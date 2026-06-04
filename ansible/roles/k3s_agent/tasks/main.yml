@@ -1,0 +1,186 @@
+---
+# ============================================================
+# k3s_agent/tasks/main.yml — k3s worker-node (agent) installation
+#
+# Fetches the cluster join-token from the k3s server via
+# delegate_to, writes the agent config, and installs k3s in
+# agent mode. Must run AFTER the k3s server role on homeserver.
+# ============================================================
+
+# ---- k3s Prerequisites (mirrored from common/k3s role) -----
+- name: Disable swap immediately
+  ansible.builtin.command: swapoff -a
+  changed_when: false
+
+- name: Remove swap entries from /etc/fstab
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^([^#].*\s+swap\s+.*)$'
+    replace: '# \1'
+
+- name: Create modules-load.d config for k3s
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/k3s.conf
+    content: |
+      br_netfilter
+      overlay
+    mode: '0644'
+
+- name: Load required kernel modules
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - br_netfilter
+    - overlay
+
+- name: Configure sysctl parameters for k3s agent
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    sysctl_file: /etc/sysctl.d/99-k3s.conf
+    reload: true
+    state: present
+  loop:
+    - {key: "net.ipv4.ip_forward", value: "1"}
+    - {key: "net.bridge.bridge-nf-call-iptables", value: "1"}
+    - {key: "net.bridge.bridge-nf-call-ip6tables", value: "1"}
+    - {key: "net.ipv6.conf.all.forwarding", value: "1"}
+    - {key: "fs.inotify.max_user_watches", value: "524288"}
+    - {key: "fs.inotify.max_user_instances", value: "512"}
+    - {key: "vm.swappiness", value: "0"}
+
+# ---- UFW rules for k3s agent operation ----------------------
+- name: Allow kubelet API (port 10250) from k3s server
+  community.general.ufw:
+    rule: allow
+    port: "10250"
+    proto: tcp
+    src: "{{ hostvars[k3s_server_host]['ansible_host'] }}"
+    comment: "k3s kubelet API from control-plane"
+
+- name: Allow Flannel VXLAN (UDP 8472) for pod overlay
+  community.general.ufw:
+    rule: allow
+    port: "8472"
+    proto: udp
+    comment: "Flannel VXLAN pod overlay network"
+
+- name: Allow all traffic from k3s pod CIDR
+  community.general.ufw:
+    rule: allow
+    src: "{{ k3s_pod_cidr }}"
+    comment: "k3s pod CIDR traffic"
+
+- name: Allow all traffic from k3s service CIDR
+  community.general.ufw:
+    rule: allow
+    src: "{{ k3s_service_cidr }}"
+    comment: "k3s service CIDR traffic"
+
+# ---- Fetch join token from k3s server ----------------------
+- name: Read k3s node-token from server
+  ansible.builtin.slurp:
+    src: /var/lib/rancher/k3s/server/node-token
+  delegate_to: "{{ k3s_server_host }}"
+  register: k3s_agent_token_raw
+
+- name: Set k3s node-token fact
+  ansible.builtin.set_fact:
+    k3s_node_token: "{{ k3s_agent_token_raw.content | b64decode | trim }}"
+
+# ---- k3s Agent Configuration --------------------------------
+- name: Create /etc/rancher/k3s directory
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Template k3s agent configuration
+  ansible.builtin.template:
+    src: k3s-agent-config.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    owner: root
+    group: root
+    mode: '0600'
+  notify: Restart k3s-agent
+
+# ---- k3s Installation ---------------------------------------
+- name: Check if k3s is already installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+  register: k3s_agent_binary
+
+- name: Get current k3s version (if installed)
+  ansible.builtin.command: k3s --version
+  register: k3s_agent_current_version
+  changed_when: false
+  failed_when: false
+  when: k3s_agent_binary.stat.exists
+
+- name: Decide whether to (re)run the k3s installer
+  ansible.builtin.set_fact:
+    k3s_agent_run_installer: >-
+      {{
+        (not k3s_agent_binary.stat.exists)
+        or (k3s_version | length > 0 and k3s_version not in (k3s_agent_current_version.stdout | default('')))
+        or (k3s_version | length == 0 and auto_upgrade | bool)
+      }}
+
+- name: Download k3s install script
+  ansible.builtin.get_url:
+    url: https://get.k3s.io
+    dest: /tmp/get-k3s.sh
+    mode: '0755'
+    force: true
+  when: k3s_agent_run_installer
+
+- name: Install or upgrade k3s agent
+  ansible.builtin.command: /tmp/get-k3s.sh agent
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    INSTALL_K3S_CHANNEL: "{{ k3s_channel | default('stable') }}"
+  register: k3s_agent_install_result
+  changed_when:
+    - k3s_agent_install_result.rc == 0
+    - "'Skipping' not in (k3s_agent_install_result.stdout | default(''))"
+  when: k3s_agent_run_installer
+
+- name: Remove k3s install script
+  ansible.builtin.file:
+    path: /tmp/get-k3s.sh
+    state: absent
+
+# ---- k3s Agent Service Management ---------------------------
+- name: Enable and start k3s-agent service
+  ansible.builtin.systemd:
+    name: k3s-agent
+    state: started
+    enabled: true
+    daemon_reload: true
+
+# ---- Wait for agent node to join the cluster ----------------
+- name: Wait for homeserver2 node to become Ready
+  ansible.builtin.command: kubectl get node {{ k3s_agent_hostname }} --no-headers
+  register: k3s_agent_node_status
+  retries: 30
+  delay: 10
+  until: "'Ready' in k3s_agent_node_status.stdout"
+  delegate_to: "{{ k3s_server_host }}"
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: false
+
+- name: Display cluster node status
+  ansible.builtin.command: kubectl get nodes -o wide
+  register: k3s_agent_all_nodes
+  delegate_to: "{{ k3s_server_host }}"
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: false
+
+- name: Show all cluster nodes
+  ansible.builtin.debug:
+    var: k3s_agent_all_nodes.stdout_lines
