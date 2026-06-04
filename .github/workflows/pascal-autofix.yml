@@ -8,10 +8,17 @@ on:
 jobs:
   autofix:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate Patch with Pascal
         id: pascal
@@ -45,13 +52,15 @@ jobs:
         run: |
           git config user.name "Pascal Wargenknecht"
           git config user.email "info@edv-kretzer.de"
-          git checkout -b pascal-autofix-branch
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+          git checkout -B pascal-autofix-branch
           git add .
-          git diff --cached --quiet && echo "Keine Änderungen" && exit 0
+          if git diff --cached --quiet; then
+            echo "Keine Änderungen – Workflow wird übersprungen."
+            exit 0
+          fi
           git commit -m "Automated fix by Claude"
           git push origin pascal-autofix-branch --force-with-lease
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Pull Request
         run: |
