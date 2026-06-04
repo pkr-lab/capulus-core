@@ -51,11 +51,14 @@
     {% if argocd_version | length > 0 %}--version {{ argocd_version }}{% endif %}
     --namespace {{ argocd_namespace }}
     --values /tmp/argocd-values.yaml
-    --wait
-    --timeout 10m
+    --atomic
+    --timeout 20m
     --create-namespace
   register: argocd_helm_result
   changed_when: "'deployed' in argocd_helm_result.stdout or 'upgraded' in argocd_helm_result.stdout"
+  retries: 2
+  delay: 30
+  until: argocd_helm_result.rc == 0
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
 
