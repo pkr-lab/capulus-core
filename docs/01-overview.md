@@ -23,50 +23,37 @@ Dieses Dokument beschreibt die High-Level-Architektur des Home-Server-Setups.
 └───────────────────────────────┬─────────────────────────────────────┘
                                 │ Tailscale MagicDNS / IP
                                 ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                    HOME SERVER (192.168.1.100)                      │
-│                                                                     │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │                    Ubuntu 26.04 LTS                          │   │
-│  │  ┌────────────┐  ┌──────────────┐  ┌──────────────────────┐ │   │
-│  │  │ tailscaled │  │   chrony     │  │   UFW Firewall       │ │   │
-│  │  │ (Tailscale)│  │ (NTP sync)   │  │  (22,80,443,6443..)  │ │   │
-│  │  └────────────┘  └──────────────┘  └──────────────────────┘ │   │
-│  │  ┌──────────────┐  ┌─────────────────────────────────────┐  │   │
-│  │  │   dnsmasq    │  │   scanbd + SANE + scan_*.sh         │  │   │
-│  │  │ split-DNS    │  │   (Fujitsu USB Scanner Pipeline)    │  │   │
-│  │  │ *.homeserver │  │   ──► CIFS Mount auf UGREEN NAS     │  │   │
-│  │  │ :53 LAN+TS   │  │       (Paperless-NGX consume-Dir)   │  │   │
-│  │  └──────────────┘  └─────────────────────────────────────┘  │   │
-│  │                                                              │   │
-│  │  ┌──────────────────────────────────────────────────────┐   │   │
-│  │  │                   k3s (Kubernetes)                   │   │   │
-│  │  │                                                      │   │   │
-│  │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  │   │   │
-│  │  │  │   Traefik   │  │   ArgoCD    │  │  Workload   │  │   │   │
-│  │  │  │  (Ingress)  │  │  (GitOps)   │  │   Apps      │  │   │   │
-│  │  │  │  :80/:443   │  │  :30080     │  │  (siehe ↓)  │  │   │   │
-│  │  │  └──────┬──────┘  └──────┬──────┘  └─────────────┘  │   │   │
-│  │  │         │                │                           │   │   │
-│  │  │  ┌──────┴────────────────┴──────────────────────┐   │   │   │
-│  │  │  │  argocd/apps/ — verwaltet vom ApplicationSet:│   │   │   │
-│  │  │  │    monitoring (VictoriaMetrics + Grafana),   │   │   │   │
-│  │  │  │    sealed-secrets + kubeseal-webgui,         │   │   │   │
-│  │  │  │    semaphore (Ansible UI),                   │   │   │   │
-│  │  │  │    headlamp (k8s-Dashboard), gotify (Push),  │   │   │   │
-│  │  │  │    example-whoami                            │   │   │   │
-│  │  │  └─────────────────────────────────────────────┘   │   │   │
-│  │  │                                                      │   │   │
-│  │  │  ┌──────────────────────────────────────────────┐   │   │   │
-│  │  │  │   Flannel VXLAN (Pod-Netz 10.42.0.0/16)      │   │   │   │
-│  │  │  └──────────────────────────────────────────────┘   │   │   │
-│  │  │                                                      │   │   │
-│  │  │  ┌──────────────────────────────────────────────┐   │   │   │
-│  │  │  │   local-path StorageClass (NVMe-SSD)         │   │   │   │
-│  │  │  └──────────────────────────────────────────────┘   │   │   │
-│  │  └──────────────────────────────────────────────────────┘   │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                k3s CLUSTER (2-Node)                                          │
+│                                                                              │
+│  ┌────────────────────────────────────┐  ┌──────────────────────────────┐   │
+│  │  HOMESERVER — 192.168.178.94       │  │  HOMESERVER2 — 192.168.178.95│   │
+│  │  Control-Plane + Worker            │  │  Worker-Node                 │   │
+│  │                                    │  │                              │   │
+│  │  ┌────────────┐ ┌───────────────┐  │  │  ┌──────────────────────┐   │   │
+│  │  │ tailscaled │ │   dnsmasq     │  │  │  │  k3s-agent           │   │   │
+│  │  │ (Tailscale)│ │  split-DNS    │  │  │  │  (kubelet + Flannel) │   │   │
+│  │  └────────────┘ │  *.homeserver │  │  │  └──────────────────────┘   │   │
+│  │  ┌────────────┐ │  :53 LAN+TS  │  │  │                              │   │
+│  │  │  scanbd +  │ └───────────────┘  │  │  ┌──────────────────────┐   │   │
+│  │  │  SANE      │                    │  │  │  Docker-Compose       │   │   │
+│  │  │  scan_.sh  │ ┌───────────────┐  │  │  │  Paperless-NGX       │   │   │
+│  │  └────────────┘ │  UFW Firewall │  │  │  │  TinyTeller          │   │   │
+│  │                 └───────────────┘  │  │  │  Day Pilot           │   │   │
+│  │  ┌──────────────────────────────┐  │  │  │  Node Exporter       │   │   │
+│  │  │  k3s server (Control-Plane)  │  │  │  └──────────────────────┘   │   │
+│  │  │  ┌──────────┐ ┌───────────┐  │  │  │                              │   │
+│  │  │  │ Traefik  │ │  ArgoCD   │  │◄─┼─►│  Flannel VXLAN (8472/UDP)   │   │
+│  │  │  │ :80/:443 │ │  :30080   │  │  │  │  kubelet API  (10250/TCP)   │   │
+│  │  │  └──────────┘ └───────────┘  │  │  └──────────────────────────────┘   │
+│  │  │  argocd/apps/:                │  │                              │   │
+│  │  │   monitoring, sealed-secrets, │  │                              │   │
+│  │  │   semaphore, headlamp, gotify │  │                              │   │
+│  │  │  Flannel VXLAN 10.42.0.0/16   │  │                              │   │
+│  │  │  local-path StorageClass      │  │                              │   │
+│  │  └──────────────────────────────┘  │  └──────────────────────────────┘   │
+│  └────────────────────────────────────┘                                     │
+└──────────────────────────────────────────────────────────────────────────────┘
                                 ▲
                                 │ git pull (HTTPS/SSH)
                                 │
@@ -119,16 +106,25 @@ Das Fundament des ganzen Stacks. Konfiguriert durch die Ansible-Rolle `common`:
 - Chrony für NTP-Zeitsync
 - Swap deaktiviert (Kubernetes-Pflicht)
 
-### k3s (Kubernetes-Distribution)
+### k3s (Kubernetes-Distribution, 2-Node-Cluster)
 
 k3s ist eine CNCF-zertifizierte, produktionsreife Kubernetes-Distribution,
-optimiert für ressourcenarme Umgebungen. Auf dieser Hardware (i5 + 32 GB RAM)
-läuft k3s weit unter seinem Limit.
+optimiert für ressourcenarme Umgebungen.
+
+| Node | IP | Rolle | Service |
+|------|----|-------|---------|
+| homeserver | 192.168.178.94 | Control-Plane + Worker | k3s server |
+| homeserver2 | 192.168.178.95 | Worker | k3s agent |
+
+homeserver2 tritt dem Cluster über `k3s agent` bei — der Join-Token wird
+per Ansible automatisch vom Control-Plane-Node gelesen. Kubernetes-Workloads
+werden vom Scheduler auf beide Nodes verteilt. Docker-Compose-Dienste auf
+homeserver2 laufen parallel dazu auf dem Host.
 
 Mitgelieferte Komponenten:
 
-- **Flannel** (VXLAN) für Pod-Networking
-- **Traefik v2** als Default-Ingress-Controller
+- **Flannel** (VXLAN) für Pod-Networking (beide Nodes über UDP 8472)
+- **Traefik v2** als Default-Ingress-Controller (läuft auf Control-Plane)
 - **CoreDNS** für Cluster-DNS
 - **local-path Provisioner** für PersistentVolume-Storage
 - **metrics-server** für Resource-Metriken
@@ -204,18 +200,18 @@ die UI ist nach dem ersten Playbook-Run sofort einsatzbereit.
 
 ## Port-Übersicht
 
-| Port  | Protokoll | Komponente      | Scope            | Zweck                                |
-|-------|-----------|-----------------|------------------|--------------------------------------|
-| 22    | TCP       | SSH             | LAN + Tailscale  | Server-SSH-Zugriff                   |
-| 53    | UDP+TCP   | dnsmasq         | LAN + Tailscale  | Split-DNS für `*.homeserver`         |
-| 80    | TCP       | Traefik         | LAN + Tailscale  | HTTP-Ingress                         |
-| 443   | TCP       | Traefik         | LAN + Tailscale  | HTTPS-Ingress                        |
-| 6443  | TCP       | k3s API-Server  | LAN + Tailscale  | Kubernetes-API                       |
-| 30080 | TCP       | ArgoCD NodePort | LAN + Tailscale  | ArgoCD-Web-UI (HTTP)                 |
-| 30443 | TCP       | ArgoCD NodePort | LAN + Tailscale  | ArgoCD-Web-UI (HTTPS)                |
-| 41641 | UDP       | Tailscale       | Internet         | WireGuard-VPN (Tailscale)            |
-| 10250 | TCP       | k3s-kubelet     | Intern           | kubelet-API                          |
-| 8472  | UDP       | Flannel VXLAN   | Intern           | Pod-Overlay-Netz                     |
+| Port  | Protokoll | Komponente      | Scope                  | Zweck                                |
+|-------|-----------|-----------------|------------------------|--------------------------------------|
+| 22    | TCP       | SSH             | LAN + Tailscale        | Server-SSH-Zugriff                   |
+| 53    | UDP+TCP   | dnsmasq         | LAN + Tailscale        | Split-DNS für `*.homeserver`         |
+| 80    | TCP       | Traefik         | LAN + Tailscale        | HTTP-Ingress                         |
+| 443   | TCP       | Traefik         | LAN + Tailscale        | HTTPS-Ingress                        |
+| 6443  | TCP       | k3s API-Server  | LAN + Tailscale        | Kubernetes-API (+ Agent-Join)        |
+| 30080 | TCP       | ArgoCD NodePort | LAN + Tailscale        | ArgoCD-Web-UI (HTTP)                 |
+| 30443 | TCP       | ArgoCD NodePort | LAN + Tailscale        | ArgoCD-Web-UI (HTTPS)                |
+| 41641 | UDP       | Tailscale       | Internet               | WireGuard-VPN (Tailscale)            |
+| 10250 | TCP       | k3s-kubelet     | Cluster-intern (beide) | kubelet-API                          |
+| 8472  | UDP       | Flannel VXLAN   | Cluster-intern (beide) | Pod-Overlay-Netz zwischen den Nodes  |
 
 ---
 

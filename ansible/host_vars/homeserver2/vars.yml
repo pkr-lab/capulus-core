@@ -1,5 +1,6 @@
 ---
 ansible_become_password: "{{ vault_homeserver2_become_password }}"
+hostname: homeserver2
 
 # ---- Paperless-NGX ------------------------------------------
 paperless_base_dir: /opt/paperless
