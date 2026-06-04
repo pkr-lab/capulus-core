@@ -29,7 +29,7 @@ dass deine Tailscale-Clients den Home-Server als Nameserver für die
    Tailscale-IP ist aus dem Tailnet überall direkt erreichbar, ohne
    dass Subnet-Routes auf jedem Client aktiviert werden müssen):
    ```bash
-   ssh jaydee@homeserver "tailscale ip -4"
+   ssh ubuntu@homeserver "tailscale ip -4"
    # z.B. 100.78.12.34
    ```
 2. [Tailscale Admin Console → DNS](https://login.tailscale.com/admin/dns)
@@ -106,7 +106,7 @@ ugreen_nas:
   hosts:
     ugreen:
       ansible_host: 192.168.178.40
-      ansible_user: jaydee
+      ansible_user: ubuntu
 ```
 
 ### 3. Playbook laufen lassen
@@ -134,7 +134,7 @@ SSH pubkey: /etc/semaphore-secrets/id_ed25519.pub
 Admin-Passwort einmalig auslesen:
 
 ```bash
-ssh jaydee@homeserver "sudo cat /etc/semaphore-secrets/admin_password"
+ssh ubuntu@homeserver "sudo cat /etc/semaphore-secrets/admin_password"
 ```
 
 ### 4. ArgoCD wartet & deployt
@@ -163,7 +163,7 @@ nichts mehr klicken außer ▶ **Run**.
 1. Browser auf `http://semaphore.homeserver`.
 2. Login mit `admin` + Passwort aus `/etc/semaphore-secrets/admin_password`:
    ```bash
-   ssh jaydee@homeserver "sudo cat /etc/semaphore-secrets/admin_password"
+   ssh ubuntu@homeserver "sudo cat /etc/semaphore-secrets/admin_password"
    ```
 3. **Passwort sofort ändern** (oben rechts → Settings → Change Password).
    ⚠️ Wenn du das tust, kann das nächste `make semaphore-bootstrap` sich

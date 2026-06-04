@@ -4,7 +4,7 @@
 
 **Goal:** Alle NAS-Rollen aus `ugreen-paperless` ins `home-server`-Repo migrieren, sodass UGREEN NAS + Home-Server aus einem einzigen Repo betrieben werden.
 
-**Architecture:** Separates Playbook `ansible/ugreen-nas.yml` für den NAS; gemeinsames Inventory `ansible/inventory/hosts.yml`; NAS-Variablen isoliert in `ansible/host_vars/ugreen-nas/`. Rollen werden 1:1 aus `/home/jaydee/git/ugreen-paperless/roles/` kopiert; Umbenennung von `node-exporter` → `node_exporter_nas` und `day-pilot` → `day_pilot`. Node-Exporter-Metriken des NAS werden per `VMStaticScrape` CRD in den bestehenden k8s-Monitoring-Stack integriert.
+**Architecture:** Separates Playbook `ansible/ugreen-nas.yml` für den NAS; gemeinsames Inventory `ansible/inventory/hosts.yml`; NAS-Variablen isoliert in `ansible/host_vars/ugreen-nas/`. Rollen werden 1:1 aus `/home/ubuntu/git/ugreen-paperless/roles/` kopiert; Umbenennung von `node-exporter` → `node_exporter_nas` und `day-pilot` → `day_pilot`. Node-Exporter-Metriken des NAS werden per `VMStaticScrape` CRD in den bestehenden k8s-Monitoring-Stack integriert.
 
 **Tech Stack:** Ansible 2.14+, Docker Compose v2, VictoriaMetrics Operator (VMStaticScrape CRD), Ansible Vault
 
@@ -40,7 +40,7 @@
 - [ ] **Schritt 1: Lint-Baseline erfassen**
 
 ```bash
-cd /home/jaydee/git/home-server
+cd /home/ubuntu/git/home-server
 yamllint -c .yamllint ansible/ argocd/ 2>&1 | head -20
 ansible-lint ansible/ 2>&1 | tail -5
 ```
@@ -74,12 +74,12 @@ all:
       hosts:
         homeserver:
           ansible_host: 192.168.178.94
-          ansible_user: jaydee
+          ansible_user: ubuntu
     ugreen_nas:
       hosts:
         ugreen-nas:
           ansible_host: jays-ugreen
-          ansible_user: jaydee
+          ansible_user: ubuntu
     semaphore_targets:
       hosts:
         homeserver:
@@ -183,14 +183,14 @@ git commit -m "feat(nas): add ugreen-nas to inventory and host_vars"
 - [ ] **Schritt 1: Rolle kopieren**
 
 ```bash
-cp -r /home/jaydee/git/ugreen-paperless/roles/paperless \
-      /home/jaydee/git/home-server/ansible/roles/paperless
+cp -r /home/ubuntu/git/ugreen-paperless/roles/paperless \
+      /home/ubuntu/git/home-server/ansible/roles/paperless
 ```
 
 - [ ] **Schritt 2: Lint prüfen**
 
 ```bash
-cd /home/jaydee/git/home-server
+cd /home/ubuntu/git/home-server
 yamllint -c .yamllint ansible/roles/paperless/
 ansible-lint ansible/roles/paperless/ 2>&1 | grep -E 'error|warning' | head -20
 ```
@@ -216,14 +216,14 @@ Die Rolle behält ihren internen Inhalt unverändert, nur der Verzeichnisname ä
 - [ ] **Schritt 1: Rolle kopieren und umbenennen**
 
 ```bash
-cp -r /home/jaydee/git/ugreen-paperless/roles/node-exporter \
-      /home/jaydee/git/home-server/ansible/roles/node_exporter_nas
+cp -r /home/ubuntu/git/ugreen-paperless/roles/node-exporter \
+      /home/ubuntu/git/home-server/ansible/roles/node_exporter_nas
 ```
 
 - [ ] **Schritt 2: Lint prüfen**
 
 ```bash
-cd /home/jaydee/git/home-server
+cd /home/ubuntu/git/home-server
 yamllint -c .yamllint ansible/roles/node_exporter_nas/
 ansible-lint ansible/roles/node_exporter_nas/ 2>&1 | grep -E 'error|warning' | head -20
 ```
@@ -247,14 +247,14 @@ git commit -m "feat(nas): migrate node-exporter role as node_exporter_nas"
 - [ ] **Schritt 1: Rolle kopieren**
 
 ```bash
-cp -r /home/jaydee/git/ugreen-paperless/roles/opencode \
-      /home/jaydee/git/home-server/ansible/roles/opencode
+cp -r /home/ubuntu/git/ugreen-paperless/roles/opencode \
+      /home/ubuntu/git/home-server/ansible/roles/opencode
 ```
 
 - [ ] **Schritt 2: Lint prüfen**
 
 ```bash
-cd /home/jaydee/git/home-server
+cd /home/ubuntu/git/home-server
 yamllint -c .yamllint ansible/roles/opencode/
 ansible-lint ansible/roles/opencode/ 2>&1 | grep -E 'error|warning' | head -20
 ```
@@ -278,14 +278,14 @@ git commit -m "feat(nas): migrate opencode role from ugreen-paperless"
 - [ ] **Schritt 1: Rolle kopieren**
 
 ```bash
-cp -r /home/jaydee/git/ugreen-paperless/roles/tinyteller \
-      /home/jaydee/git/home-server/ansible/roles/tinyteller
+cp -r /home/ubuntu/git/ugreen-paperless/roles/tinyteller \
+      /home/ubuntu/git/home-server/ansible/roles/tinyteller
 ```
 
 - [ ] **Schritt 2: Lint prüfen**
 
 ```bash
-cd /home/jaydee/git/home-server
+cd /home/ubuntu/git/home-server
 yamllint -c .yamllint ansible/roles/tinyteller/
 ansible-lint ansible/roles/tinyteller/ 2>&1 | grep -E 'error|warning' | head -20
 ```
@@ -311,14 +311,14 @@ Der Bindestrich im Rollennamen ist in Ansible zulässig, aber Unterstriche sind 
 - [ ] **Schritt 1: Rolle kopieren und umbenennen**
 
 ```bash
-cp -r /home/jaydee/git/ugreen-paperless/roles/day-pilot \
-      /home/jaydee/git/home-server/ansible/roles/day_pilot
+cp -r /home/ubuntu/git/ugreen-paperless/roles/day-pilot \
+      /home/ubuntu/git/home-server/ansible/roles/day_pilot
 ```
 
 - [ ] **Schritt 2: Lint prüfen**
 
 ```bash
-cd /home/jaydee/git/home-server
+cd /home/ubuntu/git/home-server
 yamllint -c .yamllint ansible/roles/day_pilot/
 ansible-lint ansible/roles/day_pilot/ 2>&1 | grep -E 'error|warning' | head -20
 ```
@@ -374,7 +374,7 @@ Erstelle `ansible/ugreen-nas.yml`:
 - [ ] **Schritt 2: Syntax-Check**
 
 ```bash
-cd /home/jaydee/git/home-server
+cd /home/ubuntu/git/home-server
 ansible-playbook -i ansible/inventory/hosts.yml ansible/ugreen-nas.yml \
   --syntax-check 2>&1
 ```
@@ -612,7 +612,7 @@ git commit -m "docs: update CLAUDE.md with ugreen-nas architecture and commands"
 - [ ] **Schritt 1: Vollständigen Lint laufen lassen**
 
 ```bash
-cd /home/jaydee/git/home-server
+cd /home/ubuntu/git/home-server
 yamllint -c .yamllint ansible/ argocd/
 ansible-lint ansible/
 ```

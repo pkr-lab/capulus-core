@@ -27,7 +27,7 @@ directory.
 > Tailscale IP if your setup differs:
 >
 > ```bash
-> SRV='ssh -i ~/.ssh/id_ed25519 jaydee@homeserver'
+> SRV='ssh -i ~/.ssh/id_ed25519 ubuntu@homeserver'
 > ```
 
 ## 1. Hardware prerequisites
