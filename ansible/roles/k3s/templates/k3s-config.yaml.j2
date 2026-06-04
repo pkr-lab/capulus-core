@@ -8,3 +8,7 @@ tls-san:
 cluster-cidr: "{{ k3s_pod_cidr }}"
 service-cidr: "{{ k3s_service_cidr }}"
 node-name: "{{ hostname }}"
+# Ubuntu systemd-resolved stellt /etc/resolv.conf auf 127.0.0.53 (Stub),
+# der aus dem Pod-Netz nicht erreichbar ist. CoreDNS bekommt damit keine
+# Upstream-DNS-Server und kann externe Namen (github.com etc.) nicht auflösen.
+resolv-conf: /run/systemd/resolve/resolv.conf
