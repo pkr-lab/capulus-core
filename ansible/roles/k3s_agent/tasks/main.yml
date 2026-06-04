@@ -167,7 +167,10 @@
   register: k3s_agent_node_status
   retries: 30
   delay: 10
-  until: "'Ready' in k3s_agent_node_status.stdout"
+  until: >-
+    k3s_agent_node_status.rc == 0
+    and 'Ready' in k3s_agent_node_status.stdout
+    and 'NotReady' not in k3s_agent_node_status.stdout
   delegate_to: "{{ k3s_server_host }}"
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
