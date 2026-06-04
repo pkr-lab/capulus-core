@@ -69,6 +69,23 @@ the role fails pre-flight if it is undefined.
 make scanner
 ```
 
+### 4a. Alternative: local consume mount
+
+If there is no SMB/NAS endpoint available, the scanner role can also
+write directly to a locally mounted consume directory. Configure the
+local mount in `ansible/group_vars/all.yml`:
+
+```yaml
+scanner_consume_mount_type: "local"
+scanner_consume_local_source: "/dev/sda3"
+scanner_consume_local_fstype: "ext4"
+scanner_consume_mount_options_local: "defaults"
+scanner_consume_mountpoint: "/mnt/paperless-consume"
+```
+
+In this mode the role mounts the local source at the configured
+`scanner_consume_mountpoint` and skips the CIFS credential rendering.
+
 The role runs in this order:
 
 1. Install `sane`, `sane-utils`, `scanbd`, `imagemagick`, `cifs-utils`, `bc`, `util-linux`.

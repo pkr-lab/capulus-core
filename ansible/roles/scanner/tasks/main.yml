@@ -25,7 +25,33 @@
       scanner_smb_password is not defined. Vault-encrypt it with
       `ansible-vault encrypt_string '...' --name 'scanner_smb_password'`
       and paste the resulting !vault block into ansible/group_vars/all.yml.
-  when: scanner_smb_password is not defined or (scanner_smb_password | length == 0)
+  when:
+    - scanner_consume_mount_type == 'cifs'
+    - scanner_smb_password is not defined or (scanner_smb_password | length == 0)
+
+- name: Pre-flight — scanner_consume_mount_type must be valid
+  ansible.builtin.assert:
+    that:
+      - scanner_consume_mount_type in ['cifs', 'local', 'none']
+    fail_msg: >-
+      scanner_consume_mount_type must be one of: cifs, local, none.
+    success_msg: scanner_consume_mount_type is valid.
+
+- name: Pre-flight — scanner_smb_share must be defined for CIFS mount type
+  ansible.builtin.assert:
+    that:
+      - scanner_consume_mount_type != 'cifs' or (scanner_smb_share | default('') | length > 0)
+    fail_msg: >-
+      scanner_smb_share must be defined when scanner_consume_mount_type is cifs.
+  when: scanner_consume_mount_type == 'cifs'
+
+- name: Pre-flight — local consume source must be defined for local mount type
+  ansible.builtin.assert:
+    that:
+      - scanner_consume_mount_type != 'local' or (scanner_consume_local_source | default('') | length > 0)
+    fail_msg: >-
+      scanner_consume_local_source must be defined when scanner_consume_mount_type is local.
+  when: scanner_consume_mount_type == 'local'
 
 - name: Pre-flight — Gotify URL + token must be set when notifications are enabled
   ansible.builtin.fail:
@@ -134,6 +160,7 @@
     group: root
     mode: "0600"
   no_log: true
+  when: scanner_consume_mount_type == 'cifs'
 
 - name: Mount Paperless consume share (CIFS)
   ansible.posix.mount:
@@ -142,6 +169,16 @@
     src: "{{ scanner_smb_share }}"
     path: "{{ scanner_consume_mountpoint }}"
     opts: "credentials={{ scanner_smb_credentials_path }},{{ scanner_smb_mount_options }}"
+  when: scanner_consume_mount_type == 'cifs'
+
+- name: Mount local consume source
+  ansible.posix.mount:
+    state: mounted
+    src: "{{ scanner_consume_local_source }}"
+    path: "{{ scanner_consume_mountpoint }}"
+    fstype: "{{ scanner_consume_local_fstype }}"
+    opts: "{{ scanner_consume_mount_options_local }}"
+  when: scanner_consume_mount_type == 'local'
 
 # ---- SANE / scanbd configuration --------------------------
 - name: Deploy SANE dll.conf

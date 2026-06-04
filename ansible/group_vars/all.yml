@@ -173,10 +173,16 @@ scanner_usb_product_id: "132b"
 # Das SMB-Passwort MUSS vault-encrypted sein. Hinweis in docs/10-scanner.md.
 #   ansible-vault encrypt_string 'DEIN_SMB_PASSWORT' \
 #     --name 'scanner_smb_password'
+scanner_consume_mount_type: "cifs"
 scanner_smb_share: "//192.168.178.95/personal_folder/paperless/consume"
 scanner_smb_username: "pkretzer"
 scanner_smb_password: !vault |
           $ANSIBLE_VAULT;1.1;AES256
+# Alternative local consume mount configuration:
+# scanner_consume_mount_type: "local"
+# scanner_consume_local_source: "/dev/sda3"
+# scanner_consume_local_fstype: "ext4"
+# scanner_consume_mount_options_local: "defaults"
           65623261646538323630323466633031663134333430613862666532623333613636336531366139
           3532663330613862383963333766653037366136333366610a366565313636363230323335636365
           31653863353437633462656237356332666233326465386637363235343337323733346364366235

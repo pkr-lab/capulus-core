@@ -7,6 +7,7 @@
 set -euo pipefail
 
 MOUNTPOINT="{{ scanner_consume_mountpoint }}"
+MOUNT_TYPE="{{ scanner_consume_mount_type }}"
 SCANNER_USB_ID="{{ scanner_usb_vendor_id }}:{{ scanner_usb_product_id }}"
 
 log_info()  { logger -t scanner-healthcheck -p user.info  "$*"; }
@@ -25,16 +26,28 @@ check_mount() {
         return 0
     fi
 
-    local unit
-    unit="$(automount_unit)"
-    log_warn "mount missing: ${MOUNTPOINT} — restarting ${unit}"
-    if systemctl restart "${unit}" >/dev/null 2>&1; then
-        sleep 2
-        if mountpoint -q "${MOUNTPOINT}"; then
-            log_info "mount recovered via ${unit}"
-            return 0
+    if [ "${MOUNT_TYPE}" = "cifs" ]; then
+        local unit
+        unit="$(automount_unit)"
+        log_warn "mount missing: ${MOUNTPOINT} — restarting ${unit}"
+        if systemctl restart "${unit}" >/dev/null 2>&1; then
+            sleep 2
+            if mountpoint -q "${MOUNTPOINT}"; then
+                log_info "mount recovered via ${unit}"
+                return 0
+            fi
+        fi
+    elif [ "${MOUNT_TYPE}" = "local" ]; then
+        log_warn "mount missing: ${MOUNTPOINT} — attempting mount from fstab or systemd"
+        if mount "${MOUNTPOINT}" >/dev/null 2>&1; then
+            sleep 2
+            if mountpoint -q "${MOUNTPOINT}"; then
+                log_info "mount recovered via mount(8)"
+                return 0
+            fi
         fi
     fi
+
     log_error "mount recovery failed for ${MOUNTPOINT}"
     return 1
 }
