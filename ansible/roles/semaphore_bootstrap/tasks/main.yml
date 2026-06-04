@@ -15,6 +15,17 @@
       them without a vault password. Set semaphore_vault_password in
       group_vars/all.yml (ansible-vault encrypted).
 
+- name: Wait for the semaphore Deployment to be created
+  ansible.builtin.command:
+    cmd: kubectl -n {{ semaphore_namespace }} get deploy semaphore
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: _semaphore_deploy_exists
+  retries: 30
+  delay: 10
+  until: _semaphore_deploy_exists.rc == 0
+  changed_when: false
+
 - name: Wait for the semaphore Deployment to roll out
   ansible.builtin.command:
     cmd: kubectl -n {{ semaphore_namespace }} rollout status deploy/semaphore --timeout=300s
