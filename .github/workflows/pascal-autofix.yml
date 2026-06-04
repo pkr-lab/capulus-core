@@ -1,0 +1,64 @@
+name: Pascal Auto Fix
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # täglich um 03:00
+  workflow_dispatch:       # manuell startbar
+
+jobs:
+  autofix:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install GitHub CLI
+        uses: cli/cli@v3
+        with:
+          version: latest
+
+      - name: Generate Patch with Pascal
+        id: pascal
+        run: |
+          PATCH=$(curl -s https://api.anthropic.com/v1/messages \
+            -H "x-api-key: ${{ secrets.CLAUDE_API_KEY }}" \
+            -H "content-type: application/json" \
+            -d '{
+              "model": "claude-3-7-sonnet",
+              "max_tokens": 4096,
+              "messages": [
+                {
+                  "role": "user",
+                  "content": "Analysiere das Repository. Erstelle einen Patch im unified diff Format. Keine Erklärungen, nur den Patch."
+                }
+              ]
+            }' | jq -r '.content[0].text')
+
+          echo "$PATCH" > patch.diff
+          echo "patch<<EOF" >> $GITHUB_OUTPUT
+          echo "$PATCH" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Apply Patch
+        run: |
+          if [ -s patch.diff ]; then
+            git apply patch.diff || echo "Patch konnte nicht angewendet werden"
+          fi
+
+      - name: Commit changes
+        run: |
+          git config user.name "Pascal Wargenknecht"
+          git config user.email "info@edv-kretzer.de"
+          git add .
+          git commit -m "Automated fix by Claude" || echo "Keine Änderungen"
+
+      - name: Create Pull Request
+        run: |
+          gh pr create \
+            --title "Automated Fix by Pascal" \
+            --body "Dieser PR wurde automatisch generiert." \
+            --base main \
+            --head pascal-autofix-branch || echo "PR existiert bereits"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
