@@ -1,9 +1,10 @@
 name: Pascal Auto Fix
 
 on:
-  schedule:
-    - cron: "0 3 * * *"   # täglich um 03:00
-  workflow_dispatch:       # manuell startbar
+  push:
+    branches:
+      - pascal_autofix
+  workflow_dispatch:
 
 jobs:
   autofix:
@@ -14,9 +15,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install GitHub CLI
-        uses: cli/cli-action@v2
-        with:
-          version: latest
+        uses: actions/setup-gh@v4
+
+      - name: Authenticate GitHub CLI
+        run: gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Generate Patch with Pascal
         id: pascal
@@ -59,6 +61,6 @@ jobs:
             --title "Automated Fix by Pascal" \
             --body "Dieser PR wurde automatisch generiert." \
             --base main \
-            --head pascal-autofix-branch || echo "PR existiert bereits"
+            --head pascal_autofix || echo "PR existiert bereits"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
