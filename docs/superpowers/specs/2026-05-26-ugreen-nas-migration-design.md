@@ -56,10 +56,10 @@ all:
   hosts:
     home-server:
       ansible_host: 192.168.178.94
-      ansible_user: jaydee
+      ansible_user: ubuntu
     ugreen-nas:
       ansible_host: jays-ugreen
-      ansible_user: jaydee
+      ansible_user: ubuntu
 ```
 
 ## Playbook `ansible/ugreen-nas.yml`

@@ -42,7 +42,7 @@ This is the same password used with `--ask-vault-pass` when running `make instal
 semaphore_default_keys:
   - name: semaphore-ssh-key
     type: ssh
-    login: jaydee
+    login: ubuntu
   - name: git-none
     type: none
   - name: vault-password        # NEW

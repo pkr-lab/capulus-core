@@ -74,7 +74,7 @@ In `ansible/roles/semaphore_bootstrap/defaults/main.yml`, replace:
 semaphore_default_keys:
   - name: semaphore-ssh-key
     type: ssh
-    login: jaydee
+    login: ubuntu
   - name: git-none
     type: none
 ```
@@ -85,7 +85,7 @@ with:
 semaphore_default_keys:
   - name: semaphore-ssh-key
     type: ssh
-    login: jaydee
+    login: ubuntu
   - name: git-none
     type: none
   - name: vault-password

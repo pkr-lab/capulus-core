@@ -365,7 +365,7 @@
       A reboot is required (/var/run/reboot-required exists) but this playbook
       is running inside Semaphore (SEMAPHORE_TASK_ID is set). Auto-reboot is
       skipped to avoid killing the executor Pod. Reboot manually after the run
-      finishes: `ssh jaydee@homeserver "sudo reboot"`.
+      finishes: `ssh ubuntu@homeserver "sudo reboot"`.
   when:
     - common_reboot_required.stat.exists
     - lookup('env', 'SEMAPHORE_TASK_ID') | length > 0

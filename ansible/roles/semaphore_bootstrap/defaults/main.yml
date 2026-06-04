@@ -36,7 +36,7 @@ semaphore_vault_password: ""
 
 # SSH login used by Semaphore when connecting to managed targets.
 # Must match ansible_user on all targets.
-semaphore_ssh_login: "jaydee"
+semaphore_ssh_login: "ubuntu"
 
 # Three access keys are created in every project — name them once here.
 # `login` is only relevant for the ssh-type entry.

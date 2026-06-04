@@ -79,10 +79,12 @@
     --advertise-routes={{ local_subnet }}
     --accept-dns=true
     --accept-routes=false
+    --timeout=60s
   environment:
     TS_AUTHKEY: "{{ tailscale_auth_key }}"
   register: tailscale_up_result
   changed_when: tailscale_up_result.rc == 0
+  failed_when: tailscale_up_result.rc != 0
   no_log: true
   when: not tailscale_connected
 
