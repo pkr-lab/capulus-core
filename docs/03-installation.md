@@ -228,15 +228,23 @@ Per SSH auf den Server und folgende Kommandos laufen lassen:
 ### k3s-Node-Status
 
 ```bash
-ssh ubuntu@192.168.1.100
+ssh ubuntu@192.168.178.94
 kubectl get nodes
 ```
 
-Erwartet:
+Nach `make install` (nur homeserver):
 
 ```
 NAME         STATUS   ROLES                  AGE   VERSION
 homeserver   Ready    control-plane,master   5m    v1.29.3+k3s1
+```
+
+Nach `make homeserver2` (beide Nodes):
+
+```
+NAME          STATUS   ROLES                  AGE   VERSION
+homeserver    Ready    control-plane,master   5m    v1.29.3+k3s1
+homeserver2   Ready    <none>                 2m    v1.29.3+k3s1
 ```
 
 ### Alle System-Pods
@@ -350,6 +358,55 @@ Remote-Zugriff entweder:
 
 - SSH-Tunnel: `ssh -L 6443:localhost:6443 ubuntu@192.168.1.100`
 - Oder die Server-Adresse in der kubeconfig auf die Tailscale-IP umschreiben, bevor sie kopiert wird.
+
+---
+
+---
+
+## Schritt 9 — homeserver2 als Worker-Node beitreten lassen
+
+Nachdem `make install` auf homeserver abgeschlossen ist, kann homeserver2
+(192.168.178.95) als zweiter Kubernetes-Worker-Node dem Cluster beitreten.
+
+**Voraussetzungen:**
+
+- k3s läuft auf homeserver (Schritt 6 abgeschlossen)
+- homeserver2 ist per SSH erreichbar (Ansible-Konnektivität testen: `ansible -i ansible/inventory/hosts.yml homeserver2 -m ping`)
+- `vault_homeserver2_become_password` in `group_vars/all.yml` gesetzt
+
+**homeserver2 provisionieren:**
+
+```bash
+make homeserver2
+```
+
+Das Playbook führt in dieser Reihenfolge aus:
+
+1. **k3s_agent** — Deaktiviert Swap, lädt Kernel-Module, konfiguriert sysctl,
+   liest den Join-Token vom Control-Plane-Server, installiert k3s im Agent-Mode
+   und wartet bis der Node `Ready` ist.
+2. **paperless**, **tinyteller**, **day_pilot**, **node_exporter_nas** —
+   Docker-Compose-Dienste wie bisher.
+
+Nur den k3s-Agent-Schritt ausführen (ohne Docker-Compose-Dienste):
+
+```bash
+make k3s-agent
+```
+
+**Verifikation:**
+
+```bash
+ssh ubuntu@192.168.178.94 kubectl get nodes -o wide
+```
+
+Erwartet:
+
+```
+NAME          STATUS   ROLES                  AGE   VERSION          INTERNAL-IP
+homeserver    Ready    control-plane,master   10m   v1.29.3+k3s1    192.168.178.94
+homeserver2   Ready    <none>                 2m    v1.29.3+k3s1    192.168.178.95
+```
 
 ---
 

@@ -1,18 +1,27 @@
 ---
 # ============================================================
-# Second-Server Playbook — deployt Docker-Compose-basierte Dienste auf
-# homeserver2 (192.168.178.95).
+# Second-Server Playbook — provisioniert homeserver2 (192.168.178.95).
+#
+# Reihenfolge:
+#   1. k3s_agent  — tritt dem k3s-Cluster als Worker-Node bei
+#      (benötigt laufenden k3s-Server auf homeserver/.94)
+#   2. Docker-Compose-Dienste (Paperless-NGX, TinyTeller, Day Pilot,
+#      Node Exporter) — laufen parallel zum Kubernetes-Workload
 #
 # Run with:
 #   make homeserver2
 # Dry-run:
 #   make homeserver2-check
+# Nur k3s-Agent:
+#   make k3s-agent
 # ============================================================
 
-- name: Deploy second-server services
+- name: Deploy k3s agent and services on homeserver2
   hosts: second_servers
   become: true
   roles:
+    - role: k3s_agent
+      tags: [k3s-agent, kubernetes]
     - role: paperless
       tags: [paperless]
     - role: node_exporter_nas
