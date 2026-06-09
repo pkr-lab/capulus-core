@@ -14,7 +14,7 @@ spec:
               up{job=~".*node-exporter.*", instance=~"192\\.168\\.178\\.95.*"} == 0
             ) or (
               kube_node_status_condition{
-                node="homeserver2",
+                node="worker-0",
                 condition="Ready",
                 status="true"
               } == 0
