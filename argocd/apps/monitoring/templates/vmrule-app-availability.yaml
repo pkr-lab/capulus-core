@@ -1,0 +1,38 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: app-availability
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: app.availability
+      interval: 30s
+      rules:
+
+        - alert: DeploymentUnavailable
+          expr: |
+            kube_deployment_spec_replicas > 0
+              unless ignoring(reason)
+            kube_deployment_status_replicas_available > 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.deployment }} nicht erreichbar"
+            description: >-
+              Deployment {{ $labels.deployment }} (Namespace: {{ $labels.namespace }})
+              hat seit mehr als 1 Minute keine verfügbaren Pods.
+
+        - alert: StatefulSetUnavailable
+          expr: |
+            kube_statefulset_replicas > 0
+              unless ignoring(reason)
+            kube_statefulset_status_replicas_ready > 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.statefulset }} nicht erreichbar"
+            description: >-
+              StatefulSet {{ $labels.statefulset }} (Namespace: {{ $labels.namespace }})
+              hat seit mehr als 1 Minute keine ready Pods.
