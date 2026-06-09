@@ -233,3 +233,9 @@
 - name: Show system pod status
   ansible.builtin.debug:
     var: k3s_system_pods.stdout_lines
+
+- name: Ensure k3s-agent is enabled at boot
+  ansible.builtin.systemd:
+    name: k3s-agent
+    enabled: true
+  become: true
