@@ -1,0 +1,16 @@
+---
+apiVersion: v2
+name: gotify-bridge
+description: >
+  Webhook bridge: translates Alertmanager JSON payloads into Gotify message API calls.
+  Runs as a lightweight Python stdlib HTTP server — no external dependencies.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - alertmanager
+  - gotify
+  - bridge
+  - notifications
+maintainers:
+  - name: home-server-admin
