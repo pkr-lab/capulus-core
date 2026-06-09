@@ -128,3 +128,9 @@
       - "Advertised subnet: {{ local_subnet }}"
       - "NOTE: Approve the advertised subnet route in the admin panel:"
       - "      https://login.tailscale.com/admin/machines"
+
+- name: Ensure tailscaled is enabled at boot
+  ansible.builtin.systemd:
+    name: tailscaled
+    enabled: true
+  become: true
