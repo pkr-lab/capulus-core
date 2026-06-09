@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "gotify-bridge.fullname" . }}-script
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "gotify-bridge.labels" . | nindent 4 }}
+data:
+  bridge.py: |
+    #!/usr/bin/env python3
+    """
+    Alertmanager → Gotify bridge.
+    Receives Alertmanager webhook JSON, sends one Gotify message per alert.
+    Uses only Python stdlib — no pip required.
+    """
+    import json
+    import os
+    import urllib.request
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    GOTIFY_URL   = os.environ["GOTIFY_URL"].rstrip("/")
+    GOTIFY_TOKEN = os.environ["GOTIFY_TOKEN"]
+
+    SEVERITY_PRIORITY = {"critical": 8, "warning": 5, "info": 3}
+
+    def send_to_gotify(title: str, message: str, priority: int) -> None:
+        payload = json.dumps(
+            {"title": title, "message": message, "priority": priority}
+        ).encode()
+        req = urllib.request.Request(
+            f"{GOTIFY_URL}/message?token={GOTIFY_TOKEN}",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=5)
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            length = int(self.headers.get("Content-Length", 0))
+            body   = json.loads(self.rfile.read(length))
+
+            for alert in body.get("alerts", []):
+                status    = alert.get("status", "firing")
+                name      = alert.get("labels", {}).get("alertname", "Alert")
+                severity  = alert.get("labels", {}).get("severity", "info")
+                namespace = alert.get("labels", {}).get("namespace", "")
+                summary   = (
+                    alert.get("annotations", {}).get("summary")
+                    or alert.get("annotations", {}).get("description")
+                    or ""
+                )
+
+                icon     = "🔴" if status == "firing" else "✅"
+                title    = f"{icon} {name}"
+                msg_line = summary or f"Status: {status}"
+                if namespace:
+                    msg_line += f"\nNamespace: {namespace}"
+                msg_line += f"\nSeverity: {severity}"
+
+                priority = SEVERITY_PRIORITY.get(severity, 3)
+
+                try:
+                    send_to_gotify(title, msg_line, priority)
+                    print(f"[OK] {title}")
+                except Exception as exc:
+                    print(f"[ERR] {title}: {exc}")
+
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"ok")
+
+        def log_message(self, fmt, *args):  # suppress default access log
+            print(fmt % args)
+
+    if __name__ == "__main__":
+        port = int(os.environ.get("PORT", 8080))
+        print(f"gotify-bridge listening on :{port}")
+        HTTPServer(("0.0.0.0", port), Handler).serve_forever()

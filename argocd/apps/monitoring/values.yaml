@@ -76,23 +76,39 @@ victoria-metrics-k8s-stack:
       evaluationInterval: 30s
 
   # ---- Alertmanager ----------------------------------------
-  # Default "blackhole" receiver: alerts are routed but silently dropped.
-  # To wire up Discord/Slack/Gotify later, replace `receivers` and `route`
-  # with a real configuration (see commented examples in the upstream
-  # values.yaml).
+  # Routing:
+  #   default → gotify-bridge (alle Alerts als kurzer Log)
+  #   severity=critical → ntfy /Home-Lab (iOS Push) + gotify (continue: true)
+  #
+  # gotify-bridge: argocd/apps/gotify-bridge/ — übersetzt Alertmanager-JSON
+  #   in Gotifys message-API. Token als Secret `gotify-bridge-token` anlegen
+  #   (siehe argocd/apps/gotify-bridge/values.yaml).
+  # ntfy: argocd/apps/ntfy/ — Alertmanager-Webhook wird direkt empfangen.
   alertmanager:
     enabled: true
     spec:
       replicaCount: 1
     config:
       route:
-        receiver: blackhole
+        receiver: gotify
         group_by: ["alertname", "namespace"]
         group_wait: 30s
         group_interval: 5m
         repeat_interval: 12h
+        routes:
+          - matchers:
+              - severity="critical"
+            receiver: ntfy
+            continue: true
       receivers:
-        - name: blackhole
+        - name: gotify
+          webhook_configs:
+            - url: 'http://gotify-bridge.gotify-bridge.svc.cluster.local:8080/alert'
+              send_resolved: true
+        - name: ntfy
+          webhook_configs:
+            - url: 'http://ntfy.ntfy.svc.cluster.local/Home-Lab'
+              send_resolved: true
       inhibit_rules:
         - target_matchers:
             - severity=~"warning|info"
@@ -101,13 +117,7 @@ victoria-metrics-k8s-stack:
           equal:
             - namespace
             - alertname
-        - target_matchers:
-            - severity=info
-          source_matchers:
-            - severity=warning
-          equal:
-            - namespace
-            - alertname
+
 
   # ---- Default alert rules ---------------------------------
   defaultRules:
