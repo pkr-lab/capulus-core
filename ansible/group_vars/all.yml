@@ -36,7 +36,7 @@ k3s_service_cidr: "10.43.0.0/16"
 # zu lesen und den Server-Endpoint dynamisch zu ermitteln.
 k3s_server_host: homeserver
 # Kubernetes-Node-Name des Worker-Nodes (muss im Cluster eindeutig sein).
-k3s_agent_hostname: homeserver2
+k3s_agent_hostname: worker-0
 
 # ---- Helm --------------------------------------------------
 # Empty = always install the latest Helm 3 release. Pin to e.g. "v3.16.0" if needed.
