@@ -7,6 +7,19 @@
 # agent mode. Must run AFTER the k3s server role on homeserver.
 # ============================================================
 
+# ---- Hostname -----------------------------------------------
+- name: Set system hostname
+  ansible.builtin.hostname:
+    name: "{{ k3s_agent_hostname }}"
+    use: systemd
+
+- name: Update /etc/hosts with new hostname
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1'
+    line: "127.0.1.1 {{ k3s_agent_hostname }}"
+    state: present
+
 # ---- k3s Prerequisites (mirrored from common/k3s role) -----
 - name: Disable swap immediately
   ansible.builtin.command: swapoff -a
@@ -162,7 +175,7 @@
     daemon_reload: true
 
 # ---- Wait for agent node to join the cluster ----------------
-- name: Wait for homeserver2 node to become Ready
+- name: Wait for {{ k3s_agent_hostname }} node to become Ready
   ansible.builtin.command: kubectl get node {{ k3s_agent_hostname }} --no-headers
   register: k3s_agent_node_status
   retries: 30
