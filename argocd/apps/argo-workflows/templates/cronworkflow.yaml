@@ -20,7 +20,7 @@ spec:
     arguments:
       parameters:
         - name: repo
-          value: https://github.com/PKE-Tech/Home-Lab.git
+          value: https://github.com/PKE-Tech/capulus-core.git
         - name: revision
           value: main
         - name: image
