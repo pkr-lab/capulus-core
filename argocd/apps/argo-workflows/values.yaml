@@ -29,12 +29,31 @@ argo-workflows:
         memory: 512Mi
 
   server:
-    # server auth-mode = no login, open on LAN/Tailnet (consistent with
-    # Grafana/Headlamp/Semaphore). Security via Tailnet isolation.
+    # SSO-Modus via Authentik OIDC.
+    # Voraussetzung: SealedSecret `argo-workflows-sso` anlegen.
+    # Anleitung: docs/15-cert-login.md → Schritt 8 (Argo Workflows)
+    # Zum Aktivieren: authModes auf [sso] setzen, sso.enabled: true
     authModes:
       - server
     # Serve plain HTTP — TLS is terminated/none behind Traefik on the LAN.
     secure: false
+    sso:
+      enabled: false
+      issuer: "http://authentik.homeserver/application/o/argo-workflows/"
+      clientId:
+        name: argo-workflows-sso
+        key: clientId
+      clientSecret:
+        name: argo-workflows-sso
+        key: clientSecret
+      redirectUrl: "http://argo-workflows.homeserver/oauth2/callback"
+      scopes:
+        - openid
+        - profile
+        - email
+        - groups
+      rbac:
+        enabled: true
     resources:
       requests:
         cpu: 25m
@@ -74,6 +93,13 @@ argo-workflows:
 #     --name argo-artifacts-s3 --controller-name sealed-secrets-controller \
 #     --controller-namespace sealed-secrets --from-file=/dev/stdin
 # See docs/13-argo-workflows.md for the full workflow (incl. the GHCR token).
+
+# SSO — OIDC-Credentials für Authentik. Nach docs/15-cert-login.md Schritt 8 befüllen.
+ssoSecret:
+  enabled: false
+  name: argo-workflows-sso
+  encryptedClientId: ""
+  encryptedClientSecret: ""
 
 # S3 access for the artifact repository — must match the MinIO root creds.
 artifactSecret:
