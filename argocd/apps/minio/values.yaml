@@ -47,12 +47,32 @@ minio:
   ingress:
     enabled: false
 
+  # ---- OIDC — Authentik Single Sign-On -------------------------
+  # Voraussetzung: SealedSecret `minio-oidc` im Namespace minio anlegen.
+  # Anleitung: docs/15-cert-login.md → Schritt 8 (MinIO)
+  # Zum Aktivieren: oidc.enabled: true setzen und Secret befüllen.
+  oidc:
+    enabled: false
+    configUrl: "http://authentik.homeserver/application/o/minio/.well-known/openid-configuration"
+    clientId: ""
+    clientSecret: ""
+    redirectUri: "http://minio.homeserver/oauth_callback"
+    claimName: "groups"
+    displayName: "Authentik"
+
 # --- Consumed by this chart's own templates/ (NOT the minio sub-chart) ---
 # SealedSecret holding the MinIO root credentials. Seal real values with:
 #   echo -n "<value>" | kubeseal --raw --namespace minio --name minio-root \
 #     --controller-name sealed-secrets-controller \
 #     --controller-namespace sealed-secrets --from-file=/dev/stdin
 # then paste the outputs below. See docs/13-argo-workflows.md.
+# OIDC SealedSecret — nach docs/15-cert-login.md Schritt 8 befüllen.
+oidcSecret:
+  enabled: false
+  name: minio-oidc
+  encryptedClientId: ""
+  encryptedClientSecret: ""
+
 rootCreds:
   name: minio-root
   encryptedRootUser: "AgBOGEfSvHUfPa+WCVmZmfYS2Rw30Vu0AKk5wLLLMfHEdVXHd3A6EkWUUxNO3pcqoM7+DfGbsWu4cAOMHkVYDmT6oShQiHKvNRl8kRGZLVgyHDLBcZisYdMZp38Sjl6eaUM6Kd8VGFG0uY6Av2A+kuFE5LWypaMU0NBJZ/bAmdoxOfgRXsrlwHdMyjPGf6RqIskPHec0mmMjx3j0s9LUi14NbiuS7/oWM6UajuuGBr+egPrk9hceketP/JC7vXgwZKOWXUdABMFpEyT5GMIiUIEgwnX6kyhlnYwZp6xF80kvbH8GbRVY+c7bPYM4GjZVqYRK/Heb953YM7nLtUsJZynS6nxVpwkTmVr2GQFSiAJwgKaXGjk1fPCaGJ4x9TUPITPrxirXeQDC6gPz+8LWy4SLyFG6ZcTwMGh/emnHVI7Mgp25fQCOo7fWDpaYnesyJtQIM+S9IUlJb31ZYD9SUsVuSi4b5pB6HT7bRmQCRg51ln5Rk3rJzex6bcp4bQCEJEf6SzLIZMmi5+leQ/hVV4AeDllEPeB/XhuwtwrN6K6JtnPULxd1W4ucOh689JZwOLBP09Kdb7Hd1XMwMLUAfeAwP+uPPGLIUUiyay23q7FRcrbiP0rVifS+JwXw0MSn244zFVH6Qwt3guj7wSZS1OnSXz4VUsEIM0Xi7wGzzrrv3XToJkSwFczTxRnsfEEvGaIvsX4MyQ=="
