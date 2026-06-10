@@ -48,9 +48,12 @@ minio:
     enabled: false
 
   # ---- OIDC — Authentik Single Sign-On -------------------------
-  # Voraussetzung: SealedSecret `minio-oidc` im Namespace minio anlegen.
-  # Anleitung: docs/15-cert-login.md → Schritt 8 (MinIO)
-  # Zum Aktivieren: oidc.enabled: true setzen und Secret befüllen.
+  # Anleitung: docs/16-sso-alle-dienste.md → Schritt 4
+  # Zum Aktivieren:
+  #   1. Provider in Authentik anlegen, clientId + clientSecret notieren
+  #   2. oidc.enabled: true setzen
+  #   3. clientId (öffentlich, kein Geheimnis) direkt eintragen
+  #   4. clientSecret direkt eintragen (Repo ist privat — kein kubeseal nötig für MinIO)
   oidc:
     enabled: false
     configUrl: "http://authentik.homeserver/application/o/minio/.well-known/openid-configuration"
@@ -66,7 +69,9 @@ minio:
 #     --controller-name sealed-secrets-controller \
 #     --controller-namespace sealed-secrets --from-file=/dev/stdin
 # then paste the outputs below. See docs/13-argo-workflows.md.
-# OIDC SealedSecret — nach docs/15-cert-login.md Schritt 8 befüllen.
+# OIDC SealedSecret — Backup-Mechanismus, da die MinIO Community-Chart keine
+# native Secret-Referenz für OIDC unterstützt. Credentials oben direkt eintragen.
+# Anleitung: docs/16-sso-alle-dienste.md → Schritt 4 (Hinweis MinIO)
 oidcSecret:
   enabled: false
   name: minio-oidc

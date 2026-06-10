@@ -30,9 +30,9 @@ argo-workflows:
 
   server:
     # SSO-Modus via Authentik OIDC.
-    # Voraussetzung: SealedSecret `argo-workflows-sso` anlegen.
-    # Anleitung: docs/15-cert-login.md → Schritt 8 (Argo Workflows)
+    # Anleitung: docs/16-sso-alle-dienste.md → Schritt 3
     # Zum Aktivieren: authModes auf [sso] setzen, sso.enabled: true
+    # (erst nach dem Eintragen der Secrets in ssoSecret unten)
     authModes:
       - server
     # Serve plain HTTP — TLS is terminated/none behind Traefik on the LAN.
@@ -94,7 +94,12 @@ argo-workflows:
 #     --controller-namespace sealed-secrets --from-file=/dev/stdin
 # See docs/13-argo-workflows.md for the full workflow (incl. the GHCR token).
 
-# SSO — OIDC-Credentials für Authentik. Nach docs/15-cert-login.md Schritt 8 befüllen.
+# SSO — OIDC-Credentials für Authentik.
+# Anleitung: docs/16-sso-alle-dienste.md → Schritt 3.3
+# 1. kubeseal-Befehle aus der Anleitung ausführen
+# 2. Ausgabe hier eintragen
+# 3. enabled auf true setzen
+# 4. Gleichzeitig oben authModes: [sso] und sso.enabled: true setzen
 ssoSecret:
   enabled: false
   name: argo-workflows-sso
