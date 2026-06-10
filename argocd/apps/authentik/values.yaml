@@ -108,9 +108,6 @@ authentik:
       secretKeys:
         userPasswordKey: db_password
     primary:
-      updateStrategy:
-        rollingUpdate:
-          maxUnavailable: 1
       persistence:
         enabled: true
         storageClass: local-path
