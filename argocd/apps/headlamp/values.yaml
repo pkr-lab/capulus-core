@@ -17,30 +17,15 @@ headlamp:
 
   # ---- OIDC — Authentik Single Sign-On -------------------------
   # Anleitung: docs/16-sso-alle-dienste.md → Schritt 2
-  # Nach dem Versiegeln der Secrets: oidc.enabled auf true setzen.
+  # externalSecret referenziert das SealedSecret `headlamp-oidc` (unten konfiguriert).
+  # Erwartete Keys im Secret: clientID, clientSecret
   oidc:
-    enabled: true
     issuerURL: "http://authentik.homeserver/application/o/headlamp/"
     scopes: "openid email profile groups"
-    secretName: headlamp-oidc
-
-  env:
-    - name: HEADLAMP_CONFIG_OIDC_CLIENT_ID
-      valueFrom:
-        secretKeyRef:
-          name: headlamp-oidc
-          key: clientId
-          optional: true
-    - name: HEADLAMP_CONFIG_OIDC_CLIENT_SECRET
-      valueFrom:
-        secretKeyRef:
-          name: headlamp-oidc
-          key: clientSecret
-          optional: true
-    - name: HEADLAMP_CONFIG_OIDC_ISSUER_URL
-      value: "http://authentik.homeserver/application/o/headlamp/"
-    - name: HEADLAMP_CONFIG_OIDC_SCOPES
-      value: "openid email profile groups"
+    externalSecret:
+      enabled: true
+      name: headlamp-oidc
+      hasScopes: false
 
   resources:
     requests:
