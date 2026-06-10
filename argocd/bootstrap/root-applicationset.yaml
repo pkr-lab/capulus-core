@@ -30,6 +30,11 @@ spec:
       destination:
         server: https://kubernetes.default.svc
         namespace: "{{.path.basename}}"
+      ignoreDifferences:
+        - group: bitnami.com
+          kind: SealedSecret
+          jsonPointers:
+            - /status
       syncPolicy:
         automated:
           prune: true
