@@ -16,13 +16,8 @@ headlamp:
     tls: []
 
   # ---- OIDC — Authentik Single Sign-On -------------------------
-  # Voraussetzung: SealedSecret `headlamp-oidc` im Namespace headlamp anlegen.
-  # Anleitung: docs/15-cert-login.md → Schritt 8 (Headlamp)
-  #
-  # 1. Provider in Authentik anlegen (Redirect URI: http://headlamp.homeserver/oidc-callback)
-  # 2. Client ID und Secret mit kubeseal versiegeln
-  # 3. Versiegelte Werte in templates/oidc-sealedsecret.yaml eintragen
-  # 4. Danach `oidc.enabled: true` setzen
+  # Anleitung: docs/16-sso-alle-dienste.md → Schritt 2
+  # Nach dem Versiegeln der Secrets: oidc.enabled auf true setzen.
   oidc:
     enabled: false
     issuerURL: "http://authentik.homeserver/application/o/headlamp/"
@@ -61,7 +56,11 @@ headlamp:
     create: true
 
 # ---- SealedSecret-Konfiguration (consumed by templates/oidc-sealedsecret.yaml) ---
-# Nach Schritt 8 aus docs/15-cert-login.md ausfüllen.
+# Anleitung: docs/16-sso-alle-dienste.md → Schritt 2.3
+# 1. kubeseal-Befehle aus der Anleitung ausführen
+# 2. Ausgabe hier eintragen
+# 3. enabled auf true setzen
+# 4. Gleichzeitig oben oidc.enabled: true setzen
 oidcSecret:
   enabled: false
   name: headlamp-oidc
