@@ -1,6 +1,6 @@
 ---
 # ============================================================
-# Second-Server Playbook — provisioniert homeserver2 (192.168.178.95).
+# Second-Server Playbook — provisioniert worker-0 (192.168.178.95).
 #
 # Reihenfolge:
 #   1. k3s_agent  — tritt dem k3s-Cluster als Worker-Node bei
@@ -9,14 +9,14 @@
 #      Node Exporter) — laufen parallel zum Kubernetes-Workload
 #
 # Run with:
-#   make homeserver2
+#   make worker-0
 # Dry-run:
-#   make homeserver2-check
+#   make worker-0-check
 # Nur k3s-Agent:
 #   make k3s-agent
 # ============================================================
 
-- name: Deploy k3s agent and services on homeserver2
+- name: Deploy k3s agent and services on worker-0
   hosts: second_servers
   become: true
   roles:

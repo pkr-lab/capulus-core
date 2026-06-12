@@ -9,7 +9,7 @@ server={{ network_gateway }}
 # Wildcard: *.homeserver und homeserver selbst → statische Server-IP
 address=/homeserver/{{ network_static_ip }}
 
-# worker-0 (homeserver2) → statische IP
+# worker-0 (worker-0) → statische IP
 address=/worker-0/192.168.178.95
 
 # bind-dynamic statt bind-interfaces, damit dnsmasq die tailscale0-Adresse
