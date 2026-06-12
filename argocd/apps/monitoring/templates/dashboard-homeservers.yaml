@@ -9,7 +9,7 @@ data:
   homeservers.json: |
     {
       "annotations": {"list": []},
-      "description": "CPU, RAM, Disk und Netzwerk für homeserver und homeserver2",
+      "description": "CPU, RAM, Disk und Netzwerk für homeserver und worker-0",
       "editable": true,
       "graphTooltip": 1,
       "links": [],

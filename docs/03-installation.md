@@ -239,12 +239,12 @@ NAME         STATUS   ROLES                  AGE   VERSION
 homeserver   Ready    control-plane,master   5m    v1.29.3+k3s1
 ```
 
-Nach `make homeserver2` (beide Nodes):
+Nach `make worker-0` (beide Nodes):
 
 ```
 NAME          STATUS   ROLES                  AGE   VERSION
 homeserver    Ready    control-plane,master   5m    v1.29.3+k3s1
-homeserver2   Ready    <none>                 2m    v1.29.3+k3s1
+worker-0   Ready    <none>                 2m    v1.29.3+k3s1
 ```
 
 ### Alle System-Pods
@@ -363,21 +363,21 @@ Remote-Zugriff entweder:
 
 ---
 
-## Schritt 9 — homeserver2 als Worker-Node beitreten lassen
+## Schritt 9 — worker-0 als Worker-Node beitreten lassen
 
-Nachdem `make install` auf homeserver abgeschlossen ist, kann homeserver2
+Nachdem `make install` auf homeserver abgeschlossen ist, kann worker-0
 (192.168.178.95) als zweiter Kubernetes-Worker-Node dem Cluster beitreten.
 
 **Voraussetzungen:**
 
 - k3s läuft auf homeserver (Schritt 6 abgeschlossen)
-- homeserver2 ist per SSH erreichbar (Ansible-Konnektivität testen: `ansible -i ansible/inventory/hosts.yml homeserver2 -m ping`)
-- `vault_homeserver2_become_password` in `group_vars/all.yml` gesetzt
+- worker-0 ist per SSH erreichbar (Ansible-Konnektivität testen: `ansible -i ansible/inventory/hosts.yml worker-0 -m ping`)
+- `vault_worker-0_become_password` in `group_vars/all.yml` gesetzt
 
-**homeserver2 provisionieren:**
+**worker-0 provisionieren:**
 
 ```bash
-make homeserver2
+make worker-0
 ```
 
 Das Playbook führt in dieser Reihenfolge aus:
@@ -405,7 +405,7 @@ Erwartet:
 ```
 NAME          STATUS   ROLES                  AGE   VERSION          INTERNAL-IP
 homeserver    Ready    control-plane,master   10m   v1.29.3+k3s1    192.168.178.94
-homeserver2   Ready    <none>                 2m    v1.29.3+k3s1    192.168.178.95
+worker-0   Ready    <none>                 2m    v1.29.3+k3s1    192.168.178.95
 ```
 
 ---
