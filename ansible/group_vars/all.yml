@@ -95,8 +95,8 @@ semaphore_vault_password: !vault |
 # Semaphore REST API and idempotently creates two projects:
 #
 #   - home-server   (this repo, deployed against the home-server itself)
-#   - homeserver2   (dieses Repo, ansible/homeserver2.yml,
-#                    deployed to homeserver2 at 192.168.178.95)
+#   - worker-0   (dieses Repo, ansible/worker-0.yml,
+#                    deployed to worker-0 at 192.168.178.95)
 #
 # To add a third project, copy/extend the `semaphore_projects` list from
 # ansible/roles/semaphore_bootstrap/defaults/main.yml here. The role only
@@ -132,8 +132,8 @@ semaphore_projects:
         cron: "0 6 * * *"
         active: true
 
-  - name: homeserver2
-    description: "Deploy Docker-Compose-Dienste auf homeserver2 (192.168.178.95)."
+  - name: worker-0
+    description: "Deploy Docker-Compose-Dienste auf worker-0 (192.168.178.95)."
     repository:
       name: home-server-git
       url: "{{ argocd_repo_url }}"
@@ -146,24 +146,24 @@ semaphore_projects:
         ssh_key: semaphore-ssh-key
         content: |
           [second_servers]
-          homeserver2 ansible_host=192.168.178.95
+          worker-0 ansible_host=192.168.178.95
     templates:
-      - name: "Deploy homeserver2"
-        playbook: ansible/homeserver2.yml
+      - name: "Deploy worker-0"
+        playbook: ansible/worker-0.yml
         inventory: second_servers
         environment: default-env
         vault_key: vault-password
-        description: "Paperless-NGX, TinyTeller, Day Pilot, Node Exporter auf homeserver2."
+        description: "Paperless-NGX, TinyTeller, Day Pilot, Node Exporter auf worker-0."
     schedules:
       - name: "Daily 06:00"
-        template: "Deploy homeserver2"
+        template: "Deploy worker-0"
         cron: "0 6 * * *"
         active: true
 
 # ---- Scanner / Paperless Ingestion ------------------------
 # Fujitsu USB-Scanner direkt am Home-Server; scanbd hört auf den
 # Hardware-Button und schreibt Scans als PDF in den SMB-Share von
-# homeserver2, von wo Paperless-NGX sie automatisch einliest.
+# worker-0, von wo Paperless-NGX sie automatisch einliest.
 # Vollständige Migrations-Checkliste: docs/10-scanner.md.
 #
 # USB-IDs auf dem Host ermitteln (`lsusb | grep -i fujitsu`):
@@ -204,10 +204,10 @@ scanner_gotify_token: !vault |
           6638346364623337390a643262646631393332623861373737616666363931656434303366373963
           3037
 
-# ---- homeserver2 (192.168.178.95) --------------------------
-# sudo-Passwort für homeserver2 vault-verschlüsselt speichern:
-#   ansible-vault encrypt_string 'DEIN_SUDO_PW' --name 'vault_homeserver2_become_password'
-# vault_homeserver2_become_password: !vault | ...
+# ---- worker-0 (192.168.178.95) --------------------------
+# sudo-Passwort für worker-0 vault-verschlüsselt speichern:
+#   ansible-vault encrypt_string 'DEIN_SUDO_PW' --name 'vault_worker-0_become_password'
+# vault_worker-0_become_password: !vault | ...
 
 # ---- Optional: configure a static IP via Netplan ----------
 # Set to true to have Ansible deploy /etc/netplan/99-static.yaml.

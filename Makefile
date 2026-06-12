@@ -5,7 +5,7 @@ ANSIBLE_DIR := ansible
 INVENTORY   := $(ANSIBLE_DIR)/inventory/hosts.yml
 PLAYBOOK    := $(ANSIBLE_DIR)/site.yml
 VAULT_OPTS  ?= --ask-vault-pass
-HS2_PLAYBOOK := $(ANSIBLE_DIR)/homeserver2.yml
+HS2_PLAYBOOK := $(ANSIBLE_DIR)/worker-0.yml
 
 .DEFAULT_GOAL := help
 
@@ -29,7 +29,7 @@ check: ## Dry-run the full playbook (no changes applied).
 install: deps ## Provision the home server end-to-end.
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) $(VAULT_OPTS)
 
-.PHONY: common dnsmasq tailscale k3s k3s-agent argocd scanner semaphore semaphore-targets semaphore-bootstrap semaphore-bootstrap-local homeserver2 homeserver2-check
+.PHONY: common dnsmasq tailscale k3s k3s-agent argocd scanner semaphore semaphore-targets semaphore-bootstrap semaphore-bootstrap-local worker-0 worker-0-check
 common: ## Run only the `common` role (base OS, firewall, packages).
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags common $(VAULT_OPTS)
 
@@ -42,7 +42,7 @@ tailscale: ## Run only the `tailscale` role (VPN).
 k3s: ## Run only the `k3s` role (Kubernetes + Helm) on homeserver.
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags k3s $(VAULT_OPTS)
 
-k3s-agent: ## Join homeserver2 as k3s worker node (requires homeserver k3s running).
+k3s-agent: ## Join worker-0 as k3s worker node (requires homeserver k3s running).
 	ansible-playbook -i $(INVENTORY) $(HS2_PLAYBOOK) --tags k3s-agent $(VAULT_OPTS)
 
 argocd: ## Run only the `argocd` role (GitOps controller).
@@ -66,10 +66,10 @@ semaphore-bootstrap-local: ## Bootstrap Semaphore natively on the home server (n
 	    --extra-vars "ansible_host=127.0.0.1 ansible_user=$$(whoami)" \
 	    --tags semaphore-bootstrap $(VAULT_OPTS)
 
-homeserver2: ## Deploy all services on homeserver2 (192.168.178.95).
+worker-0: ## Deploy all services on worker-0 (192.168.178.95).
 	ansible-playbook -i $(INVENTORY) $(HS2_PLAYBOOK) $(VAULT_OPTS)
 
-homeserver2-check: ## Dry-run the homeserver2 playbook (no changes applied).
+worker-0-check: ## Dry-run the worker-0 playbook (no changes applied).
 	ansible-playbook -i $(INVENTORY) $(HS2_PLAYBOOK) --check --diff $(VAULT_OPTS)
 
 .PHONY: lint

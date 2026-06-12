@@ -27,7 +27,7 @@ Dieses Dokument beschreibt die High-Level-Architektur des Home-Server-Setups.
 │                k3s CLUSTER (2-Node)                                          │
 │                                                                              │
 │  ┌────────────────────────────────────┐  ┌──────────────────────────────┐   │
-│  │  HOMESERVER — 192.168.178.94       │  │  HOMESERVER2 — 192.168.178.95│   │
+│  │  HOMESERVER — 192.168.178.94       │  │  worker-0 — 192.168.178.95│   │
 │  │  Control-Plane + Worker            │  │  Worker-Node                 │   │
 │  │                                    │  │                              │   │
 │  │  ┌────────────┐ ┌───────────────┐  │  │  ┌──────────────────────┐   │   │
@@ -114,12 +114,12 @@ optimiert für ressourcenarme Umgebungen.
 | Node | IP | Rolle | Service |
 |------|----|-------|---------|
 | homeserver | 192.168.178.94 | Control-Plane + Worker | k3s server |
-| homeserver2 | 192.168.178.95 | Worker | k3s agent |
+| worker-0 | 192.168.178.95 | Worker | k3s agent |
 
-homeserver2 tritt dem Cluster über `k3s agent` bei — der Join-Token wird
+worker-0 tritt dem Cluster über `k3s agent` bei — der Join-Token wird
 per Ansible automatisch vom Control-Plane-Node gelesen. Kubernetes-Workloads
 werden vom Scheduler auf beide Nodes verteilt. Docker-Compose-Dienste auf
-homeserver2 laufen parallel dazu auf dem Host.
+worker-0 laufen parallel dazu auf dem Host.
 
 Mitgelieferte Komponenten:
 

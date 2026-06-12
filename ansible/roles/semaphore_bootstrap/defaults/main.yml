@@ -92,8 +92,8 @@ semaphore_projects:
         cron: "0 6 * * *"
         active: true
 
-  - name: homeserver2
-    description: "Deploy Docker-Compose-Dienste auf homeserver2 (192.168.178.95)."
+  - name: worker-0
+    description: "Deploy Docker-Compose-Dienste auf worker-0 (192.168.178.95)."
     repository:
       name: home-server-git
       url: "{{ argocd_repo_url }}"
@@ -106,16 +106,16 @@ semaphore_projects:
         ssh_key: semaphore-ssh-key
         content: |
           [second_servers]
-          homeserver2 ansible_host=192.168.178.95
+          worker-0 ansible_host=192.168.178.95
     templates:
-      - name: "Deploy homeserver2"
-        playbook: ansible/homeserver2.yml
+      - name: "Deploy worker-0"
+        playbook: ansible/worker-0.yml
         inventory: second_servers
         environment: default-env
         vault_key: vault-password
-        description: "Paperless-NGX, TinyTeller, Day Pilot, Node Exporter auf homeserver2."
+        description: "Paperless-NGX, TinyTeller, Day Pilot, Node Exporter auf worker-0."
     schedules:
       - name: "Daily 06:00"
-        template: "Deploy homeserver2"
+        template: "Deploy worker-0"
         cron: "0 6 * * *"
         active: true

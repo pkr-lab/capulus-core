@@ -1,6 +1,6 @@
 ---
-ansible_become_password: "{{ vault_homeserver2_become_password }}"
-hostname: homeserver2
+ansible_become_password: "{{ vault_worker-0_become_password }}"
+hostname: worker-0
 
 # ---- Paperless-NGX ------------------------------------------
 paperless_base_dir: /opt/paperless
@@ -22,7 +22,7 @@ cadvisor_port: 18080
 tinyteller_base_dir: /opt/tinyteller
 tinyteller_frontend_port: 3002
 tinyteller_backend_port: 3004
-tinyteller_cors_origin: "http://homeserver2:3002"
+tinyteller_cors_origin: "http://worker-0:3002"
 
 # ---- Day Pilot ----------------------------------------------
 day_pilot_base_dir: /opt/day-pilot
