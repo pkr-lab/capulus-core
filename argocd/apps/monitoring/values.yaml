@@ -102,11 +102,6 @@ victoria-metrics-k8s-stack:
     enabled: true
     spec:
       replicaCount: 1
-    ingress:
-      enabled: true
-      ingressClassName: traefik
-      hosts:
-        - alertmanager.homeserver
     config:
       route:
         receiver: gotify
@@ -116,10 +111,14 @@ victoria-metrics-k8s-stack:
         repeat_interval: 12h
         routes:
           - matchers:
+              - alertname=~"InfoInhibitor|Watchdog"
+            receiver: blackhole
+          - matchers:
               - severity="critical"
             receiver: ntfy
             continue: true
       receivers:
+        - name: blackhole
         - name: gotify
           webhook_configs:
             - url: 'http://gotify-bridge.gotify-bridge.svc.cluster.local:8080/alert'
