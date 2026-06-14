@@ -1,4 +1,7 @@
-{{- if .Values.ingressApi.enabled -}}
+{{- if .Values.ingressApi.enabled }}
+# Direkter Ingress ohne Authentik-ForwardAuth für native App-Clients (iGotify iOS).
+# Gotify-eigene Token-Auth schützt den Zugriff.
+# URL für iGotify: http://gotify-api.homeserver
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -6,37 +9,17 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "gotify.labels" . | nindent 4 }}
-  {{- with .Values.ingressApi.annotations }}
-  annotations:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
 spec:
-  {{- if .Values.ingressApi.className }}
-  ingressClassName: {{ .Values.ingressApi.className }}
-  {{- end }}
-  {{- if .Values.ingressApi.tls }}
-  tls:
-    {{- range .Values.ingressApi.tls }}
-    - hosts:
-        {{- range .hosts }}
-        - {{ . | quote }}
-        {{- end }}
-      secretName: {{ .secretName }}
-    {{- end }}
-  {{- end }}
+  ingressClassName: {{ .Values.ingress.className }}
   rules:
-    {{- range .Values.ingressApi.hosts }}
-    - host: {{ .host | quote }}
+    - host: {{ .Values.ingressApi.host | quote }}
       http:
         paths:
-          {{- range .paths }}
-          - path: {{ .path }}
-            pathType: {{ .pathType }}
+          - path: /
+            pathType: Prefix
             backend:
               service:
-                name: {{ include "gotify.fullname" $ }}
+                name: {{ include "gotify.fullname" . }}
                 port:
-                  number: {{ $.Values.service.port }}
-          {{- end }}
-    {{- end }}
+                  number: {{ .Values.service.port }}
 {{- end }}
