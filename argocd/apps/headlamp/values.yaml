@@ -25,6 +25,8 @@ headlamp:
       externalSecret:
         enabled: true
         name: headlamp-oidc
+    extraArgs:
+      - "-oidc-skip-tls-verify"
 
   # OIDC_ISSUER_URL und OIDC_SCOPES als direkte env-Variablen (nur value erlaubt
   # vom Chart-Schema; die Args werden vom Chart via externalSecret ergänzt).
