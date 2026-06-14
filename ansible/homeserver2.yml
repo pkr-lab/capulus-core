@@ -22,10 +22,6 @@
   roles:
     - role: k3s_agent
       tags: [k3s-agent, kubernetes]
-    - role: paperless
-      tags: [paperless]
-    - role: node_exporter_nas
-      tags: [node-exporter]
     - role: tinyteller
       tags: [tinyteller]
     - role: day_pilot
