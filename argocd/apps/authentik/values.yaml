@@ -82,9 +82,9 @@ authentik:
     resources:
       requests:
         cpu: 100m
-        memory: 256Mi
-      limits:
         memory: 512Mi
+      limits:
+        memory: 768Mi
 
     ingress:
       enabled: true
@@ -117,9 +117,9 @@ authentik:
     resources:
       requests:
         cpu: 50m
-        memory: 256Mi
+        memory: 384Mi
       limits:
-        memory: 512Mi
+        memory: 768Mi
 
   # ---- PostgreSQL (eingebettet) ---------------------------
   # Chart 2026.x nutzt library/postgres:17-bookworm statt des alten Bitnami-Images.
@@ -140,8 +140,8 @@ authentik:
       resources:
         requests:
           cpu: 50m
-          memory: 128Mi
-        limits:
           memory: 256Mi
+        limits:
+          memory: 512Mi
 
   # Redis ist ab Chart 2026.x kein eigenständiger Dienst mehr.
