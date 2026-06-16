@@ -1,0 +1,162 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: setup-scripts
+  namespace: windeployment
+data:
+  # setup.ps1 wird von autounattend.xml nach der Installation aufgerufen.
+  # Der Inhalt ist identisch mit scripts/windows/setup.ps1 im Repository.
+  # Bei Aenderungen: beide Dateien synchron halten.
+  setup.ps1: |
+    #Requires -RunAsAdministrator
+    param(
+        [string]$PCName = "",
+        [string]$PCPurpose = "PC",
+        [string]$AdminPassword = "DLRG-Admin-2024!",
+        [string]$UserPassword = "DLRG2024",
+        [switch]$NonInteractive
+    )
+
+    Set-StrictMode -Version Latest
+    $ErrorActionPreference = "Continue"
+
+    $LogFile = "C:\Windows\Logs\dlrg-setup.log"
+    New-Item -ItemType Directory -Force -Path "C:\Windows\Logs" | Out-Null
+
+    function Write-Log {
+        param([string]$Message, [string]$Level = "INFO")
+        $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        $line = "[$ts] [$Level] $Message"
+        Write-Host $line
+        Add-Content -Path $LogFile -Value $line -ErrorAction SilentlyContinue
+    }
+
+    Write-Log "=== DLRG OG Andernach - Windows Einrichtung gestartet ==="
+
+    if ($PCName -eq "") { $PCName = "DLRG-PC-" + (Get-Random -Maximum 9999).ToString("0000") }
+    if ($PCPurpose -eq "") { $PCPurpose = "PC" }
+    $DlrgDisplayName = "DLRG OG Andernach ($PCPurpose)"
+
+    Write-Log "Computername:    $PCName"
+    Write-Log "Anwendungszweck: $PCPurpose"
+
+    # Benutzer anlegen / aktualisieren
+    Write-Log "--- Benutzer ---"
+    function New-LocalUserSafe {
+        param($Name, $Password, $FullName, $Description, $Group)
+        try {
+            $secPw = ConvertTo-SecureString $Password -AsPlainText -Force
+            if (Get-LocalUser -Name $Name -ErrorAction SilentlyContinue) {
+                Set-LocalUser -Name $Name -FullName $FullName -Description $Description
+                Set-LocalUser -Name $Name -Password $secPw -PasswordNeverExpires $true
+                Write-Log "Benutzer '$Name' aktualisiert"
+            } else {
+                New-LocalUser -Name $Name -Password $secPw -FullName $FullName `
+                    -Description $Description -PasswordNeverExpires $true | Out-Null
+                Write-Log "Benutzer '$Name' erstellt"
+            }
+            Add-LocalGroupMember -Group $Group -Member $Name -ErrorAction SilentlyContinue
+        } catch { Write-Log "Fehler Benutzer '$Name': $_" "WARN" }
+    }
+
+    New-LocalUserSafe "Admin" $AdminPassword "Administrator" "DLRG OG Andernach - Administrator" "Administrators"
+    New-LocalUserSafe "dlrg" $UserPassword $DlrgDisplayName "DLRG OG Andernach - Standardbenutzer" "Users"
+    Disable-LocalUser -Name "Administrator" -ErrorAction SilentlyContinue
+    Disable-LocalUser -Name "Guest" -ErrorAction SilentlyContinue
+    Write-Log "Benutzer konfiguriert"
+
+    # Computername
+    if ($env:COMPUTERNAME -ne $PCName) {
+        Rename-Computer -NewName $PCName -Force -ErrorAction SilentlyContinue
+        Write-Log "Computername: $($env:COMPUTERNAME) -> $PCName (wirksam nach Neustart)"
+    }
+
+    # Chocolatey
+    Write-Log "--- Chocolatey ---"
+    if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        $env:Path += ";$env:ALLUSERSPROFILE\chocolatey\bin"
+    }
+    Write-Log "Chocolatey: $(choco --version 2>$null)"
+
+    # Software
+    Write-Log "--- Software ---"
+    @("googlechrome", "teamviewer", "microsoft-teams") | ForEach-Object {
+        Write-Log "Installiere: $_"
+        choco install $_ --yes --no-progress --limit-output 2>&1 | Out-Null
+        Write-Log "Fertig: $_"
+    }
+
+    # Microsoft 365 via ODT
+    Write-Log "--- Microsoft 365 ---"
+    $odtDir = "C:\Windows\Temp\odt"
+    New-Item -ItemType Directory -Force -Path $odtDir | Out-Null
+    @"
+    <Configuration>
+      <Add OfficeClientEdition="64" Channel="Current">
+        <Product ID="O365BusinessRetail">
+          <Language ID="de-de"/>
+          <ExcludeApp ID="Access"/>
+          <ExcludeApp ID="Groove"/>
+          <ExcludeApp ID="Lync"/>
+          <ExcludeApp ID="Publisher"/>
+        </Product>
+      </Add>
+      <Updates Enabled="TRUE"/>
+      <Display Level="None" AcceptEULA="TRUE"/>
+      <Logging Level="Standard" Path="C:\Windows\Logs"/>
+    </Configuration>
+    "@ | Out-File "$odtDir\config.xml" -Encoding UTF8
+    try {
+        $odtUrl = "https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_17531-20046.exe"
+        Invoke-WebRequest -Uri $odtUrl -OutFile "$odtDir\odt.exe" -UseBasicParsing -TimeoutSec 120
+        Start-Process "$odtDir\odt.exe" -ArgumentList "/quiet /extract:$odtDir" -Wait
+        Start-Process "$odtDir\setup.exe" -ArgumentList "/configure $odtDir\config.xml" -Wait
+        Write-Log "Microsoft 365 installiert (Aktivierung erfordert Anmeldung)"
+    } catch { Write-Log "M365-Fehler: $_" "WARN" }
+
+    # Systemeinstellungen
+    Write-Log "--- Systemeinstellungen ---"
+    Set-TimeZone -Id "W. Europe Standard Time" -ErrorAction SilentlyContinue
+    powercfg /change standby-timeout-ac 0 | Out-Null
+    powercfg /change hibernate-timeout-ac 0 | Out-Null
+    powercfg /change monitor-timeout-ac 30 | Out-Null
+    $telKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"
+    New-Item -Path $telKey -Force | Out-Null
+    Set-ItemProperty -Path $telKey -Name AllowTelemetry -Value 0 -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power" `
+        -Name HiberbootEnabled -Value 0 -ErrorAction SilentlyContinue
+
+    # WinRM fuer Ansible
+    Write-Log "--- WinRM ---"
+    try {
+        Enable-PSRemoting -Force -SkipNetworkProfileCheck | Out-Null
+        winrm set winrm/config/service/auth '@{Basic="true"}' | Out-Null
+        winrm set winrm/config/service '@{AllowUnencrypted="true"}' | Out-Null
+        New-NetFirewallRule -DisplayName "WinRM HTTP - DLRG LAN" -Direction Inbound `
+            -Protocol TCP -LocalPort 5985 -Action Allow `
+            -RemoteAddress "192.168.178.0/24" -ErrorAction SilentlyContinue | Out-Null
+        Write-Log "WinRM aktiviert"
+    } catch { Write-Log "WinRM-Fehler: $_" "WARN" }
+
+    Write-Log "=== Einrichtung abgeschlossen. Neustart in 60 Sekunden. ==="
+    Write-Log "WICHTIG: Admin-Passwort nach dem Neustart aendern!"
+    Start-Sleep -Seconds 60
+    Restart-Computer -Force
+
+  # winrm-enable.ps1: Standalone-Skript zum Aktivieren von WinRM
+  winrm-enable.ps1: |
+    #Requires -RunAsAdministrator
+    Enable-PSRemoting -Force -SkipNetworkProfileCheck
+    winrm set winrm/config/service/auth '@{Basic="true"}'
+    winrm set winrm/config/service '@{AllowUnencrypted="true"}'
+    New-NetFirewallRule -DisplayName "WinRM HTTP - DLRG LAN" -Direction Inbound `
+        -Protocol TCP -LocalPort 5985 -Action Allow `
+        -RemoteAddress "192.168.178.0/24" -ErrorAction SilentlyContinue | Out-Null
+    Set-Item WSMan:\localhost\Client\TrustedHosts -Value "192.168.178.*" -Force
+    Set-Service WinRM -StartupType Automatic
+    Start-Service WinRM
+    Write-Host "WinRM aktiviert. PC ist jetzt per Ansible verwaltbar."
+    Write-Host "IP: $((Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -like '192.168.*' } | Select-Object -First 1).IPAddress)"

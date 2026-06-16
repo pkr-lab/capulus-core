@@ -1,0 +1,53 @@
+---
+# DLRG OG Andernach - Windows-Setup-Hauptaufgabe
+- name: Benutzer anlegen und konfigurieren
+  ansible.builtin.import_tasks: users.yml
+  tags: [users]
+
+- name: Computernamen setzen
+  ansible.windows.win_hostname:
+    name: "{{ windows_pc_name }}"
+  register: hostname_result
+  tags: [hostname]
+
+- name: Systeminformationen anzeigen
+  ansible.windows.win_shell: |
+    [PSCustomObject]@{
+      Hostname     = $env:COMPUTERNAME
+      OS           = (Get-WmiObject Win32_OperatingSystem).Caption
+      Architecture = $env:PROCESSOR_ARCHITECTURE
+      IP           = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127.*' } | Select-Object -First 1).IPAddress
+    } | ConvertTo-Json
+  register: sysinfo
+  changed_when: false
+  tags: [always]
+
+- name: Systeminformationen ausgeben
+  ansible.builtin.debug:
+    msg: "{{ sysinfo.stdout | from_json }}"
+  tags: [always]
+
+- name: Windows-Einstellungen konfigurieren
+  ansible.builtin.import_tasks: settings.yml
+  tags: [settings]
+
+- name: Software installieren
+  ansible.builtin.import_tasks: software.yml
+  tags: [software]
+
+- name: Neustart erforderlich pruefen
+  ansible.windows.win_shell: |
+    if ((Get-Item "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager" -ErrorAction SilentlyContinue).GetValue("PendingFileRenameOperations")) {
+      "true"
+    } else {
+      "false"
+    }
+  register: reboot_pending
+  changed_when: false
+  tags: [always]
+
+- name: PC neu starten falls erforderlich
+  ansible.windows.win_reboot:
+    reboot_timeout: 300
+  when: hostname_result.reboot_required | default(false) or reboot_pending.stdout | trim == "true"
+  tags: [always]
