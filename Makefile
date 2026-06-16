@@ -69,6 +69,9 @@ worker-0: ## Deploy all services on worker-0 (192.168.178.95).
 worker-0-check: ## Dry-run the worker-0 playbook (no changes applied).
 	ansible-playbook -i $(INVENTORY) $(HS2_PLAYBOOK) --check --diff $(VAULT_OPTS)
 
+hdd: ## HDD (sda) auf worker-0 einrichten und dauerhaft mounten.
+	ansible-playbook -i $(INVENTORY) $(HS2_PLAYBOOK) --tags hdd $(VAULT_OPTS)
+
 .PHONY: windows windows-check windows-users windows-software windows-settings
 WIN_PLAYBOOK := $(ANSIBLE_DIR)/windows.yml
 

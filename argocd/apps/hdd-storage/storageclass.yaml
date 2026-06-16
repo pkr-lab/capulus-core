@@ -1,0 +1,24 @@
+# StorageClass "hdd": dynamischer Speicher aus /mnt/hdd auf worker-0 (192.168.178.95).
+#
+# Verwendung in PVCs:
+#   storageClassName: hdd
+#
+# Eigenschaften:
+#   - reclaimPolicy: Retain  → Daten bleiben beim Löschen einer PVC erhalten
+#   - WaitForFirstConsumer   → PV wird erst erstellt wenn ein Pod tatsächlich
+#                               auf worker-0 scheduled (kein verfrühtes Binding)
+#   - Nur auf worker-0 verfügbar (sda-Festplatte ist dort gemountet)
+#
+# Pods die "hdd" nutzen MÜSSEN auf worker-0 schedulen (NodeAffinity setzen).
+# Das local-path-provisioner-Deployment versagt die Volume-Erstellung auf
+# anderen Nodes (nodePathMap enthält nur worker-0).
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: hdd
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: homelab.io/hdd-path
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+allowVolumeExpansion: true

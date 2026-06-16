@@ -1,5 +1,6 @@
 ---
 # HTTP-Server: Stellt autounattend.xml, PowerShell-Skripte und WinPE-Dateien bereit.
+# Laeuft auf worker-0 (NodeAffinity), weil der PVC "hdd" nur dort verfuegbar ist.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,6 +18,15 @@ spec:
       labels:
         app: windeployment-http
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - worker-0
       containers:
         - name: nginx
           image: nginx:1.27-alpine
@@ -77,6 +87,7 @@ spec:
 ---
 # PXE-TFTP-Server: Liefert iPXE-Bootloader an bootende PCs.
 # Benoetigt hostNetwork fuer UDP-Port 69 (TFTP).
+# Laeuft auf worker-0 (NodeAffinity + hostNetwork → derselbe Node wie der HTTP-Server).
 # Optional - nur benoetigt wenn PXE-Boot ohne USB-Stick verwendet werden soll.
 apiVersion: apps/v1
 kind: Deployment
@@ -95,11 +106,22 @@ spec:
       labels:
         app: windeployment-pxe
     spec:
-      # hostNetwork: TFTP laeuft auf Port 69 (< 1024), kein NodePort moeglich
+      # hostNetwork: TFTP laeuft auf Port 69 (< 1024), kein NodePort moeglich.
+      # NodeAffinity: muss auf worker-0 laufen (PVC + TFTP im LAN).
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - worker-0
       initContainers:
-        # Init-Container: iPXE-Binaries aus dem offiziellen Release herunterladen
+        # Init-Container: iPXE-Binaries aus dem offiziellen Release herunterladen.
+        # Legt Dateien in /tftpboot (PVC-Subpath) ab; beim Neustart ueberspringen.
         - name: download-ipxe
           image: alpine:3.20
           command:
@@ -160,3 +182,4 @@ spec:
         - name: tftpboot
           persistentVolumeClaim:
             claimName: windeployment-files
+            readOnly: false

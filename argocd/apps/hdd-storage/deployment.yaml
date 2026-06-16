@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hdd-local-path-provisioner
+  namespace: hdd-storage
+  labels:
+    app: hdd-local-path-provisioner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hdd-local-path-provisioner
+  template:
+    metadata:
+      labels:
+        app: hdd-local-path-provisioner
+    spec:
+      serviceAccountName: hdd-local-path-provisioner
+      # Provisioner läuft auf dem Control-Plane, verwaltet aber Volumes auf worker-0.
+      # Kein NodeAffinity nötig — der Provisioner selbst hat keinen Disk-Zugriff;
+      # er startet Helper-Pods auf dem Ziel-Node die das Verzeichnis anlegen.
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: hdd-local-path-provisioner
+          # Gleiche Version wie der k3s-interne local-path-provisioner.
+          # Beim Upgrade von k3s: diese Version entsprechend anpassen.
+          image: rancher/local-path-provisioner:v0.0.30
+          imagePullPolicy: IfNotPresent
+          command:
+            - local-path-provisioner
+            - --debug
+            - start
+            - --config=/etc/local-path-config/config.json
+            - --provisioner-name=homelab.io/hdd-path
+            - --helper-image=busybox:stable
+            - --configmap-name=hdd-local-path-config
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+            - name: config
+              mountPath: /etc/local-path-config
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "20m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+      volumes:
+        - name: config
+          configMap:
+            name: hdd-local-path-config
