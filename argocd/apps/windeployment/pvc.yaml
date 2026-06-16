@@ -6,7 +6,8 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: local-path
+  # StorageClass "hdd" → /mnt/hdd/k8s-storage auf worker-0 (7,3 TB sda)
+  storageClassName: hdd
   resources:
     requests:
-      storage: 20Gi
+      storage: 500Gi
