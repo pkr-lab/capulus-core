@@ -7,15 +7,23 @@ Die Deployment-Konfiguration liegt unter `argocd/apps/zammad/`.
 
 ## Übersicht
 
-| Komponente        | Technologie                    | Namespace   |
-|-------------------|-------------------------------|-------------|
-| Zammad App        | Rails + Puma                  | `zammad`    |
-| Datenbank         | PostgreSQL (Bitnami Sub-Chart) | `zammad`    |
-| Cache / Websockets| Redis (Bitnami Sub-Chart)      | `zammad`    |
-| Volltextsuche     | PostgreSQL-basiert (eingebaut) | —           |
-| Ingress           | Traefik                       | `zammad`    |
-| Secrets           | SealedSecrets                 | `zammad`    |
-| Auto-Updates      | Renovate (patch + minor)      | —           |
+| Komponente        | Technologie                       | Namespace   |
+|-------------------|-----------------------------------|-------------|
+| Zammad App        | Rails + Puma                      | `zammad`    |
+| Datenbank         | PostgreSQL (Bitnami Sub-Chart)     | `zammad`    |
+| Cache             | Memcached (CloudPirates OCI)       | `zammad`    |
+| Pub/Sub / Sessions| Redis (CloudPirates OCI Sub-Chart) | `zammad`    |
+| Volltextsuche     | PostgreSQL-basiert (eingebaut)     | —           |
+| Ingress           | Traefik                           | `zammad`    |
+| Secrets           | SealedSecrets                     | `zammad`    |
+| Persistenz        | StorageClass `hdd` auf worker-0    | —           |
+| Auto-Updates      | Renovate (patch + minor)          | —           |
+
+PostgreSQL und Redis laufen mit `storageClassName: hdd` und sind via
+NodeAffinity an `worker-0` gebunden (siehe [docs/18-hdd-storage.md](18-hdd-storage.md)).
+Da Zammad Attachments standardmäßig in der Datenbank speichert
+(`storageVolume.enabled: false`), kann die PostgreSQL-PVC mit der Zeit groß
+werden — auf der 7,3-TB-HDD statt der Homeserver-SSD ist das unkritisch.
 
 ---
 
@@ -23,6 +31,11 @@ Die Deployment-Konfiguration liegt unter `argocd/apps/zammad/`.
 
 - ArgoCD läuft und das Root-ApplicationSet ist aktiv (`argocd/bootstrap/root-applicationset.yaml`)
 - Sealed-Secrets Controller ist installiert (`argocd/apps/sealed-secrets/`)
+- **`hdd-storage`-App ist deployt** (`argocd/apps/hdd-storage/`) und die
+  StorageClass `hdd` existiert: `kubectl get storageclass hdd`
+- **worker-0 ist online** und `/mnt/hdd` ist gemountet (siehe
+  [docs/18-hdd-storage.md](18-hdd-storage.md)) — sonst bleiben die
+  PostgreSQL- und Redis-PVCs auf `Pending`
 - `kubeseal` CLI ist lokal installiert
 - `kubectl` ist mit dem Cluster verbunden
 
@@ -113,10 +126,15 @@ kubectl get pods -n zammad -w
 ```
 
 Typische Pod-Reihenfolge beim ersten Start:
-1. `zammad-postgresql-0` — startet zuerst (Datenbankinitialisierung)
-2. `zammad-redis-master-0` — startet parallel
+1. `zammad-postgresql-0` und `zammad-redis-*` — starten zuerst auf **worker-0**
+   (NodeAffinity, PVCs auf der HDD-StorageClass)
+2. `zammad-memcached-*` — startet parallel (kein PVC, läuft überall)
 3. `zammad-init-*` — führt Datenbankmigrationen durch
 4. `zammad-*` (App-Pod) — startet nach erfolgreichem Init
+
+> Falls `zammad-postgresql-0` / `zammad-redis-*` dauerhaft `Pending` bleiben:
+> worker-0 ist offline oder die `hdd`-StorageClass fehlt — siehe
+> [docs/18-hdd-storage.md](18-hdd-storage.md) → Fehlerbehebung.
 
 ---
 
@@ -126,7 +144,7 @@ Nach dem erfolgreichen Start ist Zammad unter http://zammad.homeserver erreichba
 
 1. Browser öffnen: `http://zammad.homeserver`
 2. Setup-Wizard durchlaufen:
-   - **System-URL** eintragen: `https://zammad.pke-lab.de`
+   - **System-URL** eintragen: `http://zammad.homeserver`
    - **Admin-E-Mail** und Passwort festlegen
    - E-Mail-Kanal konfigurieren (optional, kann später gemacht werden)
 3. Login mit den im Wizard erstellten Zugangsdaten
@@ -152,9 +170,12 @@ ansible-playbook ansible/site.yml --tags dnsmasq
 
 ---
 
-## Schritt 6 — HTTPS / TLS (optional)
+## Schritt 6 — Öffentlicher Hostname + HTTPS / TLS (optional)
 
-Für TLS via Traefik die Ingress-Annotation in `values.yaml` anpassen:
+Aktuell ist nur `zammad.homeserver` (intern, HTTP) konfiguriert. Für einen
+öffentlichen Zugriff per Domain zuerst einen weiteren Host in
+`argocd/apps/zammad/values.yaml` → `zammad.ingress.hosts` ergänzen, dann TLS
+aktivieren:
 
 ```yaml
 zammad:
@@ -162,9 +183,18 @@ zammad:
     annotations:
       traefik.ingress.kubernetes.io/router.entrypoints: websecure
       traefik.ingress.kubernetes.io/router.tls: "true"
+    hosts:
+      - host: zammad.homeserver
+        paths:
+          - path: /
+            pathType: Prefix
+      - host: zammad.eure-domain.de
+        paths:
+          - path: /
+            pathType: Prefix
     tls:
       - hosts:
-          - zammad.pke-lab.de
+          - zammad.eure-domain.de
         secretName: zammad-tls  # Cert-Manager oder manuelles TLS-Secret
 ```
 
@@ -172,15 +202,17 @@ zammad:
 
 ## Schritt 7 — SSO via Authentik (optional)
 
-Zammad unterstützt SAML-basiertes SSO. Anleitung:
+Zammad unterstützt SAML-basiertes SSO. Setzt einen öffentlichen Hostname
+(Schritt 6) voraus, da die ACS-URL von außerhalb des Clusters erreichbar
+sein muss (z. B. `https://zammad.eure-domain.de`).
 
 ### 7.1 Authentik SAML-Provider erstellen
 
 In Authentik:
 1. **Applications → Providers → Create** → SAML Provider
 2. **Name:** `Zammad`
-3. **ACS URL:** `https://zammad.pke-lab.de/auth/saml/callback`
-4. **Issuer:** `https://zammad.pke-lab.de`
+3. **ACS URL:** `https://zammad.eure-domain.de/auth/saml/callback`
+4. **Issuer:** `https://zammad.eure-domain.de`
 5. **Service Provider Binding:** `Post`
 6. Metadaten-URL notieren: `https://authentik.pke-lab.de/...`
 
@@ -244,8 +276,20 @@ kubectl get pod -n zammad -l app.kubernetes.io/name=postgresql
 
 # Direkte DB-Verbindung testen
 kubectl exec -it -n zammad zammad-postgresql-0 -- \
-  psql -U zammad -d zammad -c '\dt'
+  psql -U zammad -d zammad_production -c '\dt'
 ```
+
+### PostgreSQL- / Redis-PVC bleibt `Pending`
+
+Beide laufen auf der HDD-StorageClass und sind an `worker-0` gebunden:
+
+```bash
+kubectl describe pvc -n zammad data-zammad-postgresql-0
+kubectl get nodes worker-0   # muss Ready sein
+kubectl -n hdd-storage get pods
+```
+
+Details: [docs/18-hdd-storage.md](18-hdd-storage.md) → Fehlerbehebung.
 
 ### ArgoCD zeigt OutOfSync
 
@@ -261,13 +305,19 @@ argocd app sync zammad --force
 
 ## Ressourcenverbrauch (Richtwerte Home Lab)
 
-| Komponente     | CPU Request | RAM Request | RAM Limit |
-|----------------|-------------|-------------|-----------|
-| Zammad App     | 100m        | 512Mi       | 1Gi       |
-| PostgreSQL     | 50m         | 256Mi       | 512Mi     |
-| Redis          | 25m         | 64Mi        | 128Mi     |
-| Nginx Sidecar  | 25m         | 64Mi        | 128Mi     |
-| **Gesamt**     | ~200m       | ~896Mi      | ~1.8Gi    |
+| Komponente     | CPU Request | RAM Request | RAM Limit | Storage              |
+|----------------|-------------|-------------|-----------|-----------------------|
+| Zammad App     | 100m        | 512Mi       | 1Gi       | —                      |
+| PostgreSQL     | 50m         | 256Mi       | 512Mi     | 50Gi (`hdd`, worker-0) |
+| Redis          | —           | —           | —         | 8Gi (`hdd`, worker-0)  |
+| Nginx Sidecar  | 25m         | 64Mi        | 128Mi     | —                      |
+| **Gesamt**     | ~200m       | ~896Mi      | ~1.8Gi    | 58Gi auf der HDD       |
+
+PostgreSQL- und Redis-Storage liegen bewusst auf `worker-0`/`/mnt/hdd`
+(7,3 TB) statt auf der Homeserver-System-SSD — siehe
+[docs/18-hdd-storage.md](18-hdd-storage.md). Die 50Gi für PostgreSQL sind
+ein Startwert; da Attachments in der DB liegen, ggf. nach Bedarf erhöhen
+(`zammad.postgresql.primary.persistence.size`).
 
 ---
 
