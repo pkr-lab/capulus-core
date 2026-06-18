@@ -17,7 +17,7 @@ ArgoCD          =  CD   (deploy argocd/apps/* to the cluster)
   schedules. There is no public ingress, so git webhooks are out of scope.
 - **Auth:** server auth-mode — no login, open on LAN/Tailnet (same trust model
   as Grafana/Headlamp/Semaphore). Reachable only through the Tailnet/LAN.
-- **Image builds:** Kaniko builds and pushes to GHCR (`ghcr.io/jaydee94/...`)
+- **Image builds:** Kaniko builds and pushes to GHCR (`ghcr.io/pke/...`)
   using a sealed docker-config secret. No in-cluster registry.
 
 | Service        | URL                              | Notes                       |
@@ -72,7 +72,7 @@ it under the `.dockerconfigjson` key. Paste into
 `ghcrSecret.encryptedDockerConfigJson`:
 
 ```bash
-GHCR_USER=jaydee94
+GHCR_USER=pke
 GHCR_PAT=ghp_xxx           # PAT with write:packages
 AUTH=$(printf '%s:%s' "$GHCR_USER" "$GHCR_PAT" | base64 -w0)
 printf '{"auths":{"ghcr.io":{"auth":"%s"}}}' "$AUTH" \
@@ -121,14 +121,14 @@ archived logs confirms the artifact repository is wired correctly.
 
 ```bash
 argo submit -n argo-workflows --from workflowtemplate/kaniko-build-push \
-  -p repo=https://github.com/Jaydee94/<repo-with-Dockerfile>.git \
+  -p repo=https://github.com/pke/<repo-with-Dockerfile>.git \
   -p revision=main \
   -p context=. \
   -p dockerfile=Dockerfile \
-  -p image=ghcr.io/jaydee94/<image>:latest
+  -p image=ghcr.io/pke/<image>:latest
 ```
 
-The image appears under `ghcr.io/jaydee94/...`. ArgoCD can then deploy it as
+The image appears under `ghcr.io/pke/...`. ArgoCD can then deploy it as
 usual (CD stays with ArgoCD).
 
 ### 3.3 Scheduled runs (`CronWorkflow`)
