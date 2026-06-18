@@ -103,8 +103,8 @@ victoria-metrics-k8s-stack:
 
   # ---- Alertmanager ----------------------------------------
   # Routing:
-  #   default → gotify-bridge (alle Alerts als kurzer Log)
-  #   severity=critical → ntfy /Home-Lab (iOS Push) + gotify (continue: true)
+  #   alle Alerts (außer InfoInhibitor/Watchdog) → gotify-bridge
+  #   zusätzlich severity=critical → auch ntfy /Home-Lab (iOS Push)
   #
   # gotify-bridge: argocd/apps/gotify-bridge/ — übersetzt Alertmanager-JSON
   #   in Gotifys message-API. Token als Secret `gotify-bridge-token` anlegen
@@ -116,7 +116,7 @@ victoria-metrics-k8s-stack:
       replicaCount: 1
     config:
       route:
-        receiver: gotify
+        receiver: blackhole
         group_by: ["alertname", "namespace"]
         group_wait: 30s
         group_interval: 5m
@@ -125,10 +125,19 @@ victoria-metrics-k8s-stack:
           - matchers:
               - alertname=~"InfoInhibitor|Watchdog"
             receiver: blackhole
+          # Match-all sibling: every alert reaching here goes to gotify, then
+          # (continue: true) falls through to the severity=critical route
+          # below. A bare top-level receiver does NOT get combined with a
+          # matched child route — Alertmanager only falls back to it when no
+          # child matches at all — so the "default + critical" fan-out has
+          # to be modeled as explicit sibling routes.
+          - matchers:
+              - severity=~".*"
+            receiver: gotify
+            continue: true
           - matchers:
               - severity="critical"
             receiver: ntfy
-            continue: true
       receivers:
         - name: blackhole
         - name: gotify
