@@ -1,0 +1,380 @@
+{{/*
+WorkflowTemplate: pod-maintenance
+Ablauf:
+  1. Alertmanager-Silence anlegen (verhindert False-Alarms im Monitoring)
+  2. Alle Pods suchen, die länger als `min-age-days` Tage laufen
+     (ausgenommen: kube-system, argocd, argo-workflows, monitoring, sealed-secrets)
+  3. Zugehörige Deployments / StatefulSets auf 0 Replicas skalieren
+  4. 2 Stunden warten (Wartungsfenster)
+  5. Alle Workloads wieder auf die ursprüngliche Replica-Anzahl hochfahren
+  6. Gesundheitsprüfung — alle Pods müssen innerhalb von 10 Min. Ready sein
+  7. Alertmanager-Silence wieder löschen
+
+Alertmanager-URL:  http://vmalertmanager-monitoring.monitoring.svc.cluster.local:9093
+Silence-Matcher:   cluster="homeserver"  → trifft alle Cluster-Alerts
+*/}}
+{{`
+---
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: pod-maintenance
+spec:
+  serviceAccountName: argo-workflow
+  entrypoint: maintenance-steps
+  arguments:
+    parameters:
+      - name: alertmanager-url
+        value: "http://vmalertmanager-monitoring.monitoring.svc.cluster.local:9093"
+      - name: skip-namespaces
+        value: "kube-system argocd argo-workflows monitoring sealed-secrets"
+      - name: min-age-days
+        value: "7"
+
+  templates:
+
+    # ------------------------------------------------------------------ #
+    # Hauptablauf (sequentielle Steps)                                     #
+    # ------------------------------------------------------------------ #
+    - name: maintenance-steps
+      steps:
+        - - name: create-silence
+            template: alertmanager-create-silence
+            arguments:
+              parameters:
+                - name: alertmanager-url
+                  value: "{{workflow.parameters.alertmanager-url}}"
+
+        - - name: find-and-scale-down
+            template: scale-down-old-pods
+            arguments:
+              parameters:
+                - name: skip-namespaces
+                  value: "{{workflow.parameters.skip-namespaces}}"
+                - name: min-age-days
+                  value: "{{workflow.parameters.min-age-days}}"
+
+        - - name: maintenance-sleep
+            template: sleep-2h
+            when: "'{{steps.find-and-scale-down.outputs.parameters.has-targets}}' == 'true'"
+
+        - - name: scale-up
+            template: restore-scale
+            when: "'{{steps.find-and-scale-down.outputs.parameters.has-targets}}' == 'true'"
+            arguments:
+              parameters:
+                - name: targets
+                  value: "{{steps.find-and-scale-down.outputs.parameters.targets}}"
+
+        - - name: verify-health
+            template: check-health
+            when: "'{{steps.find-and-scale-down.outputs.parameters.has-targets}}' == 'true'"
+            arguments:
+              parameters:
+                - name: targets
+                  value: "{{steps.find-and-scale-down.outputs.parameters.targets}}"
+
+        - - name: delete-silence
+            template: alertmanager-delete-silence
+            arguments:
+              parameters:
+                - name: alertmanager-url
+                  value: "{{workflow.parameters.alertmanager-url}}"
+                - name: silence-id
+                  value: "{{steps.create-silence.outputs.parameters.silence-id}}"
+
+    # ------------------------------------------------------------------ #
+    # Step 1: Alertmanager-Silence anlegen                                 #
+    # Matcher: cluster=homeserver → alle Cluster-Alerts werden stummge-   #
+    # schaltet. Läuft automatisch nach 3h ab (Fallback falls Delete fehlt) #
+    # ------------------------------------------------------------------ #
+    - name: alertmanager-create-silence
+      inputs:
+        parameters:
+          - name: alertmanager-url
+      outputs:
+        parameters:
+          - name: silence-id
+            valueFrom:
+              path: /tmp/silence-id
+      container:
+        image: alpine:3.20
+        command: [sh, -c]
+        args:
+          - |
+            apk add --no-cache curl > /dev/null 2>&1
+            AM_URL="{{inputs.parameters.alertmanager-url}}"
+            START=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            END=$(date -u -d "@$(($(date +%s) + 10800))" +"%Y-%m-%dT%H:%M:%SZ")
+
+            echo "Lege Alertmanager-Silence an: $START → $END"
+            RESPONSE=$(curl -sf -X POST "${AM_URL}/api/v2/silences" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"matchers\": [{
+                  \"name\": \"cluster\",
+                  \"value\": \"homeserver\",
+                  \"isRegex\": false,
+                  \"isEqual\": true
+                }],
+                \"startsAt\": \"${START}\",
+                \"endsAt\": \"${END}\",
+                \"createdBy\": \"argo-maintenance\",
+                \"comment\": \"Nightly pod maintenance window (pods older than 7 days)\"
+              }") || {
+                echo "WARNUNG: Silence konnte nicht angelegt werden — Wartung läuft trotzdem weiter"
+                echo -n "none" > /tmp/silence-id
+                exit 0
+              }
+
+            SILENCE_ID=$(echo "$RESPONSE" | sed 's/.*"silenceID":"\([^"]*\)".*/\1/')
+            echo "Silence-ID: $SILENCE_ID"
+            echo -n "$SILENCE_ID" > /tmp/silence-id
+
+    # ------------------------------------------------------------------ #
+    # Step 2: Alte Pods finden und Scale-Down                              #
+    # Ausgabe: targets  — semikolon-getrennte Liste "ns:Kind:Name:Replicas"#
+    #          has-targets — "true" / "false"                              #
+    # ------------------------------------------------------------------ #
+    - name: scale-down-old-pods
+      inputs:
+        parameters:
+          - name: skip-namespaces
+          - name: min-age-days
+      outputs:
+        parameters:
+          - name: targets
+            valueFrom:
+              path: /tmp/targets
+          - name: has-targets
+            valueFrom:
+              path: /tmp/has-targets
+      container:
+        image: alpine:3.20
+        command: [sh, -c]
+        args:
+          - |
+            apk add --no-cache kubectl > /dev/null 2>&1
+
+            SKIP_NS="{{inputs.parameters.skip-namespaces}}"
+            MIN_AGE_DAYS={{inputs.parameters.min-age-days}}
+            MIN_AGE_SEC=$((MIN_AGE_DAYS * 86400))
+            NOW=$(date +%s)
+
+            > /tmp/targets_raw
+
+            echo "=== Suche Pods älter als ${MIN_AGE_DAYS} Tage ==="
+
+            kubectl get pods -A --no-headers \
+              -o custom-columns='NS:.metadata.namespace,NAME:.metadata.name,START:.status.startTime,PHASE:.status.phase' | \
+            while read -r ns pod_name start_time phase; do
+
+              # Ausgeschlossene Namespaces überspringen
+              skip=false
+              for sn in $SKIP_NS; do
+                [ "$ns" = "$sn" ] && skip=true && break
+              done
+              $skip && continue
+
+              # Nur laufende Pods
+              [ "$phase" != "Running" ] && continue
+
+              # Startzeit vorhanden?
+              [ -z "$start_time" ] || [ "$start_time" = "<none>" ] && continue
+
+              # Alter berechnen
+              start_epoch=$(date -d "$start_time" +%s 2>/dev/null) || continue
+              age=$((NOW - start_epoch))
+              [ "$age" -le "$MIN_AGE_SEC" ] && continue
+
+              echo "Alter Pod: $ns/$pod_name (Alter: $((age/86400))d $((age%86400/3600))h)"
+
+              # Owner-Reference ermitteln
+              owner_kind=$(kubectl get pod "$pod_name" -n "$ns" \
+                -o jsonpath='{.metadata.ownerReferences[0].kind}' 2>/dev/null) || continue
+              owner_name=$(kubectl get pod "$pod_name" -n "$ns" \
+                -o jsonpath='{.metadata.ownerReferences[0].name}' 2>/dev/null) || continue
+              [ -z "$owner_kind" ] && continue
+
+              # Bei ReplicaSet: Parent-Deployment ermitteln
+              if [ "$owner_kind" = "ReplicaSet" ]; then
+                rs_pk=$(kubectl get rs "$owner_name" -n "$ns" \
+                  -o jsonpath='{.metadata.ownerReferences[0].kind}' 2>/dev/null) || continue
+                rs_pn=$(kubectl get rs "$owner_name" -n "$ns" \
+                  -o jsonpath='{.metadata.ownerReferences[0].name}' 2>/dev/null) || continue
+                [ -z "$rs_pk" ] && continue
+                owner_kind="$rs_pk"
+                owner_name="$rs_pn"
+              fi
+
+              [ "$owner_kind" != "Deployment" ] && [ "$owner_kind" != "StatefulSet" ] && continue
+
+              # Aktuelle Replica-Anzahl merken
+              if [ "$owner_kind" = "Deployment" ]; then
+                replicas=$(kubectl get deployment "$owner_name" -n "$ns" \
+                  -o jsonpath='{.spec.replicas}' 2>/dev/null)
+              else
+                replicas=$(kubectl get statefulset "$owner_name" -n "$ns" \
+                  -o jsonpath='{.spec.replicas}' 2>/dev/null)
+              fi
+              [ -z "$replicas" ] && replicas=1
+
+              echo "$ns:$owner_kind:$owner_name:$replicas" >> /tmp/targets_raw
+            done
+
+            # Deduplizieren
+            sort -u /tmp/targets_raw > /tmp/targets_dedup
+            COUNT=$(wc -l < /tmp/targets_dedup | tr -d ' ')
+
+            echo "=== $COUNT Workload(s) für Neustart gefunden ==="
+
+            if [ "$COUNT" = "0" ]; then
+              echo "Keine Pods älter als ${MIN_AGE_DAYS} Tage. Kein Neustart nötig."
+              echo -n "" > /tmp/targets
+              echo -n "false" > /tmp/has-targets
+              exit 0
+            fi
+
+            cat /tmp/targets_dedup
+
+            # Semikolon-getrennt für Argo-Parameter (vermeidet Zeilenumbrüche in YAML)
+            TARGETS_LINE=$(tr '\n' ';' < /tmp/targets_dedup | sed 's/;$//')
+
+            echo "=== Scale-Down ==="
+            while IFS=':' read -r ns kind name replicas; do
+              echo "↓ $kind $ns/$name (war: $replicas Replica(s))"
+              case "$kind" in
+                Deployment)   kubectl scale deployment  "$name" -n "$ns" --replicas=0 ;;
+                StatefulSet)  kubectl scale statefulset "$name" -n "$ns" --replicas=0 ;;
+              esac
+            done < /tmp/targets_dedup
+
+            echo -n "$TARGETS_LINE" > /tmp/targets
+            echo -n "true"          > /tmp/has-targets
+            echo "=== Scale-Down abgeschlossen — Wartungsfenster startet ==="
+
+    # ------------------------------------------------------------------ #
+    # Step 3: 2 Stunden warten                                            #
+    # ------------------------------------------------------------------ #
+    - name: sleep-2h
+      container:
+        image: alpine:3.20
+        command: [sh, -c]
+        args:
+          - |
+            WAKE=$(date -u -d "@$(($(date +%s) + 7200))" +"%H:%M UTC" 2>/dev/null || echo "+2h")
+            echo "Wartungspause: 2 Stunden. Aufwachen um ca. ${WAKE}."
+            sleep 7200
+            echo "Wartungsfenster beendet: $(date -u +'%H:%M UTC')"
+
+    # ------------------------------------------------------------------ #
+    # Step 4: Scale-Up auf ursprüngliche Replica-Anzahl                   #
+    # ------------------------------------------------------------------ #
+    - name: restore-scale
+      inputs:
+        parameters:
+          - name: targets
+      container:
+        image: alpine:3.20
+        command: [sh, -c]
+        args:
+          - |
+            apk add --no-cache kubectl > /dev/null 2>&1
+
+            echo "=== Scale-Up ==="
+            echo "{{inputs.parameters.targets}}" | tr ';' '\n' > /tmp/targets_up
+
+            while IFS=':' read -r ns kind name replicas; do
+              [ -z "$ns" ] && continue
+              echo "↑ $kind $ns/$name → $replicas Replica(s)"
+              case "$kind" in
+                Deployment)   kubectl scale deployment  "$name" -n "$ns" --replicas="$replicas" ;;
+                StatefulSet)  kubectl scale statefulset "$name" -n "$ns" --replicas="$replicas" ;;
+              esac
+            done < /tmp/targets_up
+            echo "=== Scale-Up abgeschlossen ==="
+
+    # ------------------------------------------------------------------ #
+    # Step 5: Gesundheitsprüfung (max. 10 Minuten)                        #
+    # ------------------------------------------------------------------ #
+    - name: check-health
+      inputs:
+        parameters:
+          - name: targets
+      container:
+        image: alpine:3.20
+        command: [sh, -c]
+        args:
+          - |
+            apk add --no-cache kubectl > /dev/null 2>&1
+
+            TIMEOUT=600
+            FAIL=0
+
+            echo "=== Gesundheitsprüfung (Timeout: ${TIMEOUT}s) ==="
+            echo "{{inputs.parameters.targets}}" | tr ';' '\n' > /tmp/targets_check
+
+            while IFS=':' read -r ns kind name replicas; do
+              [ -z "$ns" ] && continue
+              echo "Warte auf $kind $ns/$name ($replicas/$replicas ready)..."
+              deadline=$(($(date +%s) + TIMEOUT))
+              ok=0
+
+              while [ "$(date +%s)" -le "$deadline" ]; do
+                if [ "$kind" = "Deployment" ]; then
+                  ready=$(kubectl get deployment  "$name" -n "$ns" \
+                    -o jsonpath='{.status.readyReplicas}' 2>/dev/null)
+                else
+                  ready=$(kubectl get statefulset "$name" -n "$ns" \
+                    -o jsonpath='{.status.readyReplicas}' 2>/dev/null)
+                fi
+
+                if [ "${ready:-0}" = "$replicas" ]; then
+                  echo "OK: $kind $ns/$name ($replicas/$replicas)"
+                  ok=1
+                  break
+                fi
+
+                echo "  … ${ready:-0}/$replicas ready — nächster Check in 15s"
+                sleep 15
+              done
+
+              if [ "$ok" = "0" ]; then
+                echo "TIMEOUT: $kind $ns/$name ist nach ${TIMEOUT}s nicht ready"
+                FAIL=1
+              fi
+            done < /tmp/targets_check
+
+            if [ "$FAIL" = "1" ]; then
+              echo "=== FEHLER: Nicht alle Workloads sind rechtzeitig hochgekommen ==="
+              exit 1
+            fi
+            echo "=== Alle Workloads gesund ==="
+
+    # ------------------------------------------------------------------ #
+    # Step 6: Alertmanager-Silence löschen                                 #
+    # ------------------------------------------------------------------ #
+    - name: alertmanager-delete-silence
+      inputs:
+        parameters:
+          - name: alertmanager-url
+          - name: silence-id
+      container:
+        image: alpine:3.20
+        command: [sh, -c]
+        args:
+          - |
+            apk add --no-cache curl > /dev/null 2>&1
+            AM_URL="{{inputs.parameters.alertmanager-url}}"
+            SID="{{inputs.parameters.silence-id}}"
+
+            if [ -z "$SID" ] || [ "$SID" = "none" ]; then
+              echo "Kein Silence-ID vorhanden — überspringe Löschung"
+              exit 0
+            fi
+
+            echo "Lösche Alertmanager-Silence: $SID"
+            curl -sf -X DELETE "${AM_URL}/api/v2/silences/${SID}" && \
+              echo "Silence gelöscht. Monitoring ist wieder aktiv." || \
+              echo "WARNUNG: Silence konnte nicht gelöscht werden (läuft nach 3h automatisch ab)"
+`}}

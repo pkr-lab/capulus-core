@@ -3,19 +3,20 @@ apiVersion: v2
 name: zammad
 description: |
   Zammad — Open-Source Helpdesk und Ticketing-System.
-  Integriert PostgreSQL und Redis als Sub-Charts.
-  Elasticsearch ist deaktiviert; Zammad nutzt die eingebaute Volltextsuche.
+  Integriert PostgreSQL, Redis und Memcached als Sub-Charts (im Zammad-Chart gebündelt).
+  Elasticsearch ist deaktiviert; Zammad nutzt die eingebaute PostgreSQL-Volltextsuche.
 
   Web-Interface:
     http://zammad.homeserver
     https://zammad.pke-lab.de
 
-  Abhängigkeiten:
-    - PostgreSQL (Bitnami, intern)
-    - Redis (Bitnami, intern)
+  Sub-Charts (im Zammad-Chart enthalten):
+    - PostgreSQL 16.x (Bitnami)
+    - Redis 0.30.x (CloudPirates OCI)
+    - Memcached 0.13.x (CloudPirates OCI)
 type: application
 version: 0.1.0
-appVersion: "latest"
+appVersion: "7.1.0"
 keywords:
   - zammad
   - helpdesk
@@ -29,4 +30,4 @@ maintainers:
 dependencies:
   - name: zammad
     repository: https://zammad.github.io/zammad-helm
-    version: "*"
+    version: "16.4.1"
