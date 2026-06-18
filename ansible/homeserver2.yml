@@ -7,6 +7,8 @@
 #      (benötigt laufenden k3s-Server auf homeserver/.94)
 #   2. Docker-Compose-Dienste (Paperless-NGX, TinyTeller, Day Pilot,
 #      Node Exporter) — laufen parallel zum Kubernetes-Workload
+#   3. Uncordon — stellt sicher dass worker-0 schedulable bleibt
+#      (kubectl drain/cordon durch Maintenance-Schritte rückgängig machen)
 #
 # Run with:
 #   make worker-0
@@ -28,3 +30,17 @@
       tags: [tinyteller]
     - role: day_pilot
       tags: [day-pilot]
+
+- name: Uncordon worker-0 nach Provisioning
+  hosts: homeservers
+  become: true
+  tags: [uncordon, kubernetes]
+  tasks:
+    - name: worker-0 schedulable halten
+      ansible.builtin.command:
+        cmd: kubectl uncordon worker-0
+      register: uncordon_result
+      changed_when: "'uncordoned' in uncordon_result.stdout"
+      failed_when: >
+        uncordon_result.rc != 0 and
+        'not found' not in uncordon_result.stderr
