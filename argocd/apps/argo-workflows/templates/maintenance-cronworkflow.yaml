@@ -1,0 +1,43 @@
+{{/*
+CronWorkflow: nightly-pod-maintenance
+Läuft täglich um 03:00 Uhr (Europe/Berlin).
+
+Vor der ersten Aktivierung prüfen:
+  1. kubectl -n argo-workflows get cronworkflow nightly-pod-maintenance
+  2. Manuell testen:
+       kubectl -n argo-workflows create -f - <<EOF
+       apiVersion: argoproj.io/v1alpha1
+       kind: Workflow
+       metadata:
+         generateName: pod-maintenance-test-
+         namespace: argo-workflows
+       spec:
+         workflowTemplateRef:
+           name: pod-maintenance
+       EOF
+  3. suspend auf false setzen (s.u.) und committen
+
+Monitoring-Integration:
+  - Der Workflow legt vor dem Scale-Down eine Alertmanager-Silence mit dem
+    Matcher cluster=homeserver an. Während des Wartungsfensters (ca. 3h) werden
+    dadurch keine False-Alarms ausgelöst.
+  - Die Silence wird am Ende automatisch wieder gelöscht.
+*/}}
+{{`
+---
+apiVersion: argoproj.io/v1alpha1
+kind: CronWorkflow
+metadata:
+  name: nightly-pod-maintenance
+spec:
+  schedules: ["0 3 * * *"]
+  timezone: Europe/Berlin
+  # Auf false setzen, sobald der manuelle Test erfolgreich war.
+  suspend: true
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  workflowSpec:
+    serviceAccountName: argo-workflow
+    workflowTemplateRef:
+      name: pod-maintenance
+`}}
