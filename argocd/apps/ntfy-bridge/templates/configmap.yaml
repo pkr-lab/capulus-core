@@ -32,13 +32,16 @@ data:
     }
 
     def send_to_ntfy(title: str, message: str, priority: int, tags: str) -> None:
+        # http.client encodes str header values as latin-1, which can't
+        # represent the emoji in `title` — pass UTF-8 bytes instead, which
+        # http.client forwards unchanged.
         req = urllib.request.Request(
             f"{NTFY_URL}/{NTFY_TOPIC}",
             data=message.encode(),
             headers={
-                "Title":    title,
-                "Priority": str(priority),
-                "Tags":     tags,
+                "Title":    title.encode("utf-8"),
+                "Priority": str(priority).encode("utf-8"),
+                "Tags":     tags.encode("utf-8"),
             },
             method="POST",
         )
