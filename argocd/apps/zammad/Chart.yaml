@@ -1,0 +1,32 @@
+---
+apiVersion: v2
+name: zammad
+description: |
+  Zammad — Open-Source Helpdesk und Ticketing-System.
+  Integriert PostgreSQL und Redis als Sub-Charts.
+  Elasticsearch ist deaktiviert; Zammad nutzt die eingebaute Volltextsuche.
+
+  Web-Interface:
+    http://zammad.homeserver
+    https://zammad.pke-lab.de
+
+  Abhängigkeiten:
+    - PostgreSQL (Bitnami, intern)
+    - Redis (Bitnami, intern)
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - zammad
+  - helpdesk
+  - ticketing
+  - support
+home: https://zammad.org
+sources:
+  - https://github.com/zammad/zammad-helm
+maintainers:
+  - name: home-server-admin
+dependencies:
+  - name: zammad
+    repository: https://zammad.github.io/zammad-helm
+    version: "*"
