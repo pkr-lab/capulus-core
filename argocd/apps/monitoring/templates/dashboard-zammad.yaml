@@ -1,0 +1,378 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-zammad
+  namespace: {{ .Release.Namespace }}
+  labels:
+    grafana_dashboard: "1"
+data:
+  zammad.json: |
+    {
+      "annotations": {"list": []},
+      "description": "Zammad Helpdesk — Komponentenstatus, CPU, RAM und Speicher",
+      "editable": true,
+      "graphTooltip": 1,
+      "links": [],
+      "panels": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [
+                {"options": {"0": {"color": "red", "index": 0, "text": "Gestoppt"}}, "type": "value"},
+                {"options": {"from": 1, "to": 1e+99, "result": {"color": "green", "index": 1, "text": "Online"}}, "type": "range"}
+              ],
+              "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]},
+              "unit": "short"
+            }
+          },
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "id": 1,
+          "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "sum(kube_pod_status_ready{namespace=\"zammad\", condition=\"true\", pod=~\".*nginx.*\"})",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Nginx (Frontend)",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [
+                {"options": {"0": {"color": "red", "index": 0, "text": "Gestoppt"}}, "type": "value"},
+                {"options": {"from": 1, "to": 1e+99, "result": {"color": "green", "index": 1, "text": "Online"}}, "type": "range"}
+              ],
+              "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]},
+              "unit": "short"
+            }
+          },
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+          "id": 2,
+          "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "sum(kube_pod_status_ready{namespace=\"zammad\", condition=\"true\", pod=~\".*railsserver.*\"})",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Rails Server",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [
+                {"options": {"0": {"color": "red", "index": 0, "text": "Gestoppt"}}, "type": "value"},
+                {"options": {"from": 1, "to": 1e+99, "result": {"color": "green", "index": 1, "text": "Online"}}, "type": "range"}
+              ],
+              "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]},
+              "unit": "short"
+            }
+          },
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+          "id": 3,
+          "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "sum(kube_pod_status_ready{namespace=\"zammad\", condition=\"true\", pod=~\".*scheduler.*\"})",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Scheduler",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [
+                {"options": {"0": {"color": "red", "index": 0, "text": "Gestoppt"}}, "type": "value"},
+                {"options": {"from": 1, "to": 1e+99, "result": {"color": "green", "index": 1, "text": "Online"}}, "type": "range"}
+              ],
+              "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]},
+              "unit": "short"
+            }
+          },
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+          "id": 4,
+          "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "sum(kube_pod_status_ready{namespace=\"zammad\", condition=\"true\", pod=~\".*websocket.*\"})",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Websocket",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [
+                {"options": {"0": {"color": "red", "index": 0, "text": "Gestoppt"}}, "type": "value"},
+                {"options": {"from": 1, "to": 1e+99, "result": {"color": "green", "index": 1, "text": "Online"}}, "type": "range"}
+              ],
+              "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]},
+              "unit": "short"
+            }
+          },
+          "gridPos": {"h": 4, "w": 8, "x": 0, "y": 4},
+          "id": 5,
+          "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "sum(kube_pod_status_ready{namespace=\"zammad\", condition=\"true\", pod=~\".*postgresql.*\"})",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "title": "PostgreSQL",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [
+                {"options": {"0": {"color": "red", "index": 0, "text": "Gestoppt"}}, "type": "value"},
+                {"options": {"from": 1, "to": 1e+99, "result": {"color": "green", "index": 1, "text": "Online"}}, "type": "range"}
+              ],
+              "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]},
+              "unit": "short"
+            }
+          },
+          "gridPos": {"h": 4, "w": 8, "x": 8, "y": 4},
+          "id": 6,
+          "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "sum(kube_pod_status_ready{namespace=\"zammad\", condition=\"true\", pod=~\".*redis.*\"})",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Redis",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [
+                {"options": {"0": {"color": "red", "index": 0, "text": "Gestoppt"}}, "type": "value"},
+                {"options": {"from": 1, "to": 1e+99, "result": {"color": "green", "index": 1, "text": "Online"}}, "type": "range"}
+              ],
+              "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]},
+              "unit": "short"
+            }
+          },
+          "gridPos": {"h": 4, "w": 8, "x": 16, "y": 4},
+          "id": 7,
+          "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "sum(kube_pod_status_ready{namespace=\"zammad\", condition=\"true\", pod=~\".*memcached.*\"})",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Memcached",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "short"
+            }
+          },
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8},
+          "id": 8,
+          "options": {
+            "legend": {"calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom"},
+            "tooltip": {"mode": "multi", "sort": "desc"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "rate(container_cpu_usage_seconds_total{namespace=\"zammad\", container!=\"\", container!=\"POD\", image!=\"\"}[5m])",
+              "legendFormat": "{{ "{{container}}" }}",
+              "refId": "A"
+            }
+          ],
+          "title": "CPU Auslastung (Kerne)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "bytes"
+            }
+          },
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16},
+          "id": 9,
+          "options": {
+            "legend": {"calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom"},
+            "tooltip": {"mode": "multi", "sort": "desc"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "container_memory_working_set_bytes{namespace=\"zammad\", container!=\"\", container!=\"POD\", image!=\"\"}",
+              "legendFormat": "{{ "{{container}}" }}",
+              "refId": "A"
+            }
+          ],
+          "title": "RAM Auslastung",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 70},
+                  {"color": "red", "value": 90}
+                ]
+              },
+              "unit": "percent",
+              "max": 100,
+              "min": 0
+            }
+          },
+          "gridPos": {"h": 5, "w": 6, "x": 0, "y": 24},
+          "id": 10,
+          "options": {
+            "minVizHeight": 75,
+            "minVizWidth": 75,
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "kubelet_volume_stats_used_bytes{namespace=\"zammad\", persistentvolumeclaim=~\".*postgresql.*\"} / kubelet_volume_stats_capacity_bytes{namespace=\"zammad\", persistentvolumeclaim=~\".*postgresql.*\"} * 100",
+              "instant": true,
+              "legendFormat": "PostgreSQL PVC",
+              "refId": "A"
+            }
+          ],
+          "title": "PostgreSQL Speicher",
+          "type": "gauge"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "bytes"
+            }
+          },
+          "gridPos": {"h": 5, "w": 18, "x": 6, "y": 24},
+          "id": 11,
+          "options": {
+            "legend": {"calcs": ["last"], "displayMode": "table", "placement": "right"},
+            "tooltip": {"mode": "multi", "sort": "desc"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "kubelet_volume_stats_used_bytes{namespace=\"zammad\"}",
+              "legendFormat": "{{ "{{persistentvolumeclaim}}" }}",
+              "refId": "A"
+            },
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "kubelet_volume_stats_capacity_bytes{namespace=\"zammad\"}",
+              "legendFormat": "{{ "{{persistentvolumeclaim}}" }} (Kapazität)",
+              "refId": "B"
+            }
+          ],
+          "title": "PVC Belegung",
+          "type": "timeseries"
+        }
+      ],
+      "refresh": "30s",
+      "schemaVersion": 38,
+      "tags": ["homelab", "zammad"],
+      "templating": {
+        "list": [
+          {
+            "current": {},
+            "hide": 0,
+            "includeAll": false,
+            "label": "Datasource",
+            "multi": false,
+            "name": "datasource",
+            "options": [],
+            "query": "prometheus",
+            "refresh": 1,
+            "type": "datasource"
+          }
+        ]
+      },
+      "time": {"from": "now-3h", "to": "now"},
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "Zammad",
+      "uid": "zammad-overview",
+      "version": 1
+    }
