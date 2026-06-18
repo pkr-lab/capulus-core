@@ -4,7 +4,7 @@
 #
 # Secrets-Block (SealedSecret):
 #   Werte mit kubeseal versiegeln und hier eintragen.
-#   Anleitung: docs/19-zammad.md → Abschnitt "Secrets versiegeln"
+#   Anleitung: docs/19-zammad.md → Abschnitt "Schritt 1 — Secrets versiegeln"
 # ============================================================
 
 secrets:
@@ -14,12 +14,15 @@ secrets:
   # Versiegeln: echo -n 'WERT' | kubeseal --raw --namespace zammad \
   #             --name zammad-secrets --controller-namespace sealed-secrets \
   #             --controller-name sealed-secrets-controller
+  #
+  # Beide Keys müssen dasselbe Passwort enthalten:
+  #   postgresql-pass      → Key für den Zammad-App-Container
+  #   postgresql-password  → Key für den Bitnami-PostgreSQL-Sub-Chart
+  encryptedPostgresPass: "PLACEHOLDER"
   encryptedPostgresPassword: "PLACEHOLDER"
-  encryptedPostgresAdminPassword: "PLACEHOLDER"
-  encryptedSecretKeyBase: "PLACEHOLDER"
 
 # ============================================================
-# Sub-Chart: zammad/zammad
+# Sub-Chart: zammad/zammad v16.4.1
 # Alle Keys unterhalb von `zammad:` landen beim upstream-Chart.
 # Upstream values.yaml:
 #   https://github.com/zammad/zammad-helm/blob/main/zammad/values.yaml
@@ -43,22 +46,113 @@ zammad:
             pathType: Prefix
     tls: []
 
-  # ---- Persistenz (Zammad-Dateispeicher) ---------------------
-  persistence:
-    enabled: true
-    storageClass: local-path
-    size: 15Gi
+  # ---- Secrets (aus bestehendem SealedSecret) ----------------
+  # Zammad liest das DB-Passwort aus `zammad-secrets[postgresql-pass]`.
+  secrets:
+    postgresql:
+      useExisting: true
+      secretKey: postgresql-pass
+      secretName: zammad-secrets
+    # Redis läuft ohne Authentifizierung (Home-Lab-Setup)
+    redis:
+      useExisting: false
 
-  # ---- PostgreSQL (Bitnami Sub-Chart) ------------------------
+  # ---- Zammad App + Sub-Chart Konfiguration ------------------
+  zammadConfig:
+    # ---- Elasticsearch deaktivieren (Ressourcenersparnis) ----
+    # Zammad 7.x nutzt PostgreSQL-basierte Volltextsuche als Fallback.
+    # Für Produktionseinsatz mit großem Ticketvolumen ES aktivieren.
+    elasticsearch:
+      enabled: false
+
+    # ---- Memcached (aktiv — Standard-Cache) -----------------
+    memcached:
+      enabled: true
+
+    # ---- PostgreSQL (intern, Bitnami Sub-Chart) -------------
+    postgresql:
+      enabled: true
+      db: zammad_production
+      user: zammad
+      # pass leer lassen → kommt aus secrets.postgresql (useExisting: true)
+      pass: ""
+
+    # ---- Redis (intern, CloudPirates OCI Sub-Chart) ---------
+    redis:
+      enabled: true
+      # Redis ohne Authentifizierung für das Home-Lab
+      pass: ""
+
+    # ---- Datei-Ablage (deaktiviert → Dateien in DB) ---------
+    # Attachments werden in PostgreSQL gespeichert.
+    # Für separates PVC: storageVolume.enabled=true +
+    #   existingClaim (ReadWriteMany) — auf single-node k3s nicht Standard.
+    storageVolume:
+      enabled: false
+
+    # ---- Nginx (Web-Frontend) --------------------------------
+    nginx:
+      resources:
+        requests:
+          cpu: 25m
+          memory: 64Mi
+        limits:
+          memory: 128Mi
+
+    # ---- Rails-App-Server -----------------------------------
+    railsserver:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 512Mi
+        limits:
+          memory: 1Gi
+
+    # ---- Scheduler (Background Jobs) ------------------------
+    scheduler:
+      resources:
+        requests:
+          cpu: 50m
+          memory: 256Mi
+        limits:
+          memory: 512Mi
+
+    # ---- Websocket-Server -----------------------------------
+    websocket:
+      resources:
+        requests:
+          cpu: 25m
+          memory: 128Mi
+        limits:
+          memory: 256Mi
+
+    # ---- Init-Container ------------------------------------
+    initContainers:
+      zammad:
+        resources:
+          requests:
+            cpu: 50m
+            memory: 256Mi
+          limits:
+            memory: 512Mi
+      postgresql:
+        resources:
+          requests:
+            cpu: 25m
+            memory: 64Mi
+          limits:
+            memory: 128Mi
+
+  # ---- PostgreSQL Sub-Chart (Bitnami) -----------------------
   postgresql:
     enabled: true
     auth:
       username: zammad
-      database: zammad
+      database: zammad_production
+      # Passwort aus existierendem SealedSecret
       existingSecret: zammad-secrets
       secretKeys:
         userPasswordKey: postgresql-password
-        adminPasswordKey: postgresql-postgres-password
     primary:
       persistence:
         enabled: true
@@ -71,69 +165,9 @@ zammad:
         limits:
           memory: 512Mi
 
-  # ---- Redis (Bitnami Sub-Chart) -----------------------------
+  # ---- Redis Sub-Chart (CloudPirates OCI) -------------------
   redis:
-    enabled: true
-    architecture: standalone
     auth:
+      # Kein Passwort im Home-Lab
       enabled: false
-    master:
-      persistence:
-        enabled: true
-        storageClass: local-path
-        size: 1Gi
-      resources:
-        requests:
-          cpu: 25m
-          memory: 64Mi
-        limits:
-          memory: 128Mi
-
-  # ---- Elasticsearch deaktiviert (Ressourcenersparnis) -------
-  # Zammad 6.x hat eingebaute Volltextsuche (PostgreSQL-basiert).
-  # Für produktiven Einsatz mit großem Ticketvolumen Elasticsearch
-  # aktivieren und eigenen ES-Cluster bereitstellen.
-  elasticsearch:
-    enabled: false
-
-  # ---- Zammad-Konfiguration ----------------------------------
-  zammadConfig:
-    # Öffentliche URL von Zammad (für E-Mail-Links u.ä.)
-    railsOptions:
-      applicationUrl: "https://zammad.pke-lab.de"
-
-  # ---- Secret Key Base via existierendem Secret ---------------
-  # Legt den Rails Secret Key Base aus dem SealedSecret fest.
-  # Das Secret muss den Key `secret-key-base` enthalten.
-  secrets:
-    secretKeyBase:
-      useExistingSecret:
-        name: zammad-secrets
-        key: secret-key-base
-
-  # ---- Ressourcen (Zammad-Appserver) -------------------------
-  resources:
-    requests:
-      cpu: 100m
-      memory: 512Mi
-    limits:
-      memory: 1Gi
-
-  # ---- Zammad-Webserver (nginx-Sidecar) ----------------------
-  webSrv:
-    resources:
-      requests:
-        cpu: 25m
-        memory: 64Mi
-      limits:
-        memory: 128Mi
-
-  # ---- Init-Container ----------------------------------------
-  initContainers:
-    zammadInit:
-      resources:
-        requests:
-          cpu: 50m
-          memory: 256Mi
-        limits:
-          memory: 512Mi
+      password: ""
