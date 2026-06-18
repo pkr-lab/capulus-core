@@ -140,6 +140,9 @@ zammad:
             memory: 128Mi
 
   # ---- PostgreSQL Sub-Chart (Bitnami) -----------------------
+  # Speichert Tickets + Attachments (storageVolume.enabled: false) → wächst
+  # potenziell groß. Läuft daher auf der HDD-StorageClass (docs/18-hdd-storage.md)
+  # statt auf der System-SSD des Homeservers.
   postgresql:
     enabled: true
     auth:
@@ -152,8 +155,18 @@ zammad:
     primary:
       persistence:
         enabled: true
-        storageClass: local-path
-        size: 8Gi
+        storageClass: hdd
+        size: 50Gi
+      # Pflicht: hdd-PVCs binden nur auf worker-0 (siehe docs/18-hdd-storage.md)
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - worker-0
       resources:
         requests:
           cpu: 50m
@@ -162,8 +175,23 @@ zammad:
           memory: 512Mi
 
   # ---- Redis Sub-Chart (CloudPirates OCI) -------------------
+  # Cache/Websocket-Pub-Sub, ebenfalls auf HDD ausgelagert, damit kein
+  # Persistenzspeicher auf der Homeserver-SSD landet.
   redis:
     auth:
       # Kein Passwort im Home-Lab
       enabled: false
       password: ""
+    persistence:
+      storageClass: hdd
+      size: 8Gi
+    # Pflicht: hdd-PVCs binden nur auf worker-0 (siehe docs/18-hdd-storage.md)
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: In
+                  values:
+                    - worker-0
