@@ -69,6 +69,27 @@ worker-0: ## Deploy all services on worker-0 (192.168.178.95).
 worker-0-check: ## Dry-run the worker-0 playbook (no changes applied).
 	ansible-playbook -i $(INVENTORY) $(HS2_PLAYBOOK) --check --diff $(VAULT_OPTS)
 
+hdd: ## HDD (sda) auf worker-0 einrichten und dauerhaft mounten.
+	ansible-playbook -i $(INVENTORY) $(HS2_PLAYBOOK) --tags hdd $(VAULT_OPTS)
+
+.PHONY: windows windows-check windows-users windows-software windows-settings
+WIN_PLAYBOOK := $(ANSIBLE_DIR)/windows.yml
+
+windows: ## Einrichten aller Windows-PCs (DLRG OG Andernach).
+	ansible-playbook -i $(INVENTORY) $(WIN_PLAYBOOK) $(VAULT_OPTS)
+
+windows-check: ## Dry-run des Windows-Playbooks (keine Aenderungen).
+	ansible-playbook -i $(INVENTORY) $(WIN_PLAYBOOK) --check --diff $(VAULT_OPTS)
+
+windows-users: ## Nur Benutzer auf Windows-PCs anlegen/aktualisieren.
+	ansible-playbook -i $(INVENTORY) $(WIN_PLAYBOOK) --tags users $(VAULT_OPTS)
+
+windows-software: ## Nur Software auf Windows-PCs installieren.
+	ansible-playbook -i $(INVENTORY) $(WIN_PLAYBOOK) --tags software $(VAULT_OPTS)
+
+windows-settings: ## Nur System-Einstellungen auf Windows-PCs konfigurieren.
+	ansible-playbook -i $(INVENTORY) $(WIN_PLAYBOOK) --tags settings $(VAULT_OPTS)
+
 .PHONY: lint
 lint: ## Lint YAML, Ansible, and ALL Helm charts.
 	yamllint -c .yamllint ansible/ argocd/

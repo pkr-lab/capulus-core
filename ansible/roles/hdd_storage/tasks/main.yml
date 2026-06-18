@@ -1,0 +1,61 @@
+---
+# ============================================================
+# hdd_storage — /dev/sda (7,3 TB) auf worker-0 einrichten
+# ============================================================
+# Stellt sicher dass:
+#   1. Mount-Point /mnt/hdd existiert
+#   2. Festplatte via UUID in /etc/fstab dauerhaft eingetragen ist
+#   3. Verzeichnisstruktur für Kubernetes-Storage und Apps angelegt ist
+# ============================================================
+
+- name: UUID und Dateisystem-Typ von {{ hdd_device }} ermitteln
+  ansible.builtin.shell: |
+    blkid -s UUID -o value {{ hdd_device }}
+  register: hdd_uuid
+  changed_when: false
+  failed_when: hdd_uuid.stdout == ""
+
+- name: Dateisystem-Typ von {{ hdd_device }} ermitteln
+  ansible.builtin.shell: |
+    blkid -s TYPE -o value {{ hdd_device }}
+  register: hdd_fstype
+  changed_when: false
+  failed_when: hdd_fstype.stdout == ""
+
+- name: "Festplatteninfo — UUID: {{ hdd_uuid.stdout }}, Typ: {{ hdd_fstype.stdout }}"
+  ansible.builtin.debug:
+    msg: "{{ hdd_device }}: UUID={{ hdd_uuid.stdout }} TYPE={{ hdd_fstype.stdout }}"
+
+- name: Mount-Point {{ hdd_mount_point }} anlegen
+  ansible.builtin.file:
+    path: "{{ hdd_mount_point }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: "{{ hdd_device }} dauerhaft in /etc/fstab eintragen und mounten"
+  ansible.posix.mount:
+    path: "{{ hdd_mount_point }}"
+    src: "UUID={{ hdd_uuid.stdout }}"
+    fstype: "{{ hdd_fstype.stdout }}"
+    opts: "{{ hdd_mount_opts }}"
+    state: mounted
+
+- name: Verzeichnisstruktur auf {{ hdd_mount_point }} anlegen
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: root
+    mode: "{{ item.mode }}"
+  loop: "{{ hdd_app_dirs }}"
+
+- name: Festplatten-Nutzung ausgeben
+  ansible.builtin.shell: df -h {{ hdd_mount_point }}
+  register: df_output
+  changed_when: false
+
+- name: Festplatten-Status
+  ansible.builtin.debug:
+    msg: "{{ df_output.stdout_lines }}"

@@ -20,6 +20,8 @@
   hosts: second_servers
   become: true
   roles:
+    - role: hdd_storage
+      tags: [hdd, storage]
     - role: k3s_agent
       tags: [k3s-agent, kubernetes]
     - role: tinyteller

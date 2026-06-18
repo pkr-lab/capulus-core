@@ -1,0 +1,185 @@
+---
+# HTTP-Server: Stellt autounattend.xml, PowerShell-Skripte und WinPE-Dateien bereit.
+# Laeuft auf worker-0 (NodeAffinity), weil der PVC "hdd" nur dort verfuegbar ist.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: windeployment-http
+  namespace: windeployment
+  labels:
+    app: windeployment-http
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: windeployment-http
+  template:
+    metadata:
+      labels:
+        app: windeployment-http
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - worker-0
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+            - name: autounattend
+              mountPath: /usr/share/nginx/html/autounattend.xml
+              subPath: autounattend.xml
+            - name: autounattend
+              mountPath: /usr/share/nginx/html/autounattend-usb.xml
+              subPath: autounattend-usb.xml
+            - name: scripts
+              mountPath: /usr/share/nginx/html/scripts
+            - name: ipxe-menu
+              mountPath: /usr/share/nginx/html/ipxe
+            - name: winpe-files
+              mountPath: /mnt/winpe
+              subPath: winpe
+            - name: winpe-files
+              mountPath: /mnt/iso
+              subPath: iso
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 30
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: nginx-config
+        - name: autounattend
+          configMap:
+            name: autounattend-configs
+        - name: scripts
+          configMap:
+            name: setup-scripts
+        - name: ipxe-menu
+          configMap:
+            name: ipxe-menu
+            items:
+              - key: menu.ipxe
+                path: menu.ipxe
+        - name: winpe-files
+          persistentVolumeClaim:
+            claimName: windeployment-files
+---
+# PXE-TFTP-Server: Liefert iPXE-Bootloader an bootende PCs.
+# Benoetigt hostNetwork fuer UDP-Port 69 (TFTP).
+# Laeuft auf worker-0 (NodeAffinity + hostNetwork → derselbe Node wie der HTTP-Server).
+# Optional - nur benoetigt wenn PXE-Boot ohne USB-Stick verwendet werden soll.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: windeployment-pxe
+  namespace: windeployment
+  labels:
+    app: windeployment-pxe
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: windeployment-pxe
+  template:
+    metadata:
+      labels:
+        app: windeployment-pxe
+    spec:
+      # hostNetwork: TFTP laeuft auf Port 69 (< 1024), kein NodePort moeglich.
+      # NodeAffinity: muss auf worker-0 laufen (PVC + TFTP im LAN).
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - worker-0
+      initContainers:
+        # Init-Container: iPXE-Binaries aus dem offiziellen Release herunterladen.
+        # Legt Dateien in /tftpboot (PVC-Subpath) ab; beim Neustart ueberspringen.
+        - name: download-ipxe
+          image: alpine:3.20
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              cd /tftpboot
+              if [ ! -f undionly.kpxe ]; then
+                echo "Lade iPXE-Binaerdateien..."
+                wget -q "https://boot.ipxe.org/undionly.kpxe" -O undionly.kpxe
+                wget -q "https://boot.ipxe.org/ipxe.efi" -O ipxe.efi
+                echo "iPXE geladen: $(ls -lh)"
+              else
+                echo "iPXE bereits vorhanden: $(ls -lh)"
+              fi
+          volumeMounts:
+            - name: tftpboot
+              mountPath: /tftpboot
+      containers:
+        - name: dnsmasq-pxe
+          image: andyshinn/dnsmasq:2.86
+          args:
+            - --conf-file=/etc/dnsmasq-pxe/dnsmasq-pxe.conf
+            - --no-daemon
+            - --log-facility=-
+          ports:
+            - containerPort: 69
+              protocol: UDP
+              hostPort: 69
+            - containerPort: 67
+              protocol: UDP
+              hostPort: 67
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+                - NET_RAW
+          volumeMounts:
+            - name: dnsmasq-config
+              mountPath: /etc/dnsmasq-pxe
+            - name: tftpboot
+              mountPath: /tftpboot
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "20m"
+            limits:
+              memory: "64Mi"
+              cpu: "100m"
+      volumes:
+        - name: dnsmasq-config
+          configMap:
+            name: ipxe-menu
+            items:
+              - key: dnsmasq-pxe.conf
+                path: dnsmasq-pxe.conf
+        - name: tftpboot
+          persistentVolumeClaim:
+            claimName: windeployment-files
+            readOnly: false

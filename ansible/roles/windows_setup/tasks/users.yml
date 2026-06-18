@@ -1,0 +1,51 @@
+---
+# Benutzer und Gruppen anlegen
+
+- name: "Admin-Konto '{{ windows_admin_user }}' anlegen"
+  ansible.windows.win_user:
+    name: "{{ windows_admin_user }}"
+    fullname: "Administrator"
+    description: "{{ windows_admin_description }}"
+    password: "{{ windows_admin_password }}"
+    password_never_expires: true
+    account_disabled: false
+    state: present
+  no_log: true
+
+- name: "Admin-Konto zur Administrators-Gruppe hinzufuegen"
+  ansible.windows.win_group_membership:
+    name: Administrators
+    members:
+      - "{{ windows_admin_user }}"
+    state: present
+
+- name: "DLRG-Benutzerkonto '{{ windows_dlrg_user }}' anlegen"
+  ansible.windows.win_user:
+    name: "{{ windows_dlrg_user }}"
+    fullname: "{{ windows_dlrg_display_name }}"
+    description: "{{ windows_dlrg_description }}"
+    password: "{{ windows_dlrg_password }}"
+    password_never_expires: true
+    account_disabled: false
+    state: present
+  no_log: true
+
+- name: "DLRG-Benutzer zur Users-Gruppe hinzufuegen"
+  ansible.windows.win_group_membership:
+    name: Users
+    members:
+      - "{{ windows_dlrg_user }}"
+    state: present
+
+- name: "Eingebautes Administrator-Konto deaktivieren"
+  ansible.windows.win_user:
+    name: Administrator
+    account_disabled: true
+    state: present
+
+- name: "Gast-Konto deaktivieren"
+  ansible.windows.win_user:
+    name: Guest
+    account_disabled: true
+    state: present
+  ignore_errors: true

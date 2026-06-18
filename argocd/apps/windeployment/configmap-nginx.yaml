@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: windeployment
+data:
+  default.conf: |
+    server {
+      listen 80;
+      server_name _;
+      root /usr/share/nginx/html;
+      autoindex on;
+      autoindex_exact_size off;
+      autoindex_localtime on;
+
+      location /scripts/ {
+        alias /usr/share/nginx/html/scripts/;
+        add_header Content-Type text/plain;
+      }
+
+      location /winpe/ {
+        alias /mnt/winpe/;
+      }
+
+      location /iso/ {
+        alias /mnt/iso/;
+      }
+
+      location = /autounattend.xml {
+        alias /usr/share/nginx/html/autounattend.xml;
+        add_header Content-Type application/xml;
+      }
+
+      location = /autounattend-usb.xml {
+        alias /usr/share/nginx/html/autounattend-usb.xml;
+        add_header Content-Type application/xml;
+      }
+    }

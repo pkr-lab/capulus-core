@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ipxe-menu
+  namespace: windeployment
+data:
+  # iPXE-Bootmenu - wird vom TFTP-Server an bootende PCs ausgeliefert.
+  # Voraussetzung: WinPE-Dateien liegen im PVC unter /mnt/winpe/
+  # Aufbau: iPXE laedt dieses Skript via HTTP und zeigt das Menue an.
+  menu.ipxe: |
+    #!ipxe
+
+    set server http://192.168.178.94:30090
+
+    :menu
+    menu DLRG OG Andernach - Netzwerk-Boot
+    item --gap -- --- Windows ---
+    item win11   Windows 11 installieren (vollautomatisch)
+    item win11m  Windows 11 installieren (manuell - Passwort-Abfrage)
+    item --gap -- --- Diagnose ---
+    item shell   iPXE-Shell
+    item reboot  Neu starten
+    item exit    Von Festplatte booten
+    choose --timeout 30 --default win11 target && goto ${target}
+
+    :win11
+    echo Starte automatische Windows-11-Installation...
+    echo Lade WinPE vom Server ${server}/winpe/
+    set autounattend ${server}/autounattend.xml
+    # WinPE booten (Dateien muessen vorab ins PVC geladen werden)
+    kernel ${server}/winpe/bootmgr.efi
+    initrd ${server}/winpe/boot/bcd
+    imgargs bootmgr.efi /nointegritychecks
+    boot || goto failed
+
+    :win11m
+    echo Starte Windows-11-Installation (manuelle Konfiguration)...
+    echo Computername und Passwort werden abgefragt.
+    set autounattend ${server}/autounattend.xml
+    kernel ${server}/winpe/bootmgr.efi
+    boot || goto failed
+
+    :shell
+    shell
+
+    :reboot
+    reboot
+
+    :exit
+    exit
+
+    :failed
+    echo Boot fehlgeschlagen. WinPE-Dateien pruefen:
+    echo   kubectl -n windeployment exec deploy/windeployment-http -- ls /mnt/winpe/
+    prompt Druecken Sie eine Taste...
+    goto menu
+
+  # dnsmasq-Konfiguration fuer PXE-Boot (proxyDHCP-Modus)
+  # Wird vom pxe-tftp-Deployment verwendet.
+  dnsmasq-pxe.conf: |
+    # PXE-Server Konfiguration (proxyDHCP)
+    # Stört den Fritz!Box-DHCP nicht - antwortet nur auf PXE-Anfragen.
+
+    # ProxyDHCP: IP-Vergabe bleibt bei der Fritz!Box
+    dhcp-range=192.168.178.0,proxy
+
+    # TFTP-Server aktivieren
+    enable-tftp
+    tftp-root=/tftpboot
+
+    # BIOS-PCs (Legacy): iPXE undionly.kpxe
+    dhcp-boot=tag:!ipxe,undionly.kpxe
+
+    # UEFI-PCs: iPXE EFI
+    dhcp-match=set:efi-x86_64,option:client-arch,7
+    dhcp-match=set:efi-x86_64,option:client-arch,9
+    dhcp-boot=tag:efi-x86_64,ipxe.efi
+
+    # Wenn iPXE schon geladen: Bootmenu via HTTP laden
+    dhcp-match=set:ipxe,175
+    dhcp-boot=tag:ipxe,http://192.168.178.94:30090/ipxe/menu.ipxe
+
+    # Logs
+    log-dhcp
+    log-queries

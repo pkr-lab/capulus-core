@@ -1,0 +1,46 @@
+---
+# DLRG OG Andernach - Windows-Setup-Rolle Standardwerte
+# Alle Werte koennen im Inventory oder per -e ueberschrieben werden.
+
+# Computername (Standard: hostname aus Inventory)
+windows_pc_name: "{{ inventory_hostname }}"
+
+# Anwendungszweck - erscheint im Anzeigenamen des dlrg-Kontos
+# z.B. "Buero", "Schulung", "Empfang"
+windows_pc_purpose: "PC"
+
+# Benutzer: DLRG-Standardkonto
+windows_dlrg_user: "dlrg"
+windows_dlrg_password: "DLRG2024"
+windows_dlrg_display_name: "DLRG OG Andernach ({{ windows_pc_purpose }})"
+windows_dlrg_description: "DLRG OG Andernach - Standardbenutzer"
+
+# Benutzer: Admin-Konto
+windows_admin_user: "Admin"
+windows_admin_password: "DLRG-Admin-2024!"
+windows_admin_description: "DLRG OG Andernach - lokaler Administrator"
+
+# Zeitzone
+windows_timezone: "W. Europe Standard Time"
+
+# Locale / Sprache
+windows_locale: "de-DE"
+windows_input_locale: "0407:00000407"
+
+# Software-Pakete (Chocolatey)
+windows_choco_packages:
+  - googlechrome
+  - teamviewer
+  - microsoft-teams
+
+# Microsoft 365: true = automatisch via ODT installieren
+windows_install_office365: true
+
+# WinRM: true = WinRM fuer Ansible offen lassen (nach Setup)
+windows_keep_winrm: true
+
+# LAN-Subnetz fuer WinRM-Firewall-Regel
+windows_lan_subnet: "192.168.178.0/24"
+
+# URL des windeployment-Servers (fuer Skript-Downloads)
+windows_deployment_server: "http://192.168.178.94:30090"

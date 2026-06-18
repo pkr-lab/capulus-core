@@ -1,0 +1,27 @@
+---
+# sda-Festplatte auf worker-0
+hdd_device: /dev/sda
+hdd_mount_point: /mnt/hdd
+hdd_mount_opts: defaults,nofail,x-systemd.device-timeout=10s
+
+# Unterverzeichnisse die Kubernetes für Storage-Volumes anlegt
+hdd_k8s_storage_dir: /mnt/hdd/k8s-storage
+
+# Weitere App-Datenverzeichnisse auf der Festplatte
+# Format: { path: "...", owner: "...", mode: "..." }
+# Ansible legt diese Verzeichnisse an; Apps können sie per HostPath-Volume nutzen
+# oder die Kubernetes-StorageClass "hdd" dynmaisch provisioniert Unterverzeichnisse
+# unter hdd_k8s_storage_dir.
+hdd_app_dirs:
+  - path: /mnt/hdd/k8s-storage
+    owner: root
+    mode: "0755"
+  - path: /mnt/hdd/backups
+    owner: root
+    mode: "0755"
+  - path: /mnt/hdd/media
+    owner: root
+    mode: "0755"
+  - path: /mnt/hdd/windeployment
+    owner: root
+    mode: "0755"
