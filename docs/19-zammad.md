@@ -30,72 +30,57 @@ Die Deployment-Konfiguration liegt unter `argocd/apps/zammad/`.
 
 ## Schritt 1 — Secrets generieren und versiegeln
 
-Vor dem ersten Deployment müssen drei Secrets erstellt und versiegelt werden.
+Vor dem ersten Deployment muss das Datenbank-Passwort versiegelt werden.  
+Es wird **zweimal** versiegelt (unterschiedliche Secret-Keys), enthält aber denselben Wert.
 
-### 1.1 Passwörter generieren
+### 1.1 Passwort generieren
 
 ```bash
-# PostgreSQL-Passwort für den Zammad-User
-POSTGRES_PASSWORD=$(openssl rand -base64 32 | tr -d '=+/' | head -c 32)
-echo "POSTGRES_PASSWORD: $POSTGRES_PASSWORD"
-
-# PostgreSQL Admin-Passwort (postgres-User)
-POSTGRES_ADMIN_PASSWORD=$(openssl rand -base64 32 | tr -d '=+/' | head -c 32)
-echo "POSTGRES_ADMIN_PASSWORD: $POSTGRES_ADMIN_PASSWORD"
-
-# Rails Secret Key Base (64-Byte Hex)
-SECRET_KEY_BASE=$(openssl rand -hex 64)
-echo "SECRET_KEY_BASE: $SECRET_KEY_BASE"
+# PostgreSQL-Passwort für den Zammad-DB-User
+DB_PASS=$(openssl rand -base64 32 | tr -d '=+/' | head -c 32)
+echo "DB_PASS: $DB_PASS"
 ```
 
-Passwörter sicher speichern (z. B. in einem Passwort-Manager).
+Passwort sicher speichern (z. B. in einem Passwort-Manager).
 
 ### 1.2 Secrets versiegeln
 
 ```bash
-# Hilfsvariable
 NS=zammad
 SECRET_NAME=zammad-secrets
 CONTROLLER_NS=sealed-secrets
 CONTROLLER=sealed-secrets-controller
 
-# postgresql-password
-echo -n "$POSTGRES_PASSWORD" | kubeseal --raw \
+# Key 1: postgresql-pass (für den Zammad-App-Container)
+echo -n "$DB_PASS" | kubeseal --raw \
   --namespace $NS --name $SECRET_NAME \
   --controller-namespace $CONTROLLER_NS \
   --controller-name $CONTROLLER \
   --from-file=/dev/stdin
+# → Ausgabe als encryptedPostgresPass eintragen
 
-# postgresql-postgres-password
-echo -n "$POSTGRES_ADMIN_PASSWORD" | kubeseal --raw \
+# Key 2: postgresql-password (für den Bitnami-PostgreSQL-Sub-Chart)
+echo -n "$DB_PASS" | kubeseal --raw \
   --namespace $NS --name $SECRET_NAME \
   --controller-namespace $CONTROLLER_NS \
   --controller-name $CONTROLLER \
   --from-file=/dev/stdin
-
-# secret-key-base
-echo -n "$SECRET_KEY_BASE" | kubeseal --raw \
-  --namespace $NS --name $SECRET_NAME \
-  --controller-namespace $CONTROLLER_NS \
-  --controller-name $CONTROLLER \
-  --from-file=/dev/stdin
+# → Ausgabe als encryptedPostgresPassword eintragen
 ```
 
-### 1.3 Werte in values.yaml eintragen
+> **Hinweis:** Beide Werte enthalten dasselbe Passwort, aber unterschiedliche  
+> kubeseal-Ciphertexts. Jeder `kubeseal --raw`-Aufruf erzeugt eine andere  
+> Ausgabe — das ist korrekt (nichtdeterministische asymmetrische Verschlüsselung).
 
-Die verschlüsselten Ausgaben in `argocd/apps/zammad/values.yaml` eintragen:
+### 1.3 Werte in values.yaml eintragen
 
 ```yaml
 secrets:
   enabled: true
   name: zammad-secrets
-  encryptedPostgresPassword: "<Ausgabe für postgresql-password>"
-  encryptedPostgresAdminPassword: "<Ausgabe für postgresql-postgres-password>"
-  encryptedSecretKeyBase: "<Ausgabe für secret-key-base>"
+  encryptedPostgresPass: "<Ausgabe von Aufruf 1>"
+  encryptedPostgresPassword: "<Ausgabe von Aufruf 2>"
 ```
-
-> **Hinweis:** Jeder `kubeseal --raw`-Aufruf erzeugt einen anderen Ciphertext,  
-> auch für denselben Klartext. Das ist normales Verhalten (asymmetrische Verschlüsselung).
 
 ---
 
