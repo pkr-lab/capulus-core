@@ -8,7 +8,6 @@ description: |
 
   Web-Interface:
     http://zammad.homeserver
-    https://zammad.pke-lab.de
 
   Sub-Charts (im Zammad-Chart enthalten):
     - PostgreSQL 16.x (Bitnami)
