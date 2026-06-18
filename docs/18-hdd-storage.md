@@ -125,6 +125,107 @@ kubectl get pvc -A | grep hdd
 ssh ubuntu@192.168.178.95 'df -h /mnt/hdd && du -sh /mnt/hdd/k8s-storage/*'
 ```
 
+## Bestehende PVC auf HDD migrieren
+
+Für eine **neue** App reicht es, `storageClassName: hdd` direkt in die
+Werte zu schreiben (siehe Checkliste unten). Läuft die App aber bereits mit
+Daten auf `local-path`, reicht das **nicht**: `storageClassName` ist auf
+einer existierenden PVC unveränderlich. Kubernetes/ArgoCD verweigern die
+Änderung einfach (sicherer Fehlschlag, keine Datenverluste) — die alte PVC
+bleibt unangetastet, bis sie manuell migriert wird.
+
+> Git-Änderung committen ist also gefahrlos möglich, bevor die Migration
+> durchgeführt wird: ArgoCD zeigt danach lediglich `OutOfSync`, löscht aber
+> nichts. Erst der manuelle Schritt unten verschiebt die Daten wirklich.
+
+### Ablauf
+
+```
+1. Auto-Sync der App in ArgoCD pausieren
+2. Workload auf 0 Replicas skalieren (stoppt Schreibzugriffe)
+3. Temp-Pod auf ALTER PVC starten        → landet automatisch auf dem alten Node
+4. Temp-PVC auf "hdd" anlegen (anderer Name als Original)
+5. Temp-Pod auf NEUER (hdd) PVC starten  → landet automatisch auf worker-0
+6. Daten Pod-zu-Pod kopieren (tar-Pipe über kubectl exec)
+7. Alte PVC löschen
+8. ArgoCD syncen → Chart legt frische PVC mit Original-Namen auf "hdd" an
+9. Daten von Temp-PVC in die frische PVC kopieren
+10. Temp-Pod + Temp-PVC löschen, Workload wieder hochskalieren, Auto-Sync reaktivieren
+```
+
+### Befehle
+
+```bash
+NS=<namespace>            # z.B. minio / monitoring
+OLD_PVC=<alte-pvc>         # kubectl get pvc -n $NS
+APP_KIND=deployment        # oder: statefulset / vmsingle (Operator-CRD)
+APP_NAME=<workload-name>
+
+# 1. Auto-Sync pausieren (ArgoCD UI: App → ... → Disable Auto-Sync)
+argocd app set $NS --sync-policy none
+
+# 2. Herunterskalieren
+kubectl -n $NS scale $APP_KIND/$APP_NAME --replicas=0
+# Operator-CRD (z.B. VMSingle) statt scale:
+# kubectl -n $NS patch vmsingle $APP_NAME --type merge -p '{"spec":{"replicaCount":0}}'
+
+# 3. Source-Pod auf der alten PVC
+kubectl -n $NS run migrate-source --image=alpine:3.20 --restart=Never \
+  --overrides='{"spec":{"containers":[{"name":"shell","image":"alpine:3.20","command":["sleep","3600"],"volumeMounts":[{"name":"data","mountPath":"/data"}]}],"volumes":[{"name":"data","persistentVolumeClaim":{"claimName":"'$OLD_PVC'"}}]}}'
+
+# 4. Temp-PVC auf hdd (Größe an Original anpassen)
+kubectl -n $NS apply -f - <<EOF
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${OLD_PVC}-hdd-migration
+spec:
+  storageClassName: hdd
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 10Gi
+EOF
+
+# 5. Target-Pod auf der neuen (hdd) PVC
+kubectl -n $NS run migrate-target --image=alpine:3.20 --restart=Never \
+  --overrides='{"spec":{"containers":[{"name":"shell","image":"alpine:3.20","command":["sleep","3600"],"volumeMounts":[{"name":"data","mountPath":"/data"}]}],"volumes":[{"name":"data","persistentVolumeClaim":{"claimName":"'$OLD_PVC'-hdd-migration"}}]}}'
+
+# 6. Kopieren + verifizieren
+kubectl -n $NS exec migrate-source -- tar cf - -C /data . | \
+  kubectl -n $NS exec -i migrate-target -- tar xf - -C /data
+kubectl -n $NS exec migrate-source -- du -sh /data
+kubectl -n $NS exec migrate-target -- du -sh /data   # Größen vergleichen!
+
+# 7. Alte PVC löschen (erst wenn 6. verifiziert ist!)
+kubectl -n $NS delete pod migrate-source
+kubectl -n $NS delete pvc $OLD_PVC
+
+# 8. ArgoCD syncen → legt frische PVC mit Original-Namen auf hdd an
+argocd app sync $NS
+
+# 9. Daten von Temp-PVC in die frische PVC kopieren
+kubectl -n $NS run migrate-restore --image=alpine:3.20 --restart=Never \
+  --overrides='{"spec":{"containers":[{"name":"shell","image":"alpine:3.20","command":["sleep","3600"],"volumeMounts":[{"name":"data","mountPath":"/data"}]}],"volumes":[{"name":"data","persistentVolumeClaim":{"claimName":"'$OLD_PVC'"}}]}}'
+kubectl -n $NS exec migrate-target -- tar cf - -C /data . | \
+  kubectl -n $NS exec -i migrate-restore -- tar xf - -C /data
+
+# 10. Aufräumen + hochskalieren
+kubectl -n $NS delete pod migrate-target migrate-restore
+kubectl -n $NS delete pvc ${OLD_PVC}-hdd-migration
+kubectl -n $NS scale $APP_KIND/$APP_NAME --replicas=1
+argocd app set $NS --sync-policy automated --auto-prune --self-heal
+```
+
+> **Hinweis VictoriaMetrics (`vmsingle`):** Der Operator verwaltet Deployment
+> + PVC selbst; Namen vorab mit `kubectl -n monitoring get pvc,deploy` prüfen
+> (typischerweise `vmsingle-<release>-victoria-metrics-k8s-stack`).
+>
+> **Hinweis MinIO:** PVC- und Deployment-Name sind im Standalone-Modus
+> üblicherweise schlicht `minio` (`kubectl -n minio get pvc,deploy`).
+
+---
+
 ## Neue Anwendung hinzufügen (Checkliste)
 
 ```

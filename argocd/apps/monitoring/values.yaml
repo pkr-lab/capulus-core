@@ -56,10 +56,22 @@ victoria-metrics-k8s-stack:
       storage:
         accessModes:
           - ReadWriteOnce
-        storageClassName: local-path
+        storageClassName: hdd
         resources:
           requests:
             storage: 10Gi
+      # Pflicht: hdd-PVCs binden nur auf worker-0 (siehe docs/18-hdd-storage.md).
+      # ACHTUNG: Bestehende PVC bereits auf local-path → vor dem Sync manuell
+      # migrieren (docs/18-hdd-storage.md → "Bestehende PVC auf HDD migrieren").
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - worker-0
 
   # ---- VMAgent ---------------------------------------------
   # Scrapes everything matching a VMServiceScrape / VMPodScrape /
