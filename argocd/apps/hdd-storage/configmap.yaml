@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hdd-local-path-config
+  namespace: hdd-storage
+data:
+  # nodePathMap: Nur worker-0 hat die Festplatte → leere Pfade für alle anderen Nodes
+  # sorgt dafür dass Volume-Erstellung auf dem Control-Plane-Node fehlschlägt
+  # (statt versehentlich lokalen Storage des Servers zu verwenden).
+  config.json: |
+    {
+      "nodePathMap": [
+        {
+          "node": "DEFAULT_PATH_FOR_NON_LISTED_NODES",
+          "paths": []
+        },
+        {
+          "node": "worker-0",
+          "paths": ["/mnt/hdd/k8s-storage"]
+        }
+      ]
+    }
+
+  # setup-Script: legt Verzeichnis für jedes neue Volume an
+  setup: |
+    #!/bin/sh
+    set -eu
+    mkdir -m 0777 -p "${VOL_DIR}"
+
+  # teardown-Script: löscht Verzeichnis beim Freigeben (nur bei reclaimPolicy: Delete)
+  teardown: |
+    #!/bin/sh
+    set -eu
+    rm -rf "${VOL_DIR}"
+
+  # helperPod-Template: Pod der setup/teardown auf dem Ziel-Node ausführt
+  helperPod.yaml: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: helper-pod
+    spec:
+      priorityClassName: system-node-critical
+      tolerations:
+        - key: node.kubernetes.io/not-ready
+          operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 300
+        - key: node.kubernetes.io/unreachable
+          operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 300
+      containers:
+        - name: helper-pod
+          image: busybox:stable
+          imagePullPolicy: IfNotPresent

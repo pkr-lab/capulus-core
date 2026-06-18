@@ -1,0 +1,403 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: autounattend-configs
+  namespace: windeployment
+data:
+  # Netzwerk-Version: lädt setup.ps1 vom windeployment-Server (PXE-Szenario)
+  autounattend.xml: |
+    <?xml version="1.0" encoding="utf-8"?>
+    <unattend xmlns="urn:schemas-microsoft-com:unattend">
+
+      <!-- ============================================================
+           windowsPE: Läuft in WinPE vor der Installation
+           ============================================================ -->
+      <settings pass="windowsPE">
+        <component name="Microsoft-Windows-International-Core-WinPE"
+                   processorArchitecture="amd64"
+                   publicKeyToken="31bf3856ad364e35"
+                   language="neutral"
+                   versionScope="nonSxS"
+                   xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <SetupUILanguage>
+            <UILanguage>de-DE</UILanguage>
+          </SetupUILanguage>
+          <InputLocale>0407:00000407</InputLocale>
+          <SystemLocale>de-DE</SystemLocale>
+          <UILanguage>de-DE</UILanguage>
+          <UserLocale>de-DE</UserLocale>
+        </component>
+
+        <component name="Microsoft-Windows-Setup"
+                   processorArchitecture="amd64"
+                   publicKeyToken="31bf3856ad364e35"
+                   language="neutral"
+                   versionScope="nonSxS"
+                   xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <!-- TPM/SecureBoot-Bypass für ältere Hardware (Windows 11) -->
+          <RunSynchronous>
+            <RunSynchronousCommand wcm:action="add">
+              <Order>1</Order>
+              <Path>cmd /c reg add "HKLM\SYSTEM\Setup\LabConfig" /v BypassTPMCheck /t REG_DWORD /d 1 /f</Path>
+            </RunSynchronousCommand>
+            <RunSynchronousCommand wcm:action="add">
+              <Order>2</Order>
+              <Path>cmd /c reg add "HKLM\SYSTEM\Setup\LabConfig" /v BypassSecureBootCheck /t REG_DWORD /d 1 /f</Path>
+            </RunSynchronousCommand>
+            <RunSynchronousCommand wcm:action="add">
+              <Order>3</Order>
+              <Path>cmd /c reg add "HKLM\SYSTEM\Setup\LabConfig" /v BypassRAMCheck /t REG_DWORD /d 1 /f</Path>
+            </RunSynchronousCommand>
+          </RunSynchronous>
+          <DiskConfiguration>
+            <Disk wcm:action="add">
+              <DiskID>0</DiskID>
+              <WillWipeDisk>true</WillWipeDisk>
+              <CreatePartitions>
+                <CreatePartition wcm:action="add">
+                  <Order>1</Order>
+                  <Size>100</Size>
+                  <Type>EFI</Type>
+                </CreatePartition>
+                <CreatePartition wcm:action="add">
+                  <Order>2</Order>
+                  <Size>16</Size>
+                  <Type>MSR</Type>
+                </CreatePartition>
+                <CreatePartition wcm:action="add">
+                  <Order>3</Order>
+                  <Extend>true</Extend>
+                  <Type>Primary</Type>
+                </CreatePartition>
+              </CreatePartitions>
+              <ModifyPartitions>
+                <ModifyPartition wcm:action="add">
+                  <Order>1</Order>
+                  <PartitionID>1</PartitionID>
+                  <Format>FAT32</Format>
+                  <Label>EFI</Label>
+                </ModifyPartition>
+                <ModifyPartition wcm:action="add">
+                  <Order>2</Order>
+                  <PartitionID>2</PartitionID>
+                </ModifyPartition>
+                <ModifyPartition wcm:action="add">
+                  <Order>3</Order>
+                  <PartitionID>3</PartitionID>
+                  <Format>NTFS</Format>
+                  <Label>Windows</Label>
+                  <Letter>C</Letter>
+                </ModifyPartition>
+              </ModifyPartitions>
+            </Disk>
+          </DiskConfiguration>
+          <ImageInstall>
+            <OSImage>
+              <InstallTo>
+                <DiskID>0</DiskID>
+                <PartitionID>3</PartitionID>
+              </InstallTo>
+              <WillShowUI>Never</WillShowUI>
+            </OSImage>
+          </ImageInstall>
+          <UserData>
+            <AcceptEula>true</AcceptEula>
+            <FullName>DLRG OG Andernach</FullName>
+            <Organization>DLRG OG Andernach</Organization>
+          </UserData>
+        </component>
+      </settings>
+
+      <!-- ============================================================
+           specialize: Läuft nach erstem Reboot, maschinenspezifisch
+           ============================================================ -->
+      <settings pass="specialize">
+        <component name="Microsoft-Windows-Shell-Setup"
+                   processorArchitecture="amd64"
+                   publicKeyToken="31bf3856ad364e35"
+                   language="neutral"
+                   versionScope="nonSxS"
+                   xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <ComputerName>DLRG-PC</ComputerName>
+          <TimeZone>W. Europe Standard Time</TimeZone>
+        </component>
+        <component name="Microsoft-Windows-International-Core"
+                   processorArchitecture="amd64"
+                   publicKeyToken="31bf3856ad364e35"
+                   language="neutral"
+                   versionScope="nonSxS"
+                   xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <InputLocale>0407:00000407</InputLocale>
+          <SystemLocale>de-DE</SystemLocale>
+          <UILanguage>de-DE</UILanguage>
+          <UserLocale>de-DE</UserLocale>
+        </component>
+      </settings>
+
+      <!-- ============================================================
+           oobeSystem: OOBE-Phase (Out-of-Box-Experience)
+           ============================================================ -->
+      <settings pass="oobeSystem">
+        <component name="Microsoft-Windows-Shell-Setup"
+                   processorArchitecture="amd64"
+                   publicKeyToken="31bf3856ad364e35"
+                   language="neutral"
+                   versionScope="nonSxS"
+                   xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <OOBE>
+            <HideEULAPage>true</HideEULAPage>
+            <HideLocalAccountScreen>true</HideLocalAccountScreen>
+            <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
+            <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+            <NetworkLocation>Work</NetworkLocation>
+            <ProtectYourPC>3</ProtectYourPC>
+            <SkipMachineOOBE>true</SkipMachineOOBE>
+            <SkipUserOOBE>true</SkipUserOOBE>
+          </OOBE>
+          <!-- Admin-Konto: Passwort MUSS nach der Einrichtung geändert werden! -->
+          <UserAccounts>
+            <AdministratorPassword>
+              <Value>DLRG-Admin-2024!</Value>
+              <PlainText>true</PlainText>
+            </AdministratorPassword>
+            <LocalAccounts>
+              <LocalAccount wcm:action="add">
+                <Description>DLRG OG Andernach - lokaler Administrator</Description>
+                <DisplayName>Admin</DisplayName>
+                <Group>Administrators</Group>
+                <Name>Admin</Name>
+                <Password>
+                  <Value>DLRG-Admin-2024!</Value>
+                  <PlainText>true</PlainText>
+                </Password>
+              </LocalAccount>
+              <LocalAccount wcm:action="add">
+                <Description>DLRG OG Andernach Standardbenutzer</Description>
+                <DisplayName>DLRG OG Andernach</DisplayName>
+                <Group>Users</Group>
+                <Name>dlrg</Name>
+                <Password>
+                  <Value>DLRG2024</Value>
+                  <PlainText>true</PlainText>
+                </Password>
+              </LocalAccount>
+            </LocalAccounts>
+          </UserAccounts>
+          <!-- Admin-Autologon für erstes Setup, danach deaktiviert -->
+          <AutoLogon>
+            <Password>
+              <Value>DLRG-Admin-2024!</Value>
+              <PlainText>true</PlainText>
+            </Password>
+            <Enabled>true</Enabled>
+            <LogonCount>1</LogonCount>
+            <Username>Admin</Username>
+          </AutoLogon>
+          <!-- setup.ps1 vom windeployment-Server laden und ausführen -->
+          <FirstLogonCommands>
+            <SynchronousCommand wcm:action="add">
+              <Order>1</Order>
+              <RequiresUserInput>false</RequiresUserInput>
+              <Description>DLRG-Software und Systemkonfiguration herunterladen</Description>
+              <CommandLine>powershell.exe -ExecutionPolicy Bypass -Command "try { Invoke-WebRequest -Uri 'http://192.168.178.94:30090/scripts/setup.ps1' -OutFile 'C:\Windows\Temp\setup.ps1' -UseBasicParsing; Start-Process powershell.exe -ArgumentList '-ExecutionPolicy Bypass -File C:\Windows\Temp\setup.ps1' -Wait -Verb RunAs } catch { Write-EventLog -LogName Application -Source 'DLRG-Setup' -EntryType Error -EventId 1 -Message $_.Exception.Message }"</CommandLine>
+            </SynchronousCommand>
+          </FirstLogonCommands>
+        </component>
+      </settings>
+    </unattend>
+
+  # USB-Version: setup.ps1 liegt direkt auf dem USB-Stick (kein Netzwerk nötig)
+  autounattend-usb.xml: |
+    <?xml version="1.0" encoding="utf-8"?>
+    <unattend xmlns="urn:schemas-microsoft-com:unattend">
+      <settings pass="windowsPE">
+        <component name="Microsoft-Windows-International-Core-WinPE"
+                   processorArchitecture="amd64"
+                   publicKeyToken="31bf3856ad364e35"
+                   language="neutral"
+                   versionScope="nonSxS"
+                   xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <SetupUILanguage>
+            <UILanguage>de-DE</UILanguage>
+          </SetupUILanguage>
+          <InputLocale>0407:00000407</InputLocale>
+          <SystemLocale>de-DE</SystemLocale>
+          <UILanguage>de-DE</UILanguage>
+          <UserLocale>de-DE</UserLocale>
+        </component>
+        <component name="Microsoft-Windows-Setup"
+                   processorArchitecture="amd64"
+                   publicKeyToken="31bf3856ad364e35"
+                   language="neutral"
+                   versionScope="nonSxS"
+                   xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <RunSynchronous>
+            <RunSynchronousCommand wcm:action="add">
+              <Order>1</Order>
+              <Path>cmd /c reg add "HKLM\SYSTEM\Setup\LabConfig" /v BypassTPMCheck /t REG_DWORD /d 1 /f</Path>
+            </RunSynchronousCommand>
+            <RunSynchronousCommand wcm:action="add">
+              <Order>2</Order>
+              <Path>cmd /c reg add "HKLM\SYSTEM\Setup\LabConfig" /v BypassSecureBootCheck /t REG_DWORD /d 1 /f</Path>
+            </RunSynchronousCommand>
+            <RunSynchronousCommand wcm:action="add">
+              <Order>3</Order>
+              <Path>cmd /c reg add "HKLM\SYSTEM\Setup\LabConfig" /v BypassRAMCheck /t REG_DWORD /d 1 /f</Path>
+            </RunSynchronousCommand>
+          </RunSynchronous>
+          <DiskConfiguration>
+            <Disk wcm:action="add">
+              <DiskID>0</DiskID>
+              <WillWipeDisk>true</WillWipeDisk>
+              <CreatePartitions>
+                <CreatePartition wcm:action="add">
+                  <Order>1</Order>
+                  <Size>100</Size>
+                  <Type>EFI</Type>
+                </CreatePartition>
+                <CreatePartition wcm:action="add">
+                  <Order>2</Order>
+                  <Size>16</Size>
+                  <Type>MSR</Type>
+                </CreatePartition>
+                <CreatePartition wcm:action="add">
+                  <Order>3</Order>
+                  <Extend>true</Extend>
+                  <Type>Primary</Type>
+                </CreatePartition>
+              </CreatePartitions>
+              <ModifyPartitions>
+                <ModifyPartition wcm:action="add">
+                  <Order>1</Order>
+                  <PartitionID>1</PartitionID>
+                  <Format>FAT32</Format>
+                  <Label>EFI</Label>
+                </ModifyPartition>
+                <ModifyPartition wcm:action="add">
+                  <Order>2</Order>
+                  <PartitionID>2</PartitionID>
+                </ModifyPartition>
+                <ModifyPartition wcm:action="add">
+                  <Order>3</Order>
+                  <PartitionID>3</PartitionID>
+                  <Format>NTFS</Format>
+                  <Label>Windows</Label>
+                  <Letter>C</Letter>
+                </ModifyPartition>
+              </ModifyPartitions>
+            </Disk>
+          </DiskConfiguration>
+          <ImageInstall>
+            <OSImage>
+              <InstallTo>
+                <DiskID>0</DiskID>
+                <PartitionID>3</PartitionID>
+              </InstallTo>
+              <WillShowUI>Never</WillShowUI>
+            </OSImage>
+          </ImageInstall>
+          <UserData>
+            <AcceptEula>true</AcceptEula>
+            <FullName>DLRG OG Andernach</FullName>
+            <Organization>DLRG OG Andernach</Organization>
+          </UserData>
+        </component>
+      </settings>
+      <settings pass="specialize">
+        <component name="Microsoft-Windows-Shell-Setup"
+                   processorArchitecture="amd64"
+                   publicKeyToken="31bf3856ad364e35"
+                   language="neutral"
+                   versionScope="nonSxS"
+                   xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <ComputerName>DLRG-PC</ComputerName>
+          <TimeZone>W. Europe Standard Time</TimeZone>
+        </component>
+        <component name="Microsoft-Windows-International-Core"
+                   processorArchitecture="amd64"
+                   publicKeyToken="31bf3856ad364e35"
+                   language="neutral"
+                   versionScope="nonSxS"
+                   xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <InputLocale>0407:00000407</InputLocale>
+          <SystemLocale>de-DE</SystemLocale>
+          <UILanguage>de-DE</UILanguage>
+          <UserLocale>de-DE</UserLocale>
+        </component>
+      </settings>
+      <settings pass="oobeSystem">
+        <component name="Microsoft-Windows-Shell-Setup"
+                   processorArchitecture="amd64"
+                   publicKeyToken="31bf3856ad364e35"
+                   language="neutral"
+                   versionScope="nonSxS"
+                   xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <OOBE>
+            <HideEULAPage>true</HideEULAPage>
+            <HideLocalAccountScreen>true</HideLocalAccountScreen>
+            <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
+            <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+            <NetworkLocation>Work</NetworkLocation>
+            <ProtectYourPC>3</ProtectYourPC>
+            <SkipMachineOOBE>true</SkipMachineOOBE>
+            <SkipUserOOBE>true</SkipUserOOBE>
+          </OOBE>
+          <UserAccounts>
+            <AdministratorPassword>
+              <Value>DLRG-Admin-2024!</Value>
+              <PlainText>true</PlainText>
+            </AdministratorPassword>
+            <LocalAccounts>
+              <LocalAccount wcm:action="add">
+                <Description>DLRG OG Andernach - lokaler Administrator</Description>
+                <DisplayName>Admin</DisplayName>
+                <Group>Administrators</Group>
+                <Name>Admin</Name>
+                <Password>
+                  <Value>DLRG-Admin-2024!</Value>
+                  <PlainText>true</PlainText>
+                </Password>
+              </LocalAccount>
+              <LocalAccount wcm:action="add">
+                <Description>DLRG OG Andernach Standardbenutzer</Description>
+                <DisplayName>DLRG OG Andernach</DisplayName>
+                <Group>Users</Group>
+                <Name>dlrg</Name>
+                <Password>
+                  <Value>DLRG2024</Value>
+                  <PlainText>true</PlainText>
+                </Password>
+              </LocalAccount>
+            </LocalAccounts>
+          </UserAccounts>
+          <AutoLogon>
+            <Password>
+              <Value>DLRG-Admin-2024!</Value>
+              <PlainText>true</PlainText>
+            </Password>
+            <Enabled>true</Enabled>
+            <LogonCount>1</LogonCount>
+            <Username>Admin</Username>
+          </AutoLogon>
+          <!-- USB-Version: setup.ps1 liegt auf USB-Stick (Laufwerk wechselt je nach System) -->
+          <FirstLogonCommands>
+            <SynchronousCommand wcm:action="add">
+              <Order>1</Order>
+              <RequiresUserInput>false</RequiresUserInput>
+              <Description>DLRG-Software von USB-Stick installieren</Description>
+              <CommandLine>powershell.exe -ExecutionPolicy Bypass -Command "foreach ($drive in 'D','E','F','G','H') { $p = \"$drive:\setup.ps1\"; if (Test-Path $p) { Start-Process powershell.exe -ArgumentList \"-ExecutionPolicy Bypass -File $p\" -Wait -Verb RunAs; break } }"</CommandLine>
+            </SynchronousCommand>
+          </FirstLogonCommands>
+        </component>
+      </settings>
+    </unattend>

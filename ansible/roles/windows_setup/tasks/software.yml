@@ -1,0 +1,62 @@
+---
+# Software-Installation via Chocolatey
+
+- name: Chocolatey installieren
+  ansible.windows.win_shell: |
+    if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
+      [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
+      Set-ExecutionPolicy Bypass -Scope Process -Force
+      Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+    }
+  args:
+    executable: powershell
+  changed_when: false
+
+- name: Chocolatey-Pakete installieren
+  chocolatey.chocolatey.win_chocolatey:
+    name: "{{ windows_choco_packages }}"
+    state: present
+
+- name: Microsoft 365 installieren (ODT)
+  when: windows_install_office365
+  block:
+    - name: ODT-Konfiguration erstellen
+      ansible.windows.win_copy:
+        dest: C:\Windows\Temp\m365-config.xml
+        content: |
+          <Configuration>
+            <Add OfficeClientEdition="64" Channel="Current">
+              <Product ID="O365BusinessRetail">
+                <Language ID="de-de"/>
+                <ExcludeApp ID="Access"/>
+                <ExcludeApp ID="Groove"/>
+                <ExcludeApp ID="Lync"/>
+                <ExcludeApp ID="Publisher"/>
+              </Product>
+            </Add>
+            <Updates Enabled="TRUE" Channel="Current"/>
+            <Display Level="None" AcceptEULA="TRUE"/>
+            <Logging Level="Standard" Path="C:\Windows\Logs"/>
+          </Configuration>
+
+    - name: Office Deployment Tool herunterladen
+      ansible.windows.win_get_url:
+        url: "https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_17531-20046.exe"
+        dest: C:\Windows\Temp\officedeploymenttool.exe
+        timeout: 120
+
+    - name: ODT entpacken
+      ansible.windows.win_shell: |
+        Start-Process "C:\Windows\Temp\officedeploymenttool.exe" `
+          -ArgumentList "/quiet /extract:C:\Windows\Temp\odt" -Wait
+      args:
+        executable: powershell
+
+    - name: Microsoft 365 installieren (dauert 20-45 Minuten)
+      ansible.windows.win_shell: |
+        Start-Process "C:\Windows\Temp\odt\setup.exe" `
+          -ArgumentList "/configure C:\Windows\Temp\m365-config.xml" -Wait
+      args:
+        executable: powershell
+      async: 3600
+      poll: 30

@@ -1,0 +1,100 @@
+---
+# Windows-Systemeinstellungen
+
+- name: Zeitzone setzen
+  community.windows.win_timezone:
+    timezone: "{{ windows_timezone }}"
+
+- name: Lokalisierung konfigurieren
+  ansible.windows.win_shell: |
+    Set-Culture {{ windows_locale }}
+    Set-WinSystemLocale {{ windows_locale }}
+    Set-WinUILanguageOverride -Language {{ windows_locale }}
+    Set-WinUserLanguageList -LanguageList {{ windows_locale }} -Force
+  changed_when: false
+
+- name: Energieoptionen - kein Ruhezustand (Strom)
+  ansible.windows.win_shell: |
+    powercfg /change standby-timeout-ac 0
+    powercfg /change hibernate-timeout-ac 0
+    powercfg /change monitor-timeout-ac 30
+  changed_when: false
+
+- name: Windows Update - automatisch installieren
+  ansible.windows.win_regedit:
+    path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU
+    name: "{{ item.name }}"
+    data: "{{ item.value }}"
+    type: dword
+  loop:
+    - { name: AUOptions,     value: 4 }
+    - { name: NoAutoUpdate,  value: 0 }
+    - { name: AutoInstallMinorUpdates, value: 1 }
+
+- name: Telemetrie minimieren (DSGVO)
+  ansible.windows.win_regedit:
+    path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection
+    name: AllowTelemetry
+    data: 0
+    type: dword
+
+- name: Cortana deaktivieren
+  ansible.windows.win_regedit:
+    path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search
+    name: AllowCortana
+    data: 0
+    type: dword
+
+- name: Fast Startup deaktivieren
+  ansible.windows.win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power
+    name: HiberbootEnabled
+    data: 0
+    type: dword
+
+- name: Windows Firewall aktivieren
+  ansible.windows.win_shell: netsh advfirewall set allprofiles state on
+  changed_when: false
+
+- name: Remote Desktop aktivieren
+  ansible.windows.win_regedit:
+    path: HKLM:\System\CurrentControlSet\Control\Terminal Server
+    name: fDenyTSConnections
+    data: 0
+    type: dword
+
+- name: Remote Desktop in Firewall freischalten (nur LAN)
+  community.windows.win_firewall_rule:
+    name: "Remote Desktop - DLRG LAN"
+    localport: "3389"
+    protocol: tcp
+    direction: in
+    action: allow
+    remoteip: "{{ windows_lan_subnet }}"
+    state: present
+    enabled: true
+
+- name: WinRM fuer Ansible-Verwaltung offen halten
+  community.windows.win_firewall_rule:
+    name: "WinRM HTTP - DLRG LAN"
+    localport: "5985"
+    protocol: tcp
+    direction: in
+    action: allow
+    remoteip: "{{ windows_lan_subnet }}"
+    state: present
+    enabled: "{{ windows_keep_winrm }}"
+
+- name: Netzwerkprofil auf Privat setzen
+  ansible.windows.win_shell: |
+    Get-NetConnectionProfile | Set-NetConnectionProfile -NetworkCategory Private
+  changed_when: false
+  ignore_errors: true
+
+- name: Dateiendungen im Explorer anzeigen (alle Benutzer via Standard-Registry)
+  ansible.windows.win_regedit:
+    path: HKU:\.DEFAULT\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+    name: HideFileExt
+    data: 0
+    type: dword
+  ignore_errors: true

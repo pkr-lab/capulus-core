@@ -1,0 +1,57 @@
+---
+# ============================================================
+# Windows-PC Einrichtungs-Playbook
+# DLRG OG Andernach
+# ============================================================
+#
+# Voraussetzungen:
+#   1. WinRM auf dem Ziel-PC aktivieren:
+#      powershell.exe -ExecutionPolicy Bypass -File scripts/windows/winrm-enable.ps1
+#   2. Ziel-PC im Inventory unter "windows_pcs" eintragen (siehe unten)
+#   3. Chocolatey-Collection installieren:
+#      ansible-galaxy collection install chocolatey.chocolatey
+#
+# Aufruf:
+#   ansible-playbook ansible/windows.yml -i ansible/inventory/hosts.yml \
+#     -e "windows_pc_purpose=Buero windows_admin_password=MeinSicheresPasswort"
+#
+# Nur bestimmte Tasks ausfuehren (Tags):
+#   --tags users       - nur Benutzer anlegen
+#   --tags software    - nur Software installieren
+#   --tags settings    - nur System-Einstellungen
+# ============================================================
+
+- name: Windows-PC einrichten (DLRG OG Andernach)
+  hosts: windows_pcs
+  gather_facts: false
+  vars:
+    ansible_connection: winrm
+    ansible_winrm_transport: basic
+    ansible_port: 5985
+    ansible_winrm_server_cert_validation: ignore
+
+  pre_tasks:
+    - name: Verbindung pruefen
+      ansible.windows.win_ping:
+      register: ping_result
+
+    - name: Verbindungsstatus ausgeben
+      ansible.builtin.debug:
+        msg: "Verbindung zu {{ inventory_hostname }} erfolgreich"
+      when: ping_result.ping == "pong"
+
+  roles:
+    - role: windows_setup
+
+  post_tasks:
+    - name: Einrichtung abgeschlossen
+      ansible.builtin.debug:
+        msg: |
+          ================================================
+          PC {{ inventory_hostname }} erfolgreich eingerichtet!
+
+          Naechste Schritte:
+          1. Admin-Passwort aendern: net user Admin <neues-passwort>
+          2. Microsoft 365 aktivieren: Beim naechsten Start anmelden
+          3. TeamViewer-ID notieren (fuer Fernwartung)
+          ================================================
