@@ -40,10 +40,6 @@ zammad:
         paths:
           - path: /
             pathType: Prefix
-      - host: zammad.pke-lab.de
-        paths:
-          - path: /
-            pathType: Prefix
     tls: []
 
   # ---- Secrets (aus bestehendem SealedSecret) ----------------
