@@ -14,9 +14,24 @@ minio:
 
   persistence:
     enabled: true
-    storageClass: local-path
+    storageClass: hdd
     size: 10Gi
     accessMode: ReadWriteOnce
+
+  # Pflicht: hdd-PVCs binden nur auf worker-0 (siehe docs/18-hdd-storage.md).
+  # ACHTUNG: Bestehende PVC bereits auf local-path → vor dem Sync manuell
+  # migrieren (docs/18-hdd-storage.md → "Bestehende PVC auf HDD migrieren"),
+  # sonst bleibt die alte PVC unverändert (storageClassName ist immutable)
+  # und der neue Pod kann wegen der Affinity nicht mehr auf der alten PVC starten.
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                  - worker-0
 
   # The chart defaults to requesting 16Gi of memory (distributed production
   # sizing). That would never schedule on the home-server — override hard.
