@@ -4,6 +4,14 @@ metadata:
   name: hdd-local-path-provisioner
   namespace: hdd-storage
 ---
+# rancher/local-path-provisioner erwartet diesen SA-Namen hardcoded für Helper-Pods.
+# Helper-Pods laufen nur setup/teardown-Skripte (mkdir/rm) — kein API-Zugriff nötig.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: local-path-provisioner-service-account
+  namespace: hdd-storage
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
