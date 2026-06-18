@@ -1,0 +1,139 @@
+---
+# ============================================================
+# Zammad — Wrapper-Chart values
+#
+# Secrets-Block (SealedSecret):
+#   Werte mit kubeseal versiegeln und hier eintragen.
+#   Anleitung: docs/19-zammad.md → Abschnitt "Secrets versiegeln"
+# ============================================================
+
+secrets:
+  enabled: true
+  name: zammad-secrets
+  # Versiegelte Ciphertext-Werte — NIEMALS Klartext committen!
+  # Versiegeln: echo -n 'WERT' | kubeseal --raw --namespace zammad \
+  #             --name zammad-secrets --controller-namespace sealed-secrets \
+  #             --controller-name sealed-secrets-controller
+  encryptedPostgresPassword: "PLACEHOLDER"
+  encryptedPostgresAdminPassword: "PLACEHOLDER"
+  encryptedSecretKeyBase: "PLACEHOLDER"
+
+# ============================================================
+# Sub-Chart: zammad/zammad
+# Alle Keys unterhalb von `zammad:` landen beim upstream-Chart.
+# Upstream values.yaml:
+#   https://github.com/zammad/zammad-helm/blob/main/zammad/values.yaml
+# ============================================================
+
+zammad:
+  # ---- Ingress -----------------------------------------------
+  ingress:
+    enabled: true
+    className: traefik
+    annotations:
+      traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    hosts:
+      - host: zammad.homeserver
+        paths:
+          - path: /
+            pathType: Prefix
+      - host: zammad.pke-lab.de
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+  # ---- Persistenz (Zammad-Dateispeicher) ---------------------
+  persistence:
+    enabled: true
+    storageClass: local-path
+    size: 15Gi
+
+  # ---- PostgreSQL (Bitnami Sub-Chart) ------------------------
+  postgresql:
+    enabled: true
+    auth:
+      username: zammad
+      database: zammad
+      existingSecret: zammad-secrets
+      secretKeys:
+        userPasswordKey: postgresql-password
+        adminPasswordKey: postgresql-postgres-password
+    primary:
+      persistence:
+        enabled: true
+        storageClass: local-path
+        size: 8Gi
+      resources:
+        requests:
+          cpu: 50m
+          memory: 256Mi
+        limits:
+          memory: 512Mi
+
+  # ---- Redis (Bitnami Sub-Chart) -----------------------------
+  redis:
+    enabled: true
+    architecture: standalone
+    auth:
+      enabled: false
+    master:
+      persistence:
+        enabled: true
+        storageClass: local-path
+        size: 1Gi
+      resources:
+        requests:
+          cpu: 25m
+          memory: 64Mi
+        limits:
+          memory: 128Mi
+
+  # ---- Elasticsearch deaktiviert (Ressourcenersparnis) -------
+  # Zammad 6.x hat eingebaute Volltextsuche (PostgreSQL-basiert).
+  # Für produktiven Einsatz mit großem Ticketvolumen Elasticsearch
+  # aktivieren und eigenen ES-Cluster bereitstellen.
+  elasticsearch:
+    enabled: false
+
+  # ---- Zammad-Konfiguration ----------------------------------
+  zammadConfig:
+    # Öffentliche URL von Zammad (für E-Mail-Links u.ä.)
+    railsOptions:
+      applicationUrl: "https://zammad.pke-lab.de"
+
+  # ---- Secret Key Base via existierendem Secret ---------------
+  # Legt den Rails Secret Key Base aus dem SealedSecret fest.
+  # Das Secret muss den Key `secret-key-base` enthalten.
+  secrets:
+    secretKeyBase:
+      useExistingSecret:
+        name: zammad-secrets
+        key: secret-key-base
+
+  # ---- Ressourcen (Zammad-Appserver) -------------------------
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
+  # ---- Zammad-Webserver (nginx-Sidecar) ----------------------
+  webSrv:
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+
+  # ---- Init-Container ----------------------------------------
+  initContainers:
+    zammadInit:
+      resources:
+        requests:
+          cpu: 50m
+          memory: 256Mi
+        limits:
+          memory: 512Mi

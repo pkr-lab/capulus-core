@@ -12,6 +12,14 @@
       "matchPackageNames": ["/kubeseal-webgui/"],
       "matchUpdateTypes": ["patch", "minor"],
       "automerge": true
+    },
+    {
+      "description": "Auto-merge patch and minor Zammad Helm chart updates; major versions require manual review.",
+      "matchManagers": ["helmv3"],
+      "matchDatasources": ["helm"],
+      "matchPackageNames": ["zammad"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true
     }
   ],
   "platformAutomerge": true
