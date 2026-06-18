@@ -1,23 +1,34 @@
 <p align="center">
-  <img src="docs/assets/banner.svg" alt="home-server — GitOps Home Lab on k3s, ArgoCD, Tailscale" width="100%" />
+  <img src="docs/assets/banner.svg" alt="capulus-core — GitOps Home Lab on k3s, ArgoCD, Tailscale" width="100%" />
 </p>
 
 <p align="center">
-  <a href="https://ubuntu.com/server"><img alt="Ubuntu" src="https://img.shields.io/badge/Ubuntu-26.04_LTS-E95420?style=for-the-badge&logo=ubuntu&logoColor=white"></a>
-  <a href="https://k3s.io"><img alt="k3s" src="https://img.shields.io/badge/k3s-v1.29-FFC61C?style=for-the-badge&logo=k3s&logoColor=black"></a>
-  <a href="https://argo-cd.readthedocs.io"><img alt="ArgoCD" src="https://img.shields.io/badge/ArgoCD-GitOps-EF7B4D?style=for-the-badge&logo=argo&logoColor=white"></a>
-  <a href="https://tailscale.com"><img alt="Tailscale" src="https://img.shields.io/badge/Tailscale-VPN-246FDB?style=for-the-badge&logo=tailscale&logoColor=white"></a>
+  <a href="https://ubuntu.com/server"><img alt="Ubuntu" src="https://img.shields.io/badge/Ubuntu-26.04_LTS-E95420?style=for-the-badge&logo=ubuntu&logoColor=white"></a>&nbsp;
+  <a href="https://k3s.io"><img alt="k3s" src="https://img.shields.io/badge/k3s-v1.29-FFC61C?style=for-the-badge&logo=kubernetes&logoColor=black"></a>&nbsp;
+  <a href="https://argo-cd.readthedocs.io"><img alt="ArgoCD" src="https://img.shields.io/badge/ArgoCD-GitOps-EF7B4D?style=for-the-badge&logo=argo&logoColor=white"></a>&nbsp;
+  <a href="https://tailscale.com"><img alt="Tailscale" src="https://img.shields.io/badge/Tailscale-VPN-246FDB?style=for-the-badge&logo=tailscale&logoColor=white"></a>&nbsp;
   <a href="https://www.ansible.com"><img alt="Ansible" src="https://img.shields.io/badge/Ansible-IaC-EE0000?style=for-the-badge&logo=ansible&logoColor=white"></a>
 </p>
 
 <p align="center">
-  <b>Vollständig automatisierter, GitOps-getriebener Home-Server auf einer einzigen Maschine.</b><br/>
+  <img alt="Lizenz" src="https://img.shields.io/badge/Lizenz-MIT-22D3EE?style=flat-square">&nbsp;
+  <img alt="GitOps" src="https://img.shields.io/badge/GitOps-driven-A78BFA?style=flat-square">&nbsp;
+  <img alt="Self-hosted" src="https://img.shields.io/badge/Self--hosted-100%25-34D399?style=flat-square">&nbsp;
+  <img alt="Single Node" src="https://img.shields.io/badge/Single--Node-Cluster-F59E0B?style=flat-square">
+</p>
+
+<br/>
+
+<p align="center">
+  <strong>Vollständig automatisierter, GitOps-getriebener Home-Server auf einer einzigen Maschine.</strong><br/>
   Ein einziger Ansible-Run liefert einen gehärteten Ubuntu-Host, einen schlanken Kubernetes-Cluster (<a href="https://k3s.io">k3s</a>), Continuous Delivery aus Git (<a href="https://argo-cd.readthedocs.io">ArgoCD</a>) und Zero-Config-Remote-Access (<a href="https://tailscale.com">Tailscale</a>).
 </p>
 
+<br/>
+
 ---
 
-## TL;DR
+## ⚡ TL;DR
 
 ```bash
 # 1) Repo klonen
@@ -28,53 +39,74 @@ $EDITOR ansible/inventory/hosts.yml
 $EDITOR ansible/group_vars/all.yml
 
 # 3) Collections installieren und Playbook laufen lassen
-make install   # oder: ansible-galaxy collection install -r ansible/requirements.yml \
-               #       && ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --ask-vault-pass
+make install
+# oder:
+# ansible-galaxy collection install -r ansible/requirements.yml
+# ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --ask-vault-pass
 ```
 
-Am Ende druckt das Playbook die ArgoCD-URL und das Admin-Passwort. Fertig.
+> Am Ende druckt das Playbook die ArgoCD-URL und das Admin-Passwort. **Fertig.**
 
 ---
 
 ## Was du bekommst
 
-| Schicht          | Komponente                             | Hinweis                                                                |
-|------------------|----------------------------------------|------------------------------------------------------------------------|
-| Betriebssystem   | **Ubuntu Server 26.04 LTS**            | Gehärtet, UFW-Firewall, NTP-synced, Swap off                           |
-| Kubernetes       | **k3s** (latest stable channel)        | Single-Node, bundelt Traefik, CoreDNS, local-path, metrics-server      |
-| GitOps           | **ArgoCD** + ApplicationSets           | Verzeichnis unter `argocd/apps/` anlegen, pushen, deployt              |
-| Split-DNS        | **dnsmasq** auf `tailscale0` + LAN     | `*.homeserver` aus LAN und Tailnet auflösbar — kein öffentliches DNS   |
-| Web-Ansible      | **Semaphore UI**                       | Ein-Klick-`git pull && ansible-playbook` gegen das eigene LAN          |
-| Monitoring       | **VictoriaMetrics + Grafana**          | Single-Node TSDB, vmagent, vmalert, Alertmanager, Dashboards           |
-| Kubernetes-UI    | **Headlamp**                           | Browser-Dashboard für den Cluster                                      |
-| Secrets          | **Sealed Secrets + kubeseal-webgui**   | Verschlüsselte Secrets in Git, nur im Cluster entschlüsselbar          |
-| Notifications    | **Gotify** + **ntfy**                  | Self-hosted Push-Notifications — Gotify (Android), ntfy (iOS + Android) |
-| Remote-Access    | **Tailscale**                          | WireGuard-Mesh-VPN — keine Portfreigaben, keine öffentliche IP         |
-| CI/CD intern     | **Argo Workflows + MinIO**             | Private CI/CD-Pipeline + S3-Artifact-Store im Cluster                 |
-| Ingress          | **Traefik v2** (mit k3s gebundled)     | HTTP/HTTPS-Routing in den Cluster                                      |
-| Provisioning     | **Ansible** (≥ 2.14)                   | Vollständig idempotent, Role-per-Concern, Vault für Secrets            |
+<table>
+<thead>
+<tr>
+<th>Schicht</th>
+<th>Komponente</th>
+<th>Hinweis</th>
+</tr>
+</thead>
+<tbody>
+<tr><td>🖥️ Betriebssystem</td><td><strong>Ubuntu Server 26.04 LTS</strong></td><td>Gehärtet, UFW-Firewall, NTP-synced, Swap off</td></tr>
+<tr><td>☸️ Kubernetes</td><td><strong>k3s</strong> (latest stable)</td><td>Single-Node, Traefik, CoreDNS, local-path, metrics-server</td></tr>
+<tr><td>🔄 GitOps</td><td><strong>ArgoCD</strong> + ApplicationSets</td><td>Verzeichnis unter <code>argocd/apps/</code> anlegen → pushen → deployed</td></tr>
+<tr><td>🌐 Split-DNS</td><td><strong>dnsmasq</strong> auf <code>tailscale0</code></td><td><code>*.homeserver</code> aus LAN und Tailnet auflösbar</td></tr>
+<tr><td>🎛️ Web-Ansible</td><td><strong>Semaphore UI</strong></td><td>Ein-Klick-<code>git pull &amp;&amp; ansible-playbook</code> gegen das eigene LAN</td></tr>
+<tr><td>📊 Monitoring</td><td><strong>VictoriaMetrics + Grafana</strong></td><td>Single-Node TSDB, vmagent, vmalert, Alertmanager, Dashboards</td></tr>
+<tr><td>🖥️ Kubernetes-UI</td><td><strong>Headlamp</strong></td><td>Browser-Dashboard für den Cluster</td></tr>
+<tr><td>🔐 Secrets</td><td><strong>Sealed Secrets + kubeseal-webgui</strong></td><td>Verschlüsselte Secrets in Git, nur im Cluster entschlüsselbar</td></tr>
+<tr><td>🔔 Notifications</td><td><strong>Gotify</strong> + <strong>ntfy</strong></td><td>Self-hosted Push — Gotify (Android), ntfy (iOS + Android)</td></tr>
+<tr><td>🔒 Remote-Access</td><td><strong>Tailscale</strong></td><td>WireGuard-Mesh-VPN — keine Portfreigaben, keine öffentliche IP</td></tr>
+<tr><td>⚙️ CI/CD intern</td><td><strong>Argo Workflows + MinIO</strong></td><td>Private CI/CD-Pipeline + S3-Artifact-Store im Cluster</td></tr>
+<tr><td>🚦 Ingress</td><td><strong>Traefik v2</strong> (k3s bundled)</td><td>HTTP/HTTPS-Routing in den Cluster</td></tr>
+<tr><td>🔑 SSO</td><td><strong>Authentik</strong></td><td>Zentraler Identity Provider für alle Dienste via OIDC</td></tr>
+<tr><td>📦 Provisioning</td><td><strong>Ansible</strong> (≥ 2.14)</td><td>Vollständig idempotent, Role-per-Concern, Vault für Secrets</td></tr>
+</tbody>
+</table>
 
-Ziel-Hardware: kleine Box mit ≥ 4 GB RAM und ≥ 20 GB Disk. Referenz-Build: Intel i5, 32 GB RAM, 512 GB NVMe.
+> **Ziel-Hardware:** kleine Box mit ≥ 4 GB RAM und ≥ 20 GB Disk.
+> **Referenz-Build:** Intel i5, 32 GB RAM, 512 GB NVMe.
 
-### Immer aktuell
+<details>
+<summary><strong>🔄 Auto-Upgrade-Details</strong></summary>
 
 `auto_upgrade: true` (Default) hält bei jedem Playbook-Run den gesamten Stack aktuell:
 
-- **APT-Pakete** — `apt dist-upgrade` bei jedem Run, plus `unattended-upgrades` für tägliche Sicherheits-Patches im Hintergrund.
-- **Tailscale** — `state: latest` für das `tailscale`-Paket.
-- **k3s** — folgt `k3s_channel` (Default `stable`), der Upstream-Installer zieht jeweils den neuesten Release. Pin via `k3s_version`.
-- **Helm** — Re-Run des offiziellen Installers ersetzt das Binary, wenn ein neuerer Helm-3-Release existiert.
-- **ArgoCD** — `helm upgrade --install` ohne `--version` zieht das neueste Chart. Pin via `argocd_version`.
-- **Reboot-if-required** — wenn APT `/var/run/reboot-required` setzt, rebootet das Playbook den Host und wartet, bis er wieder oben ist (Toggle via `auto_reboot_if_required`).
+| Komponente | Mechanismus |
+|---|---|
+| **APT-Pakete** | `apt dist-upgrade` + `unattended-upgrades` für tägliche Sicherheits-Patches |
+| **Tailscale** | `state: latest` für das `tailscale`-Paket |
+| **k3s** | Folgt `k3s_channel` (Default `stable`), pin via `k3s_version` |
+| **Helm** | Re-Run des offiziellen Installers bei neuem Release |
+| **ArgoCD** | `helm upgrade --install` ohne `--version`, pin via `argocd_version` |
+| **Reboot** | Auto-Reboot wenn APT `/var/run/reboot-required` setzt (togglebar via `auto_reboot_if_required`) |
 
-Für reproduzierbare Builds `auto_upgrade: false` in `ansible/group_vars/all.yml` setzen.
+Für reproduzierbare Builds: `auto_upgrade: false` in `ansible/group_vars/all.yml`.
+
+</details>
 
 ---
 
-## Quickstart (5 Schritte)
+## 🚀 Quickstart (5 Schritte)
 
 > Erstmalig auf der Maschine? Start mit **[Ubuntu-Server-Installation](docs/00-ubuntu-server-install.md)**.
-> Komplette Voraussetzungen unter **[docs/02-prerequisites.md](docs/02-prerequisites.md)**.
+> Komplette Voraussetzungen: **[docs/02-prerequisites.md](docs/02-prerequisites.md)**.
+
+<details open>
+<summary><strong>Schritt-für-Schritt aufklappen</strong></summary>
 
 **1. Repo klonen**
 
@@ -83,7 +115,7 @@ git clone https://github.com/PKE-Tech/capulus-core.git
 cd capulus-core
 ```
 
-**2. Inventory auf den eigenen Server zeigen lassen**
+**2. Inventory auf den eigenen Server zeigen**
 
 ```bash
 $EDITOR ansible/inventory/hosts.yml
@@ -114,7 +146,7 @@ ansible-galaxy collection install -r ansible/requirements.yml
 ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --ask-vault-pass
 ```
 
-Am Ende druckt das Playbook:
+**Ergebnis:**
 
 ```
 ArgoCD UI:  http://<server-ip>:30080
@@ -122,12 +154,17 @@ Username:   admin
 Password:   <auto-generiert>
 ```
 
+</details>
+
 ---
 
-## Repository-Layout
+## 📁 Repository-Layout
+
+<details>
+<summary><strong>Verzeichnisstruktur anzeigen</strong></summary>
 
 ```
-Home-Lab/
+capulus-core/
 ├── README.md
 ├── Makefile                          # Convenience-Targets: install, lint, ping, check, …
 ├── docs/
@@ -159,54 +196,53 @@ Home-Lab/
 │       ├── dnsmasq/                  # Split-DNS für *.homeserver
 │       ├── tailscale/                # VPN (WireGuard-Mesh)
 │       ├── k3s/                      # Kubernetes Control-Plane + Helm
-│       ├── k3s_agent/                # Kubernetes Worker-Node (worker-0 beitreten)
+│       ├── k3s_agent/                # Kubernetes Worker-Node
 │       ├── argocd/                   # GitOps-Controller via Helm
 │       ├── semaphore_secrets/        # Bootstrap-Secret für den Semaphore-Pod
 │       ├── semaphore_targets/        # SSH-Pubkey auf Managed-Hosts pushen
-│       ├── semaphore_bootstrap/      # Projects/Inventories/Templates per API
-│       ├── tinyteller/               # TinyTeller (Docker Compose auf worker-0)
-│       └── day_pilot/                # Day Pilot (Docker Compose auf worker-0)
+│       └── semaphore_bootstrap/      # Projects/Inventories/Templates per API
 └── argocd/
     ├── bootstrap/root-applicationset.yaml  # Erkennt jedes Verzeichnis darunter
     └── apps/                               # Ein Ordner pro ArgoCD-Application
-        ├── example-whoami/                 # Referenz-Helm-Chart
-        ├── gotify/                         # Push-Notifications (Android)
-        ├── gotify-bridge/                  # Alertmanager → Gotify Webhook-Bridge
-        ├── ntfy/                           # Push-Notifications (iOS + Android)
-        ├── ntfy-bridge/                    # Alertmanager → ntfy Webhook-Bridge
-        ├── headlamp/                       # Kubernetes-Web-Dashboard
-        ├── kubeseal-webgui/                # Sealed-Secrets-Verschlüsselungs-UI
-        ├── monitoring/                     # VictoriaMetrics + Grafana
-        ├── argo-workflows/                 # Private CI/CD-Pipeline (Argo Workflows)
-        ├── minio/                          # S3-Artifact-Store für Argo Workflows
-        ├── coredns-custom/                 # Zusätzliche CoreDNS-Zonen
-        ├── gotify-bridge/                  # Alertmanager → Gotify-Webhook-Adapter
-        ├── ntfy-bridge/                    # Alertmanager → ntfy-Webhook-Adapter
-        ├── coredns-custom/                 # CoreDNS-Anpassungen (Custom ConfigMap)
-        ├── sealed-secrets/                 # SealedSecrets-Controller
-        ├── authentik/                      # Authentik Single-Sign-On
-        └── semaphore/                      # Ansible-Web-UI
+        ├── example-whoami/
+        ├── gotify/                   # Push-Notifications (Android)
+        ├── gotify-bridge/            # Alertmanager → Gotify Webhook-Bridge
+        ├── ntfy/                     # Push-Notifications (iOS + Android)
+        ├── ntfy-bridge/              # Alertmanager → ntfy Webhook-Bridge
+        ├── headlamp/                 # Kubernetes-Web-Dashboard
+        ├── kubeseal-webgui/          # Sealed-Secrets-Verschlüsselungs-UI
+        ├── monitoring/               # VictoriaMetrics + Grafana
+        ├── argo-workflows/           # Private CI/CD-Pipeline
+        ├── minio/                    # S3-Artifact-Store für Argo Workflows
+        ├── coredns-custom/           # Zusätzliche CoreDNS-Zonen
+        ├── sealed-secrets/           # SealedSecrets-Controller
+        ├── authentik/                # Authentik Single-Sign-On
+        └── semaphore/                # Ansible-Web-UI
 ```
+
+</details>
 
 ---
 
-## Monitoring
+## 📊 Monitoring
 
-Ein schlanker VictoriaMetrics-+-Grafana-Stack lebt unter
-`argocd/apps/monitoring/` und wird automatisch von ArgoCD ausgerollt.
+Ein schlanker VictoriaMetrics-+-Grafana-Stack lebt unter `argocd/apps/monitoring/` und wird automatisch von ArgoCD ausgerollt.
 
-- **TSDB:** VMSingle (15 Tage Retention, 10 Gi `local-path`-PVC).
-- **Scrapers:** VMAgent scrapet alle `VMServiceScrape`/`VMPodScrape` und
-  zusätzlich Prometheus-`ServiceMonitor`-CRDs (vom Operator auto-konvertiert).
-- **Host-Metriken:** `prometheus-node-exporter` als DaemonSet auf dem Ubuntu-Host.
-- **Cluster-Metriken:** kubelet/cAdvisor, kube-apiserver, kube-state-metrics, CoreDNS.
-  Scheduler/Controller-Manager/etcd-Scrapes sind deaktiviert — k3s vereint sie in einem Prozess.
-- **Alerts:** Default-kube-prometheus-Rules; Gotify- und ntfy-Alertmanager-Bridges
-  (`gotify-bridge`, `ntfy-bridge`) leiten Alerts weiter.
-- **Dashboards:** Node Exporter Full, VictoriaMetrics + Kubernetes „Views / Global, Namespaces, Nodes, Pods" von grafana.com.
+<details>
+<summary><strong>Stack-Details</strong></summary>
 
-Grafana öffnen unter **http://grafana.homeserver** (LAN + Tailnet via dnsmasq).
-User `admin`, Passwort aus dem auto-generierten Secret:
+| Komponente | Detail |
+|---|---|
+| **TSDB** | VMSingle — 15 Tage Retention, 10 Gi `local-path`-PVC |
+| **Scrapers** | VMAgent scrapet alle `VMServiceScrape`/`VMPodScrape` + Prometheus `ServiceMonitor`-CRDs |
+| **Host-Metriken** | `prometheus-node-exporter` als DaemonSet auf dem Ubuntu-Host |
+| **Cluster-Metriken** | kubelet/cAdvisor, kube-apiserver, kube-state-metrics, CoreDNS |
+| **Alerts** | Default-kube-prometheus-Rules; Gotify- und ntfy-Alertmanager-Bridges |
+| **Dashboards** | Node Exporter Full, VictoriaMetrics + Kubernetes Views von grafana.com |
+
+</details>
+
+Grafana öffnen unter **http://grafana.homeserver** — Admin-Passwort abfragen:
 
 ```bash
 kubectl -n monitoring get secret monitoring-grafana \
@@ -215,7 +251,7 @@ kubectl -n monitoring get secret monitoring-grafana \
 
 ---
 
-## Application hinzufügen (der GitOps-Weg)
+## 🔁 Application hinzufügen (GitOps-Weg)
 
 ```bash
 mkdir -p argocd/apps/my-app
@@ -223,74 +259,85 @@ mkdir -p argocd/apps/my-app
 git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 ```
 
-Innerhalb von ~3 Minuten erkennt ArgoCD das neue Verzeichnis, erstellt eine
-`Application` namens `my-app` im Namespace `my-app` und synct sie.
-Details: **[docs/05-argocd.md](docs/05-argocd.md)**.
+> Innerhalb von ~3 Minuten erkennt ArgoCD das neue Verzeichnis, erstellt eine `Application` namens `my-app` im Namespace `my-app` und synct sie.
+> Details: **[docs/05-argocd.md](docs/05-argocd.md)**
 
 ---
 
-## Service-URLs
+## 🌐 Service-URLs
 
-| Service           | URL                                 |
-|-------------------|-------------------------------------|
-| Grafana           | http://grafana.homeserver           |
-| ArgoCD            | http://\<server-ip\>:30080          |
-| Headlamp          | http://headlamp.homeserver          |
-| Semaphore         | http://semaphore.homeserver         |
-| Authentik         | http://authentik.homeserver         |
-| Gotify            | http://gotify.homeserver            |
-| ntfy              | http://ntfy.homeserver              |
-| Argo Workflows    | http://argo-workflows.homeserver    |
-| MinIO Console     | http://minio.homeserver             |
-| kubeseal-webgui   | http://kubeseal-webgui.homeserver   |
-
----
-
-## Networking & Security
-
-- **Keine öffentlichen Ports.** Zugriff ausschließlich über LAN oder Tailscale-VPN.
-- **UFW** erlaubt nur, was der Stack braucht: SSH, HTTP/HTTPS, k3s-API, ArgoCD-NodePort, kubelet, Flannel VXLAN, Tailscale-UDP, plus volles Trust für LAN, Tailnet, Pod- und Service-CIDRs.
-- **Ansible-Vault** verschlüsselt sensitive Secrets at rest.
-- **ArgoCD** hat ausschließlich Read-Access auf das Git-Repo.
-
-| Port  | Protokoll | Scope             | Zweck                                  |
-|-------|-----------|-------------------|----------------------------------------|
-| 22    | TCP       | LAN + Tailnet     | SSH                                    |
-| 53    | UDP+TCP   | LAN + Tailnet     | dnsmasq Split-DNS für `*.homeserver`   |
-| 80    | TCP       | LAN + Tailnet     | Traefik HTTP                           |
-| 443   | TCP       | LAN + Tailnet     | Traefik HTTPS                          |
-| 6443  | TCP       | LAN + Tailnet     | k3s-API                                |
-| 30080 | TCP       | LAN + Tailnet     | ArgoCD-UI (HTTP)                       |
-| 30443 | TCP       | LAN + Tailnet     | ArgoCD-UI (HTTPS)                      |
-| 41641 | UDP       | Internet          | Tailscale-WireGuard                    |
-
-Vollständige Architektur in **[docs/01-overview.md](docs/01-overview.md)**.
+| Service | URL |
+|---|---|
+| Grafana | http://grafana.homeserver |
+| ArgoCD | http://\<server-ip\>:30080 |
+| Headlamp | http://headlamp.homeserver |
+| Semaphore | http://semaphore.homeserver |
+| Authentik | http://authentik.homeserver |
+| Gotify | http://gotify.homeserver |
+| ntfy | http://ntfy.homeserver |
+| Argo Workflows | http://argo-workflows.homeserver |
+| MinIO Console | http://minio.homeserver |
+| kubeseal-webgui | http://kubeseal-webgui.homeserver |
 
 ---
 
-## Dokumentation
+## 🔒 Networking & Security
 
-| Doc                                                             | Inhalt                                       |
-|-----------------------------------------------------------------|----------------------------------------------|
-| [Ubuntu-Server-Installation](docs/00-ubuntu-server-install.md)  | ISO, USB-Stick, Installer, erster Boot       |
-| [Architektur-Überblick](docs/01-overview.md)                    | Komponenten und Traffic-Flows                |
-| [Voraussetzungen](docs/02-prerequisites.md)                     | Was vor dem Ansible-Run nötig ist            |
-| [Installationsleitfaden](docs/03-installation.md)               | Vollständiger Step-by-Step-Walkthrough       |
-| [k3s-Referenz](docs/04-k3s.md)                                  | Config, kubectl-Cheatsheet, Upgrades         |
-| [ArgoCD-GitOps](docs/05-argocd.md)                              | App-Workflow, CLI, Sync-Policies             |
-| [Tailscale-VPN](docs/06-tailscale.md)                           | Auth-Keys, MagicDNS, Subnet-Routes           |
-| [Troubleshooting](docs/07-troubleshooting.md)                   | Diagnose-Playbook für häufige Probleme       |
-| [Semaphore-UI](docs/08-semaphore.md)                            | Web-UI zum Ausführen von Playbooks           |
-| [DNS-Architektur](docs/09-dns-architecture.md)                  | Warum der Home-Server NICHT dein LAN-DNS ist |
-| [Gotify-Push](docs/11-gotify.md)                                | Self-hosted Push-Notifications aus dem Stack |
-| [Argo Workflows](docs/13-argo-workflows.md)                     | Private CI/CD-Pipeline mit MinIO-Artifact-Store |
-| [SSO via Authentik](docs/14-sso-authentik.md)                   | Authentik als zentraler Identity Provider |
-| [ntfy iOS-Push](docs/15-ntfy.md)                                | Self-hosted ntfy mit iOS APNs-Relay via ntfy.sh |
-| [Zertifikats-Auth](docs/15-cert-login.md)                       | Traefik mTLS Client-Zertifikate |
-| [SSO alle Dienste](docs/16-sso-alle-dienste.md)                 | Headlamp, Argo Workflows, MinIO via OIDC |
+<table>
+<thead><tr><th>Prinzip</th><th>Umsetzung</th></tr></thead>
+<tbody>
+<tr><td>🚫 Keine öffentlichen Ports</td><td>Zugriff ausschließlich über LAN oder Tailscale-VPN</td></tr>
+<tr><td>🛡️ UFW-Firewall</td><td>Erlaubt nur SSH, HTTP/HTTPS, k3s-API, ArgoCD-NodePort, Flannel, Tailscale-UDP</td></tr>
+<tr><td>🔐 Ansible-Vault</td><td>Sensitive Secrets verschlüsselt at rest</td></tr>
+<tr><td>👁️ ArgoCD Read-only</td><td>Hat ausschließlich Read-Access auf das Git-Repo</td></tr>
+</tbody>
+</table>
+
+<details>
+<summary><strong>Firewall-Ports</strong></summary>
+
+| Port | Protokoll | Scope | Zweck |
+|---|---|---|---|
+| 22 | TCP | LAN + Tailnet | SSH |
+| 53 | UDP+TCP | LAN + Tailnet | dnsmasq Split-DNS für `*.homeserver` |
+| 80 | TCP | LAN + Tailnet | Traefik HTTP |
+| 443 | TCP | LAN + Tailnet | Traefik HTTPS |
+| 6443 | TCP | LAN + Tailnet | k3s-API |
+| 30080 | TCP | LAN + Tailnet | ArgoCD-UI (HTTP) |
+| 30443 | TCP | LAN + Tailnet | ArgoCD-UI (HTTPS) |
+| 41641 | UDP | Internet | Tailscale-WireGuard |
+
+</details>
+
+Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 
 ---
 
-## Lizenz
+## 📖 Dokumentation
 
-MIT — siehe [LICENSE](LICENSE).
+| Dokument | Inhalt |
+|---|---|
+| [Ubuntu-Server-Installation](docs/00-ubuntu-server-install.md) | ISO, USB-Stick, Installer, erster Boot |
+| [Architektur-Überblick](docs/01-overview.md) | Komponenten und Traffic-Flows |
+| [Voraussetzungen](docs/02-prerequisites.md) | Was vor dem Ansible-Run nötig ist |
+| [Installationsleitfaden](docs/03-installation.md) | Vollständiger Step-by-Step-Walkthrough |
+| [k3s-Referenz](docs/04-k3s.md) | Config, kubectl-Cheatsheet, Upgrades |
+| [ArgoCD-GitOps](docs/05-argocd.md) | App-Workflow, CLI, Sync-Policies |
+| [Tailscale-VPN](docs/06-tailscale.md) | Auth-Keys, MagicDNS, Subnet-Routes |
+| [Troubleshooting](docs/07-troubleshooting.md) | Diagnose-Playbook für häufige Probleme |
+| [Semaphore-UI](docs/08-semaphore.md) | Web-UI zum Ausführen von Playbooks |
+| [DNS-Architektur](docs/09-dns-architecture.md) | Warum der Home-Server NICHT dein LAN-DNS ist |
+| [Gotify-Push](docs/11-gotify.md) | Self-hosted Push-Notifications aus dem Stack |
+| [Argo Workflows](docs/13-argo-workflows.md) | Private CI/CD-Pipeline mit MinIO-Artifact-Store |
+| [SSO via Authentik](docs/14-sso-authentik.md) | Authentik als zentraler Identity Provider |
+| [ntfy iOS-Push](docs/15-ntfy.md) | Self-hosted ntfy mit iOS APNs-Relay |
+| [Zertifikats-Auth](docs/15-cert-login.md) | Traefik mTLS Client-Zertifikate |
+| [SSO alle Dienste](docs/16-sso-alle-dienste.md) | Headlamp, Argo Workflows, MinIO via OIDC |
+
+---
+
+<p align="center">
+  MIT — siehe <a href="LICENSE">LICENSE</a>
+  &nbsp;·&nbsp;
+  Made with ☕ &amp; GitOps
+</p>
