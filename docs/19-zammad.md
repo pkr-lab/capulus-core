@@ -202,27 +202,40 @@ zammad:
 
 ## Schritt 7 — SSO via Authentik (optional)
 
-Zammad unterstützt SAML-basiertes SSO. Setzt einen öffentlichen Hostname
-(Schritt 6) voraus, da die ACS-URL von außerhalb des Clusters erreichbar
-sein muss (z. B. `https://zammad.eure-domain.de`).
+Zammad unterstützt SAML-basiertes SSO. Eine öffentliche Domain (Schritt 6)
+ist dafür **nicht** erforderlich — Authentik (`authentik.homeserver`) und
+Zammad (`zammad.homeserver`) liegen beide im selben Heimnetz, der Browser
+des Nutzers erreicht beide Hosts direkt, daher reicht der interne Hostname
+für den SAML-Redirect/ACS-Callback aus. Eine öffentliche Domain ist nur
+nötig, falls Zammad zusätzlich von außerhalb des Heimnetzes erreichbar
+sein soll (siehe Schritt 6).
 
 ### 7.1 Authentik SAML-Provider erstellen
 
-In Authentik:
+In Authentik (`http://authentik.homeserver`):
 1. **Applications → Providers → Create** → SAML Provider
 2. **Name:** `Zammad`
-3. **ACS URL:** `https://zammad.eure-domain.de/auth/saml/callback`
-4. **Issuer:** `https://zammad.eure-domain.de`
+3. **ACS URL:** `http://zammad.homeserver/auth/saml/callback`
+4. **Issuer:** `http://zammad.homeserver`
 5. **Service Provider Binding:** `Post`
-6. Metadaten-URL notieren: `https://authentik.pke-lab.de/...`
+6. **Applications → Create**: neue Application anlegen, den eben erstellten
+   Provider zuweisen, und über **Policy/Group/User Bindings** festlegen,
+   wer sich per SSO einloggen darf
+7. Metadaten-URL notieren: `http://authentik.homeserver/application/saml/<slug>/sso/binding/redirect/`
+   (sichtbar im Provider unter **Related objects → Metadata**)
 
 ### 7.2 Zammad SAML konfigurieren
 
 In Zammad:
 1. **Admin → Security → Third-party Applications → Authentication via SAML**
-2. **IDP SSO target URL:** `https://authentik.pke-lab.de/application/saml/<slug>/sso/binding/redirect/`
-3. **IDP Cert Fingerprint:** aus den Authentik-Metadaten
+2. **IDP SSO target URL:** `http://authentik.homeserver/application/saml/<slug>/sso/binding/redirect/`
+3. **IDP Cert Fingerprint:** aus den Authentik-Metadaten (Provider → Related
+   objects → Download → "Download signing certificate")
 4. **Name Identifier Format:** `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress`
+
+> **Hinweis:** Den bestehenden lokalen Admin-Account (Schritt 4) nicht
+> deaktivieren, bevor der SAML-Login erfolgreich getestet wurde — sonst
+> droht ein Lockout, falls die Authentik-Konfiguration fehlerhaft ist.
 
 ---
 
