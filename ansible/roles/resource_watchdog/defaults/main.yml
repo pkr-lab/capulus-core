@@ -1,0 +1,36 @@
+---
+# Kill-switch: auf false setzen (z.B. in host_vars) um den automatischen
+# Shutdown auf einem bestimmten Host zu deaktivieren, ohne die Rolle aus
+# dem Playbook zu entfernen.
+resource_watchdog_enabled: true
+
+# Abtastintervall (Sekunden). Bei METRIC=cpu kommt pro Abtastung noch 1s
+# Messdauer für die /proc/stat-Differenz dazu.
+resource_watchdog_poll_seconds: 10
+
+# CPU-Last (%), ab der der Host nach resource_watchdog_cpu_sustain_seconds
+# automatisch herunterfährt. Deutlich längere Sustain-Dauer als bei der
+# Temperatur (ansible/roles/thermal_watchdog), da CPU/RAM-Sättigung anders
+# als Übertemperatur keine unmittelbare Hardware-Gefahr ist.
+resource_watchdog_cpu_threshold: 90
+resource_watchdog_cpu_sustain_seconds: 300
+
+# RAM-Belegung (%), ab der der Host nach resource_watchdog_ram_sustain_seconds
+# automatisch herunterfährt.
+resource_watchdog_ram_threshold: 90
+resource_watchdog_ram_sustain_seconds: 300
+
+# ntfy-Ziel für die Shutdown-Meldung. Wird per `curl --resolve` direkt auf
+# die statische Server-IP aufgelöst (siehe thermal_watchdog-Rolle für die
+# Begründung).
+resource_watchdog_ntfy_host: "ntfy.homeserver"
+resource_watchdog_ntfy_ip: "{{ network_static_ip }}"
+resource_watchdog_ntfy_topic: "Home-Lab-System"
+
+resource_watchdog_metrics:
+  - name: cpu
+    threshold: "{{ resource_watchdog_cpu_threshold }}"
+    sustain_seconds: "{{ resource_watchdog_cpu_sustain_seconds }}"
+  - name: ram
+    threshold: "{{ resource_watchdog_ram_threshold }}"
+    sustain_seconds: "{{ resource_watchdog_ram_sustain_seconds }}"

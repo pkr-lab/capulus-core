@@ -1,0 +1,50 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: thermal-resources
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: thermal.resources
+      interval: 30s
+      rules:
+        # Reine Warnstufen (severity: warning → nur Gotify, siehe
+        # argocd/apps/monitoring/values.yaml). Die Shutdown-Schwellen für
+        # CPU/RAM (90%) laufen NICHT über Alertmanager, sondern über den
+        # lokalen resource_watchdog auf dem Host selbst
+        # (ansible/roles/resource_watchdog) — gleiches Prinzip wie beim
+        # thermal_watchdog für Temperatur.
+        - alert: HostHighCPULoad
+          expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) >= 80
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Hohe CPU-Last auf {{ "{{ $labels.instance }}" }}"
+            description: >-
+              CPU-Last auf {{ "{{ $labels.instance }}" }} liegt seit 2 Minuten bei
+              {{ "{{ $value }}" }}% (Schwelle: 80%).
+
+        - alert: HostHighMemoryUsage
+          expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 >= 70
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Hohe RAM-Auslastung auf {{ "{{ $labels.instance }}" }}"
+            description: >-
+              RAM-Auslastung auf {{ "{{ $labels.instance }}" }} liegt seit 2 Minuten bei
+              {{ "{{ $value }}" }}% (Schwelle: 70%).
+
+        - alert: HostHighDiskUsage
+          expr: >-
+            (node_filesystem_size_bytes{mountpoint="/",fstype!~"tmpfs|overlay"} - node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay"})
+            / node_filesystem_size_bytes{mountpoint="/",fstype!~"tmpfs|overlay"} * 100 >= 70
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Speicherplatz (/) auf {{ "{{ $labels.instance }}" }} wird knapp"
+            description: >-
+              Disk-Belegung (/) auf {{ "{{ $labels.instance }}" }} liegt seit 2 Minuten bei
+              {{ "{{ $value }}" }}% (Schwelle: 70%).
