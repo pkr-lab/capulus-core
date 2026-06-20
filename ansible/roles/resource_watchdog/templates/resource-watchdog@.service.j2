@@ -1,0 +1,15 @@
+# Managed by Ansible (resource_watchdog role) — do not edit manually.
+[Unit]
+Description=Resource watchdog (%i) - powers the host off on sustained overload
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/resource-watchdog/%i.env
+ExecStart=/usr/local/bin/resource-watchdog.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

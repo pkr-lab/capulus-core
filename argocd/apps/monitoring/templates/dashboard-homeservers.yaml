@@ -306,7 +306,85 @@ data:
               "unit": "celsius"
             }
           },
-          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 36},
+          "gridPos": {"h": 4, "w": 12, "x": 0, "y": 36},
+          "id": 10,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "max(node_hwmon_temp_celsius{instance=~\"192\\.168\\.178\\.94.*\"})",
+              "instant": true,
+              "legendFormat": "Homeserver Max",
+              "refId": "A"
+            }
+          ],
+          "title": "Gesamt Temperatur Homeserver (Max)",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 70},
+                  {"color": "red", "value": 85}
+                ]
+              },
+              "unit": "celsius"
+            }
+          },
+          "gridPos": {"h": 4, "w": 12, "x": 12, "y": 36},
+          "id": 11,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "max(node_hwmon_temp_celsius{instance=~\"192\\.168\\.178\\.95.*\"})",
+              "instant": true,
+              "legendFormat": "Worker-0 Max",
+              "refId": "A"
+            }
+          ],
+          "title": "Gesamt Temperatur Worker-0 (Max)",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 70},
+                  {"color": "red", "value": 85}
+                ]
+              },
+              "unit": "celsius"
+            }
+          },
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 40},
           "id": 8,
           "options": {
             "colorMode": "background",
@@ -344,7 +422,7 @@ data:
               "unit": "celsius"
             }
           },
-          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 40},
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 44},
           "id": 9,
           "options": {
             "legend": {"calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom"},
@@ -405,5 +483,5 @@ data:
       "timezone": "browser",
       "title": "Home Server Auslastung",
       "uid": "homeserver-auslastung",
-      "version": 2
+      "version": 3
     }

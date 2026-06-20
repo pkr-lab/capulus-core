@@ -29,6 +29,8 @@
       tags: [semaphore, semaphore-secrets]
     - role: thermal_watchdog
       tags: [thermal-watchdog, thermal]
+    - role: resource_watchdog
+      tags: [resource-watchdog, thermal]
 
   post_tasks:
     - name: Display setup summary

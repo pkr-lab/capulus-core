@@ -1,0 +1,9 @@
+---
+- name: Restart resource watchdogs
+  ansible.builtin.systemd:
+    name: "resource-watchdog@{{ item.name }}"
+    daemon_reload: true
+    state: restarted
+  loop: "{{ resource_watchdog_metrics }}"
+  loop_control:
+    label: "{{ item.name }}"
