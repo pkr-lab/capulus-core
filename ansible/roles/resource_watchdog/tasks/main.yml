@@ -1,0 +1,77 @@
+---
+# ============================================================
+# resource_watchdog role — CPU/RAM-Selbstschutz
+# ============================================================
+# Pollt CPU-Last und RAM-Belegung direkt auf dem Host (ohne Umweg über
+# Prometheus/k8s) und fährt den Host herunter, wenn ein Wert zu lange zu
+# hoch bleibt. Gleiches Prinzip wie thermal_watchdog, aber mit deutlich
+# längerer Sustain-Dauer (Minuten statt Sekunden), da CPU/RAM-Sättigung
+# anders als Übertemperatur keine unmittelbare Hardware-Gefahr ist. Die
+# reinen Warnschwellen (80% CPU, 70% RAM, 70% Disk) laufen separat über
+# VMRule/Alertmanager
+# (argocd/apps/monitoring/templates/vmrule-resources.yaml).
+# ============================================================
+
+- name: Deploy resource watchdog script
+  ansible.builtin.copy:
+    src: resource-watchdog.sh
+    dest: /usr/local/bin/resource-watchdog.sh
+    owner: root
+    group: root
+    mode: "0755"
+  when: resource_watchdog_enabled | bool
+  notify: Restart resource watchdogs
+
+- name: Ensure resource watchdog config directory exists
+  ansible.builtin.file:
+    path: /etc/resource-watchdog
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: resource_watchdog_enabled | bool
+
+- name: Deploy per-metric environment files
+  ansible.builtin.template:
+    src: instance.env.j2
+    dest: "/etc/resource-watchdog/{{ item.name }}.env"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ resource_watchdog_metrics }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: resource_watchdog_enabled | bool
+  notify: Restart resource watchdogs
+
+- name: Deploy resource watchdog systemd template unit
+  ansible.builtin.template:
+    src: "resource-watchdog@.service.j2"
+    dest: /etc/systemd/system/resource-watchdog@.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: resource_watchdog_enabled | bool
+  notify: Restart resource watchdogs
+
+- name: Enable and start resource watchdog instances
+  ansible.builtin.systemd:
+    name: "resource-watchdog@{{ item.name }}"
+    daemon_reload: true
+    enabled: true
+    state: started
+  loop: "{{ resource_watchdog_metrics }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: resource_watchdog_enabled | bool
+
+- name: Disable resource watchdog instances if turned off via resource_watchdog_enabled
+  ansible.builtin.systemd:
+    name: "resource-watchdog@{{ item.name }}"
+    enabled: false
+    state: stopped
+  loop: "{{ resource_watchdog_metrics }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: not (resource_watchdog_enabled | bool)
+  failed_when: false

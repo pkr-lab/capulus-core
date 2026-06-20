@@ -32,6 +32,8 @@
       tags: [day-pilot]
     - role: thermal_watchdog
       tags: [thermal-watchdog, thermal]
+    - role: resource_watchdog
+      tags: [resource-watchdog, thermal]
 
 - name: Uncordon worker-0 nach Provisioning
   hosts: homeservers
