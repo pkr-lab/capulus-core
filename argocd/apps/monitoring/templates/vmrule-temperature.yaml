@@ -1,0 +1,27 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: thermal-temperature
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: thermal.temperature
+      interval: 30s
+      rules:
+        # Sofortwarnung, sobald irgendein Sensor 80°C erreicht. severity:
+        # critical nutzt das bestehende Alertmanager-Routing
+        # (argocd/apps/monitoring/values.yaml) → geht an Gotify UND ntfy.
+        #
+        # Der eigentliche Shutdown bei 90°C läuft NICHT über diesen Alert,
+        # sondern über einen lokalen Watchdog auf dem Host
+        # (ansible/roles/thermal_watchdog) — das funktioniert auch dann
+        # noch, wenn der Cluster wegen der Hitze schon klemmt.
+        - alert: HostHighTemperature
+          expr: node_hwmon_temp_celsius >= 80
+          labels:
+            severity: critical
+          annotations:
+            summary: "Hohe Temperatur auf {{ "{{ $labels.instance }}" }}"
+            description: >-
+              {{ "{{ $labels.chip }}" }}/{{ "{{ $labels.sensor }}" }} auf {{ "{{ $labels.instance }}" }}
+              hat {{ "{{ $value }}" }}°C erreicht (Schwelle: 80°C).
