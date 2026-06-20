@@ -8,7 +8,8 @@ spec:
     - name: thermal.temperature
       interval: 30s
       rules:
-        # Sofortwarnung, sobald irgendein Sensor 80°C erreicht. severity:
+        # Warnung, wenn irgendein Sensor mindestens 1 Minute sustained
+        # 80°C erreicht (for: 1m entprellt kurze Sensor-Spikes). severity:
         # critical nutzt das bestehende Alertmanager-Routing
         # (argocd/apps/monitoring/values.yaml) → geht an Gotify UND ntfy.
         #
@@ -18,6 +19,7 @@ spec:
         # noch, wenn der Cluster wegen der Hitze schon klemmt.
         - alert: HostHighTemperature
           expr: node_hwmon_temp_celsius >= 80
+          for: 1m
           labels:
             severity: critical
           annotations:
