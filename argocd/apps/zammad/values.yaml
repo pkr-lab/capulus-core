@@ -33,6 +33,7 @@ zammad:
   ingress:
     enabled: true
     className: traefik
+    replicas: 0
     annotations:
       traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
     hosts:
