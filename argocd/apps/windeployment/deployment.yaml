@@ -9,7 +9,7 @@ metadata:
   labels:
     app: windeployment-http
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: windeployment-http
@@ -97,7 +97,7 @@ metadata:
   labels:
     app: windeployment-pxe
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: windeployment-pxe
