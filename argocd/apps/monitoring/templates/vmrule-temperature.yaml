@@ -12,7 +12,7 @@ spec:
         # critical nutzt das bestehende Alertmanager-Routing
         # (argocd/apps/monitoring/values.yaml) → geht an Gotify UND ntfy.
         #
-        # Der eigentliche Shutdown bei 90°C läuft NICHT über diesen Alert,
+        # Der eigentliche Shutdown bei 100°C läuft NICHT über diesen Alert,
         # sondern über einen lokalen Watchdog auf dem Host
         # (ansible/roles/thermal_watchdog) — das funktioniert auch dann
         # noch, wenn der Cluster wegen der Hitze schon klemmt.

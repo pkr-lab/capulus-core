@@ -14,6 +14,9 @@ POLL_SECONDS="${POLL_SECONDS:?POLL_SECONDS not set}"
 NTFY_HOST="${NTFY_HOST:?NTFY_HOST not set}"
 NTFY_IP="${NTFY_IP:?NTFY_IP not set}"
 NTFY_TOPIC="${NTFY_TOPIC:?NTFY_TOPIC not set}"
+# Set DRY_RUN=1 (e.g. via `systemctl edit --runtime thermal-watchdog`) to
+# test the full detection → notify path without actually powering off.
+DRY_RUN="${DRY_RUN:-0}"
 
 over_since=0
 
@@ -30,12 +33,18 @@ max_temp_c() {
 }
 
 notify_shutdown() {
+  local title="PC wird heruntergefahren"
+  local body="$(hostname): Temperatur >= ${THRESHOLD_C} C fuer ${SUSTAIN_SECONDS}s. Fahre jetzt herunter."
+  if [ "$DRY_RUN" = "1" ]; then
+    title="[DRY RUN] ${title}"
+    body="${body} (DRY_RUN=1, kein echter Shutdown)"
+  fi
   curl --fail --silent --show-error --max-time 5 \
     --resolve "${NTFY_HOST}:80:${NTFY_IP}" \
-    -H "Title: PC wird heruntergefahren" \
+    -H "Title: ${title}" \
     -H "Priority: 5" \
     -H "Tags: rotating_light,stop_sign" \
-    -d "$(hostname): Temperatur >= ${THRESHOLD_C} C fuer ${SUSTAIN_SECONDS}s. Fahre jetzt herunter." \
+    -d "$body" \
     "http://${NTFY_HOST}/${NTFY_TOPIC}" || true
 }
 
@@ -51,7 +60,11 @@ while true; do
     elif (( now - over_since >= SUSTAIN_SECONDS )); then
       logger -t thermal-watchdog "${temp}C >= ${THRESHOLD_C}C for $(( now - over_since ))s -- shutting down"
       notify_shutdown
-      systemctl poweroff
+      if [ "$DRY_RUN" = "1" ]; then
+        logger -t thermal-watchdog "DRY_RUN=1 -- skipping systemctl poweroff"
+      else
+        systemctl poweroff
+      fi
       exit 0
     fi
   else

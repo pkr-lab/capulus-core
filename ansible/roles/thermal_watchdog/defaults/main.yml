@@ -6,7 +6,7 @@ thermal_watchdog_enabled: true
 
 # Temperatur (°C), ab der der Host nach thermal_watchdog_sustain_seconds
 # automatisch herunterfährt.
-thermal_watchdog_threshold_c: 90
+thermal_watchdog_threshold_c: 100
 
 # Wie lange die Temperatur am/über dem Schwellwert bleiben muss, bevor
 # heruntergefahren wird (Sekunden). 90s = Mitte der gewünschten 1-2 Min.
