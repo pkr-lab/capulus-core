@@ -1,0 +1,20 @@
+# Managed by Ansible (thermal_watchdog role) — do not edit manually.
+[Unit]
+Description=Thermal watchdog - powers the host off on sustained overheat
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/thermal-watchdog.sh
+Restart=always
+RestartSec=10
+Environment=THRESHOLD_C={{ thermal_watchdog_threshold_c }}
+Environment=SUSTAIN_SECONDS={{ thermal_watchdog_sustain_seconds }}
+Environment=POLL_SECONDS={{ thermal_watchdog_poll_seconds }}
+Environment=NTFY_HOST={{ thermal_watchdog_ntfy_host }}
+Environment=NTFY_IP={{ thermal_watchdog_ntfy_ip }}
+Environment=NTFY_TOPIC={{ thermal_watchdog_ntfy_topic }}
+
+[Install]
+WantedBy=multi-user.target

@@ -30,6 +30,8 @@
       tags: [tinyteller]
     - role: day_pilot
       tags: [day-pilot]
+    - role: thermal_watchdog
+      tags: [thermal-watchdog, thermal]
 
 - name: Uncordon worker-0 nach Provisioning
   hosts: homeservers

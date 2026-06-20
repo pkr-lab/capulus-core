@@ -1,0 +1,24 @@
+---
+# Kill-switch: auf false setzen (z.B. in host_vars) um den automatischen
+# Shutdown auf einem bestimmten Host zu deaktivieren, ohne die Rolle aus
+# dem Playbook zu entfernen.
+thermal_watchdog_enabled: true
+
+# Temperatur (°C), ab der der Host nach thermal_watchdog_sustain_seconds
+# automatisch herunterfährt.
+thermal_watchdog_threshold_c: 90
+
+# Wie lange die Temperatur am/über dem Schwellwert bleiben muss, bevor
+# heruntergefahren wird (Sekunden). 90s = Mitte der gewünschten 1-2 Min.
+thermal_watchdog_sustain_seconds: 90
+
+# Abtastintervall der hwmon-Sensoren (Sekunden).
+thermal_watchdog_poll_seconds: 10
+
+# ntfy-Ziel für die Shutdown-Meldung. Wird per `curl --resolve` direkt auf
+# die statische Server-IP aufgelöst, damit die Meldung auch dann
+# rausgeht, wenn auf diesem Host kein *.homeserver-DNS eingerichtet ist
+# (siehe docs/09-dns-architecture.md).
+thermal_watchdog_ntfy_host: "ntfy.homeserver"
+thermal_watchdog_ntfy_ip: "{{ network_static_ip }}"
+thermal_watchdog_ntfy_topic: "Home-Lab-System"

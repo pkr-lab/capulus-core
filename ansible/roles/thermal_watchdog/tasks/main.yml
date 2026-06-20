@@ -1,0 +1,54 @@
+---
+# ============================================================
+# thermal_watchdog role — Hardware-Selbstschutz
+# ============================================================
+# Liest die hwmon-Sensoren direkt vom Host (ohne Umweg über
+# Prometheus/k8s) und fährt den Host selbst herunter, wenn die
+# Temperatur zu lange zu hoch bleibt. Läuft bewusst unabhängig vom
+# Cluster, damit der Schutz auch greift, wenn der Cluster wegen der
+# Hitze schon klemmt. Ergänzt den Grafana/Alertmanager-Alert ab 80°C
+# (argocd/apps/monitoring/templates/vmrule-temperature.yaml), der
+# parallel über Gotify/ntfy warnt.
+# ============================================================
+
+- name: Install lm-sensors (hwmon kernel modules / sysfs helpers)
+  ansible.builtin.apt:
+    name: lm-sensors
+    state: present
+  when: thermal_watchdog_enabled | bool
+
+- name: Deploy thermal watchdog script
+  ansible.builtin.copy:
+    src: thermal-watchdog.sh
+    dest: /usr/local/bin/thermal-watchdog.sh
+    owner: root
+    group: root
+    mode: "0755"
+  when: thermal_watchdog_enabled | bool
+  notify: Restart thermal-watchdog
+
+- name: Deploy thermal watchdog systemd unit
+  ansible.builtin.template:
+    src: thermal-watchdog.service.j2
+    dest: /etc/systemd/system/thermal-watchdog.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: thermal_watchdog_enabled | bool
+  notify: Restart thermal-watchdog
+
+- name: Enable and start thermal watchdog
+  ansible.builtin.systemd:
+    name: thermal-watchdog
+    daemon_reload: true
+    enabled: true
+    state: started
+  when: thermal_watchdog_enabled | bool
+
+- name: Disable thermal watchdog if turned off via thermal_watchdog_enabled
+  ansible.builtin.systemd:
+    name: thermal-watchdog
+    enabled: false
+    state: stopped
+  when: not (thermal_watchdog_enabled | bool)
+  failed_when: false
