@@ -27,6 +27,8 @@
       tags: [argocd, gitops]
     - role: semaphore_secrets
       tags: [semaphore, semaphore-secrets]
+    - role: thermal_watchdog
+      tags: [thermal-watchdog, thermal]
 
   post_tasks:
     - name: Display setup summary
