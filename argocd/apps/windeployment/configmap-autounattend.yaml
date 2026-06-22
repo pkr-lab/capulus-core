@@ -121,6 +121,7 @@ data:
                    versionScope="nonSxS"
                    xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <!-- Platzhalter: wird von setup.ps1 automatisch auf 1002011-XXXX umbenannt -->
           <ComputerName>DLRG-PC</ComputerName>
           <TimeZone>W. Europe Standard Time</TimeZone>
         </component>
@@ -318,6 +319,7 @@ data:
                    versionScope="nonSxS"
                    xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <!-- Platzhalter: wird von setup.ps1 automatisch auf 1002011-XXXX umbenannt -->
           <ComputerName>DLRG-PC</ComputerName>
           <TimeZone>W. Europe Standard Time</TimeZone>
         </component>

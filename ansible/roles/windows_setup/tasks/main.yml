@@ -1,5 +1,38 @@
 ---
 # DLRG OG Andernach - Windows-Setup-Hauptaufgabe
+
+# Namensschema 1002011-XXXX + Einsatzzweck: laufen mit Tag "always", damit
+# sie auch bei --tags users/hostname/settings/software zuerst aufgeloest sind.
+- name: Naechste PC-Nummer vom Zaehler-Server holen
+  ansible.windows.win_uri:
+    url: "{{ windows_deployment_server }}/api/next-number"
+    method: GET
+    return_content: true
+  register: pc_number_result
+  when: windows_pc_name == ""
+  tags: [always]
+
+- name: Computername aus Zaehler-Server ableiten (1002011-XXXX)
+  ansible.builtin.set_fact:
+    windows_pc_name: "1002011-{{ pc_number_result.content | trim }}"
+  when: windows_pc_name == ""
+  tags: [always]
+
+- name: Einsatzzweck aus pc.cfg vom Server holen
+  ansible.windows.win_uri:
+    url: "{{ windows_deployment_server }}/pc.cfg"
+    method: GET
+    return_content: true
+  register: pc_cfg_result
+  when: windows_pc_purpose == ""
+  tags: [always]
+
+- name: Einsatzzweck aus pc.cfg extrahieren
+  ansible.builtin.set_fact:
+    windows_pc_purpose: "{{ pc_cfg_result.content | regex_search('Einsatzzweck=(.+)', '\\1') | first | trim }}"
+  when: windows_pc_purpose == ""
+  tags: [always]
+
 - name: Benutzer anlegen und konfigurieren
   ansible.builtin.import_tasks: users.yml
   tags: [users]
@@ -50,4 +83,35 @@
   ansible.windows.win_reboot:
     reboot_timeout: 300
   when: hostname_result.reboot_required | default(false) or reboot_pending.stdout | trim == "true"
+  tags: [always]
+
+# Gleiches Melde-Verhalten wie setup.ps1 (PXE/USB-Pfad): kurzer Timeout,
+# ignore_errors/failed_when false - schlaegt Zammad/MinIO fehl, bricht der
+# Ansible-Lauf nicht ab und der PC/Techniker merkt nichts davon.
+- name: PC-Einrichtung an Zammad melden
+  ansible.windows.win_uri:
+    url: "{{ windows_deployment_server }}/api/notify-zammad"
+    method: POST
+    body_format: json
+    body:
+      pcName: "{{ windows_pc_name }}"
+      purpose: "{{ windows_pc_purpose }}"
+      status: ok
+      message: "Eingerichtet per Ansible (windows_setup-Rolle)."
+    timeout: 5
+  ignore_errors: true
+  failed_when: false
+  tags: [always]
+
+- name: Setup-Zusammenfassung an MinIO melden
+  ansible.windows.win_uri:
+    url: "{{ windows_deployment_server }}/api/upload-log?pc={{ windows_pc_name }}"
+    method: POST
+    body_format: raw
+    body: "{{ sysinfo.stdout | default('') }}\nEinsatzzweck: {{ windows_pc_purpose }}\n"
+    headers:
+      Content-Type: text/plain
+    timeout: 5
+  ignore_errors: true
+  failed_when: false
   tags: [always]
