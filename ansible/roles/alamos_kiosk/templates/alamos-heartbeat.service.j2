@@ -1,0 +1,10 @@
+# Managed by Ansible (alamos_kiosk role) — do not edit manually.
+[Unit]
+Description=ALAMOS Alarmmonitor Heartbeat ({{ alamos_kiosk_station }})
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/alamos-heartbeat.env
+ExecStart=/usr/local/bin/alamos-heartbeat.sh

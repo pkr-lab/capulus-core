@@ -90,6 +90,15 @@ windows-software: ## Nur Software auf Windows-PCs installieren.
 windows-settings: ## Nur System-Einstellungen auf Windows-PCs konfigurieren.
 	ansible-playbook -i $(INVENTORY) $(WIN_PLAYBOOK) --tags settings $(VAULT_OPTS)
 
+.PHONY: alarm-kiosks alarm-kiosks-check
+ALARM_PLAYBOOK := $(ANSIBLE_DIR)/alarm-kiosks.yml
+
+alarm-kiosks: ## Alarmmonitor-Kiosks einrichten (Raspberry Pis, ALAMOS AMweb).
+	ansible-playbook -i $(INVENTORY) $(ALARM_PLAYBOOK) $(VAULT_OPTS)
+
+alarm-kiosks-check: ## Dry-run des Alarmmonitor-Kiosk-Playbooks (keine Aenderungen).
+	ansible-playbook -i $(INVENTORY) $(ALARM_PLAYBOOK) --check --diff $(VAULT_OPTS)
+
 .PHONY: lint
 lint: ## Lint YAML, Ansible, and ALL Helm charts.
 	yamllint -c .yamllint ansible/ argocd/

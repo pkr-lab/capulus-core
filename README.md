@@ -217,6 +217,7 @@ capulus-core/
         ├── coredns-custom/           # Zusätzliche CoreDNS-Zonen
         ├── sealed-secrets/           # SealedSecrets-Controller
         ├── authentik/                # Authentik Single-Sign-On
+        ├── alamos-apager/            # Alarmmonitor-Kiosk-Verwaltung (ALAMOS AMweb)
         └── semaphore/                # Ansible-Web-UI
 ```
 
@@ -278,6 +279,7 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 | Argo Workflows | http://argo-workflows.homeserver |
 | MinIO Console | http://minio.homeserver |
 | kubeseal-webgui | http://kubeseal-webgui.homeserver |
+| Alarmmonitor (alamos-apager) | http://alamos-apager.homeserver |
 
 ---
 
@@ -333,6 +335,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [ntfy iOS-Push](docs/15-ntfy.md) | Self-hosted ntfy mit iOS APNs-Relay |
 | [Zertifikats-Auth](docs/15-cert-login.md) | Traefik mTLS Client-Zertifikate |
 | [SSO alle Dienste](docs/16-sso-alle-dienste.md) | Headlamp, Argo Workflows, MinIO via OIDC |
+| [Alarmmonitor-Kiosks](docs/20-alamos-apager.md) | Raspberry-Pi-Kiosks für ALAMOS AMweb, zentral verwaltet |
 
 ---
 
