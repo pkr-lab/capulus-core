@@ -17,8 +17,9 @@ installierten Windows-System aus gestartet werden.
 6. [Ansible-Verwaltung bestehender PCs](#ansible-verwaltung-bestehender-pcs)
 7. [Benutzer & Passwörter](#benutzer--passwörter)
 8. [Namenskonvention: 1002011-XXXX](#namenskonvention-1002011-xxxx)
-9. [Anpassungen](#anpassungen)
-10. [Fehlerbehebung](#fehlerbehebung)
+9. [Integration: Zammad-Ticket + MinIO-Log-Upload](#integration-zammad-ticket--minio-log-upload)
+10. [Anpassungen](#anpassungen)
+11. [Fehlerbehebung](#fehlerbehebung)
 
 ---
 
@@ -528,6 +529,61 @@ zurück, damit die Installation nicht blockiert.
 > **Hinweis:** Da der Zähler nur einen einzigen, globalen Zustand führt,
 > immer nur einen PC gleichzeitig fertigstellen (Aufruf von `setup.ps1`),
 > sonst können zwei PCs zeitgleich denselben `pc.cfg`-Einsatzzweck erhalten.
+
+---
+
+## Integration: Zammad-Ticket + MinIO-Log-Upload
+
+Am Ende jedes Setups (PXE/USB-`setup.ps1` **und** Ansible-Rolle) meldet sich
+der PC zweimal beim windeployment-Server:
+
+- **`POST /api/notify-zammad`** — legt ein Ticket in Zammad an
+  (`PC <Name> eingerichtet (ok|warn)`, inkl. Einsatzzweck).
+- **`POST /api/upload-log`** — lädt `C:\Windows\Logs\dlrg-setup.log` (bzw.
+  bei Ansible eine kurze Zusammenfassung) nach MinIO hoch, Bucket
+  `windows-pc-logs` (liegt auf derselben `hdd`-StorageClass/worker-0 wie der
+  Rest von MinIO, siehe `argocd/apps/minio/values.yaml`).
+
+Beide Aufrufe laufen über den bestehenden `counter`-Sidecar im
+`windeployment-http`-Pod (`argocd/apps/windeployment/configmap-counter.yaml`)
+— **kein Secret (MinIO-Key, Zammad-Token) verlässt den Cluster oder landet
+auf einem PC.** Der PC schickt nur Klartext-Status/Log an einen bereits
+unauthentifizierten LAN-Endpunkt (wie `/api/next-number`); die eigentliche
+authentifizierte Anfrage an MinIO/Zammad macht der Sidecar serverseitig
+(reines Python-Stdlib: manuelles AWS-SigV4 für MinIO, Bearer-Token-POST für
+Zammad — keine zusätzliche Abhängigkeit/Binary nötig).
+
+**Bewusst fehlertolerant:** Beide Aufrufe haben ein 5-Sekunden-Timeout und
+ein stilles `try/catch` (`Write-LogQuiet`, kein `Write-Host`). Sind
+MinIO/Zammad nicht erreichbar, merkt der Benutzer am PC nichts — die
+Installation läuft unbeeinträchtigt weiter, es gibt keine Fehlermeldung,
+keine Verzögerung über die 5s hinaus, keinen Abbruch. Performance-technisch
+sind das zwei einmalige, kleine HTTP-Requests am Ende des Setups — kein
+Hintergrunddienst, kein Dauerbetrieb auf dem PC.
+
+### Einmaliger Bootstrap (bevor das funktioniert)
+
+Zammad ist aktuell eine frische Instanz ohne Gruppen/Token, MinIO hat noch
+keinen eigenen Zugriffsschlüssel für diesen Zweck. Schritte:
+
+1. **Zammad:** Instanz erreichbar machen (`replicas`-Feld in
+   `argocd/apps/zammad/values.yaml` prüfen — der aktuelle Wert steht
+   ungewöhnlicherweise unter `ingress:`, einem Feld ohne echten
+   Replica-Effekt; vor dem Verlassen darauf mit `kubectl get pods -n zammad`
+   verifizieren, ob Zammad überhaupt schon läuft). Dann Gruppe
+   **„Windows-PCs“** anlegen (Manage → Groups) und unter dem Profil einen
+   API-Token mit Ticket-Rechten erzeugen (siehe docs/19-zammad.md).
+2. **MinIO:** Einen auf den Bucket `windows-pc-logs` beschränkten
+   Access-Key anlegen (statt der Root-Credentials zu verwenden) — Befehle
+   stehen als Kommentar in
+   `argocd/apps/windeployment/sealedsecret-credentials.yaml`.
+3. Beide Werte mit `kubeseal` versiegeln und in
+   `argocd/apps/windeployment/sealedsecret-credentials.yaml` eintragen
+   (Platzhalter ersetzen), dann committen/syncen.
+
+Bis das erledigt ist, bleiben die Endpunkte serverseitig "konfiguriert,
+aber leer" (`optional: true` auf den Secret-Refs in `deployment.yaml`) —
+die PCs merken davon nichts, es passiert einfach noch kein Ticket/Upload.
 
 ---
 

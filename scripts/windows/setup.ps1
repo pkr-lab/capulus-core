@@ -47,6 +47,7 @@ $ErrorActionPreference = "Stop"
 # ─── Logging ─────────────────────────────────────────────────────────────────
 $LogFile = "C:\Windows\Logs\dlrg-setup.log"
 New-Item -ItemType Directory -Force -Path "C:\Windows\Logs" | Out-Null
+$script:WarnCount = 0
 
 function Write-Log {
     param([string]$Message, [string]$Level = "INFO")
@@ -54,6 +55,15 @@ function Write-Log {
     $line = "[$ts] [$Level] $Message"
     Write-Host $line
     Add-Content -Path $LogFile -Value $line
+    if ($Level -eq "WARN" -or $Level -eq "ERROR") { $script:WarnCount++ }
+}
+
+# Schreibt nur in die Logdatei (kein Write-Host) - fuer Dinge, die den
+# Benutzer nicht erreichen/beeinflussen sollen (siehe Melde-Block am Ende).
+function Write-LogQuiet {
+    param([string]$Message)
+    $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    Add-Content -Path $LogFile -Value "[$ts] [INFO] $Message" -ErrorAction SilentlyContinue
 }
 
 function Exit-WithError {
@@ -378,6 +388,28 @@ Write-Log "WICHTIG: Admin-Passwort nach der Einrichtung aendern!"
 Write-Log "WICHTIG: Microsoft 365 muss noch mit Ihrer Lizenz aktiviert werden."
 Write-Log ""
 Write-Log "PC wird in 30 Sekunden neu gestartet..."
+
+# PC-Status (Zammad-Ticket) + Setup-Log (MinIO) an den windeployment-Server
+# melden. Laeuft IMMER stumm ab: kurzer Timeout, kein Write-Host, kein
+# Abbruch bei Fehler - sind MinIO/Zammad nicht erreichbar, merkt der
+# Benutzer davon nichts und die Installation laeuft unbeeintraechtigt weiter.
+try {
+    $status = if ($script:WarnCount -gt 0) { "warn" } else { "ok" }
+    $notifyBody = @{
+        pcName  = $PCName
+        purpose = $PCPurpose
+        status  = $status
+        message = "Setup abgeschlossen mit $($script:WarnCount) Warnung(en)."
+    } | ConvertTo-Json
+    Invoke-WebRequest -Uri "$DeploymentServer/api/notify-zammad" -Method Post `
+        -Body $notifyBody -ContentType "application/json" -UseBasicParsing -TimeoutSec 5 | Out-Null
+} catch { Write-LogQuiet "notify-zammad fehlgeschlagen: $_" }
+
+try {
+    $logContent = Get-Content -Path $LogFile -Raw -ErrorAction SilentlyContinue
+    Invoke-WebRequest -Uri "$DeploymentServer/api/upload-log?pc=$PCName" -Method Post `
+        -Body $logContent -ContentType "text/plain" -UseBasicParsing -TimeoutSec 5 | Out-Null
+} catch { Write-LogQuiet "upload-log fehlgeschlagen: $_" }
 
 if (-not $NonInteractive) {
     Write-Host ""
