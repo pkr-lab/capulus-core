@@ -43,9 +43,14 @@ minio:
       cpu: "1"
       memory: 1Gi
 
-  # Auto-create the Argo Workflows artifact bucket on first start.
+  # Auto-create buckets on first start.
   buckets:
     - name: argo-artifacts
+      policy: none
+      purge: false
+    # Setup-Logs der Windows-PC-Flotte (windeployment, siehe
+    # argocd/apps/windeployment/configmap-counter.yaml + sealedsecret-credentials.yaml).
+    - name: windows-pc-logs
       policy: none
       purge: false
 
