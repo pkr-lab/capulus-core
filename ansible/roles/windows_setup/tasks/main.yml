@@ -84,3 +84,34 @@
     reboot_timeout: 300
   when: hostname_result.reboot_required | default(false) or reboot_pending.stdout | trim == "true"
   tags: [always]
+
+# Gleiches Melde-Verhalten wie setup.ps1 (PXE/USB-Pfad): kurzer Timeout,
+# ignore_errors/failed_when false - schlaegt Zammad/MinIO fehl, bricht der
+# Ansible-Lauf nicht ab und der PC/Techniker merkt nichts davon.
+- name: PC-Einrichtung an Zammad melden
+  ansible.windows.win_uri:
+    url: "{{ windows_deployment_server }}/api/notify-zammad"
+    method: POST
+    body_format: json
+    body:
+      pcName: "{{ windows_pc_name }}"
+      purpose: "{{ windows_pc_purpose }}"
+      status: ok
+      message: "Eingerichtet per Ansible (windows_setup-Rolle)."
+    timeout: 5
+  ignore_errors: true
+  failed_when: false
+  tags: [always]
+
+- name: Setup-Zusammenfassung an MinIO melden
+  ansible.windows.win_uri:
+    url: "{{ windows_deployment_server }}/api/upload-log?pc={{ windows_pc_name }}"
+    method: POST
+    body_format: raw
+    body: "{{ sysinfo.stdout | default('') }}\nEinsatzzweck: {{ windows_pc_purpose }}\n"
+    headers:
+      Content-Type: text/plain
+    timeout: 5
+  ignore_errors: true
+  failed_when: false
+  tags: [always]

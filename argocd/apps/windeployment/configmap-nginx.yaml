@@ -42,8 +42,17 @@ data:
       }
 
       # Reicht an den counter-Sidecar im selben Pod weiter (Zaehler fuer
-      # das Namensschema 1002011-XXXX, siehe configmap-counter.yaml).
+      # das Namensschema 1002011-XXXX, MinIO-Log-Upload, Zammad-Ticket;
+      # siehe configmap-counter.yaml).
       location = /api/next-number {
         proxy_pass http://127.0.0.1:8080/next-number;
+      }
+
+      location = /api/upload-log {
+        proxy_pass http://127.0.0.1:8080/upload-log;
+      }
+
+      location = /api/notify-zammad {
+        proxy_pass http://127.0.0.1:8080/notify-zammad;
       }
     }

@@ -73,6 +73,35 @@ spec:
         - name: counter
           image: python:3.12-alpine
           command: ["python3", "/app/counter.py"]
+          env:
+            - name: MINIO_ENDPOINT
+              value: "minio.minio.svc.cluster.local:9000"
+            - name: MINIO_BUCKET
+              value: "windows-pc-logs"
+            - name: ZAMMAD_URL
+              value: "http://zammad.homeserver"
+            - name: ZAMMAD_GROUP
+              value: "Windows-PCs"
+            - name: ZAMMAD_CUSTOMER
+              value: "windeployment@dlrg.local"
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: windeployment-credentials
+                  key: minioAccessKey
+                  optional: true
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: windeployment-credentials
+                  key: minioSecretKey
+                  optional: true
+            - name: ZAMMAD_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: windeployment-credentials
+                  key: zammadToken
+                  optional: true
           volumeMounts:
             - name: counter-script
               mountPath: /app
