@@ -1,0 +1,28 @@
+---
+# Kill-switch: auf false setzen (z.B. in host_vars) um den Kiosk/Heartbeat auf
+# einem bestimmten Host zu deaktivieren, ohne die Rolle aus dem Playbook zu
+# entfernen.
+alamos_kiosk_enabled: true
+
+# Basis-URL des alamos-apager Helm Charts (argocd/apps/alamos-apager). Der Pi
+# kennt nur diese URL + seinen eigenen Stationsnamen, nie die echte
+# ALAMOS-AMweb-URL (die bleibt als Secret im Cluster, siehe
+# docs/20-alamos-apager.md).
+alamos_kiosk_base_url: "http://alamos-apager.homeserver"
+
+# Stationsname dieses Pi. MUSS pro Host gesetzt werden (siehe
+# ansible/inventory/hosts.yml) und muss zu einem Key im SealedSecret
+# alamos-apager-stations passen — kein Default, damit ein fehlender Wert
+# laut auffällt statt eine falsche Station anzuzeigen.
+# alamos_kiosk_station: "geraetehaus"
+
+# Wie oft der Pi ein Lebenszeichen an den Cluster sendet (Sekunden). Muss
+# deutlich unter argocd/apps/alamos-apager values.yaml heartbeatTimeoutSeconds
+# liegen, sonst loest schon ein einzelner verpasster Ping einen Fehlalarm aus.
+alamos_kiosk_heartbeat_interval: 60
+
+# Linux-User, unter dessen grafischer Session (DISPLAY=:0) der Kiosk-Browser
+# laeuft. Setzt voraus, dass Autologin fuer diesen User bereits eingerichtet
+# ist (Raspberry Pi Imager Option "Enable autologin") — das richtet diese
+# Rolle nicht zusaetzlich ein.
+alamos_kiosk_user: "pi"

@@ -1,0 +1,35 @@
+---
+# ============================================================
+# Alarmmonitor-Kiosk-Playbook (ALAMOS AMweb)
+# DLRG OG Andernach
+# ============================================================
+#
+# Provisioniert die Raspberry-Pi-Alarmmonitore: Chromium-Kiosk gegen
+# argocd/apps/alamos-apager (zentrale Stations-URL + Heartbeat-Alerting),
+# plus Thermal-/Resource-Watchdog (unbeaufsichtigte Geraete, gleiches
+# Bundling wie worker-0 in ansible/homeserver2.yml).
+#
+# Voraussetzungen:
+#   1. Raspberry Pi OS (Desktop) mit Autologin fuer den Kiosk-User
+#      bereits geflasht (Raspberry Pi Imager Option "Enable autologin").
+#   2. Host unter "raspberry_pis" in ansible/inventory/hosts.yml mit
+#      gesetztem alamos_kiosk_station eintragen.
+#   3. Standort-URL als Key im SealedSecret alamos-apager-stations
+#      angelegt (siehe docs/20-alamos-apager.md).
+#
+# Aufruf:
+#   make alarm-kiosks
+# Dry-run:
+#   make alarm-kiosks-check
+# ============================================================
+
+- name: Alarmmonitor-Kiosks einrichten
+  hosts: raspberry_pis
+  become: true
+  roles:
+    - role: alamos_kiosk
+      tags: [alamos-kiosk, kiosk]
+    - role: thermal_watchdog
+      tags: [thermal-watchdog, thermal]
+    - role: resource_watchdog
+      tags: [resource-watchdog, thermal]
