@@ -9,11 +9,12 @@
     Parameter koennen interaktiv abgefragt oder per -NonInteractive uebergeben werden.
 
 .PARAMETER PCName
-    Computername (Standard: DLRG-PC-<Zufallszahl>)
+    Computername (Standard: automatisch vom Zaehler-Server, Schema 1002011-XXXX)
 
 .PARAMETER PCPurpose
-    Anwendungszweck des PCs, erscheint im Anzeigenamen des dlrg-Benutzers
-    z.B. "Buero", "Schulung", "Empfang"
+    Einsatzzweck des PCs, erscheint im Anzeigenamen des dlrg-Benutzers als
+    "<PCName> <Einsatzzweck>", z.B. "1002011-0007 Buero"
+    (Standard: aus pc.cfg vom windeployment-Server gelesen)
 
 .PARAMETER AdminPassword
     Passwort fuer den Admin-Account (Pflicht, kein Standard)
@@ -21,17 +22,22 @@
 .PARAMETER UserPassword
     Passwort fuer den dlrg-Benutzer (Standard: DLRG2024)
 
+.PARAMETER DeploymentServer
+    Basis-URL des windeployment-Servers fuer Zaehler (/api/next-number)
+    und pc.cfg (Standard: http://192.168.178.94:30090)
+
 .PARAMETER NonInteractive
     Unterdrückt alle Abfragen, nutzt Standardwerte
 
 .EXAMPLE
-    .\setup.ps1 -PCName "DLRG-Buero-01" -PCPurpose "Buero" -AdminPassword "S3cur3P@ss!" -NonInteractive
+    .\setup.ps1 -PCPurpose "Buero" -AdminPassword "S3cur3P@ss!" -NonInteractive
 #>
 param(
     [string]$PCName = "",
-    [string]$PCPurpose = "PC",
+    [string]$PCPurpose = "",
     [string]$AdminPassword = "",
     [string]$UserPassword = "DLRG2024",
+    [string]$DeploymentServer = "http://192.168.178.94:30090",
     [switch]$NonInteractive
 )
 
@@ -65,10 +71,10 @@ Write-Log "Skript-Version: 2024-06-16"
 # ─── Parameter einsammeln ─────────────────────────────────────────────────────
 if (-not $NonInteractive) {
     if ($PCName -eq "") {
-        $PCName = Read-Host "Computername (z.B. DLRG-Buero-01) [Leer = automatisch]"
+        $PCName = Read-Host "Computername (z.B. 1002011-0007) [Leer = automatisch vom Zaehler-Server]"
     }
     if ($PCPurpose -eq "") {
-        $PCPurpose = Read-Host "Anwendungszweck (z.B. Buero, Schulung, Empfang)"
+        $PCPurpose = Read-Host "Einsatzzweck (z.B. Buero, Schulung, Empfang) [Leer = aus pc.cfg vom Server]"
     }
     if ($AdminPassword -eq "") {
         $adminPwSecure = Read-Host "Admin-Passwort" -AsSecureString
@@ -78,12 +84,31 @@ if (-not $NonInteractive) {
     }
 }
 
+# PC-Nummer vom Zaehler-Server holen: Namensschema 1002011-XXXX
 if ($PCName -eq "") {
-    $PCName = "DLRG-PC-" + (Get-Random -Maximum 9999).ToString("0000")
+    try {
+        $nr = (Invoke-WebRequest -Uri "$DeploymentServer/api/next-number" -UseBasicParsing -TimeoutSec 10).Content.Trim()
+        $PCName = "1002011-$nr"
+    } catch {
+        $PCName = "1002011-" + (Get-Random -Maximum 9999).ToString("0000")
+        Write-Log "Zaehler-Server nicht erreichbar, nutze Zufallsnummer: $_" "WARN"
+    }
 }
-if ($PCPurpose -eq "") { $PCPurpose = "PC" }
 
-$DlrgDisplayName = "DLRG OG Andernach ($PCPurpose)"
+# Einsatzzweck aus pc.cfg vom Server holen (vom Techniker vor dem Deployment gepflegt)
+if ($PCPurpose -eq "") {
+    try {
+        $cfg = (Invoke-WebRequest -Uri "$DeploymentServer/pc.cfg" -UseBasicParsing -TimeoutSec 10).Content
+        foreach ($cfgLine in ($cfg -split "`r?`n")) {
+            if ($cfgLine -match '^\s*Einsatzzweck\s*=\s*(.+?)\s*$') { $PCPurpose = $matches[1]; break }
+        }
+    } catch {
+        Write-Log "pc.cfg nicht erreichbar: $_" "WARN"
+    }
+    if ($PCPurpose -eq "") { $PCPurpose = "PC" }
+}
+
+$DlrgDisplayName = "$PCName $PCPurpose"
 
 Write-Log "Computername:    $PCName"
 Write-Log "Anwendungszweck: $PCPurpose"
