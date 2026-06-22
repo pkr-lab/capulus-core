@@ -16,8 +16,10 @@ installierten Windows-System aus gestartet werden.
 5. [Kubernetes-Infrastruktur (windeployment)](#kubernetes-infrastruktur-windeployment)
 6. [Ansible-Verwaltung bestehender PCs](#ansible-verwaltung-bestehender-pcs)
 7. [Benutzer & Passwörter](#benutzer--passwörter)
-8. [Anpassungen](#anpassungen)
-9. [Fehlerbehebung](#fehlerbehebung)
+8. [Namenskonvention: 1002011-XXXX](#namenskonvention-1002011-xxxx)
+9. [Integration: Zammad-Ticket + MinIO-Log-Upload](#integration-zammad-ticket--minio-log-upload)
+10. [Anpassungen](#anpassungen)
+11. [Fehlerbehebung](#fehlerbehebung)
 
 ---
 
@@ -43,10 +45,10 @@ installierten Windows-System aus gestartet werden.
 │  │  └──────────────────┘                                        │    │
 │  └─────────────────────────────────────────────────────────────┘    │
 │                                                                      │
-│  ┌─────────┐    ┌─────────┐    ┌─────────┐                         │
-│  │DLRG-PC  │    │DLRG-PC  │    │DLRG-PC  │                         │
-│  │Büro-01  │    │Schulung │    │Empfang  │                         │
-│  │.101     │    │.102     │    │.103     │                         │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐                   │
+│  │1002011-0001 │ │1002011-0002 │ │1002011-0003 │                   │
+│  │Büro         │ │Schulung     │ │Empfang      │                   │
+│  │.101         │ │.102         │ │.103         │                   │
 │  └─────────┘    └─────────┘    └─────────┘                         │
 │       ↑                                                              │
 │       └── PXE Boot → iPXE → WinPE → Windows-Installation           │
@@ -72,8 +74,14 @@ installierten Windows-System aus gestartet werden.
 
 | Konto | Typ | Anzeigename | Standardpasswort |
 |---|---|---|---|
-| `dlrg` | Standardbenutzer | DLRG OG Andernach *(Zweck)* | `DLRG2024` |
+| `dlrg` | Standardbenutzer | *1002011-XXXX Einsatzzweck* (z.B. `1002011-0007 Buero`) | `DLRG2024` |
 | `Admin` | Lokaler Administrator | Administrator | `DLRG-Admin-2024!` |
+
+> Computername (`1002011-XXXX`) und Einsatzzweck werden automatisch vergeben:
+> die Nummer vom Zaehler-Server (`/api/next-number`), der Einsatzzweck aus
+> `pc.cfg` auf dem windeployment-Server. Das gilt fuer **alle** Wege
+> (PXE, USB, Ansible, manueller `setup.ps1`-Aufruf) — siehe
+> [Namenskonvention](#namenskonvention-1002011-xxxx).
 
 > **Sicherheitshinweis:** Das Admin-Passwort **sofort nach der Einrichtung ändern!**
 
@@ -133,13 +141,13 @@ cp scripts/windows/autounattend.xml /media/$USER/USB-STICK/
 cp scripts/windows/setup.ps1        /media/$USER/USB-STICK/
 ```
 
-**Schritt 3: Computernamen anpassen (optional)**
+**Schritt 3: Computername/Einsatzzweck**
 
-In `autounattend.xml` auf dem USB-Stick den Computernamen ändern:
-```xml
-<!-- Zeile "specialize" pass: -->
-<ComputerName>DLRG-Buero-01</ComputerName>
-```
+Nicht mehr nötig: `setup.ps1` holt sich Computername (`1002011-XXXX`) und
+Einsatzzweck nach der Installation automatisch vom windeployment-Server
+(siehe [Namenskonvention](#namenskonvention-1002011-xxxx)). Der Wert in
+`autounattend.xml` (`<ComputerName>DLRG-PC</ComputerName>`) ist nur ein
+Platzhalter und wird sofort überschrieben.
 
 **Schritt 4: PC booten**
 
@@ -292,10 +300,11 @@ powershell.exe -ExecutionPolicy Bypass -File D:\setup.ps1 -PCPurpose "Schulung"
 
 | Parameter | Pflicht | Beschreibung |
 |---|---|---|
-| `-PCName` | Nein | Computername (Standard: `DLRG-PC-XXXX`) |
-| `-PCPurpose` | Nein | Anwendungszweck, z.B. `Buero`, `Schulung` (Standard: `PC`) |
+| `-PCName` | Nein | Computername (Standard: automatisch vom Zaehler-Server, `1002011-XXXX`) |
+| `-PCPurpose` | Nein | Einsatzzweck, z.B. `Buero`, `Schulung` (Standard: aus `pc.cfg` vom Server) |
 | `-AdminPassword` | Ja* | Admin-Passwort (*wird interaktiv abgefragt wenn nicht angegeben) |
 | `-UserPassword` | Nein | DLRG-Benutzerpasswort (Standard: `DLRG2024`) |
+| `-DeploymentServer` | Nein | Basis-URL des windeployment-Servers (Standard: `http://192.168.178.94:30090`) |
 | `-NonInteractive` | Nein | Alle Abfragen unterdrücken |
 
 ### Methode B2: WinRM aktivieren → Ansible
@@ -327,12 +336,12 @@ windows_pcs:
   hosts:
     buero-01:
       ansible_host: 192.168.178.101
+      # windows_pc_name/windows_pc_purpose leer lassen = automatisch vom
+      # windeployment-Server (Zaehler + pc.cfg). Optional ueberschreiben:
       windows_pc_purpose: Buero
-      windows_pc_name: DLRG-Buero-01
     schulung-01:
       ansible_host: 192.168.178.102
       windows_pc_purpose: Schulung
-      windows_pc_name: DLRG-Schulung-01
 ```
 
 **Schritt 3: Ansible ausführen**
@@ -368,12 +377,14 @@ Die ArgoCD-App `windeployment` stellt alle Deployment-Ressourcen bereit.
 ```
 argocd/apps/windeployment/
 ├── namespace.yaml           # Namespace "windeployment"
-├── pvc.yaml                 # 20 GiB PVC für WinPE/ISO-Dateien
+├── pvc.yaml                 # 500 GiB PVC für WinPE/ISO-Dateien + Zaehlerstand
 ├── configmap-nginx.yaml     # nginx-Konfiguration
 ├── configmap-autounattend.yaml  # autounattend.xml (Netzwerk + USB-Variante)
 ├── configmap-scripts.yaml   # setup.ps1, winrm-enable.ps1
 ├── configmap-ipxe.yaml      # iPXE-Bootmenü + dnsmasq-PXE-Config
-├── deployment.yaml          # nginx (HTTP) + dnsmasq-pxe (TFTP/proxyDHCP)
+├── configmap-pccfg.yaml     # pc.cfg: Einsatzzweck fuer den naechsten PC
+├── configmap-counter.yaml   # counter.py: vergibt fortlaufende PC-Nummern
+├── deployment.yaml          # nginx (HTTP) + counter-Sidecar + dnsmasq-pxe (TFTP/proxyDHCP)
 └── service.yaml             # NodePort 30090 für HTTP
 ```
 
@@ -386,6 +397,8 @@ http://192.168.178.94:30090/scripts/setup.ps1
 http://192.168.178.94:30090/scripts/winrm-enable.ps1
 http://192.168.178.94:30090/ipxe/menu.ipxe
 http://192.168.178.94:30090/winpe/        → WinPE-Dateien (manuell hochladen)
+http://192.168.178.94:30090/pc.cfg        → Einsatzzweck für den nächsten PC
+http://192.168.178.94:30090/api/next-number → vergibt + erhöht die PC-Nummer
 ```
 
 ### WinPE-Dateien in den PVC laden
@@ -477,15 +490,100 @@ ansible windows_pcs -i ansible/inventory/hosts.yml \
 
 ### Anzeigenamen anpassen
 
-Der Anzeigename des `dlrg`-Kontos enthält den Anwendungszweck:
-- Büro-PC: **"DLRG OG Andernach (Buero)"**
-- Schulungs-PC: **"DLRG OG Andernach (Schulung)"**
-- Empfang: **"DLRG OG Andernach (Empfang)"**
+Der Anzeigename des `dlrg`-Kontos ist immer `<Computername> <Einsatzzweck>`:
+- Büro-PC: **"1002011-0001 Buero"**
+- Schulungs-PC: **"1002011-0002 Schulung"**
+- Empfang: **"1002011-0003 Empfang"**
 
-Wird gesetzt über:
+Der Einsatzzweck kommt standardmäßig aus `pc.cfg` (siehe
+[Namenskonvention](#namenskonvention-1002011-xxxx)), kann aber überschrieben werden über:
 - `setup.ps1 -PCPurpose "Buero"` (direkt)
 - `windows_pc_purpose: Buero` (Ansible-Inventory)
-- `<ComputerName>DLRG-Buero-01</ComputerName>` (autounattend.xml)
+
+---
+
+## Namenskonvention: 1002011-XXXX
+
+Alle PCs bekommen denselben Namen, egal ob Neuinstallation (PXE/USB) oder
+bereits installiertes Windows (Ansible/manueller `setup.ps1`-Lauf):
+
+- **Computername:** `1002011-XXXX` mit fortlaufender, vierstelliger Nummer.
+  Die Nummer wird vom `counter`-Sidecar im `windeployment-http`-Pod vergeben
+  (`GET /api/next-number`, persistiert auf der PVC unter
+  `pc-counter.txt`) und bei jedem Aufruf um 1 erhöht.
+- **Benutzeranzeigename** des `dlrg`-Kontos: `1002011-XXXX Einsatzzweck`
+  (z.B. `1002011-0007 Buero`).
+- **Einsatzzweck:** kommt aus `pc.cfg` auf dem windeployment-Server
+  (`Einsatzzweck=Buero`). Vor jedem Deployment in
+  `argocd/apps/windeployment/configmap-pccfg.yaml` anpassen und
+  synchronisieren (ArgoCD-Sync oder `kubectl apply -n windeployment -f
+  argocd/apps/windeployment/configmap-pccfg.yaml`).
+
+`setup.ps1` holt Nummer und Einsatzzweck automatisch, sobald `-PCName`/
+`-PCPurpose` nicht explizit angegeben sind — das gilt für PXE, USB, direkten
+Aufruf und den Ansible-Pfad (Rolle `windows_setup` fragt dieselben Endpunkte
+über `windows_deployment_server` ab). Ist der Zaehler-Server nicht
+erreichbar (z.B. PC ohne Netzwerk), fällt `setup.ps1` auf eine Zufallsnummer
+zurück, damit die Installation nicht blockiert.
+
+> **Hinweis:** Da der Zähler nur einen einzigen, globalen Zustand führt,
+> immer nur einen PC gleichzeitig fertigstellen (Aufruf von `setup.ps1`),
+> sonst können zwei PCs zeitgleich denselben `pc.cfg`-Einsatzzweck erhalten.
+
+---
+
+## Integration: Zammad-Ticket + MinIO-Log-Upload
+
+Am Ende jedes Setups (PXE/USB-`setup.ps1` **und** Ansible-Rolle) meldet sich
+der PC zweimal beim windeployment-Server:
+
+- **`POST /api/notify-zammad`** — legt ein Ticket in Zammad an
+  (`PC <Name> eingerichtet (ok|warn)`, inkl. Einsatzzweck).
+- **`POST /api/upload-log`** — lädt `C:\Windows\Logs\dlrg-setup.log` (bzw.
+  bei Ansible eine kurze Zusammenfassung) nach MinIO hoch, Bucket
+  `windows-pc-logs` (liegt auf derselben `hdd`-StorageClass/worker-0 wie der
+  Rest von MinIO, siehe `argocd/apps/minio/values.yaml`).
+
+Beide Aufrufe laufen über den bestehenden `counter`-Sidecar im
+`windeployment-http`-Pod (`argocd/apps/windeployment/configmap-counter.yaml`)
+— **kein Secret (MinIO-Key, Zammad-Token) verlässt den Cluster oder landet
+auf einem PC.** Der PC schickt nur Klartext-Status/Log an einen bereits
+unauthentifizierten LAN-Endpunkt (wie `/api/next-number`); die eigentliche
+authentifizierte Anfrage an MinIO/Zammad macht der Sidecar serverseitig
+(reines Python-Stdlib: manuelles AWS-SigV4 für MinIO, Bearer-Token-POST für
+Zammad — keine zusätzliche Abhängigkeit/Binary nötig).
+
+**Bewusst fehlertolerant:** Beide Aufrufe haben ein 5-Sekunden-Timeout und
+ein stilles `try/catch` (`Write-LogQuiet`, kein `Write-Host`). Sind
+MinIO/Zammad nicht erreichbar, merkt der Benutzer am PC nichts — die
+Installation läuft unbeeinträchtigt weiter, es gibt keine Fehlermeldung,
+keine Verzögerung über die 5s hinaus, keinen Abbruch. Performance-technisch
+sind das zwei einmalige, kleine HTTP-Requests am Ende des Setups — kein
+Hintergrunddienst, kein Dauerbetrieb auf dem PC.
+
+### Einmaliger Bootstrap (bevor das funktioniert)
+
+Zammad ist aktuell eine frische Instanz ohne Gruppen/Token, MinIO hat noch
+keinen eigenen Zugriffsschlüssel für diesen Zweck. Schritte:
+
+1. **Zammad:** Instanz erreichbar machen (`replicas`-Feld in
+   `argocd/apps/zammad/values.yaml` prüfen — der aktuelle Wert steht
+   ungewöhnlicherweise unter `ingress:`, einem Feld ohne echten
+   Replica-Effekt; vor dem Verlassen darauf mit `kubectl get pods -n zammad`
+   verifizieren, ob Zammad überhaupt schon läuft). Dann Gruppe
+   **„Windows-PCs“** anlegen (Manage → Groups) und unter dem Profil einen
+   API-Token mit Ticket-Rechten erzeugen (siehe docs/19-zammad.md).
+2. **MinIO:** Einen auf den Bucket `windows-pc-logs` beschränkten
+   Access-Key anlegen (statt der Root-Credentials zu verwenden) — Befehle
+   stehen als Kommentar in
+   `argocd/apps/windeployment/sealedsecret-credentials.yaml`.
+3. Beide Werte mit `kubeseal` versiegeln und in
+   `argocd/apps/windeployment/sealedsecret-credentials.yaml` eintragen
+   (Platzhalter ersetzen), dann committen/syncen.
+
+Bis das erledigt ist, bleiben die Endpunkte serverseitig "konfiguriert,
+aber leer" (`optional: true` auf den Secret-Refs in `deployment.yaml`) —
+die PCs merken davon nichts, es passiert einfach noch kein Ticket/Upload.
 
 ---
 
@@ -628,9 +726,11 @@ Get-Content C:\Windows\Logs\dlrg-setup.log -Tail 50
 ## Schnellübersicht: Neuen PC einrichten
 
 ```
-1. USB-Stick mit Windows 11 ISO + autounattend.xml + setup.ps1 erstellen
-2. autounattend.xml: Computernamen anpassen (z.B. DLRG-Buero-01)
+1. pc.cfg auf dem Server auf den Einsatzzweck des nächsten PCs setzen
+   (configmap-pccfg.yaml anpassen + ArgoCD-Sync)
+2. USB-Stick mit Windows 11 ISO + autounattend.xml + setup.ps1 erstellen
 3. USB-Stick in PC → Einschalten → warten (~60 Minuten)
+   → Computername (1002011-XXXX) und Einsatzzweck werden automatisch vergeben
 4. Nach Neustart: Admin-Passwort ändern
 5. Bei Bedarf: ans Inventory eintragen für zukünftige Ansible-Verwaltung
 ```

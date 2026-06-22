@@ -1,0 +1,177 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pc-counter-script
+  namespace: windeployment
+data:
+  # Kleiner HTTP-Dienst im windeployment-http-Pod (localhost-only, nginx reicht
+  # die Endpunkte unter /api/... durch, siehe configmap-nginx.yaml). Macht drei
+  # Dinge fuer die PCs, ohne dass je ein Secret (MinIO/Zammad) auf einen PC
+  # gelangt:
+  #   GET  /next-number    -> fortlaufende PC-Nummer (1002011-XXXX)
+  #   POST /upload-log     -> schreibt das Setup-Log nach MinIO (SigV4, reine
+  #                            Stdlib, kein mc/boto3 noetig)
+  #   POST /notify-zammad   -> legt ein Zammad-Ticket fuer die PC-Einrichtung an
+  # Beide POST-Endpunkte antworten immer mit 200, auch wenn MinIO/Zammad nicht
+  # erreichbar sind oder die Credentials fehlen — der PC soll davon nichts
+  # merken (siehe setup.ps1: kurzer Timeout, stilles try/catch).
+  counter.py: |
+    import datetime
+    import fcntl
+    import hashlib
+    import hmac
+    import http.server
+    import json
+    import os
+    import urllib.error
+    import urllib.request
+    from urllib.parse import urlsplit, parse_qs
+
+    COUNTER_FILE = "/data/pc-counter.txt"
+
+    MINIO_ENDPOINT = os.environ.get("MINIO_ENDPOINT", "")
+    MINIO_BUCKET = os.environ.get("MINIO_BUCKET", "windows-pc-logs")
+    MINIO_ACCESS_KEY = os.environ.get("MINIO_ACCESS_KEY", "")
+    MINIO_SECRET_KEY = os.environ.get("MINIO_SECRET_KEY", "")
+
+    ZAMMAD_URL = os.environ.get("ZAMMAD_URL", "")
+    ZAMMAD_TOKEN = os.environ.get("ZAMMAD_TOKEN", "")
+    ZAMMAD_GROUP = os.environ.get("ZAMMAD_GROUP", "Windows-PCs")
+    ZAMMAD_CUSTOMER = os.environ.get("ZAMMAD_CUSTOMER", "windeployment@dlrg.local")
+
+
+    def _hmac(key, msg):
+        return hmac.new(key, msg.encode("utf-8"), hashlib.sha256).digest()
+
+
+    def s3_put_object(object_key, data):
+        """Minimaler AWS-SigV4-PUT gegen MinIO, ohne mc/boto3-Abhaengigkeit."""
+        if not (MINIO_ENDPOINT and MINIO_ACCESS_KEY and MINIO_SECRET_KEY):
+            raise RuntimeError("MinIO nicht konfiguriert")
+        region = "us-east-1"
+        now = datetime.datetime.utcnow()
+        amz_date = now.strftime("%Y%m%dT%H%M%SZ")
+        date_stamp = now.strftime("%Y%m%d")
+        payload_hash = hashlib.sha256(data).hexdigest()
+        canonical_uri = f"/{MINIO_BUCKET}/{object_key}"
+        canonical_headers = (
+            f"host:{MINIO_ENDPOINT}\n"
+            f"x-amz-content-sha256:{payload_hash}\n"
+            f"x-amz-date:{amz_date}\n"
+        )
+        signed_headers = "host;x-amz-content-sha256;x-amz-date"
+        canonical_request = (
+            f"PUT\n{canonical_uri}\n\n{canonical_headers}\n{signed_headers}\n{payload_hash}"
+        )
+        credential_scope = f"{date_stamp}/{region}/s3/aws4_request"
+        string_to_sign = (
+            f"AWS4-HMAC-SHA256\n{amz_date}\n{credential_scope}\n"
+            f"{hashlib.sha256(canonical_request.encode()).hexdigest()}"
+        )
+        k_date = _hmac(("AWS4" + MINIO_SECRET_KEY).encode("utf-8"), date_stamp)
+        k_region = _hmac(k_date, region)
+        k_service = _hmac(k_region, "s3")
+        k_signing = _hmac(k_service, "aws4_request")
+        signature = hmac.new(k_signing, string_to_sign.encode("utf-8"), hashlib.sha256).hexdigest()
+        authorization = (
+            f"AWS4-HMAC-SHA256 Credential={MINIO_ACCESS_KEY}/{credential_scope}, "
+            f"SignedHeaders={signed_headers}, Signature={signature}"
+        )
+        url = f"http://{MINIO_ENDPOINT}{canonical_uri}"
+        req = urllib.request.Request(url, data=data, method="PUT")
+        req.add_header("x-amz-date", amz_date)
+        req.add_header("x-amz-content-sha256", payload_hash)
+        req.add_header("Authorization", authorization)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return resp.status
+
+
+    def zammad_create_ticket(title, body):
+        if not (ZAMMAD_URL and ZAMMAD_TOKEN):
+            raise RuntimeError("Zammad nicht konfiguriert")
+        payload = json.dumps({
+            "title": title,
+            "group": ZAMMAD_GROUP,
+            "customer": ZAMMAD_CUSTOMER,
+            "article": {"subject": title, "body": body, "type": "note", "internal": False},
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            ZAMMAD_URL.rstrip("/") + "/api/v1/tickets",
+            data=payload,
+            method="POST",
+        )
+        req.add_header("Authorization", f"Token token={ZAMMAD_TOKEN}")
+        req.add_header("Content-Type", "application/json")
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return resp.status
+
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def _ok(self, body=b"ok"):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_GET(self):
+            if self.path != "/next-number":
+                self.send_response(404)
+                self.end_headers()
+                return
+            next_num = self._increment()
+            self._ok(f"{next_num:04d}".encode())
+
+        def do_POST(self):
+            parsed = urlsplit(self.path)
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length) if length else b""
+
+            if parsed.path == "/upload-log":
+                pc = (parse_qs(parsed.query).get("pc", ["unknown"])[0])
+                ts = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+                try:
+                    s3_put_object(f"{pc}-{ts}.log", body)
+                except Exception as exc:
+                    print(f"upload-log fehlgeschlagen fuer {pc}: {exc}")
+                # immer 200: der PC soll von einem MinIO-Ausfall nichts merken
+                self._ok()
+                return
+
+            if parsed.path == "/notify-zammad":
+                try:
+                    info = json.loads(body or b"{}")
+                    pc = info.get("pcName", "unknown")
+                    purpose = info.get("purpose", "")
+                    status = info.get("status", "ok")
+                    message = info.get("message", "")
+                    title = f"PC {pc} eingerichtet ({status})"
+                    text = f"Einsatzzweck: {purpose}\nStatus: {status}\n\n{message}"
+                    zammad_create_ticket(title, text)
+                except Exception as exc:
+                    print(f"notify-zammad fehlgeschlagen: {exc}")
+                # immer 200: der PC soll von einem Zammad-Ausfall nichts merken
+                self._ok()
+                return
+
+            self.send_response(404)
+            self.end_headers()
+
+        def _increment(self):
+            if not os.path.exists(COUNTER_FILE):
+                open(COUNTER_FILE, "w").close()
+            with open(COUNTER_FILE, "r+") as f:
+                fcntl.flock(f, fcntl.LOCK_EX)
+                current = f.read().strip()
+                next_num = (int(current) if current else 0) + 1
+                f.seek(0)
+                f.truncate()
+                f.write(str(next_num))
+                fcntl.flock(f, fcntl.LOCK_UN)
+            return next_num
+
+        def log_message(self, fmt, *args):
+            print(fmt % args)
+
+    if __name__ == "__main__":
+        http.server.HTTPServer(("127.0.0.1", 8080), Handler).serve_forever()
