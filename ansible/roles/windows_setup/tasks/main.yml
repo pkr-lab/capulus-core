@@ -1,5 +1,38 @@
 ---
 # DLRG OG Andernach - Windows-Setup-Hauptaufgabe
+
+# Namensschema 1002011-XXXX + Einsatzzweck: laufen mit Tag "always", damit
+# sie auch bei --tags users/hostname/settings/software zuerst aufgeloest sind.
+- name: Naechste PC-Nummer vom Zaehler-Server holen
+  ansible.windows.win_uri:
+    url: "{{ windows_deployment_server }}/api/next-number"
+    method: GET
+    return_content: true
+  register: pc_number_result
+  when: windows_pc_name == ""
+  tags: [always]
+
+- name: Computername aus Zaehler-Server ableiten (1002011-XXXX)
+  ansible.builtin.set_fact:
+    windows_pc_name: "1002011-{{ pc_number_result.content | trim }}"
+  when: windows_pc_name == ""
+  tags: [always]
+
+- name: Einsatzzweck aus pc.cfg vom Server holen
+  ansible.windows.win_uri:
+    url: "{{ windows_deployment_server }}/pc.cfg"
+    method: GET
+    return_content: true
+  register: pc_cfg_result
+  when: windows_pc_purpose == ""
+  tags: [always]
+
+- name: Einsatzzweck aus pc.cfg extrahieren
+  ansible.builtin.set_fact:
+    windows_pc_purpose: "{{ pc_cfg_result.content | regex_search('Einsatzzweck=(.+)', '\\1') | first | trim }}"
+  when: windows_pc_purpose == ""
+  tags: [always]
+
 - name: Benutzer anlegen und konfigurieren
   ansible.builtin.import_tasks: users.yml
   tags: [users]

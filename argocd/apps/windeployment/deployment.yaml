@@ -52,6 +52,9 @@ spec:
             - name: winpe-files
               mountPath: /mnt/iso
               subPath: iso
+            - name: pccfg
+              mountPath: /usr/share/nginx/html/pc.cfg
+              subPath: pc.cfg
           resources:
             requests:
               memory: "64Mi"
@@ -65,6 +68,24 @@ spec:
               port: 80
             initialDelaySeconds: 5
             periodSeconds: 30
+        # Zaehler-Sidecar: vergibt fortlaufende PC-Nummern (1002011-XXXX).
+        # Laeuft nur auf localhost, nginx reicht /api/next-number durch.
+        - name: counter
+          image: python:3.12-alpine
+          command: ["python3", "/app/counter.py"]
+          volumeMounts:
+            - name: counter-script
+              mountPath: /app
+            - name: winpe-files
+              mountPath: /data
+              subPath: counter
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "10m"
+            limits:
+              memory: "64Mi"
+              cpu: "100m"
       volumes:
         - name: nginx-config
           configMap:
@@ -81,6 +102,12 @@ spec:
             items:
               - key: menu.ipxe
                 path: menu.ipxe
+        - name: pccfg
+          configMap:
+            name: pc-cfg
+        - name: counter-script
+          configMap:
+            name: pc-counter-script
         - name: winpe-files
           persistentVolumeClaim:
             claimName: windeployment-files

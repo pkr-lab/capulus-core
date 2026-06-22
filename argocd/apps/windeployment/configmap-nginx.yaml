@@ -35,4 +35,15 @@ data:
         alias /usr/share/nginx/html/autounattend-usb.xml;
         add_header Content-Type application/xml;
       }
+
+      location = /pc.cfg {
+        alias /usr/share/nginx/html/pc.cfg;
+        add_header Content-Type text/plain;
+      }
+
+      # Reicht an den counter-Sidecar im selben Pod weiter (Zaehler fuer
+      # das Namensschema 1002011-XXXX, siehe configmap-counter.yaml).
+      location = /api/next-number {
+        proxy_pass http://127.0.0.1:8080/next-number;
+      }
     }
