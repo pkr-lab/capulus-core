@@ -4,13 +4,13 @@ ntfy ist ein einfacher, selbst gehosteter Pub/Sub-Notification-Dienst. Im Gegens
 
 ## Warum ntfy statt Gotify für iOS?
 
-| | Gotify | ntfy |
-|---|---|---|
-| Android | ✓ nativ | ✓ nativ |
-| iOS | ✗ (WebSocket, kein Background-Push) | ✓ (APNs via upstream-Relay) |
-| Self-hosted | ✓ | ✓ |
-| Auth | ✓ | ✓ (optional) |
-| HTTP-API | ✓ | ✓ |
+|             | Gotify                              | ntfy                        |
+|-------------|-------------------------------------|-----------------------------|
+| Android     | ✓ nativ                             | ✓ nativ                     |
+| iOS         | ✗ (WebSocket, kein Background-Push) | ✓ (APNs via upstream-Relay) |
+| Self-hosted | ✓                                   | ✓                           |
+| Auth        | ✓                                   | ✓ (optional)                |
+| HTTP-API    | ✓                                   | ✓                           |
 
 **Empfehlung:** Gotify für interne Logs/Scanner-Status behalten; ntfy für iOS-Benachrichtigungen nutzen.
 
@@ -75,19 +75,19 @@ curl \
 ```
 
 ### Prioritäten
-| Wert | Bedeutung |
-|---|---|
-| `min` / `1` | Stumm |
-| `low` / `2` | Leise |
-| `default` / `3` | Normal |
-| `high` / `4` | Laut |
-| `urgent` / `5` | Dringend, DND wird ignoriert |
+| Wert             | Bedeutung                    |
+|------------------|------------------------------|
+| `min` / `1`      | Stumm                        |
+| `low` / `2`      | Leise                        |
+| `default` / `3`  | Normal                       |
+| `high` / `4`     | Laut                         |
+| `urgent` / `5`   | Dringend, DND wird ignoriert |
 
 ### Tags (Emoji-Icons in der App)
 ```bash
--H "Tags: white_check_mark"   # ✅
--H "Tags: warning"             # ⚠️
--H "Tags: rotating_light"      # 🚨
+-H "Tags: white_check_mark"   # 
+-H "Tags: warning"             # 
+-H "Tags: rotating_light"      # 
 ```
 
 Vollständige Emoji-Liste: https://docs.ntfy.sh/emojis/

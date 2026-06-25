@@ -154,9 +154,9 @@ $SRV 'journalctl -t scanbd-scan -f'
 ```
 
 Expected pushes:
-- **Erfolg**: `✅ Scan erfolgreich` + `📄 scan-<ts>.pdf (<n> Seiten) → Paperless`
-- **Kein Papier im ADF**: `❌ Scan fehlgeschlagen` + `Keine Seiten gescannt — ADF leer oder Scanner blockiert?`
-- **scan_button-Trap außerhalb der Pipeline**: `❌ Scan abgebrochen` + `scan_button trap rc=<rc>`
+- **Erfolg**: `Scan erfolgreich` + `scan-<ts>.pdf (<n> Seiten) → Paperless`
+- **Kein Papier im ADF**: `Scan fehlgeschlagen` + `Keine Seiten gescannt — ADF leer oder Scanner blockiert?`
+- **scan_button-Trap außerhalb der Pipeline**: `Scan abgebrochen` + `scan_button trap rc=<rc>`
 
 ## 4. Rotate the admin password / app token
 

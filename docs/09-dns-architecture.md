@@ -16,16 +16,16 @@ behandelst du `*.homeserver` als *opt-in*-Komfort pro Gerät.
 ## Warum die naheliegende Lösung schlecht ist
 
 ```
-            ┌──────────────────────────────────────┐
-            │  Fritz!Box (DHCP)                    │
+            ┌───────────────────────────────────────┐
+            │  Fritz!Box (DHCP)                     │
             │  → "Dein DNS-Server ist 192.168...127"│
-            └──────────────────────────────────────┘
+            └───────────────────────────────────────┘
                             │
                             ▼
             ┌──────────────────────────────────────┐
-            │  Jedes LAN-Gerät: Smart-TV,         │
-            │  IoT-Steckdose, Drucker, Telefon... │
-            │  Alle fragen NUR 192.168.178.94    │
+            │  Jedes LAN-Gerät: Smart-TV,          │
+            │  IoT-Steckdose, Drucker, Telefon...  │
+            │  Alle fragen NUR 192.168.178.94      │
             └──────────────────────────────────────┘
                             │
                 Home-Server crashed

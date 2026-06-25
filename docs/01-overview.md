@@ -16,43 +16,43 @@ Dieses Dokument beschreibt die High-Level-Architektur des Home-Server-Setups.
 │                    TAILSCALE VPN OVERLAY                            │
 │                  (100.x.x.x Adressbereich)                          │
 │                                                                     │
-│   ┌─────────────┐         ┌──────────────┐      ┌──────────────┐   │
-│   │  Laptop /   │         │    Phone /   │      │   Remote     │   │
-│   │  Desktop    │◄───────►│    Tablet    │      │   Machine    │   │
-│   └─────────────┘         └──────────────┘      └──────────────┘   │
+│   ┌─────────────┐         ┌──────────────┐      ┌──────────────┐    │
+│   │  Laptop /   │         │    Phone /   │      │   Remote     │    │
+│   │  Desktop    │◄───────►│    Tablet    │      │   Machine    │    │
+│   └─────────────┘         └──────────────┘      └──────────────┘    │
 └───────────────────────────────┬─────────────────────────────────────┘
                                 │ Tailscale MagicDNS / IP
                                 ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                k3s CLUSTER (2-Node)                                          │
 │                                                                              │
-│  ┌────────────────────────────────────┐  ┌──────────────────────────────┐   │
-│  │  HOMESERVER — 192.168.178.94       │  │  worker-0 — 192.168.178.95│   │
-│  │  Control-Plane + Worker            │  │  Worker-Node                 │   │
-│  │                                    │  │                              │   │
-│  │  ┌────────────┐ ┌───────────────┐  │  │  ┌──────────────────────┐   │   │
-│  │  │ tailscaled │ │   dnsmasq     │  │  │  │  k3s-agent           │   │   │
-│  │  │ (Tailscale)│ │  split-DNS    │  │  │  │  (kubelet + Flannel) │   │   │
-│  │  └────────────┘ │  *.homeserver │  │  │  └──────────────────────┘   │   │
-│  │  ┌────────────┐ │  :53 LAN+TS  │  │  │                              │   │
-│  │  │  scanbd +  │ └───────────────┘  │  │  ┌──────────────────────┐   │   │
-│  │  │  SANE      │                    │  │  │  Docker-Compose       │   │   │
-│  │  │  scan_.sh  │ ┌───────────────┐  │  │  │  Paperless-NGX       │   │   │
-│  │  └────────────┘ │  UFW Firewall │  │  │  │  TinyTeller          │   │   │
-│  │                 └───────────────┘  │  │  │  Day Pilot           │   │   │
-│  │  ┌──────────────────────────────┐  │  │  │  Node Exporter       │   │   │
-│  │  │  k3s server (Control-Plane)  │  │  │  └──────────────────────┘   │   │
-│  │  │  ┌──────────┐ ┌───────────┐  │  │  │                              │   │
-│  │  │  │ Traefik  │ │  ArgoCD   │  │◄─┼─►│  Flannel VXLAN (8472/UDP)   │   │
-│  │  │  │ :80/:443 │ │  :30080   │  │  │  │  kubelet API  (10250/TCP)   │   │
-│  │  │  └──────────┘ └───────────┘  │  │  └──────────────────────────────┘   │
-│  │  │  argocd/apps/:                │  │                              │   │
-│  │  │   monitoring, sealed-secrets, │  │                              │   │
-│  │  │   semaphore, headlamp, gotify │  │                              │   │
-│  │  │  Flannel VXLAN 10.42.0.0/16   │  │                              │   │
-│  │  │  local-path StorageClass      │  │                              │   │
-│  │  └──────────────────────────────┘  │  └──────────────────────────────┘   │
-│  └────────────────────────────────────┘                                     │
+│  ┌─────────────────────────────────────┐  ┌──────────────────────────────┐   │
+│  │  HOMESERVER — 192.168.178.94        │  │  worker-0 — 192.168.178.95│  │   │ 
+│  │  Control-Plane + Worker             │  │  Worker-Node                 │   │
+│  │                                     │  │                              │   │
+│  │  ┌────────────┐ ┌───────────────┐   │  │  ┌──────────────────────┐    │   │
+│  │  │ tailscaled │ │   dnsmasq     │   │  │  │  k3s-agent           │    │   │
+│  │  │ (Tailscale)│ │  split-DNS    │   │  │  │  (kubelet + Flannel) │    │   │
+│  │  └────────────┘ │  *.homeserver │   │  │  └──────────────────────┘    │   │
+│  │  ┌────────────┐ │  :53 LAN+TS   │   │  │                              │   │
+│  │  │  scanbd +  │ └───────────────┘   │  │  ┌──────────────────────┐    │   │
+│  │  │  SANE      │                     │  │  │  Docker-Compose      │    │   │
+│  │  │  scan_.sh  │ ┌───────────────┐   │  │  │  Paperless-NGX       │    │   │
+│  │  └────────────┘ │  UFW Firewall │   │  │  │  TinyTeller          │    │   │
+│  │                 └───────────────┘   │  │  │  Day Pilot           │    │   │
+│  │  ┌───────────────────────────────┐  │  │  │  Node Exporter       │    │   │
+│  │  │  k3s server (Control-Plane)   │  │  │  └──────────────────────┘    │   │
+│  │  │  ┌──────────┐ ┌───────────┐   │  │  │                              │   │
+│  │  │  │ Traefik  │ │  ArgoCD   │   │◄─┼─►│  Flannel VXLAN (8472/UDP)    │   │
+│  │  │  │ :80/:443 │ │  :30080   │   │  │  │  kubelet API  (10250/TCP)    │   │
+│  │  │  └──────────┘ └───────────┘   │  │  └──────────────────────────────┘   │
+│  │  │  argocd/apps/:                │  │                                     │
+│  │  │   monitoring, sealed-secrets, │  │                                     │
+│  │  │   semaphore, headlamp, gotify │  │                                     │
+│  │  │  Flannel VXLAN 10.42.0.0/16   │  │                                     │
+│  │  │  local-path StorageClass      │  │                                     │
+│  │  └───────────────────────────────┘  │                                     │
+│  └─────────────────────────────────────┘                                     │
 └──────────────────────────────────────────────────────────────────────────────┘
                                 ▲
                                 │ git pull (HTTPS/SSH)
@@ -61,15 +61,15 @@ Dieses Dokument beschreibt die High-Level-Architektur des Home-Server-Setups.
 │                    GIT REPOSITORY (GitHub)                          │
 │                                                                     │
 │   home-server/                                                      │
-│   └── argocd/apps/          ← ArgoCD beobachtet dieses Verzeichnis │
-│       ├── example-whoami/   ← Jedes Unterverzeichnis = eine App    │
-│       ├── monitoring/                                              │
-│       ├── sealed-secrets/                                          │
-│       ├── kubeseal-webgui/                                         │
-│       ├── headlamp/                                                │
-│       ├── semaphore/                                               │
-│       ├── gotify/                                                  │
-│       └── my-new-app/       ← Verzeichnis anlegen → auto-deployed  │
+│   └── argocd/apps/          ← ArgoCD beobachtet dieses Verzeichnis  │
+│       ├── example-whoami/   ← Jedes Unterverzeichnis = eine App     │
+│       ├── monitoring/                                               │
+│       ├── sealed-secrets/                                           │
+│       ├── kubeseal-webgui/                                          │
+│       ├── headlamp/                                                 │
+│       ├── semaphore/                                                │
+│       ├── gotify/                                                   │
+│       └── my-new-app/       ← Verzeichnis anlegen → auto-deployed   │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -111,10 +111,10 @@ Das Fundament des ganzen Stacks. Konfiguriert durch die Ansible-Rolle `common`:
 k3s ist eine CNCF-zertifizierte, produktionsreife Kubernetes-Distribution,
 optimiert für ressourcenarme Umgebungen.
 
-| Node | IP | Rolle | Service |
-|------|----|-------|---------|
-| homeserver | 192.168.178.94 | Control-Plane + Worker | k3s server |
-| worker-0 | 192.168.178.95 | Worker | k3s agent |
+| Node          | IP                | Rolle                  | Service       |
+|---------------|-------------------|------------------------|---------------|
+| homeserver    | 192.168.178.94    | Control-Plane + Worker | k3s server    |
+| worker-0      | 192.168.178.95    | Worker                 | k3s agent     |
 
 worker-0 tritt dem Cluster über `k3s agent` bei — der Join-Token wird
 per Ansible automatisch vom Control-Plane-Node gelesen. Kubernetes-Workloads

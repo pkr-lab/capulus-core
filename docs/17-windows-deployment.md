@@ -291,10 +291,11 @@ powershell.exe -ExecutionPolicy Bypass -Command "
         -OutFile 'C:\Windows\Temp\setup.ps1' -UseBasicParsing
     & 'C:\Windows\Temp\setup.ps1' -PCPurpose 'Buero' -AdminPassword 'MeinSicheresPasswort!'
 "
+```
 
 # Variante 2: Von USB-Stick (setup.ps1 auf USB-Stick kopieren)
 powershell.exe -ExecutionPolicy Bypass -File D:\setup.ps1 -PCPurpose "Schulung"
-```
+
 
 **Parameter für setup.ps1:**
 

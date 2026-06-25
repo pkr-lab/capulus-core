@@ -14,15 +14,15 @@ Browser  →  Traefik  →  authentik.homeserver  (Authentik)
                          Gotify · Semaphore
 ```
 
-| Dienst | Integrations-Typ | Authentik-Vorlage |
-|---|---|---|
-| Grafana | OIDC OAuth2 | — |
-| ArgoCD | OIDC (extern) | — |
-| Headlamp | OIDC | — |
-| Argo Workflows | OIDC SSO | — |
-| MinIO | OpenID Connect | — |
-| Gotify | Forward Auth (Traefik) | Proxy Provider |
-| Semaphore | Forward Auth (Traefik) | Proxy Provider |
+| Dienst           | Integrations-Typ        | Authentik-Vorlage |
+|------------------|-------------------------|-------------------|
+| Grafana          | OIDC OAuth2             | —                 |
+| ArgoCD           | OIDC (extern)           | —                 |
+| Headlamp         | OIDC                    | —                 |
+| Argo Workflows   | OIDC SSO                | —                 |
+| MinIO            | OpenID Connect          | —                 |
+| Gotify           | Forward Auth (Traefik)  | Proxy Provider    |
+| Semaphore        | Forward Auth (Traefik)  | Proxy Provider    |
 
 ---
 

@@ -60,20 +60,20 @@ make install
 </tr>
 </thead>
 <tbody>
-<tr><td>🖥️ Betriebssystem</td><td><strong>Ubuntu Server 26.04 LTS</strong></td><td>Gehärtet, UFW-Firewall, NTP-synced, Swap off</td></tr>
-<tr><td>☸️ Kubernetes</td><td><strong>k3s</strong> (latest stable)</td><td>Single-Node, Traefik, CoreDNS, local-path, metrics-server</td></tr>
-<tr><td>🔄 GitOps</td><td><strong>ArgoCD</strong> + ApplicationSets</td><td>Verzeichnis unter <code>argocd/apps/</code> anlegen → pushen → deployed</td></tr>
-<tr><td>🌐 Split-DNS</td><td><strong>dnsmasq</strong> auf <code>tailscale0</code></td><td><code>*.homeserver</code> aus LAN und Tailnet auflösbar</td></tr>
-<tr><td>🎛️ Web-Ansible</td><td><strong>Semaphore UI</strong></td><td>Ein-Klick-<code>git pull &amp;&amp; ansible-playbook</code> gegen das eigene LAN</td></tr>
-<tr><td>📊 Monitoring</td><td><strong>VictoriaMetrics + Grafana</strong></td><td>Single-Node TSDB, vmagent, vmalert, Alertmanager, Dashboards</td></tr>
-<tr><td>🖥️ Kubernetes-UI</td><td><strong>Headlamp</strong></td><td>Browser-Dashboard für den Cluster</td></tr>
-<tr><td>🔐 Secrets</td><td><strong>Sealed Secrets + kubeseal-webgui</strong></td><td>Verschlüsselte Secrets in Git, nur im Cluster entschlüsselbar</td></tr>
-<tr><td>🔔 Notifications</td><td><strong>Gotify</strong> + <strong>ntfy</strong></td><td>Self-hosted Push — Gotify (Android), ntfy (iOS + Android)</td></tr>
-<tr><td>🔒 Remote-Access</td><td><strong>Tailscale</strong></td><td>WireGuard-Mesh-VPN — keine Portfreigaben, keine öffentliche IP</td></tr>
-<tr><td>⚙️ CI/CD intern</td><td><strong>Argo Workflows + MinIO</strong></td><td>Private CI/CD-Pipeline + S3-Artifact-Store im Cluster</td></tr>
-<tr><td>🚦 Ingress</td><td><strong>Traefik v2</strong> (k3s bundled)</td><td>HTTP/HTTPS-Routing in den Cluster</td></tr>
-<tr><td>🔑 SSO</td><td><strong>Authentik</strong></td><td>Zentraler Identity Provider für alle Dienste via OIDC</td></tr>
-<tr><td>📦 Provisioning</td><td><strong>Ansible</strong> (≥ 2.14)</td><td>Vollständig idempotent, Role-per-Concern, Vault für Secrets</td></tr>
+<tr><td>Betriebssystem</td><td><strong>Ubuntu Server 26.04 LTS</strong></td><td>Gehärtet, UFW-Firewall, NTP-synced, Swap off</td></tr>
+<tr><td>Kubernetes</td><td><strong>k3s</strong> (latest stable)</td><td>Single-Node, Traefik, CoreDNS, local-path, metrics-server</td></tr>
+<tr><td>GitOps</td><td><strong>ArgoCD</strong> + ApplicationSets</td><td>Verzeichnis unter <code>argocd/apps/</code> anlegen → pushen → deployed</td></tr>
+<tr><td>Split-DNS</td><td><strong>dnsmasq</strong> auf <code>tailscale0</code></td><td><code>*.homeserver</code> aus LAN und Tailnet auflösbar</td></tr>
+<tr><td>Web-Ansible</td><td><strong>Semaphore UI</strong></td><td>Ein-Klick-<code>git pull &amp;&amp; ansible-playbook</code> gegen das eigene LAN</td></tr>
+<tr><td>Monitoring</td><td><strong>VictoriaMetrics + Grafana</strong></td><td>Single-Node TSDB, vmagent, vmalert, Alertmanager, Dashboards</td></tr>
+<tr><td>Kubernetes-UI</td><td><strong>Headlamp</strong></td><td>Browser-Dashboard für den Cluster</td></tr>
+<tr><td>Secrets</td><td><strong>Sealed Secrets + kubeseal-webgui</strong></td><td>Verschlüsselte Secrets in Git, nur im Cluster entschlüsselbar</td></tr>
+<tr><td>Notifications</td><td><strong>Gotify</strong> + <strong>ntfy</strong></td><td>Self-hosted Push — Gotify (Android), ntfy (iOS + Android)</td></tr>
+<tr><td>Remote-Access</td><td><strong>Tailscale</strong></td><td>WireGuard-Mesh-VPN — keine Portfreigaben, keine öffentliche IP</td></tr>
+<tr><td>CI/CD intern</td><td><strong>Argo Workflows + MinIO</strong></td><td>Private CI/CD-Pipeline + S3-Artifact-Store im Cluster</td></tr>
+<tr><td>Ingress</td><td><strong>Traefik v2</strong> (k3s bundled)</td><td>HTTP/HTTPS-Routing in den Cluster</td></tr>
+<tr><td>SSO</td><td><strong>Authentik</strong></td><td>Zentraler Identity Provider für alle Dienste via OIDC</td></tr>
+<tr><td>Provisioning</td><td><strong>Ansible</strong> (≥ 2.14)</td><td>Vollständig idempotent, Role-per-Concern, Vault für Secrets</td></tr>
 </tbody>
 </table>
 
@@ -81,7 +81,7 @@ make install
 > **Referenz-Build:** Intel i5, 32 GB RAM, 512 GB NVMe.
 
 <details>
-<summary><strong>🔄 Auto-Upgrade-Details</strong></summary>
+<summary><strong>Auto-Upgrade-Details</strong></summary>
 
 `auto_upgrade: true` (Default) hält bei jedem Playbook-Run den gesamten Stack aktuell:
 
@@ -100,7 +100,7 @@ Für reproduzierbare Builds: `auto_upgrade: false` in `ansible/group_vars/all.ym
 
 ---
 
-## 🚀 Quickstart (5 Schritte)
+## Quickstart (5 Schritte)
 
 > Erstmalig auf der Maschine? Start mit **[Ubuntu-Server-Installation](docs/00-ubuntu-server-install.md)**.
 > Komplette Voraussetzungen: **[docs/02-prerequisites.md](docs/02-prerequisites.md)**.
@@ -158,7 +158,7 @@ Password:   <auto-generiert>
 
 ---
 
-## 📁 Repository-Layout
+## Repository-Layout
 
 <details>
 <summary><strong>Verzeichnisstruktur anzeigen</strong></summary>
@@ -224,7 +224,7 @@ capulus-core/
 
 ---
 
-## 📊 Monitoring
+## Monitoring
 
 Ein schlanker VictoriaMetrics-+-Grafana-Stack lebt unter `argocd/apps/monitoring/` und wird automatisch von ArgoCD ausgerollt.
 
@@ -251,7 +251,7 @@ kubectl -n monitoring get secret monitoring-grafana \
 
 ---
 
-## 🔁 Application hinzufügen (GitOps-Weg)
+## Application hinzufügen (GitOps-Weg)
 
 ```bash
 mkdir -p argocd/apps/my-app
@@ -264,7 +264,7 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 
 ---
 
-## 🌐 Service-URLs
+## Service-URLs
 
 | Service | URL |
 |---|---|
@@ -281,15 +281,15 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 
 ---
 
-## 🔒 Networking & Security
+## Networking & Security
 
 <table>
 <thead><tr><th>Prinzip</th><th>Umsetzung</th></tr></thead>
 <tbody>
-<tr><td>🚫 Keine öffentlichen Ports</td><td>Zugriff ausschließlich über LAN oder Tailscale-VPN</td></tr>
-<tr><td>🛡️ UFW-Firewall</td><td>Erlaubt nur SSH, HTTP/HTTPS, k3s-API, ArgoCD-NodePort, Flannel, Tailscale-UDP</td></tr>
-<tr><td>🔐 Ansible-Vault</td><td>Sensitive Secrets verschlüsselt at rest</td></tr>
-<tr><td>👁️ ArgoCD Read-only</td><td>Hat ausschließlich Read-Access auf das Git-Repo</td></tr>
+<tr><td>Keine öffentlichen Ports</td><td>Zugriff ausschließlich über LAN oder Tailscale-VPN</td></tr>
+<tr><td>UFW-Firewall</td><td>Erlaubt nur SSH, HTTP/HTTPS, k3s-API, ArgoCD-NodePort, Flannel, Tailscale-UDP</td></tr>
+<tr><td>Ansible-Vault</td><td>Sensitive Secrets verschlüsselt at rest</td></tr>
+<tr><td>ArgoCD Read-only</td><td>Hat ausschließlich Read-Access auf das Git-Repo</td></tr>
 </tbody>
 </table>
 
@@ -313,7 +313,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 
 ---
 
-## 📖 Dokumentation
+## Dokumentation
 
 | Dokument | Inhalt |
 |---|---|
