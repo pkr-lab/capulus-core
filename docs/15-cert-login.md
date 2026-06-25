@@ -30,14 +30,14 @@ CA-signiertem Zertifikat können die Dienste überhaupt kontaktieren.
 **Was das Zertifikat NICHT tut:** Es ersetzt nicht den Authentik-Login.
 Benutzername + Passwort (oder TOTP) bleibt der Identity-Schritt.
 
-| Dienst | Typ | Status |
-|---|---|---|
-| Grafana | OIDC | ✅ bereits konfiguriert |
-| Headlamp | OIDC | PR: feat/headlamp-oidc |
-| Argo Workflows | OIDC SSO | PR: feat/argo-workflows-sso |
-| MinIO | OIDC | PR: feat/minio-oidc |
-| Gotify | Forward Auth | PR: feat/gotify-forwardauth |
-| Semaphore | Forward Auth | PR: feat/semaphore-forwardauth |
+| Dienst          | Typ           | Status                          |
+|-----------------|---------------|---------------------------------|
+| Grafana         | OIDC          | bereits konfiguriert            |
+| Headlamp        | OIDC          | PR: feat/headlamp-oidc          |
+| Argo Workflows  | OIDC SSO      | PR: feat/argo-workflows-sso     |
+| MinIO           | OIDC          | PR: feat/minio-oidc             |
+| Gotify          | Forward Auth  | PR: feat/gotify-forwardauth     |
+| Semaphore       | Forward Auth  | PR: feat/semaphore-forwardauth  |
 
 ---
 
@@ -300,7 +300,7 @@ Settings → Privacy & Security → View Certificates → Your Certificates → 
 
 ## Schritt 6 — Pro App verbinden
 
-### Grafana ✅ (bereits konfiguriert)
+### Grafana (bereits konfiguriert)
 
 Keine Änderung nötig. Nach Cert-Check durch Traefik leitet Grafana automatisch
 zu Authentik weiter.

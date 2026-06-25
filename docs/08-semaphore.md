@@ -66,14 +66,14 @@ Browser  ──▶  Traefik (k3s ingress)  ──▶  semaphore Pod
 
 Der `semaphore-bootstrap` Secret im Namespace `semaphore` hält:
 
-| Key                       | Inhalt                                      |
-|---------------------------|---------------------------------------------|
-| `admin_username`          | `admin` (Default)                           |
+| Key                       | Inhalt                                                              |
+|---------------------------|---------------------------------------------------------------------|
+| `admin_username`          | `admin` (Default)                                                   |
 | `admin_password`          | Auto-generiert, liegt unter `/etc/semaphore-secrets/admin_password` |
-| `access_key_encryption`   | 32-byte base64, verschlüsselt Semaphores DB-Secrets |
-| `ansible_vault_password`  | Dein Master-Vault-Password (erforderlich)   |
-| `ssh_private_key`         | Ed25519-Key — Semaphore SSH-t damit raus    |
-| `ssh_public_key`          | Gegenstück, wird auf die Targets verteilt   |
+| `access_key_encryption`   | 32-byte base64, verschlüsselt Semaphores DB-Secrets                 |
+| `ansible_vault_password`  | Dein Master-Vault-Password (erforderlich)                           |
+| `ssh_private_key`         | Ed25519-Key — Semaphore SSH-t damit raus                            |
+| `ssh_public_key`          | Gegenstück, wird auf die Targets verteilt                           |
 
 ## Erst-Setup (einmalig, ~5 Min)
 
