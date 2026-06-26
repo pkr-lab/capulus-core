@@ -45,7 +45,7 @@ ansible -i ansible/inventory/hosts.yml all -m ping
 ## Schritt 1 — Repo klonen & Abhängigkeiten installieren
 
 ```bash
-git clone https://github.com/PKE-Tech/capulus-core.git
+git clone https://github.com/pkr-lab/capulus-core.git
 cd capulus-core
 make deps
 ```
@@ -171,10 +171,10 @@ Semaphore UI: **http://semaphore.homeserver**
 
 Folgende Projekte werden automatisch angelegt:
 
-| Projekt | Playbook | Inventory |
-|---|---|---|
-| `home-server` | `ansible/site.yml` | homeserver (192.168.178.94) |
-| `worker-0`    | `ansible/worker-0.yml` | worker-0 (192.168.178.95) |
+| Projekt       | Playbook               | Inventory                   |
+|---------------|------------------------|-----------------------------|
+| `home-server` | `ansible/site.yml`     | homeserver (192.168.178.94) |
+| `worker-0`    | `ansible/worker-0.yml` | worker-0 (192.168.178.95)   |
 
 Beide laufen täglich um 06:00 Uhr automatisch durch.
 
