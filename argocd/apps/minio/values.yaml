@@ -18,9 +18,9 @@ minio:
     size: 10Gi
     accessMode: ReadWriteOnce
 
-  # Pflicht: hdd-PVCs binden nur auf worker-0 (siehe docs/18-hdd-storage.md).
+  # Pflicht: hdd-PVCs binden nur auf worker-0 (siehe docs/16-hdd-storage.md).
   # ACHTUNG: Bestehende PVC bereits auf local-path → vor dem Sync manuell
-  # migrieren (docs/18-hdd-storage.md → "Bestehende PVC auf HDD migrieren"),
+  # migrieren (docs/16-hdd-storage.md → "Bestehende PVC auf HDD migrieren"),
   # sonst bleibt die alte PVC unverändert (storageClassName ist immutable)
   # und der neue Pod kann wegen der Affinity nicht mehr auf der alten PVC starten.
   affinity:
@@ -68,7 +68,7 @@ minio:
     enabled: false
 
   # ---- OIDC — Authentik Single Sign-On -------------------------
-  # Anleitung: docs/16-sso-alle-dienste.md → Schritt 4
+  # Anleitung: docs/15-sso-alle-dienste.md → Schritt 4
   # Zum Aktivieren:
   #   1. Provider in Authentik anlegen, clientId + clientSecret notieren
   #   2. oidc.enabled: true setzen
@@ -88,10 +88,10 @@ minio:
 #   echo -n "<value>" | kubeseal --raw --namespace minio --name minio-root \
 #     --controller-name sealed-secrets-controller \
 #     --controller-namespace sealed-secrets --from-file=/dev/stdin
-# then paste the outputs below. See docs/13-argo-workflows.md.
+# then paste the outputs below. See docs/12-argo-workflows.md.
 # OIDC SealedSecret — Backup-Mechanismus, da die MinIO Community-Chart keine
 # native Secret-Referenz für OIDC unterstützt. Credentials oben direkt eintragen.
-# Anleitung: docs/16-sso-alle-dienste.md → Schritt 4 (Hinweis MinIO)
+# Anleitung: docs/15-sso-alle-dienste.md → Schritt 4 (Hinweis MinIO)
 oidcSecret:
   enabled: true
   name: minio-oidc

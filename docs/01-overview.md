@@ -169,8 +169,7 @@ Hardware-Button und triggert Shell-Skripte (`scan_button.sh` →
 `scan_to_pdf.sh`), die ein PDF erzeugen und auf einem CIFS-Mount der
 UGREEN NAS ablegen, wo Paperless-NGX es einliest. Optional werden
 Gotify-Push-Notifications aus denselben Skripten verschickt.
-Vollständiges Setup: [`10-scanner.md`](10-scanner.md) und
-[`11-gotify.md`](11-gotify.md).
+Vollständiges Setup: [`10-gotify.md`](10-gotify.md).
 
 ### Monitoring-Stack (VictoriaMetrics + Grafana)
 
