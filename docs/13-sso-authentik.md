@@ -1,4 +1,4 @@
-# 14 — Single Sign-On mit Authentik
+# Single Sign-On mit Authentik
 
 Authentik ist ein Open-Source Identity Provider (IdP). Er stellt OIDC/OAuth2 bereit, sodass du dich einmal anmeldest und danach automatisch in allen Home-Lab-Diensten eingeloggt bist.
 

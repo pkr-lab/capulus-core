@@ -1,4 +1,4 @@
-# 15 — Zertifikats-Authentifizierung via Traefik mTLS
+# Zertifikats-Authentifizierung via Traefik mTLS
 
 Client-Zertifikate als Zugangsschutz für alle Home-Lab-Dienste. Traefik prüft das
 Browser-Zertifikat direkt gegen die eigene CA — kein Authentik Enterprise-Feature

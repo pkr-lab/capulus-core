@@ -203,11 +203,11 @@ Das Monitoring scrapt automatisch:
 
 Nach dem automatischen ArgoCD-Sync von `argocd/apps/authentik/` steht Authentik als zentraler Identity Provider bereit.
 
-**Voraussetzung:** Secrets müssen zuerst mit `kubeseal` versiegelt und in `values.yaml` eingetragen werden (Anleitung: [docs/14-sso-authentik.md](docs/14-sso-authentik.md)).
+**Voraussetzung:** Secrets müssen zuerst mit `kubeseal` versiegelt und in `values.yaml` eingetragen werden (Anleitung: [docs/13-sso-authentik.md](docs/13-sso-authentik.md)).
 
 ```bash
 # 1. Sealed-Werte erzeugen und in values.yaml eintragen (Einmalaufwand)
-#    → Anleitung: docs/14-sso-authentik.md, Abschnitt "Schritt 1"
+#    → Anleitung: docs/13-sso-authentik.md, Abschnitt "Schritt 1"
 
 # 2. Authentik-Status prüfen (ArgoCD synct automatisch nach Push)
 ssh ubuntu@192.168.178.94 \
@@ -225,7 +225,7 @@ ssh ubuntu@192.168.178.94 \
 #    Gotify/Semaphore: Traefik Forward-Auth-Middleware (Template in docs)
 ```
 
-Vollständige Service-by-Service-Anleitung: **[docs/14-sso-authentik.md](docs/14-sso-authentik.md)**
+Vollständige Service-by-Service-Anleitung: **[docs/13-sso-authentik.md](docs/13-sso-authentik.md)**
 
 ---
 
