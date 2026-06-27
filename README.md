@@ -333,6 +333,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [ntfy iOS-Push](docs/15-ntfy.md) | Self-hosted ntfy mit iOS APNs-Relay |
 | [Zertifikats-Auth](docs/15-cert-login.md) | Traefik mTLS Client-Zertifikate |
 | [SSO alle Dienste](docs/16-sso-alle-dienste.md) | Headlamp, Argo Workflows, MinIO via OIDC |
+| [Wiki.js](docs/20-wikijs.md) | Wiki mit Gruppen/Page-Rules-Berechtigungen + Authentik-SSO |
 
 ---
 
