@@ -1,71 +1,73 @@
-# Gotify push notifications
+# Gotify Push-Benachrichtigungen
 
-[Gotify](https://gotify.net) runs as an ArgoCD-managed app in the k3s
-cluster (`argocd/apps/gotify/`) and receives push notifications from the
-scanner pipeline on the home-server. The Android/iOS Gotify client (or
-any of the desktop/CLI clients) subscribes to the server and surfaces a
-push for every scan event.
+[Gotify](https://gotify.net) läuft als ArgoCD-verwaltete App im k3s-Cluster
+(`argocd/apps/gotify/`) und empfängt Push-Benachrichtigungen aus der
+Scanner-Pipeline auf dem Home-Server. Der Android/iOS-Gotify-Client (oder
+einer der Desktop-/CLI-Clients) abonniert den Server und zeigt für jedes
+Scan-Event eine Push-Benachrichtigung an.
 
 ```
-[scan button] → scanbd → scan_button.sh
-                          └── scan_to_pdf.sh ─curl──> Gotify (k3s) ─push──> Phone
+[Scan-Taste] → scanbd → scan_button.sh
+                          └── scan_to_pdf.sh ─curl──> Gotify (k3s) ─push──> Handy
 ```
 
-The scan scripts source `/etc/scanner/gotify.env` (mode `0640 root:scanner`)
-at runtime — the app token never appears in the script body, the systemd
-journal, or git.
+Die Scan-Skripte lesen `/etc/scanner/gotify.env` (Mode `0640 root:scanner`)
+zur Laufzeit ein — der App-Token taucht weder im Skript-Body noch im
+systemd-Journal noch in Git auf.
 
-## 1. Initial deploy of the Gotify server
+---
 
-### 1.1 Vault-encrypt the admin password
+## 1. Erstdeployment des Gotify-Servers
+
+### 1.1 Admin-Passwort mit Vault verschlüsseln
 
 ```bash
-ansible-vault encrypt_string 'YOUR_STRONG_ADMIN_PW' \
+ansible-vault encrypt_string 'DEIN_STARKES_ADMIN_PW' \
   --name 'gotify_admin_password'
 ```
 
-Paste the resulting `!vault |` block into `ansible/group_vars/all.yml`
-(see the commented stub at the bottom of that file). This value is **not**
-read by Ansible directly — it is only kept under vault so the plaintext
-isn't lost when rotating.
+Den resultierenden `!vault |`-Block in `ansible/group_vars/all.yml` einfügen
+(siehe den auskommentierten Stub am Ende der Datei). Dieser Wert wird **nicht**
+direkt von Ansible gelesen — er wird nur unter Vault aufbewahrt, damit der
+Klartext bei einer Rotation nicht verloren geht.
 
-### 1.2 Generate the SealedSecret cipher text
+### 1.2 SealedSecret-Ciphertext erzeugen
 
-The cluster controller (already deployed via `argocd/apps/sealed-secrets/`)
-will only accept ciphers produced with its public key. Easiest path is the
-web UI at <http://kubeseal-webgui.homeserver>:
+Der Cluster-Controller (bereits über `argocd/apps/sealed-secrets/` deployt)
+akzeptiert nur Ciphertext, der mit seinem Public Key erzeugt wurde. Der
+einfachste Weg ist die Web-UI unter <http://kubeseal-webgui.homeserver>:
 
-1. Open it, fill in:
+1. Öffnen und ausfüllen:
    - **Namespace**: `gotify`
-   - **Secret name**: `gotify-admin`
+   - **Secret-Name**: `gotify-admin`
    - **Key**: `password`
-   - **Value**: the plaintext admin password from 1.1
-2. Click **Encrypt**, copy the long base64 string.
+   - **Value**: das Klartext-Admin-Passwort aus 1.1
+2. **Encrypt** klicken, den langen Base64-String kopieren.
 
-Or via CLI (run from a workstation that has `kubeseal` installed and the
-cluster's public cert in `~/.kube/sealed-secrets.pem`):
+Oder per CLI (von einer Workstation mit installiertem `kubeseal` und dem
+öffentlichen Cluster-Zertifikat unter `~/.kube/sealed-secrets.pem`):
 
 ```bash
-echo -n 'YOUR_STRONG_ADMIN_PW' \
+echo -n 'DEIN_STARKES_ADMIN_PW' \
   | kubeseal --raw \
       --namespace gotify \
       --name gotify-admin \
       --from-file=/dev/stdin
 ```
 
-### 1.3 Paste the cipher into `values.yaml`
+### 1.3 Ciphertext in `values.yaml` eintragen
 
-Open `argocd/apps/gotify/values.yaml` and replace the placeholder:
+`argocd/apps/gotify/values.yaml` öffnen und den Platzhalter ersetzen:
 
 ```yaml
 adminSecret:
   enabled: true
   username: admin
   secretName: gotify-admin
-  encryptedPassword: "AgB...long-base64..."     # ← from 1.2
+  encryptedPassword: "AgB...langes-base64..."     # ← aus 1.2
 ```
 
-Commit + push:
+Committen + pushen:
 
 ```bash
 git add argocd/apps/gotify/values.yaml
@@ -73,14 +75,14 @@ git commit -m "feat(gotify): set sealed admin password"
 git push
 ```
 
-ArgoCD picks the change up within ~3 minutes (or click **Refresh** in the
-ArgoCD UI on the `gotify` app to apply immediately).
+ArgoCD übernimmt die Änderung innerhalb von ~3 Minuten (oder **Refresh** in
+der ArgoCD-UI bei der `gotify`-App klicken, um sie sofort anzuwenden).
 
-### 1.4 Verify
+### 1.4 Verifizieren
 
-> The shell snippets below use a `SRV` shorthand for the SSH command into
-> the home-server. Replace `homeserver` with the inventory host or
-> Tailscale IP if your setup differs:
+> Die folgenden Shell-Snippets nutzen ein `SRV`-Kürzel für den SSH-Befehl auf
+> den Home-Server. `homeserver` durch den Inventory-Host oder die
+> Tailscale-IP ersetzen, falls dein Setup abweicht:
 >
 > ```bash
 > SRV='ssh -i ~/.ssh/id_ed25519 ubuntu@homeserver'
@@ -91,89 +93,97 @@ $SRV 'sudo kubectl -n gotify get pods,svc,ingress,pvc,sealedsecret,secret'
 curl -sS http://gotify.homeserver/health
 ```
 
-Expected:
-- Pod `Running`, PVC `Bound`, the `gotify-admin` Secret is present
-  (decrypted by the controller from the SealedSecret).
-- `/health` returns `{"health":"green",...}`.
+Erwartet:
+- Pod `Running`, PVC `Bound`, das `gotify-admin`-Secret ist vorhanden
+  (vom Controller aus dem SealedSecret entschlüsselt).
+- `/health` liefert `{"health":"green",...}`.
 
-Log into `http://gotify.homeserver` with `admin` + the password from 1.1.
+Bei `http://gotify.homeserver` mit `admin` + dem Passwort aus 1.1 einloggen.
 
-## 2. Create an application token for the scanner
+---
 
-1. In the Gotify Web UI: **Apps → CREATE APPLICATION**
+## 2. Application-Token für den Scanner anlegen
+
+1. In der Gotify-Web-UI: **Apps → CREATE APPLICATION**
    - Name: `Scanner`
-   - Description: `Fujitsu scanner pipeline`
-2. Copy the generated token (long opaque string).
+   - Beschreibung: `Fujitsu scanner pipeline`
+2. Den generierten Token (langer opaker String) kopieren.
 
-## 3. Wire the scanner scripts to Gotify
+---
 
-### 3.1 Vault-encrypt the token
+## 3. Scanner-Skripte mit Gotify verdrahten
+
+### 3.1 Token mit Vault verschlüsseln
 
 ```bash
-ansible-vault encrypt_string 'YOUR_GOTIFY_APP_TOKEN' \
+ansible-vault encrypt_string 'DEIN_GOTIFY_APP_TOKEN' \
   --name 'scanner_gotify_token'
 ```
 
-### 3.2 Enable the integration in `group_vars/all.yml`
+### 3.2 Integration in `group_vars/all.yml` aktivieren
 
 ```yaml
 scanner_gotify_enabled: true
 scanner_gotify_url: "http://gotify.homeserver"
 scanner_gotify_token: !vault |
           $ANSIBLE_VAULT;1.1;AES256
-          ... pasted block from 3.1 ...
+          ... eingefügter Block aus 3.1 ...
 ```
 
-### 3.3 Roll out
+### 3.3 Ausrollen
 
 ```bash
 make scanner
 ```
 
-The role:
-- adds `curl` to the package set,
-- creates `/etc/scanner` (`0750 root:scanner`),
-- renders `/etc/scanner/gotify.env` (`0640 root:scanner`, `no_log`),
-- redeploys `scan_button.sh` and `scan_to_pdf.sh` with the
-  `gotify_notify` helper baked in.
+Die Rolle:
+- fügt `curl` zum Paket-Set hinzu,
+- legt `/etc/scanner` an (`0750 root:scanner`),
+- rendert `/etc/scanner/gotify.env` (`0640 root:scanner`, `no_log`),
+- deployt `scan_button.sh` und `scan_to_pdf.sh` neu mit eingebautem
+  `gotify_notify`-Helper.
 
-### 3.4 End-to-end test
+### 3.4 End-to-End-Test
 
 ```bash
-# Confirm saned can read the env-file
+# Prüfen, ob saned die env-Datei lesen kann
 $SRV 'sudo -u saned bash -lc ". /etc/scanner/gotify.env && echo $GOTIFY_ENABLED $GOTIFY_URL"'
-# expected: 1 http://gotify.homeserver
+# erwartet: 1 http://gotify.homeserver
 
-# Manual push from the host (sanity check the token):
+# Manueller Push vom Host (Token-Sanity-Check):
 $SRV 'curl -fsS -X POST "http://gotify.homeserver/message" \
         -H "X-Gotify-Key: $(grep ^GOTIFY_TOKEN= /etc/scanner/gotify.env | cut -d= -f2-)" \
         -F "title=test" -F "message=hello" -F "priority=5"'
 
-# Press the hardware button on the scanner — watch:
+# Hardware-Button am Scanner drücken — beobachten:
 $SRV 'journalctl -t scanbd-scan -f'
 ```
 
-Expected pushes:
+Erwartete Pushes:
 - **Erfolg**: `Scan erfolgreich` + `scan-<ts>.pdf (<n> Seiten) → Paperless`
 - **Kein Papier im ADF**: `Scan fehlgeschlagen` + `Keine Seiten gescannt — ADF leer oder Scanner blockiert?`
 - **scan_button-Trap außerhalb der Pipeline**: `Scan abgebrochen` + `scan_button trap rc=<rc>`
 
-## 4. Rotate the admin password / app token
+---
 
-- **Admin password**: regenerate via `kubeseal` from a new plaintext,
-  replace `adminSecret.encryptedPassword` in `values.yaml`, commit +
-  push. Delete the old `gotify-admin` secret in-cluster if ArgoCD doesn't
-  prune it automatically, then restart the gotify pod.
-- **App token**: revoke the old one in the Gotify Web UI, create a new
-  one, repeat steps 3.1–3.3. The env-file (`0640`) is rewritten by
-  Ansible — never edit it by hand.
+## 4. Admin-Passwort / App-Token rotieren
+
+- **Admin-Passwort**: per `kubeseal` aus einem neuen Klartext neu erzeugen,
+  `adminSecret.encryptedPassword` in `values.yaml` ersetzen, committen +
+  pushen. Das alte `gotify-admin`-Secret im Cluster löschen, falls ArgoCD es
+  nicht automatisch prunt, dann den Gotify-Pod neu starten.
+- **App-Token**: den alten in der Gotify-Web-UI widerrufen, einen neuen
+  anlegen, Schritte 3.1–3.3 wiederholen. Die env-Datei (`0640`) wird von
+  Ansible neu geschrieben — nie manuell editieren.
+
+---
 
 ## 5. Troubleshooting
 
-| Symptom | Hint |
+| Symptom | Hinweis |
 |---|---|
-| Pod CrashLoopBackOff after first deploy | `encryptedPassword` is still `REPLACE_ME_WITH_KUBESEAL_OUTPUT` — finish step 1.3 |
-| `gotify-admin` secret missing | `kubectl -n gotify describe sealedsecret gotify-admin` — controller logs explain decryption errors; cipher must be generated against this cluster's public key |
-| No pushes despite a successful scan | `sudo cat /etc/scanner/gotify.env` and confirm `GOTIFY_ENABLED=1`; check `journalctl -t scanbd-scan -g "gotify notify failed"` |
-| Pushes work via curl but not from the scripts | `saned` likely isn't in the `scanner` group → re-run `make scanner` |
-| Wrong hostname (`gotify.homeserver` doesn't resolve) | Confirm `gotify` is in `dnsmasq_hosts` in `group_vars/all.yml`, then `make dnsmasq` |
+| Pod CrashLoopBackOff nach Erstdeployment | `encryptedPassword` ist noch `REPLACE_ME_WITH_KUBESEAL_OUTPUT` — Schritt 1.3 abschließen |
+| `gotify-admin`-Secret fehlt | `kubectl -n gotify describe sealedsecret gotify-admin` — Controller-Logs erklären Entschlüsselungsfehler; Ciphertext muss gegen den Public Key dieses Clusters erzeugt worden sein |
+| Keine Pushes trotz erfolgreichem Scan | `sudo cat /etc/scanner/gotify.env` prüfen und sicherstellen, dass `GOTIFY_ENABLED=1`; `journalctl -t scanbd-scan -g "gotify notify failed"` prüfen |
+| Pushes funktionieren per curl, aber nicht aus den Skripten | `saned` ist wahrscheinlich nicht in der Gruppe `scanner` → `make scanner` erneut ausführen |
+| Falscher Hostname (`gotify.homeserver` löst nicht auf) | Prüfen, ob `gotify` in `dnsmasq_hosts` in `group_vars/all.yml` steht, dann `make dnsmasq` |

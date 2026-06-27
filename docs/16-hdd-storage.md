@@ -4,6 +4,8 @@ Die 7,3-TB-Festplatte (sda) an worker-0 (192.168.178.95) ist als
 Kubernetes-StorageClass `hdd` verfügbar. Alle Anwendungen die größere
 Mengen persistenter Daten benötigen nutzen diese StorageClass.
 
+---
+
 ## Architektur
 
 ```
@@ -24,6 +26,8 @@ Kubernetes (hdd-storage Namespace)
         ├── WaitForFirstConsumer    ← PV entsteht erst beim Pod-Scheduling
         └── nodePathMap → nur worker-0
 ```
+
+---
 
 ## StorageClass `hdd` verwenden
 
@@ -79,6 +83,8 @@ spec:
 > den Pod auf dem Control-Plane (homeserver) zu schedulen — dort gibt es
 > aber keinen `hdd`-Provisioner und der PVC bleibt ewig `Pending`.
 
+---
+
 ## Vergleich der StorageClasses
 
 | | `local-path` (Standard) | `hdd` |
@@ -88,6 +94,8 @@ spec:
 | Kapazität | begrenzt (System-SSD) | ~7,3 TB |
 | reclaimPolicy | Delete | **Retain** |
 | Geeignet für | kleine Configs, temporäre Daten | große Daten, Medien, ISO-Images |
+
+---
 
 ## Einrichtung (Ansible)
 
@@ -105,6 +113,8 @@ Die Rolle:
 1. Ermittelt UUID von `/dev/sda` via `blkid`
 2. Trägt die Festplatte mit UUID in `/etc/fstab` ein (`nofail`)
 3. Legt Verzeichnisstruktur unter `/mnt/hdd` an
+
+---
 
 ## Kubernetes-App `hdd-storage`
 
@@ -124,6 +134,8 @@ kubectl get pvc -A | grep hdd
 # Belegter Speicher auf worker-0:
 ssh ubuntu@192.168.178.95 'df -h /mnt/hdd && du -sh /mnt/hdd/k8s-storage/*'
 ```
+
+---
 
 ## Bestehende PVC auf HDD migrieren
 
@@ -236,6 +248,8 @@ argocd app set $NS --sync-policy automated --auto-prune --self-heal
 [ ] Nach Merge: kubectl -n <namespace> get pvc prüfen (Status: Bound)
 ```
 
+---
+
 ## reclaimPolicy: Retain — was das bedeutet
 
 Die StorageClass `hdd` hat `reclaimPolicy: Retain`. Das bedeutet:
@@ -254,6 +268,8 @@ kubectl delete pv <pv-name>
 # Verzeichnis auf worker-0 dann manuell löschen:
 ssh ubuntu@192.168.178.95 'sudo rm -rf /mnt/hdd/k8s-storage/<pv-name>'
 ```
+
+---
 
 ## Fehlerbehebung
 

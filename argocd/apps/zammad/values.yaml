@@ -4,7 +4,7 @@
 #
 # Secrets-Block (SealedSecret):
 #   Werte mit kubeseal versiegeln und hier eintragen.
-#   Anleitung: docs/19-zammad.md → Abschnitt "Schritt 1 — Secrets versiegeln"
+#   Anleitung: docs/17-zammad.md → Abschnitt "Schritt 1 — Secrets versiegeln"
 # ============================================================
 
 secrets:
@@ -142,7 +142,7 @@ zammad:
 
   # ---- PostgreSQL Sub-Chart (Bitnami) -----------------------
   # Speichert Tickets + Attachments (storageVolume.enabled: false) → wächst
-  # potenziell groß. Läuft daher auf der HDD-StorageClass (docs/18-hdd-storage.md)
+  # potenziell groß. Läuft daher auf der HDD-StorageClass (docs/16-hdd-storage.md)
   # statt auf der System-SSD des Homeservers.
   postgresql:
     enabled: true
@@ -158,7 +158,7 @@ zammad:
         enabled: true
         storageClass: hdd
         size: 50Gi
-      # Pflicht: hdd-PVCs binden nur auf worker-0 (siehe docs/18-hdd-storage.md)
+      # Pflicht: hdd-PVCs binden nur auf worker-0 (siehe docs/16-hdd-storage.md)
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -186,7 +186,7 @@ zammad:
     persistence:
       storageClass: hdd
       size: 8Gi
-    # Pflicht: hdd-PVCs binden nur auf worker-0 (siehe docs/18-hdd-storage.md)
+    # Pflicht: hdd-PVCs binden nur auf worker-0 (siehe docs/16-hdd-storage.md)
     affinity:
       nodeAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:

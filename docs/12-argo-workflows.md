@@ -1,39 +1,44 @@
 # Argo Workflows (private CI/CD)
 
-[Argo Workflows](https://argo-workflows.readthedocs.io) runs as an
-ArgoCD-managed app (`argocd/apps/argo-workflows/`) and is the home-server's
-private CI engine. It pairs with a small MinIO instance
-(`argocd/apps/minio/`) that serves as the S3-compatible artifact repository
-and log archive.
+[Argo Workflows](https://argo-workflows.readthedocs.io) läuft als
+ArgoCD-verwaltete App (`argocd/apps/argo-workflows/`) und ist die private
+CI-Engine des Home-Servers. Es ist mit einer kleinen MinIO-Instanz
+(`argocd/apps/minio/`) gekoppelt, die als S3-kompatibles Artifact-Repository
+und Log-Archiv dient.
 
-Split of concerns:
+Aufgabenteilung:
 
 ```
-Argo Workflows  =  CI   (clone, test, lint, build images)
-ArgoCD          =  CD   (deploy argocd/apps/* to the cluster)
+Argo Workflows  =  CI   (clonen, testen, linten, Images bauen)
+ArgoCD          =  CD   (argocd/apps/* in den Cluster deployen)
 ```
 
-- **Triggers:** manual via the UI or `argo submit`, plus `CronWorkflow`
-  schedules. There is no public ingress, so git webhooks are out of scope.
-- **Auth:** server auth-mode — no login, open on LAN/Tailnet (same trust model
-  as Grafana/Headlamp/Semaphore). Reachable only through the Tailnet/LAN.
-- **Image builds:** Kaniko builds and pushes to GHCR (`ghcr.io/pke/...`)
-  using a sealed docker-config secret. No in-cluster registry.
+- **Trigger:** manuell über die UI oder `argo submit`, plus
+  `CronWorkflow`-Schedules. Es gibt keinen öffentlichen Ingress, Git-Webhooks
+  sind daher außerhalb des Scopes.
+- **Auth:** Server-Auth-Mode — kein Login, offen im LAN/Tailnet (gleiches
+  Trust-Modell wie Grafana/Headlamp/Semaphore). Nur über Tailnet/LAN
+  erreichbar.
+- **Image-Builds:** Kaniko baut und pusht nach GHCR (`ghcr.io/pke/...`)
+  mittels eines versiegelten Docker-Config-Secrets. Keine In-Cluster-Registry.
 
-| Service        | URL                              | Notes                       |
-|----------------|----------------------------------|-----------------------------|
-| Argo Workflows | http://argo-workflows.homeserver | UI + API (server auth-mode) |
-| MinIO console  | http://minio.homeserver          | Object browser              |
+| Dienst         | URL                               | Hinweise                    |
+|----------------|------------------------------------|------------------------------|
+| Argo Workflows | http://argo-workflows.homeserver  | UI + API (Server-Auth-Mode) |
+| MinIO-Konsole  | http://minio.homeserver           | Objekt-Browser              |
 
-## 1. One-time secrets (kubeseal)
+---
 
-The two apps ship `SealedSecret` manifests with placeholder values
-(`REPLACE_ME_SEALED_*`). They must be sealed against the cluster's
-sealed-secrets controller before the apps become healthy. Run `kubeseal` from a
-machine with the cluster reachable (e.g. via SSH on the server), pointing at the
-controller `sealed-secrets-controller` in namespace `sealed-secrets`.
+## 1. Einmalige Secrets (kubeseal)
 
-A reusable helper:
+Die beiden Apps liefern `SealedSecret`-Manifeste mit Platzhalter-Werten
+(`REPLACE_ME_SEALED_*`). Diese müssen gegen den Sealed-Secrets-Controller des
+Clusters versiegelt werden, bevor die Apps gesund werden. `kubeseal` von
+einer Maschine mit Cluster-Zugriff ausführen (z.B. per SSH auf dem Server),
+gerichtet auf den Controller `sealed-secrets-controller` im Namespace
+`sealed-secrets`.
+
+Ein wiederverwendbarer Helper:
 
 ```bash
 seal() {  # seal <namespace> <secret-name> <value-on-stdin>
@@ -44,19 +49,19 @@ seal() {  # seal <namespace> <secret-name> <value-on-stdin>
 }
 ```
 
-### 1.1 MinIO root credentials (namespace `minio`)
+### 1.1 MinIO-Root-Credentials (Namespace `minio`)
 
-Pick a user/password, seal both, paste into `argocd/apps/minio/values.yaml`
-(`rootCreds.encryptedRootUser` / `encryptedRootPassword`):
+User/Passwort wählen, beide versiegeln, in `argocd/apps/minio/values.yaml`
+einfügen (`rootCreds.encryptedRootUser` / `encryptedRootPassword`):
 
 ```bash
 printf 'argo'                | seal minio minio-root   # -> encryptedRootUser
 printf 'CHANGE-ME-strong-pw' | seal minio minio-root   # -> encryptedRootPassword
 ```
 
-### 1.2 Argo artifact S3 access (namespace `argo-workflows`)
+### 1.2 Argo-Artifact-S3-Zugriff (Namespace `argo-workflows`)
 
-**Same values** as the MinIO root creds — paste into
+**Dieselben Werte** wie die MinIO-Root-Credentials — einfügen in
 `argocd/apps/argo-workflows/values.yaml`
 (`artifactSecret.encryptedAccessKey` / `encryptedSecretKey`):
 
@@ -65,27 +70,30 @@ printf 'argo'                | seal argo-workflows argo-artifacts-s3  # -> encry
 printf 'CHANGE-ME-strong-pw' | seal argo-workflows argo-artifacts-s3  # -> encryptedSecretKey
 ```
 
-### 1.3 GHCR push credentials (namespace `argo-workflows`)
+### 1.3 GHCR-Push-Credentials (Namespace `argo-workflows`)
 
-Create a GitHub PAT with `write:packages`, build a docker-config JSON, then seal
-it under the `.dockerconfigjson` key. Paste into
+Einen GitHub-PAT mit `write:packages` erstellen, ein Docker-Config-JSON
+bauen, dann unter dem Key `.dockerconfigjson` versiegeln. Einfügen in
 `ghcrSecret.encryptedDockerConfigJson`:
 
 ```bash
 GHCR_USER=pke
-GHCR_PAT=ghp_xxx           # PAT with write:packages
+GHCR_PAT=ghp_xxx           # PAT mit write:packages
 AUTH=$(printf '%s:%s' "$GHCR_USER" "$GHCR_PAT" | base64 -w0)
 printf '{"auths":{"ghcr.io":{"auth":"%s"}}}' "$AUTH" \
   | seal argo-workflows ghcr-push
 ```
 
-If you do not need image builds yet, set `ghcrSecret.enabled: false` instead.
+Wenn Image-Builds noch nicht benötigt werden, stattdessen
+`ghcrSecret.enabled: false` setzen.
 
-After pasting all values, commit + push. ArgoCD syncs within ~3 minutes;
-the sealed-secrets controller decrypts the SealedSecrets into real Secrets and
-the MinIO + Argo pods start.
+Nach dem Einfügen aller Werte: committen + pushen. ArgoCD synct innerhalb von
+~3 Minuten; der Sealed-Secrets-Controller entschlüsselt die SealedSecrets zu
+echten Secrets und die MinIO- + Argo-Pods starten.
 
-## 2. Verify
+---
+
+## 2. Verifizieren
 
 ```bash
 SSH="ssh -i ~/.ssh/id_ed25519 ubuntu@192.168.178.94"
@@ -94,16 +102,18 @@ $SSH 'sudo kubectl -n minio get pods'
 $SSH 'sudo kubectl -n argo-workflows get pods'
 ```
 
-Open `http://argo-workflows.homeserver` — the Workflows UI should load and list
-the `git-ci` and `kaniko-build-push` WorkflowTemplates.
+`http://argo-workflows.homeserver` öffnen — die Workflows-UI sollte laden
+und die WorkflowTemplates `git-ci` und `kaniko-build-push` auflisten.
 
-## 3. Run pipelines
+---
 
-The `argo` CLI talks to the server; run it on the host or any Tailnet machine
-with `ARGO_SERVER=argo-workflows.homeserver:80` and `ARGO_HTTP1=true`, or just
-submit through the UI.
+## 3. Pipelines ausführen
 
-### 3.1 Test / lint job (`git-ci`)
+Die `argo`-CLI spricht mit dem Server; sie auf dem Host oder einer beliebigen
+Tailnet-Maschine mit `ARGO_SERVER=argo-workflows.homeserver:80` und
+`ARGO_HTTP1=true` ausführen, oder einfach über die UI submitten.
+
+### 3.1 Test-/Lint-Job (`git-ci`)
 
 ```bash
 argo submit -n argo-workflows --from workflowtemplate/git-ci \
@@ -113,48 +123,57 @@ argo submit -n argo-workflows --from workflowtemplate/git-ci \
   -p cmd="ls -la && cat README.md | head"
 ```
 
-The git repo is checked out as an input artifact at `/work`; step logs are
-archived to MinIO (`argo-artifacts` bucket). A `Succeeded` status with visible
-archived logs confirms the artifact repository is wired correctly.
+Das Git-Repo wird als Input-Artifact unter `/work` ausgecheckt; Step-Logs
+werden nach MinIO archiviert (Bucket `argo-artifacts`). Ein `Succeeded`-Status
+mit sichtbaren archivierten Logs bestätigt, dass das Artifact-Repository
+korrekt verdrahtet ist.
 
-### 3.2 Image build (`kaniko-build-push`)
+### 3.2 Image-Build (`kaniko-build-push`)
 
 ```bash
 argo submit -n argo-workflows --from workflowtemplate/kaniko-build-push \
-  -p repo=https://github.com/pke/<repo-with-Dockerfile>.git \
+  -p repo=https://github.com/pke/<repo-mit-Dockerfile>.git \
   -p revision=main \
   -p context=. \
   -p dockerfile=Dockerfile \
   -p image=ghcr.io/pke/<image>:latest
 ```
 
-The image appears under `ghcr.io/pke/...`. ArgoCD can then deploy it as
-usual (CD stays with ArgoCD).
+Das Image erscheint unter `ghcr.io/pke/...`. ArgoCD kann es dann wie gewohnt
+deployen (CD bleibt bei ArgoCD).
 
-### 3.3 Scheduled runs (`CronWorkflow`)
+### 3.3 Geplante Runs (`CronWorkflow`)
 
-`nightly-home-server-lint` ships **suspended**. Adjust the `cmd` to a real lint
-command in `argocd/apps/argo-workflows/templates/cronworkflow.yaml`, then resume:
+`nightly-home-server-lint` liefert **suspendiert** aus. `cmd` auf einen
+echten Lint-Befehl in
+`argocd/apps/argo-workflows/templates/cronworkflow.yaml` anpassen, dann
+fortsetzen:
 
 ```bash
 argo cron resume -n argo-workflows nightly-home-server-lint
 ```
 
+---
+
 ## 4. Troubleshooting
 
-- **App stuck `Progressing` / pods `CreateContainerConfigError`** — the
-  SealedSecrets are still placeholders or the controller could not decrypt them.
-  Re-check §1, confirm `kubectl -n <ns> get secret <name>` exists.
-- **`git-ci` succeeds but logs are not archived** — the `argo-artifacts-s3`
-  Secret values do not match the MinIO root creds, or MinIO is not up. Check
-  `kubectl -n minio logs deploy/minio` and the `argo-artifacts` bucket exists.
-- **Kaniko `UNAUTHORIZED` pushing to GHCR** — the PAT lacks `write:packages` or
-  the `ghcr-push` secret is malformed. Verify the dockerconfigjson auth string.
-- **CRDs not found on first sync** — the WorkflowTemplate/CronWorkflow CRs and
-  the Argo CRDs land in the same sync. The ApplicationSet already sets
-  `SkipDryRunOnMissingResource=true` + retry, so it converges on the next
-  reconcile; no manual action needed.
-- **GHCR unreachable from the cluster** — depends on the egress policy. If
-  outbound to `ghcr.io` is blocked, image builds need a local registry instead
-  (separate change: a `registry:2` app + containerd mirror config in the `k3s`
-  role).
+- **App hängt in `Progressing` / Pods mit `CreateContainerConfigError`** —
+  die SealedSecrets sind noch Platzhalter oder der Controller konnte sie
+  nicht entschlüsseln. §1 erneut prüfen, mit `kubectl -n <ns> get secret
+  <name>` verifizieren, dass das Secret existiert.
+- **`git-ci` läuft erfolgreich durch, aber Logs werden nicht archiviert** —
+  die Werte des `argo-artifacts-s3`-Secrets stimmen nicht mit den
+  MinIO-Root-Credentials überein, oder MinIO ist nicht erreichbar.
+  `kubectl -n minio logs deploy/minio` prüfen und sicherstellen, dass der
+  Bucket `argo-artifacts` existiert.
+- **Kaniko liefert `UNAUTHORIZED` beim Push nach GHCR** — dem PAT fehlt
+  `write:packages` oder das Secret `ghcr-push` ist fehlerhaft. Den
+  Auth-String im Docker-Config-JSON verifizieren.
+- **CRDs beim ersten Sync nicht gefunden** — die WorkflowTemplate-/
+  CronWorkflow-Custom-Resources und die Argo-CRDs landen im selben Sync. Das
+  ApplicationSet setzt bereits `SkipDryRunOnMissingResource=true` + Retry,
+  sodass es beim nächsten Reconcile konvergiert; keine manuelle Aktion nötig.
+- **GHCR vom Cluster aus nicht erreichbar** — abhängig von der
+  Egress-Policy. Falls Outbound nach `ghcr.io` blockiert ist, brauchen
+  Image-Builds statt dessen eine lokale Registry (separate Änderung: eine
+  `registry:2`-App + Containerd-Mirror-Konfiguration in der `k3s`-Rolle).
