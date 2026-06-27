@@ -1,4 +1,4 @@
-# 19 — Zammad Helpdesk / Ticket-System
+# Zammad Helpdesk / Ticket-System
 
 Zammad ist ein Open-Source Helpdesk- und Ticketing-System.  
 Die Deployment-Konfiguration liegt unter `argocd/apps/zammad/`.
@@ -20,7 +20,7 @@ Die Deployment-Konfiguration liegt unter `argocd/apps/zammad/`.
 | Auto-Updates      | Renovate (patch + minor)          | —           |
 
 PostgreSQL und Redis laufen mit `storageClassName: hdd` und sind via
-NodeAffinity an `worker-0` gebunden (siehe [docs/18-hdd-storage.md](18-hdd-storage.md)).
+NodeAffinity an `worker-0` gebunden (siehe [docs/16-hdd-storage.md](16-hdd-storage.md)).
 Da Zammad Attachments standardmäßig in der Datenbank speichert
 (`storageVolume.enabled: false`), kann die PostgreSQL-PVC mit der Zeit groß
 werden — auf der 7,3-TB-HDD statt der Homeserver-SSD ist das unkritisch.
@@ -34,7 +34,7 @@ werden — auf der 7,3-TB-HDD statt der Homeserver-SSD ist das unkritisch.
 - **`hdd-storage`-App ist deployt** (`argocd/apps/hdd-storage/`) und die
   StorageClass `hdd` existiert: `kubectl get storageclass hdd`
 - **worker-0 ist online** und `/mnt/hdd` ist gemountet (siehe
-  [docs/18-hdd-storage.md](18-hdd-storage.md)) — sonst bleiben die
+  [docs/16-hdd-storage.md](16-hdd-storage.md)) — sonst bleiben die
   PostgreSQL- und Redis-PVCs auf `Pending`
 - `kubeseal` CLI ist lokal installiert
 - `kubectl` ist mit dem Cluster verbunden
@@ -134,7 +134,7 @@ Typische Pod-Reihenfolge beim ersten Start:
 
 > Falls `zammad-postgresql-0` / `zammad-redis-*` dauerhaft `Pending` bleiben:
 > worker-0 ist offline oder die `hdd`-StorageClass fehlt — siehe
-> [docs/18-hdd-storage.md](18-hdd-storage.md) → Fehlerbehebung.
+> [docs/16-hdd-storage.md](16-hdd-storage.md) → Fehlerbehebung.
 
 ---
 
@@ -302,7 +302,7 @@ kubectl get nodes worker-0   # muss Ready sein
 kubectl -n hdd-storage get pods
 ```
 
-Details: [docs/18-hdd-storage.md](18-hdd-storage.md) → Fehlerbehebung.
+Details: [docs/16-hdd-storage.md](16-hdd-storage.md) → Fehlerbehebung.
 
 ### ArgoCD zeigt OutOfSync
 
@@ -328,7 +328,7 @@ argocd app sync zammad --force
 
 PostgreSQL- und Redis-Storage liegen bewusst auf `worker-0`/`/mnt/hdd`
 (7,3 TB) statt auf der Homeserver-System-SSD — siehe
-[docs/18-hdd-storage.md](18-hdd-storage.md). Die 50Gi für PostgreSQL sind
+[docs/16-hdd-storage.md](16-hdd-storage.md). Die 50Gi für PostgreSQL sind
 ein Startwert; da Attachments in der DB liegen, ggf. nach Bedarf erhöhen
 (`zammad.postgresql.primary.persistence.size`).
 
@@ -340,5 +340,5 @@ ein Startwert; da Attachments in der DB liegen, ggf. nach Bedarf erhöhen
 - [Zammad Helm Chart values.yaml](https://github.com/zammad/zammad-helm/blob/main/zammad/values.yaml)
 - [Zammad Admin-Dokumentation](https://admin-docs.zammad.org)
 - [Zammad SAML-Dokumentation](https://admin-docs.zammad.org/en/latest/settings/security/third-party/saml.html)
-- [Authentik SSO Übersicht](docs/14-sso-authentik.md)
-- [ArgoCD Setup](docs/05-argocd.md)
+- [Authentik SSO Übersicht](13-sso-authentik.md)
+- [ArgoCD Setup](05-argocd.md)

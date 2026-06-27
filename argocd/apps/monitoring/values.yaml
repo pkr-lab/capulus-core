@@ -60,9 +60,9 @@ victoria-metrics-k8s-stack:
         resources:
           requests:
             storage: 10Gi
-      # Pflicht: hdd-PVCs binden nur auf worker-0 (siehe docs/18-hdd-storage.md).
+      # Pflicht: hdd-PVCs binden nur auf worker-0 (siehe docs/16-hdd-storage.md).
       # ACHTUNG: Bestehende PVC bereits auf local-path → vor dem Sync manuell
-      # migrieren (docs/18-hdd-storage.md → "Bestehende PVC auf HDD migrieren").
+      # migrieren (docs/16-hdd-storage.md → "Bestehende PVC auf HDD migrieren").
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
