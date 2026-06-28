@@ -2,6 +2,8 @@
 
 ntfy ist ein einfacher, selbst gehosteter Pub/Sub-Notification-Dienst. Im Gegensatz zu Gotify unterstützt ntfy **echte iOS-Push-Nachrichten** über Apple Push Notification Service (APNs), indem es Nachrichten über das ntfy.sh-Relay weiterleitet.
 
+---
+
 ## Warum ntfy statt Gotify für iOS?
 
 |             | Gotify                              | ntfy                        |
@@ -13,6 +15,8 @@ ntfy ist ein einfacher, selbst gehosteter Pub/Sub-Notification-Dienst. Im Gegens
 | HTTP-API    | ✓                                   | ✓                           |
 
 **Empfehlung:** Gotify für interne Logs/Scanner-Status behalten; ntfy für iOS-Benachrichtigungen nutzen.
+
+---
 
 ## Architektur
 
@@ -28,6 +32,8 @@ ntfy-Server (http://ntfy.homeserver)
 ```
 
 Das `upstream-base-url: https://ntfy.sh` in der Konfiguration aktiviert diesen Relay. Die Nachrichteninhalte verlassen dabei deinen Server im Klartext in Richtung ntfy.sh — für sensible Daten ggf. End-to-End-Verschlüsselung aktivieren (siehe unten).
+
+---
 
 ## Deployment
 
@@ -48,6 +54,8 @@ argocd/apps/ntfy/
 
 URL nach dem Deployment: **http://ntfy.homeserver**
 
+---
+
 ## iOS einrichten
 
 1. **ntfy-App** aus dem [App Store](https://apps.apple.com/app/ntfy/id1625396347) installieren
@@ -56,6 +64,8 @@ URL nach dem Deployment: **http://ntfy.homeserver**
 4. Benachrichtigungen in den iOS-Einstellungen für ntfy erlauben
 
 > **Hinweis:** Das Topic ist öffentlich zugänglich solange `auth-default-access: read-write` gesetzt ist. Für private Topics Auth aktivieren (siehe unten).
+
+---
 
 ## Nachrichten senden
 
@@ -92,6 +102,8 @@ curl \
 
 Vollständige Emoji-Liste: https://docs.ntfy.sh/emojis/
 
+---
+
 ## Scanner-Integration
 
 In `ansible/roles/scanner/templates/scan_to_pdf.sh.j2` zusätzlich zu Gotify an ntfy senden:
@@ -105,6 +117,8 @@ curl -s \
   http://ntfy.homeserver/scanner || true
 ```
 
+---
+
 ## dnsmasq-Eintrag
 
 ntfy.homeserver muss in der dnsmasq-Konfiguration ergänzt werden. In `ansible/group_vars/all.yml`:
@@ -117,6 +131,8 @@ dnsmasq_hosts:
 ```
 
 Danach `make dnsmasq` ausführen.
+
+---
 
 ## Authentifizierung aktivieren (optional)
 
@@ -141,6 +157,8 @@ Nachrichten dann mit Basic Auth senden:
 curl -u publisher:PASSWORT -d "Test" http://ntfy.homeserver/homeserver
 ```
 
+---
+
 ## End-to-End-Verschlüsselung (optional)
 
 Wenn Nachrichten über ntfy.sh-Relay nicht im Klartext weitergeleitet werden sollen:
@@ -151,6 +169,8 @@ ntfy publish --password "geheim" http://ntfy.homeserver/homeserver "Meine Nachri
 ```
 
 In der iOS-App: Topic-Einstellungen → Passwort eintragen.
+
+---
 
 ## Troubleshooting
 
