@@ -6,6 +6,8 @@ zeigt. In diesem Setup läuft Semaphore als Pod im k3s-Cluster auf dem
 Home Server und wird über ArgoCD gepflegt — du fasst nach dem Erst-Setup
 nie wieder eine YAML-Datei an, um eine neue Aktion auszulösen.
 
+---
+
 ## Was du am Ende hast
 
 - **`http://semaphore.homeserver`** im LAN und im Tailnet — dnsmasq
@@ -55,6 +57,8 @@ Falls die Auflösung nicht klappt: prüfe auf dem Server
 `sudo ss -lntu | grep :53` — dnsmasq sollte sowohl auf
 `192.168.178.94:53` als auch auf `100.x.y.z:53` (tailscale0) lauschen.
 
+---
+
 ## Architektur in zehn Sekunden
 
 ```
@@ -74,6 +78,8 @@ Der `semaphore-bootstrap` Secret im Namespace `semaphore` hält:
 | `ansible_vault_password`  | Dein Master-Vault-Password (erforderlich)                           |
 | `ssh_private_key`         | Ed25519-Key — Semaphore SSH-t damit raus                            |
 | `ssh_public_key`          | Gegenstück, wird auf die Targets verteilt                           |
+
+---
 
 ## Erst-Setup (einmalig, ~5 Min)
 
@@ -146,6 +152,8 @@ ein Pod startet, Traefik routet `semaphore.homeserver` darauf.
 kubectl -n semaphore get pods,svc,ingress
 ```
 
+---
+
 ## Projekte werden automatisch angelegt
 
 Nach `make install` (genauer: nach der Rolle `semaphore_bootstrap`) sind in
@@ -213,6 +221,8 @@ bei jedem Run via PUT aktualisiert (self-healing). Ein manuelles Löschen in der
 ist nicht nötig. Einzige Ausnahme: Umbenennen eines Projekts/Inventories/Templates
 erzeugt einen Orphan-Eintrag, der beim nächsten Run automatisch gelöscht wird.
 
+---
+
 ## Manuelles Anlegen (Fallback / ad-hoc)
 
 > ⚠️ **Warnung:** Manuell in der UI angelegte Projekte werden beim nächsten
@@ -233,6 +243,8 @@ du es per UI anlegen:
 5. **Task Template** → Playbook-Pfad, Inventory + Repository auswählen.
 6. **Save → ▶ Run.**
 
+---
+
 ## Tipps
 
 - **Mehrere Repos**: Pro Repo ein eigenes Semaphore-Project anlegen.
@@ -248,6 +260,8 @@ du es per UI anlegen:
 - **Backups**: Sichere `/etc/semaphore-secrets/` (Passwörter & Keys)
   und das PVC `semaphore-data` im Namespace `semaphore` (Projects,
   Inventories, History).
+
+---
 
 ## Troubleshooting
 

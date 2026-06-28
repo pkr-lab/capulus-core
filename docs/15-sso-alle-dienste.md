@@ -1,4 +1,4 @@
-# 16 — SSO für alle Dienste: Ein User, ein Passwort
+# SSO für alle Dienste: Ein User, ein Passwort
 
 Dieser Guide verbindet die verbleibenden drei Dienste (Headlamp, Argo Workflows,
 MinIO) mit Authentik SSO. Nach Abschluss genügt ein einziger Login für alles.

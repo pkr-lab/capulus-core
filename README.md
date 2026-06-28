@@ -178,12 +178,15 @@ capulus-core/
 │   ├── 07-troubleshooting.md         # Häufige Probleme
 │   ├── 08-semaphore.md               # Semaphore-Web-UI für Ansible
 │   ├── 09-dns-architecture.md        # Split-DNS-Design & Ausfallsicherheit
-│   ├── 11-gotify.md                  # Push-Notifications via Gotify
-│   ├── 13-argo-workflows.md          # Private CI/CD mit Argo Workflows + MinIO
-│   ├── 14-sso-authentik.md           # Single-Sign-On via Authentik
-│   ├── 15-ntfy.md                    # iOS Push-Notifications via ntfy
-│   ├── 15-cert-login.md              # Zertifikats-Authentifizierung via Traefik mTLS
-│   ├── 16-sso-alle-dienste.md        # SSO-Konfiguration für alle Dienste
+│   ├── 10-gotify.md                  # Push-Notifications via Gotify
+│   ├── 11-ntfy.md                    # iOS Push-Notifications via ntfy
+│   ├── 12-argo-workflows.md          # Private CI/CD mit Argo Workflows + MinIO
+│   ├── 13-sso-authentik.md           # Single-Sign-On via Authentik
+│   ├── 14-cert-login.md              # Zertifikats-Authentifizierung via Traefik mTLS
+│   ├── 15-sso-alle-dienste.md        # SSO-Konfiguration für alle Dienste
+│   ├── 16-hdd-storage.md             # HDD-StorageClass auf worker-0
+│   ├── 17-zammad.md                  # Zammad Helpdesk/Ticket-System
+│   ├── 18-windows-deployment.md      # Windows-PC-Deployment (PXE/USB/Ansible)
 │   └── assets/banner.svg
 ├── ansible/
 │   ├── site.yml                      # Entry-Point
@@ -327,13 +330,15 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [Troubleshooting](docs/07-troubleshooting.md) | Diagnose-Playbook für häufige Probleme |
 | [Semaphore-UI](docs/08-semaphore.md) | Web-UI zum Ausführen von Playbooks |
 | [DNS-Architektur](docs/09-dns-architecture.md) | Warum der Home-Server NICHT dein LAN-DNS ist |
-| [Gotify-Push](docs/11-gotify.md) | Self-hosted Push-Notifications aus dem Stack |
-| [Argo Workflows](docs/13-argo-workflows.md) | Private CI/CD-Pipeline mit MinIO-Artifact-Store |
-| [SSO via Authentik](docs/14-sso-authentik.md) | Authentik als zentraler Identity Provider |
-| [ntfy iOS-Push](docs/15-ntfy.md) | Self-hosted ntfy mit iOS APNs-Relay |
-| [Zertifikats-Auth](docs/15-cert-login.md) | Traefik mTLS Client-Zertifikate |
-| [SSO alle Dienste](docs/16-sso-alle-dienste.md) | Headlamp, Argo Workflows, MinIO via OIDC |
-| [Wiki.js](docs/20-wikijs.md) | Wiki mit Gruppen/Page-Rules-Berechtigungen + Authentik-SSO |
+| [Gotify-Push](docs/10-gotify.md) | Self-hosted Push-Notifications aus dem Stack |
+| [ntfy iOS-Push](docs/11-ntfy.md) | Self-hosted ntfy mit iOS APNs-Relay |
+| [Argo Workflows](docs/12-argo-workflows.md) | Private CI/CD-Pipeline mit MinIO-Artifact-Store |
+| [SSO via Authentik](docs/13-sso-authentik.md) | Authentik als zentraler Identity Provider |
+| [Zertifikats-Auth](docs/14-cert-login.md) | Traefik mTLS Client-Zertifikate |
+| [SSO alle Dienste](docs/15-sso-alle-dienste.md) | Headlamp, Argo Workflows, MinIO via OIDC |
+| [HDD-Storage](docs/16-hdd-storage.md) | StorageClass `hdd` auf worker-0 für große Datenmengen |
+| [Zammad Helpdesk](docs/17-zammad.md) | Ticket-System mit optionalem SAML-SSO |
+| [Windows-PC Deployment](docs/18-windows-deployment.md) | Automatisierte Windows-Einrichtung per PXE/USB/Ansible |
 
 ---
 

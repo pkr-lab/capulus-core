@@ -186,7 +186,7 @@ scanner_smb_password: !vault |
 
 # ---- Gotify push notifications ----------------------------
 # Cluster-App: argocd/apps/gotify (Helm-Chart). Workflow + kubeseal-Schritte
-# stehen in docs/11-gotify.md.
+# stehen in docs/10-gotify.md.
 #
 # 1) Admin-Passwort für das initiale Login (SealedSecret im Cluster):
 #    ansible-vault encrypt_string 'DEIN_ADMIN_PW' --name 'gotify_admin_password'
