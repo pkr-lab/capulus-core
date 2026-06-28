@@ -1,0 +1,23 @@
+# Einsatz-Dashboard fuer alle eingeloggten Mitglieder.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "le-homeserver.fullname" . }}-einsatz
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "le-homeserver.labels" . | nindent 4 }}
+  annotations:
+    {{- toYaml .Values.ingress.annotations | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.ingress.einsatzHost | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "le-homeserver.fullname" . }}
+                port:
+                  number: {{ .Values.service.port }}
