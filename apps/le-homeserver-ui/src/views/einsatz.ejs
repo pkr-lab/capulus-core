@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body class="theme-einsatz">
+  <%- include('partials/topbar') %>
+
+  <main class="page">
+    <section class="hero">
+      <h1>Willkommen, <%= user.name %></h1>
+      <p class="hero__sub">Alle wichtigen Infos und Werkzeuge für den Wach- und Einsatzbereich auf einen Blick.</p>
+    </section>
+
+    <section class="grid" aria-label="Schnellzugriff">
+      <% cards.forEach(function (card) { %>
+        <%- include('partials/card', { card: card, showHealth: false }) %>
+      <% }) %>
+    </section>
+  </main>
+</body>
+</html>

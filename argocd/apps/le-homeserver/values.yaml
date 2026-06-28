@@ -1,0 +1,139 @@
+---
+replicaCount: 1
+
+image:
+  repository: ghcr.io/pkr-lab/le-homeserver-ui
+  pullPolicy: Always
+  # "latest" + Always passt zum Rest des Repos (kein Image-Updater
+  # installiert). Nach einem neuen CI-Build einmal manuell neu ausrollen:
+  #   kubectl -n le-homeserver rollout restart deployment/le-homeserver-ui
+  tag: "latest"
+
+nameOverride: ""
+fullnameOverride: "le-homeserver-ui"
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+ingress:
+  className: traefik
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: "authentik-authentik-forwardauth@kubernetescrd"
+  einsatzHost: le.homeserver
+  adminHost: admin.homeserver
+
+# Authentik-Gruppe, die serverseitig auf admin.homeserver zugreifen darf.
+# Muss in Authentik existieren (Standardgruppe "authentik Admins") und die
+# zugehoerige Authentik-Application fuer admin.homeserver braucht ein
+# Policy-Binding auf dieselbe Gruppe — siehe docs/19-le-homeserver-ui.md.
+authentik:
+  adminGroup: "authentik Admins"
+
+# Grafana-Anbindung fuer den Live-Health-Status auf admin.homeserver.
+# Token wird ueber einen Grafana-Service-Account erzeugt und als
+# SealedSecret versiegelt (siehe docs/19-le-homeserver-ui.md).
+grafana:
+  url: "http://monitoring-grafana.monitoring.svc.cluster.local"
+  datasourceUid: ""
+  tokenSecret:
+    enabled: false
+    name: le-homeserver-grafana-sa
+    # Erzeugt mit:
+    #   echo -n "<service-account-token>" \
+    #     | kubeseal --raw --namespace le-homeserver --name le-homeserver-grafana-sa \
+    #         --from-file=/dev/stdin
+    encryptedToken: ""
+
+# Karten/Kacheln je Bereich. Aenderungen hier werden ueber eine ConfigMap
+# in den Pod gemountet — kein Image-Rebuild noetig.
+# `job` ist das Prometheus/VictoriaMetrics-Job-Label fuer den Health-Badge
+# auf admin.homeserver; ohne `job` gibt es keinen Health-Badge.
+# `comingSoon: true` zeigt eine "bald verfuegbar"-Kachel ohne Link.
+services:
+  einsatz:
+    - name: "Grafana – Pegel & Wetter"
+      description: "Rhein-Pegel Andernach, DWD-Warnungen, Wachdienst-Wetter"
+      url: "http://grafana.homeserver"
+      icon: chart
+    - name: "Wiki.js – SOPs & Checklisten"
+      description: "Alarm- und Ausrueckeordnung, Einsatz-Checklisten"
+      url: ""
+      icon: book
+      comingSoon: true
+    - name: "Alamos Pager"
+      description: "Alarmierung & aktuelle Einsaetze"
+      url: ""
+      icon: siren
+      comingSoon: true
+  admin:
+    - name: Authentik
+      description: "Single Sign-On & Benutzerverwaltung"
+      url: "http://authentik.homeserver"
+      icon: shield
+      job: authentik
+    - name: Grafana
+      description: "Monitoring-Dashboards"
+      url: "http://grafana.homeserver"
+      icon: chart
+      job: grafana
+    - name: Gotify
+      description: "Push-Benachrichtigungen"
+      url: "http://gotify.homeserver"
+      icon: bell
+      job: gotify
+    - name: Headlamp
+      description: "Kubernetes-Dashboard"
+      url: "http://headlamp.homeserver"
+      icon: cube
+      job: headlamp
+    - name: ArgoCD
+      description: "GitOps-Deployments"
+      url: "http://homeserver:30080"
+      icon: sync
+      job: argocd
+    - name: Semaphore
+      description: "Ansible-Playbooks"
+      url: "http://semaphore.homeserver"
+      icon: terminal
+      job: semaphore
+    - name: MinIO
+      description: "S3-Objektspeicher"
+      url: "http://minio.homeserver"
+      icon: box
+      job: minio
+
+extraEnv: []
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

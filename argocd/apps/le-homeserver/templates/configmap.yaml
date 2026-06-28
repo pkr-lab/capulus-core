@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "le-homeserver.fullname" . }}-services
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "le-homeserver.labels" . | nindent 4 }}
+data:
+  services.json: |
+    {{- dict "einsatz" .Values.services.einsatz "admin" .Values.services.admin | toJson | nindent 4 }}

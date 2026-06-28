@@ -1,0 +1,19 @@
+<a
+  class="card <%= card.comingSoon ? 'card--soon' : '' %>"
+  href="<%= card.url || '#' %>"
+  <% if (!card.url) { %>aria-disabled="true" onclick="return false;"<% } else { %>target="_blank" rel="noopener"<% } %>
+>
+  <span class="card__icon"><%- icon(card.icon) %></span>
+  <span class="card__body">
+    <span class="card__title"><%= card.name %></span>
+    <% if (card.description) { %><span class="card__desc"><%= card.description %></span><% } %>
+  </span>
+  <% if (card.comingSoon) { %>
+    <span class="badge badge--soon">bald verfügbar</span>
+  <% } else if (showHealth && card.job) { %>
+    <span class="badge badge--unknown" data-job="<%= card.job %>">
+      <span class="badge__dot"></span>
+      <span class="badge__label">wird geprüft…</span>
+    </span>
+  <% } %>
+</a>
