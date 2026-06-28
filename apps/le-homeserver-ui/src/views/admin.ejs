@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body class="theme-admin">
+  <%- include('partials/topbar') %>
+
+  <main class="page">
+    <section class="hero">
+      <h1>Admin-Übersicht</h1>
+      <p class="hero__sub">Status und Sprungbrett zu allen deployten Diensten.</p>
+      <p class="hero__hint" id="health-error" hidden>
+        Grafana-Health-Check nicht erreichbar – Status wird als „unbekannt“ angezeigt.
+      </p>
+    </section>
+
+    <section class="grid" aria-label="Dienste">
+      <% cards.forEach(function (card) { %>
+        <%- include('partials/card', { card: card, showHealth: true }) %>
+      <% }) %>
+    </section>
+  </main>
+
+  <script src="/js/health.js"></script>
+</body>
+</html>

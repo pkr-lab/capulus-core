@@ -1,0 +1,20 @@
+<header class="topbar">
+  <div class="topbar__brand">
+    <span class="topbar__org">DLRG OG Andernach</span>
+    <span class="topbar__divider">/</span>
+    <span class="topbar__area"><%= subtitle %></span>
+  </div>
+
+  <nav class="topbar__nav">
+    <a class="topbar__navlink <%= activeNav === 'einsatz' ? 'is-active' : '' %>" href="http://le.homeserver/">Einsatz</a>
+    <% if (user.groups.includes(adminGroup)) { %>
+      <a class="topbar__navlink <%= activeNav === 'admin' ? 'is-active' : '' %>" href="http://admin.homeserver/">Admin</a>
+    <% } %>
+  </nav>
+
+  <div class="topbar__user">
+    <span class="topbar__avatar"><%= (user.name || '?').charAt(0).toUpperCase() %></span>
+    <span class="topbar__name"><%= user.name %></span>
+    <a class="topbar__logout" href="/outpost.goauthentik.io/sign_out" title="Abmelden"><%- icon('logout') %></a>
+  </div>
+</header>
