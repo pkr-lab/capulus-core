@@ -15,7 +15,7 @@ secrets:
   #             --controller-name sealed-secrets-controller
   # Derselbe Wert wird von Postgres (POSTGRES_PASSWORD) und Wiki.js
   # (DB_PASS) gelesen — nur EIN kubeseal-Aufruf nötig.
-  encryptedDbPassword: ""
+  encryptedDbPassword: "AgCLGVPqsZ/s1d8rdVlRLCP+QvBhtkSRHUFX93VKRqhkKLuuh0jLs1cX7AQQGC7eE9Ey4brLPKCBI/UlhUWLVH7B/yZnuBo42XcWv3Mm8iw51qG6KDcBqf5CaMC37pNai9GPHwPWhQOwYnbyyoXjJQY+5Z6VT33+qWp2IHl7/wpaX+7JR22d1a9TIBtie/X9XgvjUb+ERgmJM+a4FBhRPfug+ehRv/XpGE+2QdLcPjs7tEJZai0/e28o/U8ob+4CJZPXM5yqrsKO0zZvUUxLM05I1Ov1nH5+Sxo0n1vXru+ki9xarRqcKKuNaXfro0oaK7F1c2jhRhCbGd5sD+ggtL2l7YSssfqoRxpL1U9ootruHd2nz+joQTxuGtISmzWc0DQxdVnxpv6ZwZ/PDdqn4TWX7q144Kz9ODBNsADRzZxfCMJTUqkZjb3zLvdgqMVWykbWnIkYmOIPdAL0X3C3w2RjtTjGQIYf682uXZ0wZyd0bCkYOK1BRWCOS/tw4MGpjDWjF6RclTQ0Z1WfeI7MgNC+re1lCFX2uKZ4zziF8zTR0w8qGnzUL5bSD/fclK+5pDYjuYZaegvEgUM7AHqdlnKgjGfb+HwWitn3bLk/ctR/k5ZdUQaGmvCGdwDzgWTkrk2zI6emLuJCloDM4y5JXYSVuJYBs7BxgX+AoPLZVYz9tuFnaxp/M3VpT4t4EzHriJQRzfJrFp9Yb1Ek/FeVgcKzcZ50kd1Jg8t/KSiVlFYkew=="
 
 # ============================================================
 # Wiki.js App
