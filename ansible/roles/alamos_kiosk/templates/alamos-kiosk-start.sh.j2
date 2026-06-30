@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Managed by Ansible (alamos_kiosk role) — do not edit manually.
+#
+# Startet Chromium im Kiosk-Modus gegen die alamos-apager Redirect-URL.
+# Die echte ALAMOS-AMweb-URL kennt der Pi nie — der Cluster loest
+# /start?station={{ alamos_kiosk_station }} serverseitig auf (siehe
+# argocd/apps/alamos-apager und docs/20-alamos-apager.md).
+set -euo pipefail
+
+export DISPLAY=:0
+
+# Bildschirmschoner/Energiesparen deaktivieren, sonst dunkelt der
+# Alarmmonitor nach Inaktivitaet ab.
+xset s off || true
+xset s noblank || true
+xset -dpms || true
+
+exec chromium-browser \
+  --kiosk \
+  --noerrdialogs \
+  --disable-infobars \
+  --disable-session-crashed-bubble \
+  --incognito \
+  --autoplay-policy=no-user-gesture-required \
+  "{{ alamos_kiosk_base_url }}/start?station={{ alamos_kiosk_station }}"
