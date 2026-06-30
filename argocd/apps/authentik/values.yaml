@@ -109,8 +109,9 @@ authentik:
       #     secretName: authentik-tls
 
     metrics:
+      enabled: true
       serviceMonitor:
-        create: false
+        enabled: true
 
   # ---- Worker (Background-Tasks) --------------------------
   worker:

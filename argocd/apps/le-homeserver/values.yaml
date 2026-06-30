@@ -86,17 +86,15 @@ services:
       description: "Monitoring-Dashboards"
       url: "http://grafana.homeserver"
       icon: chart
-      job: grafana
+      job: monitoring-grafana
     - name: Gotify
       description: "Push-Benachrichtigungen"
       url: "http://gotify.homeserver"
       icon: bell
-      job: gotify
     - name: Headlamp
       description: "Kubernetes-Dashboard"
       url: "http://headlamp.homeserver"
       icon: cube
-      job: headlamp
     - name: ArgoCD
       description: "GitOps-Deployments"
       url: "http://homeserver:30080"
@@ -106,7 +104,6 @@ services:
       description: "Ansible-Playbooks"
       url: "http://semaphore.homeserver"
       icon: terminal
-      job: semaphore
     - name: MinIO
       description: "S3-Objektspeicher"
       url: "http://minio.homeserver"
