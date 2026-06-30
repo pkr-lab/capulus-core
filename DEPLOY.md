@@ -84,7 +84,7 @@ Vault-Datei für worker-0 befüllen:
 
 ```bash
 # Die Datei existiert bereits — mit make vault-edit öffnen oder direkt editieren:
-# ansible/host_vars/homeserver2/vault.yml
+# ansible/host_vars/worker-0/vault.yml
 ```
 
 Secrets verschlüsseln und einfügen:
@@ -97,7 +97,7 @@ ansible-vault encrypt_string 'SUDO_PASSWORT' --name 'vault_worker-0_become_passw
 ansible-vault encrypt_string 'API_KEY' --name 'vault_day_pilot_openai_api_key'
 ```
 
-Ergebnisse in `ansible/host_vars/homeserver2/vault.yml` einfügen.
+Ergebnisse in `ansible/host_vars/worker-0/vault.yml` einfügen.
 
 > **Wichtig:** `vault.yml` niemals committen — sie liegt bereits in `.gitignore`.
 
@@ -146,10 +146,10 @@ make worker-0
 make k3s-agent
 
 # Einzelne Docker-Compose-Dienste deployen
-ansible-playbook -i ansible/inventory/hosts.yml ansible/homeserver2.yml \
+ansible-playbook -i ansible/inventory/hosts.yml ansible/worker-0.yml \
   --tags tinyteller $(VAULT_OPTS)
 
-ansible-playbook -i ansible/inventory/hosts.yml ansible/homeserver2.yml \
+ansible-playbook -i ansible/inventory/hosts.yml ansible/worker-0.yml \
   --tags day-pilot $(VAULT_OPTS)
 ```
 
@@ -345,11 +345,11 @@ ssh ubuntu@192.168.178.94 \
 Home-Lab/
 ├── ansible/
 │   ├── site.yml                    ← Haupt-Playbook (homeserver)
-│   ├── homeserver2.yml             ← Playbook für worker-0 (k3s-Agent + Docker Compose)
+│   ├── worker-0.yml                ← Playbook für worker-0 (k3s-Agent + Docker Compose)
 │   ├── inventory/hosts.yml         ← IP-Adressen beider Server
 │   ├── group_vars/all.yml          ← Alle Konfigurationswerte + Vault-Secrets
 │   ├── host_vars/
-│   │   └── homeserver2/
+│   │   └── worker-0/
 │   │       ├── vars.yml            ← Service-Konfiguration für worker-0
 │   │       └── vault.yml           ← Verschlüsselte Secrets (nicht im Git!)
 │   └── roles/
