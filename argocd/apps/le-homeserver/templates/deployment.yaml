@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "le-homeserver.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "le-homeserver.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "le-homeserver.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "le-homeserver.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "le-homeserver.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: PORT
+              value: {{ .Values.service.targetPort | quote }}
+            - name: AUTHENTIK_ADMIN_GROUP
+              value: {{ .Values.authentik.adminGroup | quote }}
+            - name: SERVICES_CONFIG_PATH
+              value: /app/config/services.json
+            - name: GRAFANA_URL
+              value: {{ .Values.grafana.url | quote }}
+            - name: GRAFANA_DATASOURCE_UID
+              value: {{ .Values.grafana.datasourceUid | quote }}
+            - name: GRAFANA_NODE_LABELS
+              value: {{ .Values.grafana.nodeLabels | toJson | quote }}
+            {{- if .Values.grafana.tokenSecret.enabled }}
+            - name: GRAFANA_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.grafana.tokenSecret.name }}
+                  key: token
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: services-config
+              mountPath: /app/config
+              readOnly: true
+      volumes:
+        - name: services-config
+          configMap:
+            name: {{ include "le-homeserver.fullname" . }}-services
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

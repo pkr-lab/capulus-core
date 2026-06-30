@@ -1,0 +1,20 @@
+---
+apiVersion: v2
+name: le-homeserver
+description: |
+  Eigenes Admin-Dashboard-UI fuer den DLRG-Homeserver (admin.homeserver,
+  nur "authentik Admins"): Kurzlinks zu allen deployten Apps inkl.
+  Live-Health-Status und System-Auslastung (CPU/RAM/Disk/Temperatur) aus
+  Grafana.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - dashboard
+  - admin
+  - grafana
+home: https://github.com/pkr-lab/capulus-core
+sources:
+  - https://github.com/pkr-lab/capulus-core/tree/main/apps/le-homeserver-ui
+maintainers:
+  - name: home-server-admin

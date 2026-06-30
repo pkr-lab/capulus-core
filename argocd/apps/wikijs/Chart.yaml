@@ -1,0 +1,29 @@
+---
+apiVersion: v2
+name: wikijs
+description: |
+  Wiki.js — Markdown-Wiki mit eingebauten Gruppen- und Page-Rules-Berechtigungen.
+  Bündelt eine eigene, schlanke PostgreSQL-Instanz (kein Bitnami-Subchart —
+  Bitnamis Helm-Charts sind seit August 2025 eingefroren/kostenpflichtig,
+  siehe docs/20-wikijs.md). Seiten- und Asset-Inhalte liegen vollständig in
+  PostgreSQL, der Wiki.js-Pod selbst ist zustandslos.
+
+  Web-Interface:
+    http://wiki.homeserver
+
+  Komponenten:
+    - Wiki.js 2.x (ghcr.io/requarks/wiki)
+    - PostgreSQL 16 (offizielles postgres-Image, eigenes Deployment)
+type: application
+version: 0.1.0
+appVersion: "2.5.314"
+keywords:
+  - wikijs
+  - wiki
+  - documentation
+  - knowledge-base
+home: https://js.wiki
+sources:
+  - https://github.com/requarks/wiki
+maintainers:
+  - name: home-server-admin

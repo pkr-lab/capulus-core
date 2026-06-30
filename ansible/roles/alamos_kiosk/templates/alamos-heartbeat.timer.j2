@@ -1,0 +1,11 @@
+# Managed by Ansible (alamos_kiosk role) — do not edit manually.
+[Unit]
+Description=Periodischer ALAMOS Alarmmonitor Heartbeat ({{ alamos_kiosk_station }})
+
+[Timer]
+OnBootSec=30
+OnUnitActiveSec={{ alamos_kiosk_heartbeat_interval }}
+Unit=alamos-heartbeat.service
+
+[Install]
+WantedBy=timers.target

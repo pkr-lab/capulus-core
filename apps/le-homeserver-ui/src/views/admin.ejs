@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body class="theme-admin">
+  <%- include('partials/topbar') %>
+
+  <main class="page">
+    <section class="hero">
+      <h1>Admin-Übersicht</h1>
+      <p class="hero__sub">Status und Sprungbrett zu allen deployten Diensten.</p>
+      <p class="hero__hint" id="health-error" hidden>
+        Grafana-Health-Check nicht erreichbar – Status wird als „unbekannt“ angezeigt.
+      </p>
+    </section>
+
+    <section class="stats-bar" aria-label="Home Server Auslastung">
+      <div class="stats-bar__head">
+        <h2>Home Server Auslastung</h2>
+        <span class="stats-bar__hint" id="stats-error" hidden>
+          Live-Werte nicht erreichbar
+        </span>
+      </div>
+      <div class="stats-grid" id="stats-grid">
+        <p class="stats-grid__empty" id="stats-empty">Lade Live-Werte…</p>
+      </div>
+    </section>
+
+    <section class="grid" aria-label="Dienste">
+      <% cards.forEach(function (card, index) { %>
+        <%- include('partials/card', { card: card, index: index }) %>
+      <% }) %>
+    </section>
+  </main>
+
+  <script src="/js/health.js"></script>
+  <script src="/js/stats.js"></script>
+</body>
+</html>

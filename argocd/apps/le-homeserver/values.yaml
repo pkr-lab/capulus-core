@@ -1,0 +1,137 @@
+---
+replicaCount: 1
+
+image:
+  repository: ghcr.io/pkr-lab/le-homeserver-ui
+  pullPolicy: Always
+  # "latest" + Always passt zum Rest des Repos (kein Image-Updater
+  # installiert). Nach einem neuen CI-Build einmal manuell neu ausrollen:
+  #   kubectl -n le-homeserver rollout restart deployment/le-homeserver-ui
+  tag: "latest"
+
+nameOverride: ""
+fullnameOverride: "le-homeserver-ui"
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+ingress:
+  className: traefik
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: "authentik-authentik-forwardauth@kubernetescrd"
+  adminHost: admin.homeserver
+
+# Authentik-Gruppe, die serverseitig auf admin.homeserver zugreifen darf.
+# Muss in Authentik existieren (Standardgruppe "authentik Admins") und die
+# zugehoerige Authentik-Application fuer admin.homeserver braucht ein
+# Policy-Binding auf dieselbe Gruppe — siehe docs/19-le-homeserver-ui.md.
+authentik:
+  adminGroup: "authentik Admins"
+
+# Grafana-Anbindung fuer Live-Health-Status und System-Auslastung
+# (CPU/RAM/Disk/Temperatur) auf admin.homeserver. Token wird ueber einen
+# Grafana-Service-Account erzeugt und als SealedSecret versiegelt
+# (siehe docs/19-le-homeserver-ui.md).
+grafana:
+  url: "http://monitoring-grafana.monitoring.svc.cluster.local"
+  datasourceUid: "VictoriaMetrics"
+  tokenSecret:
+    enabled: true
+    name: le-homeserver-grafana-sa
+    # Erzeugt mit:
+    #   echo -n "<service-account-token>" \
+    #     | kubeseal --raw --namespace le-homeserver --name le-homeserver-grafana-sa \
+    #         --from-file=/dev/stdin
+    encryptedToken: "AgBiTZY9lnXZcHi1BKfxAVtdzAPP6kIBM5xd+r+SjxFNHC9Y3omVojCFoKCKZyRE66CZzh2NmpsqyRN16V1QiDkGmKeVHP2tedKcOnM+dlsemn56g5sK+df0xp1ISSrKYAFa3hE7FUNcXNSn+LfeLwf0WXBoaAYHtCMSscftZKbfxuLDOvKeCdwcAODbFUEnUNHFPzBNfSE87Gns98xAQLvtzsCMmolHWxb2KE38bTpGhWA87LH59yXu2AuwfVz/V9pO2SBmEZ9KUYKR88IFUyoqLj55U8VDkoyLltjKUtfp7AUjZtb1bP0+E5NRSAr68xKbOeqU8sB8fHtFFh5TTRiBwqPchZjZB5P3UMiKXsZCf5S3VEeOXfuDOP/lggYdUgPz2zF8eaLrsfs6ff+so81+OnO7lOy5XmkpEJfTVAAqFXeTnKNJqiyvkwFKKMEBUV1OrBqOcGGU+o57rfGbfY8b9EQJ6kIDCSLKzT4dQwwY0IMKMZJa4Vlwslqb15CBtrcxansa6t2+Nldlfzk/tgU0/AMEM6aqPiYj9bc9emokGsBrl99fwvt/H05JLZ2uU0OI8hjJMOIgvKDi6P4kMxcmJUnQ70FPtOt1ZWynnVdt1QeRa3YZ6s3qXYokPkoAaa6AWjy20Jh3gGREwe3W/WGdeg+J8cuNPq1ZrNa47TMgWTYJMf4TPOrtT/qpux2xcgwgY1eOykliI2uLkRiqP+7+UwsNK2iy0YSWZXr+PzTOHNR6GyKQOaWp0YUHr5Kr"
+  # Ordnet das Prometheus/VictoriaMetrics `instance`-Label des
+  # node-exporters (Host-Teil, ohne Port) einem lesbaren Namen fuer die
+  # Auslastungs-Kacheln auf admin.homeserver zu.
+  nodeLabels:
+    "192.168.178.94": "Home Server"
+    "192.168.178.95": "Worker-0"
+
+# Karten/Kacheln im Admin-Dashboard. Aenderungen hier werden ueber eine
+# ConfigMap in den Pod gemountet — kein Image-Rebuild noetig.
+# `job` ist das Prometheus/VictoriaMetrics-Job-Label fuer den Health-Badge;
+# ohne `job` gibt es keinen Health-Badge.
+# `comingSoon: true` zeigt eine "bald verfuegbar"-Kachel ohne Link.
+services:
+  apps:
+    - name: Authentik
+      description: "Single Sign-On & Benutzerverwaltung"
+      url: "http://authentik.homeserver"
+      icon: shield
+      job: authentik-server-metrics
+    - name: Grafana
+      description: "Monitoring-Dashboards"
+      url: "http://grafana.homeserver"
+      icon: chart
+      job: monitoring-grafana
+    - name: Gotify
+      description: "Push-Benachrichtigungen"
+      url: "http://gotify.homeserver"
+      icon: bell
+    - name: Headlamp
+      description: "Kubernetes-Dashboard"
+      url: "http://headlamp.homeserver"
+      icon: cube
+    - name: ArgoCD
+      description: "GitOps-Deployments"
+      url: "http://homeserver:30080"
+      icon: sync
+      job: argocd
+    - name: Semaphore
+      description: "Ansible-Playbooks"
+      url: "http://semaphore.homeserver"
+      icon: terminal
+    - name: MinIO
+      description: "S3-Objektspeicher"
+      url: "http://minio.homeserver"
+      icon: box
+      job: minio
+    - name: "Wiki.js – SOPs & Checklisten"
+      description: "Alarm- und Ausrueckeordnung, Einsatz-Checklisten"
+      url: ""
+      icon: book
+      comingSoon: true
+    - name: "Alamos Pager"
+      description: "Alarmierung & aktuelle Einsaetze"
+      url: ""
+      icon: siren
+      comingSoon: true
+
+extraEnv: []
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

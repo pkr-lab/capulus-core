@@ -1,0 +1,24 @@
+# Separater Ingress für den Authentik-Outpost-Pfad auf dem Admin-Host.
+# /outpost.goauthentik.io/ muss zum Authentik-Server zeigen (nicht zur App),
+# damit der ForwardAuth-Login-/Logout-Flow korrekt zurückleiten kann.
+# Kein ForwardAuth-Middleware hier — Authentik bedient diesen Pfad selbst.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "le-homeserver.fullname" . }}-outpost
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "le-homeserver.labels" . | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.ingress.adminHost | quote }}
+      http:
+        paths:
+          - path: /outpost.goauthentik.io/
+            pathType: Prefix
+            backend:
+              service:
+                name: authentik-server-alias
+                port:
+                  number: 80

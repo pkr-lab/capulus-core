@@ -64,7 +64,7 @@ persistence:
   mountPath: /app/data
 
 # Admin credentials are injected from the SealedSecret rendered by
-# templates/sealedsecret.yaml. See docs/11-gotify.md for the kubeseal
+# templates/sealedsecret.yaml. See docs/10-gotify.md for the kubeseal
 # workflow that fills in `encryptedPassword` below.
 adminSecret:
   enabled: true

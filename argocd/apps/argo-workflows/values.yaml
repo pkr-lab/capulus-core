@@ -30,7 +30,7 @@ argo-workflows:
 
   server:
     # SSO-Modus via Authentik OIDC.
-    # Anleitung: docs/16-sso-alle-dienste.md → Schritt 3
+    # Anleitung: docs/15-sso-alle-dienste.md → Schritt 3
     # TODO: Zurück auf [sso] setzen sobald alle drei SealedSecrets neu versiegelt sind:
     #   - argo-workflows-sso (clientId, clientSecret) → Authentik OIDC-App
     #   - argo-artifacts-s3 (accesskey, secretkey) → MinIO Root-Credentials
@@ -96,10 +96,10 @@ argo-workflows:
 #   echo -n "<value>" | kubeseal --raw --namespace argo-workflows \
 #     --name argo-artifacts-s3 --controller-name sealed-secrets-controller \
 #     --controller-namespace sealed-secrets --from-file=/dev/stdin
-# See docs/13-argo-workflows.md for the full workflow (incl. the GHCR token).
+# See docs/12-argo-workflows.md for the full workflow (incl. the GHCR token).
 
 # SSO — OIDC-Credentials für Authentik.
-# Anleitung: docs/16-sso-alle-dienste.md → Schritt 3.3
+# Anleitung: docs/15-sso-alle-dienste.md → Schritt 3.3
 # 1. kubeseal-Befehle aus der Anleitung ausführen
 # 2. Ausgabe hier eintragen
 # 3. enabled auf true setzen

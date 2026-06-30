@@ -45,7 +45,7 @@ ansible -i ansible/inventory/hosts.yml all -m ping
 ## Schritt 1 — Repo klonen & Abhängigkeiten installieren
 
 ```bash
-git clone https://github.com/PKE-Tech/capulus-core.git
+git clone https://github.com/pkr-lab/capulus-core.git
 cd capulus-core
 make deps
 ```
@@ -80,26 +80,31 @@ ansible-vault encrypt_string 'DEIN_WERT' --name 'variable_name'
 
 ### 2.2 — worker-0 (Docker Compose)
 
-Vault-Datei für worker-0 befüllen:
-
-```bash
-# Die Datei existiert bereits — mit make vault-edit öffnen oder direkt editieren:
-# ansible/host_vars/homeserver2/vault.yml
-```
+Vault-Datei für worker-0 ggf. neu anlegen (existiert sie noch nicht):
+`ansible/host_vars/worker-0/vault.yml`
 
 Secrets verschlüsseln und einfügen:
 
 ```bash
 # sudo-Passwort für worker-0
-ansible-vault encrypt_string 'SUDO_PASSWORT' --name 'vault_worker-0_become_password'
+ansible-vault encrypt_string 'SUDO_PASSWORT' --name 'vault_worker_0_become_password'
 
 # TinyTeller / Day Pilot spezifische Secrets (falls nötig)
 ansible-vault encrypt_string 'API_KEY' --name 'vault_day_pilot_openai_api_key'
 ```
 
-Ergebnisse in `ansible/host_vars/homeserver2/vault.yml` einfügen.
+Ergebnisse in `ansible/host_vars/worker-0/vault.yml` einfügen, z.B.:
 
-> **Wichtig:** `vault.yml` niemals committen — sie liegt bereits in `.gitignore`.
+```yaml
+---
+vault_worker_0_become_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          ...
+```
+
+> **Wichtig:** `vault.yml` ist **nicht** gitignored (analog zu `group_vars/all.yml`) —
+> sie muss eingecheckt werden, damit Semaphore sie beim Git-Clone für jeden Run
+> erhält. Der Inhalt ist vault-verschlüsselt, also unbedenklich zu committen.
 
 ---
 
@@ -146,10 +151,10 @@ make worker-0
 make k3s-agent
 
 # Einzelne Docker-Compose-Dienste deployen
-ansible-playbook -i ansible/inventory/hosts.yml ansible/homeserver2.yml \
+ansible-playbook -i ansible/inventory/hosts.yml ansible/worker-0.yml \
   --tags tinyteller $(VAULT_OPTS)
 
-ansible-playbook -i ansible/inventory/hosts.yml ansible/homeserver2.yml \
+ansible-playbook -i ansible/inventory/hosts.yml ansible/worker-0.yml \
   --tags day-pilot $(VAULT_OPTS)
 ```
 
@@ -171,10 +176,10 @@ Semaphore UI: **http://semaphore.homeserver**
 
 Folgende Projekte werden automatisch angelegt:
 
-| Projekt | Playbook | Inventory |
-|---|---|---|
-| `home-server` | `ansible/site.yml` | homeserver (192.168.178.94) |
-| `worker-0`    | `ansible/worker-0.yml` | worker-0 (192.168.178.95) |
+| Projekt       | Playbook               | Inventory                   |
+|---------------|------------------------|-----------------------------|
+| `home-server` | `ansible/site.yml`     | homeserver (192.168.178.94) |
+| `worker-0`    | `ansible/worker-0.yml` | worker-0 (192.168.178.95)   |
 
 Beide laufen täglich um 06:00 Uhr automatisch durch.
 
@@ -203,11 +208,11 @@ Das Monitoring scrapt automatisch:
 
 Nach dem automatischen ArgoCD-Sync von `argocd/apps/authentik/` steht Authentik als zentraler Identity Provider bereit.
 
-**Voraussetzung:** Secrets müssen zuerst mit `kubeseal` versiegelt und in `values.yaml` eingetragen werden (Anleitung: [docs/14-sso-authentik.md](docs/14-sso-authentik.md)).
+**Voraussetzung:** Secrets müssen zuerst mit `kubeseal` versiegelt und in `values.yaml` eingetragen werden (Anleitung: [docs/13-sso-authentik.md](docs/13-sso-authentik.md)).
 
 ```bash
 # 1. Sealed-Werte erzeugen und in values.yaml eintragen (Einmalaufwand)
-#    → Anleitung: docs/14-sso-authentik.md, Abschnitt "Schritt 1"
+#    → Anleitung: docs/13-sso-authentik.md, Abschnitt "Schritt 1"
 
 # 2. Authentik-Status prüfen (ArgoCD synct automatisch nach Push)
 ssh ubuntu@192.168.178.94 \
@@ -225,7 +230,7 @@ ssh ubuntu@192.168.178.94 \
 #    Gotify/Semaphore: Traefik Forward-Auth-Middleware (Template in docs)
 ```
 
-Vollständige Service-by-Service-Anleitung: **[docs/14-sso-authentik.md](docs/14-sso-authentik.md)**
+Vollständige Service-by-Service-Anleitung: **[docs/13-sso-authentik.md](docs/13-sso-authentik.md)**
 
 ---
 
@@ -345,11 +350,11 @@ ssh ubuntu@192.168.178.94 \
 Home-Lab/
 ├── ansible/
 │   ├── site.yml                    ← Haupt-Playbook (homeserver)
-│   ├── homeserver2.yml             ← Playbook für worker-0 (k3s-Agent + Docker Compose)
+│   ├── worker-0.yml                ← Playbook für worker-0 (k3s-Agent + Docker Compose)
 │   ├── inventory/hosts.yml         ← IP-Adressen beider Server
 │   ├── group_vars/all.yml          ← Alle Konfigurationswerte + Vault-Secrets
 │   ├── host_vars/
-│   │   └── homeserver2/
+│   │   └── worker-0/
 │   │       ├── vars.yml            ← Service-Konfiguration für worker-0
 │   │       └── vault.yml           ← Verschlüsselte Secrets (nicht im Git!)
 │   └── roles/

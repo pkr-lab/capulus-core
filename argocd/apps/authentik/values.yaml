@@ -4,7 +4,7 @@
 #
 # Credentials-Block (SealedSecret):
 #   Werte mit kubeseal versiegeln und hier eintragen.
-#   Anleitung: docs/14-sso-authentik.md → Abschnitt "Secrets versiegeln"
+#   Anleitung: docs/13-sso-authentik.md → Abschnitt "Secrets versiegeln"
 # ============================================================
 
 credentials:
@@ -22,7 +22,7 @@ credentials:
 # ============================================================
 # TLS — Server-Zertifikat für HTTPS + mTLS (Zertifikats-Login)
 #
-# Anleitung zum Versiegeln: docs/15-cert-login.md → Schritt 2
+# Anleitung zum Versiegeln: docs/14-cert-login.md → Schritt 2
 # Nach dem Versiegeln encryptedCrt und encryptedKey ausfüllen und
 # tls.enabled auf true setzen.
 # ============================================================
@@ -90,7 +90,7 @@ authentik:
       enabled: true
       ingressClassName: traefik
       annotations:
-        # Mit tls.enabled=true: auf websecure + mTLS umstellen (s. Schritt 6 in docs/15-cert-login.md)
+        # Mit tls.enabled=true: auf websecure + mTLS umstellen (s. Schritt 6 in docs/14-cert-login.md)
         traefik.ingress.kubernetes.io/router.entrypoints: web
         # traefik.ingress.kubernetes.io/router.entrypoints: websecure
         # traefik.ingress.kubernetes.io/router.tls: "true"
@@ -108,9 +108,15 @@ authentik:
       #       - authentik.homeserver
       #     secretName: authentik-tls
 
+    # serviceMonitor.enabled bleibt false: erzeugt eine ServiceMonitor-CRD
+    # (monitoring.coreos.com/v1), die in diesem Cluster nicht installiert ist
+    # (nur VictoriaMetrics-CRDs) -> ArgoCD-Sync würde fehlschlagen.
+    # Stattdessen scrapt eine handgeschriebene VMServiceScrape
+    # (templates/vmservicescrape.yaml) denselben Metrics-Service.
     metrics:
+      enabled: true
       serviceMonitor:
-        create: false
+        enabled: false
 
   # ---- Worker (Background-Tasks) --------------------------
   worker:

@@ -1,0 +1,69 @@
+---
+replicaCount: 1
+
+image:
+  repository: python
+  tag: "3.12-alpine"
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+# ntfy connection — wohin der Ausfall-Alarm gepusht wird.
+ntfy:
+  url: "http://ntfy.ntfy.svc.cluster.local"
+  topic: "Alarmmonitor"
+
+# Name des SealedSecret mit den Standort→AMweb-URL-Paaren (ein Key pro
+# Standort). Wird NICHT von diesem Chart erzeugt — siehe
+# docs/20-alamos-apager.md für den kubeseal-Befehl, der ihn anlegt.
+stationsSecretName: alamos-apager-stations
+
+# Nach wie vielen Sekunden ohne Heartbeat ein Standort als "down" gilt.
+# Sollte deutlich über dem Heartbeat-Intervall des Pi-Timers liegen
+# (siehe ansible/roles/alamos_kiosk: alamos_kiosk_heartbeat_interval),
+# damit ein einzelner verpasster Ping noch keinen Fehlalarm auslöst.
+heartbeatTimeoutSeconds: 300
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations: {}
+  host: alamos-apager.homeserver
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 100m
+    memory: 64Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
