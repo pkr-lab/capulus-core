@@ -163,6 +163,36 @@ semaphore_projects:
         cron: "0 6 * * *"
         active: true
 
+  - name: alarm-kiosks
+    description: >-
+      Alarmmonitor-Kiosks (Raspberry Pi, ALAMOS AMweb) einrichten — siehe
+      docs/20-alamos-apager.md.
+    repository:
+      name: home-server-git
+      url: "{{ argocd_repo_url }}"
+      branch: main
+    environments:
+      - "{{ semaphore_default_environment }}"
+    inventories:
+      - name: raspberry_pis
+        type: static
+        ssh_key: semaphore-ssh-key
+        content: |
+          [raspberry_pis]
+          # Pi-Hostnamen hier eintragen, sobald vorhanden (Stationsname muss
+          # zu einem Key im SealedSecret alamos-apager-stations passen):
+          # geraetehaus ansible_host=192.168.178.110 alamos_kiosk_station=geraetehaus
+    templates:
+      - name: "Deploy Alarmmonitor Kiosks"
+        playbook: ansible/alarm-kiosks.yml
+        inventory: raspberry_pis
+        environment: default-env
+        vault_key: vault-password
+        description: "Chromium-Kiosk + Heartbeat-Timer auf den Alarmmonitor-Pis."
+    # Bewusst kein Schedule: anders als bei home-server/worker-0 soll ein
+    # Re-Run hier nur manuell per Knopfdruck laufen, nicht automatisch nachts
+    # — siehe docs/20-alamos-apager.md.
+
 # ---- Scanner / Paperless Ingestion ------------------------
 # Fujitsu USB-Scanner direkt am Home-Server; scanbd hört auf den
 # Hardware-Button und schreibt Scans als PDF in den SMB-Share von

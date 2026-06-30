@@ -220,6 +220,7 @@ capulus-core/
         ├── coredns-custom/           # Zusätzliche CoreDNS-Zonen
         ├── sealed-secrets/           # SealedSecrets-Controller
         ├── authentik/                # Authentik Single-Sign-On
+        ├── alamos-apager/            # Alarmmonitor-Kiosk-Verwaltung (ALAMOS AMweb)
         └── semaphore/                # Ansible-Web-UI
 ```
 
@@ -281,6 +282,7 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 | Argo Workflows | http://argo-workflows.homeserver |
 | MinIO Console | http://minio.homeserver |
 | kubeseal-webgui | http://kubeseal-webgui.homeserver |
+| Alarmmonitor (alamos-apager) | http://alamos-apager.homeserver |
 
 ---
 
@@ -330,15 +332,13 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [Troubleshooting](docs/07-troubleshooting.md) | Diagnose-Playbook für häufige Probleme |
 | [Semaphore-UI](docs/08-semaphore.md) | Web-UI zum Ausführen von Playbooks |
 | [DNS-Architektur](docs/09-dns-architecture.md) | Warum der Home-Server NICHT dein LAN-DNS ist |
-| [Gotify-Push](docs/10-gotify.md) | Self-hosted Push-Notifications aus dem Stack |
-| [ntfy iOS-Push](docs/11-ntfy.md) | Self-hosted ntfy mit iOS APNs-Relay |
-| [Argo Workflows](docs/12-argo-workflows.md) | Private CI/CD-Pipeline mit MinIO-Artifact-Store |
-| [SSO via Authentik](docs/13-sso-authentik.md) | Authentik als zentraler Identity Provider |
-| [Zertifikats-Auth](docs/14-cert-login.md) | Traefik mTLS Client-Zertifikate |
-| [SSO alle Dienste](docs/15-sso-alle-dienste.md) | Headlamp, Argo Workflows, MinIO via OIDC |
-| [HDD-Storage](docs/16-hdd-storage.md) | StorageClass `hdd` auf worker-0 für große Datenmengen |
-| [Zammad Helpdesk](docs/17-zammad.md) | Ticket-System mit optionalem SAML-SSO |
-| [Windows-PC Deployment](docs/18-windows-deployment.md) | Automatisierte Windows-Einrichtung per PXE/USB/Ansible |
+| [Gotify-Push](docs/11-gotify.md) | Self-hosted Push-Notifications aus dem Stack |
+| [Argo Workflows](docs/13-argo-workflows.md) | Private CI/CD-Pipeline mit MinIO-Artifact-Store |
+| [SSO via Authentik](docs/14-sso-authentik.md) | Authentik als zentraler Identity Provider |
+| [ntfy iOS-Push](docs/15-ntfy.md) | Self-hosted ntfy mit iOS APNs-Relay |
+| [Zertifikats-Auth](docs/15-cert-login.md) | Traefik mTLS Client-Zertifikate |
+| [SSO alle Dienste](docs/16-sso-alle-dienste.md) | Headlamp, Argo Workflows, MinIO via OIDC |
+| [Alarmmonitor-Kiosks](docs/20-alamos-apager.md) | Raspberry-Pi-Kiosks für ALAMOS AMweb, zentral verwaltet |
 
 ---
 

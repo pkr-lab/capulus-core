@@ -1,0 +1,155 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "alamos-apager.fullname" . }}-script
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "alamos-apager.labels" . | nindent 4 }}
+data:
+  # Haelt pro Standort nur den Stationsnamen->AMweb-URL-Redirect und einen
+  # Heartbeat-Zeitstempel vor. Die echte AMweb-URL (Secret-Volume unter
+  # STATIONS_DIR) verlaesst den Cluster nie Richtung Pi - der Pi kennt nur
+  # seinen eigenen Stationsnamen (siehe ansible/roles/alamos_kiosk).
+  #   GET /start?station=<name>     -> 302 Redirect zur AMweb-URL
+  #   GET /heartbeat?station=<name> -> Pi-Lebenszeichen, alle paar Sekunden
+  # Ein Background-Thread prueft periodisch, ob ein Standort laenger als
+  # HEARTBEAT_TIMEOUT_SECONDS keinen Heartbeat gesendet hat, und meldet das
+  # per ntfy (kein Zammad-Ticket - siehe docs/20-alamos-apager.md).
+  app.py: |
+    #!/usr/bin/env python3
+    import os
+    import threading
+    import time
+    import urllib.request
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    from urllib.parse import urlsplit, parse_qs
+
+    NTFY_URL = os.environ.get("NTFY_URL", "").rstrip("/")
+    NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "")
+    HEARTBEAT_TIMEOUT_SECONDS = int(os.environ.get("HEARTBEAT_TIMEOUT_SECONDS", "300"))
+    CHECK_INTERVAL_SECONDS = 30
+
+    STATIONS_DIR = "/etc/alamos-apager/stations"
+    DATA_DIR = "/data"
+
+
+    def send_to_ntfy(title: str, message: str, priority: int, tags: str) -> None:
+        if not (NTFY_URL and NTFY_TOPIC):
+            print(f"[ntfy nicht konfiguriert] {title}: {message}")
+            return
+        req = urllib.request.Request(
+            f"{NTFY_URL}/{NTFY_TOPIC}",
+            data=message.encode("utf-8"),
+            headers={
+                "Title": title.encode("utf-8"),
+                "Priority": str(priority).encode("utf-8"),
+                "Tags": tags.encode("utf-8"),
+            },
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=5)
+
+
+    def known_stations():
+        if not os.path.isdir(STATIONS_DIR):
+            return []
+        return [n for n in os.listdir(STATIONS_DIR) if not n.startswith("..")]
+
+
+    def down_flag_path(station):
+        return os.path.join(DATA_DIR, f"{station}.down")
+
+
+    def heartbeat_path(station):
+        return os.path.join(DATA_DIR, f"{station}.hb")
+
+
+    def watchdog_loop():
+        while True:
+            time.sleep(CHECK_INTERVAL_SECONDS)
+            for station in known_stations():
+                hb_file = heartbeat_path(station)
+                age = None
+                if os.path.exists(hb_file):
+                    age = time.time() - os.path.getmtime(hb_file)
+                is_overdue = age is None or age > HEARTBEAT_TIMEOUT_SECONDS
+                already_down = os.path.exists(down_flag_path(station))
+                if is_overdue and not already_down:
+                    open(down_flag_path(station), "w").close()
+                    try:
+                        send_to_ntfy(
+                            f"\U0001F6A8 Alarmmonitor {station} offline",
+                            "Kein Heartbeat seit "
+                            + (f"{int(age)}s" if age is not None else "Start"),
+                            5,
+                            "rotating_light",
+                        )
+                    except Exception as exc:
+                        print(f"ntfy-Alarm fehlgeschlagen fuer {station}: {exc}")
+
+
+    class Handler(BaseHTTPRequestHandler):
+        def _station_param(self):
+            query = parse_qs(urlsplit(self.path).query)
+            return (query.get("station", [""])[0]).strip()
+
+        def _respond(self, status, body=b"", headers=None):
+            self.send_response(status)
+            for key, value in (headers or {}).items():
+                self.send_header(key, value)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            if body:
+                self.wfile.write(body)
+
+        def do_GET(self):
+            path = urlsplit(self.path).path
+
+            if path == "/start":
+                station = self._station_param()
+                if not station:
+                    self._respond(400, b"missing station parameter")
+                    return
+                station_file = os.path.join(STATIONS_DIR, station)
+                if not os.path.isfile(station_file):
+                    self._respond(404, b"unknown station")
+                    return
+                with open(station_file) as f:
+                    target_url = f.read().strip()
+                self._respond(302, b"", {"Location": target_url})
+                return
+
+            if path == "/heartbeat":
+                station = self._station_param()
+                if not station:
+                    self._respond(400, b"missing station parameter")
+                    return
+                os.makedirs(DATA_DIR, exist_ok=True)
+                open(heartbeat_path(station), "w").close()
+                down_file = down_flag_path(station)
+                if os.path.exists(down_file):
+                    os.remove(down_file)
+                    try:
+                        send_to_ntfy(
+                            f"✅ Alarmmonitor {station} wieder online",
+                            "Heartbeat empfangen.",
+                            3,
+                            "white_check_mark",
+                        )
+                    except Exception as exc:
+                        print(f"ntfy-Resolve fehlgeschlagen fuer {station}: {exc}")
+                self._respond(200, b"ok")
+                return
+
+            self._respond(404, b"not found")
+
+        def log_message(self, fmt, *args):
+            print(fmt % args)
+
+
+    if __name__ == "__main__":
+        os.makedirs(DATA_DIR, exist_ok=True)
+        threading.Thread(target=watchdog_loop, daemon=True).start()
+        port = int(os.environ.get("PORT", 8080))
+        print(f"alamos-apager listening on :{port}")
+        HTTPServer(("0.0.0.0", port), Handler).serve_forever()
