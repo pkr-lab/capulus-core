@@ -119,12 +119,15 @@ zammad:
 
     # ---- Scheduler (Background Jobs) ------------------------
     scheduler:
+      # Läuft (wie railsserver) die volle Rails-App dauerhaft; bei Backlog-
+      # Verarbeitung (z.B. viele SearchIndexJobs nach einem Neustart) reichten
+      # 512Mi nicht aus → OOMKilled. Limit an railsserver angeglichen.
       resources:
         requests:
           cpu: 50m
           memory: 256Mi
         limits:
-          memory: 512Mi
+          memory: 1Gi
 
     # ---- Websocket-Server -----------------------------------
     websocket:
