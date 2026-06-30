@@ -32,7 +32,7 @@
 
 ```bash
 # 1) Repo klonen
-git clone https://github.com/PKE-Tech/capulus-core.git && cd capulus-core
+git clone https://github.com/pkr-lab/capulus-core.git && cd capulus-core
 
 # 2) Eigene Details eintragen (Server-IP, Repo-URL, Tailscale-Key)
 $EDITOR ansible/inventory/hosts.yml
@@ -60,20 +60,20 @@ make install
 </tr>
 </thead>
 <tbody>
-<tr><td>🖥️ Betriebssystem</td><td><strong>Ubuntu Server 26.04 LTS</strong></td><td>Gehärtet, UFW-Firewall, NTP-synced, Swap off</td></tr>
-<tr><td>☸️ Kubernetes</td><td><strong>k3s</strong> (latest stable)</td><td>Single-Node, Traefik, CoreDNS, local-path, metrics-server</td></tr>
-<tr><td>🔄 GitOps</td><td><strong>ArgoCD</strong> + ApplicationSets</td><td>Verzeichnis unter <code>argocd/apps/</code> anlegen → pushen → deployed</td></tr>
-<tr><td>🌐 Split-DNS</td><td><strong>dnsmasq</strong> auf <code>tailscale0</code></td><td><code>*.homeserver</code> aus LAN und Tailnet auflösbar</td></tr>
-<tr><td>🎛️ Web-Ansible</td><td><strong>Semaphore UI</strong></td><td>Ein-Klick-<code>git pull &amp;&amp; ansible-playbook</code> gegen das eigene LAN</td></tr>
-<tr><td>📊 Monitoring</td><td><strong>VictoriaMetrics + Grafana</strong></td><td>Single-Node TSDB, vmagent, vmalert, Alertmanager, Dashboards</td></tr>
-<tr><td>🖥️ Kubernetes-UI</td><td><strong>Headlamp</strong></td><td>Browser-Dashboard für den Cluster</td></tr>
-<tr><td>🔐 Secrets</td><td><strong>Sealed Secrets + kubeseal-webgui</strong></td><td>Verschlüsselte Secrets in Git, nur im Cluster entschlüsselbar</td></tr>
-<tr><td>🔔 Notifications</td><td><strong>Gotify</strong> + <strong>ntfy</strong></td><td>Self-hosted Push — Gotify (Android), ntfy (iOS + Android)</td></tr>
-<tr><td>🔒 Remote-Access</td><td><strong>Tailscale</strong></td><td>WireGuard-Mesh-VPN — keine Portfreigaben, keine öffentliche IP</td></tr>
-<tr><td>⚙️ CI/CD intern</td><td><strong>Argo Workflows + MinIO</strong></td><td>Private CI/CD-Pipeline + S3-Artifact-Store im Cluster</td></tr>
-<tr><td>🚦 Ingress</td><td><strong>Traefik v2</strong> (k3s bundled)</td><td>HTTP/HTTPS-Routing in den Cluster</td></tr>
-<tr><td>🔑 SSO</td><td><strong>Authentik</strong></td><td>Zentraler Identity Provider für alle Dienste via OIDC</td></tr>
-<tr><td>📦 Provisioning</td><td><strong>Ansible</strong> (≥ 2.14)</td><td>Vollständig idempotent, Role-per-Concern, Vault für Secrets</td></tr>
+<tr><td>Betriebssystem</td><td><strong>Ubuntu Server 26.04 LTS</strong></td><td>Gehärtet, UFW-Firewall, NTP-synced, Swap off</td></tr>
+<tr><td>Kubernetes</td><td><strong>k3s</strong> (latest stable)</td><td>Single-Node, Traefik, CoreDNS, local-path, metrics-server</td></tr>
+<tr><td>GitOps</td><td><strong>ArgoCD</strong> + ApplicationSets</td><td>Verzeichnis unter <code>argocd/apps/</code> anlegen → pushen → deployed</td></tr>
+<tr><td>Split-DNS</td><td><strong>dnsmasq</strong> auf <code>tailscale0</code></td><td><code>*.homeserver</code> aus LAN und Tailnet auflösbar</td></tr>
+<tr><td>Web-Ansible</td><td><strong>Semaphore UI</strong></td><td>Ein-Klick-<code>git pull &amp;&amp; ansible-playbook</code> gegen das eigene LAN</td></tr>
+<tr><td>Monitoring</td><td><strong>VictoriaMetrics + Grafana</strong></td><td>Single-Node TSDB, vmagent, vmalert, Alertmanager, Dashboards</td></tr>
+<tr><td>Kubernetes-UI</td><td><strong>Headlamp</strong></td><td>Browser-Dashboard für den Cluster</td></tr>
+<tr><td>Secrets</td><td><strong>Sealed Secrets + kubeseal-webgui</strong></td><td>Verschlüsselte Secrets in Git, nur im Cluster entschlüsselbar</td></tr>
+<tr><td>Notifications</td><td><strong>Gotify</strong> + <strong>ntfy</strong></td><td>Self-hosted Push — Gotify (Android), ntfy (iOS + Android)</td></tr>
+<tr><td>Remote-Access</td><td><strong>Tailscale</strong></td><td>WireGuard-Mesh-VPN — keine Portfreigaben, keine öffentliche IP</td></tr>
+<tr><td>CI/CD intern</td><td><strong>Argo Workflows + MinIO</strong></td><td>Private CI/CD-Pipeline + S3-Artifact-Store im Cluster</td></tr>
+<tr><td>Ingress</td><td><strong>Traefik v2</strong> (k3s bundled)</td><td>HTTP/HTTPS-Routing in den Cluster</td></tr>
+<tr><td>SSO</td><td><strong>Authentik</strong></td><td>Zentraler Identity Provider für alle Dienste via OIDC</td></tr>
+<tr><td>Provisioning</td><td><strong>Ansible</strong> (≥ 2.14)</td><td>Vollständig idempotent, Role-per-Concern, Vault für Secrets</td></tr>
 </tbody>
 </table>
 
@@ -81,7 +81,7 @@ make install
 > **Referenz-Build:** Intel i5, 32 GB RAM, 512 GB NVMe.
 
 <details>
-<summary><strong>🔄 Auto-Upgrade-Details</strong></summary>
+<summary><strong>Auto-Upgrade-Details</strong></summary>
 
 `auto_upgrade: true` (Default) hält bei jedem Playbook-Run den gesamten Stack aktuell:
 
@@ -100,7 +100,7 @@ Für reproduzierbare Builds: `auto_upgrade: false` in `ansible/group_vars/all.ym
 
 ---
 
-## 🚀 Quickstart (5 Schritte)
+## Quickstart (5 Schritte)
 
 > Erstmalig auf der Maschine? Start mit **[Ubuntu-Server-Installation](docs/00-ubuntu-server-install.md)**.
 > Komplette Voraussetzungen: **[docs/02-prerequisites.md](docs/02-prerequisites.md)**.
@@ -111,7 +111,7 @@ Für reproduzierbare Builds: `auto_upgrade: false` in `ansible/group_vars/all.ym
 **1. Repo klonen**
 
 ```bash
-git clone https://github.com/PKE-Tech/capulus-core.git
+git clone https://github.com/pkr-lab/capulus-core.git
 cd capulus-core
 ```
 
@@ -158,7 +158,7 @@ Password:   <auto-generiert>
 
 ---
 
-## 📁 Repository-Layout
+## Repository-Layout
 
 <details>
 <summary><strong>Verzeichnisstruktur anzeigen</strong></summary>
@@ -178,12 +178,15 @@ capulus-core/
 │   ├── 07-troubleshooting.md         # Häufige Probleme
 │   ├── 08-semaphore.md               # Semaphore-Web-UI für Ansible
 │   ├── 09-dns-architecture.md        # Split-DNS-Design & Ausfallsicherheit
-│   ├── 11-gotify.md                  # Push-Notifications via Gotify
-│   ├── 13-argo-workflows.md          # Private CI/CD mit Argo Workflows + MinIO
-│   ├── 14-sso-authentik.md           # Single-Sign-On via Authentik
-│   ├── 15-ntfy.md                    # iOS Push-Notifications via ntfy
-│   ├── 15-cert-login.md              # Zertifikats-Authentifizierung via Traefik mTLS
-│   ├── 16-sso-alle-dienste.md        # SSO-Konfiguration für alle Dienste
+│   ├── 10-gotify.md                  # Push-Notifications via Gotify
+│   ├── 11-ntfy.md                    # iOS Push-Notifications via ntfy
+│   ├── 12-argo-workflows.md          # Private CI/CD mit Argo Workflows + MinIO
+│   ├── 13-sso-authentik.md           # Single-Sign-On via Authentik
+│   ├── 14-cert-login.md              # Zertifikats-Authentifizierung via Traefik mTLS
+│   ├── 15-sso-alle-dienste.md        # SSO-Konfiguration für alle Dienste
+│   ├── 16-hdd-storage.md             # HDD-StorageClass auf worker-0
+│   ├── 17-zammad.md                  # Zammad Helpdesk/Ticket-System
+│   ├── 18-windows-deployment.md      # Windows-PC-Deployment (PXE/USB/Ansible)
 │   └── assets/banner.svg
 ├── ansible/
 │   ├── site.yml                      # Entry-Point
@@ -217,6 +220,7 @@ capulus-core/
         ├── coredns-custom/           # Zusätzliche CoreDNS-Zonen
         ├── sealed-secrets/           # SealedSecrets-Controller
         ├── authentik/                # Authentik Single-Sign-On
+        ├── alamos-apager/            # Alarmmonitor-Kiosk-Verwaltung (ALAMOS AMweb)
         └── semaphore/                # Ansible-Web-UI
 ```
 
@@ -224,7 +228,7 @@ capulus-core/
 
 ---
 
-## 📊 Monitoring
+## Monitoring
 
 Ein schlanker VictoriaMetrics-+-Grafana-Stack lebt unter `argocd/apps/monitoring/` und wird automatisch von ArgoCD ausgerollt.
 
@@ -251,7 +255,7 @@ kubectl -n monitoring get secret monitoring-grafana \
 
 ---
 
-## 🔁 Application hinzufügen (GitOps-Weg)
+## Application hinzufügen (GitOps-Weg)
 
 ```bash
 mkdir -p argocd/apps/my-app
@@ -264,7 +268,7 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 
 ---
 
-## 🌐 Service-URLs
+## Service-URLs
 
 | Service | URL |
 |---|---|
@@ -278,18 +282,19 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 | Argo Workflows | http://argo-workflows.homeserver |
 | MinIO Console | http://minio.homeserver |
 | kubeseal-webgui | http://kubeseal-webgui.homeserver |
+| Alarmmonitor (alamos-apager) | http://alamos-apager.homeserver |
 
 ---
 
-## 🔒 Networking & Security
+## Networking & Security
 
 <table>
 <thead><tr><th>Prinzip</th><th>Umsetzung</th></tr></thead>
 <tbody>
-<tr><td>🚫 Keine öffentlichen Ports</td><td>Zugriff ausschließlich über LAN oder Tailscale-VPN</td></tr>
-<tr><td>🛡️ UFW-Firewall</td><td>Erlaubt nur SSH, HTTP/HTTPS, k3s-API, ArgoCD-NodePort, Flannel, Tailscale-UDP</td></tr>
-<tr><td>🔐 Ansible-Vault</td><td>Sensitive Secrets verschlüsselt at rest</td></tr>
-<tr><td>👁️ ArgoCD Read-only</td><td>Hat ausschließlich Read-Access auf das Git-Repo</td></tr>
+<tr><td>Keine öffentlichen Ports</td><td>Zugriff ausschließlich über LAN oder Tailscale-VPN</td></tr>
+<tr><td>UFW-Firewall</td><td>Erlaubt nur SSH, HTTP/HTTPS, k3s-API, ArgoCD-NodePort, Flannel, Tailscale-UDP</td></tr>
+<tr><td>Ansible-Vault</td><td>Sensitive Secrets verschlüsselt at rest</td></tr>
+<tr><td>ArgoCD Read-only</td><td>Hat ausschließlich Read-Access auf das Git-Repo</td></tr>
 </tbody>
 </table>
 
@@ -313,7 +318,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 
 ---
 
-## 📖 Dokumentation
+## Dokumentation
 
 | Dokument | Inhalt |
 |---|---|
@@ -333,6 +338,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [ntfy iOS-Push](docs/15-ntfy.md) | Self-hosted ntfy mit iOS APNs-Relay |
 | [Zertifikats-Auth](docs/15-cert-login.md) | Traefik mTLS Client-Zertifikate |
 | [SSO alle Dienste](docs/16-sso-alle-dienste.md) | Headlamp, Argo Workflows, MinIO via OIDC |
+| [Alarmmonitor-Kiosks](docs/20-alamos-apager.md) | Raspberry-Pi-Kiosks für ALAMOS AMweb, zentral verwaltet |
 
 ---
 

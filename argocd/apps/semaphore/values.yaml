@@ -48,6 +48,14 @@ ingress:
           pathType: Prefix
   tls: []
 
+# Zweiter Ingress ohne ForwardAuth — die semaphore_bootstrap-Ansible-Rolle
+# spricht Semaphores eigene REST-API an (kein Authentik-Session-Cookie
+# vorhanden) und braucht direkten Zugriff. semaphore-api.homeserver wird
+# vom *.homeserver-Wildcard automatisch aufgelöst.
+ingressApi:
+  enabled: true
+  host: semaphore-api.homeserver
+
 resources:
   requests:
     cpu: 100m

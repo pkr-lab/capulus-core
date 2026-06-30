@@ -1,0 +1,67 @@
+{
+  "apps": [
+    {
+      "name": "Authentik",
+      "description": "Single Sign-On & Benutzerverwaltung",
+      "url": "http://authentik.homeserver",
+      "icon": "shield",
+      "job": "authentik"
+    },
+    {
+      "name": "Grafana",
+      "description": "Monitoring-Dashboards",
+      "url": "http://grafana.homeserver",
+      "icon": "chart",
+      "job": "grafana"
+    },
+    {
+      "name": "Gotify",
+      "description": "Push-Benachrichtigungen",
+      "url": "http://gotify.homeserver",
+      "icon": "bell",
+      "job": "gotify"
+    },
+    {
+      "name": "Headlamp",
+      "description": "Kubernetes-Dashboard",
+      "url": "http://headlamp.homeserver",
+      "icon": "cube",
+      "job": "headlamp"
+    },
+    {
+      "name": "ArgoCD",
+      "description": "GitOps-Deployments",
+      "url": "http://argocd.homeserver:30080",
+      "icon": "sync",
+      "job": "argocd"
+    },
+    {
+      "name": "Semaphore",
+      "description": "Ansible-Playbooks",
+      "url": "http://semaphore.homeserver",
+      "icon": "terminal",
+      "job": "semaphore"
+    },
+    {
+      "name": "MinIO",
+      "description": "S3-Objektspeicher",
+      "url": "http://minio.homeserver",
+      "icon": "box",
+      "job": "minio"
+    },
+    {
+      "name": "Wiki.js – SOPs & Checklisten",
+      "description": "Alarm- und Ausrueckeordnung, Einsatz-Checklisten",
+      "url": "",
+      "icon": "book",
+      "comingSoon": true
+    },
+    {
+      "name": "Alamos Pager",
+      "description": "Alarmierung & aktuelle Einsaetze",
+      "url": "",
+      "icon": "siren",
+      "comingSoon": true
+    }
+  ]
+}

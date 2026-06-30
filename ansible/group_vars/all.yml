@@ -50,7 +50,7 @@ argocd_version: ""
 argocd_namespace: argocd
 argocd_server_insecure: true
 # Git repo ArgoCD pulls from. Must be reachable by argocd-repo-server pod.
-argocd_repo_url: "https://github.com/PKE-Tech/capulus-core.git"
+argocd_repo_url: "https://github.com/pkr-lab/capulus-core.git"
 # Branch/tag/SHA ArgoCD tracks. Pinned to `main` (the GitOps branch) instead of
 # the ambiguous `HEAD` for reproducible bootstraps; set a tag or SHA to freeze.
 argocd_repo_revision: main
@@ -147,6 +147,9 @@ semaphore_projects:
         content: |
           [second_servers]
           worker-0 ansible_host=192.168.178.95
+
+          [homeservers]
+          homeserver ansible_host=192.168.178.94
     templates:
       - name: "Deploy worker-0"
         playbook: ansible/worker-0.yml
@@ -159,6 +162,36 @@ semaphore_projects:
         template: "Deploy worker-0"
         cron: "0 6 * * *"
         active: true
+
+  - name: alarm-kiosks
+    description: >-
+      Alarmmonitor-Kiosks (Raspberry Pi, ALAMOS AMweb) einrichten — siehe
+      docs/20-alamos-apager.md.
+    repository:
+      name: home-server-git
+      url: "{{ argocd_repo_url }}"
+      branch: main
+    environments:
+      - "{{ semaphore_default_environment }}"
+    inventories:
+      - name: raspberry_pis
+        type: static
+        ssh_key: semaphore-ssh-key
+        content: |
+          [raspberry_pis]
+          # Pi-Hostnamen hier eintragen, sobald vorhanden (Stationsname muss
+          # zu einem Key im SealedSecret alamos-apager-stations passen):
+          # geraetehaus ansible_host=192.168.178.110 alamos_kiosk_station=geraetehaus
+    templates:
+      - name: "Deploy Alarmmonitor Kiosks"
+        playbook: ansible/alarm-kiosks.yml
+        inventory: raspberry_pis
+        environment: default-env
+        vault_key: vault-password
+        description: "Chromium-Kiosk + Heartbeat-Timer auf den Alarmmonitor-Pis."
+    # Bewusst kein Schedule: anders als bei home-server/worker-0 soll ein
+    # Re-Run hier nur manuell per Knopfdruck laufen, nicht automatisch nachts
+    # — siehe docs/20-alamos-apager.md.
 
 # ---- Scanner / Paperless Ingestion ------------------------
 # Fujitsu USB-Scanner direkt am Home-Server; scanbd hört auf den
@@ -186,7 +219,7 @@ scanner_smb_password: !vault |
 
 # ---- Gotify push notifications ----------------------------
 # Cluster-App: argocd/apps/gotify (Helm-Chart). Workflow + kubeseal-Schritte
-# stehen in docs/11-gotify.md.
+# stehen in docs/10-gotify.md.
 #
 # 1) Admin-Passwort für das initiale Login (SealedSecret im Cluster):
 #    ansible-vault encrypt_string 'DEIN_ADMIN_PW' --name 'gotify_admin_password'

@@ -1,0 +1,12 @@
+---
+- name: Restart alamos kiosk
+  ansible.builtin.systemd:
+    name: alamos-kiosk.service
+    daemon_reload: true
+    state: restarted
+
+- name: Restart alamos heartbeat timer
+  ansible.builtin.systemd:
+    name: alamos-heartbeat.timer
+    daemon_reload: true
+    state: restarted

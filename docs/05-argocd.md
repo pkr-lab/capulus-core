@@ -138,6 +138,8 @@ argocd/apps/
 ├── headlamp/            → Web-basiertes Kubernetes-Dashboard
 ├── kubeseal-webgui/     → Browser-UI, die Werte mit dem
 │                          SealedSecrets-Public-Key des Clusters verschlüsselt
+├── le-homeserver/       → Eigenes Admin-Dashboard-UI: admin.homeserver
+│                          (App-Kurzlinks, Health-Status + Auslastung aus Grafana)
 ├── monitoring/          → VictoriaMetrics + Grafana + node-exporter +
 │                          kube-state-metrics + Alertmanager
 ├── sealed-secrets/      → bitnami-labs SealedSecrets-Controller

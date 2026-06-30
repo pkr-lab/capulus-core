@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body class="theme-admin">
+  <main class="page page--centered">
+    <section class="forbidden">
+      <span class="forbidden__icon"><%- icon('shield') %></span>
+      <h1>Kein Zugriff</h1>
+      <p>Diese Seite ist der Authentik-Gruppe „<%= adminGroup %>“ vorbehalten.</p>
+      <p>Angemeldet als <strong><%= user.name %></strong>. Falls das nicht stimmt, melde dich an anderer Stelle erneut an.</p>
+      <a class="button" href="/outpost.goauthentik.io/sign_out">Abmelden</a>
+    </section>
+  </main>
+</body>
+</html>

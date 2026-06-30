@@ -1,0 +1,13 @@
+<header class="topbar">
+  <div class="topbar__brand">
+    <span class="topbar__org">DLRG OG Andernach</span>
+    <span class="topbar__divider">/</span>
+    <span class="topbar__area"><%= subtitle %></span>
+  </div>
+
+  <div class="topbar__user">
+    <span class="topbar__avatar"><%= (user.name || '?').charAt(0).toUpperCase() %></span>
+    <span class="topbar__name"><%= user.name %></span>
+    <a class="topbar__logout" href="/outpost.goauthentik.io/sign_out" title="Abmelden"><%- icon('logout') %></a>
+  </div>
+</header>

@@ -1,0 +1,101 @@
+---
+# ============================================================
+# Wiki.js — wrapper values
+#
+# Secrets-Block (SealedSecret):
+#   DB-Passwort mit kubeseal versiegeln und hier eintragen.
+#   Anleitung: docs/20-wikijs.md → Abschnitt "Secrets versiegeln"
+# ============================================================
+
+secrets:
+  enabled: true
+  name: wikijs-secrets
+  # Versiegeln: echo -n 'WERT' | kubeseal --raw --namespace wikijs \
+  #             --name wikijs-secrets --controller-namespace sealed-secrets \
+  #             --controller-name sealed-secrets-controller
+  # Derselbe Wert wird von Postgres (POSTGRES_PASSWORD) und Wiki.js
+  # (DB_PASS) gelesen — nur EIN kubeseal-Aufruf nötig.
+  encryptedDbPassword: "AgCLGVPqsZ/s1d8rdVlRLCP+QvBhtkSRHUFX93VKRqhkKLuuh0jLs1cX7AQQGC7eE9Ey4brLPKCBI/UlhUWLVH7B/yZnuBo42XcWv3Mm8iw51qG6KDcBqf5CaMC37pNai9GPHwPWhQOwYnbyyoXjJQY+5Z6VT33+qWp2IHl7/wpaX+7JR22d1a9TIBtie/X9XgvjUb+ERgmJM+a4FBhRPfug+ehRv/XpGE+2QdLcPjs7tEJZai0/e28o/U8ob+4CJZPXM5yqrsKO0zZvUUxLM05I1Ov1nH5+Sxo0n1vXru+ki9xarRqcKKuNaXfro0oaK7F1c2jhRhCbGd5sD+ggtL2l7YSssfqoRxpL1U9ootruHd2nz+joQTxuGtISmzWc0DQxdVnxpv6ZwZ/PDdqn4TWX7q144Kz9ODBNsADRzZxfCMJTUqkZjb3zLvdgqMVWykbWnIkYmOIPdAL0X3C3w2RjtTjGQIYf682uXZ0wZyd0bCkYOK1BRWCOS/tw4MGpjDWjF6RclTQ0Z1WfeI7MgNC+re1lCFX2uKZ4zziF8zTR0w8qGnzUL5bSD/fclK+5pDYjuYZaegvEgUM7AHqdlnKgjGfb+HwWitn3bLk/ctR/k5ZdUQaGmvCGdwDzgWTkrk2zI6emLuJCloDM4y5JXYSVuJYBs7BxgX+AoPLZVYz9tuFnaxp/M3VpT4t4EzHriJQRzfJrFp9Yb1Ek/FeVgcKzcZ50kd1Jg8t/KSiVlFYkew=="
+
+# ============================================================
+# Wiki.js App
+# ============================================================
+wikijs:
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/requarks/wiki
+    pullPolicy: IfNotPresent
+    # Pinned für Reproduzierbarkeit. Releases: https://github.com/requarks/wiki/releases
+    tag: "2.5.314"
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+
+  ingress:
+    enabled: true
+    className: traefik
+    annotations:
+      traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    hosts:
+      - host: wiki.homeserver
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+  # Wiki.js speichert Seiten UND Assets vollständig in PostgreSQL (siehe
+  # docs/20-wikijs.md) — der App-Pod selbst braucht kein PVC und keine
+  # NodeAffinity, im Gegensatz zu Postgres unten.
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+
+# ============================================================
+# PostgreSQL (eigenes Deployment, kein Bitnami-Subchart)
+# Persistenz auf HDD-StorageClass + worker-0 (docs/18-hdd-storage.md)
+# ============================================================
+postgresql:
+  image:
+    repository: postgres
+    pullPolicy: IfNotPresent
+    tag: "16-alpine"
+
+  database: wiki
+  username: wikijs
+
+  service:
+    port: 5432
+
+  persistence:
+    enabled: true
+    storageClassName: hdd
+    size: 20Gi
+    accessMode: ReadWriteOnce
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+  # Pflicht: hdd-PVCs binden nur auf worker-0 (siehe docs/18-hdd-storage.md)
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                  - worker-0

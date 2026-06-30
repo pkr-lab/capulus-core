@@ -1,0 +1,16 @@
+# Managed by Ansible (alamos_kiosk role) — do not edit manually.
+[Unit]
+Description=ALAMOS Alarmmonitor Kiosk ({{ alamos_kiosk_station }})
+After=graphical.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ alamos_kiosk_user }}
+Environment=DISPLAY=:0
+ExecStart=/usr/local/bin/alamos-kiosk-start.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target

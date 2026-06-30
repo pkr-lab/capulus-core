@@ -1,0 +1,108 @@
+---
+# ============================================================
+# alamos_kiosk role — Raspberry-Pi-Alarmmonitor (ALAMOS AMweb)
+# ============================================================
+# Macht den Pi zu einem reinen Kiosk-Display: Chromium zeigt die
+# Cluster-Redirect-URL (argocd/apps/alamos-apager), die echte AMweb-URL und
+# alle Heartbeat/Alerting-Logik bleiben im Cluster. Ein systemd-Timer pingt
+# periodisch den Heartbeat-Endpunkt, damit ein Ausfall zentral per ntfy
+# erkannt wird (siehe docs/20-alamos-apager.md).
+# ============================================================
+
+- name: Sicherstellen dass alamos_kiosk_station gesetzt ist
+  ansible.builtin.assert:
+    that:
+      - alamos_kiosk_station is defined
+      - alamos_kiosk_station | length > 0
+    fail_msg: >-
+      alamos_kiosk_station ist nicht gesetzt. Pro Host in
+      ansible/inventory/hosts.yml als Host-Var setzen (muss zu einem Key im
+      SealedSecret alamos-apager-stations passen).
+  when: alamos_kiosk_enabled | bool
+
+- name: Kiosk-Pakete installieren
+  ansible.builtin.apt:
+    name:
+      - chromium-browser
+      - unclutter
+      - x11-xserver-utils
+      - curl
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: alamos_kiosk_enabled | bool
+
+- name: Kiosk-Start-Skript deployen
+  ansible.builtin.template:
+    src: alamos-kiosk-start.sh.j2
+    dest: /usr/local/bin/alamos-kiosk-start.sh
+    owner: root
+    group: root
+    mode: "0755"
+  when: alamos_kiosk_enabled | bool
+  notify: Restart alamos kiosk
+
+- name: Kiosk-systemd-Service deployen
+  ansible.builtin.template:
+    src: alamos-kiosk.service.j2
+    dest: /etc/systemd/system/alamos-kiosk.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: alamos_kiosk_enabled | bool
+  notify: Restart alamos kiosk
+
+- name: Heartbeat-Skript deployen
+  ansible.builtin.copy:
+    src: alamos-heartbeat.sh
+    dest: /usr/local/bin/alamos-heartbeat.sh
+    owner: root
+    group: root
+    mode: "0755"
+  when: alamos_kiosk_enabled | bool
+  notify: Restart alamos heartbeat timer
+
+- name: Heartbeat-Environment-Datei deployen
+  ansible.builtin.template:
+    src: alamos-heartbeat.env.j2
+    dest: /etc/alamos-heartbeat.env
+    owner: root
+    group: root
+    mode: "0644"
+  when: alamos_kiosk_enabled | bool
+  notify: Restart alamos heartbeat timer
+
+- name: Heartbeat-systemd-Service + Timer deployen
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - alamos-heartbeat.service
+    - alamos-heartbeat.timer
+  when: alamos_kiosk_enabled | bool
+  notify: Restart alamos heartbeat timer
+
+- name: Kiosk-Service und Heartbeat-Timer aktivieren
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    daemon_reload: true
+    enabled: true
+    state: started
+  loop:
+    - alamos-kiosk.service
+    - alamos-heartbeat.timer
+  when: alamos_kiosk_enabled | bool
+
+- name: Kiosk-Service und Heartbeat-Timer deaktivieren (alamos_kiosk_enabled false)
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+  loop:
+    - alamos-kiosk.service
+    - alamos-heartbeat.timer
+  when: not (alamos_kiosk_enabled | bool)
+  failed_when: false
