@@ -69,6 +69,10 @@ zammad:
     # Für Produktionseinsatz mit großem Ticketvolumen ES aktivieren.
     elasticsearch:
       enabled: false
+      # initialisation ist standardmäßig true, unabhängig von enabled — ohne
+      # diese Zeile versucht der zammad-init-Job trotzdem, ein (nicht
+      # vorhandenes) Elasticsearch zu initialisieren, und der Job schlägt fehl.
+      initialisation: false
 
     # ---- Memcached (aktiv — Standard-Cache) -----------------
     memcached:
@@ -126,10 +130,10 @@ zammad:
     websocket:
       resources:
         requests:
-          cpu: 25m
-          memory: 128Mi
-        limits:
+          cpu: 50m
           memory: 256Mi
+        limits:
+          memory: 512Mi
 
     # ---- Init-Container ------------------------------------
     initContainers:
