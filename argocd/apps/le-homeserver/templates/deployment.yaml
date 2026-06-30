@@ -39,6 +39,8 @@ spec:
               value: {{ .Values.grafana.url | quote }}
             - name: GRAFANA_DATASOURCE_UID
               value: {{ .Values.grafana.datasourceUid | quote }}
+            - name: GRAFANA_NODE_LABELS
+              value: {{ .Values.grafana.nodeLabels | toJson | quote }}
             {{- if .Values.grafana.tokenSecret.enabled }}
             - name: GRAFANA_TOKEN
               valueFrom:

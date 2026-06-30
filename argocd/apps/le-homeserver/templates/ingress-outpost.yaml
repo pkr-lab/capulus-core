@@ -1,4 +1,4 @@
-# Separater Ingress für den Authentik-Outpost-Pfad auf beiden Hosts.
+# Separater Ingress für den Authentik-Outpost-Pfad auf dem Admin-Host.
 # /outpost.goauthentik.io/ muss zum Authentik-Server zeigen (nicht zur App),
 # damit der ForwardAuth-Login-/Logout-Flow korrekt zurückleiten kann.
 # Kein ForwardAuth-Middleware hier — Authentik bedient diesen Pfad selbst.
@@ -12,8 +12,7 @@ metadata:
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   rules:
-    {{- range list .Values.ingress.einsatzHost .Values.ingress.adminHost }}
-    - host: {{ . | quote }}
+    - host: {{ .Values.ingress.adminHost | quote }}
       http:
         paths:
           - path: /outpost.goauthentik.io/
@@ -23,4 +22,3 @@ spec:
                 name: authentik-server-alias
                 port:
                   number: 80
-    {{- end }}
