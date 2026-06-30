@@ -147,6 +147,9 @@ semaphore_projects:
         content: |
           [second_servers]
           worker-0 ansible_host=192.168.178.95
+
+          [homeservers]
+          homeserver ansible_host=192.168.178.94
     templates:
       - name: "Deploy worker-0"
         playbook: ansible/worker-0.yml
