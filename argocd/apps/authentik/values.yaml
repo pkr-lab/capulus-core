@@ -108,10 +108,15 @@ authentik:
       #       - authentik.homeserver
       #     secretName: authentik-tls
 
+    # serviceMonitor.enabled bleibt false: erzeugt eine ServiceMonitor-CRD
+    # (monitoring.coreos.com/v1), die in diesem Cluster nicht installiert ist
+    # (nur VictoriaMetrics-CRDs) -> ArgoCD-Sync würde fehlschlagen.
+    # Stattdessen scrapt eine handgeschriebene VMServiceScrape
+    # (templates/vmservicescrape.yaml) denselben Metrics-Service.
     metrics:
       enabled: true
       serviceMonitor:
-        enabled: true
+        enabled: false
 
   # ---- Worker (Background-Tasks) --------------------------
   worker:
