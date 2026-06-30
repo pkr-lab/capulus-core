@@ -198,6 +198,14 @@ zammad:
       enabled: true
       existingSecret: zammad-secrets
       existingSecretPasswordKey: redis-password
+    # Chart-Default setzt updateStrategy.rollingUpdate.maxUnavailable: 1, aber
+    # dieser k3s-Cluster hat das Feature-Gate MaxUnavailableStatefulSet nicht
+    # aktiviert — der API-Server verwirft das Feld bei jedem Apply, wodurch
+    # ArgoCD die Ressource dauerhaft als OutOfSync anzeigt. Per "null"
+    # entfernen (Helm-Konvention zum Löschen verschachtelter Default-Keys).
+    updateStrategy:
+      rollingUpdate:
+        maxUnavailable: null
     persistence:
       storageClass: hdd
       size: 8Gi
