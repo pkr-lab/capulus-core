@@ -81,7 +81,7 @@ services:
       description: "Single Sign-On & Benutzerverwaltung"
       url: "http://authentik.homeserver"
       icon: shield
-      job: authentik
+      job: authentik-server-metrics
     - name: Grafana
       description: "Monitoring-Dashboards"
       url: "http://grafana.homeserver"
