@@ -9,8 +9,7 @@ function loadServices() {
   const raw = fs.readFileSync(sourcePath, 'utf8');
   const parsed = JSON.parse(raw);
   return {
-    einsatz: parsed.einsatz || [],
-    admin: parsed.admin || [],
+    apps: parsed.apps || [],
   };
 }
 

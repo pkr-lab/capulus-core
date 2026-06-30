@@ -7,4 +7,4 @@ metadata:
     {{- include "le-homeserver.labels" . | nindent 4 }}
 data:
   services.json: |
-    {{- dict "einsatz" .Values.services.einsatz "admin" .Values.services.admin | toJson | nindent 4 }}
+    {{- dict "apps" .Values.services.apps | toJson | nindent 4 }}

@@ -1,7 +1,7 @@
 {
   "name": "le-homeserver-ui",
   "version": "1.0.0",
-  "description": "Einsatz- und Admin-Dashboard fuer den DLRG-Homeserver",
+  "description": "Admin-Dashboard fuer den DLRG-Homeserver",
   "private": true,
   "type": "commonjs",
   "main": "src/server.js",
