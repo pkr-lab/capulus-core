@@ -18,8 +18,8 @@ secrets:
   # Beide Keys müssen dasselbe Passwort enthalten:
   #   postgresql-pass      → Key für den Zammad-App-Container
   #   postgresql-password  → Key für den Bitnami-PostgreSQL-Sub-Chart
-  encryptedPostgresPass: "AgDA8QlR5j/WiavMtZzPcm+EpVmev8Rrf5uSVwanJNBC/+sf6SaRiMcmB8a5cfai54OQ7t0QLIVrGQF/Xk9wQKoz2E/KknD0p4w9k95t5HiZlv7D0+Pb7xzMd6FkHeO4EhVCKosNYlB0p6GcrYsG1U/OnefOSDd6n4t7scKkDd8PcAWyQS1WGLv9rr/qQh/m6XVofg7HxjAlK8/K/88ESW1JMjb2w5+52AOOHDp+p5MQ8KNidfVkY45NVtmE6rGp7FmYVVK9KxXNRRO8w1ytteIZpIluIBa7lwexOKFe4rell0hrd0FTu2JuPJMEJYcqf330f6cQvyQO5+aHD0SnixLhsrcV6Y/ST3diQBvcxz6Kf5hN4rIJL5UshvQ39pyNUWHS5nJc+3CERpBh0gNyzYMcv3XIaVf0kvrNtIlEz2hGrTb9/CVZgrt5lQD8GV3tJ+2ga7rhMAlkgiqal7ha3NYVivmQ+Dej9NqOQyOqzl6gsyWoTrIIsdY9ubRLUBpxT9pzppnAaqg+DPKxiQ5qFBUt5349ENl5JXV9Zs8xoHUIFWodSuQKfJjyigb6TFbAw7Q0ogIY9F/BrzIqay8PrWY4s+zB2uW9o4cqEm+4T0F4stUzoy0oyYA3RN+Vp7loHO3YiEIvSsP/VWdzmsDknBPLhM4j69oypXbDQJ+7tKSu72pYhdN5EqcSGTQtb09Gs2WSUw+PwPHEwVkjEWTHs9XwwsZhlUdW6XAATErYw6VIag=="
-  encryptedPostgresPassword: "AgCe2OiDx7mtDZArgV3O2kkAUlVWJaEnd9pFKwjE+NRdb2F4EOrPBfM/jbNP/PGLXFocubH36w/+sivYo3BPits0VvgP9UFgQhNNG0SETSBlthe6CEKMZ6AEGv/R1SmsdGH49WbBptkf2ySmp2RG/BhYojPDRVmcq0+cWKjcmKVVSeghCCMEGQO8qtpz5+2UXcFhJZaysd+EirGIx36cU2UyyjEg6IKucg+Rx8wNfy1Te3RwgDRxAaaT1l5A/jM3HNAQB/9/JmQdOnkJk46J/5CZsj25Vlv9Fb2wZHsOgW4Gqqlsz1/ROHo4ls/kFocOUHhbHcgPd4AN0nNptappiK+MTIZ34ljv/NhdntPLwHP/6cW72JBvG6RBxaJVy1j9FylvgRnOl+adwbY70NeMrwzRAm2YU4N2BRGOpGAPJHeEPdsdpc/B9eBCrKAH/oWAsAX9wg/dGs2gXE+zvBsoJIGi0jVAmMnWQJMt2z07V3JdXbTzcryvXFDbGqH7q/yJgVOp+pRXxssBXvgUUHO2UFzbjYzE3baXfrIey9rXm0RfzeMFTJJTCBYV1YqZ6XsvdE4qwPBWYrvZ+Ft/fhtw+ouHmT/Am9xq2bqNY4qX58xxL/WOno5lH9dlo6v4QoxZwJ84XjNj2W58rBHCzVsyc8VFOooQU+HEKF/7B7bT6n1bBeRDzSi2qzGNHzBN8lqIW96L++MV6QfaFcR/ib6UH/smVfmKisn35iAFxiN37QbpGQ=="
+  encryptedPostgresPass: "AgC3wyHBZ7SZvjsOZWAX4jslBec4RrFtcGTjEzMTXuW2tWVqf4Mtl72yZjfi120Rk2lV4ncRFBn4t+tsOYzsh5svLH4xPHddTNSzH7S+3Kwr9wCtnxCKiEpdeIRB9BVjqnz5Z0OmEhAaqHtCC9ZjIcJrKKGgFmc46gw4icVcbm3zINI1ofc5MpdpARYdKXmEUdwjC254LqWonXvcFfjXjloZljGWTaSp+uCOwlf9z+ACCgljLeC78IWhKOR8Jb/ydfzSRD5vSZLGtquz9lnEeRbd/dpwyNVYlv4IWzQeOAvXrg8aGCtAd73ltr7gqorGdn3RTgb959/KRigE0hXehCLvJT/7xn5KXWTQMiulM1s5Vtj/3Yk7SW33FOqvsBeSO4+3PcK/yBZgpys5zad1b07O3KcmcZ+IOOZ6rn1SNOWB7D/dgFUMv6zf/JfX3ko80ra483z/2t82ll2uNc6waN2zi8Dtgc21pe61VRWRZbeo0BQQoLhdysvKeIj84uWHp0vwVz3PwHYSt4vNfNS586zbu2sldcHHTYbArp9VG+rKHcHyZKrgryswA/jrJ22lSMo7SS13GvHIc2+NG30/Id4HbkgIWRFhj2QBXgYXzrgpslgV7qS7f9QlmMicoeFjLBwP1czlb4Z1t72fAnecsXImBbQVUFb0QYTVj6+8D9lCL4/SmEJnUanaA2XtKM4fWe43cL/MbOcRXjHoP/EGxEyPB9jy2scllXnw1fl8cBq5tg=="
+  encryptedPostgresPassword: "AgAm6eHdm20h1r+R6A6O96qUCNpyJQnvaEOGCRXoEwb6saOFV28nDuodHAdZOBIXhfUkeXElpUArFjAAY0cMSRsQfq8igNj1PnaNDGXhzxeigjkLHk/1V1L4dHtLB6M9ljmtMiBzseZRaAZSW6K1vkaQAe/OZS2L2ZpX2rH73xFN9gRjTaPIfXaVop7ggizgaX2NAcnN8yaZ0Ew7ZoafE832AewbGasWKJ9k0UF4ztwGHFGYhMaP54wFaaM2vXa9vI6IiiSyg3mtV1ghNj7YPbz+cp2963WR/pp8ABFidmmiODAzlg0JuN7tqIo7MAyeNKzXy9i8k3qm8KPl0MKVZGzDo/dBVfwIVQqsyZnybRO210qjkIcaXOb+t2wIJBfqjLMhqXnmiK/jHc5cUbm/sTTyWHw2uwdUebvjdChzFelZvtYC+kHJkdimrET7yT5a5B7bZeaozV2gvfGVpPUXAHP/Qv0mZHoPq79DfwvY2i53TTlajWLX3I+AV0b8XB2cIPsN7pz9rfWgbzS7APv9JjtE+7K51d86hHdhAhZ6BCRvpjbr/ufOyuZpAIei6VgdKFMY87dxOfyrbyYu4q59tK687JVaYIV2B5xVYDEUpXujV7GMxjp3sb5k0O+oetj9VhdrUqjYsDjBIGlju+A+2yOwSDTSqQ+NuxErXwjdVNTnNt2s3nMDO6DqcbN3JY9acCXVfJ2AtHupA4E3uo0fmhnQ2O36PSTC2+l0X864w6Q6Hg=="
 
 # ============================================================
 # Sub-Chart: zammad/zammad v16.4.1
@@ -135,10 +135,10 @@ zammad:
       postgresql:
         resources:
           requests:
-            cpu: 25m
-            memory: 64Mi
+            cpu: 50m
+            memory: 256Mi
           limits:
-            memory: 128Mi
+            memory: 512Mi
 
   # ---- PostgreSQL Sub-Chart (Bitnami) -----------------------
   # Speichert Tickets + Attachments (storageVolume.enabled: false) → wächst
