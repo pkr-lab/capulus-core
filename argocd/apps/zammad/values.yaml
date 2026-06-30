@@ -20,6 +20,8 @@ secrets:
   #   postgresql-password  → Key für den Bitnami-PostgreSQL-Sub-Chart
   encryptedPostgresPass: "AgC3wyHBZ7SZvjsOZWAX4jslBec4RrFtcGTjEzMTXuW2tWVqf4Mtl72yZjfi120Rk2lV4ncRFBn4t+tsOYzsh5svLH4xPHddTNSzH7S+3Kwr9wCtnxCKiEpdeIRB9BVjqnz5Z0OmEhAaqHtCC9ZjIcJrKKGgFmc46gw4icVcbm3zINI1ofc5MpdpARYdKXmEUdwjC254LqWonXvcFfjXjloZljGWTaSp+uCOwlf9z+ACCgljLeC78IWhKOR8Jb/ydfzSRD5vSZLGtquz9lnEeRbd/dpwyNVYlv4IWzQeOAvXrg8aGCtAd73ltr7gqorGdn3RTgb959/KRigE0hXehCLvJT/7xn5KXWTQMiulM1s5Vtj/3Yk7SW33FOqvsBeSO4+3PcK/yBZgpys5zad1b07O3KcmcZ+IOOZ6rn1SNOWB7D/dgFUMv6zf/JfX3ko80ra483z/2t82ll2uNc6waN2zi8Dtgc21pe61VRWRZbeo0BQQoLhdysvKeIj84uWHp0vwVz3PwHYSt4vNfNS586zbu2sldcHHTYbArp9VG+rKHcHyZKrgryswA/jrJ22lSMo7SS13GvHIc2+NG30/Id4HbkgIWRFhj2QBXgYXzrgpslgV7qS7f9QlmMicoeFjLBwP1czlb4Z1t72fAnecsXImBbQVUFb0QYTVj6+8D9lCL4/SmEJnUanaA2XtKM4fWe43cL/MbOcRXjHoP/EGxEyPB9jy2scllXnw1fl8cBq5tg=="
   encryptedPostgresPassword: "AgAm6eHdm20h1r+R6A6O96qUCNpyJQnvaEOGCRXoEwb6saOFV28nDuodHAdZOBIXhfUkeXElpUArFjAAY0cMSRsQfq8igNj1PnaNDGXhzxeigjkLHk/1V1L4dHtLB6M9ljmtMiBzseZRaAZSW6K1vkaQAe/OZS2L2ZpX2rH73xFN9gRjTaPIfXaVop7ggizgaX2NAcnN8yaZ0Ew7ZoafE832AewbGasWKJ9k0UF4ztwGHFGYhMaP54wFaaM2vXa9vI6IiiSyg3mtV1ghNj7YPbz+cp2963WR/pp8ABFidmmiODAzlg0JuN7tqIo7MAyeNKzXy9i8k3qm8KPl0MKVZGzDo/dBVfwIVQqsyZnybRO210qjkIcaXOb+t2wIJBfqjLMhqXnmiK/jHc5cUbm/sTTyWHw2uwdUebvjdChzFelZvtYC+kHJkdimrET7yT5a5B7bZeaozV2gvfGVpPUXAHP/Qv0mZHoPq79DfwvY2i53TTlajWLX3I+AV0b8XB2cIPsN7pz9rfWgbzS7APv9JjtE+7K51d86hHdhAhZ6BCRvpjbr/ufOyuZpAIei6VgdKFMY87dxOfyrbyYu4q59tK687JVaYIV2B5xVYDEUpXujV7GMxjp3sb5k0O+oetj9VhdrUqjYsDjBIGlju+A+2yOwSDTSqQ+NuxErXwjdVNTnNt2s3nMDO6DqcbN3JY9acCXVfJ2AtHupA4E3uo0fmhnQ2O36PSTC2+l0X864w6Q6Hg=="
+  # redis-password → Key für Zammad-App-Container + CloudPirates-Redis-Sub-Chart (gemeinsames Passwort)
+  encryptedRedisPassword: "AgDMea3b4MoAFfa0yf9MtmtY7uKFBZcIc7gdkj4/nTHKtFaePimlkRT7ExiwzQp6MD86Wd1EAtU9vYLkgRRcgiCXwOEbDM1JdqBno92da1FVceQ4/08POTbcZ4SPRIYJlu/1+kSAbOiekBgjEmnwk3Vp4DyGj4at75XRdYND6eTbt+MF9wg7XnC6EkjADsd7vukuyBhNpj0biKnbv+Uvn4SCxDyw3eifGzK/MMgKlQhdBr6iG73VSpl8pg9tWvZxD8K897x/8IC0sjwNFQyueIRf0b2GkEq4BFxzEJgbgzcZer0GdKNnHkkXCxpg8tOshioR16k/yy4H6jwYxGkn8XEBhJzNbbqobFkQFISmL+ptQMdZM3/X8WvsNMwqrRr4/mstwmTOjDgNwGSEFGMK5pJ6QKqqRTu1VmSaQdpiBvMff1vPkQXm1EFo5g+sG2kFyJYK3/hbMVm3psGPqlBSJ86/IfY+Kktwld5hE5sbZ4cAO68Rm1+7lDHgJllcqBPNbfEJbbA8XDZbisv+6mV43bkMvOYx1vMrOctylNQYRN9L4i0qEamA1ZRexpSvnxxX2YrEJPPK3aDA1xVXLfkKDwffs4xtRC7c/t5+Bo6OBYWfMjrDHamyFU4v0wD63yXyyEz1poBeCNfE8TNzrOKjUcH5WYUd/L/4E7eQG0qK3qXZ5U5m/yLKufNcMCsa3enfyaL7G/WUs0xuenr+c80MOLyC/oCJwe4OY2yAf20iOaeW1g=="
 
 # ============================================================
 # Sub-Chart: zammad/zammad v16.4.1
@@ -50,9 +52,15 @@ zammad:
       useExisting: true
       secretKey: postgresql-pass
       secretName: zammad-secrets
-    # Redis läuft ohne Authentifizierung (Home-Lab-Setup)
+    # Redis-Passwort aus existierendem SealedSecret (zammad-secrets[redis-password]).
+    # Hinweis: Passwortloses Redis ist mit diesem Chart nicht nutzbar — REDIS_URL
+    # wird immer als "redis://:$(REDIS_PASSWORD)@..." gebaut; ohne definierte
+    # REDIS_PASSWORD-Var landet der wörtliche String "$(REDIS_PASSWORD)" im
+    # Passwort-Feld und Zammad sendet ein AUTH-Kommando an ein Redis ohne Auth.
     redis:
-      useExisting: false
+      useExisting: true
+      secretKey: redis-password
+      secretName: zammad-secrets
 
   # ---- Zammad App + Sub-Chart Konfiguration ------------------
   zammadConfig:
@@ -77,7 +85,7 @@ zammad:
     # ---- Redis (intern, CloudPirates OCI Sub-Chart) ---------
     redis:
       enabled: true
-      # Redis ohne Authentifizierung für das Home-Lab
+      # pass leer lassen → kommt aus secrets.redis (useExisting: true)
       pass: ""
 
     # ---- Datei-Ablage (deaktiviert → Dateien in DB) ---------
@@ -140,18 +148,6 @@ zammad:
           limits:
             memory: 512Mi
 
-  # ---- REDIS_URL-Override -------------------------------------
-  # Bug im zammad-Chart: REDIS_URL wird immer als "redis://:$(REDIS_PASSWORD)@..."
-  # gebaut. Ist zammadConfig.redis.pass leer (Auth deaktiviert), wird die
-  # REDIS_PASSWORD-Env-Var gar nicht definiert → "$(REDIS_PASSWORD)" landet als
-  # wörtlicher String im Passwort-Feld, wodurch Zammad ein AUTH-Kommando an ein
-  # Redis ohne Passwortschutz sendet (Connection wird abgelehnt).
-  # extraEnv wird nach dem chart-eigenen env-Block angehängt und überschreibt
-  # REDIS_URL für alle Komponenten (railsserver, scheduler, websocket, init-Job).
-  extraEnv:
-    - name: REDIS_URL
-      value: "redis://zammad-redis:6379"
-
   # ---- PostgreSQL Sub-Chart (Bitnami) -----------------------
   # Speichert Tickets + Attachments (storageVolume.enabled: false) → wächst
   # potenziell groß. Läuft daher auf der HDD-StorageClass (docs/16-hdd-storage.md)
@@ -192,9 +188,12 @@ zammad:
   # Persistenzspeicher auf der Homeserver-SSD landet.
   redis:
     auth:
-      # Kein Passwort im Home-Lab
-      enabled: false
-      password: ""
+      # Passwort aus existierendem SealedSecret (zammad-secrets[redis-password]).
+      # Passwortloses Redis funktioniert mit dem zammad-Chart nicht zuverlässig,
+      # siehe Kommentar bei zammad.secrets.redis weiter oben.
+      enabled: true
+      existingSecret: zammad-secrets
+      existingSecretPasswordKey: redis-password
     persistence:
       storageClass: hdd
       size: 8Gi
