@@ -145,12 +145,14 @@ zammad:
           limits:
             memory: 512Mi
       postgresql:
+        # postgresql-init/-post führen die volle Rails-App aus (DB-Migrationen,
+        # Locale-Sync) — vergleichbare Last wie railsserver, daher gleiches Limit.
         resources:
           requests:
             cpu: 50m
             memory: 256Mi
           limits:
-            memory: 512Mi
+            memory: 1Gi
 
   # ---- PostgreSQL Sub-Chart (Bitnami) -----------------------
   # Speichert Tickets + Attachments (storageVolume.enabled: false) → wächst
