@@ -1,25 +1,21 @@
-# Eigenes Dashboard-UI: le.homeserver (Einsatz) & admin.homeserver (Admin)
+# Eigenes Admin-Dashboard-UI: admin.homeserver
 
 Dieses Repo enthält eine selbst gebaute Dashboard-UI
 (`apps/le-homeserver-ui/`, deployed über `argocd/apps/le-homeserver/`), die
-zwei Einstiegsseiten bereitstellt:
+unter `admin.homeserver` (nur Gruppe "authentik Admins") eine einzige
+Einstiegsseite bereitstellt: Kurzlinks zu allen deployten Apps, Live-Health-
+Status pro App sowie eine Auslastungs-Übersicht (CPU/RAM/Disk/Temperatur je
+Node) — beides live aus Grafana.
 
-| Host | Zielgruppe | Inhalt |
-|---|---|---|
-| `le.homeserver` | alle eingeloggten Mitglieder | Einsatz-Dashboard: Navigation zu Grafana, Wiki.js, Alamos Pager |
-| `admin.homeserver` | nur Gruppe "authentik Admins" | Admin-Dashboard: alle Apps + Live-Health-Status aus Grafana |
-
-Beide Hosts laufen als **ein** Deployment/Pod (`le-homeserver-ui`,
-Namespace `le-homeserver`) mit zwei separaten `Ingress`-Ressourcen. Die
-Zugriffstrennung passiert in Authentik (zwei Applications, eine davon mit
+Die Zugriffstrennung passiert in Authentik (eigene Application mit
 Gruppen-Bindung) und zusätzlich serverseitig in der App selbst
-(`X-authentik-groups`-Header-Check für `/admin`).
+(`X-authentik-groups`-Header-Check).
 
 Wiki.js und der "Alamos Pager" sind aktuell **nicht** deployed — die
-entsprechenden Kacheln im Einsatz-Dashboard sind als "bald verfügbar"
-markiert (`comingSoon: true` in `values.yaml`). Sobald sie verfügbar sind,
-reicht es, in `argocd/apps/le-homeserver/values.yaml` unter `services.einsatz`
-die `url` einzutragen und `comingSoon` zu entfernen — kein Code-Change nötig.
+entsprechenden Kacheln sind als "bald verfügbar" markiert
+(`comingSoon: true` in `values.yaml`). Sobald sie verfügbar sind, reicht es,
+in `argocd/apps/le-homeserver/values.yaml` unter `services.apps` die `url`
+einzutragen und `comingSoon` zu entfernen — kein Code-Change nötig.
 
 ---
 
@@ -48,42 +44,29 @@ ssh ubuntu@192.168.178.94 \
 
 ---
 
-## 2. Authentik: zwei Applications anlegen
+## 2. Authentik: Application für `admin.homeserver` anlegen
 
 Wie bei den anderen Forward-Auth-Diensten (siehe `docs/10-gotify.md`) reicht
 die bereits bestehende `authentik-authentik-forwardauth`-Middleware — die
-Zugriffstrennung passiert über die Policy-/Gruppen-Bindung der jeweiligen
+Zugriffstrennung passiert über die Policy-/Gruppen-Bindung der
 Authentik-**Application**, nicht über den Provider-Typ.
-
-### 2.1 — Provider + Application für `le.homeserver`
 
 1. **Applications → Providers → Erstellen**
 2. Typ: **Proxy Provider** → Weiter
 3. Felder:
-   - **Name:** `le-homeserver`
+   - **Name:** `le-homeserver-admin`
    - **Authorization flow:** Standard lassen
    - **Forward auth (single application)**
-   - **External host:** `http://le.homeserver`
+   - **External host:** `http://admin.homeserver`
 4. **Fertigstellen**.
 5. **Applications → Applications → Erstellen**:
-   - **Name:** `Einsatz-Dashboard`, **Slug:** `le-homeserver`
-   - **Provider:** `le-homeserver`
-   - **Launch URL:** `http://le.homeserver`
-6. Speichern. Jeder gültige Authentik-Login darf hier rein — keine
-   zusätzliche Gruppen-Bindung nötig.
-
-### 2.2 — Provider + Application für `admin.homeserver`
-
-Wie 2.1, aber:
-
-- **Name (Provider):** `le-homeserver-admin`, **External host:**
-  `http://admin.homeserver`
-- **Name (Application):** `Admin-Dashboard`, **Slug:**
-  `le-homeserver-admin`, **Launch URL:** `http://admin.homeserver`
-- Zusätzlich nach dem Speichern: Application öffnen → Tab
-  **Policy / Group / User Bindings → Bind existing group** →
-  **authentik Admins** auswählen, **Order** auf `0` lassen. Damit kommen
-  nur Mitglieder dieser Gruppe überhaupt am Forward-Auth-Check vorbei.
+   - **Name:** `Admin-Dashboard`, **Slug:** `le-homeserver-admin`
+   - **Provider:** `le-homeserver-admin`
+   - **Launch URL:** `http://admin.homeserver`
+6. Speichern. Anschließend Application öffnen → Tab
+   **Policy / Group / User Bindings → Bind existing group** →
+   **authentik Admins** auswählen, **Order** auf `0` lassen. Damit kommen
+   nur Mitglieder dieser Gruppe überhaupt am Forward-Auth-Check vorbei.
 
 > Falls eine andere Gruppe als "authentik Admins" gewünscht ist: Gruppe in
 > Authentik anlegen, hier binden, und denselben Namen in
@@ -91,13 +74,20 @@ Wie 2.1, aber:
 > eintragen (muss exakt übereinstimmen, da die App diesen Header-Wert
 > serverseitig vergleicht).
 
+> **Migration von einem alten Setup mit `le.homeserver`:** den Provider
+> `le-homeserver` und die Application `Einsatz-Dashboard` in Authentik
+> löschen — beide werden nicht mehr benötigt, da es nur noch
+> `admin.homeserver` gibt.
+
 ---
 
-## 3. Grafana: Service-Account für den Health-Check anlegen
+## 3. Grafana: Service-Account für Health-Check & Auslastung anlegen
 
-Der Health-Status auf `admin.homeserver` wird über Grafanas
-Datasource-Proxy abgefragt (Prometheus-kompatible `up`-Metrik gegen die
-VictoriaMetrics-Datasource).
+Health-Status und die Auslastungs-Kacheln (CPU/RAM/Disk/Temperatur) auf
+`admin.homeserver` werden über Grafanas Datasource-Proxy abgefragt
+(Prometheus-kompatible `up`- und `node_exporter`-Metriken gegen die
+VictoriaMetrics-Datasource) — derselbe Service-Account/Token wird für
+beides genutzt.
 
 1. `http://grafana.homeserver` öffnen → **Administration → Users and
    access → Service accounts → Add service account**.
@@ -147,19 +137,18 @@ git push
 ```
 
 ArgoCD synct innerhalb von ~3 Minuten. `*.homeserver` ist als Wildcard in
-dnsmasq hinterlegt (`docs/09-dns-architecture.md`) — für `le.homeserver` und
-`admin.homeserver` ist **keine** zusätzliche DNS-Änderung nötig.
+dnsmasq hinterlegt (`docs/09-dns-architecture.md`) — für `admin.homeserver`
+ist **keine** zusätzliche DNS-Änderung nötig.
 
 ---
 
 ## 6. Verifizierung
 
-1. Browser → `http://le.homeserver` → Authentik-Login → Einsatz-Dashboard
-   mit Kacheln für Grafana, Wiki.js ("bald verfügbar"), Alamos Pager ("bald
-   verfügbar").
-2. Browser → `http://admin.homeserver` als Mitglied von "authentik Admins"
-   → Admin-Dashboard, Health-Badges werden nach ein paar Sekunden grün/rot.
-3. Browser → `http://admin.homeserver` als Nicht-Admin → 403-Seite
+1. Browser → `http://admin.homeserver` als Mitglied von "authentik Admins"
+   → Authentik-Login → Admin-Dashboard mit Auslastungs-Kacheln
+   (CPU/RAM/Disk/Temperatur je Node) oben und App-Kacheln darunter;
+   Health-Badges werden nach ein paar Sekunden grün/rot.
+2. Browser → `http://admin.homeserver` als Nicht-Admin → 403-Seite
    ("Kein Zugriff").
 
 ---
@@ -176,6 +165,18 @@ das `error`-Feld prüfen. Häufigste Ursachen:
 - VictoriaMetrics liefert kein `up{job="..."}` für den Job-Namen in
   `values.yaml` → Job-Namen mit den tatsächlichen VMServiceScrape/
   ServiceMonitor-Labels in `argocd/apps/monitoring` abgleichen.
+
+### Auslastungs-Kacheln bleiben leer ("Keine Live-Werte verfügbar")
+
+`GET http://admin.homeserver/api/stats` direkt aufrufen (eingeloggt) und
+das `error`-Feld prüfen — dieselben Ursachen wie bei den Health-Badges
+(Token/`datasourceUid`). Zusätzlich:
+
+- Es muss `node_exporter` (DaemonSet in `argocd/apps/monitoring`) auf dem
+  jeweiligen Node laufen, sonst fehlen `node_cpu_seconds_total` /
+  `node_memory_*` / `node_filesystem_*` / `node_hwmon_temp_celsius`.
+- Eine Node-Kachel zeigt das rohe `instance`-Label statt eines Namens →
+  IP in `grafana.nodeLabels` in `values.yaml` ergänzen.
 
 ### `admin.homeserver` zeigt Authentik-Login-Loop
 

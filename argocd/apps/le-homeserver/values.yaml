@@ -39,7 +39,6 @@ ingress:
   className: traefik
   annotations:
     traefik.ingress.kubernetes.io/router.middlewares: "authentik-authentik-forwardauth@kubernetescrd"
-  einsatzHost: le.homeserver
   adminHost: admin.homeserver
 
 # Authentik-Gruppe, die serverseitig auf admin.homeserver zugreifen darf.
@@ -49,9 +48,10 @@ ingress:
 authentik:
   adminGroup: "authentik Admins"
 
-# Grafana-Anbindung fuer den Live-Health-Status auf admin.homeserver.
-# Token wird ueber einen Grafana-Service-Account erzeugt und als
-# SealedSecret versiegelt (siehe docs/19-le-homeserver-ui.md).
+# Grafana-Anbindung fuer Live-Health-Status und System-Auslastung
+# (CPU/RAM/Disk/Temperatur) auf admin.homeserver. Token wird ueber einen
+# Grafana-Service-Account erzeugt und als SealedSecret versiegelt
+# (siehe docs/19-le-homeserver-ui.md).
 grafana:
   url: "http://monitoring-grafana.monitoring.svc.cluster.local"
   datasourceUid: ""
@@ -63,29 +63,20 @@ grafana:
     #     | kubeseal --raw --namespace le-homeserver --name le-homeserver-grafana-sa \
     #         --from-file=/dev/stdin
     encryptedToken: ""
+  # Ordnet das Prometheus/VictoriaMetrics `instance`-Label des
+  # node-exporters (Host-Teil, ohne Port) einem lesbaren Namen fuer die
+  # Auslastungs-Kacheln auf admin.homeserver zu.
+  nodeLabels:
+    "192.168.178.94": "Home Server"
+    "192.168.178.95": "Worker-0"
 
-# Karten/Kacheln je Bereich. Aenderungen hier werden ueber eine ConfigMap
-# in den Pod gemountet — kein Image-Rebuild noetig.
-# `job` ist das Prometheus/VictoriaMetrics-Job-Label fuer den Health-Badge
-# auf admin.homeserver; ohne `job` gibt es keinen Health-Badge.
+# Karten/Kacheln im Admin-Dashboard. Aenderungen hier werden ueber eine
+# ConfigMap in den Pod gemountet — kein Image-Rebuild noetig.
+# `job` ist das Prometheus/VictoriaMetrics-Job-Label fuer den Health-Badge;
+# ohne `job` gibt es keinen Health-Badge.
 # `comingSoon: true` zeigt eine "bald verfuegbar"-Kachel ohne Link.
 services:
-  einsatz:
-    - name: "Grafana – Pegel & Wetter"
-      description: "Rhein-Pegel Andernach, DWD-Warnungen, Wachdienst-Wetter"
-      url: "http://grafana.homeserver"
-      icon: chart
-    - name: "Wiki.js – SOPs & Checklisten"
-      description: "Alarm- und Ausrueckeordnung, Einsatz-Checklisten"
-      url: ""
-      icon: book
-      comingSoon: true
-    - name: "Alamos Pager"
-      description: "Alarmierung & aktuelle Einsaetze"
-      url: ""
-      icon: siren
-      comingSoon: true
-  admin:
+  apps:
     - name: Authentik
       description: "Single Sign-On & Benutzerverwaltung"
       url: "http://authentik.homeserver"
@@ -121,6 +112,16 @@ services:
       url: "http://minio.homeserver"
       icon: box
       job: minio
+    - name: "Wiki.js – SOPs & Checklisten"
+      description: "Alarm- und Ausrueckeordnung, Einsatz-Checklisten"
+      url: ""
+      icon: book
+      comingSoon: true
+    - name: "Alamos Pager"
+      description: "Alarmierung & aktuelle Einsaetze"
+      url: ""
+      icon: siren
+      comingSoon: true
 
 extraEnv: []
 
