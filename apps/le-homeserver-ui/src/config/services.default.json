@@ -1,27 +1,5 @@
 {
-  "einsatz": [
-    {
-      "name": "Grafana – Pegel & Wetter",
-      "description": "Rhein-Pegel Andernach, DWD-Warnungen, Wachdienst-Wetter",
-      "url": "http://grafana.homeserver",
-      "icon": "chart"
-    },
-    {
-      "name": "Wiki.js – SOPs & Checklisten",
-      "description": "Alarm- und Ausrueckeordnung, Einsatz-Checklisten",
-      "url": "",
-      "icon": "book",
-      "comingSoon": true
-    },
-    {
-      "name": "Alamos Pager",
-      "description": "Alarmierung & aktuelle Einsaetze",
-      "url": "",
-      "icon": "siren",
-      "comingSoon": true
-    }
-  ],
-  "admin": [
+  "apps": [
     {
       "name": "Authentik",
       "description": "Single Sign-On & Benutzerverwaltung",
@@ -70,6 +48,20 @@
       "url": "http://minio.homeserver",
       "icon": "box",
       "job": "minio"
+    },
+    {
+      "name": "Wiki.js – SOPs & Checklisten",
+      "description": "Alarm- und Ausrueckeordnung, Einsatz-Checklisten",
+      "url": "",
+      "icon": "book",
+      "comingSoon": true
+    },
+    {
+      "name": "Alamos Pager",
+      "description": "Alarmierung & aktuelle Einsaetze",
+      "url": "",
+      "icon": "siren",
+      "comingSoon": true
     }
   ]
 }

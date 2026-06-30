@@ -1,7 +1,6 @@
 const path = require('path');
 const express = require('express');
 
-const einsatzRouter = require('./routes/einsatz');
 const adminRouter = require('./routes/admin');
 const apiRouter = require('./routes/api');
 const { icon } = require('./lib/icons');
@@ -26,8 +25,7 @@ app.use((req, res, next) => {
 app.get('/healthz', (req, res) => res.send('ok'));
 
 app.use('/api', apiRouter);
-app.use('/admin', adminRouter);
-app.use('/', einsatzRouter);
+app.use('/', adminRouter);
 
 app.use((req, res) => {
   res.status(404).send('Nicht gefunden');

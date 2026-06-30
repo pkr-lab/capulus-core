@@ -15,13 +15,26 @@
       </p>
     </section>
 
+    <section class="stats-bar" aria-label="Home Server Auslastung">
+      <div class="stats-bar__head">
+        <h2>Home Server Auslastung</h2>
+        <span class="stats-bar__hint" id="stats-error" hidden>
+          Live-Werte nicht erreichbar
+        </span>
+      </div>
+      <div class="stats-grid" id="stats-grid">
+        <p class="stats-grid__empty" id="stats-empty">Lade Live-Werte…</p>
+      </div>
+    </section>
+
     <section class="grid" aria-label="Dienste">
-      <% cards.forEach(function (card) { %>
-        <%- include('partials/card', { card: card, showHealth: true }) %>
+      <% cards.forEach(function (card, index) { %>
+        <%- include('partials/card', { card: card, index: index }) %>
       <% }) %>
     </section>
   </main>
 
   <script src="/js/health.js"></script>
+  <script src="/js/stats.js"></script>
 </body>
 </html>
