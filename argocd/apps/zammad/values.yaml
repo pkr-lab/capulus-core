@@ -140,6 +140,18 @@ zammad:
           limits:
             memory: 512Mi
 
+  # ---- REDIS_URL-Override -------------------------------------
+  # Bug im zammad-Chart: REDIS_URL wird immer als "redis://:$(REDIS_PASSWORD)@..."
+  # gebaut. Ist zammadConfig.redis.pass leer (Auth deaktiviert), wird die
+  # REDIS_PASSWORD-Env-Var gar nicht definiert → "$(REDIS_PASSWORD)" landet als
+  # wörtlicher String im Passwort-Feld, wodurch Zammad ein AUTH-Kommando an ein
+  # Redis ohne Passwortschutz sendet (Connection wird abgelehnt).
+  # extraEnv wird nach dem chart-eigenen env-Block angehängt und überschreibt
+  # REDIS_URL für alle Komponenten (railsserver, scheduler, websocket, init-Job).
+  extraEnv:
+    - name: REDIS_URL
+      value: "redis://zammad-redis:6379"
+
   # ---- PostgreSQL Sub-Chart (Bitnami) -----------------------
   # Speichert Tickets + Attachments (storageVolume.enabled: false) → wächst
   # potenziell groß. Läuft daher auf der HDD-StorageClass (docs/16-hdd-storage.md)
