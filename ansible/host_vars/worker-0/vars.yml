@@ -1,5 +1,5 @@
 ---
-ansible_become_password: "{{ vault_worker-0_become_password }}"
+ansible_become_password: "{{ vault_worker_0_become_password }}"
 hostname: worker-0
 
 # ---- Paperless-NGX ------------------------------------------

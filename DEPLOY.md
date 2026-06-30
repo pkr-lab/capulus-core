@@ -80,26 +80,31 @@ ansible-vault encrypt_string 'DEIN_WERT' --name 'variable_name'
 
 ### 2.2 — worker-0 (Docker Compose)
 
-Vault-Datei für worker-0 befüllen:
-
-```bash
-# Die Datei existiert bereits — mit make vault-edit öffnen oder direkt editieren:
-# ansible/host_vars/worker-0/vault.yml
-```
+Vault-Datei für worker-0 ggf. neu anlegen (existiert sie noch nicht):
+`ansible/host_vars/worker-0/vault.yml`
 
 Secrets verschlüsseln und einfügen:
 
 ```bash
 # sudo-Passwort für worker-0
-ansible-vault encrypt_string 'SUDO_PASSWORT' --name 'vault_worker-0_become_password'
+ansible-vault encrypt_string 'SUDO_PASSWORT' --name 'vault_worker_0_become_password'
 
 # TinyTeller / Day Pilot spezifische Secrets (falls nötig)
 ansible-vault encrypt_string 'API_KEY' --name 'vault_day_pilot_openai_api_key'
 ```
 
-Ergebnisse in `ansible/host_vars/worker-0/vault.yml` einfügen.
+Ergebnisse in `ansible/host_vars/worker-0/vault.yml` einfügen, z.B.:
 
-> **Wichtig:** `vault.yml` niemals committen — sie liegt bereits in `.gitignore`.
+```yaml
+---
+vault_worker_0_become_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          ...
+```
+
+> **Wichtig:** `vault.yml` ist **nicht** gitignored (analog zu `group_vars/all.yml`) —
+> sie muss eingecheckt werden, damit Semaphore sie beim Git-Clone für jeden Run
+> erhält. Der Inhalt ist vault-verschlüsselt, also unbedenklich zu committen.
 
 ---
 
