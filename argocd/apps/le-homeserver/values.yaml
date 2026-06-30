@@ -54,15 +54,15 @@ authentik:
 # (siehe docs/19-le-homeserver-ui.md).
 grafana:
   url: "http://monitoring-grafana.monitoring.svc.cluster.local"
-  datasourceUid: ""
+  datasourceUid: "VictoriaMetrics"
   tokenSecret:
-    enabled: false
+    enabled: true
     name: le-homeserver-grafana-sa
     # Erzeugt mit:
     #   echo -n "<service-account-token>" \
     #     | kubeseal --raw --namespace le-homeserver --name le-homeserver-grafana-sa \
     #         --from-file=/dev/stdin
-    encryptedToken: ""
+    encryptedToken: "AgBiTZY9lnXZcHi1BKfxAVtdzAPP6kIBM5xd+r+SjxFNHC9Y3omVojCFoKCKZyRE66CZzh2NmpsqyRN16V1QiDkGmKeVHP2tedKcOnM+dlsemn56g5sK+df0xp1ISSrKYAFa3hE7FUNcXNSn+LfeLwf0WXBoaAYHtCMSscftZKbfxuLDOvKeCdwcAODbFUEnUNHFPzBNfSE87Gns98xAQLvtzsCMmolHWxb2KE38bTpGhWA87LH59yXu2AuwfVz/V9pO2SBmEZ9KUYKR88IFUyoqLj55U8VDkoyLltjKUtfp7AUjZtb1bP0+E5NRSAr68xKbOeqU8sB8fHtFFh5TTRiBwqPchZjZB5P3UMiKXsZCf5S3VEeOXfuDOP/lggYdUgPz2zF8eaLrsfs6ff+so81+OnO7lOy5XmkpEJfTVAAqFXeTnKNJqiyvkwFKKMEBUV1OrBqOcGGU+o57rfGbfY8b9EQJ6kIDCSLKzT4dQwwY0IMKMZJa4Vlwslqb15CBtrcxansa6t2+Nldlfzk/tgU0/AMEM6aqPiYj9bc9emokGsBrl99fwvt/H05JLZ2uU0OI8hjJMOIgvKDi6P4kMxcmJUnQ70FPtOt1ZWynnVdt1QeRa3YZ6s3qXYokPkoAaa6AWjy20Jh3gGREwe3W/WGdeg+J8cuNPq1ZrNa47TMgWTYJMf4TPOrtT/qpux2xcgwgY1eOykliI2uLkRiqP+7+UwsNK2iy0YSWZXr+PzTOHNR6GyKQOaWp0YUHr5Kr%"
   # Ordnet das Prometheus/VictoriaMetrics `instance`-Label des
   # node-exporters (Host-Teil, ohne Port) einem lesbaren Namen fuer die
   # Auslastungs-Kacheln auf admin.homeserver zu.
