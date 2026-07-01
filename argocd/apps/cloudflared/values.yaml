@@ -65,21 +65,6 @@ tunnel:
   encryptedCredentialsJson: "AgB49BqViJnIDnFKOwX+Kpi+TQ6BxU53KsGl+P5i805EVOdVlTVadh1lGloITvfqay23V01mm2ZObI1cEFjQhHFqfco+ku5qEy2ZqEt/VBN9ieEblwDRRJXDJkeXWJ7TF5MsT0REWo4iIJDHcZfSrFjPKGjPSghGqWS0PiX1PoqeIFBWsRR/impbz/8tEj2WUVzmC1sYs/dMRkBRi6hgYW0CX0hpl+3bqaXRsQwbVWxyQOdU+aLjYNPIYqkHmkOBGwNnZlJj1kTg1Ka3nyAjkcUsdjK9kYzqM7Jl8WO+CQgnWi7ZQx0TcGcbXAPNmqT3qbndggyPCW6P983pXkajX/LKAApHslcacNyuQnblCPA8Epwx4imsuZ2Wdx228QBfa0089+eDW4iM4f3KE2/w5bzHqNXHhn1WImvJFS/tlkYzATLsfcKDIGhjgQtQd75+0q+DIP26Ri9TD1xA1EK7HUcO4FI57YSW6GT50dgVBDbJnlQW4ZlrtCIT+UV6hi2t5dU64ZHKT4xNApkcPRRWVLzJyVxpSJRSyLCAcVsQVj58vPOoJiy3+A57VxLoJ1BFemixxH1oymzWRRo9m26+0zYS39rGlXwwZPN/wVSj2NQvvqfdPM4W7xV+ZZLmbIty+d9PxW/Flytu28DR9fXkoHqXDmHb3BSfciDcUEYTZQQnhFvmFHCkTTYDJrzHFstZWWIVeAX45L9NurjKoVOC4xRy1cww//e5PgUzenMYbEjewPqHWUgRZv6AuroYivM/fL8WIh+Rj2Xu7xSK9gxN59p9pWD/OsTH177oZ3ZA49hzXyv34oQypoXkhdzYc7J3Cju0x4Cdlaz97ftSUUeGGyF9ENG8Y+l2QAWsyCTuVQQQTV1Ky9UHoqGwvvpPJG/wOIR/kOIa2kjz4wwCsjZ+V6ccAICBafUyXX4qZqqkcOcj"
 
   ingress:
-    # Public-Hostname → internes Kubernetes-Service-Routing.
-    # Reihenfolge zählt: der erste Treffer gewinnt. `defaultService` unten
-    # fängt alles Übrige ab (Pflicht bei cloudflared).
-    #
-    # Bei Wildcard-DNS-Route (empfohlen, docs/22 Schritt 4: ein *-CNAME
-    # auf den Tunnel) reicht es, hier eine neue Zeile zu ergänzen — kein
-    # erneutes `cloudflared tunnel route dns` pro Dienst nötig.
-    #
-    # Service-Namen mit `kubectl -n <namespace> get svc` prüfen — bei
-    # Sub-Charts (z.B. Zammad) heißt der Service oft
-    # "<release>-<chart>-<komponente>", nicht einfach der App-Name.
-    #
-    # Beispiele (siehe docs/22-cloudflare-tunnel.md → "Welche Dienste
-    # freigeben?" für die Begründung je Dienst):
-    #
     rules:
       - hostname: wiki.pke-lab.de
         service: http://wikijs.wikijs.svc.cluster.local:80
