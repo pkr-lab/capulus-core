@@ -107,10 +107,13 @@ logLevel: info
 resources:
   requests:
     cpu: 50m
-    memory: 64Mi
+    memory: 128Mi
   limits:
     cpu: 500m
-    memory: 256Mi
+    # 256Mi reichte im Leerlauf, führte unter echter Last (aktiver
+    # Publish + HLS-Muxing für mehrere Zuschauer) aber zu wiederkehrendem
+    # OOMKilled → Pod-Neustart → 502 beim Zuschauer. 512Mi als Puffer.
+    memory: 512Mi
 
 nodeSelector: {}
 
