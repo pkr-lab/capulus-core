@@ -1,0 +1,20 @@
+---
+apiVersion: v2
+name: cloudflared
+description: |
+  Cloudflare Tunnel (cloudflared) — macht ausgewählte Cluster-Services über
+  eine ausgehende Verbindung zu Cloudflare öffentlich erreichbar, ganz ohne
+  Portfreigabe am Router oder offene Ports in der UFW-Firewall.
+type: application
+version: 0.1.0
+appVersion: "2025.7.0"
+keywords:
+  - cloudflare
+  - tunnel
+  - ingress
+  - remote-access
+home: https://github.com/cloudflare/cloudflared
+sources:
+  - https://github.com/cloudflare/cloudflared
+maintainers:
+  - name: home-server-admin
