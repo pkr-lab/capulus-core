@@ -234,6 +234,38 @@ Vollständige Service-by-Service-Anleitung: **[docs/13-sso-authentik.md](docs/13
 
 ---
 
+## Schritt 8 — Cloudflare Tunnel einrichten (optional, externe Erreichbarkeit)
+
+Standardmäßig sind alle Dienste nur über LAN oder Tailscale-VPN erreichbar.
+Wer einzelne Dienste (z. B. Wiki.js, ntfy, Zammad) auch **ohne VPN** von
+außen erreichbar machen will, richtet einen Cloudflare Tunnel ein — ganz
+ohne Portfreigabe am Router:
+
+```bash
+# 1. Tunnel anlegen (lokal, einmalig)
+cloudflared tunnel login
+cloudflared tunnel create homeserver
+
+# 2. Credentials versiegeln
+kubeseal --raw \
+  --namespace cloudflared --name cloudflared-credentials \
+  --controller-namespace sealed-secrets --controller-name sealed-secrets-controller \
+  --from-file=/pfad/zur/<TUNNEL-ID>.json
+
+# 3. DNS-Route pro freizugebendem Dienst
+cloudflared tunnel route dns homeserver wiki.deine-domain.de
+
+# 4. argocd/apps/cloudflared/values.yaml ausfüllen (Tunnel-ID, Ciphertext,
+#    Ingress-Regeln), dann committen und pushen
+git add argocd/apps/cloudflared && git commit -m "feat(cloudflared): enable external access" && git push
+```
+
+Vollständige Anleitung inkl. Architektur-Hintergrund und Empfehlungen, welche
+Dienste sich zur Freigabe eignen: **[docs/22-cloudflare-tunnel.md](docs/22-cloudflare-tunnel.md)**.
+Rollout, Day-2-Betrieb und Troubleshooting: **[docs/23-cloudflare-deploy.md](docs/23-cloudflare-deploy.md)**.
+
+---
+
 ## Service-URLs
 
 | Service | URL | Authentifizierung |
@@ -249,6 +281,15 @@ Vollständige Service-by-Service-Anleitung: **[docs/13-sso-authentik.md](docs/13
 | Paperless-NGX | http://worker-0:8000 | admin / aus Vault |
 | TinyTeller | http://worker-0:3002 | — |
 | Day Pilot | http://worker-0:3003 | — |
+
+**Extern per Cloudflare Tunnel** (nur die dort explizit eingetragenen
+Dienste, siehe [docs/22-cloudflare-tunnel.md](docs/22-cloudflare-tunnel.md)):
+
+| Dienst | Beispiel-URL | Authentifizierung |
+|---|---|---|
+| Wiki.js | https://wiki.deine-domain.de | Cloudflare Access + intern |
+| ntfy | https://ntfy.deine-domain.de | Cloudflare Access (optional) |
+| Zammad | https://support.deine-domain.de | Cloudflare Access empfohlen |
 
 ---
 
@@ -380,5 +421,6 @@ Home-Lab/
         ├── headlamp/               ← Kubernetes-Dashboard
         ├── sealed-secrets/         ← SealedSecrets-Controller
         ├── authentik/              ← SSO Identity Provider
+        ├── cloudflared/            ← Cloudflare Tunnel (externe Erreichbarkeit)
         └── ...
 ```
