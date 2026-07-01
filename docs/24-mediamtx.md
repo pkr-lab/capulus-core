@@ -308,6 +308,28 @@ an](23-cloudflare-deploy.md#configmap-änderung-kommt-nicht-im-pod-an)).
   Verbindung entweder gar nicht erst aufbauen oder mediamtx lehnt sie ab.
 - Falsche/vertauschte Groß-/Kleinschreibung oder Sonderzeichen im Passwort
   ohne URL-Encoding — Sonderzeichen im Stream-Key ggf. prozentkodieren.
+- Server-URL enthält den Pfad bereits **und** der Stream-Key auch (z. B.
+  Server `.../live/mystream` + Stream-Key `mystream?user=...`) — Server
+  darf nur `rtmp://<server-ip>:31935/live` sein, der Pfadname gehört
+  ausschließlich in den Stream-Key.
+
+**OBS zeigt "Auf den angegebenen Kanal oder Streamschlüssel konnte nicht
+zugegriffen werden":**
+
+Das ist mediamtx' generische RTMP-Fehlermeldung für so ziemlich jeden
+Publish-Fehler (Auth, Parse-Fehler, doppelter Pfad, …) — sagt selbst
+nichts Genaues aus. Die eigentliche Ursache steht im mediamtx-Log:
+
+```bash
+ssh ubuntu@192.168.178.94 'sudo kubectl -n mediamtx logs deploy/mediamtx --tail=50'
+```
+
+Typischer Befund: `net/url: invalid control character in URL` oder
+ähnliches — dann liegt es am Streamer-Passwort (siehe Warnkasten in
+Schritt 2.1). **Falls das Passwort in der Log-Ausgabe im Klartext
+auftaucht** (wie bei einem gescheiterten Parse-Versuch), gilt es als
+kompromittiert — neues, rein alphanumerisches Passwort generieren, neu
+hashen (Schritt 2.1) und in `values.yaml` eintragen.
 
 ---
 
