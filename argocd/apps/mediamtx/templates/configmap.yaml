@@ -24,24 +24,31 @@ data:
     webrtcAddress: :{{ .Values.service.ports.webrtc }}
     srt: no
 
-    # Publish-Autorisierung über Authentik-JWT (docs/24-mediamtx.md).
-    authMethod: jwt
-    authJWTJWKS: {{ .Values.auth.jwks | quote }}
-    {{- if .Values.auth.issuer }}
-    authJWTIssuer: {{ .Values.auth.issuer | quote }}
-    {{- end }}
-    {{- if .Values.auth.audience }}
-    authJWTAudience: {{ .Values.auth.audience | quote }}
-    {{- end }}
-    authJWTClaimKey: {{ .Values.auth.claimKey | quote }}
-    # Lesezugriff (read/playback) bleibt ohne JWT offen — Zuschauer werden
-    # stattdessen über Cloudflare Access (Einmalcode per E-Mail) auf der
-    # öffentlichen HLS-URL abgesichert, siehe docs/24-mediamtx.md.
-    authJWTExclude:
-      - action: read
-      - action: playback
-      - action: api
-      - action: metrics
+    # Publish- und Leseautorisierung über mediamtx' eingebaute interne
+    # Benutzerverwaltung (docs/24-mediamtx.md) — kein externer
+    # Identity-Provider mehr nötig.
+    authMethod: internal
+    authInternalUsers:
+      - user: {{ .Values.auth.streamer.user | quote }}
+        pass: {{ .Values.auth.streamer.pass | quote }}
+        ips: []
+        permissions:
+          - action: publish
+      - user: {{ .Values.auth.viewer.user | quote }}
+        pass: {{ .Values.auth.viewer.pass | quote }}
+        ips: []
+        permissions:
+          - action: read
+          - action: playback
+      # Erlaubt der Kubernetes-Readiness-Probe und internem Monitoring
+      # Zugriff auf API/Metrics ohne Login — beides ist ohnehin nur
+      # ClusterIP-intern erreichbar, kein extern exponierter Endpunkt.
+      - user: any
+        pass:
+        ips: []
+        permissions:
+          - action: api
+          - action: metrics
 
     paths:
       all_others:
