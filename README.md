@@ -70,6 +70,7 @@ make install
 <tr><td>Kubernetes-UI</td><td><strong>Headlamp</strong></td><td>Browser-Dashboard für den Cluster</td></tr>
 <tr><td>Secrets</td><td><strong>Sealed Secrets + kubeseal-webgui</strong></td><td>Verschlüsselte Secrets in Git, nur im Cluster entschlüsselbar</td></tr>
 <tr><td>Notifications</td><td><strong>Gotify</strong> + <strong>ntfy</strong></td><td>Self-hosted Push — Gotify (Android), ntfy (iOS + Android)</td></tr>
+<tr><td>Live-Streaming</td><td><strong>MediaMTX</strong></td><td>RTMP/RTSP-Ingest → HLS-Playback; Publish per Authentik-JWT, Zuschauer per Authentik-Login + TOTP</td></tr>
 <tr><td>Remote-Access</td><td><strong>Tailscale</strong></td><td>WireGuard-Mesh-VPN — keine Portfreigaben, keine öffentliche IP</td></tr>
 <tr><td>Externe Erreichbarkeit</td><td><strong>Cloudflare Tunnel</strong></td><td>Ausgewählte Dienste öffentlich erreichbar, ohne VPN und ohne offene Ports</td></tr>
 <tr><td>CI/CD intern</td><td><strong>Argo Workflows + MinIO</strong></td><td>Private CI/CD-Pipeline + S3-Artifact-Store im Cluster</td></tr>
@@ -194,6 +195,7 @@ capulus-core/
 │   ├── 21-le-homeserver-ui.md        # Home-Server-Status-UI
 │   ├── 22-cloudflare-tunnel.md       # Cloudflare Tunnel — Setup & Konzept
 │   ├── 23-cloudflare-deploy.md       # Cloudflare Tunnel — Deploy & Betrieb
+│   ├── 24-mediamtx.md                # Live-Streaming (RTMP/RTSP → HLS)
 │   └── assets/banner.svg
 ├── ansible/
 │   ├── site.yml                      # Entry-Point
@@ -229,6 +231,7 @@ capulus-core/
         ├── authentik/                # Authentik Single-Sign-On
         ├── alamos-apager/            # Alarmmonitor-Kiosk-Verwaltung (ALAMOS AMweb)
         ├── cloudflared/               # Cloudflare Tunnel — externe Erreichbarkeit
+        ├── mediamtx/                  # Live-Streaming (RTMP/RTSP → HLS)
         └── semaphore/                # Ansible-Web-UI
 ```
 
@@ -291,11 +294,16 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 | MinIO Console | http://minio.homeserver |
 | kubeseal-webgui | http://kubeseal-webgui.homeserver |
 | Alarmmonitor (alamos-apager) | http://alamos-apager.homeserver |
+| MediaMTX (Live-Stream-Playback) | http://stream.homeserver |
 
 > Zusätzlich zu den internen `*.homeserver`-URLs können ausgewählte Dienste
 > über Cloudflare Tunnel öffentlich unter einer eigenen Domain erreichbar
 > gemacht werden (z. B. `https://wiki.deine-domain.de`) — ohne VPN, ohne
 > offene Ports. Setup: **[docs/22-cloudflare-tunnel.md](docs/22-cloudflare-tunnel.md)**.
+> Der Live-Stream ist zusätzlich unter `https://stream.pke-lab.de` erreichbar,
+> abgesichert per Authentik-Login mit erzwungenem TOTP (Google Authenticator) —
+> komplett selbst-gehostet, kein Cloudflare-Zero-Trust-Konto nötig. Details:
+> **[docs/24-mediamtx.md](docs/24-mediamtx.md)**.
 
 ---
 
@@ -355,6 +363,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [Alarmmonitor-Kiosks](docs/20-alamos-apager.md) | Raspberry-Pi-Kiosks für ALAMOS AMweb, zentral verwaltet |
 | [Cloudflare Tunnel — Setup](docs/22-cloudflare-tunnel.md) | Externe Erreichbarkeit ohne VPN: Konzept, Tunnel-Einrichtung, Absicherung |
 | [Cloudflare Tunnel — Deploy](docs/23-cloudflare-deploy.md) | Rollout, neuen Dienst freigeben, Rotation, Troubleshooting |
+| [MediaMTX Live-Streaming](docs/24-mediamtx.md) | RTMP/RTSP-Ingest → HLS, Publish-Autorisierung via Authentik-JWT, Zuschauer-Zugang via Authentik-Login + TOTP (Google Authenticator) |
 
 ---
 

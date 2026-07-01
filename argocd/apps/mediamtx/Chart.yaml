@@ -1,0 +1,19 @@
+---
+apiVersion: v2
+name: mediamtx
+description: Self-hosted RTSP/RTMP/WebRTC/HLS/SRT media server for live-stream ingest and playback.
+type: application
+version: 0.1.0
+appVersion: "1.19.2"
+keywords:
+  - mediamtx
+  - rtsp
+  - rtmp
+  - webrtc
+  - hls
+  - streaming
+home: https://github.com/bluenviron/mediamtx
+sources:
+  - https://github.com/bluenviron/mediamtx
+maintainers:
+  - name: home-server-admin
