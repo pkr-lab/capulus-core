@@ -301,8 +301,8 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 > gemacht werden (z. B. `https://wiki.deine-domain.de`) — ohne VPN, ohne
 > offene Ports. Setup: **[docs/22-cloudflare-tunnel.md](docs/22-cloudflare-tunnel.md)**.
 > Der Live-Stream ist zusätzlich unter `https://stream.pke-lab.de` erreichbar,
-> abgesichert per Authentik-Login mit erzwungenem TOTP (Google Authenticator) —
-> komplett selbst-gehostet, kein Cloudflare-Zero-Trust-Konto nötig. Details:
+> abgesichert per mediamtx-eigenem HTTP-Basic-Login — kein externer
+> Identity-Provider, kein Cloudflare-Zero-Trust-Konto nötig. Details:
 > **[docs/24-mediamtx.md](docs/24-mediamtx.md)**.
 
 ---
@@ -363,7 +363,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [Alarmmonitor-Kiosks](docs/20-alamos-apager.md) | Raspberry-Pi-Kiosks für ALAMOS AMweb, zentral verwaltet |
 | [Cloudflare Tunnel — Setup](docs/22-cloudflare-tunnel.md) | Externe Erreichbarkeit ohne VPN: Konzept, Tunnel-Einrichtung, Absicherung |
 | [Cloudflare Tunnel — Deploy](docs/23-cloudflare-deploy.md) | Rollout, neuen Dienst freigeben, Rotation, Troubleshooting |
-| [MediaMTX Live-Streaming](docs/24-mediamtx.md) | RTMP/RTSP-Ingest → HLS, Publish-Autorisierung via Authentik-JWT, Zuschauer-Zugang via Authentik-Login + TOTP (Google Authenticator) |
+| [MediaMTX Live-Streaming](docs/24-mediamtx.md) | RTMP/RTSP-Ingest → HLS, Publish- und Zuschauer-Autorisierung über mediamtx' eingebaute interne Benutzerverwaltung (HTTP Basic Auth) |
 
 ---
 

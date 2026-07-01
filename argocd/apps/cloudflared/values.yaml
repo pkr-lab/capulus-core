@@ -91,16 +91,13 @@ tunnel:
         service: http://monitoring-grafana.monitoring.svc.cluster.local:80
       - hostname: authentik.pke-lab.de
         service: http://authentik-server.authentik.svc.cluster.local:80
-      # Zeigt bewusst auf Traefik (nicht direkt auf den mediamtx-Service),
-      # damit die auf dem mediamtx-Ingress hängende
-      # Authentik-ForwardAuth-Middleware greift — direkt zum Backend würde
-      # sie umgehen. Traefik routet anhand des Host-Headers intern zu
-      # mediamtx weiter (Ingress-Regel in argocd/apps/mediamtx/values.yaml).
+      # Zeigt wie die anderen Hostnamen direkt auf den Backend-Service —
+      # die Zuschauer-Autorisierung übernimmt mediamtx selbst per
+      # HTTP-Basic-Auth (kein ForwardAuth-Umweg über Traefik mehr nötig).
       # RTMP/RTSP-Publish läuft bewusst NICHT über den Tunnel, siehe
       # docs/24-mediamtx.md.
-      # Service-Name mit `kubectl -n kube-system get svc traefik` prüfen.
       - hostname: stream.pke-lab.de
-        service: http://traefik.kube-system.svc.cluster.local:80
+        service: http://mediamtx.mediamtx.svc.cluster.local:8888
     defaultService: "http_status:404"
 
 nodeSelector: {}
