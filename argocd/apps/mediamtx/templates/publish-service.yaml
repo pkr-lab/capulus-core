@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mediamtx.fullname" . }}-publish
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mediamtx.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.publishService.type }}
+  ports:
+    - port: {{ .Values.publishService.ports.rtmp.port }}
+      targetPort: rtmp
+      nodePort: {{ .Values.publishService.ports.rtmp.nodePort }}
+      protocol: TCP
+      name: rtmp
+    - port: {{ .Values.publishService.ports.rtsp.port }}
+      targetPort: rtsp
+      nodePort: {{ .Values.publishService.ports.rtsp.nodePort }}
+      protocol: TCP
+      name: rtsp
+  selector:
+    {{- include "mediamtx.selectorLabels" . | nindent 4 }}

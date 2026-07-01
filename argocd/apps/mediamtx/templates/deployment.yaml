@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mediamtx.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mediamtx.labels" . | nindent 4 }}
+spec:
+  # RTMP/RTSP-Publisher halten eine lange Verbindung zu genau einem Pod —
+  # mehr als 1 Replica würde Zuschauer ohne Sticky-Routing zufällig auf
+  # Pods ohne aktiven Stream verteilen. Single-Replica ist hier bewusst,
+  # nicht wie bei cloudflared eine Verfügbarkeits-Optimierung.
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "mediamtx.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "mediamtx.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "mediamtx.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - /etc/mediamtx/mediamtx.yml
+          ports:
+            - name: rtsp
+              containerPort: {{ .Values.publishService.ports.rtsp.port }}
+              protocol: TCP
+            - name: rtmp
+              containerPort: {{ .Values.publishService.ports.rtmp.port }}
+              protocol: TCP
+            - name: hls
+              containerPort: {{ .Values.service.ports.hls }}
+              protocol: TCP
+            - name: webrtc
+              containerPort: {{ .Values.service.ports.webrtc }}
+              protocol: TCP
+            - name: api
+              containerPort: {{ .Values.service.ports.api }}
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: rtsp
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /v3/paths/list
+              port: api
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/mediamtx
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "mediamtx.fullname" . }}-config
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
