@@ -67,15 +67,14 @@ publishService:
 
 # Ingress für Browser-Playback — sowohl intern (stream.homeserver) als auch
 # extern über den Cloudflare Tunnel (stream.pke-lab.de, siehe
-# argocd/apps/cloudflared/values.yaml). Beide Hostnamen laufen durch Traefik
-# und sind per Authentik-ForwardAuth-Middleware abgesichert: nur Mitglieder
-# der Authentik-Gruppe "mediamtx-viewers" mit eingerichtetem TOTP
-# (Google Authenticator) kommen durch. Details: docs/24-mediamtx.md.
+# argocd/apps/cloudflared/values.yaml). Absicherung läuft komplett über
+# mediamtx' eigene interne Auth (siehe `auth` unten) — der Browser bekommt
+# beim Öffnen einen normalen HTTP-Basic-Auth-Dialog von mediamtx selbst,
+# kein externer Identity-Provider nötig. Details: docs/24-mediamtx.md.
 ingress:
   enabled: true
   className: traefik
-  annotations:
-    traefik.ingress.kubernetes.io/router.middlewares: "authentik-authentik-forwardauth@kubernetescrd"
+  annotations: {}
   hosts:
     - host: stream.homeserver
       paths:
@@ -87,21 +86,21 @@ ingress:
           pathType: Prefix
   tls: []
 
-# Authentik-gestützte Publish-Autorisierung: mediamtx validiert das JWT,
-# das ein Streamer als `?token=<JWT>` an die RTMP-/RTSP-URL anhängt, gegen
-# Authentiks JWKS-Endpunkt. Lesezugriff (Playback) bleibt bewusst ohne JWT
-# offen — Zuschauer werden stattdessen über Cloudflare Access (Einmalcode
-# per E-Mail) auf der öffentlichen HLS-URL abgesichert.
-# Vollständiges Setup: docs/24-mediamtx.md.
+# mediamtx' eingebaute interne Benutzerverwaltung (`authMethod: internal`)
+# deckt sowohl Publish (RTMP/RTSP) als auch Read/Playback (HLS/WebRTC) ab —
+# kein externer Identity-Provider, kein JWKS-Endpunkt nötig. Nutzername und
+# Passwort werden nur als SHA256-Hash hinterlegt (`sha256:<Base64-Hash>`),
+# nie im Klartext, damit sie gefahrlos in Git landen können. Die Platzhalter
+# unten sind absichtlich ungültige Hashes — Auth ist damit standardmäßig für
+# jeden dicht, bis echte Hashes eingetragen werden (docs/24-mediamtx.md,
+# Schritt 2).
 auth:
-  jwks: "http://authentik-server.authentik.svc.cluster.local/application/o/mediamtx/jwks/"
-  # Issuer/Audience-Prüfung bewusst leer (= deaktiviert), bis der exakte
-  # `iss`-Claim eines echten Authentik-Tokens verifiziert wurde (docs/24,
-  # Abschnitt "Issuer/Audience schärfen"). Ein falscher Wert hier würde
-  # JEDEN Publish-Versuch mit "invalid token" ablehnen.
-  issuer: ""
-  audience: ""
-  claimKey: "mediamtx_permissions"
+  streamer:
+    user: "sha256:CHANGEME"
+    pass: "sha256:CHANGEME"
+  viewer:
+    user: "sha256:CHANGEME"
+    pass: "sha256:CHANGEME"
 
 logLevel: info
 
