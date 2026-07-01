@@ -97,7 +97,7 @@ ingress:
 auth:
   streamer:
     user: "sha256:jGl25bVBBBW96Qi9Te4V37Fnqchz/Eu4qB9vKrRIqRg="
-    pass: "sha256:cBzTszzok3bqPHFOg1n9JSdqzR9kJsCCXP6nLzUmxuQ="
+    pass: "sha256:7o3snNoI9o1Kyb18PgLNDLhbkt74LiyeNsCD0kEp4hc="
   viewer:
     user: "sha256:01ylBRuC/8Mmo7C2V0qaMWHe4WuUeKGZ7jnNgDzlt5k="
     pass: "sha256:9yNXifrl2+t1sPvw+xyIF2riEtUwEWC5YJGLaPg3Ezg="
