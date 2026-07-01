@@ -135,6 +135,19 @@ Ursprungspasswort zu kennen.
 
 ### 2.1 — Streamer-Zugang (Publish)
 
+> **Wichtig:** Das Streamer-Passwort landet bei RTMP unverändert (ohne
+> URL-Encoding) in einer Query-String (`?user=...&pass=...`, siehe
+> Schritt 3) — weder OBS noch mediamtx kodieren das automatisch.
+> Sonderzeichen wie `&`, `@`, `%`, `#`, Leerzeichen oder gar
+> Steuerzeichen (z. B. aus manchen Passwort-Managern) führen zu einem
+> Parse-Fehler und die Verbindung schlägt fehl (siehe Troubleshooting).
+> **Nur alphanumerische Zeichen verwenden**, z. B. generiert mit:
+> ```bash
+> openssl rand -hex 20
+> ```
+> Für den Zuschauer-Zugang (2.2) gilt diese Einschränkung nicht — der läuft
+> über HTTP-Basic-Auth, die codiert automatisch.
+
 ```bash
 echo -n "<streamer-username>" | openssl dgst -binary -sha256 | openssl base64
 echo -n "<streamer-passwort>" | openssl dgst -binary -sha256 | openssl base64
@@ -172,11 +185,16 @@ Server-Adresse: `<server-ip>` = die LAN- oder Tailscale-IP des Home-Servers
 
 **RTMP (OBS):**
 
+RTMP kennt kein `user:pass@host` in der URL (anders als RTSP) — mediamtx
+nimmt die Zugangsdaten bei RTMP stattdessen als Query-Parameter entgegen.
+Die gehören an den Stream-Key, nicht an die Server-URL:
+
 - **Server:** `rtmp://<server-ip>:31935/live`
-- **Stream-Key:** `mystream` — Nutzername/Passwort trägst du in OBS unter
-  **Einstellungen → Stream → Nutzername/Passwort** ein (falls OBS kein
-  separates Feld anbietet, alternativ direkt in der Server-URL:
-  `rtmp://<streamer-user>:<streamer-passwort>@<server-ip>:31935/live`)
+- **Stream-Key:** `mystream?user=<streamer-user>&pass=<streamer-passwort>`
+
+Der eigentliche Pfad ist dann `live/mystream` (Server-Pfad + Stream-Key,
+ohne die Query-Parameter) — unter genau diesem Pfad rufst du den Stream
+später zum Zuschauen ab.
 
 **RTSP/ffmpeg-Beispiel:**
 
@@ -283,9 +301,13 @@ an](23-cloudflare-deploy.md#configmap-änderung-kommt-nicht-im-pod-an)).
 
 - NodePort-Ports (31935/31554) nicht über LAN/Tailnet erreichbar prüfen:
   `nc -zv <server-ip> 31935`.
-- Nutzername/Passwort im URL-Format `rtmp://user:pass@host:port/pfad`
-  angegeben, nicht nur `rtmp://host:port/pfad`, oder OBS' getrennte
-  Nutzername/Passwort-Felder (falls vorhanden) nicht ausgefüllt.
+- Bei RTMP (OBS) die Zugangsdaten als `user:pass@host` in der Server-URL
+  eingetragen — das funktioniert nur bei RTSP. RTMP braucht die Query-
+  Parameter-Form `?user=...&pass=...` **im Stream-Key** (siehe Schritt 3);
+  eine Server-URL wie `rtmp://user:pass@host:1935/live` lässt OBS die
+  Verbindung entweder gar nicht erst aufbauen oder mediamtx lehnt sie ab.
+- Falsche/vertauschte Groß-/Kleinschreibung oder Sonderzeichen im Passwort
+  ohne URL-Encoding — Sonderzeichen im Stream-Key ggf. prozentkodieren.
 
 ---
 
