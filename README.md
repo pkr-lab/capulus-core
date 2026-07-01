@@ -7,6 +7,7 @@
   <a href="https://k3s.io"><img alt="k3s" src="https://img.shields.io/badge/k3s-v1.29-FFC61C?style=for-the-badge&logo=kubernetes&logoColor=black"></a>&nbsp;
   <a href="https://argo-cd.readthedocs.io"><img alt="ArgoCD" src="https://img.shields.io/badge/ArgoCD-GitOps-EF7B4D?style=for-the-badge&logo=argo&logoColor=white"></a>&nbsp;
   <a href="https://tailscale.com"><img alt="Tailscale" src="https://img.shields.io/badge/Tailscale-VPN-246FDB?style=for-the-badge&logo=tailscale&logoColor=white"></a>&nbsp;
+  <a href="https://www.cloudflare.com/products/tunnel/"><img alt="Cloudflare Tunnel" src="https://img.shields.io/badge/Cloudflare-Tunnel-F38020?style=for-the-badge&logo=cloudflare&logoColor=white"></a>&nbsp;
   <a href="https://www.ansible.com"><img alt="Ansible" src="https://img.shields.io/badge/Ansible-IaC-EE0000?style=for-the-badge&logo=ansible&logoColor=white"></a>
 </p>
 
@@ -70,6 +71,7 @@ make install
 <tr><td>Secrets</td><td><strong>Sealed Secrets + kubeseal-webgui</strong></td><td>Verschlüsselte Secrets in Git, nur im Cluster entschlüsselbar</td></tr>
 <tr><td>Notifications</td><td><strong>Gotify</strong> + <strong>ntfy</strong></td><td>Self-hosted Push — Gotify (Android), ntfy (iOS + Android)</td></tr>
 <tr><td>Remote-Access</td><td><strong>Tailscale</strong></td><td>WireGuard-Mesh-VPN — keine Portfreigaben, keine öffentliche IP</td></tr>
+<tr><td>Externe Erreichbarkeit</td><td><strong>Cloudflare Tunnel</strong></td><td>Ausgewählte Dienste öffentlich erreichbar, ohne VPN und ohne offene Ports</td></tr>
 <tr><td>CI/CD intern</td><td><strong>Argo Workflows + MinIO</strong></td><td>Private CI/CD-Pipeline + S3-Artifact-Store im Cluster</td></tr>
 <tr><td>Ingress</td><td><strong>Traefik v2</strong> (k3s bundled)</td><td>HTTP/HTTPS-Routing in den Cluster</td></tr>
 <tr><td>SSO</td><td><strong>Authentik</strong></td><td>Zentraler Identity Provider für alle Dienste via OIDC</td></tr>
@@ -187,6 +189,11 @@ capulus-core/
 │   ├── 16-hdd-storage.md             # HDD-StorageClass auf worker-0
 │   ├── 17-zammad.md                  # Zammad Helpdesk/Ticket-System
 │   ├── 18-windows-deployment.md      # Windows-PC-Deployment (PXE/USB/Ansible)
+│   ├── 19-alamos-apager.md           # Alarmmonitor-Kiosk-Verwaltung (ALAMOS AMweb)
+│   ├── 20-wikijs.md                  # Wiki.js Team-Wiki
+│   ├── 21-le-homeserver-ui.md        # Home-Server-Status-UI
+│   ├── 22-cloudflare-tunnel.md       # Cloudflare Tunnel — Setup & Konzept
+│   ├── 23-cloudflare-deploy.md       # Cloudflare Tunnel — Deploy & Betrieb
 │   └── assets/banner.svg
 ├── ansible/
 │   ├── site.yml                      # Entry-Point
@@ -221,6 +228,7 @@ capulus-core/
         ├── sealed-secrets/           # SealedSecrets-Controller
         ├── authentik/                # Authentik Single-Sign-On
         ├── alamos-apager/            # Alarmmonitor-Kiosk-Verwaltung (ALAMOS AMweb)
+        ├── cloudflared/               # Cloudflare Tunnel — externe Erreichbarkeit
         └── semaphore/                # Ansible-Web-UI
 ```
 
@@ -284,6 +292,11 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 | kubeseal-webgui | http://kubeseal-webgui.homeserver |
 | Alarmmonitor (alamos-apager) | http://alamos-apager.homeserver |
 
+> Zusätzlich zu den internen `*.homeserver`-URLs können ausgewählte Dienste
+> über Cloudflare Tunnel öffentlich unter einer eigenen Domain erreichbar
+> gemacht werden (z. B. `https://wiki.deine-domain.de`) — ohne VPN, ohne
+> offene Ports. Setup: **[docs/22-cloudflare-tunnel.md](docs/22-cloudflare-tunnel.md)**.
+
 ---
 
 ## Networking & Security
@@ -291,8 +304,9 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 <table>
 <thead><tr><th>Prinzip</th><th>Umsetzung</th></tr></thead>
 <tbody>
-<tr><td>Keine öffentlichen Ports</td><td>Zugriff ausschließlich über LAN oder Tailscale-VPN</td></tr>
+<tr><td>Keine öffentlichen Ports</td><td>Zugriff ausschließlich über LAN, Tailscale-VPN oder gezielt per Cloudflare Tunnel (ausgehende Verbindung, kein Port-Forwarding)</td></tr>
 <tr><td>UFW-Firewall</td><td>Erlaubt nur SSH, HTTP/HTTPS, k3s-API, ArgoCD-NodePort, Flannel, Tailscale-UDP</td></tr>
+<tr><td>Opt-in externe Erreichbarkeit</td><td>Nur explizit in <code>argocd/apps/cloudflared/values.yaml</code> eingetragene Dienste sind öffentlich erreichbar, alles andere bleibt intern</td></tr>
 <tr><td>Ansible-Vault</td><td>Sensitive Secrets verschlüsselt at rest</td></tr>
 <tr><td>ArgoCD Read-only</td><td>Hat ausschließlich Read-Access auf das Git-Repo</td></tr>
 </tbody>
@@ -339,6 +353,8 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [Zertifikats-Auth](docs/15-cert-login.md) | Traefik mTLS Client-Zertifikate |
 | [SSO alle Dienste](docs/16-sso-alle-dienste.md) | Headlamp, Argo Workflows, MinIO via OIDC |
 | [Alarmmonitor-Kiosks](docs/20-alamos-apager.md) | Raspberry-Pi-Kiosks für ALAMOS AMweb, zentral verwaltet |
+| [Cloudflare Tunnel — Setup](docs/22-cloudflare-tunnel.md) | Externe Erreichbarkeit ohne VPN: Konzept, Tunnel-Einrichtung, Absicherung |
+| [Cloudflare Tunnel — Deploy](docs/23-cloudflare-deploy.md) | Rollout, neuen Dienst freigeben, Rotation, Troubleshooting |
 
 ---
 

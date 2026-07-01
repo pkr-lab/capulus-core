@@ -1,0 +1,99 @@
+---
+# ============================================================
+# Cloudflare Tunnel — Werte-Datei
+#
+# Setup-Anleitung: docs/22-cloudflare-tunnel.md
+# Deploy-Anleitung: docs/23-cloudflare-deploy.md
+# ============================================================
+
+# Zwei Replicas = zwei unabhängige Edge-Verbindungen für denselben Tunnel
+# (cloudflared unterstützt das nativ — kein Leader-Election-Gedöns nötig).
+replicaCount: 2
+
+image:
+  repository: cloudflare/cloudflared
+  pullPolicy: IfNotPresent
+  # Pinned für Reproduzierbarkeit. Releases:
+  # https://github.com/cloudflare/cloudflared/releases
+  tag: "2025.7.0"
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 65532
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 250m
+    memory: 128Mi
+
+tunnel:
+  # Name, den `cloudflared tunnel create <name>` vergeben hat.
+  name: homeserver
+
+  # Tunnel-ID (UUID aus `cloudflared tunnel create`). Kein Secret — nur ein
+  # Bezeichner, unbedenklich im Klartext in Git.
+  id: "REPLACE_WITH_TUNNEL_ID"
+
+  # credentials.json aus `cloudflared tunnel create` mit kubeseal versiegeln:
+  #   kubeseal --raw --namespace cloudflared --name cloudflared-credentials \
+  #     --controller-namespace sealed-secrets --controller-name sealed-secrets-controller \
+  #     --from-file=/pfad/zur/<tunnel-id>.json
+  # Details: docs/22-cloudflare-tunnel.md → Schritt 3
+  credentialsSecretName: cloudflared-credentials
+  encryptedCredentialsJson: "REPLACE_WITH_SEALED_VALUE"
+
+  ingress:
+    # Public-Hostname → internes Kubernetes-Service-Routing.
+    # Reihenfolge zählt: der erste Treffer gewinnt. `defaultService` unten
+    # fängt alles Übrige ab (Pflicht bei cloudflared).
+    #
+    # Bei Wildcard-DNS-Route (empfohlen, docs/22 Schritt 4: ein *-CNAME
+    # auf den Tunnel) reicht es, hier eine neue Zeile zu ergänzen — kein
+    # erneutes `cloudflared tunnel route dns` pro Dienst nötig.
+    #
+    # Service-Namen mit `kubectl -n <namespace> get svc` prüfen — bei
+    # Sub-Charts (z.B. Zammad) heißt der Service oft
+    # "<release>-<chart>-<komponente>", nicht einfach der App-Name.
+    #
+    # Beispiele (siehe docs/22-cloudflare-tunnel.md → "Welche Dienste
+    # freigeben?" für die Begründung je Dienst):
+    #
+    # rules:
+    #   - hostname: wiki.deine-domain.de
+    #     service: http://wikijs-wikijs.wikijs.svc.cluster.local:80
+    #   - hostname: ntfy.deine-domain.de
+    #     service: http://ntfy.ntfy.svc.cluster.local:80
+    #   - hostname: support.deine-domain.de
+    #     service: http://zammad-zammad-nginx.zammad.svc.cluster.local:80
+    #   - hostname: grafana.deine-domain.de
+    #     service: http://monitoring-grafana.monitoring.svc.cluster.local:80
+    rules: []
+    defaultService: "http_status:404"
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

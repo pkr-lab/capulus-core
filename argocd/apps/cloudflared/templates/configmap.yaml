@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cloudflared.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cloudflared.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    tunnel: {{ .Values.tunnel.id }}
+    credentials-file: /etc/cloudflared/creds/credentials.json
+    metrics: 0.0.0.0:2000
+    no-autoupdate: true
+    ingress:
+      {{- range .Values.tunnel.ingress.rules }}
+      - hostname: {{ .hostname | quote }}
+        service: {{ .service | quote }}
+        {{- with .originRequest }}
+        originRequest:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- end }}
+      - service: {{ .Values.tunnel.ingress.defaultService | quote }}
