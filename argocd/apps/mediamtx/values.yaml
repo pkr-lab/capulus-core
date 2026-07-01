@@ -1,0 +1,120 @@
+---
+# ============================================================
+# MediaMTX — RTSP/RTMP/WebRTC/HLS Media-Server
+#
+# Setup-/Betriebs-Anleitung: docs/24-mediamtx.md
+# ============================================================
+
+replicaCount: 1
+
+image:
+  repository: bluenviron/mediamtx
+  pullPolicy: IfNotPresent
+  # Pinned für Reproduzierbarkeit. Releases:
+  # https://github.com/bluenviron/mediamtx/releases
+  tag: "1.19.2"
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# Interner Service — HLS-Playback + WebRTC + API/Metrics. Nur Cluster-intern
+# per ClusterIP erreichbar; welche Ports zusätzlich extern (Traefik-Ingress,
+# Cloudflare Tunnel) freigegeben werden, steuert ausschließlich `ingress`
+# unten bzw. `argocd/apps/cloudflared/values.yaml`.
+service:
+  type: ClusterIP
+  ports:
+    hls: 8888
+    webrtc: 8889
+    api: 9997
+
+# Publish-Service — RTMP/RTSP als NodePort für Encoder/OBS/ffmpeg im
+# LAN/Tailnet. Bewusst NICHT über Cloudflare Tunnel erreichbar: Streaming-
+# Quellen bleiben grundsätzlich intern (siehe docs/24-mediamtx.md,
+# Abschnitt "Warum Publish nicht über Cloudflare läuft"). NodePorts sind
+# durch die bestehenden UFW-Regeln bereits auf LAN/Tailnet beschränkt
+# (siehe README.md#networking--security) — keine zusätzliche
+# Firewall-Änderung nötig.
+publishService:
+  type: NodePort
+  ports:
+    rtmp:
+      port: 1935
+      nodePort: 31935
+    rtsp:
+      port: 8554
+      nodePort: 31554
+
+# Ingress für Browser-Playback — sowohl intern (stream.homeserver) als auch
+# extern über den Cloudflare Tunnel (stream.pke-lab.de, siehe
+# argocd/apps/cloudflared/values.yaml). Beide Hostnamen laufen durch Traefik
+# und sind per Authentik-ForwardAuth-Middleware abgesichert: nur Mitglieder
+# der Authentik-Gruppe "mediamtx-viewers" mit eingerichtetem TOTP
+# (Google Authenticator) kommen durch. Details: docs/24-mediamtx.md.
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: "authentik-authentik-forwardauth@kubernetescrd"
+  hosts:
+    - host: stream.homeserver
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: stream.pke-lab.de
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Authentik-gestützte Publish-Autorisierung: mediamtx validiert das JWT,
+# das ein Streamer als `?token=<JWT>` an die RTMP-/RTSP-URL anhängt, gegen
+# Authentiks JWKS-Endpunkt. Lesezugriff (Playback) bleibt bewusst ohne JWT
+# offen — Zuschauer werden stattdessen über Cloudflare Access (Einmalcode
+# per E-Mail) auf der öffentlichen HLS-URL abgesichert.
+# Vollständiges Setup: docs/24-mediamtx.md.
+auth:
+  jwks: "http://authentik-server.authentik.svc.cluster.local/application/o/mediamtx/jwks/"
+  # Issuer/Audience-Prüfung bewusst leer (= deaktiviert), bis der exakte
+  # `iss`-Claim eines echten Authentik-Tokens verifiziert wurde (docs/24,
+  # Abschnitt "Issuer/Audience schärfen"). Ein falscher Wert hier würde
+  # JEDEN Publish-Versuch mit "invalid token" ablehnen.
+  issuer: ""
+  audience: ""
+  claimKey: "mediamtx_permissions"
+
+logLevel: info
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

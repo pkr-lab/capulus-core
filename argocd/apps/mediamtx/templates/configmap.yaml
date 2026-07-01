@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mediamtx.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mediamtx.labels" . | nindent 4 }}
+data:
+  # Nur die von den Defaults abweichenden Keys sind nötig — mediamtx
+  # merged diese Datei über seine eingebauten Standardwerte.
+  mediamtx.yml: |
+    logLevel: {{ .Values.logLevel | quote }}
+
+    api: yes
+    apiAddress: :{{ .Values.service.ports.api }}
+
+    rtsp: yes
+    rtspAddress: :{{ .Values.publishService.ports.rtsp.port }}
+    rtmp: yes
+    rtmpAddress: :{{ .Values.publishService.ports.rtmp.port }}
+    hls: yes
+    hlsAddress: :{{ .Values.service.ports.hls }}
+    webrtc: yes
+    webrtcAddress: :{{ .Values.service.ports.webrtc }}
+    srt: no
+
+    # Publish-Autorisierung über Authentik-JWT (docs/24-mediamtx.md).
+    authMethod: jwt
+    authJWTJWKS: {{ .Values.auth.jwks | quote }}
+    {{- if .Values.auth.issuer }}
+    authJWTIssuer: {{ .Values.auth.issuer | quote }}
+    {{- end }}
+    {{- if .Values.auth.audience }}
+    authJWTAudience: {{ .Values.auth.audience | quote }}
+    {{- end }}
+    authJWTClaimKey: {{ .Values.auth.claimKey | quote }}
+    # Lesezugriff (read/playback) bleibt ohne JWT offen — Zuschauer werden
+    # stattdessen über Cloudflare Access (Einmalcode per E-Mail) auf der
+    # öffentlichen HLS-URL abgesichert, siehe docs/24-mediamtx.md.
+    authJWTExclude:
+      - action: read
+      - action: playback
+      - action: api
+      - action: metrics
+
+    paths:
+      all_others:
