@@ -36,7 +36,7 @@ zammad:
   # E-Mail-Adresse, die als Ticket-Anfrager (customer) gesetzt wird.
   # MUSS vor dem Aktivieren (suspend: false) angepasst werden.
   requesterEmail: "peterkretzer36@gmail.com"
-  tokenSecretName: BenachrichtigungRelaese
+  tokenSecretName: github-release-watcher-zammad-token
   tokenSecretKey: token
 
 # Sealed Secret für den Zammad-API-Token (Profile → Token Access in Zammad).
