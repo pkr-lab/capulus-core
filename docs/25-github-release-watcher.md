@@ -88,6 +88,13 @@ secrets:
 > Zammad nötig. Diese Adresse bestimmt nur den Ticket-"Anfrager", **nicht**
 > direkt den E-Mail-Empfänger der Benachrichtigung (siehe unten).
 
+> **Untergruppen:** Ist `zammad.group` eine Untergruppe (z. B. unter
+> **Admin → Groups** mit einer Elterngruppe angelegt), erwartet der
+> Ticket-API-Lookup den vollqualifizierten Namen mit `::` als Trenner, z. B.
+> `capulus-core::RepoBenachrichtigung`. Der einfache Name allein
+> (`RepoBenachrichtigung`) schlägt mit `HTTP 422 No lookup value found for
+> 'group'` fehl.
+
 ## Schritt 4 — Agenten-Benachrichtigung in Zammad prüfen
 
 Damit die E-Mail tatsächlich verschickt wird, muss der/die Ziel-Agent(en) in
