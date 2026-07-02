@@ -32,7 +32,9 @@ zammad:
   # Zammad-Gruppe, in der das Ticket angelegt wird. Agenten dieser Gruppe
   # erhalten eine E-Mail, sofern ihre Profil-Benachrichtigungen für
   # "Neues Ticket" aktiviert sind (Zammad-Standardverhalten).
-  group: "RepoBenachrichtigung"
+  # Bei Untergruppen erwartet der Ticket-API-Lookup den vollqualifizierten
+  # Namen mit "::" als Trenner (z.B. "ParentGruppe::Untergruppe").
+  group: "capulus-core::RepoBenachrichtigung"
   # E-Mail-Adresse, die als Ticket-Anfrager (customer) gesetzt wird.
   # MUSS vor dem Aktivieren (suspend: false) angepasst werden.
   requesterEmail: "peterkretzer36@gmail.com"
