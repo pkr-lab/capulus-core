@@ -83,17 +83,26 @@ secrets:
   encryptedToken: "<Ausgabe aus Schritt 2>"
 ```
 
-> **`requesterEmail`:** Zammad legt bei unbekannter E-Mail-Adresse automatisch
-> einen neuen Customer-Kontakt an — es ist **keine** vorherige Anlage in
-> Zammad nötig. Diese Adresse bestimmt nur den Ticket-"Anfrager", **nicht**
-> direkt den E-Mail-Empfänger der Benachrichtigung (siehe unten).
+> **`requesterEmail`:** Muss ein **bereits existierender** Zammad-User
+> (Login oder E-Mail) sein. Anders als beim E-Mail-Kanal legt die Ticket-API
+> (`POST /api/v1/tickets`) bei unbekannter Adresse **keinen** Customer
+> automatisch an, sondern schlägt mit `HTTP 422 No lookup value found for
+> 'customer'` fehl. Vorhandene User (inkl. exaktem Login/E-Mail-Feld) prüfen:
+> `GET /api/v1/groups` bzw. `GET /api/v1/users` mit dem Zammad-Token
+> (`curl -s -H "Authorization: Token token=$TOKEN" http://zammad.homeserver/api/v1/users`).
+> Existiert noch kein passender User, in **Admin → Users → New** einen
+> Customer-Account mit dieser Adresse anlegen. Diese Adresse bestimmt nur
+> den Ticket-"Anfrager", **nicht** direkt den E-Mail-Empfänger der
+> Benachrichtigung (siehe unten).
 
 > **Untergruppen:** Ist `zammad.group` eine Untergruppe (z. B. unter
 > **Admin → Groups** mit einer Elterngruppe angelegt), erwartet der
-> Ticket-API-Lookup den vollqualifizierten Namen mit `::` als Trenner, z. B.
-> `capulus-core::RepoBenachrichtigung`. Der einfache Name allein
-> (`RepoBenachrichtigung`) schlägt mit `HTTP 422 No lookup value found for
-> 'group'` fehl.
+> Ticket-API-Lookup den vollqualifizierten Namen mit `::` als Trenner, exakt
+> in der Schreibweise der Elterngruppe (Groß-/Kleinschreibung zählt), z. B.
+> `Capulus-Core::RepoBenachrichtigung`. Der einfache Name allein
+> (`RepoBenachrichtigung`) oder eine falsche Schreibweise schlägt mit
+> `HTTP 422 No lookup value found for 'group'` fehl — im Zweifel über
+> `GET /api/v1/groups` das exakte `name`-Feld prüfen.
 
 ## Schritt 4 — Agenten-Benachrichtigung in Zammad prüfen
 
