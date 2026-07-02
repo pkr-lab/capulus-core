@@ -1,0 +1,88 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "github-release-watcher.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "github-release-watcher.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.schedule | quote }}
+  timeZone: {{ .Values.timezone | quote }}
+  suspend: {{ .Values.suspend }}
+  concurrencyPolicy: {{ .Values.concurrencyPolicy }}
+  failedJobsHistoryLimit: {{ .Values.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.successfulJobsHistoryLimit }}
+  jobTemplate:
+    metadata:
+      labels:
+        {{- include "github-release-watcher.selectorLabels" . | nindent 8 }}
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          annotations:
+            checksum/script: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+          labels:
+            {{- include "github-release-watcher.selectorLabels" . | nindent 12 }}
+        spec:
+          serviceAccountName: {{ include "github-release-watcher.serviceAccountName" . }}
+          restartPolicy: Never
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          containers:
+            - name: watcher
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command: ["python3", "/app/watcher.py"]
+              env:
+                - name: NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+                - name: STATE_CONFIGMAP_NAME
+                  value: {{ include "github-release-watcher.stateConfigMapName" . }}
+                - name: GITHUB_REPOS
+                  value: {{ .Values.github.repos | join "," | quote }}
+                {{- if .Values.github.tokenSecretName }}
+                - name: GITHUB_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.github.tokenSecretName }}
+                      key: {{ .Values.github.tokenSecretKey }}
+                {{- end }}
+                - name: ZAMMAD_URL
+                  value: {{ .Values.zammad.url | quote }}
+                - name: ZAMMAD_GROUP
+                  value: {{ .Values.zammad.group | quote }}
+                - name: ZAMMAD_REQUESTER_EMAIL
+                  value: {{ .Values.zammad.requesterEmail | quote }}
+                - name: ZAMMAD_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.zammad.tokenSecretName }}
+                      key: {{ .Values.zammad.tokenSecretKey }}
+              resources:
+                {{- toYaml .Values.resources | nindent 16 }}
+              securityContext:
+                {{- toYaml .Values.securityContext | nindent 16 }}
+              volumeMounts:
+                - name: script
+                  mountPath: /app
+                  readOnly: true
+          volumes:
+            - name: script
+              configMap:
+                name: {{ include "github-release-watcher.fullname" . }}-script
+                defaultMode: 0555
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
