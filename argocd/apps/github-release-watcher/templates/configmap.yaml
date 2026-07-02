@@ -144,10 +144,12 @@ data:
                 "Content-Type": "application/json",
             },
         )
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            if resp.status not in (200, 201):
-                raise RuntimeError(f"Zammad-Ticket fehlgeschlagen: HTTP {resp.status}")
-            print(f"[OK] Zammad-Ticket erstellt fuer {repo} {tag}")
+        try:
+            with urllib.request.urlopen(req, timeout=10):
+                print(f"[OK] Zammad-Ticket erstellt fuer {repo} {tag}")
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode(errors="replace")
+            raise RuntimeError(f"Zammad-Ticket fehlgeschlagen: HTTP {exc.code} {detail}") from exc
 
 
     def main():

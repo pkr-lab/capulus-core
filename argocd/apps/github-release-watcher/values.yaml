@@ -28,7 +28,7 @@ github:
   tokenSecretKey: token
 
 zammad:
-  url: "http://zammad.homeserver"
+  url: "https://support.pke-lab.de"
   # Zammad-Gruppe, in der das Ticket angelegt wird. Agenten dieser Gruppe
   # erhalten eine E-Mail, sofern ihre Profil-Benachrichtigungen für
   # "Neues Ticket" aktiviert sind (Zammad-Standardverhalten).
