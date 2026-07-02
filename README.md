@@ -196,6 +196,7 @@ capulus-core/
 │   ├── 22-cloudflare-tunnel.md       # Cloudflare Tunnel — Setup & Konzept
 │   ├── 23-cloudflare-deploy.md       # Cloudflare Tunnel — Deploy & Betrieb
 │   ├── 24-mediamtx.md                # Live-Streaming (RTMP/RTSP → HLS)
+│   ├── 25-github-release-watcher.md  # GitHub-Release → Zammad-E-Mail-Benachrichtigung
 │   └── assets/banner.svg
 ├── ansible/
 │   ├── site.yml                      # Entry-Point
@@ -364,6 +365,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [Cloudflare Tunnel — Setup](docs/22-cloudflare-tunnel.md) | Externe Erreichbarkeit ohne VPN: Konzept, Tunnel-Einrichtung, Absicherung |
 | [Cloudflare Tunnel — Deploy](docs/23-cloudflare-deploy.md) | Rollout, neuen Dienst freigeben, Rotation, Troubleshooting |
 | [MediaMTX Live-Streaming](docs/24-mediamtx.md) | RTMP/RTSP-Ingest → HLS, Publish- und Zuschauer-Autorisierung über mediamtx' eingebaute interne Benutzerverwaltung (HTTP Basic Auth) |
+| [GitHub Release Watcher](docs/25-github-release-watcher.md) | Neue GitHub-Releases erkennen und per Zammad-Ticket eine E-Mail-Benachrichtigung auslösen |
 
 ---
 

@@ -1,0 +1,194 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "github-release-watcher.fullname" . }}-script
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "github-release-watcher.labels" . | nindent 4 }}
+data:
+  watcher.py: |
+    #!/usr/bin/env python3
+    """
+    GitHub-Release-Watcher -> Zammad-Bridge.
+
+    Pollt die GitHub-Releases-API fuer eine Liste von Repos. Bei einem neuen
+    Release wird per Zammad-REST-API ein Ticket in einer Gruppe angelegt;
+    Zammads eigene Agenten-Benachrichtigung (Profil-Einstellungen) verschickt
+    daraufhin die E-Mail. Der zuletzt gesehene Tag pro Repo wird in einer
+    ConfigMap im eigenen Namespace persistiert (Zugriff ueber das
+    ServiceAccount-Token, kein kubectl noetig). Nutzt ausschliesslich die
+    Python-Standardbibliothek.
+    """
+    import json
+    import os
+    import ssl
+    import sys
+    import urllib.error
+    import urllib.request
+
+    GITHUB_REPOS = [r.strip() for r in os.environ["GITHUB_REPOS"].split(",") if r.strip()]
+    GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+
+    ZAMMAD_URL = os.environ["ZAMMAD_URL"].rstrip("/")
+    ZAMMAD_TOKEN = os.environ["ZAMMAD_TOKEN"]
+    ZAMMAD_GROUP = os.environ["ZAMMAD_GROUP"]
+    ZAMMAD_REQUESTER_EMAIL = os.environ["ZAMMAD_REQUESTER_EMAIL"]
+
+    NAMESPACE = os.environ["NAMESPACE"]
+    STATE_CONFIGMAP = os.environ["STATE_CONFIGMAP_NAME"]
+
+    SA_DIR = "/var/run/secrets/kubernetes.io/serviceaccount"
+    K8S_API = "https://{}:{}".format(
+        os.environ["KUBERNETES_SERVICE_HOST"], os.environ["KUBERNETES_SERVICE_PORT"]
+    )
+
+
+    def k8s_request(method, path, body=None):
+        with open(f"{SA_DIR}/token") as f:
+            token = f.read().strip()
+        ctx = ssl.create_default_context(cafile=f"{SA_DIR}/ca.crt")
+        data = json.dumps(body).encode() if body is not None else None
+        content_type = "application/merge-patch+json" if method == "PATCH" else "application/json"
+        req = urllib.request.Request(
+            f"{K8S_API}{path}",
+            data=data,
+            method=method,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": content_type,
+                "Accept": "application/json",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, context=ctx, timeout=10) as resp:
+                raw = resp.read()
+                return resp.status, (json.loads(raw) if raw else {})
+        except urllib.error.HTTPError as exc:
+            raw = exc.read()
+            return exc.code, (json.loads(raw) if raw else {})
+
+
+    def load_state():
+        path = f"/api/v1/namespaces/{NAMESPACE}/configmaps/{STATE_CONFIGMAP}"
+        status, body = k8s_request("GET", path)
+        if status == 200:
+            return True, json.loads(body.get("data", {}).get("state.json", "{}"))
+        if status == 404:
+            return False, {}
+        raise RuntimeError(f"Konnte State-ConfigMap nicht lesen: HTTP {status} {body}")
+
+
+    def save_state(state, existed):
+        cm = {
+            "apiVersion": "v1",
+            "kind": "ConfigMap",
+            "metadata": {"name": STATE_CONFIGMAP, "namespace": NAMESPACE},
+            "data": {"state.json": json.dumps(state)},
+        }
+        if existed:
+            path = f"/api/v1/namespaces/{NAMESPACE}/configmaps/{STATE_CONFIGMAP}"
+            status, body = k8s_request("PATCH", path, cm)
+        else:
+            path = f"/api/v1/namespaces/{NAMESPACE}/configmaps"
+            status, body = k8s_request("POST", path, cm)
+        if status not in (200, 201):
+            raise RuntimeError(f"Konnte State-ConfigMap nicht schreiben: HTTP {status} {body}")
+
+
+    def latest_release(repo):
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        if GITHUB_TOKEN:
+            headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
+        req = urllib.request.Request(
+            f"https://api.github.com/repos/{repo}/releases/latest", headers=headers
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return json.loads(resp.read())
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404:
+                return None  # noch kein Release veroeffentlicht
+            raise
+
+
+    def notify_zammad(repo, release):
+        tag = release.get("tag_name", "?")
+        name = release.get("name") or tag
+        url = release.get("html_url", "")
+        notes = release.get("body") or "(keine Release-Notes)"
+
+        payload = {
+            "title": f"Neues Release: {repo} {name}",
+            "group": ZAMMAD_GROUP,
+            "customer": ZAMMAD_REQUESTER_EMAIL,
+            "article": {
+                "subject": f"Neues Release: {repo} {name}",
+                "body": (
+                    f"Repo: {repo}<br>Tag: {tag}<br>URL: "
+                    f"<a href=\"{url}\">{url}</a><br><br>{notes}"
+                ),
+                "content_type": "text/html",
+                "type": "note",
+                "internal": False,
+            },
+        }
+        req = urllib.request.Request(
+            f"{ZAMMAD_URL}/api/v1/tickets",
+            data=json.dumps(payload).encode(),
+            method="POST",
+            headers={
+                "Authorization": f"Token token={ZAMMAD_TOKEN}",
+                "Content-Type": "application/json",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            if resp.status not in (200, 201):
+                raise RuntimeError(f"Zammad-Ticket fehlgeschlagen: HTTP {resp.status}")
+            print(f"[OK] Zammad-Ticket erstellt fuer {repo} {tag}")
+
+
+    def main():
+        state_existed, state = load_state()
+        changed = False
+
+        for repo in GITHUB_REPOS:
+            try:
+                release = latest_release(repo)
+            except Exception as exc:
+                print(f"[ERR] {repo}: GitHub-Abfrage fehlgeschlagen: {exc}", file=sys.stderr)
+                continue
+
+            if release is None:
+                print(f"[SKIP] {repo}: keine Releases vorhanden")
+                continue
+
+            tag = release.get("tag_name")
+            previous = state.get(repo)
+
+            if previous is None:
+                print(f"[INIT] {repo}: Baseline gesetzt auf {tag}")
+                state[repo] = tag
+                changed = True
+                continue
+
+            if tag != previous:
+                print(f"[NEW] {repo}: {previous} -> {tag}")
+                try:
+                    notify_zammad(repo, release)
+                    state[repo] = tag
+                    changed = True
+                except Exception as exc:
+                    print(f"[ERR] {repo}: Zammad-Benachrichtigung fehlgeschlagen: {exc}", file=sys.stderr)
+                    # State NICHT aktualisieren -> naechster Lauf versucht es erneut.
+            else:
+                print(f"[OK] {repo}: kein neues Release ({tag})")
+
+        if changed:
+            save_state(state, state_existed)
+
+
+    if __name__ == "__main__":
+        main()
