@@ -34,7 +34,7 @@ zammad:
   # "Neues Ticket" aktiviert sind (Zammad-Standardverhalten).
   # Bei Untergruppen erwartet der Ticket-API-Lookup den vollqualifizierten
   # Namen mit "::" als Trenner (z.B. "ParentGruppe::Untergruppe").
-  group: "capulus-core::RepoBenachrichtigung"
+  group: "Capulus-Core::RepoBenachrichtigung"
   # E-Mail-Adresse, die als Ticket-Anfrager (customer) gesetzt wird.
   # MUSS vor dem Aktivieren (suspend: false) angepasst werden.
   requesterEmail: "peterkretzer36@gmail.com"
