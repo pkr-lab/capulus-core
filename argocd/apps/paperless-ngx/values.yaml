@@ -88,7 +88,7 @@ env:
   # OCR: Deutsch + Englisch — weitere Sprachen per "deu+eng+fra" ergänzen
   PAPERLESS_OCR_LANGUAGE: "deu+eng"
   PAPERLESS_OCR_LANGUAGES: "deu eng"
-  PAPERLESS_URL: "http://paperless.homeserver"
+  PAPERLESS_URL: "https://paperless.pke-lab.de"
   # Anzahl Worker/Threads — für Home Lab reicht 1
   PAPERLESS_TASK_WORKERS: "1"
   PAPERLESS_THREADS_PER_WORKER: "1"
