@@ -34,9 +34,7 @@ Pi (Chromium --kiosk) ──▶ http://alamos-apager.homeserver/start?station=X
 ```
 
 Kein Secret/Token verlässt jemals den Cluster Richtung Pi — der Pi kennt nur
-seinen eigenen Stationsnamen, die echte AMweb-URL bleibt serverseitig
-(gleiches Prinzip wie bei `windeployment`s `/api/notify-zammad`, siehe
-[docs/18-windows-deployment.md](18-windows-deployment.md)).
+seinen eigenen Stationsnamen, die echte AMweb-URL bleibt serverseitig.
 
 ## Cluster-Komponente: Helm Chart `alamos-apager`
 
@@ -133,7 +131,7 @@ Knopfdruck laufen.
   konfigurierte Topic.
 - Kommt der Heartbeat zurück, wird automatisch ein Resolve-Push ("✅
   Alarmmonitor X wieder online") gesendet.
-- Bewusst **kein** Zammad-Ticket pro Ausfall (anders als `windeployment`) —
+- Bewusst **kein** Zammad-Ticket pro Ausfall —
   ein kurzer Pi-Reboot soll nicht jedes Mal ein Ticket erzeugen. Bei
   wiederkehrenden Ausfällen liegt die Nachverfolgung beim Betrachten der
   ntfy-Historie.

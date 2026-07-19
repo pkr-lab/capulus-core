@@ -1,0 +1,17 @@
+---
+apiVersion: v2
+name: paperless-ngx
+description: Document management system with OCR — scan and search letters, invoices, contracts.
+type: application
+version: 0.1.0
+appVersion: "2.13.5"
+keywords:
+  - paperless
+  - ocr
+  - documents
+  - archive
+home: https://docs.paperless-ngx.com
+sources:
+  - https://github.com/paperless-ngx/paperless-ngx
+maintainers:
+  - name: home-server-admin

@@ -1,0 +1,85 @@
+---
+replicaCount: 1
+
+image:
+  repository: n8nio/n8n
+  pullPolicy: IfNotPresent
+  tag: "1.58.2"
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 5678
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations: {}
+  hosts:
+    - host: n8n.homeserver
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+persistence:
+  enabled: true
+  storageClassName: hdd
+  size: 5Gi
+  accessMode: ReadWriteOnce
+  mountPath: /home/node/.n8n
+
+env:
+  N8N_HOST: "n8n.homeserver"
+  N8N_PORT: "5678"
+  N8N_PROTOCOL: "http"
+  WEBHOOK_URL: "http://n8n.homeserver/"
+  TZ: Europe/Berlin
+  # SQLite als Datenbank (keine externe DB nötig im Home Lab)
+  DB_TYPE: sqlite
+  # Basis-Auth kann hier oder über Authentik (ForwardAuth) aktiviert werden
+  N8N_BASIC_AUTH_ACTIVE: "false"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+# HDD-Storage liegt auf worker-0 — NodeAffinity ist Pflicht.
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - worker-0
+
+nodeSelector: {}
+tolerations: []
