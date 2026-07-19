@@ -61,6 +61,7 @@ env:
   DB_TYPE: sqlite
   # Basis-Auth kann hier oder über Authentik (ForwardAuth) aktiviert werden
   N8N_BASIC_AUTH_ACTIVE: "false"
+  N8N_SECURE_COOKIE: "false"
 
 resources:
   requests:
