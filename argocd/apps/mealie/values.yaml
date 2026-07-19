@@ -1,0 +1,82 @@
+---
+replicaCount: 1
+
+image:
+  repository: ghcr.io/mealie-recipes/mealie
+  pullPolicy: IfNotPresent
+  tag: "v1.12.0"
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 911
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 911
+  runAsGroup: 911
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 9000
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations: {}
+  hosts:
+    - host: mealie.homeserver
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+persistence:
+  enabled: true
+  storageClassName: hdd
+  size: 5Gi
+  accessMode: ReadWriteOnce
+  mountPath: /app/data
+
+env:
+  TZ: Europe/Berlin
+  ALLOW_SIGNUP: "false"
+  BASE_URL: "http://mealie.homeserver"
+  # Maximale Anzahl Workers — für Home Lab reicht 1
+  MAX_WORKERS: "1"
+  WEB_CONCURRENCY: "1"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+# HDD-Storage liegt auf worker-0 — NodeAffinity ist Pflicht.
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - worker-0
+
+nodeSelector: {}
+tolerations: []

@@ -6,22 +6,25 @@ Vaultwarden – leichtgewichtiger Passwort-Manager (Bitwarden-kompatibel), sinnv
 
 ## Alltag / Produktivität
 
-Paperless-ngx – digitalisiert Briefe, Rechnungen und Verträge per OCR und macht sie durchsuchbar; Scanner/Handy-Foto reinwerfen, Rest läuft automatisch.
+        Lösche WindowsDeployment aus dem Repo gehe dazu alle dateien ienmal durch und lösche auch die verküpfungen sodass Windows deployment ganz raus ist.
 
-Mealie – Rezeptverwaltung + Wochenplaner, importiert Rezepte direkt von Kochseiten per URL.
+        Anschließend deploye bitte das folgende, erstelle oder passe dementsprechend die Docs an.
 
-Grocy – Haushalts-ERP: Vorräte, Einkaufsliste, Ablaufdaten, Putzplan – nützlich, wenn ihr Lebensmittelverschwendung/Vorräte im Griff haben wollt.
+        Paperless-ngx – digitalisiert Briefe, Rechnungen und Verträge per OCR und macht sie durchsuchbar; Scanner/Handy-Foto reinwerfen, Rest läuft automatisch.
 
-n8n – Low-Code-Automatisierung (Zapier-Ersatz), z. B. "neue Rechnung in Paperless → Benachrichtigung via ntfy".
+        Mealie – Rezeptverwaltung + Wochenplaner, importiert Rezepte direkt von Kochseiten per URL.
 
-Uptime Kuma – einfache Status-Seite/Alerting für "ist Dienst X gerade erreichbar", ergänzt VictoriaMetrics für den schnellen Blick.
+        Grocy – Haushalts-ERP: Vorräte, Einkaufsliste, Ablaufdaten, Putzplan – nützlich, wenn ihr Lebensmittelverschwendung/Vorräte im Griff haben wollt.
 
-Grafana-Dashboard mit Pegelonline-API (WSV, öffentlich & kostenlos) – Rhein-Pegel Andernach live einbinden. Hochwasservorhersage RLP / Hochwasserzentralen.de (öffentlich & kostenlos) – ergänzt den reinen Ist-Pegel von Pegelonline um eine 24–48h-Vorhersage, relevant für vorausschauende Einsatzplanung statt nur Momentaufnahme.
+        n8n – Low-Code-Automatisierung (Zapier-Ersatz), z. B. "neue Rechnung in Paperless → Benachrichtigung via ntfy".
 
-ELWIS (Elektronischer Wasserstraßen-Informationsservice, öffentlich & kostenlos) – Schifffahrtsmeldungen, Sperrungen und Fahrwasser-Infos zum Rhein bei Andernach, gut als zusätzliches Grafana-Panel 
+        Uptime Kuma – einfache Status-Seite/Alerting für "ist Dienst X gerade erreichbar", ergänzt VictoriaMetrics für den schnellen Blick.
 
-DWD Open Data API (Deutscher Wetterdienst, öffentlich & kostenlos) – Unwetter-/Sturmwarnungen für Andernach als Grafana-Panel
+        Grafana-Dashboard mit Pegelonline-API (WSV, öffentlich & kostenlos) – Rhein-Pegel Andernach live einbinden. Hochwasservorhersage RLP / Hochwasserzentralen.de (öffentlich & kostenlos) – ergänzt den reinen Ist-Pegel von Pegelonline um eine 24–48h-Vorhersage, relevant für vorausschauende Einsatzplanung statt nur Momentaufnahme.
 
+        ELWIS (Elektronischer Wasserstraßen-Informationsservice, öffentlich & kostenlos) – Schifffahrtsmeldungen, Sperrungen und Fahrwasser-Infos zum Rhein bei Andernach, gut als zusätzliches Grafana-Panel 
+
+        DWD Open Data API (Deutscher Wetterdienst, öffentlich & kostenlos) – Unwetter-/Sturmwarnungen für Andernach als Grafana-Panel
 
 
 Immich – Foto/Video-Backup vom Handy (Google-Photos-Ersatz), inkl. Gesichtserkennung und Timeline; spielt gut mit eurem MinIO/HDD-Storage zusammen.

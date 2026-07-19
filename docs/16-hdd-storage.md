@@ -16,8 +16,7 @@ worker-0 (192.168.178.95)
         │   ├── pvc-<uuid>/   ← automatisch von Kubernetes angelegt
         │   └── ...
         ├── backups/          ← manuelle Backups
-        ├── media/            ← Mediendateien
-        └── windeployment/    ← (legacy, jetzt per PVC verwaltet)
+        └── media/            ← Mediendateien
 
 Kubernetes (hdd-storage Namespace)
 └── local-path-provisioner (homelab.io/hdd-path)

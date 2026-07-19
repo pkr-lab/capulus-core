@@ -48,11 +48,6 @@ minio:
     - name: argo-artifacts
       policy: none
       purge: false
-    # Setup-Logs der Windows-PC-Flotte (windeployment, siehe
-    # argocd/apps/windeployment/configmap-counter.yaml + sealedsecret-credentials.yaml).
-    - name: windows-pc-logs
-      policy: none
-      purge: false
 
   # MinIO web console at http://minio.homeserver (LAN + Tailnet via dnsmasq
   # wildcard). The S3 API stays cluster-internal (minio.minio.svc:9000).
