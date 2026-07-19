@@ -1,0 +1,17 @@
+---
+apiVersion: v2
+name: grocy
+description: Household ERP — inventory, shopping list, expiry dates, chores.
+type: application
+version: 0.1.0
+appVersion: "4.2.0"
+keywords:
+  - grocy
+  - household
+  - inventory
+  - erp
+home: https://grocy.info
+sources:
+  - https://github.com/grocy/grocy
+maintainers:
+  - name: home-server-admin

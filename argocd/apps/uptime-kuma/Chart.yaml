@@ -1,0 +1,16 @@
+---
+apiVersion: v2
+name: uptime-kuma
+description: Self-hosted status page and monitoring tool.
+type: application
+version: 0.1.0
+appVersion: "1.23.15"
+keywords:
+  - uptime
+  - monitoring
+  - status
+home: https://uptime.kuma.pet
+sources:
+  - https://github.com/louislam/uptime-kuma
+maintainers:
+  - name: home-server-admin
