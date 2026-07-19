@@ -107,7 +107,18 @@ data:
                   {"color": "red", "value": 800}
                 ]
               }
-            }
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Vorhersage (cm)"},
+                "properties": [
+                  {"id": "color", "value": {"fixedColor": "white", "mode": "fixed"}},
+                  {"id": "custom.lineStyle", "value": {"dash": [8, 4], "fill": "dash"}},
+                  {"id": "custom.fillOpacity", "value": 0},
+                  {"id": "custom.lineWidth", "value": 2}
+                ]
+              }
+            ]
           },
           "gridPos": {"h": 10, "w": 18, "x": 6, "y": 0},
           "id": 2,
@@ -130,9 +141,25 @@ data:
                 {"selector": "value", "type": "number", "alias": "Wasserstand (cm)"}
               ],
               "format": "timeseries"
+            },
+            {
+              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+              "refId": "B",
+              "type": "json",
+              "source": "url",
+              "url": "https://www.hochwasser-rlp.de/rest/api/v1/stations/andernach/w/vorhersage.json",
+              "url_options": {"method": "GET", "data": ""},
+              "parser": "simple",
+              "root_selector": "",
+              "columns": [
+                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
+                {"selector": "value", "type": "number", "alias": "Vorhersage (cm)"}
+              ],
+              "format": "timeseries"
             }
           ],
-          "title": "Rhein-Pegel Andernach — 48h Verlauf",
+          "title": "Rhein-Pegel Andernach — 48h Verlauf & Vorhersage",
+          "description": "Weiße gestrichelte Linie = 48h-Vorhersage (Quelle: Hochwasservorhersagezentrale RLP). Falls keine Vorhersagelinie sichtbar: API-URL noch nicht verifiziert → hochwasser-rlp.de manuell prüfen.",
           "type": "timeseries"
         },
         {
@@ -182,14 +209,73 @@ data:
           "type": "gauge"
         },
         {
+          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto",
+                "displayMode": "auto",
+                "wrap": true
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Stufe"},
+                "properties": [
+                  {"id": "custom.width", "value": 90},
+                  {"id": "custom.displayMode", "value": "color-background"},
+                  {"id": "mappings", "value": [
+                    {"type": "value", "options": {"Minor":    {"text": "Gelb",   "color": "yellow", "index": 0}}},
+                    {"type": "value", "options": {"Moderate": {"text": "Orange", "color": "orange", "index": 1}}},
+                    {"type": "value", "options": {"Severe":   {"text": "Rot",    "color": "red",    "index": 2}}},
+                    {"type": "value", "options": {"Extreme":  {"text": "Extrem", "color": "purple", "index": 3}}}
+                  ]}
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Von"},
+                "properties": [{"id": "custom.width", "value": 140}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Bis"},
+                "properties": [{"id": "custom.width", "value": 140}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Warnung"},
+                "properties": [{"id": "custom.width", "value": 220}]
+              }
+            ]
+          },
           "gridPos": {"h": 8, "w": 12, "x": 0, "y": 10},
           "id": 3,
           "options": {
-            "content": "## DWD Warnungen — Kreis Mayen-Koblenz\n\n**Aktuelle Warnungen direkt beim DWD abrufen:**\n\n- [DWD WarnWetter — Andernach/Mayen-Koblenz](https://www.dwd.de/DE/wetter/warnungen_aktuell/warnkarten/warnkarte_gemeinden_bw.html)\n- [DWD Warnapp (warnwetter.de)](https://www.wettergefahren.de/warnkarte/gemeinden/aktuelle-warnungen.html)\n- [Katwarn Mayen-Koblenz](https://katwarn.de/)\n\n**Warnstufen:**\n\n| Stufe | Farbe | Bedeutung |\n|---|---|---|\n| 1 | Gelb | Wetterwarnung |\n| 2 | Orange | Markante Wetterwarnung |\n| 3 | Rot | Unwetterwarnung |\n| 4 | Violett | Extremes Unwetter |\n\n> **Hinweis:** Die DWD JSON-API wurde eingestellt. Die Warnungsdaten sind nur noch als JSONP oder im CAP-XML-Format verfügbar — nicht kompatibel mit dem Infinity-Plugin.",
-            "mode": "markdown"
+            "footer": {"show": false},
+            "showHeader": true,
+            "sortBy": [{"displayName": "Von", "desc": false}]
           },
-          "title": "DWD Warnungen — Kreis Mayen-Koblenz",
-          "type": "text"
+          "targets": [
+            {
+              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+              "refId": "A",
+              "type": "json",
+              "source": "url",
+              "url": "https://warnung.bund.de/api31/mapData/07137.json",
+              "url_options": {"method": "GET", "data": ""},
+              "parser": "backend",
+              "root_selector": "[*]",
+              "columns": [
+                {"selector": "payload.data.headline", "type": "string", "alias": "Warnung"},
+                {"selector": "payload.data.severity", "type": "string", "alias": "Stufe"},
+                {"selector": "startDate", "type": "string", "alias": "Von"},
+                {"selector": "expiresDate", "type": "string", "alias": "Bis"},
+                {"selector": "payload.data.description", "type": "string", "alias": "Beschreibung"}
+              ],
+              "format": "table"
+            }
+          ],
+          "title": "DWD Warnungen — Kreis Mayen-Koblenz (Live)",
+          "description": "Quelle: NINA / Bundesamt für Bevölkerungsschutz (warnung.bund.de). Keine Einträge = Keine aktuellen Warnungen.",
+          "type": "table"
         },
         {
           "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
@@ -209,7 +295,7 @@ data:
               "source": "url",
               "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations.json?includeTimeseries=true&includeCurrentMeasurement=true&waters=RHEIN&km=580&kmEnd=650",
               "url_options": {"method": "GET", "data": ""},
-              "parser": "backend",
+              "parser": "simple",
               "root_selector": "[*]",
               "columns": [
                 {"selector": "shortname", "type": "string", "alias": "Station"},
@@ -249,7 +335,7 @@ data:
       "schemaVersion": 38,
       "tags": ["rhein", "pegel", "wasser", "dlrg", "andernach"],
       "templating": {"list": []},
-      "time": {"from": "now-2d", "to": "now"},
+      "time": {"from": "now-2d", "to": "now+2d"},
       "timepicker": {},
       "timezone": "browser",
       "title": "Rhein Andernach — Pegel & Warnungen",
