@@ -15,11 +15,11 @@ data:
         uid: infinity
         isDefault: false
         jsonData:
-          # Erlaubte URL-Muster — schränkt ein, welche externen APIs abgefragt werden dürfen.
+          # Vollständige URL-Präfixe (mit https://) — Infinity v3 erfordert das im Gegensatz zu v2.
           # Änderungen hier → ArgoCD-Sync → Grafana-Neustart erforderlich.
           allowedHosts:
-            - "www.pegelonline.wsv.de"
-            - "www.dwd.de"
-            - "www.elwis.de"
-            - "www.hochwasser-rlp.de"
-            - "opendata.dwd.de"
+            - "https://www.pegelonline.wsv.de"
+            - "https://www.dwd.de"
+            - "https://www.elwis.de"
+            - "https://www.hochwasser-rlp.de"
+            - "https://opendata.dwd.de"
