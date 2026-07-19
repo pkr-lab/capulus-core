@@ -1,0 +1,119 @@
+---
+replicaCount: 1
+
+image:
+  repository: ghcr.io/paperless-ngx/paperless-ngx
+  pullPolicy: IfNotPresent
+  tag: "2.13.5"
+
+redis:
+  image: redis:7-alpine
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  persistence:
+    enabled: true
+    storageClassName: hdd
+    size: 1Gi
+    accessMode: ReadWriteOnce
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations: {}
+  hosts:
+    - host: paperless.homeserver
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+persistence:
+  data:
+    enabled: true
+    storageClassName: hdd
+    size: 20Gi
+    accessMode: ReadWriteOnce
+  media:
+    enabled: true
+    storageClassName: hdd
+    size: 50Gi
+    accessMode: ReadWriteOnce
+  consume:
+    enabled: true
+    storageClassName: hdd
+    size: 5Gi
+    accessMode: ReadWriteOnce
+  export:
+    enabled: true
+    storageClassName: hdd
+    size: 10Gi
+    accessMode: ReadWriteOnce
+
+env:
+  PAPERLESS_REDIS: "redis://localhost:6379"
+  PAPERLESS_DBENGINE: "sqlite"
+  PAPERLESS_TIME_ZONE: "Europe/Berlin"
+  # OCR: Deutsch + Englisch — weitere Sprachen per "deu+eng+fra" ergänzen
+  PAPERLESS_OCR_LANGUAGE: "deu+eng"
+  PAPERLESS_OCR_LANGUAGES: "deu eng"
+  PAPERLESS_URL: "http://paperless.homeserver"
+  # Anzahl Worker/Threads — für Home Lab reicht 1
+  PAPERLESS_TASK_WORKERS: "1"
+  PAPERLESS_THREADS_PER_WORKER: "1"
+  # Secret Key — in Produktion per SealedSecret übergeben.
+  # Vorläufig ein fester Wert; nach Deploy sofort per SealedSecret ersetzen.
+  PAPERLESS_SECRET_KEY: "CHANGE_ME_REPLACE_WITH_SEALEDSECRET"
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+
+# HDD-Storage liegt auf worker-0 — NodeAffinity ist Pflicht.
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - worker-0
+
+nodeSelector: {}
+tolerations: []

@@ -1,0 +1,316 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-rhein-andernach
+  namespace: {{ .Release.Namespace }}
+  labels:
+    grafana_dashboard: "1"
+data:
+  rhein-andernach.json: |
+    {
+      "annotations": {"list": []},
+      "description": "Rhein-Pegel Andernach — Pegelonline, DWD-Warnungen, ELWIS, Hochwasservorhersage",
+      "editable": true,
+      "graphTooltip": 1,
+      "links": [
+        {
+          "title": "Pegelonline Andernach",
+          "url": "https://www.pegelonline.wsv.de/gast/stammdaten/stationsstammdaten?pegelnummer=2757010",
+          "type": "link",
+          "targetBlank": true
+        },
+        {
+          "title": "Hochwasser RLP",
+          "url": "https://www.hochwasser-rlp.de/rhein/andernach",
+          "type": "link",
+          "targetBlank": true
+        },
+        {
+          "title": "ELWIS",
+          "url": "https://www.elwis.de/DE/dynamisch/gewaesserkundliche-Grundlagen/Wasserstaende/index.php",
+          "type": "link",
+          "targetBlank": true
+        }
+      ],
+      "panels": [
+        {
+          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "decimals": 0,
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "blue", "value": null},
+                  {"color": "green", "value": 100},
+                  {"color": "yellow", "value": 400},
+                  {"color": "orange", "value": 600},
+                  {"color": "red", "value": 800}
+                ]
+              },
+              "unit": "cm",
+              "min": 0
+            }
+          },
+          "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
+          "id": 1,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+              "refId": "A",
+              "type": "json",
+              "source": "url",
+              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/ANDERNACH/W/measurements.json?start=PT3H",
+              "url_options": {"method": "GET", "data": ""},
+              "parser": "backend",
+              "root_selector": "",
+              "columns": [
+                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
+                {"selector": "value", "type": "number", "alias": "Wasserstand (cm)"}
+              ],
+              "format": "timeseries"
+            }
+          ],
+          "title": "Rhein Andernach — Aktueller Pegel",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "cm",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 400},
+                  {"color": "orange", "value": 600},
+                  {"color": "red", "value": 800}
+                ]
+              }
+            }
+          },
+          "gridPos": {"h": 10, "w": 18, "x": 6, "y": 0},
+          "id": 2,
+          "options": {
+            "legend": {"calcs": ["lastNotNull", "min", "max"], "displayMode": "table", "placement": "bottom"},
+            "tooltip": {"mode": "multi", "sort": "desc"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+              "refId": "A",
+              "type": "json",
+              "source": "url",
+              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/ANDERNACH/W/measurements.json?start=P2D",
+              "url_options": {"method": "GET", "data": ""},
+              "parser": "backend",
+              "root_selector": "",
+              "columns": [
+                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
+                {"selector": "value", "type": "number", "alias": "Wasserstand (cm)"}
+              ],
+              "format": "timeseries"
+            }
+          ],
+          "title": "Rhein-Pegel Andernach — 48h Verlauf",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "decimals": 0,
+              "unit": "cm",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "blue", "value": null},
+                  {"color": "yellow", "value": 400},
+                  {"color": "orange", "value": 600},
+                  {"color": "red", "value": 800}
+                ]
+              }
+            }
+          },
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 6},
+          "id": 10,
+          "options": {
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "showThresholdLabels": true,
+            "showThresholdMarkers": true
+          },
+          "targets": [
+            {
+              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+              "refId": "A",
+              "type": "json",
+              "source": "url",
+              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/ANDERNACH/W/measurements.json?start=PT1H",
+              "url_options": {"method": "GET", "data": ""},
+              "parser": "backend",
+              "root_selector": "",
+              "columns": [
+                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
+                {"selector": "value", "type": "number", "alias": "Wasserstand (cm)"}
+              ],
+              "format": "timeseries"
+            }
+          ],
+          "title": "Pegel Gauge",
+          "type": "gauge"
+        },
+        {
+          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto",
+                "displayMode": "auto"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "headline"},
+                "properties": [{"id": "displayName", "value": "Warnung"}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "level"},
+                "properties": [
+                  {"id": "displayName", "value": "Stufe"},
+                  {
+                    "id": "custom.displayMode",
+                    "value": "color-background"
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        {"color": "green", "value": null},
+                        {"color": "yellow", "value": 1},
+                        {"color": "orange", "value": 2},
+                        {"color": "red", "value": 3},
+                        {"color": "dark-red", "value": 4}
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 10},
+          "id": 3,
+          "options": {
+            "footer": {"show": false},
+            "showHeader": true
+          },
+          "targets": [
+            {
+              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+              "refId": "A",
+              "type": "json",
+              "source": "url",
+              "url": "https://www.dwd.de/DWD/warnungen/warnapp_gemeinden/json/warnungen_gemeinde_map_de.json",
+              "url_options": {"method": "GET", "data": ""},
+              "parser": "backend",
+              "root_selector": "$.warnings['807137000'][*]",
+              "columns": [
+                {"selector": "headline", "type": "string", "alias": "headline"},
+                {"selector": "level", "type": "number", "alias": "level"},
+                {"selector": "event", "type": "string", "alias": "event"},
+                {"selector": "description", "type": "string", "alias": "description"}
+              ],
+              "format": "table"
+            }
+          ],
+          "title": "DWD Warnungen — Kreis Mayen-Koblenz",
+          "description": "Quelle: Deutscher Wetterdienst (DWD), öffentlich. Warncell-ID: 807137000 (Landkreis Mayen-Koblenz). Stufen: 1=Gelb, 2=Orange, 3=Rot, 4=Violett.",
+          "type": "table"
+        },
+        {
+          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"align": "auto", "displayMode": "auto"}
+            }
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 10},
+          "id": 4,
+          "options": {"footer": {"show": false}, "showHeader": true},
+          "targets": [
+            {
+              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+              "refId": "A",
+              "type": "json",
+              "source": "url",
+              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations.json?includeTimeseries=true&includeCurrentMeasurement=true&river=RHEIN&km=580&kmEnd=650",
+              "url_options": {"method": "GET", "data": ""},
+              "parser": "backend",
+              "root_selector": "[*]",
+              "columns": [
+                {"selector": "shortname", "type": "string", "alias": "Station"},
+                {"selector": "km", "type": "number", "alias": "Rhein-km"},
+                {"selector": "timeseries[0].currentMeasurement.value", "type": "number", "alias": "Pegel (cm)"},
+                {"selector": "timeseries[0].currentMeasurement.timestamp", "type": "timestamp", "alias": "Gemessen"}
+              ],
+              "format": "table"
+            }
+          ],
+          "title": "Pegelonline — Rhein Nachbarstationen (km 580–650)",
+          "description": "Quelle: Wasser- und Schifffahrtsverwaltung des Bundes (WSV), Pegelonline — öffentlich & kostenlos.",
+          "type": "table"
+        },
+        {
+          "gridPos": {"h": 6, "w": 12, "x": 0, "y": 18},
+          "id": 5,
+          "options": {
+            "content": "## Hochwasservorhersage RLP\n\nDas LUWG (Landesamt für Umwelt) RLP bietet eine **24–48h Hochwasservorhersage** für den Rhein bei Andernach:\n\n- [Hochwasserkarte RLP — Andernach](https://www.hochwasser-rlp.de/)\n- [Hochwassernachrichten-App RLP](https://www.hochwasser-rlp.de/service/hochwassernachrichten-app)\n\n**Meldestufen Rhein Andernach:**\n\n| Stufe | Pegel (cm) | Maßnahme |\n|---|---|---|\n| 1 | ≥ 430 | Beobachtung |\n| 2 | ≥ 570 | verstärkte Kontrollen |\n| 3 | ≥ 660 | Einsatz |\n| 4 | ≥ 800 | Katastrophenschutz |",
+            "mode": "markdown"
+          },
+          "title": "Hochwasservorhersage RLP",
+          "type": "text"
+        },
+        {
+          "gridPos": {"h": 6, "w": 12, "x": 12, "y": 18},
+          "id": 6,
+          "options": {
+            "content": "## ELWIS — Schifffahrt & Wasserstraßen\n\nDer Elektronische Wasserstraßen-Informationsservice (ELWIS) des Bundes bietet:\n\n- **Schifffahrtsmeldungen** (Sperrungen, Baustellen, Fahrwassereinschränkungen)\n- **Wasserstände** entlang des Rheins\n- **Nachrichten** für Wassersportler und Schifffahrt\n\n**Links:**\n- [ELWIS Rhein Andernach](https://www.elwis.de/DE/dynamisch/gewaesserkundliche-Grundlagen/Wasserstaende/index.php)\n- [Schifffahrtsmeldungen Rhein](https://www.elwis.de/DE/dynamisch/Bekanntmachungen/Binnenschifffahrt/index.php)\n- [Fahrwasserzustand Rhein](https://www.elwis.de/DE/dynamisch/gewaesserkundliche-Grundlagen/Fahrwassertiefe/index.php)\n\n*Quelle: Wasserstraßen- und Schifffahrtsverwaltung des Bundes (WSV), öffentlich & kostenlos.*",
+            "mode": "markdown"
+          },
+          "title": "ELWIS — Schifffahrtsmeldungen Rhein",
+          "type": "text"
+        }
+      ],
+      "refresh": "5m",
+      "schemaVersion": 38,
+      "tags": ["rhein", "pegel", "wasser", "dlrg", "andernach"],
+      "templating": {"list": []},
+      "time": {"from": "now-2d", "to": "now"},
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "Rhein Andernach — Pegel & Warnungen",
+      "uid": "rhein-andernach-pegel",
+      "version": 1
+    }
