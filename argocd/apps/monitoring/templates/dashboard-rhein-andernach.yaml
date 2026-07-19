@@ -75,7 +75,7 @@ data:
               "parser": "backend",
               "root_selector": "",
               "columns": [
-                {"selector": "timestamp", "type": "time", "alias": "time"},
+                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
                 {"selector": "value", "type": "number", "alias": "Wasserstand (cm)"}
               ],
               "format": "timeseries"
@@ -126,7 +126,7 @@ data:
               "parser": "backend",
               "root_selector": "",
               "columns": [
-                {"selector": "timestamp", "type": "time", "alias": "time"},
+                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
                 {"selector": "value", "type": "number", "alias": "Wasserstand (cm)"}
               ],
               "format": "timeseries"
@@ -172,7 +172,7 @@ data:
               "parser": "backend",
               "root_selector": "",
               "columns": [
-                {"selector": "timestamp", "type": "time", "alias": "time"},
+                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
                 {"selector": "value", "type": "number", "alias": "Wasserstand (cm)"}
               ],
               "format": "timeseries"
@@ -207,7 +207,7 @@ data:
               "refId": "A",
               "type": "json",
               "source": "url",
-              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations.json?includeTimeseries=true&includeCurrentMeasurement=true&river=RHEIN&km=580&kmEnd=650",
+              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations.json?includeTimeseries=true&includeCurrentMeasurement=true&waters=RHEIN&km=580&kmEnd=650",
               "url_options": {"method": "GET", "data": ""},
               "parser": "backend",
               "root_selector": "[*]",
@@ -215,7 +215,7 @@ data:
                 {"selector": "shortname", "type": "string", "alias": "Station"},
                 {"selector": "km", "type": "number", "alias": "Rhein-km"},
                 {"selector": "timeseries[0].currentMeasurement.value", "type": "number", "alias": "Pegel (cm)"},
-                {"selector": "timeseries[0].currentMeasurement.timestamp", "type": "time", "alias": "Gemessen"}
+                {"selector": "timeseries[0].currentMeasurement.timestamp", "type": "timestamp", "alias": "Gemessen"}
               ],
               "format": "table"
             }
