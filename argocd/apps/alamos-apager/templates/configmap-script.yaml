@@ -6,15 +6,15 @@ metadata:
   labels:
     {{- include "alamos-apager.labels" . | nindent 4 }}
 data:
-  # Haelt pro Standort nur den Stationsnamen->AMweb-URL-Redirect und einen
+  # Hält pro Standort nur den Stationsnamen→AMweb-URL-Redirect und einen
   # Heartbeat-Zeitstempel vor. Die echte AMweb-URL (Secret-Volume unter
-  # STATIONS_DIR) verlaesst den Cluster nie Richtung Pi - der Pi kennt nur
+  # STATIONS_DIR) verlässt den Cluster nie Richtung Pi — der Pi kennt nur
   # seinen eigenen Stationsnamen (siehe ansible/roles/alamos_kiosk).
   #   GET /start?station=<name>     -> 302 Redirect zur AMweb-URL
   #   GET /heartbeat?station=<name> -> Pi-Lebenszeichen, alle paar Sekunden
-  # Ein Background-Thread prueft periodisch, ob ein Standort laenger als
+  # Ein Background-Thread prüft periodisch, ob ein Standort länger als
   # HEARTBEAT_TIMEOUT_SECONDS keinen Heartbeat gesendet hat, und meldet das
-  # per ntfy (kein Zammad-Ticket - siehe docs/20-alamos-apager.md).
+  # per ntfy (kein Zammad-Ticket — siehe docs/19-alamos-apager.md).
   app.py: |
     #!/usr/bin/env python3
     import os
@@ -85,7 +85,7 @@ data:
                             "rotating_light",
                         )
                     except Exception as exc:
-                        print(f"ntfy-Alarm fehlgeschlagen fuer {station}: {exc}")
+                        print(f"ntfy-Alarm fehlgeschlagen für {station}: {exc}")
 
 
     class Handler(BaseHTTPRequestHandler):
@@ -137,7 +137,7 @@ data:
                             "white_check_mark",
                         )
                     except Exception as exc:
-                        print(f"ntfy-Resolve fehlgeschlagen fuer {station}: {exc}")
+                        print(f"ntfy-Resolve fehlgeschlagen für {station}: {exc}")
                 self._respond(200, b"ok")
                 return
 

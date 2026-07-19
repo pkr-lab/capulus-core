@@ -16,7 +16,7 @@ ntfy:
 
 # Name des SealedSecret mit den Standort→AMweb-URL-Paaren (ein Key pro
 # Standort). Wird NICHT von diesem Chart erzeugt — siehe
-# docs/20-alamos-apager.md für den kubeseal-Befehl, der ihn anlegt.
+# docs/19-alamos-apager.md für den kubeseal-Befehl, der ihn anlegt.
 stationsSecretName: alamos-apager-stations
 
 # Nach wie vielen Sekunden ohne Heartbeat ein Standort als "down" gilt.

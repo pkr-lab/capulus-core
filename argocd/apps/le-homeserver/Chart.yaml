@@ -2,7 +2,7 @@
 apiVersion: v2
 name: le-homeserver
 description: |
-  Eigenes Admin-Dashboard-UI fuer den DLRG-Homeserver (admin.homeserver,
+  Eigenes Admin-Dashboard-UI für den DLRG-Homeserver (admin.homeserver,
   nur "authentik Admins"): Kurzlinks zu allen deployten Apps inkl.
   Live-Health-Status und System-Auslastung (CPU/RAM/Disk/Temperatur) aus
   Grafana.

@@ -62,8 +62,8 @@ installierten Windows-System aus gestartet werden.
 | `Admin` | Lokaler Administrator | Administrator | `DLRG-Admin-2024!` |
 
 > Computername (`1002011-XXXX`) und Einsatzzweck werden automatisch vergeben:
-> die Nummer vom Zaehler-Server (`/api/next-number`), der Einsatzzweck aus
-> `pc.cfg` auf dem windeployment-Server. Das gilt fuer **alle** Wege
+> die Nummer vom Zähler-Server (`/api/next-number`), der Einsatzzweck aus
+> `pc.cfg` auf dem windeployment-Server. Das gilt für **alle** Wege
 > (PXE, USB, Ansible, manueller `setup.ps1`-Aufruf) — siehe
 > [Namenskonvention](#namenskonvention-1002011-xxxx).
 
@@ -285,7 +285,7 @@ powershell.exe -ExecutionPolicy Bypass -File D:\setup.ps1 -PCPurpose "Schulung"
 
 | Parameter | Pflicht | Beschreibung |
 |---|---|---|
-| `-PCName` | Nein | Computername (Standard: automatisch vom Zaehler-Server, `1002011-XXXX`) |
+| `-PCName` | Nein | Computername (Standard: automatisch vom Zähler-Server, `1002011-XXXX`) |
 | `-PCPurpose` | Nein | Einsatzzweck, z.B. `Buero`, `Schulung` (Standard: aus `pc.cfg` vom Server) |
 | `-AdminPassword` | Ja* | Admin-Passwort (*wird interaktiv abgefragt wenn nicht angegeben) |
 | `-UserPassword` | Nein | DLRG-Benutzerpasswort (Standard: `DLRG2024`) |
@@ -322,7 +322,7 @@ windows_pcs:
     buero-01:
       ansible_host: 192.168.178.101
       # windows_pc_name/windows_pc_purpose leer lassen = automatisch vom
-      # windeployment-Server (Zaehler + pc.cfg). Optional ueberschreiben:
+      # windeployment-Server (Zähler + pc.cfg). Optional überschreiben:
       windows_pc_purpose: Buero
     schulung-01:
       ansible_host: 192.168.178.102
@@ -362,12 +362,12 @@ Die ArgoCD-App `windeployment` stellt alle Deployment-Ressourcen bereit.
 ```
 argocd/apps/windeployment/
 ├── namespace.yaml           # Namespace "windeployment"
-├── pvc.yaml                 # 500 GiB PVC für WinPE/ISO-Dateien + Zaehlerstand
+├── pvc.yaml                 # 500 GiB PVC für WinPE/ISO-Dateien + Zählerstand
 ├── configmap-nginx.yaml     # nginx-Konfiguration
 ├── configmap-autounattend.yaml  # autounattend.xml (Netzwerk + USB-Variante)
 ├── configmap-scripts.yaml   # setup.ps1, winrm-enable.ps1
 ├── configmap-ipxe.yaml      # iPXE-Bootmenü + dnsmasq-PXE-Config
-├── configmap-pccfg.yaml     # pc.cfg: Einsatzzweck fuer den naechsten PC
+├── configmap-pccfg.yaml     # pc.cfg: Einsatzzweck für den nächsten PC
 ├── configmap-counter.yaml   # counter.py: vergibt fortlaufende PC-Nummern
 ├── deployment.yaml          # nginx (HTTP) + counter-Sidecar + dnsmasq-pxe (TFTP/proxyDHCP)
 └── service.yaml             # NodePort 30090 für HTTP
@@ -507,7 +507,7 @@ bereits installiertes Windows (Ansible/manueller `setup.ps1`-Lauf):
 `setup.ps1` holt Nummer und Einsatzzweck automatisch, sobald `-PCName`/
 `-PCPurpose` nicht explizit angegeben sind — das gilt für PXE, USB, direkten
 Aufruf und den Ansible-Pfad (Rolle `windows_setup` fragt dieselben Endpunkte
-über `windows_deployment_server` ab). Ist der Zaehler-Server nicht
+über `windows_deployment_server` ab). Ist der Zähler-Server nicht
 erreichbar (z.B. PC ohne Netzwerk), fällt `setup.ps1` auf eine Zufallsnummer
 zurück, damit die Installation nicht blockiert.
 

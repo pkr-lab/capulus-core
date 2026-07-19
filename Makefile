@@ -78,7 +78,7 @@ WIN_PLAYBOOK := $(ANSIBLE_DIR)/windows.yml
 windows: ## Einrichten aller Windows-PCs (DLRG OG Andernach).
 	ansible-playbook -i $(INVENTORY) $(WIN_PLAYBOOK) $(VAULT_OPTS)
 
-windows-check: ## Dry-run des Windows-Playbooks (keine Aenderungen).
+windows-check: ## Dry-run des Windows-Playbooks (keine Änderungen).
 	ansible-playbook -i $(INVENTORY) $(WIN_PLAYBOOK) --check --diff $(VAULT_OPTS)
 
 windows-users: ## Nur Benutzer auf Windows-PCs anlegen/aktualisieren.
@@ -96,7 +96,7 @@ ALARM_PLAYBOOK := $(ANSIBLE_DIR)/alarm-kiosks.yml
 alarm-kiosks: ## Alarmmonitor-Kiosks einrichten (Raspberry Pis, ALAMOS AMweb).
 	ansible-playbook -i $(INVENTORY) $(ALARM_PLAYBOOK) $(VAULT_OPTS)
 
-alarm-kiosks-check: ## Dry-run des Alarmmonitor-Kiosk-Playbooks (keine Aenderungen).
+alarm-kiosks-check: ## Dry-run des Alarmmonitor-Kiosk-Playbooks (keine Änderungen).
 	ansible-playbook -i $(INVENTORY) $(ALARM_PLAYBOOK) --check --diff $(VAULT_OPTS)
 
 .PHONY: lint

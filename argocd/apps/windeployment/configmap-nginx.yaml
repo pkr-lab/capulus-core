@@ -41,7 +41,7 @@ data:
         add_header Content-Type text/plain;
       }
 
-      # Reicht an den counter-Sidecar im selben Pod weiter (Zaehler fuer
+      # Reicht an den counter-Sidecar im selben Pod weiter (Zähler für
       # das Namensschema 1002011-XXXX, MinIO-Log-Upload, Zammad-Ticket;
       # siehe configmap-counter.yaml).
       location = /api/next-number {

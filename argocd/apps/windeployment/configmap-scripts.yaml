@@ -6,7 +6,7 @@ metadata:
 data:
   # setup.ps1 wird von autounattend.xml nach der Installation aufgerufen.
   # Der Inhalt ist identisch mit scripts/windows/setup.ps1 im Repository.
-  # Bei Aenderungen: beide Dateien synchron halten.
+  # Bei Änderungen: beide Dateien synchron halten.
   setup.ps1: |
     #Requires -RunAsAdministrator
     param(
@@ -34,7 +34,7 @@ data:
         if ($Level -eq "WARN" -or $Level -eq "ERROR") { $script:WarnCount++ }
     }
 
-    # Schreibt nur in die Logdatei (kein Write-Host) - fuer Dinge, die den
+    # Schreibt nur in die Logdatei (kein Write-Host) - für Dinge, die den
     # Benutzer nicht erreichen/beeinflussen sollen (siehe Melde-Block unten).
     function Write-LogQuiet {
         param([string]$Message)
@@ -44,14 +44,14 @@ data:
 
     Write-Log "=== DLRG OG Andernach - Windows Einrichtung gestartet ==="
 
-    # PC-Nummer vom Zaehler-Server holen: Namensschema 1002011-XXXX
+    # PC-Nummer vom Zähler-Server holen: Namensschema 1002011-XXXX
     if ($PCName -eq "") {
         try {
             $nr = (Invoke-WebRequest -Uri "$DeploymentServer/api/next-number" -UseBasicParsing -TimeoutSec 10).Content.Trim()
             $PCName = "1002011-$nr"
         } catch {
             $PCName = "1002011-" + (Get-Random -Maximum 9999).ToString("0000")
-            Write-Log "Zaehler-Server nicht erreichbar, nutze Zufallsnummer: $_" "WARN"
+            Write-Log "Zähler-Server nicht erreichbar, nutze Zufallsnummer: $_" "WARN"
         }
     }
 
@@ -161,7 +161,7 @@ data:
     Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power" `
         -Name HiberbootEnabled -Value 0 -ErrorAction SilentlyContinue
 
-    # WinRM fuer Ansible
+    # WinRM für Ansible
     Write-Log "--- WinRM ---"
     try {
         Enable-PSRemoting -Force -SkipNetworkProfileCheck | Out-Null
@@ -174,12 +174,12 @@ data:
     } catch { Write-Log "WinRM-Fehler: $_" "WARN" }
 
     Write-Log "=== Einrichtung abgeschlossen. Neustart in 60 Sekunden. ==="
-    Write-Log "WICHTIG: Admin-Passwort nach dem Neustart aendern!"
+    Write-Log "WICHTIG: Admin-Passwort nach dem Neustart ändern!"
 
     # PC-Status (Zammad-Ticket) + Setup-Log (MinIO) an den windeployment-Server
-    # melden. Laeuft IMMER stumm ab: kurzer Timeout, kein Write-Host, kein
+    # melden. Läuft IMMER stumm ab: kurzer Timeout, kein Write-Host, kein
     # Abbruch bei Fehler - sind MinIO/Zammad nicht erreichbar, merkt der
-    # Benutzer davon nichts und die Installation laeuft unbeeintraechtigt weiter.
+    # Benutzer davon nichts und die Installation läuft unbeeinträchtigt weiter.
     try {
         $status = if ($script:WarnCount -gt 0) { "warn" } else { "ok" }
         $notifyBody = @{
