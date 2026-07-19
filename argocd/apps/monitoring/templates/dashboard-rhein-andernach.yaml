@@ -152,7 +152,7 @@ data:
               "parser": "simple",
               "root_selector": "",
               "columns": [
-                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
+                {"selector": "timestamp", "type": "time", "alias": "time"},
                 {"selector": "value", "type": "number", "alias": "Vorhersage (cm)"}
               ],
               "format": "timeseries"
