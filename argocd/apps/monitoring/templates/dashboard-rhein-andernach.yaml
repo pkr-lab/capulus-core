@@ -215,7 +215,7 @@ data:
                 {"selector": "shortname", "type": "string", "alias": "Station"},
                 {"selector": "km", "type": "number", "alias": "Rhein-km"},
                 {"selector": "timeseries.0.currentMeasurement.value", "type": "number", "alias": "Pegel (cm)"},
-                {"selector": "timeseries.0.currentMeasurement.timestamp", "type": "time", "alias": "Gemessen"}
+                {"selector": "timeseries.0.currentMeasurement.timestamp", "type": "string", "alias": "Gemessen"}
               ],
               "format": "table"
             }
