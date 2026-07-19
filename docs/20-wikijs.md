@@ -21,7 +21,7 @@ hochgeladene Assets (Bilder, PDFs, etc.) — direkt in PostgreSQL. Der
 Wiki.js-Pod selbst ist zustandslos und braucht kein eigenes PVC; nur
 PostgreSQL benötigt Persistenz. PostgreSQL läuft mit `storageClassName: hdd`
 und ist via NodeAffinity an `worker-0` gebunden (siehe
-[docs/18-hdd-storage.md](18-hdd-storage.md)) — damit liegen alle Wiki-Daten
+[docs/16-hdd-storage.md](16-hdd-storage.md)) — damit liegen alle Wiki-Daten
 auf der 7,3-TB-HDD statt auf der Homeserver-System-SSD.
 
 > **Warum kein Bitnami-PostgreSQL-Subchart wie bei Zammad/Authentik?**
@@ -40,11 +40,11 @@ auf der 7,3-TB-HDD statt auf der Homeserver-System-SSD.
 - **`hdd-storage`-App ist deployt** (`argocd/apps/hdd-storage/`) und die
   StorageClass `hdd` existiert: `kubectl get storageclass hdd`
 - **worker-0 ist online** und `/mnt/hdd` ist gemountet (siehe
-  [docs/18-hdd-storage.md](18-hdd-storage.md)) — sonst bleibt die
+  [docs/16-hdd-storage.md](16-hdd-storage.md)) — sonst bleibt die
   PostgreSQL-PVC auf `Pending`
 - `kubeseal` CLI ist lokal installiert
 - `kubectl` ist mit dem Cluster verbunden
-- (Optional, für SSO) Authentik läuft bereits (siehe [docs/14-sso-authentik.md](14-sso-authentik.md))
+- (Optional, für SSO) Authentik läuft bereits (siehe [docs/13-sso-authentik.md](13-sso-authentik.md))
 
 ---
 
@@ -104,7 +104,7 @@ Erwartete Reihenfolge:
 
 > Falls `wikijs-postgresql-*` dauerhaft `Pending` bleibt: worker-0 ist offline
 > oder die `hdd`-StorageClass fehlt — siehe
-> [docs/18-hdd-storage.md](18-hdd-storage.md) → Fehlerbehebung.
+> [docs/16-hdd-storage.md](16-hdd-storage.md) → Fehlerbehebung.
 
 **DNS:** `wiki.homeserver` ist sofort erreichbar — dank der Wildcard-DNS-Konfiguration
 (`address=/homeserver/<server-ip>` in dnsmasq, siehe [docs/09-dns-architecture.md](09-dns-architecture.md))
@@ -267,7 +267,7 @@ kubectl get nodes worker-0   # muss Ready sein
 kubectl -n hdd-storage get pods
 ```
 
-Details: [docs/18-hdd-storage.md](18-hdd-storage.md) → Fehlerbehebung.
+Details: [docs/16-hdd-storage.md](16-hdd-storage.md) → Fehlerbehebung.
 
 ### OIDC-Login schlägt fehl ("invalid_redirect_uri" o.ä.)
 
@@ -297,7 +297,7 @@ der DB) — bei Bedarf in `argocd/apps/wikijs/values.yaml` unter
 - [Wiki.js Docker-Installation](https://docs.requarks.io/install/docker)
 - [Wiki.js GitHub Repository](https://github.com/requarks/wiki)
 - [Authentik — Wiki.js Integration](https://integrations.goauthentik.io/documentation/wiki-js/)
-- [Authentik SSO Übersicht](14-sso-authentik.md)
-- [HDD-Storage auf worker-0](18-hdd-storage.md)
+- [Authentik SSO Übersicht](13-sso-authentik.md)
+- [HDD-Storage auf worker-0](16-hdd-storage.md)
 - [DNS-Architektur (Wildcard `*.homeserver`)](09-dns-architecture.md)
 - [ArgoCD Setup](05-argocd.md)

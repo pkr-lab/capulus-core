@@ -1,4 +1,4 @@
-# Ideas to deploy at later Poind
+# Ideas to Deploy at a Later Point
 
 Loki (+ Promtail) – ihr habt VictoriaMetrics/Grafana nur für Metriken, aber keine zentrale Log-Aggregation; passt direkt in den bestehenden Grafana-Stack.
 
@@ -12,6 +12,18 @@ Mealie – Rezeptverwaltung + Wochenplaner, importiert Rezepte direkt von Kochse
 
 Grocy – Haushalts-ERP: Vorräte, Einkaufsliste, Ablaufdaten, Putzplan – nützlich, wenn ihr Lebensmittelverschwendung/Vorräte im Griff haben wollt.
 
+n8n – Low-Code-Automatisierung (Zapier-Ersatz), z. B. "neue Rechnung in Paperless → Benachrichtigung via ntfy".
+
+Uptime Kuma – einfache Status-Seite/Alerting für "ist Dienst X gerade erreichbar", ergänzt VictoriaMetrics für den schnellen Blick.
+
+Grafana-Dashboard mit Pegelonline-API (WSV, öffentlich & kostenlos) – Rhein-Pegel Andernach live einbinden. Hochwasservorhersage RLP / Hochwasserzentralen.de (öffentlich & kostenlos) – ergänzt den reinen Ist-Pegel von Pegelonline um eine 24–48h-Vorhersage, relevant für vorausschauende Einsatzplanung statt nur Momentaufnahme.
+
+ELWIS (Elektronischer Wasserstraßen-Informationsservice, öffentlich & kostenlos) – Schifffahrtsmeldungen, Sperrungen und Fahrwasser-Infos zum Rhein bei Andernach, gut als zusätzliches Grafana-Panel 
+
+DWD Open Data API (Deutscher Wetterdienst, öffentlich & kostenlos) – Unwetter-/Sturmwarnungen für Andernach als Grafana-Panel
+
+
+
 Immich – Foto/Video-Backup vom Handy (Google-Photos-Ersatz), inkl. Gesichtserkennung und Timeline; spielt gut mit eurem MinIO/HDD-Storage zusammen.
 
 Nextcloud – Datei-Sync, Kalender, Kontakte; deckt mehr ab als Immich/Paperless einzeln, dafür schwerer (mehr RAM, mehr Wartung).
@@ -20,23 +32,9 @@ Firefly III – persönliche Finanzverwaltung/Budgetierung, gut wenn ihr Ausgabe
 
 Homepage (oder Homarr) – ein Dashboard mit Links/Status für alle eure Self-Hosted-Dienste statt Lesezeichen-Chaos.
 
-n8n – Low-Code-Automatisierung (Zapier-Ersatz), z. B. "neue Rechnung in Paperless → Benachrichtigung via ntfy".
-
-Uptime Kuma – einfache Status-Seite/Alerting für "ist Dienst X gerade erreichbar", ergänzt VictoriaMetrics für den schnellen Blick.
-
 ## Vereins-IT (DLRG OG Andernach)
 
 ### Einsatzbereich
-
-Wiki.js (oder BookStack) – SOPs, Alarm- und Ausrückeordnung, Checklisten zentral und durchsuchbar statt Word-Dateien in WhatsApp-Gruppen verteilt.
-
-Grafana-Dashboard mit Pegelonline-API (WSV, öffentlich & kostenlos) – Rhein-Pegel Andernach live einbinden, hilft bei Wachdienst- und Einsatzplanung.
-
-DWD Open Data API (Deutscher Wetterdienst, öffentlich & kostenlos) – Unwetter-/Sturmwarnungen für Andernach als Grafana-Panel + automatischer ntfy-Push an die Einsatzleitung bei Gewitter/Starkregen während des Wachdienstes.
-
-Hochwasservorhersage RLP / Hochwasserzentralen.de (öffentlich & kostenlos) – ergänzt den reinen Ist-Pegel von Pegelonline um eine 24–48h-Vorhersage, relevant für vorausschauende Einsatzplanung statt nur Momentaufnahme.
-
-ELWIS (Elektronischer Wasserstraßen-Informationsservice, öffentlich & kostenlos) – Schifffahrtsmeldungen, Sperrungen und Fahrwasser-Infos zum Rhein bei Andernach, gut als zusätzliches Grafana-Panel oder Wiki.js-verlinkte Quelle.
 
 uMap (self-hosted, basiert auf OpenStreetMap) – eigene Einsatzkarte mit Layern für Wachstellen, Rettungspunkte, Einsatzgebiete und Bootshaus-Zufahrten; lässt sich direkt aus Wiki.js verlinken/einbetten.
 

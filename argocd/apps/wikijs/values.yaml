@@ -62,7 +62,7 @@ wikijs:
 
 # ============================================================
 # PostgreSQL (eigenes Deployment, kein Bitnami-Subchart)
-# Persistenz auf HDD-StorageClass + worker-0 (docs/18-hdd-storage.md)
+# Persistenz auf HDD-StorageClass + worker-0 (docs/16-hdd-storage.md)
 # ============================================================
 postgresql:
   image:
@@ -89,7 +89,7 @@ postgresql:
     limits:
       memory: 512Mi
 
-  # Pflicht: hdd-PVCs binden nur auf worker-0 (siehe docs/18-hdd-storage.md)
+  # Pflicht: hdd-PVCs binden nur auf worker-0 (siehe docs/16-hdd-storage.md)
   affinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:

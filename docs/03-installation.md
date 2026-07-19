@@ -18,7 +18,7 @@ Verifikation eines lauffähigen Clusters mit ArgoCD und Tailscale.
 
 ```bash
 git clone https://github.com/PKE-Tech/capulus-core.git
-cd home-server
+cd capulus-core
 ```
 
 Bei einem Fork stattdessen die URL des Forks verwenden.

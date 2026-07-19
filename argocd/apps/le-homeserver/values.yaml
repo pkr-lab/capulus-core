@@ -43,13 +43,13 @@ ingress:
 
 # Authentik-Gruppe, die serverseitig auf admin.homeserver zugreifen darf.
 # Muss in Authentik existieren (Standardgruppe "authentik Admins") und die
-# zugehoerige Authentik-Application fuer admin.homeserver braucht ein
+# zugehörige Authentik-Application für admin.homeserver braucht ein
 # Policy-Binding auf dieselbe Gruppe — siehe docs/19-le-homeserver-ui.md.
 authentik:
   adminGroup: "authentik Admins"
 
-# Grafana-Anbindung fuer Live-Health-Status und System-Auslastung
-# (CPU/RAM/Disk/Temperatur) auf admin.homeserver. Token wird ueber einen
+# Grafana-Anbindung für Live-Health-Status und System-Auslastung
+# (CPU/RAM/Disk/Temperatur) auf admin.homeserver. Token wird über einen
 # Grafana-Service-Account erzeugt und als SealedSecret versiegelt
 # (siehe docs/19-le-homeserver-ui.md).
 grafana:
@@ -64,17 +64,17 @@ grafana:
     #         --from-file=/dev/stdin
     encryptedToken: "AgBiTZY9lnXZcHi1BKfxAVtdzAPP6kIBM5xd+r+SjxFNHC9Y3omVojCFoKCKZyRE66CZzh2NmpsqyRN16V1QiDkGmKeVHP2tedKcOnM+dlsemn56g5sK+df0xp1ISSrKYAFa3hE7FUNcXNSn+LfeLwf0WXBoaAYHtCMSscftZKbfxuLDOvKeCdwcAODbFUEnUNHFPzBNfSE87Gns98xAQLvtzsCMmolHWxb2KE38bTpGhWA87LH59yXu2AuwfVz/V9pO2SBmEZ9KUYKR88IFUyoqLj55U8VDkoyLltjKUtfp7AUjZtb1bP0+E5NRSAr68xKbOeqU8sB8fHtFFh5TTRiBwqPchZjZB5P3UMiKXsZCf5S3VEeOXfuDOP/lggYdUgPz2zF8eaLrsfs6ff+so81+OnO7lOy5XmkpEJfTVAAqFXeTnKNJqiyvkwFKKMEBUV1OrBqOcGGU+o57rfGbfY8b9EQJ6kIDCSLKzT4dQwwY0IMKMZJa4Vlwslqb15CBtrcxansa6t2+Nldlfzk/tgU0/AMEM6aqPiYj9bc9emokGsBrl99fwvt/H05JLZ2uU0OI8hjJMOIgvKDi6P4kMxcmJUnQ70FPtOt1ZWynnVdt1QeRa3YZ6s3qXYokPkoAaa6AWjy20Jh3gGREwe3W/WGdeg+J8cuNPq1ZrNa47TMgWTYJMf4TPOrtT/qpux2xcgwgY1eOykliI2uLkRiqP+7+UwsNK2iy0YSWZXr+PzTOHNR6GyKQOaWp0YUHr5Kr"
   # Ordnet das Prometheus/VictoriaMetrics `instance`-Label des
-  # node-exporters (Host-Teil, ohne Port) einem lesbaren Namen fuer die
+  # node-exporters (Host-Teil, ohne Port) einem lesbaren Namen für die
   # Auslastungs-Kacheln auf admin.homeserver zu.
   nodeLabels:
     "192.168.178.94": "Home Server"
     "192.168.178.95": "Worker-0"
 
-# Karten/Kacheln im Admin-Dashboard. Aenderungen hier werden ueber eine
-# ConfigMap in den Pod gemountet — kein Image-Rebuild noetig.
-# `job` ist das Prometheus/VictoriaMetrics-Job-Label fuer den Health-Badge;
+# Karten/Kacheln im Admin-Dashboard. Änderungen hier werden über eine
+# ConfigMap in den Pod gemountet — kein Image-Rebuild nötig.
+# `job` ist das Prometheus/VictoriaMetrics-Job-Label für den Health-Badge;
 # ohne `job` gibt es keinen Health-Badge.
-# `comingSoon: true` zeigt eine "bald verfuegbar"-Kachel ohne Link.
+# `comingSoon: true` zeigt eine "bald verfügbar"-Kachel ohne Link.
 services:
   apps:
     - name: Authentik
@@ -110,12 +110,12 @@ services:
       icon: box
       job: minio
     - name: "Wiki.js – SOPs & Checklisten"
-      description: "Alarm- und Ausrueckeordnung, Einsatz-Checklisten"
+      description: "Alarm- und Ausrückeordnung, Einsatz-Checklisten"
       url: ""
       icon: book
       comingSoon: true
     - name: "Alamos Pager"
-      description: "Alarmierung & aktuelle Einsaetze"
+      description: "Alarmierung & aktuelle Einsätze"
       url: ""
       icon: siren
       comingSoon: true

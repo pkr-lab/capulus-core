@@ -11,12 +11,12 @@ data:
     """
     GitHub-Release-Watcher -> Zammad-Bridge.
 
-    Pollt die GitHub-Releases-API fuer eine Liste von Repos. Bei einem neuen
+    Pollt die GitHub-Releases-API für eine Liste von Repos. Bei einem neuen
     Release wird per Zammad-REST-API ein Ticket in einer Gruppe angelegt;
     Zammads eigene Agenten-Benachrichtigung (Profil-Einstellungen) verschickt
     daraufhin die E-Mail. Der zuletzt gesehene Tag pro Repo wird in einer
-    ConfigMap im eigenen Namespace persistiert (Zugriff ueber das
-    ServiceAccount-Token, kein kubectl noetig). Nutzt ausschliesslich die
+    ConfigMap im eigenen Namespace persistiert (Zugriff über das
+    ServiceAccount-Token, kein kubectl nötig). Nutzt ausschließlich die
     Python-Standardbibliothek.
     """
     import json
@@ -146,7 +146,7 @@ data:
         )
         try:
             with urllib.request.urlopen(req, timeout=10):
-                print(f"[OK] Zammad-Ticket erstellt fuer {repo} {tag}")
+                print(f"[OK] Zammad-Ticket erstellt für {repo} {tag}")
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode(errors="replace")
             raise RuntimeError(f"Zammad-Ticket fehlgeschlagen: HTTP {exc.code} {detail}") from exc

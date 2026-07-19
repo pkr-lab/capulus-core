@@ -4,7 +4,7 @@ metadata:
   name: pc-cfg
   namespace: windeployment
 data:
-  # Einsatzzweck fuer den naechsten einzurichtenden PC (egal ob Neuinstallation
+  # Einsatzzweck für den nächsten einzurichtenden PC (egal ob Neuinstallation
   # per PXE/USB oder bereits installiertes Windows per Ansible/setup.ps1).
   # Vor JEDEM Deployment anpassen und synchronisieren:
   #   git commit + push -> ArgoCD-Sync, oder manuell:

@@ -6,12 +6,12 @@ metadata:
 data:
   # Kleiner HTTP-Dienst im windeployment-http-Pod (localhost-only, nginx reicht
   # die Endpunkte unter /api/... durch, siehe configmap-nginx.yaml). Macht drei
-  # Dinge fuer die PCs, ohne dass je ein Secret (MinIO/Zammad) auf einen PC
+  # Dinge für die PCs, ohne dass je ein Secret (MinIO/Zammad) auf einen PC
   # gelangt:
   #   GET  /next-number    -> fortlaufende PC-Nummer (1002011-XXXX)
   #   POST /upload-log     -> schreibt das Setup-Log nach MinIO (SigV4, reine
-  #                            Stdlib, kein mc/boto3 noetig)
-  #   POST /notify-zammad   -> legt ein Zammad-Ticket fuer die PC-Einrichtung an
+  #                            Stdlib, kein mc/boto3 nötig)
+  #   POST /notify-zammad   -> legt ein Zammad-Ticket für die PC-Einrichtung an
   # Beide POST-Endpunkte antworten immer mit 200, auch wenn MinIO/Zammad nicht
   # erreichbar sind oder die Credentials fehlen — der PC soll davon nichts
   # merken (siehe setup.ps1: kurzer Timeout, stilles try/catch).
@@ -133,7 +133,7 @@ data:
                 try:
                     s3_put_object(f"{pc}-{ts}.log", body)
                 except Exception as exc:
-                    print(f"upload-log fehlgeschlagen fuer {pc}: {exc}")
+                    print(f"upload-log fehlgeschlagen für {pc}: {exc}")
                 # immer 200: der PC soll von einem MinIO-Ausfall nichts merken
                 self._ok()
                 return
