@@ -72,10 +72,10 @@ data:
               "source": "url",
               "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/ANDERNACH/W/measurements.json?start=PT3H",
               "url_options": {"method": "GET", "data": ""},
-              "parser": "backend",
+              "parser": "simple",
               "root_selector": "",
               "columns": [
-                {"selector": "timestamp", "type": "time", "alias": "time"},
+                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
                 {"selector": "value", "type": "number", "alias": "Wasserstand (cm)"}
               ],
               "format": "timeseries"
@@ -123,10 +123,10 @@ data:
               "source": "url",
               "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/ANDERNACH/W/measurements.json?start=P2D",
               "url_options": {"method": "GET", "data": ""},
-              "parser": "backend",
+              "parser": "simple",
               "root_selector": "",
               "columns": [
-                {"selector": "timestamp", "type": "time", "alias": "time"},
+                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
                 {"selector": "value", "type": "number", "alias": "Wasserstand (cm)"}
               ],
               "format": "timeseries"
@@ -169,10 +169,10 @@ data:
               "source": "url",
               "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/ANDERNACH/W/measurements.json?start=PT1H",
               "url_options": {"method": "GET", "data": ""},
-              "parser": "backend",
+              "parser": "simple",
               "root_selector": "",
               "columns": [
-                {"selector": "timestamp", "type": "time", "alias": "time"},
+                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
                 {"selector": "value", "type": "number", "alias": "Wasserstand (cm)"}
               ],
               "format": "timeseries"
