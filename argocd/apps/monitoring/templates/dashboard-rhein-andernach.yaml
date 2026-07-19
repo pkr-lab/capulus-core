@@ -148,7 +148,7 @@ data:
               "source": "url",
               "url": "https://www.hochwasser.rlp.de/api/v1/measurement-site/27100400",
               "url_options": {"method": "GET", "data": ""},
-              "parser": "simple",
+              "parser": "backend",
               "root_selector": "W.predictions.p50",
               "columns": [
                 {"selector": "x", "type": "timestamp", "alias": "time"},
