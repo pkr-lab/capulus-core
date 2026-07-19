@@ -6,7 +6,7 @@ metadata:
 data:
   # iPXE-Bootmenu - wird vom TFTP-Server an bootende PCs ausgeliefert.
   # Voraussetzung: WinPE-Dateien liegen im PVC unter /mnt/winpe/
-  # Aufbau: iPXE laedt dieses Skript via HTTP und zeigt das Menue an.
+  # Aufbau: iPXE lädt dieses Skript via HTTP und zeigt das Menü an.
   menu.ipxe: |
     #!ipxe
 
@@ -27,7 +27,7 @@ data:
     echo Starte automatische Windows-11-Installation...
     echo Lade WinPE vom Server ${server}/winpe/
     set autounattend ${server}/autounattend.xml
-    # WinPE booten (Dateien muessen vorab ins PVC geladen werden)
+    # WinPE booten (Dateien müssen vorab ins PVC geladen werden)
     kernel ${server}/winpe/bootmgr.efi
     initrd ${server}/winpe/boot/bcd
     imgargs bootmgr.efi /nointegritychecks
@@ -50,12 +50,12 @@ data:
     exit
 
     :failed
-    echo Boot fehlgeschlagen. WinPE-Dateien pruefen:
+    echo Boot fehlgeschlagen. WinPE-Dateien prüfen:
     echo   kubectl -n windeployment exec deploy/windeployment-http -- ls /mnt/winpe/
-    prompt Druecken Sie eine Taste...
+    prompt Drücken Sie eine Taste...
     goto menu
 
-  # dnsmasq-Konfiguration fuer PXE-Boot (proxyDHCP-Modus)
+  # dnsmasq-Konfiguration für PXE-Boot (proxyDHCP-Modus)
   # Wird vom pxe-tftp-Deployment verwendet.
   dnsmasq-pxe.conf: |
     # PXE-Server Konfiguration (proxyDHCP)

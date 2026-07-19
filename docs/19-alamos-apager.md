@@ -36,7 +36,7 @@ Pi (Chromium --kiosk) ──▶ http://alamos-apager.homeserver/start?station=X
 Kein Secret/Token verlässt jemals den Cluster Richtung Pi — der Pi kennt nur
 seinen eigenen Stationsnamen, die echte AMweb-URL bleibt serverseitig
 (gleiches Prinzip wie bei `windeployment`s `/api/notify-zammad`, siehe
-[docs/17-windows-deployment.md](17-windows-deployment.md)).
+[docs/18-windows-deployment.md](18-windows-deployment.md)).
 
 ## Cluster-Komponente: Helm Chart `alamos-apager`
 
