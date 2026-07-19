@@ -1,0 +1,72 @@
+---
+replicaCount: 1
+
+image:
+  repository: lscr.io/linuxserver/grocy
+  pullPolicy: IfNotPresent
+  tag: "4.2.0"
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations: {}
+  hosts:
+    - host: grocy.homeserver
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+persistence:
+  enabled: true
+  storageClassName: hdd
+  size: 5Gi
+  accessMode: ReadWriteOnce
+  mountPath: /config
+
+# linuxserver.io-Images verwenden PUID/PGID für Dateiberechtigungen.
+env:
+  PUID: "1000"
+  PGID: "1000"
+  TZ: Europe/Berlin
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# HDD-Storage liegt auf worker-0 — NodeAffinity ist Pflicht.
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - worker-0
+
+nodeSelector: {}
+tolerations: []

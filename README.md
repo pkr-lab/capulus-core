@@ -189,14 +189,18 @@ capulus-core/
 │   ├── 15-sso-alle-dienste.md        # SSO-Konfiguration für alle Dienste
 │   ├── 16-hdd-storage.md             # HDD-StorageClass auf worker-0
 │   ├── 17-zammad.md                  # Zammad Helpdesk/Ticket-System
-│   ├── 18-windows-deployment.md      # Windows-PC-Deployment (PXE/USB/Ansible)
 │   ├── 19-alamos-apager.md           # Alarmmonitor-Kiosk-Verwaltung (ALAMOS AMweb)
 │   ├── 20-wikijs.md                  # Wiki.js Team-Wiki
-│   ├── 21-le-homeserver-ui.md        # Home-Server-Status-UI
 │   ├── 22-cloudflare-tunnel.md       # Cloudflare Tunnel — Setup & Konzept
 │   ├── 23-cloudflare-deploy.md       # Cloudflare Tunnel — Deploy & Betrieb
 │   ├── 24-mediamtx.md                # Live-Streaming (RTMP/RTSP → HLS)
 │   ├── 25-github-release-watcher.md  # GitHub-Release → Zammad-E-Mail-Benachrichtigung
+│   ├── 26-paperless-ngx.md           # Dokumentenmanagement mit OCR
+│   ├── 27-mealie.md                  # Rezeptverwaltung + Wochenplaner
+│   ├── 28-grocy.md                   # Haushalts-ERP
+│   ├── 29-n8n.md                     # Low-Code-Automatisierung
+│   ├── 30-uptime-kuma.md             # Status-Seite und Service-Alerting
+│   ├── 31-rhein-dashboard.md         # Grafana: Pegelonline, DWD, ELWIS, Hochwasser RLP
 │   └── assets/banner.svg
 ├── ansible/
 │   ├── site.yml                      # Entry-Point
@@ -233,7 +237,12 @@ capulus-core/
         ├── alamos-apager/            # Alarmmonitor-Kiosk-Verwaltung (ALAMOS AMweb)
         ├── cloudflared/               # Cloudflare Tunnel — externe Erreichbarkeit
         ├── mediamtx/                  # Live-Streaming (RTMP/RTSP → HLS)
-        └── semaphore/                # Ansible-Web-UI
+        ├── semaphore/                # Ansible-Web-UI
+        ├── paperless-ngx/            # Dokumentenmanagement mit OCR
+        ├── mealie/                   # Rezeptverwaltung + Wochenplaner
+        ├── grocy/                    # Haushalts-ERP (Vorräte, Einkauf, Ablaufdaten)
+        ├── n8n/                      # Low-Code-Automatisierung
+        └── uptime-kuma/              # Status-Seite und Service-Alerting
 ```
 
 </details>
@@ -296,6 +305,11 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 | kubeseal-webgui | http://kubeseal-webgui.homeserver |
 | Alarmmonitor (alamos-apager) | http://alamos-apager.homeserver |
 | MediaMTX (Live-Stream-Playback) | http://stream.homeserver |
+| Paperless-ngx | http://paperless.homeserver |
+| Mealie | http://mealie.homeserver |
+| Grocy | http://grocy.homeserver |
+| n8n | http://n8n.homeserver |
+| Uptime Kuma | http://uptime-kuma.homeserver |
 
 > Zusätzlich zu den internen `*.homeserver`-URLs können ausgewählte Dienste
 > über Cloudflare Tunnel öffentlich unter einer eigenen Domain erreichbar
@@ -366,6 +380,12 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [Cloudflare Tunnel — Deploy](docs/23-cloudflare-deploy.md) | Rollout, neuen Dienst freigeben, Rotation, Troubleshooting |
 | [MediaMTX Live-Streaming](docs/24-mediamtx.md) | RTMP/RTSP-Ingest → HLS, Publish- und Zuschauer-Autorisierung über mediamtx' eingebaute interne Benutzerverwaltung (HTTP Basic Auth) |
 | [GitHub Release Watcher](docs/25-github-release-watcher.md) | Neue GitHub-Releases erkennen und per Zammad-Ticket eine E-Mail-Benachrichtigung auslösen |
+| [Paperless-ngx](docs/26-paperless-ngx.md) | Dokumentenmanagement mit OCR — Briefe, Rechnungen, Verträge scannen und durchsuchen |
+| [Mealie](docs/27-mealie.md) | Rezeptverwaltung + Wochenplaner mit URL-Import |
+| [Grocy](docs/28-grocy.md) | Haushalts-ERP: Vorräte, Einkaufsliste, Ablaufdaten, Putzplan |
+| [n8n](docs/29-n8n.md) | Low-Code-Automatisierung — Dienste verknüpfen ohne Programmieren |
+| [Uptime Kuma](docs/30-uptime-kuma.md) | Status-Seite und Alerting für alle Dienste |
+| [Rhein-Dashboard](docs/31-rhein-dashboard.md) | Grafana: Pegelonline, DWD-Warnungen, ELWIS, Hochwasservorhersage RLP |
 
 ---
 
