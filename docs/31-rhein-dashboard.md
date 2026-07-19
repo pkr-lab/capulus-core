@@ -40,10 +40,13 @@ Hochwassermeldestufen Andernach (Rhein):
 
 ### DWD Warnungen — Kreis Mayen-Koblenz
 
-**API:** `https://www.dwd.de/DWD/warnungen/warnapp_gemeinden/json/warnungen_gemeinde_map_de.json`
+> **⚠ API eingestellt:** Der DWD hat die JSON-API (`warnapp_gemeinden/json/`) abgeschaltet (HTTP 404).
+> Die Nachfolge-URL (`warnapp/json/warnings.json`) liefert **JSONP**, kein valides JSON — nicht kompatibel
+> mit dem Infinity-Plugin. Das Panel zeigt daher statische Links zum DWD-Warnportal.
+>
+> Alternative für Grafana: NINA-API (`https://nina.api.bund.dev`) oder Katwarn-API prüfen.
 
 - Warncell-ID `807137000` = Landkreis Mayen-Koblenz
-- Zeigt aktive Warnungen (Sturm, Gewitter, Frost, Starkregen usw.)
 - Warnstufen: 1 = Gelb, 2 = Orange, 3 = Rot, 4 = Violett
 
 ### ELWIS — Schifffahrtsmeldungen
@@ -129,11 +132,11 @@ kubectl -n monitoring exec deploy/monitoring-grafana -c grafana -- \
 curl -s "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/ANDERNACH/W/measurements.json?start=PT1H" | head -c 500
 ```
 
-### DWD Warnungen leer (keine Warnung aktiv)
+### DWD Warnungen — API eingestellt
 
-Das ist der Normalfall. Wenn keine Warnung für Mayen-Koblenz aktiv ist,
-gibt die API für die Warncell `807137000` ein leeres Array oder keinen Eintrag
-zurück — das Panel bleibt dann leer (kein Fehler).
+Die DWD JSON-API (`warnapp_gemeinden/json/warnungen_gemeinde_map_de.json`) wurde abgeschaltet (HTTP 404).
+Die Nachfolge-URL liefert JSONP (kein valides JSON). Das DWD-Panel ist daher auf
+statische Links umgestellt. Für Live-Warnungen → [dwd.de Warnkarte](https://www.dwd.de).
 
 ### Grafana-Neustart nach Plugin-Installation
 
