@@ -182,72 +182,14 @@ data:
           "type": "gauge"
         },
         {
-          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
-          "fieldConfig": {
-            "defaults": {
-              "custom": {
-                "align": "auto",
-                "displayMode": "auto"
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {"id": "byName", "options": "headline"},
-                "properties": [{"id": "displayName", "value": "Warnung"}]
-              },
-              {
-                "matcher": {"id": "byName", "options": "level"},
-                "properties": [
-                  {"id": "displayName", "value": "Stufe"},
-                  {
-                    "id": "custom.displayMode",
-                    "value": "color-background"
-                  },
-                  {
-                    "id": "thresholds",
-                    "value": {
-                      "mode": "absolute",
-                      "steps": [
-                        {"color": "green", "value": null},
-                        {"color": "yellow", "value": 1},
-                        {"color": "orange", "value": 2},
-                        {"color": "red", "value": 3},
-                        {"color": "dark-red", "value": 4}
-                      ]
-                    }
-                  }
-                ]
-              }
-            ]
-          },
           "gridPos": {"h": 8, "w": 12, "x": 0, "y": 10},
           "id": 3,
           "options": {
-            "footer": {"show": false},
-            "showHeader": true
+            "content": "## DWD Warnungen — Kreis Mayen-Koblenz\n\n**Aktuelle Warnungen direkt beim DWD abrufen:**\n\n- [DWD WarnWetter — Andernach/Mayen-Koblenz](https://www.dwd.de/DE/wetter/warnungen_aktuell/warnkarten/warnkarte_gemeinden_bw.html)\n- [DWD Warnapp (warnwetter.de)](https://www.wettergefahren.de/warnkarte/gemeinden/aktuelle-warnungen.html)\n- [Katwarn Mayen-Koblenz](https://katwarn.de/)\n\n**Warnstufen:**\n\n| Stufe | Farbe | Bedeutung |\n|---|---|---|\n| 1 | Gelb | Wetterwarnung |\n| 2 | Orange | Markante Wetterwarnung |\n| 3 | Rot | Unwetterwarnung |\n| 4 | Violett | Extremes Unwetter |\n\n> **Hinweis:** Die DWD JSON-API wurde eingestellt. Die Warnungsdaten sind nur noch als JSONP oder im CAP-XML-Format verfügbar — nicht kompatibel mit dem Infinity-Plugin.",
+            "mode": "markdown"
           },
-          "targets": [
-            {
-              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
-              "refId": "A",
-              "type": "json",
-              "source": "url",
-              "url": "https://www.dwd.de/DWD/warnungen/warnapp_gemeinden/json/warnungen_gemeinde_map_de.json",
-              "url_options": {"method": "GET", "data": ""},
-              "parser": "backend",
-              "root_selector": "$.warnings['807137000'][*]",
-              "columns": [
-                {"selector": "headline", "type": "string", "alias": "headline"},
-                {"selector": "level", "type": "number", "alias": "level"},
-                {"selector": "event", "type": "string", "alias": "event"},
-                {"selector": "description", "type": "string", "alias": "description"}
-              ],
-              "format": "table"
-            }
-          ],
           "title": "DWD Warnungen — Kreis Mayen-Koblenz",
-          "description": "Quelle: Deutscher Wetterdienst (DWD), öffentlich. Warncell-ID: 807137000 (Landkreis Mayen-Koblenz). Stufen: 1=Gelb, 2=Orange, 3=Rot, 4=Violett.",
-          "type": "table"
+          "type": "text"
         },
         {
           "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
