@@ -107,7 +107,17 @@ data:
                   {"color": "red", "value": 800}
                 ]
               }
-            }
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Wasserstand Vorhersage (cm)"},
+                "properties": [
+                  {"id": "color", "value": {"mode": "fixed", "fixedColor": "purple"}},
+                  {"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [10, 6]}},
+                  {"id": "custom.fillOpacity", "value": 0}
+                ]
+              }
+            ]
           },
           "gridPos": {"h": 10, "w": 18, "x": 6, "y": 0},
           "id": 2,
@@ -128,6 +138,21 @@ data:
               "columns": [
                 {"selector": "timestamp", "type": "timestamp", "alias": "time"},
                 {"selector": "value", "type": "number", "alias": "Wasserstand (cm)"}
+              ],
+              "format": "timeseries"
+            },
+            {
+              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+              "refId": "B",
+              "type": "json",
+              "source": "url",
+              "url": "https://www.hochwasser.rlp.de/api/v1/measurement-site/27100400",
+              "url_options": {"method": "GET", "data": ""},
+              "parser": "simple",
+              "root_selector": "W.predictions.p50",
+              "columns": [
+                {"selector": "x", "type": "timestamp", "alias": "time"},
+                {"selector": "y", "type": "number", "alias": "Wasserstand Vorhersage (cm)"}
               ],
               "format": "timeseries"
             }
