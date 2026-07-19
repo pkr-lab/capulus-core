@@ -15,19 +15,19 @@ data:
       "links": [
         {
           "title": "Pegelonline Andernach",
-          "url": "https://www.pegelonline.wsv.de/gast/stammdaten/stationsstammdaten?pegelnummer=2757010",
+          "url": "https://pegelonline.wsv.de/gast/stammdaten?pegelnr=27100400",
           "type": "link",
           "targetBlank": true
         },
         {
           "title": "Hochwasser RLP",
-          "url": "https://www.hochwasser-rlp.de/rhein/andernach",
+          "url": "https://www.hochwasser.rlp.de/flussgebiet/mittelrhein/andernach",
           "type": "link",
           "targetBlank": true
         },
         {
           "title": "ELWIS",
-          "url": "https://www.elwis.de/DE/dynamisch/gewaesserkundliche-Grundlagen/Wasserstaende/index.php",
+          "url": "https://elwis.de/DE/dynamisch/gewaesserkundliche-Grundlagen/Wasserstaende/index.php",
           "type": "link",
           "targetBlank": true
         }
