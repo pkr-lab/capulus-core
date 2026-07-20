@@ -274,7 +274,7 @@ data:
       "schemaVersion": 38,
       "tags": ["rhein", "pegel", "wasser", "dlrg", "andernach"],
       "templating": {"list": []},
-      "time": {"from": "now-2d", "to": "now"},
+      "time": {"from": "now-2d", "to": "now+2d"},
       "timepicker": {},
       "timezone": "browser",
       "title": "Rhein Andernach — Pegel & Warnungen",
