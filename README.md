@@ -201,6 +201,7 @@ capulus-core/
 │   ├── 29-n8n.md                     # Low-Code-Automatisierung
 │   ├── 30-uptime-kuma.md             # Status-Seite und Service-Alerting
 │   ├── 31-rhein-dashboard.md         # Grafana: Pegelonline, DWD, ELWIS, Hochwasser RLP
+│   ├── 32-vaultwarden.md             # Bitwarden-kompatibler Passwort-Manager
 │   └── assets/banner.svg
 ├── ansible/
 │   ├── site.yml                      # Entry-Point
@@ -242,7 +243,8 @@ capulus-core/
         ├── mealie/                   # Rezeptverwaltung + Wochenplaner
         ├── grocy/                    # Haushalts-ERP (Vorräte, Einkauf, Ablaufdaten)
         ├── n8n/                      # Low-Code-Automatisierung
-        └── uptime-kuma/              # Status-Seite und Service-Alerting
+        ├── uptime-kuma/              # Status-Seite und Service-Alerting
+        └── vaultwarden/              # Bitwarden-kompatibler Passwort-Manager
 ```
 
 </details>
@@ -310,6 +312,7 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 | Grocy | http://grocy.homeserver |
 | n8n | http://n8n.homeserver |
 | Uptime Kuma | http://uptime-kuma.homeserver |
+| Vaultwarden | http://vault.homeserver |
 
 > Zusätzlich zu den internen `*.homeserver`-URLs können ausgewählte Dienste
 > über Cloudflare Tunnel öffentlich unter einer eigenen Domain erreichbar
@@ -386,6 +389,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [n8n](docs/29-n8n.md) | Low-Code-Automatisierung — Dienste verknüpfen ohne Programmieren |
 | [Uptime Kuma](docs/30-uptime-kuma.md) | Status-Seite und Alerting für alle Dienste |
 | [Rhein-Dashboard](docs/31-rhein-dashboard.md) | Grafana: Pegelonline, DWD-Warnungen, ELWIS, Hochwasservorhersage RLP |
+| [Vaultwarden](docs/32-vaultwarden.md) | Bitwarden-kompatibler Passwort-Manager für Browser/Mobile-Clients |
 
 ---
 

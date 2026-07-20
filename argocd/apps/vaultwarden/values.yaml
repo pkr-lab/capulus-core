@@ -1,0 +1,99 @@
+---
+replicaCount: 1
+
+image:
+  repository: vaultwarden/server
+  pullPolicy: IfNotPresent
+  # Pinned für Reproduzierbarkeit. Releases:
+  # https://github.com/dani-garcia/vaultwarden/releases
+  tag: "1.36.0"
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+# Das offizielle vaultwarden-Image läuft als root (kein USER im Dockerfile) —
+# anders als n8n/gotify kann hier kein runAsNonRoot gesetzt werden.
+podSecurityContext: {}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+ingress:
+  enabled: true
+  className: traefik
+  # Bewusst KEIN Authentik-ForwardAuth vor Vaultwarden: die Bitwarden-Apps/
+  # Browser-Erweiterungen sprechen direkt die API an (Master-Passwort + eigenes
+  # 2FA übernehmen die Absicherung) — ein ForwardAuth-Redirect vor der API
+  # würde Login/Sync der Clients brechen.
+  annotations: {}
+  hosts:
+    - host: vault.homeserver
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+persistence:
+  enabled: true
+  storageClassName: local-path
+  size: 2Gi
+  accessMode: ReadWriteOnce
+  mountPath: /data
+
+env:
+  # Öffentliche Basis-URL — wird von Vaultwarden für Links (E-Mails, Icons,
+  # U2F/WebAuthn-Origin-Check) genutzt. Muss zur extern erreichbaren Domain
+  # passen (siehe argocd/apps/cloudflared/values.yaml).
+  DOMAIN: "https://vault.pke-lab.de"
+  # Seit Vaultwarden 1.30 läuft der Websocket-Server auf demselben Port wie
+  # die HTTP-API — kein separater Port/Service nötig.
+  WEBSOCKET_ENABLED: "true"
+  # Nach dem Anlegen des eigenen Accounts (siehe docs/32-vaultwarden.md)
+  # auf "false" setzen, damit der Server nicht offen für neue Registrierungen
+  # im Internet steht.
+  SIGNUPS_ALLOWED: "true"
+  # Deaktiviert die (ohnehin meist ungenutzte) öffentliche Organisations-
+  # Registrierung.
+  INVITATIONS_ALLOWED: "true"
+  TZ: Europe/Berlin
+
+# Admin-Token für die /admin-Oberfläche, aus dem SealedSecret in
+# templates/sealedsecret.yaml. Siehe docs/32-vaultwarden.md für den
+# kubeseal-Workflow, der `encryptedAdminToken` unten befüllt.
+adminSecret:
+  enabled: true
+  secretName: vaultwarden-admin
+  # Generiert mit (Argon2-Hash empfohlen statt Klartext-Token):
+  #   docker run --rm vaultwarden/server:1.36.0 /vaultwarden hash
+  #   echo -n '<PHC-Hash-aus-obigem-Befehl>' \
+  #     | kubeseal --raw --namespace vaultwarden --name vaultwarden-admin \
+  #         --controller-namespace sealed-secrets \
+  #         --controller-name sealed-secrets-controller --from-file=/dev/stdin
+  encryptedAdminToken: "REPLACE_ME_WITH_KUBESEAL_OUTPUT"
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
