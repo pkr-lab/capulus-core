@@ -84,7 +84,7 @@ adminSecret:
   #     | kubeseal --raw --namespace vaultwarden --name vaultwarden-admin \
   #         --controller-namespace sealed-secrets \
   #         --controller-name sealed-secrets-controller --from-file=/dev/stdin
-  encryptedAdminToken: "REPLACE_ME_WITH_KUBESEAL_OUTPUT"
+  encryptedAdminToken: "AgCtSQDVjhk8x1al1q+huzOBvm8N39BvK8nU+awOd/MTDn2/37KKK+vAjWH9gLScCgsalGigAAL7wXXdPAqm5HpniDf1mPoKXVY2NyJ7ZJnmfpvnUICPofBZaifE6NTZZiOo7WKY/uKM74b2CkxP61lg4y+icaDObyd61rO6qhQdddxR7iBbkj2I+6kLzb3mCBqq/mNmBYvCTZr2HzYtvasDwLyufgC0ZquqjP17HDpzxcjGAUtEzSOydCs/D30WJZW882hoQlkGQJDKLTbCEv66Xw+sLOchxccBtkzlSuuf+Kp0b5qfmJLzoZKzS63hZpMv2V2Hwtbd9MKXEBsAGs6agI83xzwRfmhjeh48OU8fpWpD1KbdNNtMiNrYH9N8HOjfkJLnqoYrnQRRcJfepNVfYzDVPK0uckUMd9MfWr0WksXrQ4Qm/TyN9RBagWjC+xWeYug9o0h+QWWJzqKdAiYLwaeBVv8kJ9YIe6vzLqIgqr6pXrskyXVSUYHGfjsKZ2KjV5vkp6yBRhV7BzPDGOHTx4fI5oHE/8UZoD6VcDlBS2J0BEWHf1YhkjacVuf1f3mPg48CBeNIVy0aU1mUrHNO8OwFpllatx7WJ5fdv7EQ4zg2e/eMf+cAXkDGAjcGsi56PN3ExZEZs3t6O9VMLmRGJcmCyNLlEisPII+umw17Qayh3+aQdjoHrZg5OPJA2JwInegxbTEtUr5gOl3YqHdr7Nv2nE6LuCUl8ayniCjYN/rlwap2qJ4IQT3l+kOv6kbhxfJheSXUmPXAXU8YWjqY0N6tkbRmq34OlZEE0vH6av4OVO21H+80BaOtW4e0BKZ4vVX45YzzCwkuYwguFzHk7xUuAN1n"
 
 resources:
   requests:

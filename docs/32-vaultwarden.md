@@ -40,8 +40,11 @@ Ein Klartext-`ADMIN_TOKEN` funktioniert, ist aber anfällig für
 Timing-Angriffe. Vaultwarden empfiehlt stattdessen einen Argon2-PHC-Hash:
 
 ```bash
-docker run --rm vaultwarden/server:1.36.0 /vaultwarden hash
+sudo docker run --rm -it vaultwarden/server:1.36.0 /vaultwarden hash
 ```
+
+> **`-it` nicht vergessen** — ohne TTY/stdin bricht der Passwort-Prompt mit
+> `Os { code: 6, ... "No such device or address" }` ab.
 
 Das Kommando fragt interaktiv nach einem Passwort und gibt einen
 `$argon2id$...`-Hash aus. Diesen Hash (nicht das Klartext-Passwort!) im
@@ -58,13 +61,38 @@ nächsten Schritt versiegeln.
    - **Value**: der `$argon2id$...`-Hash aus 1.1
 2. **Encrypt** klicken, den langen Base64-String kopieren.
 
-Oder per CLI:
+Oder per CLI. Falls das lokale kubeconfig nicht auf den Home-Server zeigt
+(z. B. von einer Workstation ohne Cluster-Zugriff), Public Key einmalig
+vom Server holen und mit `--cert` an alle `kubeseal`-Aufrufe übergeben
+(Details: [docs/14-cert-login.md → kubeseal ohne lokalen
+Cluster-Kontext](14-cert-login.md#kubeseal-ohne-lokalen-cluster-kontext)):
+
+```bash
+mkdir -p ~/homelab-certs
+ssh -i ~/.ssh/id_ed25519 ubuntu@192.168.178.94 \
+  'sudo kubectl -n sealed-secrets get secret \
+   -l sealedsecrets.bitnami.com/sealed-secrets-key=active \
+   -o jsonpath="{.items[0].data.tls\.crt}" | base64 -d' \
+  > ~/homelab-certs/sealed-secrets.pem
+
+echo -n '$argon2id$...' \
+  | kubeseal --raw \
+      --cert ~/homelab-certs/sealed-secrets.pem \
+      --namespace vaultwarden \
+      --name vaultwarden-admin \
+      --from-file=/dev/stdin
+```
+
+Mit direktem Cluster-Zugriff (kubeconfig zeigt auf den Home-Server) reicht
+stattdessen:
 
 ```bash
 echo -n '$argon2id$...' \
   | kubeseal --raw \
       --namespace vaultwarden \
       --name vaultwarden-admin \
+      --controller-namespace sealed-secrets \
+      --controller-name sealed-secrets-controller \
       --from-file=/dev/stdin
 ```
 
