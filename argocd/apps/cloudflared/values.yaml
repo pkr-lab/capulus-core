@@ -91,6 +91,8 @@ tunnel:
         service: http://mealie.mealie.svc.cluster.local:80
       - hostname: grocy.pke-lab.de
         service: http://grocy.grocy.svc.cluster.local:80
+      - hostname: vault.pke-lab.de
+        service: http://vaultwarden.vaultwarden.svc.cluster.local:80
     defaultService: "http_status:404"
 
 nodeSelector: {}
