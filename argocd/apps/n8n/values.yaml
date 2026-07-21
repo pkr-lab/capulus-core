@@ -2,9 +2,14 @@
 replicaCount: 1
 
 image:
-  repository: n8nio/n8n
+  # Custom image with n8n-nodes-imap baked in, see ./image/Dockerfile.
+  # Built and imported locally (k3s ctr images import) — no registry push,
+  # so pullPolicy must stay IfNotPresent (Never would also work, but
+  # IfNotPresent avoids ImagePullBackOff if the tag is ever missing after a
+  # node reboot and someone forgets to re-import).
+  repository: n8n-custom
   pullPolicy: IfNotPresent
-  tag: "1.58.2"
+  tag: "1.58.2-imap"
 
 nameOverride: ""
 fullnameOverride: ""
