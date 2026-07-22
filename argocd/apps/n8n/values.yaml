@@ -51,7 +51,7 @@ ingress:
 
 persistence:
   enabled: true
-  storageClassName: hdd
+  storageClassName: nas
   size: 5Gi
   accessMode: ReadWriteOnce
   mountPath: /home/node/.n8n
@@ -75,16 +75,7 @@ resources:
     cpu: 1000m
     memory: 1Gi
 
-# HDD-Storage liegt auf worker-0 — NodeAffinity ist Pflicht.
-affinity:
-  nodeAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: kubernetes.io/hostname
-              operator: In
-              values:
-                - worker-0
+affinity: {}
 
 nodeSelector: {}
 tolerations: []

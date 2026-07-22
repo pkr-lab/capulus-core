@@ -7,6 +7,15 @@
 # agent mode. Must run AFTER the k3s server role on homeserver.
 # ============================================================
 
+# ---- NFS-Client (Voraussetzung für die "nas"-StorageClass) --
+# Kubelet muss auf JEDEM Node NFS-Mounts erstellen können, sonst bleiben
+# PVCs auf der "nas"-StorageClass hier Pending. Siehe docs/16-nas-storage.md.
+- name: nfs-common installieren
+  ansible.builtin.apt:
+    name: nfs-common
+    state: "{{ 'latest' if auto_upgrade | bool else 'present' }}"
+    update_cache: true
+
 # ---- Hostname -----------------------------------------------
 - name: Set system hostname
   ansible.builtin.hostname:

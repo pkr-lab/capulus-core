@@ -159,7 +159,7 @@ zammad:
 
   # ---- PostgreSQL Sub-Chart (Bitnami) -----------------------
   # Speichert Tickets + Attachments (storageVolume.enabled: false) → wächst
-  # potenziell groß. Läuft daher auf der HDD-StorageClass (docs/16-hdd-storage.md)
+  # potenziell groß. Läuft daher auf der "nas"-StorageClass (docs/16-nas-storage.md)
   # statt auf der System-SSD des Homeservers.
   postgresql:
     enabled: true
@@ -173,18 +173,9 @@ zammad:
     primary:
       persistence:
         enabled: true
-        storageClass: hdd
+        storageClass: nas
         size: 50Gi
-      # Pflicht: hdd-PVCs binden nur auf worker-0 (siehe docs/16-hdd-storage.md)
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: kubernetes.io/hostname
-                    operator: In
-                    values:
-                      - worker-0
+      affinity: {}
       resources:
         requests:
           cpu: 50m
@@ -193,7 +184,7 @@ zammad:
           memory: 512Mi
 
   # ---- Redis Sub-Chart (CloudPirates OCI) -------------------
-  # Cache/Websocket-Pub-Sub, ebenfalls auf HDD ausgelagert, damit kein
+  # Cache/Websocket-Pub-Sub, ebenfalls auf die NAS ausgelagert, damit kein
   # Persistenzspeicher auf der Homeserver-SSD landet.
   redis:
     auth:
@@ -212,15 +203,6 @@ zammad:
       rollingUpdate:
         maxUnavailable: null
     persistence:
-      storageClass: hdd
+      storageClass: nas
       size: 8Gi
-    # Pflicht: hdd-PVCs binden nur auf worker-0 (siehe docs/16-hdd-storage.md)
-    affinity:
-      nodeAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          nodeSelectorTerms:
-            - matchExpressions:
-                - key: kubernetes.io/hostname
-                  operator: In
-                  values:
-                    - worker-0
+    affinity: {}
