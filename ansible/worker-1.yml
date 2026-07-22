@@ -1,0 +1,47 @@
+---
+# ============================================================
+# Worker-1 Playbook — provisioniert worker-1 (192.168.178.96).
+#
+# Anders als worker-0.yml NUR reiner k3s-Compute-Node: keine
+# Docker-Compose-Dienste (die sind an worker-0/dessen HDD gebunden).
+# worker-1 uebernimmt zusaetzliche Rechenlast im k3s-Cluster.
+#
+# Reihenfolge:
+#   1. k3s_agent — tritt dem k3s-Cluster als Worker-Node bei
+#      (benoetigt laufenden k3s-Server auf homeserver/.94)
+#   2. thermal_watchdog / resource_watchdog — automatischer Shutdown bei
+#      Uebertemperatur bzw. anhaltend hoher CPU/RAM-Last
+#   3. Uncordon — stellt sicher dass worker-1 schedulable bleibt
+#      (kubectl drain/cordon durch Maintenance-Schritte rueckgaengig machen)
+# ============================================================
+#
+# Run with:
+#   make worker-1
+# Dry-run:
+#   make worker-1-check
+# ============================================================
+
+- name: Deploy k3s agent and watchdogs on worker-1
+  hosts: worker-1
+  become: true
+  roles:
+    - role: k3s_agent
+      tags: [k3s-agent, kubernetes]
+    - role: thermal_watchdog
+      tags: [thermal-watchdog, thermal]
+    - role: resource_watchdog
+      tags: [resource-watchdog, thermal]
+
+- name: Uncordon worker-1 nach Provisioning
+  hosts: homeservers
+  become: true
+  tags: [uncordon, kubernetes]
+  tasks:
+    - name: worker-1 schedulable halten
+      ansible.builtin.command:
+        cmd: kubectl uncordon worker-1
+      register: uncordon_result
+      changed_when: "'uncordoned' in uncordon_result.stdout"
+      failed_when: >
+        uncordon_result.rc != 0 and
+        'not found' not in uncordon_result.stderr

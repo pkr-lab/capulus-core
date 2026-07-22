@@ -24,7 +24,7 @@ Dieses Dokument beschreibt die High-Level-Architektur des Home-Server-Setups.
                                 │ Tailscale MagicDNS / IP
                                 ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                k3s CLUSTER (2-Node)                                          │
+│                k3s CLUSTER (3-Node)                                          │
 │                                                                              │
 │  ┌─────────────────────────────────────┐  ┌──────────────────────────────┐   │
 │  │  HOMESERVER — 192.168.178.94        │  │  worker-0 — 192.168.178.95│  │   │ 
@@ -106,7 +106,7 @@ Das Fundament des ganzen Stacks. Konfiguriert durch die Ansible-Rolle `common`:
 - Chrony für NTP-Zeitsync
 - Swap deaktiviert (Kubernetes-Pflicht)
 
-### k3s (Kubernetes-Distribution, 2-Node-Cluster)
+### k3s (Kubernetes-Distribution, 3-Node-Cluster)
 
 k3s ist eine CNCF-zertifizierte, produktionsreife Kubernetes-Distribution,
 optimiert für ressourcenarme Umgebungen.
@@ -115,15 +115,17 @@ optimiert für ressourcenarme Umgebungen.
 |---------------|-------------------|------------------------|---------------|
 | homeserver    | 192.168.178.94    | Control-Plane + Worker | k3s server    |
 | worker-0      | 192.168.178.95    | Worker                 | k3s agent     |
+| worker-1      | 192.168.178.96    | Worker                 | k3s agent     |
 
-worker-0 tritt dem Cluster über `k3s agent` bei — der Join-Token wird
-per Ansible automatisch vom Control-Plane-Node gelesen. Kubernetes-Workloads
-werden vom Scheduler auf beide Nodes verteilt. Docker-Compose-Dienste auf
-worker-0 laufen parallel dazu auf dem Host.
+worker-0 und worker-1 treten dem Cluster über `k3s agent` bei — der
+Join-Token wird per Ansible automatisch vom Control-Plane-Node gelesen.
+Kubernetes-Workloads werden vom Scheduler auf alle Nodes verteilt.
+Docker-Compose-Dienste (Paperless-NGX, TinyTeller, Day Pilot) laufen nur
+auf worker-0 parallel zum k3s-Agent; worker-1 ist reiner Compute-Node.
 
 Mitgelieferte Komponenten:
 
-- **Flannel** (VXLAN) für Pod-Networking (beide Nodes über UDP 8472)
+- **Flannel** (VXLAN) für Pod-Networking (alle Nodes über UDP 8472)
 - **Traefik v2** als Default-Ingress-Controller (läuft auf Control-Plane)
 - **CoreDNS** für Cluster-DNS
 - **local-path Provisioner** für PersistentVolume-Storage
