@@ -1,0 +1,78 @@
+---
+# TinyTeller — vormals Docker-Compose auf worker-0 (ansible/roles/tinyteller),
+# jetzt als reguläre k8s-App. Zustandslos (kein PVC nötig) — läuft auf
+# jedem k3s-Node, keine NodeAffinity.
+
+replicaCount: 1
+
+backend:
+  image:
+    repository: ghcr.io/pkr-lab/tiny-teller-backend
+    pullPolicy: IfNotPresent
+    tag: "edge"
+  port: 8080
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+frontend:
+  image:
+    repository: ghcr.io/pkr-lab/tiny-teller-frontend
+    pullPolicy: IfNotPresent
+    tag: "edge"
+  port: 80
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+# GHCR-Packages unter ghcr.io/pkr-lab/... sind standardmäßig privat.
+# Entweder Package-Sichtbarkeit auf "Public" stellen, oder hier ein
+# imagePullSecrets-Secret (kubernetes.io/dockerconfigjson) referenzieren,
+# z.B. [{name: ghcr-pull}].
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podSecurityContext: {}
+securityContext: {}
+
+service:
+  type: ClusterIP
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations: {}
+  # Ein Host, Pfad-Routing: /api -> Backend, alles andere -> Frontend.
+  # ANNAHME: das Frontend ruft die API relativ unter /api auf. Falls das
+  # gebaute Frontend stattdessen eine absolute API-URL erwartet, hier die
+  # CORS_ORIGIN unten anpassen und ggf. auf zwei Hosts (Frontend/API)
+  # umstellen.
+  hosts:
+    - host: tinyteller.homeserver
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+env:
+  corsOrigin: "https://tinyteller.homeserver"
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

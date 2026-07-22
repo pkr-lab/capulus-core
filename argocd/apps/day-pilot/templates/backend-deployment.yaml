@@ -1,0 +1,141 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "day-pilot.fullname" . }}-backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "day-pilot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "day-pilot.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "day-pilot.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: backend
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "day-pilot.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: backend
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.backend.port }}
+              protocol: TCP
+          env:
+            - name: APP_NAME
+              value: {{ .Values.env.appName | quote }}
+            - name: APP_TIMEZONE
+              value: {{ .Values.env.timezone | quote }}
+            - name: DAILY_SUMMARY_TIME
+              value: {{ .Values.env.dailySummaryTime | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.db | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.user | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: postgres-password
+            # $(POSTGRES_PASSWORD) referenziert den obigen Secret-Wert —
+            # von k8s unterstützte Dependent-Env-Var-Syntax.
+            - name: DATABASE_URL
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@{{ include "day-pilot.fullname" . }}-postgres:5432/$(POSTGRES_DB)"
+            - name: REDIS_URL
+              value: "redis://{{ include "day-pilot.fullname" . }}-redis:6379/0"
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: openai-api-key
+            - name: OPENAI_MODEL
+              value: {{ .Values.env.openaiModel | quote }}
+            - name: AI_PROVIDER
+              value: {{ .Values.env.aiProvider | quote }}
+            - name: AI_MODEL
+              value: {{ .Values.env.aiModel | quote }}
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: github-token
+            - name: WEATHERAPI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: weatherapi-api-key
+            - name: WEATHER_CITY
+              value: {{ .Values.env.weatherCity | quote }}
+            - name: WEATHER_UNITS
+              value: {{ .Values.env.weatherUnits | quote }}
+            - name: CALDAV_URL
+              value: {{ .Values.env.caldavUrl | quote }}
+            - name: CALDAV_USERNAME
+              value: {{ .Values.env.caldavUsername | quote }}
+            - name: CALDAV_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: caldav-password
+            - name: NTFY_SERVER
+              value: {{ .Values.env.ntfyServer | quote }}
+            - name: NTFY_TOPIC
+              value: {{ .Values.env.ntfyTopic | quote }}
+            - name: NTFY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: ntfy-token
+            - name: VOICE_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: voice-webhook-secret
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 5
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,62 @@
+# nfs-subdir-external-provisioner: provisioniert PVCs als Unterverzeichnisse
+# eines NFS-Exports auf dem UGREEN NAS. Anders als der alte hdd-local-path-
+# provisioner läuft dieser Pod auf JEDEM Node (kein NodeAffinity nötig) —
+# die "Bindung" ist der NFS-Mount, nicht der lokale Pfad. Dadurch können auch
+# die PVC-nutzenden Apps frei über alle k3s-Nodes verteilt werden.
+#
+# NFS_SERVER/NFS_PATH sind Platzhalter — nach dem Anlegen der Freigabe in
+# UGOS (siehe docs/16-nas-storage.md) mit dem tatsächlichen Share-Pfad
+# ersetzen (z. B. "/volume1/k8s-storage", abhängig vom NAS-Modell).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nas-nfs-subdir-external-provisioner
+  namespace: nas-storage
+  labels:
+    app: nas-nfs-subdir-external-provisioner
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nas-nfs-subdir-external-provisioner
+  template:
+    metadata:
+      labels:
+        app: nas-nfs-subdir-external-provisioner
+    spec:
+      serviceAccountName: nas-nfs-subdir-external-provisioner
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: nfs-subdir-external-provisioner
+          image: registry.k8s.io/sig-storage/nfs-subdir-external-provisioner:v4.0.2
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: nfs-storage-root
+              mountPath: /persistentvolumes
+          env:
+            - name: PROVISIONER_NAME
+              value: k8s-sigs.io/nfs-subdir-external-provisioner
+            - name: NFS_SERVER
+              value: "192.168.178.97"   # TODO: ggf. auf ugreen-nas (DNS) umstellen
+            - name: NFS_PATH
+              value: "/volume1/k8s-storage"   # TODO: an tatsächlichen NFS-Export anpassen
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "20m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+      volumes:
+        - name: nfs-storage-root
+          nfs:
+            server: 192.168.178.97   # TODO: siehe NFS_SERVER oben
+            path: /volume1/k8s-storage   # TODO: siehe NFS_PATH oben
