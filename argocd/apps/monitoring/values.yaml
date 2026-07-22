@@ -287,8 +287,8 @@ victoria-metrics-k8s-stack:
         role_attribute_path: "contains(groups[*], 'authentik Admins') && 'Admin' || 'Viewer'"
 
   # ---- prometheus-node-exporter ----------------------------
-  # DaemonSet: one pod per node (only the home-server here), exposes host
-  # CPU/RAM/disk/network/load. Mounts /proc and /sys read-only.
+  # DaemonSet: one pod per node (homeserver, worker-0, worker-1), exposes
+  # host CPU/RAM/disk/network/load. Mounts /proc and /sys read-only.
   prometheus-node-exporter:
     enabled: true
     resources:

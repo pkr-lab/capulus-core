@@ -6,6 +6,7 @@ INVENTORY   := $(ANSIBLE_DIR)/inventory/hosts.yml
 PLAYBOOK    := $(ANSIBLE_DIR)/site.yml
 VAULT_OPTS  ?= --ask-vault-pass
 HS2_PLAYBOOK := $(ANSIBLE_DIR)/worker-0.yml
+HS3_PLAYBOOK := $(ANSIBLE_DIR)/worker-1.yml
 
 .DEFAULT_GOAL := help
 
@@ -29,7 +30,7 @@ check: ## Dry-run the full playbook (no changes applied).
 install: deps ## Provision the home server end-to-end.
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) $(VAULT_OPTS)
 
-.PHONY: common dnsmasq tailscale k3s k3s-agent argocd semaphore semaphore-targets semaphore-bootstrap semaphore-bootstrap-local worker-0 worker-0-check
+.PHONY: common dnsmasq tailscale k3s k3s-agent argocd semaphore semaphore-targets semaphore-bootstrap semaphore-bootstrap-local worker-0 worker-0-check worker-1 worker-1-check
 common: ## Run only the `common` role (base OS, firewall, packages).
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags common $(VAULT_OPTS)
 
@@ -71,6 +72,12 @@ worker-0-check: ## Dry-run the worker-0 playbook (no changes applied).
 
 hdd: ## HDD (sda) auf worker-0 einrichten und dauerhaft mounten.
 	ansible-playbook -i $(INVENTORY) $(HS2_PLAYBOOK) --tags hdd $(VAULT_OPTS)
+
+worker-1: ## Deploy k3s agent + watchdogs on worker-1 (192.168.178.96).
+	ansible-playbook -i $(INVENTORY) $(HS3_PLAYBOOK) $(VAULT_OPTS)
+
+worker-1-check: ## Dry-run the worker-1 playbook (no changes applied).
+	ansible-playbook -i $(INVENTORY) $(HS3_PLAYBOOK) --check --diff $(VAULT_OPTS)
 
 .PHONY: windows windows-check windows-users windows-software windows-settings
 WIN_PLAYBOOK := $(ANSIBLE_DIR)/windows.yml
