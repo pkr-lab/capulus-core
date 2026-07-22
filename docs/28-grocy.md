@@ -10,7 +10,7 @@ einer Oberfläche.
 
 ```
 grocy.homeserver  →  Traefik  →  grocy (Port 80)
-                                     └── PVC: config (5 Gi, hdd, worker-0)
+                                     └── PVC: config (5 Gi, nas)
 ```
 
 - **Datenbank:** SQLite (in `/config`, kein externer DB-Server nötig)
