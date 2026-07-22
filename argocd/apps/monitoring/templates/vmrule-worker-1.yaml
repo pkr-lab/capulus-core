@@ -1,0 +1,29 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: worker-1-availability
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: worker-1.availability
+      interval: 30s
+      rules:
+        - alert: worker-1Down
+          expr: |
+            (
+              up{job=~".*node-exporter.*", instance=~"192\\.168\\.178\\.96.*"} == 0
+            ) or (
+              kube_node_status_condition{
+                node="worker-1",
+                condition="Ready",
+                status="true"
+              } == 0
+            )
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "worker-1 nicht erreichbar"
+            description: >-
+              worker-1 (192.168.178.96) antwortet seit mehr als 1 Minute nicht mehr.
+              Node-Exporter oder k8s-Node sind ausgefallen.

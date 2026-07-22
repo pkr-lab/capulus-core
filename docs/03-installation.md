@@ -408,6 +408,11 @@ homeserver    Ready    control-plane,master   10m   v1.29.3+k3s1    192.168.178.
 worker-0   Ready    <none>                 2m    v1.29.3+k3s1    192.168.178.95
 ```
 
+**Weiterer Worker (worker-1):** folgt demselben Muster über
+`make worker-1` (Playbook `ansible/worker-1.yml`) — anders als worker-0
+ohne Docker-Compose-Dienste, nur reiner k3s-Compute-Node. Details siehe
+[docs/04-k3s.md](04-k3s.md).
+
 ---
 
 ## Setup aktualisieren

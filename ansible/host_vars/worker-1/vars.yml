@@ -1,0 +1,8 @@
+---
+ansible_become_password: "{{ vault_worker_1_become_password }}"
+hostname: worker-1
+
+# Ueberschreibt den globalen Default in group_vars/all.yml (der zeigt auf
+# worker-0) — muss pro Host eindeutig sein, sonst versucht k3s_agent den
+# falschen Node-Namen im Cluster zu registrieren.
+k3s_agent_hostname: worker-1

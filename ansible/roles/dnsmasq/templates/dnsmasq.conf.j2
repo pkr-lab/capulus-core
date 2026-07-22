@@ -12,6 +12,9 @@ address=/homeserver/{{ network_static_ip }}
 # worker-0 (worker-0) → statische IP
 address=/worker-0/192.168.178.95
 
+# worker-1 (worker-1) → statische IP
+address=/worker-1/192.168.178.96
+
 # bind-dynamic statt bind-interfaces, damit dnsmasq die tailscale0-Adresse
 # automatisch übernimmt, sobald tailscaled startet (kein Restart nötig).
 # - LAN-Clients fragen über die statische LAN-IP
