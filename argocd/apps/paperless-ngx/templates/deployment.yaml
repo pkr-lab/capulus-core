@@ -29,6 +29,13 @@ spec:
         - name: redis
           image: {{ .Values.redis.image }}
           imagePullPolicy: IfNotPresent
+          # Explizit als UID/GID 1000 starten (wie die Redis-PVC-Daten selbst
+          # gehoeren) statt als root — der interne chown-Fixup des Images
+          # scheitert sonst auf dem NFS-Mount ("nas" StorageClass) mit
+          # "Operation not permitted" (root_squash-artiges Verhalten).
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
           ports:
             - name: redis
               containerPort: 6379
