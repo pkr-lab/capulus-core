@@ -194,28 +194,13 @@ argocd app set $NS --sync-policy automated --auto-prune --self-heal
 > **Hinweis MinIO:** PVC- und Deployment-Name sind im Standalone-Modus
 > üblicherweise schlicht `minio` (`kubectl -n minio get pvc,deploy`).
 
-### Sonderfälle: tinyteller & day-pilot
+### Sonderfall: tinyteller
 
-Diese beiden liefen vorher **nicht** über die `hdd`-StorageClass, sondern
-als Docker-Compose direkt auf worker-0 (`/opt/...`, System-SSD). Sie sind
-jetzt eigene ArgoCD-Apps (`argocd/apps/tinyteller`, `argocd/apps/day-pilot`)
-und brauchen kein PVC-Migrations-Runbook wie oben:
-
-- **tinyteller** ist zustandslos — nichts zu migrieren, einfach die neue App
-  syncen lassen.
-- **day-pilot** hat Postgres+Redis-Daten unter `/opt/day-pilot` auf
-  worker-0. Empfohlen: `pg_dump`/`pg_restore` statt Tar-Copy (sauberer bei
-  Postgres-Major-Version-Sprüngen):
-  ```bash
-  # Auf worker-0, aus dem laufenden Compose-Container:
-  docker exec day-pilot-db pg_dump -U daypilot daypilot > daypilot.sql
-
-  # Nach dem Deploy der neuen day-pilot-App im Cluster:
-  kubectl -n day-pilot exec -i deploy/day-pilot-postgres -- \
-    psql -U daypilot -d daypilot < daypilot.sql
-  ```
-  Redis ist reiner Cache/Queue-Zustand — muss nicht migriert werden, baut
-  sich beim ersten Request neu auf.
+Lief vorher **nicht** über die `hdd`-StorageClass, sondern als
+Docker-Compose direkt auf worker-0 (`/opt/...`, System-SSD). Ist jetzt eine
+eigene ArgoCD-App (`argocd/apps/tinyteller`) und braucht kein
+PVC-Migrations-Runbook wie oben — **tinyteller** ist zustandslos, nichts zu
+migrieren, einfach die neue App syncen lassen.
 
 ---
 

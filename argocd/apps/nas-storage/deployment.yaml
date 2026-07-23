@@ -3,10 +3,6 @@
 # provisioner läuft dieser Pod auf JEDEM Node (kein NodeAffinity nötig) —
 # die "Bindung" ist der NFS-Mount, nicht der lokale Pfad. Dadurch können auch
 # die PVC-nutzenden Apps frei über alle k3s-Nodes verteilt werden.
-#
-# NFS_SERVER/NFS_PATH sind Platzhalter — nach dem Anlegen der Freigabe in
-# UGOS (siehe docs/16-nas-storage.md) mit dem tatsächlichen Share-Pfad
-# ersetzen (z. B. "/volume1/k8s-storage", abhängig vom NAS-Modell).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -45,9 +41,9 @@ spec:
             - name: PROVISIONER_NAME
               value: k8s-sigs.io/nfs-subdir-external-provisioner
             - name: NFS_SERVER
-              value: "192.168.178.97"   # TODO: ggf. auf ugreen-nas (DNS) umstellen
+              value: "192.168.178.97"
             - name: NFS_PATH
-              value: "/volume1/k8s-storage"   # TODO: an tatsächlichen NFS-Export anpassen
+              value: "/volume1/k8s-storage"
           resources:
             requests:
               memory: "32Mi"
@@ -58,5 +54,5 @@ spec:
       volumes:
         - name: nfs-storage-root
           nfs:
-            server: 192.168.178.97   # TODO: siehe NFS_SERVER oben
-            path: /volume1/k8s-storage   # TODO: siehe NFS_PATH oben
+            server: 192.168.178.97
+            path: /volume1/k8s-storage
