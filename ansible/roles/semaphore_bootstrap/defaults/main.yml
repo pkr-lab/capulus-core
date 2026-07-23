@@ -97,7 +97,7 @@ semaphore_projects:
         active: true
 
   - name: worker-0
-    description: "Deploy Docker-Compose-Dienste auf worker-0 (192.168.178.95)."
+    description: "Deploy k3s-Agent + Watchdogs auf worker-0 (192.168.178.95)."
     repository:
       name: home-server-git
       url: "{{ argocd_repo_url }}"
@@ -105,19 +105,19 @@ semaphore_projects:
     environments:
       - "{{ semaphore_default_environment }}"
     inventories:
-      - name: second_servers
+      - name: worker_0_only
         type: static
         ssh_key: semaphore-ssh-key
         content: |
-          [second_servers]
+          [k3s_agents]
           worker-0 ansible_host=192.168.178.95
     templates:
       - name: "Deploy worker-0"
         playbook: ansible/worker-0.yml
-        inventory: second_servers
+        inventory: worker_0_only
         environment: default-env
         vault_key: vault-password
-        description: "Paperless-NGX, TinyTeller, Day Pilot, Node Exporter auf worker-0."
+        description: "k3s-Agent, thermal_watchdog, resource_watchdog auf worker-0."
     schedules:
       - name: "Daily 06:00"
         template: "Deploy worker-0"

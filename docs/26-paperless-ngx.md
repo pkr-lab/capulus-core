@@ -11,11 +11,11 @@ E-Mail eingereicht werden — alles Weitere läuft automatisch.
 ```
 paperless.homeserver  →  Traefik  →  paperless-ngx (Port 8000)
                                           ├── Redis Sidecar (localhost:6379)
-                                          ├── PVC: data   (20 Gi, hdd, worker-0)
-                                          ├── PVC: media  (50 Gi, hdd, worker-0)
-                                          ├── PVC: consume (5 Gi, hdd, worker-0)
-                                          ├── PVC: export (10 Gi, hdd, worker-0)
-                                          └── PVC: redis   (1 Gi, hdd, worker-0)
+                                          ├── PVC: data   (20 Gi, nas)
+                                          ├── PVC: media  (50 Gi, nas)
+                                          ├── PVC: consume (5 Gi, nas)
+                                          ├── PVC: export (10 Gi, nas)
+                                          └── PVC: redis   (1 Gi, nas)
 ```
 
 - **OCR-Sprachen:** Deutsch + Englisch (konfigurierbar via `PAPERLESS_OCR_LANGUAGE`)

@@ -17,7 +17,7 @@ redis:
       memory: 256Mi
   persistence:
     enabled: true
-    storageClassName: hdd
+    storageClassName: nas
     size: 1Gi
     accessMode: ReadWriteOnce
 
@@ -62,22 +62,22 @@ ingress:
 persistence:
   data:
     enabled: true
-    storageClassName: hdd
+    storageClassName: nas
     size: 20Gi
     accessMode: ReadWriteOnce
   media:
     enabled: true
-    storageClassName: hdd
+    storageClassName: nas
     size: 50Gi
     accessMode: ReadWriteOnce
   consume:
     enabled: true
-    storageClassName: hdd
+    storageClassName: nas
     size: 5Gi
     accessMode: ReadWriteOnce
   export:
     enabled: true
-    storageClassName: hdd
+    storageClassName: nas
     size: 10Gi
     accessMode: ReadWriteOnce
 
@@ -104,16 +104,7 @@ resources:
     cpu: 2000m
     memory: 2Gi
 
-# HDD-Storage liegt auf worker-0 — NodeAffinity ist Pflicht.
-affinity:
-  nodeAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: kubernetes.io/hostname
-              operator: In
-              values:
-                - worker-0
+affinity: {}
 
 nodeSelector: {}
 tolerations: []

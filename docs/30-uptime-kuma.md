@@ -10,7 +10,7 @@ via ntfy, Gotify, E-Mail oder anderen Kanälen.
 
 ```
 uptime-kuma.homeserver  →  Traefik  →  uptime-kuma (Port 3001)
-                                            └── PVC: data (2 Gi, hdd, worker-0)
+                                            └── PVC: data (2 Gi, nas)
 ```
 
 ---
