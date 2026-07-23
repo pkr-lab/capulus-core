@@ -60,7 +60,7 @@ Dieses Dokument beschreibt die High-Level-Architektur des Home-Server-Setups.
                                 │
                   ┌───────────────────────────────────────┐
                   │  UGREEN NAS — 192.168.178.97           │
-                  │  Storage-Pool: RAID5 (2×4TB + 1×2TB)   │
+                  │  Storage-Pool: RAID1 (2×4TB), 2TB frei │
                   │  NFS-Export → StorageClass "nas"       │
                   │  (später: externe USB-Platte für       │
                   │   Backups, siehe docs/16-nas-storage)  │
