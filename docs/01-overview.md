@@ -49,7 +49,7 @@ Dieses Dokument beschreibt die High-Level-Architektur des Home-Server-Setups.
 │  │  │   monitoring, sealed-secrets, │  │                                     │
 │  │  │   semaphore, headlamp, gotify,│  │                                     │
 │  │  │   paperless-ngx, tinyteller,  │  │                                     │
-│  │  │   day-pilot, nas-storage, ... │  │                                     │
+│  │  │   nas-storage, ...            │  │                                     │
 │  │  │  Flannel VXLAN 10.42.0.0/16   │  │                                     │
 │  │  │  local-path + nas StorageClass│  │                                     │
 │  │  └───────────────────────────────┘  │                                     │
@@ -143,10 +143,10 @@ Kubernetes-Workloads werden vom Scheduler frei auf alle Nodes verteilt —
 beide Worker sind reine, austauschbare Compute-Nodes. Persistenter Storage
 liegt zentral auf dem UGREEN NAS (`nas`-StorageClass, NFS), nicht mehr
 lokal auf einem einzelnen Node — Details in
-[`16-nas-storage.md`](16-nas-storage.md). Paperless-NGX, TinyTeller und
-Day Pilot laufen als reguläre k3s-Apps (`argocd/apps/paperless-ngx`,
-`argocd/apps/tinyteller`, `argocd/apps/day-pilot`), nicht mehr als
-Docker-Compose auf einem bestimmten Host.
+[`16-nas-storage.md`](16-nas-storage.md). Paperless-NGX und TinyTeller
+laufen als reguläre k3s-Apps (`argocd/apps/paperless-ngx`,
+`argocd/apps/tinyteller`), nicht mehr als Docker-Compose auf einem
+bestimmten Host.
 
 Mitgelieferte Komponenten:
 

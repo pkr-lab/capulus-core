@@ -5,9 +5,9 @@
 # Seit der Umstellung auf die NAS-gestützte "nas"-StorageClass
 # (siehe docs/16-nas-storage.md) ist worker-0 ein reiner k3s-Compute-Node —
 # identisch zu worker-1.yml. Die frühere HDD-Rolle (sda) und die
-# Docker-Compose-Dienste (Paperless-NGX/TinyTeller/Day Pilot) sind entfallen:
-# Paperless-NGX läuft als ArgoCD-App, TinyTeller/Day Pilot ebenso
-# (argocd/apps/tinyteller, argocd/apps/day-pilot).
+# Docker-Compose-Dienste (Paperless-NGX/TinyTeller) sind entfallen:
+# Paperless-NGX läuft als ArgoCD-App, TinyTeller ebenso
+# (argocd/apps/tinyteller).
 #
 # Reihenfolge:
 #   1. k3s_agent  — tritt dem k3s-Cluster als Worker-Node bei

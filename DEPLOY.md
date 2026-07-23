@@ -89,8 +89,6 @@ Secrets verschlüsseln und einfügen:
 # sudo-Passwort für worker-0
 ansible-vault encrypt_string 'SUDO_PASSWORT' --name 'vault_worker_0_become_password'
 
-# TinyTeller / Day Pilot spezifische Secrets (falls nötig)
-ansible-vault encrypt_string 'API_KEY' --name 'vault_day_pilot_openai_api_key'
 ```
 
 Ergebnisse in `ansible/host_vars/worker-0/vault.yml` einfügen, z.B.:
@@ -144,7 +142,7 @@ ArgoCD UI: **http://192.168.178.94:30080** (Benutzer: `admin`)
 # Dry-run zuerst
 make worker-0-check
 
-# Vollständige Installation (k3s-Agent + TinyTeller + Day Pilot)
+# Vollständige Installation (k3s-Agent + TinyTeller)
 make worker-0
 
 # Nur k3s-Agent beitreten lassen
@@ -153,9 +151,6 @@ make k3s-agent
 # Einzelne Docker-Compose-Dienste deployen
 ansible-playbook -i ansible/inventory/hosts.yml ansible/worker-0.yml \
   --tags tinyteller $(VAULT_OPTS)
-
-ansible-playbook -i ansible/inventory/hosts.yml ansible/worker-0.yml \
-  --tags day-pilot $(VAULT_OPTS)
 ```
 
 ---
@@ -280,7 +275,6 @@ Rollout, Day-2-Betrieb und Troubleshooting: **[docs/23-cloudflare-deploy.md](doc
 | MinIO | http://minio.homeserver | OIDC via Authentik |
 | Paperless-NGX | http://worker-0:8000 | admin / aus Vault |
 | TinyTeller | http://worker-0:3002 | — |
-| Day Pilot | http://worker-0:3003 | — |
 
 **Extern per Cloudflare Tunnel** (nur die dort explizit eingetragenen
 Dienste, siehe [docs/22-cloudflare-tunnel.md](docs/22-cloudflare-tunnel.md)):
@@ -356,7 +350,7 @@ ssh ubuntu@192.168.178.94 \
 
 ```bash
 ssh ubuntu@192.168.178.95
-cd /opt/tinyteller   # oder /opt/day-pilot
+cd /opt/tinyteller
 sudo docker compose restart
 sudo docker compose logs -f
 ```
@@ -408,8 +402,7 @@ Home-Lab/
 │       ├── semaphore_secrets/      ← Semaphore-Bootstrap-Secrets
 │       ├── semaphore_targets/      ← SSH-Pubkey auf Managed-Hosts pushen
 │       ├── semaphore_bootstrap/    ← Semaphore REST-API-Provisionierung
-│       ├── tinyteller/             ← TinyTeller (Docker Compose)
-│       └── day_pilot/              ← Day Pilot (Docker Compose)
+│       └── tinyteller/             ← TinyTeller (Docker Compose)
 └── argocd/
     ├── bootstrap/root-applicationset.yaml
     └── apps/
