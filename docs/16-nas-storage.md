@@ -102,6 +102,54 @@ NFS-Export anlegt.
 
 ---
 
+## Monitoring (Grafana "Home Server Auslastung")
+
+Das NAS ist kein k3s-Node und wird daher nicht vom `prometheus-node-exporter`-
+DaemonSet erfasst. Stattdessen laufen zwei Exporter **manuell als Docker-
+Container direkt auf dem NAS** (UGOS unterstützt Docker über die App
+"Container Manager"/SSH — analog zum Docker-Compose-Setup auf anderen
+UGREEN-Geräten in diesem Fleet). `argocd/apps/monitoring/templates/
+vmstaticscrape-ugreen-nas.yaml` zapft beide per `VMStaticScrape` an; das
+Dashboard `dashboard-homeservers.yaml` erwartet die Metriken unter
+`instance="ugreen-nas"`.
+
+1. **node_exporter** (CPU/RAM/Netzwerk/Disk-Auslastung, Temperatur) —
+   erscheint dadurch automatisch in allen bestehenden Panels des
+   `$instance`-Filters:
+   ```bash
+   docker run -d --name node-exporter --restart unless-stopped \
+     --net host --pid host \
+     -v /:/host:ro,rslave \
+     prom/node-exporter:latest \
+     --path.rootfs=/host
+   ```
+2. **smartctl_exporter** (S.M.A.R.T.-Werte je Platte: Health, Temperatur,
+   Betriebsstunden — eigene Sektion ganz unten im Dashboard). Braucht
+   Zugriff auf die Block-Devices, daher `--privileged`:
+   ```bash
+   docker run -d --name smartctl-exporter --restart unless-stopped \
+     --net host --privileged \
+     -v /dev:/dev:ro \
+     prometheuscommunity/smartctl-exporter:latest
+   ```
+
+Ports `9100` (node_exporter) und `9633` (smartctl_exporter) müssen von den
+k3s-Nodes aus erreichbar sein (ggf. UGOS-Firewall-Regel analog zum NFS-Export
+oben ergänzen). Nach dem Start:
+
+```bash
+curl 192.168.178.97:9100/metrics | head
+curl 192.168.178.97:9633/metrics | head
+```
+
+Metrik-Namen (`smartctl_device_smart_status`, `smartctl_device_temperature`,
+`smartctl_device_power_on_hours`, Label `device`) stammen vom
+`prometheuscommunity/smartctl-exporter`-Image — bei Abweichungen die Panel-
+Queries in `dashboard-homeservers.yaml` gegen die tatsächliche `/metrics`-
+Ausgabe abgleichen.
+
+---
+
 ## Migrations-Runbook: `hdd` (worker-0/sda) → `nas` (NAS)
 
 Betroffen sind 9 PVCs über 8 Apps: `n8n`, `monitoring` (vmsingle),
