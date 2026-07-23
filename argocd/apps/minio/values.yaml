@@ -14,24 +14,16 @@ minio:
 
   persistence:
     enabled: true
-    storageClass: hdd
+    storageClass: nas
     size: 10Gi
     accessMode: ReadWriteOnce
 
-  # Pflicht: hdd-PVCs binden nur auf worker-0 (siehe docs/16-hdd-storage.md).
-  # ACHTUNG: Bestehende PVC bereits auf local-path → vor dem Sync manuell
-  # migrieren (docs/16-hdd-storage.md → "Bestehende PVC auf HDD migrieren"),
-  # sonst bleibt die alte PVC unverändert (storageClassName ist immutable)
-  # und der neue Pod kann wegen der Affinity nicht mehr auf der alten PVC starten.
-  affinity:
-    nodeAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        nodeSelectorTerms:
-          - matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values:
-                  - worker-0
+  # ACHTUNG: Bestehende PVC bereits auf einer anderen StorageClass → vor dem
+  # Sync manuell migrieren (docs/16-nas-storage.md → "Migrations-Runbook"),
+  # sonst bleibt die alte PVC unverändert (storageClassName ist immutable).
+  # Keine NodeAffinity mehr nötig — NFS-backed "nas"-StorageClass ist von
+  # jedem Node erreichbar.
+  affinity: {}
 
   # The chart defaults to requesting 16Gi of memory (distributed production
   # sizing). That would never schedule on the home-server — override hard.

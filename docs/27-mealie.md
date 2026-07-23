@@ -10,7 +10,7 @@ Integriert ist ein Wochenplaner und eine automatische Einkaufsliste.
 
 ```
 mealie.homeserver  →  Traefik  →  mealie (Port 9000)
-                                      └── PVC: data (5 Gi, hdd, worker-0)
+                                      └── PVC: data (5 Gi, nas)
 ```
 
 - **Datenbank:** SQLite (in `/app/data`, kein externer DB-Server nötig)

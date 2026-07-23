@@ -383,12 +383,18 @@ make worker-0
 Das Playbook führt in dieser Reihenfolge aus:
 
 1. **k3s_agent** — Deaktiviert Swap, lädt Kernel-Module, konfiguriert sysctl,
-   liest den Join-Token vom Control-Plane-Server, installiert k3s im Agent-Mode
-   und wartet bis der Node `Ready` ist.
-2. **paperless**, **tinyteller**, **day_pilot**, **node_exporter_nas** —
-   Docker-Compose-Dienste wie bisher.
+   installiert `nfs-common` (Voraussetzung für die `nas`-StorageClass, siehe
+   [docs/16-nas-storage.md](16-nas-storage.md)), liest den Join-Token vom
+   Control-Plane-Server, installiert k3s im Agent-Mode und wartet bis der
+   Node `Ready` ist.
+2. **thermal_watchdog**, **resource_watchdog** — automatischer Shutdown bei
+   Übertemperatur bzw. anhaltend hoher CPU/RAM-Last.
 
-Nur den k3s-Agent-Schritt ausführen (ohne Docker-Compose-Dienste):
+worker-0 ist ein reiner k3s-Compute-Node — identisch zu worker-1 (siehe
+unten). Persistente App-Daten laufen über die `nas`-StorageClass (UGREEN
+NAS), nicht mehr lokal auf worker-0.
+
+Nur den k3s-Agent-Schritt ausführen:
 
 ```bash
 make k3s-agent
@@ -409,8 +415,8 @@ worker-0   Ready    <none>                 2m    v1.29.3+k3s1    192.168.178.95
 ```
 
 **Weiterer Worker (worker-1):** folgt demselben Muster über
-`make worker-1` (Playbook `ansible/worker-1.yml`) — anders als worker-0
-ohne Docker-Compose-Dienste, nur reiner k3s-Compute-Node. Details siehe
+`make worker-1` (Playbook `ansible/worker-1.yml`) — inhaltlich identisch zu
+`worker-0.yml`, beide sind reine k3s-Compute-Nodes. Details siehe
 [docs/04-k3s.md](04-k3s.md).
 
 ---
