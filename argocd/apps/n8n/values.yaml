@@ -9,7 +9,7 @@ image:
   # node reboot and someone forgets to re-import).
   repository: n8n-custom
   pullPolicy: IfNotPresent
-  tag: "1.58.2-imap"
+  tag: "2.32.3-imap"
 
 nameOverride: ""
 fullnameOverride: ""
