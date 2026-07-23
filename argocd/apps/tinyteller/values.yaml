@@ -7,7 +7,7 @@ replicaCount: 1
 
 backend:
   image:
-    repository: ghcr.io/pkr-lab/tiny-teller-backend
+    repository: ghcr.io/jaydee94/tiny-teller-backend
     pullPolicy: IfNotPresent
     tag: "edge"
   port: 8080
@@ -21,7 +21,7 @@ backend:
 
 frontend:
   image:
-    repository: ghcr.io/pkr-lab/tiny-teller-frontend
+    repository: ghcr.io/jaydee94/tiny-teller-frontend
     pullPolicy: IfNotPresent
     tag: "edge"
   port: 80
@@ -33,10 +33,11 @@ frontend:
       cpu: 100m
       memory: 128Mi
 
-# GHCR-Packages unter ghcr.io/pkr-lab/... sind standardmäßig privat.
-# Entweder Package-Sichtbarkeit auf "Public" stellen, oder hier ein
-# imagePullSecrets-Secret (kubernetes.io/dockerconfigjson) referenzieren,
-# z.B. [{name: ghcr-pull}].
+# TODO: sobald der eigene Fork (pkr-lab/tiny-teller) per CI nach
+# ghcr.io/pkr-lab/tiny-teller-... published wird, hier umstellen.
+# Falls das Package dann privat ist: entweder Sichtbarkeit auf "Public"
+# stellen, oder hier ein imagePullSecrets-Secret (kubernetes.io/dockerconfigjson)
+# referenzieren, z.B. [{name: ghcr-pull}].
 imagePullSecrets: []
 
 nameOverride: ""

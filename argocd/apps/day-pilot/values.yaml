@@ -59,7 +59,7 @@ redis:
 
 backend:
   image:
-    repository: ghcr.io/pkr-lab/day-pilot/backend
+    repository: ghcr.io/jaydee94/day-pilot/backend
     pullPolicy: IfNotPresent
     tag: "latest"
   port: 8000
@@ -72,7 +72,7 @@ backend:
 
 frontend:
   image:
-    repository: ghcr.io/pkr-lab/day-pilot/frontend
+    repository: ghcr.io/jaydee94/day-pilot/frontend
     pullPolicy: IfNotPresent
     tag: "latest"
   port: 80
@@ -83,10 +83,11 @@ frontend:
     limits:
       memory: 128Mi
 
-# GHCR-Packages unter ghcr.io/pkr-lab/... sind standardmäßig privat.
-# Entweder Package-Sichtbarkeit auf "Public" stellen, oder hier ein
-# imagePullSecrets-Secret (kubernetes.io/dockerconfigjson) referenzieren,
-# z.B. [{name: ghcr-pull}].
+# TODO: sobald der eigene Fork (pkr-lab/day-pilot) per CI nach
+# ghcr.io/pkr-lab/day-pilot/... published wird, hier umstellen.
+# Falls das Package dann privat ist: entweder Sichtbarkeit auf "Public"
+# stellen, oder hier ein imagePullSecrets-Secret (kubernetes.io/dockerconfigjson)
+# referenzieren, z.B. [{name: ghcr-pull}].
 imagePullSecrets: []
 
 nameOverride: ""
