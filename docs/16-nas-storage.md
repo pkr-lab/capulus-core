@@ -1,4 +1,4 @@
-# NAS-Storage (UGREEN NAS, RAID5, NFS)
+# NAS-Storage (UGREEN NAS, RAID1, NFS)
 
 Persistenter Speicher für den k3s-Cluster liegt auf dem UGREEN NAS
 (192.168.178.97, DNS-Name `ugreen-nas`) und ist als Kubernetes-StorageClass
@@ -12,27 +12,34 @@ homeserver/worker-0/worker-1 verteilen.
 
 ## Hardware
 
-- 2× 4 TB + 1× 2 TB, geplant als **RAID5** über alle drei Platten.
+- 2× 4 TB im **RAID1** (Mirror) — nutzbare Kapazität ~4 TB, 1 Platte darf
+  ausfallen.
+- 1× 2 TB aktuell **nicht** Teil des Storage-Pools — ungenutzte Reserve,
+  spätere Verwendung noch offen.
 - Netzwerk: 192.168.178.97 (LAN), DNS-Alias `ugreen-nas` (siehe
   `ansible/roles/dnsmasq/templates/dnsmasq.conf.j2`).
 
-### RAID5-Kapazitätshinweis
+### RAID-Kapazitätshinweis
 
-Klassisches RAID5 rechnet **alle** Mitgliedsplatten auf die Größe der
-kleinsten Platte herunter. Bei 2×4TB + 1×2TB heißt das: effektiv 3×2TB
-nutzbare Rohkapazität, davon RAID5 `(n-1)×kleinste = 2×2TB = 4TB` nutzbar —
-von 10 TB Rohkapazität gehen **6 TB verloren** (4 TB Parität/Verschnitt auf
-den beiden 4-TB-Platten + die RAID5-Parität selbst). Vor dem Anlegen des
-Storage-Pools in UGOS abwägen:
+Klassisches RAID5 über alle drei Platten würde alle Mitgliedsplatten auf
+die Größe der kleinsten Platte herunterrechnen: effektiv 3×2TB nutzbare
+Rohkapazität, davon `(n-1)×kleinste = 2×2TB = 4TB` nutzbar — von 10 TB
+Rohkapazität gingen 6 TB verloren, und die 2-TB-Platte wäre fest gebunden.
+
+**Entscheidung: RAID1 nur über die beiden 4-TB-Platten.** Nutzbare
+Kapazität ist mit ~4 TB identisch zu RAID5-über-alle-3-Platten, der Mirror
+ist aber einfacher/robuster (kein Parity-Rebuild), und die 2-TB-Platte
+bleibt als Reserve frei statt fest in einen RAID-Verbund eingebunden zu
+sein.
 
 | Option | Nutzbare Kapazität | Ausfallsicherheit | Hinweis |
 |---|---|---|---|
-| RAID5 über alle 3 Platten | ~4 TB | 1 Platte darf ausfallen | verschenkt die Mehrkapazität der 4-TB-Platten |
-| RAID5 nur über die 2×4TB-Platten, 2-TB-Platte separat (JBOD/einzeln) | ~4 TB (RAID5) + 2 TB (einzeln, ohne Redundanz) | RAID5-Teil: 1 Platte darf ausfallen; Einzelplatte: keine Redundanz | mehr Gesamtkapazität (~6 TB), aber die Einzelplatte ist ein Risiko — passt z. B. für unkritische Scratch-/Backup-Daten |
-| UGOS-eigenes Hybrid-RAID (falls vom Gerät unterstützt, analog Synology SHR) | ~6 TB | 1 Platte darf ausfallen | beste Kapazitätsausnutzung bei gemischten Plattengrößen — **am Gerät prüfen, ob UGOS das für dieses Modell anbietet** |
+| RAID5 über alle 3 Platten | ~4 TB | 1 Platte darf ausfallen | bindet die 2-TB-Platte fest ein, kein Spielraum für spätere Nutzung |
+| **RAID1 über die 2×4TB-Platten (gewählt)** | ~4 TB | 1 Platte darf ausfallen | einfacher Mirror, 2-TB-Platte bleibt als Reserve frei |
+| UGOS-eigenes Hybrid-RAID über alle 3 Platten (falls vom Gerät unterstützt, analog Synology SHR) | ~6 TB | 1 Platte darf ausfallen | beste Kapazitätsausnutzung bei gemischten Plattengrößen — bindet aber alle 3 Platten fest ein |
 
-Die finale Entscheidung triffst du am Gerät (UGOS-Speicher-Manager zeigt die
-tatsächlich nutzbare Kapazität pro Option an, bevor der Pool angelegt wird).
+Die tatsächlich nutzbare Kapazität zeigt der UGOS-Speicherpool-Assistent vor
+dem endgültigen Anlegen des Pools an.
 
 ---
 
@@ -42,7 +49,7 @@ Das NAS läuft auf einer eigenen Firmware (UGOS) — es gibt bewusst **kein**
 Ansible-Playbook dafür (anders als worker-0/worker-1, die reine Ubuntu-Hosts
 sind). Einrichtung über die UGOS-Weboberfläche:
 
-1. Storage-Pool anlegen (RAID5, siehe oben) → Speicherplatz/Freigabe erstellen,
+1. Storage-Pool anlegen (RAID1, siehe oben) → Speicherplatz/Freigabe erstellen,
    z. B. `k8s-storage`.
 2. NFS-Dienst aktivieren (Systemsteuerung → Dateidienste → NFS).
 3. Für die Freigabe `k8s-storage` einen NFS-Regel-Eintrag anlegen:
