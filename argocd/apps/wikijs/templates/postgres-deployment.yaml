@@ -19,9 +19,17 @@ spec:
       labels:
         {{- include "wikijs.postgresql.selectorLabels" . | nindent 8 }}
     spec:
-      # Offizielles postgres-Image läuft als UID/GID 999 — fsGroup macht
-      # das frische PVC für initdb beschreibbar.
+      # Offizielles postgres-Image läuft als UID/GID 999. runAsUser/runAsGroup
+      # erzwingen das explizit, damit der Container NICHT als root startet —
+      # der interne chown/chmod-Fixup (der sonst beim Start liefe) scheitert
+      # auf dem NFS-Mount ("nas" StorageClass) mit "Operation not permitted"
+      # (root_squash-artiges Verhalten), selbst wenn die Dateien schon
+      # korrekt 999:999 gehören. Als 999 direkt gestartet, überspringt das
+      # offizielle Entrypoint-Skript diese Routine komplett (sie läuft nur
+      # bei id -u == 0).
       securityContext:
+        runAsUser: 999
+        runAsGroup: 999
         fsGroup: 999
       {{- with .Values.postgresql.affinity }}
       affinity:
