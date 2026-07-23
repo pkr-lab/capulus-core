@@ -14,15 +14,15 @@ Die Deployment-Konfiguration liegt unter `argocd/apps/wikijs/`.
 | Datenbank          | PostgreSQL 16 (eigenes Deployment)      | `wikijs`  |
 | Ingress            | Traefik                                 | `wikijs`  |
 | Secrets            | SealedSecrets                           | `wikijs`  |
-| Persistenz         | StorageClass `hdd` auf worker-0         | —         |
+| Persistenz         | StorageClass `nas` (UGREEN NAS, NFS)    | —         |
 
 Wiki.js speichert **sämtliche** Inhalte — Seiten, Versionshistorie und
 hochgeladene Assets (Bilder, PDFs, etc.) — direkt in PostgreSQL. Der
 Wiki.js-Pod selbst ist zustandslos und braucht kein eigenes PVC; nur
-PostgreSQL benötigt Persistenz. PostgreSQL läuft mit `storageClassName: hdd`
-und ist via NodeAffinity an `worker-0` gebunden (siehe
-[docs/16-hdd-storage.md](16-hdd-storage.md)) — damit liegen alle Wiki-Daten
-auf der 7,3-TB-HDD statt auf der Homeserver-System-SSD.
+PostgreSQL benötigt Persistenz. PostgreSQL läuft mit `storageClassName: nas`
+(siehe [docs/16-nas-storage.md](16-nas-storage.md)) — keine NodeAffinity
+mehr nötig, damit liegen alle Wiki-Daten auf dem NAS statt auf der
+Homeserver-System-SSD.
 
 > **Warum kein Bitnami-PostgreSQL-Subchart wie bei Zammad/Authentik?**
 > Bitnami hat im August 2025 sein kostenloses Chart-Katalog-Angebot stark
@@ -37,10 +37,10 @@ auf der 7,3-TB-HDD statt auf der Homeserver-System-SSD.
 
 - ArgoCD läuft und das Root-ApplicationSet ist aktiv (`argocd/bootstrap/root-applicationset.yaml`)
 - Sealed-Secrets Controller ist installiert (`argocd/apps/sealed-secrets/`)
-- **`hdd-storage`-App ist deployt** (`argocd/apps/hdd-storage/`) und die
-  StorageClass `hdd` existiert: `kubectl get storageclass hdd`
-- **worker-0 ist online** und `/mnt/hdd` ist gemountet (siehe
-  [docs/16-hdd-storage.md](16-hdd-storage.md)) — sonst bleibt die
+- **`nas-storage`-App ist deployt** (`argocd/apps/nas-storage/`) und die
+  StorageClass `nas` existiert: `kubectl get storageclass nas`
+- **NAS ist online und der NFS-Export erreichbar** (siehe
+  [docs/16-nas-storage.md](16-nas-storage.md)) — sonst bleibt die
   PostgreSQL-PVC auf `Pending`
 - `kubeseal` CLI ist lokal installiert
 - `kubectl` ist mit dem Cluster verbunden
@@ -98,13 +98,13 @@ kubectl get pods -n wikijs -w
 ```
 
 Erwartete Reihenfolge:
-1. `wikijs-postgresql-*` startet zuerst auf **worker-0** (NodeAffinity, PVC auf `hdd`)
+1. `wikijs-postgresql-*` startet zuerst (PVC auf `nas`, kein Node-Pin mehr)
 2. `wikijs-*` (App-Pod) — verbindet sich mit PostgreSQL und führt beim ersten
    Start automatisch die DB-Migrationen durch (kann 1–2 Minuten dauern)
 
-> Falls `wikijs-postgresql-*` dauerhaft `Pending` bleibt: worker-0 ist offline
-> oder die `hdd`-StorageClass fehlt — siehe
-> [docs/16-hdd-storage.md](16-hdd-storage.md) → Fehlerbehebung.
+> Falls `wikijs-postgresql-*` dauerhaft `Pending` bleibt: das NAS ist
+> offline oder die `nas`-StorageClass fehlt — siehe
+> [docs/16-nas-storage.md](16-nas-storage.md) → Fehlerbehebung.
 
 **DNS:** `wiki.homeserver` ist sofort erreichbar — dank der Wildcard-DNS-Konfiguration
 (`address=/homeserver/<server-ip>` in dnsmasq, siehe [docs/09-dns-architecture.md](09-dns-architecture.md))
@@ -259,15 +259,14 @@ kubectl logs -n sealed-secrets -l app.kubernetes.io/name=sealed-secrets
 
 ### PostgreSQL-PVC bleibt `Pending`
 
-PostgreSQL läuft auf der HDD-StorageClass und ist an `worker-0` gebunden:
+PostgreSQL läuft auf der `nas`-StorageClass (NFS, UGREEN NAS):
 
 ```bash
 kubectl describe pvc -n wikijs wikijs-postgresql-data
-kubectl get nodes worker-0   # muss Ready sein
-kubectl -n hdd-storage get pods
+kubectl -n nas-storage get pods
 ```
 
-Details: [docs/16-hdd-storage.md](16-hdd-storage.md) → Fehlerbehebung.
+Details: [docs/16-nas-storage.md](16-nas-storage.md) → Fehlerbehebung.
 
 ### OIDC-Login schlägt fehl ("invalid_redirect_uri" o.ä.)
 
@@ -281,8 +280,8 @@ Callback-URL übereinstimmen (inkl. `<strategy-id>`, kein Trailing Slash).
 | Komponente   | CPU Request | RAM Request | RAM Limit | Storage                |
 |---------------|-------------|--------------|-----------|--------------------------|
 | Wiki.js App   | 100m        | 256Mi        | 512Mi     | —                        |
-| PostgreSQL    | 50m         | 256Mi        | 512Mi     | 20Gi (`hdd`, worker-0)   |
-| **Gesamt**    | ~150m       | ~512Mi       | ~1Gi      | 20Gi auf der HDD         |
+| PostgreSQL    | 50m         | 256Mi        | 512Mi     | 20Gi (`nas`)             |
+| **Gesamt**    | ~150m       | ~512Mi       | ~1Gi      | 20Gi auf dem NAS         |
 
 Die 20Gi für PostgreSQL sind ein Startwert (Seiten + Assets liegen beide in
 der DB) — bei Bedarf in `argocd/apps/wikijs/values.yaml` unter
@@ -298,6 +297,6 @@ der DB) — bei Bedarf in `argocd/apps/wikijs/values.yaml` unter
 - [Wiki.js GitHub Repository](https://github.com/requarks/wiki)
 - [Authentik — Wiki.js Integration](https://integrations.goauthentik.io/documentation/wiki-js/)
 - [Authentik SSO Übersicht](13-sso-authentik.md)
-- [HDD-Storage auf worker-0](16-hdd-storage.md)
+- [NAS-Storage (UGREEN NAS)](16-nas-storage.md)
 - [DNS-Architektur (Wildcard `*.homeserver`)](09-dns-architecture.md)
 - [ArgoCD Setup](05-argocd.md)

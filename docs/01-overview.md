@@ -24,36 +24,56 @@ Dieses Dokument beschreibt die High-Level-Architektur des Home-Server-Setups.
                                 │ Tailscale MagicDNS / IP
                                 ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                k3s CLUSTER (3-Node)                                          │
+│               k3s CLUSTER (3-Node) — Storage-Zugriff auf ALLEN Nodes gleich  │
 │                                                                              │
 │  ┌─────────────────────────────────────┐  ┌──────────────────────────────┐   │
-│  │  HOMESERVER — 192.168.178.94        │  │  worker-0 — 192.168.178.95│  │   │ 
-│  │  Control-Plane + Worker             │  │  Worker-Node                 │   │
-│  │                                     │  │                              │   │
-│  │  ┌────────────┐ ┌───────────────┐   │  │  ┌──────────────────────┐    │   │
-│  │  │ tailscaled │ │   dnsmasq     │   │  │  │  k3s-agent           │    │   │
-│  │  │ (Tailscale)│ │  split-DNS    │   │  │  │  (kubelet + Flannel) │    │   │
-│  │  └────────────┘ │  *.homeserver │   │  │  └──────────────────────┘    │   │
-│  │  ┌────────────┐ │  :53 LAN+TS   │   │  │                              │   │
-│  │  │  scanbd +  │ └───────────────┘   │  │  ┌──────────────────────┐    │   │
-│  │  │  SANE      │                     │  │  │  Docker-Compose      │    │   │
-│  │  │  scan_.sh  │ ┌───────────────┐   │  │  │  Paperless-NGX       │    │   │
-│  │  └────────────┘ │  UFW Firewall │   │  │  │  TinyTeller          │    │   │
-│  │                 └───────────────┘   │  │  │  Day Pilot           │    │   │
-│  │  ┌───────────────────────────────┐  │  │  │  Node Exporter       │    │   │
-│  │  │  k3s server (Control-Plane)   │  │  │  └──────────────────────┘    │   │
-│  │  │  ┌──────────┐ ┌───────────┐   │  │  │                              │   │
-│  │  │  │ Traefik  │ │  ArgoCD   │   │◄─┼─►│  Flannel VXLAN (8472/UDP)    │   │
-│  │  │  │ :80/:443 │ │  :30080   │   │  │  │  kubelet API  (10250/TCP)    │   │
-│  │  │  └──────────┘ └───────────┘   │  │  └──────────────────────────────┘   │
+│  │  HOMESERVER — 192.168.178.94        │  │  worker-0/worker-1        │  │   │ 
+│  │  Control-Plane + Worker             │  │  192.168.178.95/.96          │   │
+│  │                                     │  │  reine k3s-Compute-Nodes     │   │
+│  │  ┌────────────┐ ┌───────────────┐   │  │  (identisch)                 │   │
+│  │  │ (Tailscale)│ │  split-DNS    │   │  │                              │   │
+│  │  └────────────┘ │  *.homeserver │   │  │  ┌──────────────────────┐    │   │
+│  │  ┌────────────┐ │  :53 LAN+TS   │   │  │  │  k3s-agent           │    │   │
+│  │  │  scanbd +  │ └───────────────┘   │  │  │  (kubelet + Flannel) │    │   │
+│  │  │  SANE      │                     │  │  └──────────────────────┘    │   │
+│  │  │  scan_.sh  │ ┌───────────────┐   │  │  nfs-common (NAS-Mounts)     │   │
+│  │  └────────────┘ │  UFW Firewall │   │  │                              │   │
+│  │                 └───────────────┘   │  └──────────────────────────────┘   │
+│  │  ┌───────────────────────────────┐  │                                     │
+│  │  │  k3s server (Control-Plane)   │  │                                     │
+│  │  │  ┌──────────┐ ┌───────────┐   │  │◄────── Flannel VXLAN (8472/UDP) ───►│
+│  │  │  │ Traefik  │ │  ArgoCD   │   │  │        kubelet API  (10250/TCP)     │
+│  │  │  │ :80/:443 │ │  :30080   │   │  │                                     │
+│  │  │  └──────────┘ └───────────┘   │  │                                     │
 │  │  │  argocd/apps/:                │  │                                     │
 │  │  │   monitoring, sealed-secrets, │  │                                     │
-│  │  │   semaphore, headlamp, gotify │  │                                     │
+│  │  │   semaphore, headlamp, gotify,│  │                                     │
+│  │  │   paperless-ngx, tinyteller,  │  │                                     │
+│  │  │   nas-storage, ...            │  │                                     │
 │  │  │  Flannel VXLAN 10.42.0.0/16   │  │                                     │
-│  │  │  local-path StorageClass      │  │                                     │
+│  │  │  local-path + nas StorageClass│  │                                     │
 │  │  └───────────────────────────────┘  │                                     │
 │  └─────────────────────────────────────┘                                     │
 └──────────────────────────────────────────────────────────────────────────────┘
+                                ▲
+                                │ NFS (jeder Node mountet gleich — siehe unten)
+                                │
+                  ┌───────────────────────────────────────┐
+                  │  UGREEN NAS — 192.168.178.97           │
+                  │  Storage-Pool: RAID1 (2×4TB), 2TB frei │
+                  │  NFS-Export → StorageClass "nas"       │
+                  │  (später: externe USB-Platte für       │
+                  │   Backups, siehe docs/16-nas-storage)  │
+                  └───────────────────────────────────────┘
+```
+
+Storage-Zugriff im Detail: alle drei k3s-Nodes (homeserver, worker-0,
+worker-1) mounten denselben NFS-Export vom NAS über die `nas`-
+StorageClass — anders als früher (worker-0-lokale `hdd`-StorageClass) ist
+kein Node mehr storage-technisch bevorzugt, der Scheduler verteilt frei.
+Details: [`16-nas-storage.md`](16-nas-storage.md).
+
+```
                                 ▲
                                 │ git pull (HTTPS/SSH)
                                 │
@@ -119,9 +139,14 @@ optimiert für ressourcenarme Umgebungen.
 
 worker-0 und worker-1 treten dem Cluster über `k3s agent` bei — der
 Join-Token wird per Ansible automatisch vom Control-Plane-Node gelesen.
-Kubernetes-Workloads werden vom Scheduler auf alle Nodes verteilt.
-Docker-Compose-Dienste (Paperless-NGX, TinyTeller, Day Pilot) laufen nur
-auf worker-0 parallel zum k3s-Agent; worker-1 ist reiner Compute-Node.
+Kubernetes-Workloads werden vom Scheduler frei auf alle Nodes verteilt —
+beide Worker sind reine, austauschbare Compute-Nodes. Persistenter Storage
+liegt zentral auf dem UGREEN NAS (`nas`-StorageClass, NFS), nicht mehr
+lokal auf einem einzelnen Node — Details in
+[`16-nas-storage.md`](16-nas-storage.md). Paperless-NGX und TinyTeller
+laufen als reguläre k3s-Apps (`argocd/apps/paperless-ngx`,
+`argocd/apps/tinyteller`), nicht mehr als Docker-Compose auf einem
+bestimmten Host.
 
 Mitgelieferte Komponenten:
 
