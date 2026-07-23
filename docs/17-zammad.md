@@ -16,14 +16,15 @@ Die Deployment-Konfiguration liegt unter `argocd/apps/zammad/`.
 | Volltextsuche     | PostgreSQL-basiert (eingebaut)     | —           |
 | Ingress           | Traefik                           | `zammad`    |
 | Secrets           | SealedSecrets                     | `zammad`    |
-| Persistenz        | StorageClass `hdd` auf worker-0    | —           |
+| Persistenz        | StorageClass `nas` (UGREEN NAS, NFS) | —         |
 | Auto-Updates      | Renovate (patch + minor)          | —           |
 
-PostgreSQL und Redis laufen mit `storageClassName: hdd` und sind via
-NodeAffinity an `worker-0` gebunden (siehe [docs/16-hdd-storage.md](16-hdd-storage.md)).
-Da Zammad Attachments standardmäßig in der Datenbank speichert
-(`storageVolume.enabled: false`), kann die PostgreSQL-PVC mit der Zeit groß
-werden — auf der 7,3-TB-HDD statt der Homeserver-SSD ist das unkritisch.
+PostgreSQL und Redis laufen mit `storageClassName: nas` (siehe
+[docs/16-nas-storage.md](16-nas-storage.md)) — keine NodeAffinity mehr
+nötig, die PVCs sind von jedem Node aus erreichbar. Da Zammad Attachments
+standardmäßig in der Datenbank speichert (`storageVolume.enabled: false`),
+kann die PostgreSQL-PVC mit der Zeit groß werden — auf dem NAS statt der
+Homeserver-SSD ist das unkritisch.
 
 ---
 
@@ -31,10 +32,10 @@ werden — auf der 7,3-TB-HDD statt der Homeserver-SSD ist das unkritisch.
 
 - ArgoCD läuft und das Root-ApplicationSet ist aktiv (`argocd/bootstrap/root-applicationset.yaml`)
 - Sealed-Secrets Controller ist installiert (`argocd/apps/sealed-secrets/`)
-- **`hdd-storage`-App ist deployt** (`argocd/apps/hdd-storage/`) und die
-  StorageClass `hdd` existiert: `kubectl get storageclass hdd`
-- **worker-0 ist online** und `/mnt/hdd` ist gemountet (siehe
-  [docs/16-hdd-storage.md](16-hdd-storage.md)) — sonst bleiben die
+- **`nas-storage`-App ist deployt** (`argocd/apps/nas-storage/`) und die
+  StorageClass `nas` existiert: `kubectl get storageclass nas`
+- **NAS ist online und der NFS-Export erreichbar** (siehe
+  [docs/16-nas-storage.md](16-nas-storage.md)) — sonst bleiben die
   PostgreSQL- und Redis-PVCs auf `Pending`
 - `kubeseal` CLI ist lokal installiert
 - `kubectl` ist mit dem Cluster verbunden
@@ -126,15 +127,15 @@ kubectl get pods -n zammad -w
 ```
 
 Typische Pod-Reihenfolge beim ersten Start:
-1. `zammad-postgresql-0` und `zammad-redis-*` — starten zuerst auf **worker-0**
-   (NodeAffinity, PVCs auf der HDD-StorageClass)
+1. `zammad-postgresql-0` und `zammad-redis-*` — PVCs auf der `nas`-
+   StorageClass, können auf jedem Node starten
 2. `zammad-memcached-*` — startet parallel (kein PVC, läuft überall)
 3. `zammad-init-*` — führt Datenbankmigrationen durch
 4. `zammad-*` (App-Pod) — startet nach erfolgreichem Init
 
 > Falls `zammad-postgresql-0` / `zammad-redis-*` dauerhaft `Pending` bleiben:
-> worker-0 ist offline oder die `hdd`-StorageClass fehlt — siehe
-> [docs/16-hdd-storage.md](16-hdd-storage.md) → Fehlerbehebung.
+> das NAS ist offline oder die `nas`-StorageClass fehlt — siehe
+> [docs/16-nas-storage.md](16-nas-storage.md) → Fehlerbehebung.
 
 ---
 
@@ -294,15 +295,14 @@ kubectl exec -it -n zammad zammad-postgresql-0 -- \
 
 ### PostgreSQL- / Redis-PVC bleibt `Pending`
 
-Beide laufen auf der HDD-StorageClass und sind an `worker-0` gebunden:
+Beide laufen auf der `nas`-StorageClass (NFS, UGREEN NAS):
 
 ```bash
 kubectl describe pvc -n zammad data-zammad-postgresql-0
-kubectl get nodes worker-0   # muss Ready sein
-kubectl -n hdd-storage get pods
+kubectl -n nas-storage get pods
 ```
 
-Details: [docs/16-hdd-storage.md](16-hdd-storage.md) → Fehlerbehebung.
+Details: [docs/16-nas-storage.md](16-nas-storage.md) → Fehlerbehebung.
 
 ### ArgoCD zeigt OutOfSync
 
@@ -321,14 +321,14 @@ argocd app sync zammad --force
 | Komponente     | CPU Request | RAM Request | RAM Limit | Storage              |
 |----------------|-------------|-------------|-----------|-----------------------|
 | Zammad App     | 100m        | 512Mi       | 1Gi       | —                      |
-| PostgreSQL     | 50m         | 256Mi       | 512Mi     | 50Gi (`hdd`, worker-0) |
-| Redis          | —           | —           | —         | 8Gi (`hdd`, worker-0)  |
+| PostgreSQL     | 50m         | 256Mi       | 512Mi     | 50Gi (`nas`)           |
+| Redis          | —           | —           | —         | 8Gi (`nas`)            |
 | Nginx Sidecar  | 25m         | 64Mi        | 128Mi     | —                      |
-| **Gesamt**     | ~200m       | ~896Mi      | ~1.8Gi    | 58Gi auf der HDD       |
+| **Gesamt**     | ~200m       | ~896Mi      | ~1.8Gi    | 58Gi auf dem NAS       |
 
-PostgreSQL- und Redis-Storage liegen bewusst auf `worker-0`/`/mnt/hdd`
-(7,3 TB) statt auf der Homeserver-System-SSD — siehe
-[docs/16-hdd-storage.md](16-hdd-storage.md). Die 50Gi für PostgreSQL sind
+PostgreSQL- und Redis-Storage liegen bewusst auf dem UGREEN NAS statt auf
+der Homeserver-System-SSD — siehe
+[docs/16-nas-storage.md](16-nas-storage.md). Die 50Gi für PostgreSQL sind
 ein Startwert; da Attachments in der DB liegen, ggf. nach Bedarf erhöhen
 (`zammad.postgresql.primary.persistence.size`).
 
