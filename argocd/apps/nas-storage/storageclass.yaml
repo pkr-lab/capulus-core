@@ -1,0 +1,29 @@
+# StorageClass "nas": dynamischer Speicher über NFS-Export auf dem UGREEN NAS
+# (192.168.178.97, RAID1). Ersetzt die alte "hdd"-StorageClass (worker-0/sda),
+# siehe docs/16-nas-storage.md → Migrations-Runbook.
+#
+# Verwendung in PVCs:
+#   storageClassName: nas
+#
+# Eigenschaften:
+#   - reclaimPolicy: Retain    → Daten bleiben beim Löschen einer PVC erhalten
+#   - volumeBindingMode: Immediate → PV wird sofort erstellt (kein
+#     WaitForFirstConsumer nötig, da NFS von JEDEM Node gemountet werden
+#     kann — anders als die alte, node-gebundene "hdd"-StorageClass)
+#   - allowVolumeExpansion: false → der nfs-subdir-external-provisioner kann
+#     PVCs nicht nachträglich vergrößern
+#
+# Pods, die "nas" nutzen, brauchen KEINE NodeAffinity mehr — der Scheduler
+# darf frei über alle k3s-Nodes verteilen.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nas
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: k8s-sigs.io/nfs-subdir-external-provisioner
+parameters:
+  archiveOnDelete: "false"
+reclaimPolicy: Retain
+volumeBindingMode: Immediate
+allowVolumeExpansion: false

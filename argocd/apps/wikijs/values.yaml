@@ -62,7 +62,7 @@ wikijs:
 
 # ============================================================
 # PostgreSQL (eigenes Deployment, kein Bitnami-Subchart)
-# Persistenz auf HDD-StorageClass + worker-0 (docs/16-hdd-storage.md)
+# Persistenz auf der "nas"-StorageClass (docs/16-nas-storage.md)
 # ============================================================
 postgresql:
   image:
@@ -78,7 +78,7 @@ postgresql:
 
   persistence:
     enabled: true
-    storageClassName: hdd
+    storageClassName: nas
     size: 20Gi
     accessMode: ReadWriteOnce
 
@@ -89,13 +89,4 @@ postgresql:
     limits:
       memory: 512Mi
 
-  # Pflicht: hdd-PVCs binden nur auf worker-0 (siehe docs/16-hdd-storage.md)
-  affinity:
-    nodeAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        nodeSelectorTerms:
-          - matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values:
-                  - worker-0
+  affinity: {}

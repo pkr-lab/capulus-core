@@ -64,14 +64,11 @@ semaphore-bootstrap-local: ## Bootstrap Semaphore natively on the home server (n
 	    --extra-vars "ansible_host=127.0.0.1 ansible_user=$$(whoami)" \
 	    --tags semaphore-bootstrap $(VAULT_OPTS)
 
-worker-0: ## Deploy all services on worker-0 (192.168.178.95).
+worker-0: ## Deploy k3s agent + watchdogs on worker-0 (192.168.178.95).
 	ansible-playbook -i $(INVENTORY) $(HS2_PLAYBOOK) $(VAULT_OPTS)
 
 worker-0-check: ## Dry-run the worker-0 playbook (no changes applied).
 	ansible-playbook -i $(INVENTORY) $(HS2_PLAYBOOK) --check --diff $(VAULT_OPTS)
-
-hdd: ## HDD (sda) auf worker-0 einrichten und dauerhaft mounten.
-	ansible-playbook -i $(INVENTORY) $(HS2_PLAYBOOK) --tags hdd $(VAULT_OPTS)
 
 worker-1: ## Deploy k3s agent + watchdogs on worker-1 (192.168.178.96).
 	ansible-playbook -i $(INVENTORY) $(HS3_PLAYBOOK) $(VAULT_OPTS)
