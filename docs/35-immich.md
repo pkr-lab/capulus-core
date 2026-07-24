@@ -165,6 +165,77 @@ danach ist der Cache persistent und Neustarts sind schnell.
 
 ---
 
+## Externe Bibliothek: Bestehende Fotoordner importieren (z. B. OneDrive-Export)
+
+Für Fotos, die schon als fertige Ordnerstruktur vorliegen (z. B. ein
+Massen-Export aus OneDrive) und nicht einzeln über Handy-App/Web-Upload
+hochgeladen werden sollen, unterstützt Immich sogenannte
+[External Libraries](https://immich.app/docs/features/libraries): Ordner
+werden read-only in den `immich-server`-Container gemountet und nur
+eingelesen/indexiert — die Dateien bleiben unverändert auf dem NAS liegen,
+es entsteht kein Duplikat in der `library`-PVC.
+
+> **Wichtig:** Dateien einfach in die `library`-PVC (`/data`, siehe
+> [Übersicht](#übersicht) oben) kopieren funktioniert **nicht** — dieser
+> Pfad wird ausschließlich von Immich selbst verwaltet (UUID-Struktur für
+> Uploads/Thumbnails), es gibt keinen automatischen Scan dieses Ordners.
+
+### Schritt A — Unterordner auf dem bestehenden Immich-NFS-Export anlegen
+
+Kein neuer NFS-Export nötig — die Firewall-/Host-Regel für
+`/volume2/immich-storage` (siehe [Schritt 1](#schritt-1--nfs-export-für-immich-einrichten-ugos-manuell)
+oben) erlaubt bereits Lese-/Schreibzugriff für `192.168.178.0/24`. Einfach
+einen Unterordner anlegen und die OneDrive-Ordner dort hinein
+kopieren/synchronisieren, z. B.:
+
+```
+/volume2/immich-storage/external/onedrive/<deine Ordnerstruktur>
+```
+
+### Schritt B — Mount in `argocd/apps/immich/values.yaml` aktivieren
+
+```yaml
+server:
+  externalLibrary:
+    enabled: true
+    mountPath: /mnt/external
+    nfs:
+      server: "192.168.178.97"
+      path: "/volume2/immich-storage/external"
+      readOnly: true
+```
+
+Weitere, unabhängige Ordner lassen sich über `extraMounts` einbinden (analog
+zu Jellyfins `media.extraMounts`, siehe [docs/34-jellyfin.md](34-jellyfin.md)):
+
+```yaml
+    extraMounts:
+      - name: onedrive-fotos
+        mountPath: /mnt/external/onedrive
+        server: "192.168.178.97"
+        path: "/volume2/immich-storage/external/onedrive"
+        readOnly: true
+```
+
+Nach dem ArgoCD-Sync verifizieren:
+
+```bash
+kubectl -n immich exec deploy/immich-server -- ls /mnt/external
+```
+
+### Schritt C — Library in der Immich-UI anlegen
+
+**Administration → Libraries → Create Library → External Library** →
+Import-Pfad exakt auf den gemounteten Container-Pfad setzen (z. B.
+`/mnt/external` oder `/mnt/external/onedrive` bei `extraMounts`). Danach
+**Scan Library** anstoßen (manuell oder per Intervall in den
+Library-Einstellungen) — Immich indexiert dann rekursiv alle Unterordner.
+
+Read-only reicht aus: Immich muss die Originaldateien nur lesen, es
+schreibt keine Metadaten in den externen Ordner zurück.
+
+---
+
 ## Externe Erreichbarkeit (Cloudflare Tunnel)
 
 `immich.pke-lab.de` ist bereits in
