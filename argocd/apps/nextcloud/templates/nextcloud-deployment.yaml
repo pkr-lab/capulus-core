@@ -72,6 +72,12 @@ spec:
             httpGet:
               path: /status.php
               port: http
+              # Ohne passenden Host-Header spricht kube-probe den Pod über
+              # seine IP an, die von Nextclouds Trusted-Domain-Check als
+              # ungültig abgelehnt wird (400 "Trusted domain error").
+              httpHeaders:
+                - name: Host
+                  value: {{ first (splitList " " .Values.nextcloud.trustedDomains) }}
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
@@ -80,6 +86,9 @@ spec:
             httpGet:
               path: /status.php
               port: http
+              httpHeaders:
+                - name: Host
+                  value: {{ first (splitList " " .Values.nextcloud.trustedDomains) }}
             initialDelaySeconds: 120
             periodSeconds: 30
             timeoutSeconds: 5
