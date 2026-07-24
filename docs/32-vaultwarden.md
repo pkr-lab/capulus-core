@@ -196,7 +196,30 @@ Secret im Cluster löschen, falls ArgoCD es nicht automatisch prunt.
 
 ---
 
-## 7. Troubleshooting
+## 7. Migration auf NAS-Storage
+
+`persistence.storageClassName` in `argocd/apps/vaultwarden/values.yaml`
+steht jetzt auf `nas` statt `local-path` (Homeserver-System-SSD) — damit
+liegt der Tresor künftig auf dem UGREEN NAS wie der Großteil der übrigen
+Apps (siehe [docs/16-nas-storage.md](16-nas-storage.md)). `storageClassName`
+ist auf einer bestehenden PVC **unveränderlich**: der reine `values.yaml`-
+Commit bewirkt noch keine Migration, ArgoCD zeigt nur `OutOfSync`, bis die
+Daten manuell umgezogen werden.
+
+Ablauf identisch zum generischen Migrations-Runbook — nur mit
+`NS=vaultwarden`, `APP_KIND=deployment`, `APP_NAME=vaultwarden`,
+`OLD_PVC=vaultwarden-data` (Namen vorher mit `kubectl -n vaultwarden get
+pvc,deploy` gegenprüfen):
+**[docs/16-nas-storage.md → Migrations-Runbook](16-nas-storage.md#migrations-runbook-hdd-worker-0sda--nas-nas)**
+
+Da Vaultwarden SQLite nutzt (siehe Architektur oben), unbedingt vor
+Schritt 2 (Herunterskalieren) sicherstellen, dass gerade keine
+Bitwarden-Clients aktiv syncen — offene Schreibvorgänge während der
+Migration führen sonst potenziell zu einer inkonsistenten Kopie.
+
+---
+
+## 8. Troubleshooting
 
 | Symptom | Hinweis |
 |---|---|

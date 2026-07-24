@@ -1,0 +1,16 @@
+{{- if .Values.machineLearning.persistence.modelCache.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "immich.ml.fullname" . }}-model-cache
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "immich.ml.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.machineLearning.persistence.modelCache.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.machineLearning.persistence.modelCache.size }}
+  storageClassName: {{ .Values.machineLearning.persistence.modelCache.storageClassName }}
+{{- end }}

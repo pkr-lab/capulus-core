@@ -1,0 +1,97 @@
+---
+replicaCount: 1
+
+image:
+  repository: jellyfin/jellyfin
+  pullPolicy: IfNotPresent
+  # Pinned für Reproduzierbarkeit. Releases: https://github.com/jellyfin/jellyfin/releases
+  tag: "10.11.0"
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+# Offizielles Image läuft standardmäßig als root (kein PUID/PGID-Mechanismus
+# wie bei linuxserver.io-Images) — analog zu Vaultwarden/Nextcloud kein
+# runAsNonRoot. Die "nas"-StorageClass ist mit no_root_squash exportiert
+# (siehe docs/16-nas-storage.md), root-Schreibzugriff funktioniert daher.
+podSecurityContext: {}
+securityContext:
+  allowPrivilegeEscalation: false
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8096
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations: {}
+  hosts:
+    - host: jellyfin.homeserver
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Konfiguration, Metadaten-Cache, Wiedergabestatus, SQLite-DB — klein,
+# muss aber persistent sein.
+persistence:
+  config:
+    enabled: true
+    storageClassName: nas
+    size: 10Gi
+    accessMode: ReadWriteOnce
+  # Transcoding-Zwischendateien: bewusst KEIN PVC — NFS ist für die hohe
+  # Schreiblast beim Live-Transcoding zu langsam/latent. emptyDir nutzt
+  # den lokalen Node-Storage und wird bei Pod-Neustart automatisch geleert.
+  transcodeSizeLimit: "20Gi"
+
+# Medienbibliothek: direkter NFS-Mount vom UGREEN NAS, KEIN PVC über die
+# "nas"-StorageClass — die Mediendateien sollen als normale Ordnerstruktur
+# auf dem NAS liegen (per SMB auch von Windows/macOS aus verwaltbar), nicht
+# als von nfs-subdir-external-provisioner verwaltetes PVC-Unterverzeichnis.
+#
+# Setup auf dem NAS (UGOS, manuell — siehe docs/16-nas-storage.md für den
+# analogen Ablauf bei "k8s-storage"):
+#   1. Freigabe "media" anlegen (z.B. /volume1/media)
+#   2. NFS-Dienst aktivieren, Regel für die Freigabe "media" anlegen:
+#      Erlaubte Hosts 192.168.178.0/24, Lese-/Schreibzugriff,
+#      Squash no_root_squash
+#   3. Exportpfad unten eintragen (Platzhalter aktuell: /volume1/media)
+#
+# Mehrere Bibliotheken (Filme/Serien/Musik) lassen sich entweder als
+# Unterordner derselben Freigabe organisieren (Standard hier) oder als
+# zusätzliche Einträge in `media.extraMounts` einbinden.
+media:
+  nfs:
+    server: "192.168.178.97"
+    path: "/volume1/media"
+    readOnly: false
+  # Weitere NFS-Exports (z.B. eine zweite Freigabe für Musik). Beispiel:
+  #   extraMounts:
+  #     - name: music
+  #       mountPath: /media/music
+  #       server: "192.168.178.97"
+  #       path: "/volume1/music"
+  #       readOnly: false
+  extraMounts: []
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 4000m
+    memory: 4Gi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

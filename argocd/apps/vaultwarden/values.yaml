@@ -50,7 +50,13 @@ ingress:
 
 persistence:
   enabled: true
-  storageClassName: local-path
+  # War lange "local-path" (Homeserver-System-SSD) — Migration auf die
+  # "nas"-StorageClass (UGREEN NAS) siehe docs/32-vaultwarden.md →
+  # Abschnitt "Migration auf NAS-Storage" und docs/16-nas-storage.md →
+  # Migrations-Runbook. storageClassName ist auf bestehenden PVCs
+  # unveränderlich — dieser Wert allein bewirkt noch keine Migration,
+  # ArgoCD zeigt nur "OutOfSync", bis die Daten manuell umgezogen wurden.
+  storageClassName: nas
   size: 2Gi
   accessMode: ReadWriteOnce
   mountPath: /data
