@@ -13,7 +13,7 @@ secrets:
   # Versiegeln: echo -n 'WERT' | kubeseal --raw --namespace immich \
   #             --name immich-secrets --controller-namespace sealed-secrets \
   #             --controller-name sealed-secrets-controller
-  encryptedDbPassword: "REPLACE_ME_WITH_KUBESEAL_OUTPUT"
+  encryptedDbPassword: "AgBRQs+8k7zOs52gwcId4A5pyPYPXp4Sxm9Jj8UWBrFk27yXpxwyLB7RW/7lpDBgEKxhjx3DchCgZkAzONLkVHjNwcboNBVrY8Aj4mDvnbrLXx6K944T87LM+y0PINbeiTGk8wLHZgI4/fk95Z1vzeEhyBYUwSC1UkwIOw+mBQEBB/ZAuHq54rOanGkLYOolROBkQCtme9f0VDTbWoIJGH8l8dqONxUDvYfYrJzD8eB9wqjN4jLxYEeXamekgHjdGyOBySQS3PVv5rpQlNf8YNW/NeFzBBHsyKlBWgMR0dxxv0S+VsDhCged5Y7xETRijFLbdCF1p/t3EsxQ1NzjxRJNdc3+x613kTjZp/2BMWCgPg+PRA1N/YNn4GGwU8FXSm6xM08EB1mUJ6I4ADBlP1w1hLMJspW5giIFuuVzXWki/PEsy4xRLXSr8t0yvtOnLjOzZq9/T41+0wVXdn17OwrAAtdCvnnsqZQ1hatX7ELY1iC0KNal7NVAWQcYS52m08CMEOGHubMZ7CXiIW7iwIdrJqzWSO1U7ATcVdUgw/ucblyzbSeaDKVryqFkaMJ9ckWp1By/kKwI+KycrewV0eeMl402Z0BfL2evC+iL+BdKIiSAOd2qQWJnh3mlQl55JgHmG2zDryIKpZrsvCBOjlY7KYnEpQqLg8dYi+ezcNVfljG8naIDilde9cyUxE0lg0p0uiGbET8+iIBLUZmY9UdK2lfUEsnWwGpsBSlyzI+xfg=="
 
 # ============================================================
 # immich-server — API, Web-UI, Hintergrund-Jobs
