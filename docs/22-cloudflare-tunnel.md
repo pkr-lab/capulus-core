@@ -327,6 +327,9 @@ einer Access-Policy auf deine eigene E-Mail-Adresse.
 | **ntfy** | Freigeben | Push-Benachrichtigungen (z. B. Unwetterwarnung, Alarmmonitor offline) müssen genau dann ankommen, wenn das Handy *nicht* im Heimnetz/Tailnet hängt. Ohne externe Erreichbarkeit verpuffen Alerts im Ernstfall. |
 | **Zammad** | Freigeben (mit Access-Policy) | Sinnvoll, wenn Tickets/Support-Anfragen auch von Leuten ohne VPN-Zugang reinkommen sollen. Cloudflare Access oder mindestens ein Rate-Limit vorschalten, da das Formular öffentlich erreichbar ist. |
 | **Grafana** | Optional | Praktisch, um Pegel-/Wetter-Dashboards unterwegs zu checken. Nur mit Authentik-OIDC **und** Cloudflare-Access-Policy auf den eigenen Account freigeben — sonst sind Cluster-/Infra-Metriken öffentlich einsehbar. |
+| **Immich** | Freigeben | Kernanwendungsfall ist automatisches Foto-Backup vom Handy — ohne externe Erreichbarkeit synct die App nur im WLAN. Absicherung über den eigenen Immich-Login (E-Mail + Passwort, optional 2FA). |
+| **Nextcloud** | Freigeben | Datei-Sync/Kalender/Kontakte sind für Mobile-/Desktop-Clients unterwegs gedacht. Eigener Login schützt den Zugriff, siehe [docs/33-nextcloud.md](33-nextcloud.md). |
+| **Jellyfin** | Optional | Streaming ist bandbreitenintensiv, Live-Transcoding läuft auf der Homeserver-CPU. Für reinen Hausgebrauch reicht Tailscale/LAN — externe Freigabe nur aktivieren, wenn tatsächlich von unterwegs gestreamt werden soll (Details/Abwägung: [docs/34-jellyfin.md](34-jellyfin.md)). |
 | **ArgoCD** | Nicht freigeben | Voller GitOps-Controller-Zugriff auf den Cluster. Bleibt Tailscale-only. |
 | **Semaphore** | Nicht freigeben | Kann Ansible-Playbooks mit Root-Rechten auf beiden Servern ausführen. Bleibt Tailscale-only. |
 | **Headlamp** | Nicht freigeben | Kubernetes-Admin-Dashboard, voller Cluster-Zugriff. Bleibt Tailscale-only. |

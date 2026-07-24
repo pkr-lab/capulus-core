@@ -8,6 +8,13 @@ erreichbar — **jeder** k3s-Node kann PVCs dieser StorageClass mounten, es
 gibt keine NodeAffinity-Pflicht mehr. Der Scheduler darf Pods frei über
 homeserver/worker-0/worker-1 verteilen.
 
+> **Zweiter, dedizierter Export für Immich:** Neben `nas` (→
+> `/volume1/k8s-storage`) existiert eine zweite, unabhängige StorageClass
+> `immich-nas` (→ `/volume2/immich-storage`, App
+> `argocd/apps/immich-storage/`) — bewusst getrennt, damit die
+> Fotobibliothek nicht im geteilten Cluster-Storage-Export landet. Details:
+> [docs/35-immich.md](35-immich.md).
+
 ---
 
 ## Hardware
@@ -317,18 +324,11 @@ Auf dem NAS selbst über UGOS prüfen (Speicher-Manager → Auslastung).
 
 ---
 
-## Ausblick: Backups auf externer NAS-Platte
+## Backups auf externer NAS-Platte
 
-Eine externe USB-Platte soll später direkt am UGREEN NAS angeschlossen
-werden, für regelmäßige Backups der wichtigsten Daten (Vaultwarden-Vault,
-Paperless-Dokumente). **Das ist explizit nicht Teil dieser Migration** —
-erst nachdem die Datenmigration oben abgeschlossen und verifiziert ist.
-Geplanter Ansatz für eine spätere Iteration:
-
-- Backup-Job (z. B. `CronJob` im Cluster oder ein UGOS-eigener Backup-Task)
-  sichert Vaultwarden-PVC (`argocd/apps/vaultwarden`, aktuell auf
-  `local-path`) und die Paperless-`data`/`media`-PVCs (jetzt auf `nas`)
-  regelmäßig auf die externe Platte.
-- Restic oder rsync als Werkzeug, verschlüsselt bei Vaultwarden-Daten.
-- Eigene Doku + Ansible-Rolle folgt in einem eigenen Branch, sobald die
-  externe Platte angeschlossen ist.
+Eine externe USB-Platte hängt direkt am UGREEN NAS und sichert regelmäßig
+**beide** Storage-Pools (`volume1` inkl. `k8s-storage` und `volume2` inkl.
+`immich-storage`) per restic (inkrementell, dedupliziert, verschlüsselt).
+Läuft als UGOS-Task-Scheduler-Job direkt auf dem NAS, analog zur
+Monitoring-Exporter-Einrichtung oben. Vollständige Anleitung inkl.
+Zeitplan-Empfehlungen und Restore: **[docs/36-nas-backup.md](36-nas-backup.md)**.
