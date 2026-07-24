@@ -16,8 +16,8 @@ secrets:
   #     --controller-name sealed-secrets-controller
   # kubeseal --raw erlaubt nur EINEN Key pro Aufruf — siehe docs/33-nextcloud.md
   # für den vollständigen Multi-Key-Workflow (--merge-into).
-  encryptedDbPassword: "REPLACE_ME_WITH_KUBESEAL_OUTPUT"
-  encryptedAdminPassword: "REPLACE_ME_WITH_KUBESEAL_OUTPUT"
+  encryptedDbPassword: "AgBRRf1qcn/M/ba+hiOzNdQHAscrbYBsKOybwwxCkHT9TK2/7MJaL6k3dyFaKH245qfjg6c8Z1P2MIBroZA6S9JFHqK39C9N37hOx44yZLDTzxvsD0BjHDmnkWnN4/RriaRruhU1uxOoXXfNcjvaKAvVjfbnQXIrF8wudnA/mCjyLxS4NoEKMaJe2FlTjd+dQnQWCDmqZsm7TexebiB6WwdkcK7qqwGUpImf60a9H1H6l+6DWO9BRnyo8Ww4Nv5wLXjq2T6W9Rs3G048rtcR+qVaE1Mev6GFsiAZXO9xE+aR5/+p6Zy29NntKvWyb4HPDIzmIyg/3JIIZoPdOLcGa/JhnSaczyop9hToELwveGrfbwfOWs3OnUXqHQLo7cm4DjgU0TZAbdzapaB7dTFGfTrc0vA67x0N32NP9lncM9Af28t3u03LuJgq0yE8wW3qwajtJr1ZDToKj00Lq8QQ/KaQrrEktCbHzF5D/M7da8bsiDKZ7IcjZbd4vCmQcfETcUnS7cdigZt/HuyDEN34vkhNFvYCREBgCExNadQCVrzaTVTgHXMiQh8/yVZSLNUqrEXm6QsAQNtjiKLIx1fHPWqMj9dyhH1kE94hLyyzGH5dlmPOhdo7n3DqJevFIt9W4gbb+Zq1JcznSWo49lN8GoMKOz1ArN9Tz4Y0y3gMlJBB1mwiZunoCi23lgkMBOqd9Hg3pHOEwRHmqu40oMpr/hHMmLwBLfnqrSu3ZKBhDnsckQ=="
+  encryptedAdminPassword: "AgA+PN60JBIltp+mtdtpsc2D26UGBiPl65GS+FByZYKeBg52O0l1gy/FYEcAkp7tU+dWU7t6T1fY7ju7MKwAXljUmqew/RB7bTD7d0WMPS6w/2/bitMOO66BetF4rQMTEeuVUiw6ztKj6/HaVhwjKCprH+LotDLXGQj1K7+zTH3Brom3kiq4dqaEUV4GKDJNXmeFPZvVkSMKefjeSe+ls5FD7bxdljfMjRARZYq8D/4bvllWMUIloizVzUQEw0snzKeP5P1sdd1k8NeW3F+2QA9RGGqrHhl1DQFC37n71/+sl8hHzBXcU6nl14LL9qGtx1uZdqgtPKdqeUyl1nW5pMZnwBrW1SmdV54DySyDk4Cx1uklh+Pl9625iCFrmjaVKT/M7EOkWfzUKL4FZ/o0Is6sQEcV1Bdi0iqD9+TOdsOkGVKDWQMXwCO7/2qRkJ+Nru9XfA61xh4nrB0Z9WG17cg6o21hs2WOKKWNczdli6WIXeB55tN/Amdw4wdHX4frRc01ErfvZ3pLMzpT0HJ1hiXQABQbl6EFBo9TUMAID+1UI3nc4BBRTefxrXRb3yTU0RC5iqY/SaWFQqKSjBRthYyAr/CJxNEfbaAD7/HiTpODBMJlYrJv1UDT0hz+0Qyu7C6ziDaEn87NLht6sQHabrQpM6lKvEByIy4NXxXt7ffbFXryqRwHssZWGauWNXkgzGY="
 
 # ============================================================
 # Nextcloud App
