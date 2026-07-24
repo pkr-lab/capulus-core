@@ -57,6 +57,31 @@ server:
       size: 500Gi
       accessMode: ReadWriteOnce
 
+  # Externe Bibliothek (optional, standardmäßig deaktiviert): direkter,
+  # read-only NFS-Mount für bereits vorhandene Fotoordner (z.B. ein
+  # Massen-Export aus OneDrive), die NICHT über die Upload-API laufen
+  # sollen, sondern per Immichs "External Library"-Feature eingelesen
+  # werden — Dateien bleiben als normale Ordnerstruktur auf dem NAS
+  # liegen, kein Duplikat in der "library"-PVC oben. Analog zu Jellyfins
+  # media-Mount (siehe argocd/apps/jellyfin/values.yaml), nur read-only
+  # und opt-in, da der Unterordner auf dem NAS erst manuell angelegt
+  # werden muss (siehe docs/35-immich.md → "Externe Bibliothek").
+  externalLibrary:
+    enabled: false
+    mountPath: /mnt/external
+    nfs:
+      server: "192.168.178.97"
+      path: "/volume2/immich-storage/external"
+      readOnly: true
+    # Weitere, unabhängige Ordner einbinden. Beispiel:
+    #   extraMounts:
+    #     - name: onedrive-fotos
+    #       mountPath: /mnt/external/onedrive
+    #       server: "192.168.178.97"
+    #       path: "/volume2/immich-storage/external/onedrive"
+    #       readOnly: true
+    extraMounts: []
+
   resources:
     requests:
       cpu: 250m

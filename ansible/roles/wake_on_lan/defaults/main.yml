@@ -1,0 +1,10 @@
+---
+# Kill-switch: auf false setzen (z.B. in host_vars) um Wake-on-LAN auf
+# einem bestimmten Host zu deaktivieren, ohne die Rolle aus dem Playbook
+# zu entfernen.
+wake_on_lan_enabled: true
+
+# Netzwerkinterface, auf dem WoL aktiviert wird. Default: das Interface
+# der Default-Route (per Ansible-Facts ermittelt) — auf worker-0/worker-1
+# i.d.R. korrekt, da nur ein NIC aktiv ist.
+wake_on_lan_interface: "{{ ansible_default_ipv4.interface }}"

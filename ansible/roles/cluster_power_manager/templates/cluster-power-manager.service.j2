@@ -1,0 +1,15 @@
+# Managed by Ansible (cluster_power_manager role) — do not edit manually.
+[Unit]
+Description=Cluster power manager - wakes/shuts down worker-0/worker-1 via WoL based on homeserver load
+After=network-online.target k3s.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/cluster-power-manager/config.env
+ExecStart=/usr/local/bin/cluster-power-manager.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

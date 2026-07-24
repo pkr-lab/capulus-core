@@ -1,0 +1,10 @@
+---
+# Muss zu den gleichnamigen Defaults in ansible/roles/cluster_power_manager
+# passen — dort wird der Key erzeugt, hier wird er autorisiert.
+cluster_power_manager_ssh_user: ubuntu
+cluster_power_manager_ssh_key_path: /etc/cluster-power-manager/id_ed25519
+
+# Absoluter Pfad zu poweroff, für die forced-command-Beschränkung des
+# autorisierten Keys UND den passwortlosen sudo-Eintrag. `which poweroff`
+# auf dem Zielhost prüfen, falls die Distribution abweicht.
+cluster_power_manager_poweroff_bin: /usr/sbin/poweroff

@@ -1,0 +1,6 @@
+---
+- name: Restart cluster power manager
+  ansible.builtin.systemd:
+    name: cluster-power-manager
+    daemon_reload: true
+    state: restarted
