@@ -1,0 +1,35 @@
+---
+# ============================================================
+# cluster_power_manager_target/tasks/main.yml
+# Autorisiert den auf homeserver von cluster_power_manager erzeugten SSH
+# Public Key auf diesem Worker — beschränkt per forced-command auf
+# "sudo poweroff", damit dieser Key (anders als der Semaphore-Key) NICHTS
+# anderes ausführen kann, selbst wenn das private Schlüsselmaterial
+# jemals abfließen sollte.
+# ============================================================
+
+- name: Public Key des cluster-power-manager vom Homeserver lesen
+  ansible.builtin.slurp:
+    src: "{{ cluster_power_manager_ssh_key_path }}.pub"
+  delegate_to: "{{ groups['homeservers'][0] }}"
+  become: true
+  register: cluster_power_manager_pubkey
+
+- name: cluster-power-manager-Key autorisieren (nur für poweroff, forced command)
+  ansible.posix.authorized_key:
+    user: "{{ cluster_power_manager_ssh_user }}"
+    state: present
+    key: "{{ cluster_power_manager_pubkey.content | b64decode | trim }}"
+    key_options: >-
+      command="sudo {{ cluster_power_manager_poweroff_bin }}",no-agent-forwarding,no-port-forwarding,no-pty,no-X11-forwarding
+    comment: "cluster-power-manager@homeserver"
+
+- name: Passwortlosen sudo für poweroff erlauben ({{ cluster_power_manager_ssh_user }})
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/cluster-power-manager
+    content: |
+      {{ cluster_power_manager_ssh_user }} ALL=(root) NOPASSWD: {{ cluster_power_manager_poweroff_bin }}
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "visudo -cf %s"
