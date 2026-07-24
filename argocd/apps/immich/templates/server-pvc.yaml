@@ -1,0 +1,16 @@
+{{- if .Values.server.persistence.library.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "immich.server.fullname" . }}-library
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "immich.server.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.server.persistence.library.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.server.persistence.library.size }}
+  storageClassName: {{ .Values.server.persistence.library.storageClassName }}
+{{- end }}
