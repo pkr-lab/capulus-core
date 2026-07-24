@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nextcloud.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "nextcloud.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.nextcloud.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "nextcloud.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "nextcloud.selectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.nextcloud.podSecurityContext | nindent 8 }}
+      {{- with .Values.nextcloud.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nextcloud.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nextcloud.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: nextcloud
+          securityContext:
+            {{- toYaml .Values.nextcloud.securityContext | nindent 12 }}
+          image: "{{ .Values.nextcloud.image.repository }}:{{ .Values.nextcloud.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.nextcloud.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.nextcloud.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: POSTGRES_HOST
+              value: {{ include "nextcloud.postgresql.fullname" . | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgresql.database | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.postgresql.username | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: db-password
+            - name: REDIS_HOST
+              value: {{ include "nextcloud.redis.fullname" . | quote }}
+            - name: NEXTCLOUD_ADMIN_USER
+              value: {{ .Values.nextcloud.adminUser | quote }}
+            - name: NEXTCLOUD_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: admin-password
+            - name: NEXTCLOUD_TRUSTED_DOMAINS
+              value: {{ .Values.nextcloud.trustedDomains | quote }}
+          # Nextcloud führt beim ersten Start die Installation (siehe
+          # NEXTCLOUD_ADMIN_*-Env) bzw. bei Image-Upgrades DB-Migrationen
+          # durch — das kann je nach Datenmenge länger dauern, daher die
+          # großzügigen initialDelaySeconds/Schwellwerte.
+          readinessProbe:
+            httpGet:
+              path: /status.php
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 18
+          livenessProbe:
+            httpGet:
+              path: /status.php
+              port: http
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.nextcloud.resources | nindent 12 }}
+          volumeMounts:
+            - name: html
+              mountPath: /var/www/html
+            - name: data
+              mountPath: /var/www/html/data
+      volumes:
+        - name: html
+          {{- if .Values.nextcloud.persistence.html.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "nextcloud.fullname" . }}-html
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: data
+          {{- if .Values.nextcloud.persistence.data.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "nextcloud.fullname" . }}-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

@@ -1,0 +1,31 @@
+---
+apiVersion: v2
+name: nextcloud
+description: |
+  Nextcloud — Datei-Sync, Kalender, Kontakte. Eigene PostgreSQL- und
+  Redis-Instanzen (kein Bitnami-Subchart, siehe docs/20-wikijs.md für die
+  Begründung). Nutzdaten liegen auf der "nas"-StorageClass (UGREEN NAS,
+  siehe docs/16-nas-storage.md).
+
+  Web-Interface:
+    http://nextcloud.homeserver
+    https://nextcloud.pke-lab.de (Cloudflare Tunnel)
+
+  Komponenten:
+    - Nextcloud 34 (nextcloud:34.0.2-apache)
+    - PostgreSQL 16 (offizielles postgres-Image, eigenes Deployment)
+    - Redis 7 (Datei-Locking + Caching, eigenes Deployment)
+type: application
+version: 0.1.0
+appVersion: "34.0.2"
+keywords:
+  - nextcloud
+  - files
+  - sync
+  - calendar
+  - contacts
+home: https://nextcloud.com
+sources:
+  - https://github.com/nextcloud/docker
+maintainers:
+  - name: home-server-admin
