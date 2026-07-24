@@ -170,7 +170,7 @@ danach ist der Cache persistent und Neustarts sind schnell.
 `immich.pke-lab.de` ist bereits in
 `argocd/apps/cloudflared/values.yaml` eingetragen (zeigt auf
 `immich-server.immich.svc.cluster.local:80`). Das ist hier **kein
-optionales Extra wie bei Jellyfin**, sondern für den Kernanwendungsfall
+optionales Extra**, sondern für den Kernanwendungsfall
 (automatisches Foto-Backup vom Handy) notwendig — ohne Erreichbarkeit von
 unterwegs würde die App nur zuhause im WLAN synchronisieren.
 
