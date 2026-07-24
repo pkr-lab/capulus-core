@@ -28,7 +28,7 @@ server:
     tag: "v3.0.3"
 
   # Offizielles Image — kein erzwungenes runAsNonRoot, analog zu
-  # Nextcloud/Jellyfin (siehe dortige Kommentare). "immich-nas" ist mit
+  # Nextcloud (siehe dortige Kommentare). "immich-nas" ist mit
   # no_root_squash exportiert (siehe argocd/apps/immich-storage/).
   podSecurityContext: {}
   securityContext:
