@@ -11,7 +11,14 @@
 #      (benoetigt laufenden k3s-Server auf homeserver/.94)
 #   2. thermal_watchdog / resource_watchdog — automatischer Shutdown bei
 #      Uebertemperatur bzw. anhaltend hoher CPU/RAM-Last
-#   3. Uncordon — stellt sicher dass worker-1 schedulable bleibt
+#   3. wake_on_lan — WoL-Empfangsbereitschaft, damit cluster_power_manager
+#      (laeuft auf homeserver, siehe ansible/site.yml) diesen Node aus dem
+#      ausgeschalteten Zustand aufwecken kann
+#   4. cluster_power_manager_target — autorisiert den auf homeserver
+#      erzeugten Shutdown-Key hier, beschraenkt auf "poweroff" (setzt
+#      voraus, dass site.yml bereits gegen homeserver gelaufen ist, sonst
+#      existiert der Public Key dort noch nicht)
+#   5. Uncordon — stellt sicher dass worker-1 schedulable bleibt
 #      (kubectl drain/cordon durch Maintenance-Schritte rueckgaengig machen)
 # ============================================================
 #
@@ -31,6 +38,10 @@
       tags: [thermal-watchdog, thermal]
     - role: resource_watchdog
       tags: [resource-watchdog, thermal]
+    - role: wake_on_lan
+      tags: [wake-on-lan, power-management]
+    - role: cluster_power_manager_target
+      tags: [cluster-power-manager-target, power-management]
 
 - name: Uncordon worker-1 nach Provisioning
   hosts: homeservers

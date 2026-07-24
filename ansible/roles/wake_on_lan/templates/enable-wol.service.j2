@@ -1,0 +1,18 @@
+# Managed by Ansible (wake_on_lan role) — do not edit manually.
+#
+# Die meisten NIC/Treiber vergessen "Wake-on-LAN: enabled" nach einem
+# Kaltstart (BIOS/UEFI-WoL sorgt nur dafür, dass die NIC im ausgeschalteten
+# Zustand Strom bekommt — der "magic packet"-Modus selbst wird vom Linux-
+# Treiber beim Boot zurückgesetzt und muss hier neu gesetzt werden).
+[Unit]
+Description=Enable Wake-on-LAN (magic packet) on {{ wake_on_lan_interface }}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/sbin/ethtool -s {{ wake_on_lan_interface }} wol g
+
+[Install]
+WantedBy=multi-user.target

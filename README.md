@@ -205,6 +205,7 @@ capulus-core/
 │   ├── 33-nextcloud.md               # Datei-Sync, Kalender, Kontakte
 │   ├── 35-immich.md                  # Foto-/Video-Backup vom Handy
 │   ├── 36-nas-backup.md              # Externe USB-Platte am NAS: regelmäßige Backups
+│   ├── 37-cluster-power-manager.md   # Worker per Wake-on-LAN je nach Homeserver-Last dazuschalten
 │   └── assets/banner.svg
 ├── ansible/
 │   ├── site.yml                      # Entry-Point
@@ -221,7 +222,10 @@ capulus-core/
 │       ├── argocd/                   # GitOps-Controller via Helm
 │       ├── semaphore_secrets/        # Bootstrap-Secret für den Semaphore-Pod
 │       ├── semaphore_targets/        # SSH-Pubkey auf Managed-Hosts pushen
-│       └── semaphore_bootstrap/      # Projects/Inventories/Templates per API
+│       ├── semaphore_bootstrap/      # Projects/Inventories/Templates per API
+│       ├── wake_on_lan/              # WoL-Empfangsbereitschaft auf worker-0/worker-1
+│       ├── cluster_power_manager/    # Homeserver: weckt/schaltet Worker per WoL je nach Last
+│       └── cluster_power_manager_target/  # Worker: autorisiert Shutdown-Key (nur poweroff)
 └── argocd/
     ├── bootstrap/root-applicationset.yaml  # Erkennt jedes Verzeichnis darunter
     └── apps/                               # Ein Ordner pro ArgoCD-Application
@@ -406,6 +410,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [Nextcloud](docs/33-nextcloud.md) | Datei-Sync, Kalender, Kontakte |
 | [Immich](docs/35-immich.md) | Foto-/Video-Backup vom Handy inkl. Gesichtserkennung, eigener NAS-Storage-Export |
 | [NAS-Backup](docs/36-nas-backup.md) | Externe USB-Platte am NAS: regelmäßige restic-Backups von volume1 + volume2 |
+| [Cluster Power Manager](docs/37-cluster-power-manager.md) | worker-0/worker-1 per Wake-on-LAN je nach Homeserver-Last automatisch dazu- und wieder abschalten |
 
 ---
 

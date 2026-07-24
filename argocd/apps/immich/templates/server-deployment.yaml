@@ -80,6 +80,16 @@ spec:
           volumeMounts:
             - name: library
               mountPath: /data
+            {{- if .Values.server.externalLibrary.enabled }}
+            - name: external-library
+              mountPath: {{ .Values.server.externalLibrary.mountPath }}
+              readOnly: {{ .Values.server.externalLibrary.nfs.readOnly }}
+            {{- range .Values.server.externalLibrary.extraMounts }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath }}
+              readOnly: {{ .readOnly }}
+            {{- end }}
+            {{- end }}
       volumes:
         - name: library
           {{- if .Values.server.persistence.library.enabled }}
@@ -88,3 +98,17 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
+        {{- if .Values.server.externalLibrary.enabled }}
+        - name: external-library
+          nfs:
+            server: {{ .Values.server.externalLibrary.nfs.server }}
+            path: {{ .Values.server.externalLibrary.nfs.path }}
+            readOnly: {{ .Values.server.externalLibrary.nfs.readOnly }}
+        {{- range .Values.server.externalLibrary.extraMounts }}
+        - name: {{ .name }}
+          nfs:
+            server: {{ .server }}
+            path: {{ .path }}
+            readOnly: {{ .readOnly }}
+        {{- end }}
+        {{- end }}

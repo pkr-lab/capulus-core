@@ -6,3 +6,9 @@ hostname: worker-1
 # worker-0) — muss pro Host eindeutig sein, sonst versucht k3s_agent den
 # falschen Node-Namen im Cluster zu registrieren.
 k3s_agent_hostname: worker-1
+
+# MAC-Adresse des NIC von worker-1, fuer Wake-on-LAN
+# (ansible/roles/wake_on_lan, ansible/roles/cluster_power_manager).
+# CHANGE: auf worker-1 selbst ermitteln, z.B.:
+#   ip link show | grep -A1 "^[0-9]*: en" | grep link/ether
+wake_on_lan_mac_address: "CHANGE_ME_run_ip_link_show_on_worker-1"

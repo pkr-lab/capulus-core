@@ -1,0 +1,47 @@
+---
+# ============================================================
+# wake_on_lan role — WoL-Empfangsbereitschaft auf einem Worker-Node
+# ============================================================
+# Aktiviert "Wake-on-LAN via Magic Packet" (ethtool wol g) persistent bei
+# jedem Boot, damit cluster_power_manager (läuft auf homeserver, siehe
+# ansible/roles/cluster_power_manager) den Node per WoL aus dem
+# ausgeschalteten Zustand aufwecken kann.
+#
+# Setzt voraus, dass WoL im BIOS/UEFI des jeweiligen Hosts aktiviert ist
+# (Bezeichnung je nach Hersteller z.B. "Power On by PCI-E/PCIE",
+# "Wake on LAN" o.ä.) — das kann Ansible nicht setzen, das ist einmalig
+# manuell im BIOS zu prüfen.
+# ============================================================
+
+- name: ethtool installieren (für WoL-Konfiguration)
+  ansible.builtin.apt:
+    name: ethtool
+    state: present
+    update_cache: true
+  when: wake_on_lan_enabled | bool
+
+- name: systemd-Unit zur WoL-Aktivierung beim Boot deployen
+  ansible.builtin.template:
+    src: enable-wol.service.j2
+    dest: /etc/systemd/system/enable-wol.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: wake_on_lan_enabled | bool
+  register: wake_on_lan_unit
+
+- name: enable-wol.service aktivieren und (neu) starten
+  ansible.builtin.systemd:
+    name: enable-wol.service
+    daemon_reload: true
+    enabled: true
+    state: "{{ 'restarted' if wake_on_lan_unit.changed else 'started' }}"
+  when: wake_on_lan_enabled | bool
+
+- name: enable-wol.service deaktivieren, falls wake_on_lan_enabled false
+  ansible.builtin.systemd:
+    name: enable-wol.service
+    enabled: false
+    state: stopped
+  when: not (wake_on_lan_enabled | bool)
+  failed_when: false
