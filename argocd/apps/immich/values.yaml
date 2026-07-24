@@ -1,0 +1,163 @@
+---
+# ============================================================
+# Immich — wrapper values
+#
+# Secrets-Block (SealedSecret):
+#   DB-Passwort mit kubeseal versiegeln und hier eintragen.
+#   Anleitung: docs/35-immich.md → Abschnitt "Secrets versiegeln"
+# ============================================================
+
+secrets:
+  enabled: true
+  name: immich-secrets
+  # Versiegeln: echo -n 'WERT' | kubeseal --raw --namespace immich \
+  #             --name immich-secrets --controller-namespace sealed-secrets \
+  #             --controller-name sealed-secrets-controller
+  encryptedDbPassword: "REPLACE_ME_WITH_KUBESEAL_OUTPUT"
+
+# ============================================================
+# immich-server — API, Web-UI, Hintergrund-Jobs
+# ============================================================
+server:
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/immich-app/immich-server
+    pullPolicy: IfNotPresent
+    # Pinned für Reproduzierbarkeit. Releases: https://github.com/immich-app/immich/releases
+    tag: "v3.0.3"
+
+  # Offizielles Image — kein erzwungenes runAsNonRoot, analog zu
+  # Nextcloud/Jellyfin (siehe dortige Kommentare). "immich-nas" ist mit
+  # no_root_squash exportiert (siehe argocd/apps/immich-storage/).
+  podSecurityContext: {}
+  securityContext:
+    allowPrivilegeEscalation: false
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 2283
+
+  ingress:
+    enabled: true
+    className: traefik
+    annotations: {}
+    hosts:
+      - host: immich.homeserver
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+  persistence:
+    library:
+      enabled: true
+      storageClassName: immich-nas
+      size: 500Gi
+      accessMode: ReadWriteOnce
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+
+# ============================================================
+# immich-machine-learning — Gesichtserkennung, CLIP-Ähnlichkeitssuche
+# (reine CPU-Inferenz, kein GPU-Passthrough konfiguriert)
+# ============================================================
+machineLearning:
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/immich-app/immich-machine-learning
+    pullPolicy: IfNotPresent
+    tag: "v3.0.3"
+
+  podSecurityContext: {}
+  securityContext:
+    allowPrivilegeEscalation: false
+
+  service:
+    port: 3003
+
+  persistence:
+    modelCache:
+      enabled: true
+      storageClassName: immich-nas
+      size: 10Gi
+      accessMode: ReadWriteOnce
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 4000m
+      memory: 4Gi
+
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+
+# ============================================================
+# PostgreSQL + VectorChord (offizielles immich-app/postgres-Image —
+# Standard-postgres-Image reicht NICHT, da die Vektor-Ähnlichkeitssuche
+# eine Extension braucht, die Immich selbst mitliefert)
+# ============================================================
+postgresql:
+  image:
+    repository: ghcr.io/immich-app/postgres
+    pullPolicy: IfNotPresent
+    tag: "14-vectorchord0.4.3-pgvectors0.2.0"
+
+  database: immich
+  username: immich
+
+  service:
+    port: 5432
+
+  persistence:
+    enabled: true
+    storageClassName: immich-nas
+    size: 20Gi
+    accessMode: ReadWriteOnce
+
+  # Empfehlung aus der offiziellen Immich-Doku für Datenintegrität.
+  initdbArgs: "--data-checksums"
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      memory: 2Gi
+
+  affinity: {}
+
+# ============================================================
+# Valkey/Redis (Job-Queue) — kein PVC, Jobs werden bei Neustart aus der
+# DB neu eingeplant, kein dauerhafter Zustand nötig.
+# ============================================================
+redis:
+  image:
+    repository: docker.io/valkey/valkey
+    pullPolicy: IfNotPresent
+    tag: "9-alpine"
+
+  service:
+    port: 6379
+
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      memory: 256Mi

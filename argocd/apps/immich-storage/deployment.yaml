@@ -1,0 +1,61 @@
+# Eigener nfs-subdir-external-provisioner für Immich, getrennt vom
+# generischen "nas"-Export (argocd/apps/nas-storage/). Grund: Immich-Daten
+# (Fotos/Videos + Postgres) sollen in einem eigenen NFS-Export
+# (/volume2/immich-storage) liegen statt im geteilten /volume1/k8s-storage,
+# damit Kapazitätsplanung und Backup für die Fotobibliothek unabhängig vom
+# restlichen Cluster-Storage bleiben. Läuft — wie der "nas"-Provisioner —
+# auf jedem Node (kein NodeAffinity nötig), da NFS von jedem k3s-Node aus
+# gemountet werden kann.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: immich-nfs-subdir-external-provisioner
+  namespace: immich-storage
+  labels:
+    app: immich-nfs-subdir-external-provisioner
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: immich-nfs-subdir-external-provisioner
+  template:
+    metadata:
+      labels:
+        app: immich-nfs-subdir-external-provisioner
+    spec:
+      serviceAccountName: immich-nfs-subdir-external-provisioner
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: nfs-subdir-external-provisioner
+          image: registry.k8s.io/sig-storage/nfs-subdir-external-provisioner:v4.0.2
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: nfs-storage-root
+              mountPath: /persistentvolumes
+          env:
+            - name: PROVISIONER_NAME
+              value: k8s-sigs.io/immich-storage-provisioner
+            - name: NFS_SERVER
+              value: "192.168.178.97"
+            - name: NFS_PATH
+              value: "/volume2/immich-storage"
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "20m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+      volumes:
+        - name: nfs-storage-root
+          nfs:
+            server: 192.168.178.97
+            path: /volume2/immich-storage

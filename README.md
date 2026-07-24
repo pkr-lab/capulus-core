@@ -202,6 +202,10 @@ capulus-core/
 │   ├── 30-uptime-kuma.md             # Status-Seite und Service-Alerting
 │   ├── 31-rhein-dashboard.md         # Grafana: Pegelonline, DWD, ELWIS, Hochwasser RLP
 │   ├── 32-vaultwarden.md             # Bitwarden-kompatibler Passwort-Manager
+│   ├── 33-nextcloud.md               # Datei-Sync, Kalender, Kontakte
+│   ├── 34-jellyfin.md                # Media-Server (Filme/Serien/Musik)
+│   ├── 35-immich.md                  # Foto-/Video-Backup vom Handy
+│   ├── 36-nas-backup.md              # Externe USB-Platte am NAS: regelmäßige Backups
 │   └── assets/banner.svg
 ├── ansible/
 │   ├── site.yml                      # Entry-Point
@@ -244,7 +248,11 @@ capulus-core/
         ├── grocy/                    # Haushalts-ERP (Vorräte, Einkauf, Ablaufdaten)
         ├── n8n/                      # Low-Code-Automatisierung
         ├── uptime-kuma/              # Status-Seite und Service-Alerting
-        └── vaultwarden/              # Bitwarden-kompatibler Passwort-Manager
+        ├── vaultwarden/              # Bitwarden-kompatibler Passwort-Manager
+        ├── nextcloud/                # Datei-Sync, Kalender, Kontakte
+        ├── jellyfin/                 # Media-Server (Filme/Serien/Musik)
+        ├── immich/                   # Foto-/Video-Backup vom Handy
+        └── immich-storage/           # Dedizierter NFS-Export für Immich (/volume2)
 ```
 
 </details>
@@ -313,11 +321,21 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 | n8n | http://n8n.homeserver |
 | Uptime Kuma | http://uptime-kuma.homeserver |
 | Vaultwarden | http://vault.homeserver |
+| Nextcloud | http://nextcloud.homeserver |
+| Jellyfin | http://jellyfin.homeserver |
+| Immich | http://immich.homeserver |
 
 > Zusätzlich zu den internen `*.homeserver`-URLs können ausgewählte Dienste
 > über Cloudflare Tunnel öffentlich unter einer eigenen Domain erreichbar
 > gemacht werden (z. B. `https://wiki.deine-domain.de`) — ohne VPN, ohne
 > offene Ports. Setup: **[docs/22-cloudflare-tunnel.md](docs/22-cloudflare-tunnel.md)**.
+> Nextcloud, Jellyfin, Immich und Vaultwarden sind zusätzlich unter
+> `https://nextcloud.pke-lab.de`, `https://jellyfin.pke-lab.de`,
+> `https://immich.pke-lab.de` bzw. `https://vault.pke-lab.de` per
+> Cloudflare Tunnel erreichbar (Details je Dienst in den verlinkten Docs
+> unten) — bei Immich nötig für Handy-Auto-Backup unterwegs, bei Jellyfin
+> optional (siehe [docs/34-jellyfin.md](docs/34-jellyfin.md) für die
+> Abwägung).
 > Der Live-Stream ist zusätzlich unter `https://stream.pke-lab.de` erreichbar,
 > abgesichert per mediamtx-eigenem HTTP-Basic-Login — kein externer
 > Identity-Provider, kein Cloudflare-Zero-Trust-Konto nötig. Details:
@@ -390,6 +408,10 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [Uptime Kuma](docs/30-uptime-kuma.md) | Status-Seite und Alerting für alle Dienste |
 | [Rhein-Dashboard](docs/31-rhein-dashboard.md) | Grafana: Pegelonline, DWD-Warnungen, ELWIS, Hochwasservorhersage RLP |
 | [Vaultwarden](docs/32-vaultwarden.md) | Bitwarden-kompatibler Passwort-Manager für Browser/Mobile-Clients |
+| [Nextcloud](docs/33-nextcloud.md) | Datei-Sync, Kalender, Kontakte |
+| [Jellyfin](docs/34-jellyfin.md) | Media-Server (Filme/Serien/Musik) mit Transcoding, Medienbibliothek direkt per NFS vom NAS |
+| [Immich](docs/35-immich.md) | Foto-/Video-Backup vom Handy inkl. Gesichtserkennung, eigener NAS-Storage-Export |
+| [NAS-Backup](docs/36-nas-backup.md) | Externe USB-Platte am NAS: regelmäßige restic-Backups von volume1 + volume2 |
 
 ---
 
