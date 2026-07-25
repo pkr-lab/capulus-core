@@ -42,7 +42,7 @@ ingress:
 
 persistence:
   enabled: true
-  storageClassName: nas
+  storageClassName: local-path
   size: 2Gi
   accessMode: ReadWriteOnce
   mountPath: /app/data
@@ -57,5 +57,9 @@ resources:
 
 affinity: {}
 
-nodeSelector: {}
+# local-path bindet den Pod an den Node, auf dem die PVC zuerst provisioniert
+# wird — fest auf homeserver, damit es nicht vom Scheduler zufällig auf
+# worker-0/worker-1 landet (docs/16-nas-storage.md → Migrations-Notiz).
+nodeSelector:
+  kubernetes.io/hostname: homeserver
 tolerations: []
