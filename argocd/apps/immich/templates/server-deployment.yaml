@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "immich.server.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "immich.server.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.server.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "immich.server.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "immich.server.selectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.server.podSecurityContext | nindent 8 }}
+      {{- with .Values.server.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.server.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.server.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: immich-server
+          securityContext:
+            {{- toYaml .Values.server.securityContext | nindent 12 }}
+          image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.server.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.server.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: DB_HOSTNAME
+              value: {{ include "immich.postgresql.fullname" . | quote }}
+            - name: DB_PORT
+              value: {{ .Values.postgresql.service.port | quote }}
+            - name: DB_USERNAME
+              value: {{ .Values.postgresql.username | quote }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: db-password
+            - name: DB_DATABASE_NAME
+              value: {{ .Values.postgresql.database | quote }}
+            - name: REDIS_HOSTNAME
+              value: {{ include "immich.redis.fullname" . | quote }}
+            - name: TZ
+              value: "Europe/Berlin"
+          readinessProbe:
+            httpGet:
+              path: /api/server/ping
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /api/server/ping
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.server.resources | nindent 12 }}
+          volumeMounts:
+            - name: library
+              mountPath: /data
+            {{- if .Values.server.externalLibrary.enabled }}
+            - name: external-library
+              mountPath: {{ .Values.server.externalLibrary.mountPath }}
+              readOnly: {{ .Values.server.externalLibrary.nfs.readOnly }}
+            {{- range .Values.server.externalLibrary.extraMounts }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath }}
+              readOnly: {{ .readOnly }}
+            {{- end }}
+            {{- end }}
+      volumes:
+        - name: library
+          {{- if .Values.server.persistence.library.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "immich.server.fullname" . }}-library
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- if .Values.server.externalLibrary.enabled }}
+        - name: external-library
+          nfs:
+            server: {{ .Values.server.externalLibrary.nfs.server }}
+            path: {{ .Values.server.externalLibrary.nfs.path }}
+            readOnly: {{ .Values.server.externalLibrary.nfs.readOnly }}
+        {{- range .Values.server.externalLibrary.extraMounts }}
+        - name: {{ .name }}
+          nfs:
+            server: {{ .server }}
+            path: {{ .path }}
+            readOnly: {{ .readOnly }}
+        {{- end }}
+        {{- end }}

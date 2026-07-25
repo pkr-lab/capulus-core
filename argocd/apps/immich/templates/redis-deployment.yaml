@@ -1,0 +1,46 @@
+# Job-Queue-Backend für Immich — kein PVC, Jobs werden bei Neustart aus
+# der Postgres-DB neu eingeplant.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "immich.redis.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "immich.redis.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "immich.redis.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "immich.redis.selectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+        - name: redis
+          image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
+          imagePullPolicy: {{ .Values.redis.image.pullPolicy }}
+          ports:
+            - name: redis
+              containerPort: 6379
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.redis.resources | nindent 12 }}
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
