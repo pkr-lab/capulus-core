@@ -1,0 +1,35 @@
+# UGREEN NAS (192.168.178.97, docs/16-nas-storage.md) läuft auf eigener
+# UGOS-Firmware und ist nicht Teil des k3s-Clusters — kann daher nicht per
+# VMNodeScrape/DaemonSet erfasst werden. Stattdessen zwei manuell auf dem NAS
+# laufende Docker-Container (node-exporter + smartctl-exporter, siehe
+# docs/16-nas-storage.md "Monitoring") werden per VMStaticScrape angezapft.
+# `instance: ugreen-nas` matcht damit den `$instance`-Dashboard-Filter in
+# dashboard-homeservers.yaml, wodurch CPU/RAM/Netzwerk/Temperatur-Panels den
+# NAS automatisch mit anzeigen.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMStaticScrape
+metadata:
+  name: ugreen-nas-node-exporter
+  namespace: {{ .Release.Namespace }}
+spec:
+  jobName: ugreen-nas-node-exporter
+  targetEndpoints:
+    - targets:
+        - "192.168.178.97:9100"
+      labels:
+        job: node-exporter
+        instance: ugreen-nas
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMStaticScrape
+metadata:
+  name: ugreen-nas-smartctl-exporter
+  namespace: {{ .Release.Namespace }}
+spec:
+  jobName: ugreen-nas-smartctl-exporter
+  targetEndpoints:
+    - targets:
+        - "192.168.178.97:9633"
+      labels:
+        job: smartctl-exporter
+        instance: ugreen-nas

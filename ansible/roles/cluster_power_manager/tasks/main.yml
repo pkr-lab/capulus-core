@@ -1,0 +1,106 @@
+---
+# ============================================================
+# cluster_power_manager role — Homeserver-Last -> Worker per WoL
+# ============================================================
+# Läuft auf homeserver. Generiert das SSH-Schlüsselpaar, mit dem der
+# Watchdog später worker-0/worker-1 herunterfährt (autorisiert wird der
+# Public Key erst durch cluster_power_manager_target auf den Workern
+# selbst, in worker-0.yml/worker-1.yml — dieses Playbook muss also VOR
+# den Worker-Playbooks laufen, siehe ansible/site.yml).
+# ============================================================
+
+- name: Warnen, falls eine Worker-MAC-Adresse noch nicht gesetzt ist
+  ansible.builtin.debug:
+    msg: >-
+      WARNUNG: wake_on_lan_mac_address für {{ item.name }} ist leer oder
+      noch ein Platzhalter ({{ item.mac_address }}). Mit `ip link show`
+      auf {{ item.name }} ermitteln und in
+      ansible/host_vars/{{ item.name }}/vars.yml eintragen — sonst kann
+      cluster_power_manager diesen Worker nicht per WoL wecken.
+  loop: "{{ cluster_power_manager_workers }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - cluster_power_manager_enabled | bool
+    - (item.mac_address | length) < 17 or 'CHANGE' in (item.mac_address | upper)
+
+- name: wakeonlan-Paket installieren (zum Senden von Magic Packets)
+  ansible.builtin.apt:
+    name: wakeonlan
+    state: present
+    update_cache: true
+  when: cluster_power_manager_enabled | bool
+
+- name: Config-/State-Verzeichnisse anlegen
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  loop:
+    - /etc/cluster-power-manager
+    - "{{ cluster_power_manager_state_dir }}"
+  when: cluster_power_manager_enabled | bool
+
+- name: SSH-Schlüsselpaar für Worker-Shutdown erzeugen (falls noch nicht vorhanden)
+  ansible.builtin.command:
+    cmd: >-
+      ssh-keygen -t ed25519 -f {{ cluster_power_manager_ssh_key_path }}
+      -N "" -C "cluster-power-manager@homeserver"
+    creates: "{{ cluster_power_manager_ssh_key_path }}"
+  when: cluster_power_manager_enabled | bool
+
+- name: Berechtigungen des privaten Schlüssels absichern
+  ansible.builtin.file:
+    path: "{{ cluster_power_manager_ssh_key_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  when: cluster_power_manager_enabled | bool
+
+- name: Watchdog-Skript deployen
+  ansible.builtin.copy:
+    src: cluster-power-manager.sh
+    dest: /usr/local/bin/cluster-power-manager.sh
+    owner: root
+    group: root
+    mode: "0755"
+  when: cluster_power_manager_enabled | bool
+  notify: Restart cluster power manager
+
+- name: Konfiguration templaten
+  ansible.builtin.template:
+    src: config.env.j2
+    dest: /etc/cluster-power-manager/config.env
+    owner: root
+    group: root
+    mode: "0600"
+  when: cluster_power_manager_enabled | bool
+  notify: Restart cluster power manager
+
+- name: systemd-Unit deployen
+  ansible.builtin.template:
+    src: cluster-power-manager.service.j2
+    dest: /etc/systemd/system/cluster-power-manager.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: cluster_power_manager_enabled | bool
+  notify: Restart cluster power manager
+
+- name: cluster-power-manager aktivieren und starten
+  ansible.builtin.systemd:
+    name: cluster-power-manager
+    daemon_reload: true
+    enabled: true
+    state: started
+  when: cluster_power_manager_enabled | bool
+
+- name: cluster-power-manager deaktivieren, falls cluster_power_manager_enabled false
+  ansible.builtin.systemd:
+    name: cluster-power-manager
+    enabled: false
+    state: stopped
+  when: not (cluster_power_manager_enabled | bool)
+  failed_when: false

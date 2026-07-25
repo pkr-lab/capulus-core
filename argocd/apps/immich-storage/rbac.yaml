@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: immich-nfs-subdir-external-provisioner
+  namespace: immich-storage
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: immich-nfs-subdir-external-provisioner-runner
+rules:
+  - apiGroups: [""]
+    resources: [persistentvolumes]
+    verbs: [get, list, watch, create, delete]
+  - apiGroups: [""]
+    resources: [persistentvolumeclaims]
+    verbs: [get, list, watch, update]
+  - apiGroups: [storage.k8s.io]
+    resources: [storageclasses]
+    verbs: [get, list, watch]
+  - apiGroups: [""]
+    resources: [events]
+    verbs: [create, update, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: immich-nfs-subdir-external-provisioner-bind
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: immich-nfs-subdir-external-provisioner-runner
+subjects:
+  - kind: ServiceAccount
+    name: immich-nfs-subdir-external-provisioner
+    namespace: immich-storage
+---
+# Leader-Election des Provisioners läuft über Endpoints im eigenen Namespace.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: immich-nfs-subdir-external-provisioner-leader-locking
+  namespace: immich-storage
+rules:
+  - apiGroups: [""]
+    resources: [endpoints]
+    verbs: [get, list, watch, create, update, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: immich-nfs-subdir-external-provisioner-leader-locking
+  namespace: immich-storage
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: immich-nfs-subdir-external-provisioner-leader-locking
+subjects:
+  - kind: ServiceAccount
+    name: immich-nfs-subdir-external-provisioner
+    namespace: immich-storage

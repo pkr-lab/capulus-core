@@ -202,6 +202,10 @@ capulus-core/
 │   ├── 30-uptime-kuma.md             # Status-Seite und Service-Alerting
 │   ├── 31-rhein-dashboard.md         # Grafana: Pegelonline, DWD, ELWIS, Hochwasser RLP
 │   ├── 32-vaultwarden.md             # Bitwarden-kompatibler Passwort-Manager
+│   ├── 33-nextcloud.md               # Datei-Sync, Kalender, Kontakte
+│   ├── 35-immich.md                  # Foto-/Video-Backup vom Handy
+│   ├── 36-nas-backup.md              # Externe USB-Platte am NAS: regelmäßige Backups
+│   ├── 37-cluster-power-manager.md   # Worker per Wake-on-LAN je nach Homeserver-Last dazuschalten
 │   └── assets/banner.svg
 ├── ansible/
 │   ├── site.yml                      # Entry-Point
@@ -218,7 +222,10 @@ capulus-core/
 │       ├── argocd/                   # GitOps-Controller via Helm
 │       ├── semaphore_secrets/        # Bootstrap-Secret für den Semaphore-Pod
 │       ├── semaphore_targets/        # SSH-Pubkey auf Managed-Hosts pushen
-│       └── semaphore_bootstrap/      # Projects/Inventories/Templates per API
+│       ├── semaphore_bootstrap/      # Projects/Inventories/Templates per API
+│       ├── wake_on_lan/              # WoL-Empfangsbereitschaft auf worker-0/worker-1
+│       ├── cluster_power_manager/    # Homeserver: weckt/schaltet Worker per WoL je nach Last
+│       └── cluster_power_manager_target/  # Worker: autorisiert Shutdown-Key (nur poweroff)
 └── argocd/
     ├── bootstrap/root-applicationset.yaml  # Erkennt jedes Verzeichnis darunter
     └── apps/                               # Ein Ordner pro ArgoCD-Application
@@ -244,7 +251,10 @@ capulus-core/
         ├── grocy/                    # Haushalts-ERP (Vorräte, Einkauf, Ablaufdaten)
         ├── n8n/                      # Low-Code-Automatisierung
         ├── uptime-kuma/              # Status-Seite und Service-Alerting
-        └── vaultwarden/              # Bitwarden-kompatibler Passwort-Manager
+        ├── vaultwarden/              # Bitwarden-kompatibler Passwort-Manager
+        ├── nextcloud/                # Datei-Sync, Kalender, Kontakte
+        ├── immich/                   # Foto-/Video-Backup vom Handy
+        └── immich-storage/           # Dedizierter NFS-Export für Immich (/volume2)
 ```
 
 </details>
@@ -313,11 +323,18 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 | n8n | http://n8n.homeserver |
 | Uptime Kuma | http://uptime-kuma.homeserver |
 | Vaultwarden | http://vault.homeserver |
+| Nextcloud | http://nextcloud.homeserver |
+| Immich | http://immich.homeserver |
 
 > Zusätzlich zu den internen `*.homeserver`-URLs können ausgewählte Dienste
 > über Cloudflare Tunnel öffentlich unter einer eigenen Domain erreichbar
 > gemacht werden (z. B. `https://wiki.deine-domain.de`) — ohne VPN, ohne
 > offene Ports. Setup: **[docs/22-cloudflare-tunnel.md](docs/22-cloudflare-tunnel.md)**.
+> Nextcloud, Immich und Vaultwarden sind zusätzlich unter
+> `https://nextcloud.pke-lab.de`, `https://immich.pke-lab.de` bzw.
+> `https://vault.pke-lab.de` per Cloudflare Tunnel erreichbar (Details je
+> Dienst in den verlinkten Docs unten) — bei Immich nötig für
+> Handy-Auto-Backup unterwegs.
 > Der Live-Stream ist zusätzlich unter `https://stream.pke-lab.de` erreichbar,
 > abgesichert per mediamtx-eigenem HTTP-Basic-Login — kein externer
 > Identity-Provider, kein Cloudflare-Zero-Trust-Konto nötig. Details:
@@ -390,6 +407,10 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [Uptime Kuma](docs/30-uptime-kuma.md) | Status-Seite und Alerting für alle Dienste |
 | [Rhein-Dashboard](docs/31-rhein-dashboard.md) | Grafana: Pegelonline, DWD-Warnungen, ELWIS, Hochwasservorhersage RLP |
 | [Vaultwarden](docs/32-vaultwarden.md) | Bitwarden-kompatibler Passwort-Manager für Browser/Mobile-Clients |
+| [Nextcloud](docs/33-nextcloud.md) | Datei-Sync, Kalender, Kontakte |
+| [Immich](docs/35-immich.md) | Foto-/Video-Backup vom Handy inkl. Gesichtserkennung, eigener NAS-Storage-Export |
+| [NAS-Backup](docs/36-nas-backup.md) | Externe USB-Platte am NAS: regelmäßige restic-Backups von volume1 + volume2 |
+| [Cluster Power Manager](docs/37-cluster-power-manager.md) | worker-0/worker-1 per Wake-on-LAN je nach Homeserver-Last automatisch dazu- und wieder abschalten |
 
 ---
 
