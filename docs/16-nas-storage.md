@@ -8,6 +8,13 @@ erreichbar — **jeder** k3s-Node kann PVCs dieser StorageClass mounten, es
 gibt keine NodeAffinity-Pflicht mehr. Der Scheduler darf Pods frei über
 homeserver/worker-0/worker-1 verteilen.
 
+> **Zweiter, dedizierter Export für Immich:** Neben `nas` (→
+> `/volume1/k8s-storage`) existiert eine zweite, unabhängige StorageClass
+> `immich-nas` (→ `/volume2/immich-storage`, App
+> `argocd/apps/immich-storage/`) — bewusst getrennt, damit die
+> Fotobibliothek nicht im geteilten Cluster-Storage-Export landet. Details:
+> [docs/35-immich.md](35-immich.md).
+
 ---
 
 ## Hardware
@@ -99,6 +106,54 @@ kubectl get pvc -A | grep nas
 Die App `nas-storage` (`argocd/apps/nas-storage/`) deployt dafür den
 `nfs-subdir-external-provisioner`, der PVCs als Unterverzeichnisse auf dem
 NFS-Export anlegt.
+
+---
+
+## Monitoring (Grafana "Home Server Auslastung")
+
+Das NAS ist kein k3s-Node und wird daher nicht vom `prometheus-node-exporter`-
+DaemonSet erfasst. Stattdessen laufen zwei Exporter **manuell als Docker-
+Container direkt auf dem NAS** (UGOS unterstützt Docker über die App
+"Container Manager"/SSH — analog zum Docker-Compose-Setup auf anderen
+UGREEN-Geräten in diesem Fleet). `argocd/apps/monitoring/templates/
+vmstaticscrape-ugreen-nas.yaml` zapft beide per `VMStaticScrape` an; das
+Dashboard `dashboard-homeservers.yaml` erwartet die Metriken unter
+`instance="ugreen-nas"`.
+
+1. **node_exporter** (CPU/RAM/Netzwerk/Disk-Auslastung, Temperatur) —
+   erscheint dadurch automatisch in allen bestehenden Panels des
+   `$instance`-Filters:
+   ```bash
+   docker run -d --name node-exporter --restart unless-stopped \
+     --net host --pid host \
+     -v /:/host:ro,rslave \
+     prom/node-exporter:latest \
+     --path.rootfs=/host
+   ```
+2. **smartctl_exporter** (S.M.A.R.T.-Werte je Platte: Health, Temperatur,
+   Betriebsstunden — eigene Sektion ganz unten im Dashboard). Braucht
+   Zugriff auf die Block-Devices, daher `--privileged`:
+   ```bash
+   docker run -d --name smartctl-exporter --restart unless-stopped \
+     --net host --privileged \
+     -v /dev:/dev:ro \
+     prometheuscommunity/smartctl-exporter:latest
+   ```
+
+Ports `9100` (node_exporter) und `9633` (smartctl_exporter) müssen von den
+k3s-Nodes aus erreichbar sein (ggf. UGOS-Firewall-Regel analog zum NFS-Export
+oben ergänzen). Nach dem Start:
+
+```bash
+curl 192.168.178.97:9100/metrics | head
+curl 192.168.178.97:9633/metrics | head
+```
+
+Metrik-Namen (`smartctl_device_smart_status`, `smartctl_device_temperature`,
+`smartctl_device_power_on_hours`, Label `device`) stammen vom
+`prometheuscommunity/smartctl-exporter`-Image — bei Abweichungen die Panel-
+Queries in `dashboard-homeservers.yaml` gegen die tatsächliche `/metrics`-
+Ausgabe abgleichen.
 
 ---
 
@@ -269,18 +324,11 @@ Auf dem NAS selbst über UGOS prüfen (Speicher-Manager → Auslastung).
 
 ---
 
-## Ausblick: Backups auf externer NAS-Platte
+## Backups auf externer NAS-Platte
 
-Eine externe USB-Platte soll später direkt am UGREEN NAS angeschlossen
-werden, für regelmäßige Backups der wichtigsten Daten (Vaultwarden-Vault,
-Paperless-Dokumente). **Das ist explizit nicht Teil dieser Migration** —
-erst nachdem die Datenmigration oben abgeschlossen und verifiziert ist.
-Geplanter Ansatz für eine spätere Iteration:
-
-- Backup-Job (z. B. `CronJob` im Cluster oder ein UGOS-eigener Backup-Task)
-  sichert Vaultwarden-PVC (`argocd/apps/vaultwarden`, aktuell auf
-  `local-path`) und die Paperless-`data`/`media`-PVCs (jetzt auf `nas`)
-  regelmäßig auf die externe Platte.
-- Restic oder rsync als Werkzeug, verschlüsselt bei Vaultwarden-Daten.
-- Eigene Doku + Ansible-Rolle folgt in einem eigenen Branch, sobald die
-  externe Platte angeschlossen ist.
+Eine externe USB-Platte hängt direkt am UGREEN NAS und sichert regelmäßig
+**beide** Storage-Pools (`volume1` inkl. `k8s-storage` und `volume2` inkl.
+`immich-storage`) per restic (inkrementell, dedupliziert, verschlüsselt).
+Läuft als UGOS-Task-Scheduler-Job direkt auf dem NAS, analog zur
+Monitoring-Exporter-Einrichtung oben. Vollständige Anleitung inkl.
+Zeitplan-Empfehlungen und Restore: **[docs/36-nas-backup.md](36-nas-backup.md)**.

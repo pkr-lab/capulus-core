@@ -9,7 +9,7 @@ data:
   homeservers.json: |
     {
       "annotations": {"list": []},
-      "description": "CPU, RAM, Disk, Netzwerk und Temperatur für homeserver, worker-0 und worker-1",
+      "description": "CPU, RAM, Disk, Netzwerk und Temperatur für homeserver, worker-0, worker-1 und ugreen-nas; separate S.M.A.R.T.-Sektion für die einzelnen NAS-Platten",
       "editable": true,
       "graphTooltip": 1,
       "links": [],
@@ -399,6 +399,152 @@ data:
           ],
           "title": "Temperatur Verlauf",
           "type": "timeseries"
+        },
+        {
+          "collapsed": false,
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 48},
+          "id": 20,
+          "panels": [],
+          "title": "UGREEN NAS – Festplatten (S.M.A.R.T.)",
+          "type": "row"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [
+                {"type": "value", "options": {"0": {"text": "FAILED", "color": "red"}, "1": {"text": "OK", "color": "green"}}}
+              ],
+              "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+              "unit": "none"
+            }
+          },
+          "gridPos": {"h": 4, "w": 8, "x": 0, "y": 49},
+          "id": 21,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "smartctl_device_smart_status{instance=\"ugreen-nas\"}",
+              "instant": true,
+              "legendFormat": "{{ "{{device}}" }}",
+              "refId": "A"
+            }
+          ],
+          "title": "Health",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 45},
+                  {"color": "red", "value": 55}
+                ]
+              },
+              "unit": "celsius"
+            }
+          },
+          "gridPos": {"h": 4, "w": 8, "x": 8, "y": 49},
+          "id": 22,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "smartctl_device_temperature{instance=\"ugreen-nas\"}",
+              "instant": true,
+              "legendFormat": "{{ "{{device}}" }}",
+              "refId": "A"
+            }
+          ],
+          "title": "Temperatur je Platte",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [],
+              "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]},
+              "unit": "none"
+            }
+          },
+          "gridPos": {"h": 4, "w": 8, "x": 16, "y": 49},
+          "id": 23,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "smartctl_device_power_on_hours{instance=\"ugreen-nas\"}",
+              "instant": true,
+              "legendFormat": "{{ "{{device}}" }} (h)",
+              "refId": "A"
+            }
+          ],
+          "title": "Betriebsstunden je Platte",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "celsius"
+            }
+          },
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 53},
+          "id": 24,
+          "options": {
+            "legend": {"calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom"},
+            "tooltip": {"mode": "multi", "sort": "desc"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "smartctl_device_temperature{instance=\"ugreen-nas\"}",
+              "legendFormat": "{{ "{{device}}" }}",
+              "refId": "A"
+            }
+          ],
+          "title": "Temperaturverlauf je Platte",
+          "type": "timeseries"
         }
       ],
       "refresh": "30s",
@@ -444,5 +590,5 @@ data:
       "timezone": "browser",
       "title": "Home Server Auslastung",
       "uid": "homeserver-auslastung",
-      "version": 5
+      "version": 6
     }
