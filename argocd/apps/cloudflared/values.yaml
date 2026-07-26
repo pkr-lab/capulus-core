@@ -97,8 +97,6 @@ tunnel:
         service: http://nextcloud.nextcloud.svc.cluster.local:80
       - hostname: immich.pke-lab.de
         service: http://immich-server.immich.svc.cluster.local:80
-      - hostname: nextcloud.pke-lab.de
-        service: hnextcloud.nextcloud.svc.cluster.local:80
     defaultService: "http_status:404"
 
 nodeSelector: {}
