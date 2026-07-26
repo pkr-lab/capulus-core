@@ -56,14 +56,21 @@ victoria-metrics-k8s-stack:
       storage:
         accessModes:
           - ReadWriteOnce
-        storageClassName: nas
+        # War auf "nas" (NFS), bis das UGREEN-NAS all_squash erzwang und
+        # VictoriaMetrics beim Öffnen bestehender Storage-Parts mit
+        # "permission denied" panickte (docs/16-nas-storage.md). TSDB-Daten
+        # sind reiner State → lokaler Storage. Bewusst ohne Datenmigration
+        # neu aufgesetzt (nur 15d Retention, Verdacht auf teilbeschädigte
+        # Parts durch die vorherigen Schreibfehler).
+        storageClassName: local-path
         resources:
           requests:
             storage: 10Gi
-      # ACHTUNG: Bestehende PVC bereits auf einer anderen StorageClass →
-      # vor dem Sync manuell migrieren (docs/16-nas-storage.md →
-      # "Migrations-Runbook"). Keine NodeAffinity mehr nötig — NFS-backed
-      # "nas"-StorageClass ist von jedem Node erreichbar.
+      # local-path bindet den Pod an den Node, auf dem die PVC zuerst
+      # provisioniert wird — fest auf homeserver (aktuell ohnehin der
+      # einzige Ready-Node).
+      nodeSelector:
+        kubernetes.io/hostname: homeserver
       affinity: {}
 
   # ---- VMAgent ---------------------------------------------

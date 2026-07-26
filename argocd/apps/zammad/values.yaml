@@ -158,9 +158,11 @@ zammad:
             memory: 1Gi
 
   # ---- PostgreSQL Sub-Chart (Bitnami) -----------------------
-  # Speichert Tickets + Attachments (storageVolume.enabled: false) → wächst
-  # potenziell groß. Läuft daher auf der "nas"-StorageClass (docs/16-nas-storage.md)
-  # statt auf der System-SSD des Homeservers.
+  # War auf "nas" (NFS), bis das UGREEN-NAS all_squash statt no_root_squash
+  # erzwang und der Bitnami-Entrypoint (chmod auf das Datenverzeichnis)
+  # dauerhaft mit "Operation not permitted" scheiterte (docs/16-nas-storage.md).
+  # DB-Datenverzeichnis ist reiner State → lokaler Storage auf der
+  # Homeserver-SSD statt NAS.
   postgresql:
     enabled: true
     auth:
@@ -170,11 +172,24 @@ zammad:
       existingSecret: zammad-secrets
       secretKeys:
         userPasswordKey: postgresql-password
+    # local-path legt das Volume-Verzeichnis als root:root (0777) an — fsGroup
+    # (siehe primary.podSecurityContext, Chart-Default) setzt nur die Gruppe,
+    # nicht den Owner. Ohne volumePermissions scheitert der interne
+    # chmod-Fixup des Postgres-Containers (non-root, UID 1001) daher genau
+    # wie vorher auf NFS. Bitnami-Chart-eigener Fix: Init-Container, der
+    # einmalig als root vorchownt.
+    volumePermissions:
+      enabled: true
     primary:
       persistence:
         enabled: true
-        storageClass: nas
+        storageClass: local-path
         size: 50Gi
+      # local-path bindet den Pod an den Node, auf dem die PVC zuerst
+      # provisioniert wird — fest auf homeserver (aktuell ohnehin der
+      # einzige Ready-Node).
+      nodeSelector:
+        kubernetes.io/hostname: homeserver
       affinity: {}
       resources:
         requests:

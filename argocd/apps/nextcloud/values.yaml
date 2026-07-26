@@ -34,9 +34,14 @@ nextcloud:
   # Offizielles Apache-Image läuft als root (kein USER im Dockerfile,
   # Apache-Master-Prozess braucht Port 80 + der Entrypoint chownt beim
   # ersten Start) — analog zu Vaultwarden kann hier kein runAsNonRoot
-  # gesetzt werden. Die "nas"-StorageClass ist mit no_root_squash
-  # exportiert (siehe docs/16-nas-storage.md), root-Schreibzugriff
-  # funktioniert daher.
+  # gesetzt werden.
+  # ACHTUNG (Stand 2026-07-26): Der Kommentar hier lautete früher, die
+  # "nas"-StorageClass sei mit no_root_squash exportiert und root-Schreib-
+  # zugriff funktioniere daher. Das NAS erzwingt inzwischen all_squash (kein
+  # no_root_squash mehr verfügbar) — auch root-Requests werden gesquasht.
+  # Dieser Pod (html/data-PVCs, bewusst weiter auf "nas") crasht deshalb
+  # aktuell ebenfalls (chown schlägt fehl). Bewusst nicht Teil der aktuellen
+  # DB-Migration (siehe Auftrag), aber zur Kenntnisnahme dokumentiert.
   podSecurityContext: {}
   securityContext:
     allowPrivilegeEscalation: false
@@ -106,7 +111,11 @@ postgresql:
 
   persistence:
     enabled: true
-    storageClassName: nas
+    # War auf "nas" (NFS), bis das UGREEN-NAS all_squash statt no_root_squash
+    # erzwang und jedes chmod/chown des DB-Containers scheiterte (docs/16-nas-storage.md).
+    # Postgres-Datenverzeichnis ist reiner State, gehört daher auf lokalen
+    # Storage — Files/Blobs (html/data oben) bleiben bewusst auf "nas".
+    storageClassName: local-path
     size: 10Gi
     accessMode: ReadWriteOnce
 
@@ -117,7 +126,17 @@ postgresql:
     limits:
       memory: 1Gi
 
-  affinity: {}
+  # local-path bindet den Pod an den Node, auf dem die PVC zuerst provisioniert
+  # wird — fest auf homeserver (aktuell ohnehin der einzige Ready-Node).
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                  - homeserver
 
 # ============================================================
 # Redis (Datei-Locking + Transactional-Cache, kein PVC nötig —

@@ -16,13 +16,24 @@ serviceAccount:
 
 podAnnotations: {}
 
-podSecurityContext:
-  fsGroup: 1000
+# Das Image (louislam/uptime-kuma) hat kein USER-Directive und erwartet
+# root: der eigene Entrypoint (/app/extra/entrypoint.sh) chownt /app/data
+# selbst zu $PUID:$PGID und droppt danach per setpriv auf diese UID/GID.
+# Mit erzwungenem runAsUser/runAsNonRoot startet der Container nie als root,
+# der interne chown scheitert dann immer mit "Operation not permitted" —
+# unabhängig von der StorageClass oder der tatsächlichen Volume-Ownership
+# (chown auf 0:0, da PUID/PGID ohne die Env-Vars unten auf 0 defaulten).
+podSecurityContext: {}
 
 securityContext:
-  runAsUser: 1000
-  runAsGroup: 1000
-  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+
+# Steuert den Privilege-Drop im Entrypoint (chown + setpriv), siehe Kommentar
+# oben — läuft am Ende trotzdem als UID/GID 1000, nur der Startprozess ist
+# root.
+env:
+  PUID: "1000"
+  PGID: "1000"
 
 service:
   type: ClusterIP
