@@ -95,10 +95,10 @@ tunnel:
         service: http://vaultwarden.vaultwarden.svc.cluster.local:80
       - hostname: nextcloud.pke-lab.de
         service: http://nextcloud.nextcloud.svc.cluster.local:80
-      # Nötig, damit die Handy-App auch außerhalb von LAN/Tailscale
-      # automatisch Fotos/Videos hochladen kann (analog Vaultwarden).
       - hostname: immich.pke-lab.de
         service: http://immich-server.immich.svc.cluster.local:80
+      - hostname: nextcloud.pke-lab.de
+        service: hnextcloud.nextcloud.svc.cluster.local:80
     defaultService: "http_status:404"
 
 nodeSelector: {}
