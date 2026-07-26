@@ -24,6 +24,26 @@ spec:
       serviceAccountName: {{ include "uptime-kuma.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.persistence.enabled }}
+      # local-path legt das Volume-Verzeichnis als root:root (0777) an — fsGroup
+      # setzt nur die Gruppe, nicht den Owner. Der Container läuft als
+      # non-root (securityContext.runAsUser) und dessen eigener chown-Fixup
+      # scheitert daher mit "Operation not permitted". Fix: einmalig als root
+      # vorab chownen.
+      initContainers:
+        - name: fix-permissions
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - chown -R {{ .Values.securityContext.runAsUser }}:{{ .Values.securityContext.runAsGroup }} {{ .Values.persistence.mountPath }}
+          securityContext:
+            runAsUser: 0
+            runAsNonRoot: false
+          volumeMounts:
+            - name: data
+              mountPath: {{ .Values.persistence.mountPath }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
