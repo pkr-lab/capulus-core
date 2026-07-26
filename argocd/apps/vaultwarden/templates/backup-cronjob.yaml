@@ -1,0 +1,69 @@
+{{- if .Values.backup.enabled -}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "vaultwarden.fullname" . }}-backup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "vaultwarden.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  timeZone: {{ .Values.backup.timezone | quote }}
+  suspend: {{ .Values.backup.suspend }}
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: {{ .Values.backup.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.backup.successfulJobsHistoryLimit }}
+  jobTemplate:
+    metadata:
+      labels:
+        {{- include "vaultwarden.selectorLabels" . | nindent 8 }}
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            {{- include "vaultwarden.selectorLabels" . | nindent 12 }}
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: backup
+              image: "{{ .Values.backup.image }}"
+              imagePullPolicy: IfNotPresent
+              command:
+                - sh
+                - -c
+                - |
+                  set -eu
+                  apk add --no-cache sqlite rsync >/dev/null
+
+                  echo "==> sqlite3 .backup (konsistent, auch bei aktivem WAL-Modus)"
+                  sqlite3 -readonly /source/db.sqlite3 ".backup '/backup/db.sqlite3.new'"
+                  mv /backup/db.sqlite3.new /backup/db.sqlite3
+
+                  echo "==> restliche Daten spiegeln (rsa_key, Attachments, Sends, ...)"
+                  # --no-owner --no-group: die "nas"-StorageClass (NFS) erzwingt
+                  # all_squash, ein chown auf die Quell-Ownership (root:root)
+                  # scheitert dort sonst mit "Operation not permitted".
+                  rsync -a --no-owner --no-group --delete \
+                    --exclude 'db.sqlite3*' \
+                    --exclude 'icon_cache' \
+                    --exclude 'tmp' \
+                    /source/ /backup/
+
+                  echo "==> fertig: $(date -Iseconds)"
+              resources:
+                {{- toYaml .Values.backup.resources | nindent 16 }}
+              volumeMounts:
+                - name: source
+                  mountPath: /source
+                  readOnly: true
+                - name: backup
+                  mountPath: /backup
+          volumes:
+            - name: source
+              persistentVolumeClaim:
+                claimName: {{ include "vaultwarden.fullname" . }}-data
+            - name: backup
+              persistentVolumeClaim:
+                claimName: {{ include "vaultwarden.fullname" . }}-backup
+{{- end }}
