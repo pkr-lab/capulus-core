@@ -50,13 +50,16 @@ ingress:
 
 persistence:
   enabled: true
-  # War lange "local-path" (Homeserver-System-SSD) — Migration auf die
-  # "nas"-StorageClass (UGREEN NAS) siehe docs/32-vaultwarden.md →
-  # Abschnitt "Migration auf NAS-Storage" und docs/16-nas-storage.md →
-  # Migrations-Runbook. storageClassName ist auf bestehenden PVCs
-  # unveränderlich — dieser Wert allein bewirkt noch keine Migration,
-  # ArgoCD zeigt nur "OutOfSync", bis die Daten manuell umgezogen wurden.
-  storageClassName: nas
+  # Bewusst auf "local-path" (Homeserver-System-SSD) belassen — ein Umzug
+  # auf die NFS-"nas"-StorageClass wurde erwogen, aber verworfen: das NAS
+  # erzwingt inzwischen all_squash (kein no_root_squash mehr verfügbar,
+  # siehe docs/16-nas-storage.md), worunter chmod/chown-lastige Container
+  # leiden. Vaultwarden selbst braucht das zwar nicht, aber die tägliche
+  # Sicherung unten (backup-cronjob.yaml) spiegelt die Daten stattdessen
+  # regelmäßig auf die NAS — bestes aus beiden Welten: schnelle lokale
+  # SSD im Betrieb, Redundanz auf dem NAS (und von dort per restic weiter
+  # auf die externe USB-Platte, siehe docs/36-nas-backup.md).
+  storageClassName: local-path
   size: 2Gi
   accessMode: ReadWriteOnce
   mountPath: /data
@@ -103,3 +106,31 @@ resources:
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
+# ============================================================
+# Tägliche Sicherung der lokalen Vaultwarden-Daten auf die NAS
+# ============================================================
+# Läuft VOR dem täglichen restic-Lauf auf dem NAS selbst (02:00 Uhr,
+# siehe docs/36-nas-backup.md), damit dieser eine frische Kopie snapshotet.
+# db.sqlite3 läuft im WAL-Modus — ein simpler Dateikopie wäre inkonsistent,
+# daher `sqlite3 .backup` (nutzt SQLites eigene Online-Backup-API, sicher
+# gegen einen parallel schreibenden Vaultwarden-Prozess). Restliche Dateien
+# (rsa_key.pem, Attachments, Sends) werden per rsync gespiegelt.
+backup:
+  enabled: true
+  schedule: "30 1 * * *"
+  timezone: "Europe/Berlin"
+  suspend: false
+  # Ziel-PVC auf der NAS — eigene, kleine PVC statt die Files direkt in
+  # nextcloud-artige Storage-Pfade zu mischen.
+  storageClassName: nas
+  size: 2Gi
+  image: alpine:3.20
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 3
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
