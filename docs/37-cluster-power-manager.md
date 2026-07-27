@@ -115,18 +115,18 @@ Defaults in
 
 | Variable | Default | Bedeutung |
 |---|---|---|
-| `cluster_power_manager_cpu_scale_up_threshold` | 80% | CPU-Schwelle zum Hochskalieren |
-| `cluster_power_manager_ram_scale_up_threshold` | 80% | RAM-Schwelle zum Hochskalieren |
-| `cluster_power_manager_scale_up_sustain_seconds` | 300s | Wie lange sustained hoch, bevor worker-0 geweckt wird |
-| `cluster_power_manager_scale_up_sustain_seconds_stage2` | 300s | Zusätzliche Zeit, bevor auch worker-1 geweckt wird |
+| `cluster_power_manager_cpu_scale_up_threshold` | 60% | CPU-Schwelle zum Hochskalieren |
+| `cluster_power_manager_ram_scale_up_threshold` | 60% | RAM-Schwelle zum Hochskalieren |
+| `cluster_power_manager_scale_up_sustain_seconds` | 60s | Wie lange sustained hoch, bevor worker-0 geweckt wird |
+| `cluster_power_manager_scale_up_sustain_seconds_stage2` | 200s | Zusätzliche Zeit, bevor auch worker-1 geweckt wird |
 | `cluster_power_manager_cpu_scale_down_threshold` | 30% | CPU-Schwelle zum Herunterskalieren |
 | `cluster_power_manager_ram_scale_down_threshold` | 30% | RAM-Schwelle zum Herunterskalieren |
 | `cluster_power_manager_scale_down_sustain_seconds` | 900s | Wie lange sustained niedrig, bevor EIN Worker abgeschaltet wird |
-| `cluster_power_manager_min_uptime_seconds` | 900s | Mindest-Laufzeit eines Workers nach dem Wecken, bevor er für Shutdown in Frage kommt |
+| `cluster_power_manager_min_uptime_seconds` | 300s | Mindest-Laufzeit eines Workers nach dem Wecken, bevor er für Shutdown in Frage kommt |
 
 **Bewusste Asymmetrie:** Die Scale-down-Schwelle (30%) liegt deutlich
-unter der Scale-up-Schwelle (80%), und die Sustain-Dauer zum Abschalten
-(900s) ist länger als zum Aufwecken (300s). Ohne diese Hysterese und die
+unter der Scale-up-Schwelle (60%), und die Sustain-Dauer zum Abschalten
+(900s) ist länger als zum Aufwecken (60s/260s). Ohne diese Hysterese und die
 Mindest-Laufzeit würde ein Worker direkt nach dem Aufwecken wieder
 abgeschaltet werden, sobald die (durch ihn selbst mitverursachte)
 Homeserver-Last kurzzeitig sinkt — klassisches Flapping. Pro

@@ -7,10 +7,13 @@ metadata:
     {{- include "mediamtx.labels" . | nindent 4 }}
 spec:
   # RTMP/RTSP-Publisher halten eine lange Verbindung zu genau einem Pod —
-  # mehr als 1 Replica würde Zuschauer ohne Sticky-Routing zufällig auf
-  # Pods ohne aktiven Stream verteilen. Single-Replica ist hier bewusst,
-  # nicht wie bei cloudflared eine Verfügbarkeits-Optimierung.
+  # kube-proxy verteilt nur NEUE Verbindungen über mehrere Replicas,
+  # ein bereits verbundener Stream wandert nicht automatisch mit (siehe
+  # autoscaling-Kommentar in values.yaml). replicaCount hier ist nur
+  # wirksam solange autoscaling.enabled=false ist.
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   strategy:
     type: Recreate
   selector:

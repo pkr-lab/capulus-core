@@ -6,7 +6,9 @@ metadata:
   labels:
     {{- include "nextcloud.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.nextcloud.autoscaling.enabled }}
   replicas: {{ .Values.nextcloud.replicaCount }}
+  {{- end }}
   strategy:
     type: Recreate
   selector:
@@ -19,10 +21,19 @@ spec:
     spec:
       securityContext:
         {{- toYaml .Values.nextcloud.podSecurityContext | nindent 8 }}
-      {{- with .Values.nextcloud.affinity }}
+      # Erzwingt, dass alle Replicas auf demselben Node laufen — html/data
+      # sind ReadWriteOnce (NFS, nur node-lokal gleichzeitig mountbar). Ohne
+      # das könnte der Scheduler bei >1 Replica einen anderen Node wählen;
+      # der Pod bliebe dann im ContainerCreating hängen (Multi-Attach-Fehler).
+      # .Values.nextcloud.affinity wird bewusst NICHT mehr zusätzlich
+      # eingebunden, um diese Regel nicht versehentlich zu überschreiben.
       affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  {{- include "nextcloud.selectorLabels" . | nindent 18 }}
+              topologyKey: kubernetes.io/hostname
       {{- with .Values.nextcloud.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

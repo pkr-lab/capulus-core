@@ -1,5 +1,14 @@
 ---
+# Only used while autoscaling.enabled is false — the HPA takes over
+# replica count once autoscaling is enabled (see below).
 replicaCount: 1
+
+# CPU-only.
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 75
 
 image:
   repository: python
