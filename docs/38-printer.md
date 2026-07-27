@@ -16,9 +16,10 @@ Tailscale-Subnet-Route auf `local_subnet` (siehe
 ┌────────────────────── homeserver (192.168.178.94) ──────────────────────┐
 │                                                                          │
 │  Samsung Xpress M2026 ──USB──▶ cupsd (Port 631)                        │
-│                                 ├─ Warteschlange "Samsung_M2026"        │
-│                                 ├─ IPP-Sharing (cupsctl --share-printers)│
-│                                 └─ Treiber: printer-driver-splix / hplip│
+│  (meldet sich als USB-Device    ├─ Warteschlange "Samsung_M2026"        │
+│   "M2020 Series")                ├─ IPP-Sharing (cupsctl --share-printers)│
+│                                   └─ Treiber: selbst gebauter QPDL-Filter│
+│                                      (siehe "Warum QPDL" unten)         │
 │                                                                          │
 │  avahi-daemon ──mDNS/DNS-SD──▶ bewirbt die Warteschlange als            │
 │                                 AirPrint/IPP-Everywhere-Ziel            │
@@ -58,15 +59,16 @@ den aktuellen Stand vorher per `cupsctl` ohne Argumente aus).
 
 1. Drucker per USB an den Homeserver anschließen und einschalten.
 2. `make install` bzw. `make cups-print-server` **einmal ohne** gesetzte
-   `cups_print_server_device_uri`/`cups_print_server_ppd` laufen lassen —
-   installiert nur Pakete + Sharing und zeigt am Ende per Debug-Ausgabe
-   alle erkannten Device-URIs (`lpinfo -v`) sowie zum Samsung/SPL
-   passende PPDs (`lpinfo -m`) an.
-3. Die passenden Werte aus Schritt 2 in
-   `ansible/group_vars/all.yml` eintragen:
+   `cups_print_server_ppd` laufen lassen — installiert Pakete + Sharing,
+   baut (falls `cups_print_server_build_qpdl_driver: true`) den
+   QPDL-Treiber, und zeigt am Ende per Debug-Ausgabe alle erkannten
+   Device-URIs (`lpinfo -v`) sowie zum Samsung/SPL passende PPDs
+   (`lpinfo -m`) an.
+3. Den passenden PPD-Wert aus Schritt 2 in
+   `ansible/group_vars/all.yml` eintragen (Device-URI ist für den M2026
+   bereits eingetragen):
    ```yaml
-   cups_print_server_device_uri: "usb://Samsung/M2026?serial=..."
-   cups_print_server_ppd: "..."   # z.B. eine Zeile aus dem splix-PPD-Dump
+   cups_print_server_ppd: "drv:///splix-samsung.drv/m2020.ppd"   # Beispiel — exakten Treffer aus lpinfo -m übernehmen
    ```
 4. `make cups-print-server` erneut laufen lassen — legt jetzt die
    Warteschlange an, aktiviert sie und setzt sie als System-Default.
@@ -84,33 +86,83 @@ make cups-print-server  # nur die Rolle neu deployen (z.B. nach PPD-Änderung)
 
 ## Treiber-Hinweise für den M2026
 
-Der M2026 spricht **SPL2** (kein PostScript, kein PCL) — es gibt keinen
-Hersteller-Treiber mehr direkt von Samsung, da die Druckersparte 2017 an
-HP ging. Zwei Pakete werden installiert, in dieser Prioritätsreihenfolge
-prüfen:
+Der M2026 meldet sich per USB als generische **"M2020 Series"** — viele
+günstige Samsung-SPL2-Modelle (M2020/M2021/M2022/M2026) teilen sich
+denselben USB-Controller-Chip und damit dieselbe USB-Produktkennung.
 
-1. **`printer-driver-splix`** (Open-Source-SPL-Treiber) — meist der
-   direkte Treffer. PPD-Name mit
-   `lpinfo -m | grep -i -E 'samsung|spl'` suchen. Community-Berichte
-   zeigen, dass der M2026 in der Dropdown-/PPD-Liste nicht immer sofort
-   auffindbar ist — ggf. nach `M20`, `SPL2` oder `Xpress` suchen.
-2. **`hplip`** (HP hat u. a. Samsung-SPL-Support übernommen) — falls
-   splix keine passende PPD liefert, hier ebenfalls mit
-   `lpinfo -m | grep -i samsung` prüfen.
+**Weder `printer-driver-splix` noch `hplip` unterstützen dieses Modell:**
 
-**Falls beide nichts Passendes liefern (Fallback-Optionen):**
+- `lpinfo -m | grep -i samsung` im `printer-driver-splix`-Katalog zeigt
+  nur ältere Modelle (ML-/CLP-/CLX-/SCX-Serien bis ca. 2013) — die
+  M2020-Serie fehlt komplett.
+- `sudo hp-setup -i` erkennt das USB-Gerät nicht mal als unterstütztes
+  HPLIP-Modell ("No device selected/specified or that supports this
+  functionality").
+- Grund: Die M2020-Serie spricht ein neueres Protokoll namens **QPDL**
+  (nicht das ältere SPL2/SPLc, das splix abdeckt). Das ist der eigentliche
+  Grund, warum dieses sehr verbreitete Billig-Modell unter Linux
+  notorisch schwer einzurichten ist.
+
+**Lösung: selbst gebauter QPDL-Filter (opt-in, standardmäßig aktiviert
+für dieses Deployment über `cups_print_server_build_qpdl_driver: true`
+in `group_vars/all.yml`).**
+
+Es gibt einen QPDL-Treiber-Patch für splix, der nie ins offizielle
+[OpenPrinting/splix](https://github.com/OpenPrinting/splix)-Repo gemergt
+wurde (letzter offizieller Release: 2.0.2, das ist auch, was Ubuntu
+paketiert hat). Der Patch liegt auf
+[gitlab.com/ScumCoder/splix](https://gitlab.com/ScumCoder/splix)
+(Branch `patches`) und wird von der Rolle auf einen **festen Commit
+gepinnt** gebaut:
+`f97086c367d926dc4b6f84facabc9c3029729cba` ("Fix m2020 being excluded
+from built artifacts").
+
+### Warum dieser Fremdcode vertrauenswürdig genug ist
+
+Bevor das in die Rolle eingebaut wurde, wurde der tatsächliche
+Filter-Quellcode geprüft (nicht nur die PPD-Textdatei):
+
+- Gleicher GPLv2-Lizenzkopf und Autoren-Handschrift ("Aurélien Croc
+  (AP²C)") wie im offiziellen splix — es ist strukturell dieselbe
+  Codebasis, nur um eine zusätzliche Protokoll-Variante (`qpdl.cpp`,
+  `rastertoqpdl.cpp`, analog zu den offiziellen `spl2.cpp`/`splc.cpp`)
+  erweitert.
+- Keine Netzwerk-Calls, kein `curl`/`wget`, keine Obfuskation. Die
+  einzigen `fork()`/`exec()`-Aufrufe (`pstoqpdl.cpp`) sind normales
+  CUPS-Filter-Chaining (PostScript → Raster → QPDL-Pipeline), exakt wie
+  es jeder andere CUPS-Treiber auch macht.
+- Der gepinnte Commit stammt von einem erkennbaren Maintainer
+  (`scumcoder@yandex.ru`) und behebt exakt dieses eine bekannte Problem
+  ("m2020 excluded from built artifacts") — kein Bulk-Import
+  unbekannten Codes.
+- CUPS-Filter laufen ohnehin **nicht als root** — `cupsd` startet sie
+  standardmäßig als unprivilegierter `lp`-User.
+- Der Commit ist bewusst gepinnt (nicht der Branch-`HEAD`), damit ein
+  späterer Push auf den Branch nicht unbemerkt anderen Code einschleust.
+
+Trotzdem bleibt es **inoffizieller, nie überprüfter Community-Code** —
+wer das nicht auf dem eigenen Homeserver haben möchte, setzt
+`cups_print_server_build_qpdl_driver: false` und nutzt stattdessen einen
+der Fallbacks unten.
+
+**Nach dem Build** zeigt `lpinfo -m | grep -i -E 'samsung|spl'` einen
+neuen Treffer wie `drv:///splix-samsung.drv/m2020.ppd Samsung M2020
+Series, 2.0.0` — dieser String kommt in
+`cups_print_server_ppd`.
+
+**Falls der QPDL-Build nicht gewünscht ist (Fallback-Optionen):**
 
 - **Raw-Queue**: `cups_print_server_ppd: "raw"` — druckt ohne
   Treiber-Rasterung, funktioniert nur zuverlässig für reinen Text, keine
   Formatierung/Grafik.
-- **Community-Archiv des alten "Samsung Unified Linux Driver"**
-  (`bchemnet.com/suldr`) — nicht offiziell, nicht automatisiert in dieser
-  Rolle eingebunden (unklare Signatur/Herkunft der Binärpakete). Nur
-  manuell installieren, wenn splix/hplip wirklich nicht funktionieren.
+- **Original-Samsung-Treiber (ULD-Tarball)**: taucht nur noch auf
+  Drittanbieter-Treiberseiten auf (driverguide.com, printerdrivers.com)
+  — bewusst **nicht empfohlen**, solche Seiten sind für
+  Adware/fragwürdige Downloads bekannt.
 - Alternative: Warteschlange als **raw** teilen und von einem Windows-PC
-  mit echtem Samsung-Treiber aus drucken (Windows druckt dann lokal
-  gerendert auf die geteilte Rohqueue) — Workaround aus den
-  Community-Foren, nur falls alles andere scheitert.
+  mit echtem Samsung-Treiber aus drucken (Windows rendert dann lokal und
+  schickt fertige Rohdaten an die geteilte Rohqueue) — Workaround aus
+  den Community-Foren, nur falls alles andere scheitert.
 
 ---
 
@@ -156,6 +208,20 @@ lp -h homeserver:631 -d Samsung_M2026 /etc/hostname
 
 ## Fehlerbehebung
 
+**QPDL-Build schlägt fehl (`make` / `make install` Fehler):**
+Build-Log direkt auf dem Homeserver reproduzieren:
+```bash
+cd /usr/local/src/splix-qpdl/splix
+make DISABLE_JBIG=1
+```
+Meist fehlende Build-Abhängigkeiten (die Rolle installiert
+`build-essential`, `libcups2-dev`, `pkg-config` — bei CUPS-Versionen, bei
+denen `libcupsimage` nicht mehr in `libcups2-dev` enthalten ist, zusätzlich
+`libcupsimage2-dev` installieren und erneut versuchen). Nach einem Fix
+`make cups-print-server` erneut laufen lassen — der `creates:`-Guard in
+der Rolle baut nur neu, wenn `optimized/rastertoqpdl` noch fehlt (ggf.
+manuell `rm -rf /usr/local/src/splix-qpdl` für einen sauberen Rebuild).
+
 **Drucker taucht nicht in `lpinfo -v` auf:**
 USB-Kabel/Steckplatz prüfen, `lsusb` auf dem Homeserver (Paket
 `usbutils` wird von der Rolle installiert) — der M2026 sollte als
@@ -193,3 +259,5 @@ approved? Siehe [06-tailscale.md](06-tailscale.md#subnet-routing).
 
 - [Tailscale-Referenz (Subnet-Routing)](06-tailscale.md)
 - [ansible/roles/cups_print_server](../ansible/roles/cups_print_server)
+- [OpenPrinting/splix (offizielles Upstream-Repo)](https://github.com/OpenPrinting/splix)
+- [gitlab.com/ScumCoder/splix, Branch `patches` (QPDL-Treiber-Quelle)](https://gitlab.com/ScumCoder/splix/-/tree/patches)

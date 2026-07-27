@@ -51,3 +51,18 @@ cups_print_server_packages:
 # Nutzer, die ohne root Warteschlangen verwalten dürfen (lpadmin-Gruppe).
 cups_print_server_admin_users:
   - ubuntu
+
+# ---- Optional: QPDL-Community-Treiber für die M2020/M2026-Serie -------
+# Die Samsung Xpress M2020/M2021/M2022/M2026-Serie spricht ein neueres
+# "QPDL"-Protokoll, das im offiziellen printer-driver-splix-Paket fehlt.
+# Existiert nur als inoffizieller Patch, der nie ins offizielle
+# OpenPrinting/splix-Repo gemergt wurde. Standardmäßig AUS — bewusst
+# opt-in, da hier Fremdcode aus einem gepinnten Commit kompiliert und
+# als root installiert wird (Review-Notizen: docs/38-printer.md).
+cups_print_server_build_qpdl_driver: false
+cups_print_server_qpdl_repo: "https://gitlab.com/ScumCoder/splix.git"
+# Gepinnter Commit (patches-Branch, Stand 2024-03-31: "Fix m2020 being
+# excluded from built artifacts") — bewusst NICHT der Branch-HEAD, damit
+# ein späterer Push auf den Branch nicht unbemerkt anderen Code einschleust.
+cups_print_server_qpdl_repo_version: "f97086c367d926dc4b6f84facabc9c3029729cba"
+cups_print_server_qpdl_build_dir: "/usr/local/src/splix-qpdl"

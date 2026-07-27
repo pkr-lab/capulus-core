@@ -273,10 +273,18 @@ scanner_gotify_token: !vault |
 # gibt ihn per IPP/AirPrint im LAN + Tailnet frei. Device-URI und PPD
 # erst nach dem ersten Rollen-Lauf bekannt — siehe docs/38-printer.md.
 #
-# Device-URI ermitteln (`lpinfo -v` auf dem Homeserver, zeigt der
-# Rollen-Lauf auch automatisch als Debug an):
-cups_print_server_device_uri: ""
-# Passende PPD ermitteln (`lpinfo -m | grep -i samsung`):
+# Device-URI ermittelt per `lpinfo -v` auf dem Homeserver — meldet sich
+# als generische "M2020 Series" (viele günstige Samsung-SPL2-Modelle
+# M2020/M2021/M2022/M2026 teilen sich denselben USB-Controller-Chip).
+cups_print_server_device_uri: "usb://Samsung/M2020%20Series?serial=08HVB8GM1B0870W"
+#
+# Weder printer-driver-splix noch hplip unterstützen die M2020-Serie
+# (spricht ein neueres "QPDL"-Protokoll) — daher der inoffizielle,
+# quellcode-geprüfte QPDL-Treiber-Build (Details + Review-Notizen:
+# docs/38-printer.md).
+cups_print_server_build_qpdl_driver: true
+# Passende PPD nach dem Build ermitteln (`lpinfo -m | grep -i -E 'samsung|spl'`
+# — Treffer nach dem QPDL-Build z.B. "drv:///splix-samsung.drv/m2020.ppd"):
 cups_print_server_ppd: ""
 
 # ---- worker-0 (192.168.178.95) --------------------------
