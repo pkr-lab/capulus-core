@@ -6,7 +6,9 @@ metadata:
   labels:
     {{- include "example-whoami.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "example-whoami.selectorLabels" . | nindent 6 }}

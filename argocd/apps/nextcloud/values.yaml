@@ -23,7 +23,24 @@ secrets:
 # Nextcloud App
 # ============================================================
 nextcloud:
+  # Nur wirksam solange autoscaling.enabled=false ist (siehe unten) —
+  # danach übernimmt der HPA die Replica-Anzahl.
   replicaCount: 1
+
+  # Mehrere App-Pods sind hier — trotz ReadWriteOnce html/data-PVCs (siehe
+  # persistence unten) — sicher: Nextcloud nutzt das eigene Redis (siehe
+  # redis-Block unten, per REDIS_HOST-Env in templates/nextcloud-deployment.yaml
+  # verdrahtet) für verteiltes Datei-Locking. Solange der Storage geteilt UND
+  # das Locking extern (Redis) ist, unterstützt Nextclouds Architektur
+  # mehrere Web/App-Pods gleichzeitig. Die PVCs bleiben trotzdem RWO/NFS —
+  # daher zusätzlich podAffinity (siehe templates/nextcloud-deployment.yaml),
+  # damit alle Replicas auf demselben Node laufen.
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 2
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 80
 
   image:
     repository: nextcloud
@@ -90,7 +107,9 @@ nextcloud:
       memory: 2Gi
 
   nodeSelector: {}
-  affinity: {}
+  # affinity ist fest im Deployment-Template verdrahtet (Co-location wegen
+  # RWO-Storage, siehe templates/nextcloud-deployment.yaml) und daher hier
+  # kein konfigurierbarer Wert mehr.
   tolerations: []
 
 # ============================================================
