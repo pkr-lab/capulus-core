@@ -197,6 +197,19 @@ Quotas auf Dateisystem-Ebene).
 
 ---
 
+## Autoskalierung (HPA)
+
+Die Nextcloud-App-Komponente skaliert per HPA auf 1–2 Replicas (CPU 75%
+/ RAM 80%). Das ist nur sicher, weil Nextcloud das mitgelieferte Redis
+für verteiltes Datei-Locking nutzt — ohne das würden zwei App-Pods sich
+beim gleichzeitigen Zugriff auf die geteilte `html`/`data`-PVC in die
+Quere kommen. Da diese PVCs `ReadWriteOnce` sind, erzwingt eine
+`podAffinity` zusätzlich, dass beide Replicas auf demselben Node laufen.
+PostgreSQL und Redis bleiben unangetastet (Single-Writer, kein HPA).
+Details für alle Apps: [39-hpa-autoscaling.md](39-hpa-autoscaling.md).
+
+---
+
 ## Relevante Links
 
 - [Nextcloud-Dokumentation](https://docs.nextcloud.com)
