@@ -2,7 +2,12 @@
 # Values passed through to the kubeseal-webgui sub-chart.
 # All keys live under `kubeseal-webgui:` because that is the dependency name.
 kubeseal-webgui:
-  replicaCount: 1
+  # null (not omitted) so the upstream template's `replicas: {{ .Values.replicaCount }}`
+  # renders empty → Kubernetes treats the field as unset and defaults to 1 on
+  # create, while leaving it alone afterwards. This keeps ArgoCD's selfHeal
+  # from fighting templates/hpa.yaml every sync (a literal `1` here would make
+  # ArgoCD reset the Deployment back to 1 replica right after the HPA scales up).
+  replicaCount: null
 
   image:
     pullPolicy: Always

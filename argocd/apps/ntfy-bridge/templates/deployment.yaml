@@ -6,7 +6,9 @@ metadata:
   labels:
     {{- include "ntfy-bridge.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "ntfy-bridge.selectorLabels" . | nindent 6 }}
