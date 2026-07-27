@@ -6,4 +6,4 @@ hostname: worker-0
 # (ansible/roles/wake_on_lan, ansible/roles/cluster_power_manager).
 # CHANGE: auf worker-0 selbst ermitteln, z.B.:
 #   ip link show | grep -A1 "^[0-9]*: en" | grep link/ether
-wake_on_lan_mac_address: "CHANGE_ME_run_ip_link_show_on_worker-0"
+wake_on_lan_mac_address: "98:fa:9b:28:b0:22"
