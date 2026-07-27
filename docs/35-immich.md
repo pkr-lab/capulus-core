@@ -295,6 +295,19 @@ tatsächlich belegten NAS-Speicher.
 
 ---
 
+## Autoskalierung (HPA)
+
+`immich-server` (1–3 Replicas) und `immich-machine-learning` (1–2
+Replicas) skalieren per HPA auf CPU 75% / RAM 80% hoch — das hilft bei
+**vielen gleichzeitigen** Uploads, nicht bei einem einzelnen Foto/Video,
+das für sich allein schon mehr RAM braucht als `resources.limits`
+erlaubt (dafür ggf. das Limit selbst erhöhen). Da `library`- und
+`model-cache`-PVC `ReadWriteOnce` sind, erzwingt eine `podAffinity` im
+jeweiligen Deployment, dass alle Replicas auf demselben Node laufen.
+Details und Schwellenwerte für alle Apps: [39-hpa-autoscaling.md](39-hpa-autoscaling.md).
+
+---
+
 ## Relevante Links
 
 - [Immich-Dokumentation](https://immich.app/docs)
