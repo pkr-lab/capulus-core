@@ -334,6 +334,20 @@ ein Startwert; da Attachments in der DB liegen, ggf. nach Bedarf erhöhen
 
 ---
 
+## Autoskalierung (HPA)
+
+`nginx` (1–3 Replicas, CPU 70%) und `railsserver` (1–3 Replicas, CPU 75%
+/ RAM 80%) skalieren per hand-geschriebenem HPA (der Upstream-Chart hat
+kein natives Autoscaling). `scheduler` und `websocket` bekommen
+**bewusst keinen** HPA: der Upstream-Chart kodiert für beide
+`replicas: 1` fest ("Not scalable, may only run once per cluster.") —
+doppelte Ausführung würde bei `scheduler` Jobs duplizieren, bei
+`websocket` vermutlich Echtzeit-Events nur an einen Teil der
+verbundenen Browser-Clients ausliefern. PostgreSQL/Redis bleiben
+ebenfalls unangetastet. Details für alle Apps: [39-hpa-autoscaling.md](39-hpa-autoscaling.md).
+
+---
+
 ## Relevante Links
 
 - [Zammad Helm Chart Repository](https://github.com/zammad/zammad-helm)

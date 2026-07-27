@@ -109,6 +109,11 @@ ssh ubuntu@192.168.178.94 \
 
 Authentik ist danach erreichbar unter: **http://authentik.homeserver**
 
+`server` (1–3 Replicas) und `worker` (1–2 Replicas) skalieren per HPA auf
+CPU 75% / RAM 80% — der Upstream-Chart bringt die HPA-Templates bereits
+mit, `values.yaml` schaltet sie nur ein. Details für alle Apps:
+[39-hpa-autoscaling.md](39-hpa-autoscaling.md).
+
 ---
 
 ## Schritt 3 — Erster Login & Admin-Setup
