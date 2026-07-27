@@ -1,0 +1,8 @@
+---
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: test creates skip behavior
+      ansible.builtin.command:
+        cmd: "touch newly_created.txt"
+        creates: "already_exists.txt"
