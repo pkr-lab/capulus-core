@@ -204,7 +204,10 @@ Deployt via `argocd/apps/monitoring/`. VMSingle hält 15 Tage TSDB auf
 einem `local-path`-PVC, VMAgent scrapet `VMServiceScrape`/`VMPodScrape`
 **und** auto-konvertierte Prometheus-`ServiceMonitor`-CRDs, Grafana
 liefert vorinstallierte Dashboards (Node Exporter Full, VictoriaMetrics,
-Kubernetes Views) unter `http://grafana.homeserver`.
+Kubernetes Views) unter `http://grafana.homeserver`. Grafana bekommt
+bewusst **keinen** HPA — läuft mit embedded SQLite auf einer
+ReadWriteOnce-PVC, mehrere Replicas würden sich die DB-Datei zerschießen
+(siehe [39-hpa-autoscaling.md](39-hpa-autoscaling.md)).
 
 ### Sealed Secrets
 
@@ -213,7 +216,10 @@ Der `sealed-secrets`-Controller von Bitnami (unter
 `SealedSecret`-CRDs in normale Kubernetes-`Secret`s. `kubeseal-webgui`
 (`argocd/apps/kubeseal-webgui/`) ist eine kleine Browser-UI, die
 Klartext-Werte mit dem Public Key des Controllers verschlüsselt —
-ideal, um per-App-Secrets sicher ins GitOps-Repo zu committen.
+ideal, um per-App-Secrets sicher ins GitOps-Repo zu committen. Skaliert
+per hand-geschriebenem HPA auf 1–2 Replicas (siehe
+[39-hpa-autoscaling.md](39-hpa-autoscaling.md)), da der Sealed-Secrets-
+Controller selbst zustandslos gegenüber dem Cluster-Key arbeitet.
 
 ### Semaphore (Ansible-Web-UI)
 

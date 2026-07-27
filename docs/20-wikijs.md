@@ -289,6 +289,16 @@ der DB) — bei Bedarf in `argocd/apps/wikijs/values.yaml` unter
 
 ---
 
+## Autoskalierung (HPA)
+
+Die Wiki.js-App-Komponente skaliert per HPA auf 1–3 Replicas (CPU 75% /
+RAM 80%) — da Seiten und Assets vollständig in PostgreSQL liegen (kein
+PVC am App-Pod), ist das ohne weitere Vorkehrungen (kein Affinity-Trick
+nötig) sicher. PostgreSQL selbst bleibt unangetastet (Single-Writer,
+kein HPA). Details für alle Apps: [39-hpa-autoscaling.md](39-hpa-autoscaling.md).
+
+---
+
 ## Relevante Links
 
 - [Wiki.js Dokumentation](https://docs.requarks.io)

@@ -207,6 +207,7 @@ capulus-core/
 │   ├── 36-nas-backup.md              # Externe USB-Platte am NAS: regelmäßige Backups
 │   ├── 37-cluster-power-manager.md   # Worker per Wake-on-LAN je nach Homeserver-Last dazuschalten
 │   ├── 38-printer.md                 # Samsung Xpress M2026 per CUPS im Heimnetz freigeben
+│   ├── 39-hpa-autoscaling.md         # Horizontale Autoskalierung (HPA) — welche Apps, welche Schwellenwerte
 │   └── assets/banner.svg
 ├── ansible/
 │   ├── site.yml                      # Entry-Point
@@ -414,6 +415,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [NAS-Backup](docs/36-nas-backup.md) | Externe USB-Platte am NAS: regelmäßige restic-Backups von volume1 + volume2 |
 | [Cluster Power Manager](docs/37-cluster-power-manager.md) | worker-0/worker-1 per Wake-on-LAN je nach Homeserver-Last automatisch dazu- und wieder abschalten |
 | [Drucker (CUPS)](docs/38-printer.md) | Samsung Xpress M2026 per USB am Homeserver, Freigabe im Heimnetz + Tailnet via IPP/AirPrint |
+| [Autoskalierung (HPA)](docs/39-hpa-autoscaling.md) | Welche Apps per HorizontalPodAutoscaler mitskalieren, welche bewusst nicht, und mit welchen Schwellenwerten |
 
 ---
 
