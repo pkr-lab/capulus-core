@@ -1,0 +1,53 @@
+---
+# ============================================================
+# cups_print_server — Defaults
+# ============================================================
+# Macht einen USB-Drucker, der direkt am Homeserver hängt, per CUPS im
+# Heimnetz + Tailnet verfügbar — IPP/AirPrint für Handys/Tablets, IPP für
+# Windows/Linux-Clients. Vollständige Anleitung: docs/38-printer.md.
+# ============================================================
+
+cups_print_server_enabled: true
+
+# ---- Druckerwarteschlange -----------------------------------
+# Name erscheint in CUPS-/IPP-URLs — keine Leerzeichen/Sonderzeichen.
+cups_print_server_printer_name: "Samsung_M2026"
+cups_print_server_printer_description: "Samsung Xpress M2026 (USB, homeserver)"
+cups_print_server_printer_location: "Homeserver"
+
+# Device-URI und PPD/Treiber MÜSSEN nach dem ersten Rollen-Lauf einmalig
+# manuell ermittelt werden: Drucker per USB anschließen, dann auf dem
+# Homeserver `lpinfo -v` (Device-URI) bzw. `lpinfo -m | grep -i samsung`
+# (PPD) ausführen — beide Ausgaben zeigt der Rollen-Lauf bereits als Debug
+# an. Solange einer der beiden Werte hier leer ist, installiert die Rolle
+# nur Pakete + Sharing und überspringt das Anlegen der Warteschlange.
+# Siehe docs/38-printer.md.
+cups_print_server_device_uri: ""
+cups_print_server_ppd: ""
+
+# Neu angelegte Warteschlange als System-Default setzen.
+cups_print_server_set_default: true
+
+# ---- Sharing / Remote-Zugriff --------------------------------
+# cupsctl-Flags — erlauben Admin-UI + Drucken von LAN- und Tailscale-
+# Clients. Die Firewall schränkt trotzdem ein: die `common`-Rolle erlaubt
+# bereits jeglichen Traffic aus local_subnet und dem Tailscale-Netz
+# (100.64.0.0/10), Port 631/mDNS sind darüber also schon abgedeckt — diese
+# Rolle legt deshalb bewusst KEINE eigenen UFW-Regeln an.
+cups_print_server_remote_admin: true
+cups_print_server_remote_any: true
+cups_print_server_share_printers: true
+
+# ---- Pakete ---------------------------------------------------
+cups_print_server_packages:
+  - cups
+  - cups-client
+  - cups-ipp-utils
+  - printer-driver-splix
+  - hplip
+  - avahi-daemon
+  - usbutils
+
+# Nutzer, die ohne root Warteschlangen verwalten dürfen (lpadmin-Gruppe).
+cups_print_server_admin_users:
+  - ubuntu
