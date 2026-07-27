@@ -223,6 +223,23 @@ denen `libcupsimage` nicht mehr in `libcups2-dev` enthalten ist, zusätzlich
 der Rolle baut nur neu, wenn `optimized/rastertoqpdl` noch fehlt (ggf.
 manuell `rm -rf /usr/local/src/splix-qpdl` für einen sauberen Rebuild).
 
+**Job wird angenommen, Drucker bleibt aber stumm (kein Papierauswurf):**
+```bash
+sudo grep -i "error\|SpliX" /var/log/cups/error_log | tail -n 40
+```
+Bekannter Fall: `"SpliX Cannot get paper size information. Operation
+aborted."` — der QPDL-Filter (`Printer::loadInformation()` in
+`printer.cpp`) verlangt eine **explizit im Job aufgelöste**
+PageSize/Media-Option. Der PPD-eigene `*DefaultPageSize` allein reicht
+unter dem modernen cups-filters-2.x-Kompatibilitäts-Layer
+(`ppdFilterEmitJCL`, sichtbar im Log) nicht aus — ohne explizite Option
+liefert der Filter leere/keine Seiten. Behoben durch
+`cups_print_server_media_size` (Default `A4`), das die Rolle als
+Queue-Default per `lpadmin -o media=...` setzt — betrifft also nur
+Warteschlangen, die vor diesem Fix angelegt wurden; `make
+cups-print-server` erneut laufen lassen, um den Default nachzuziehen.
+Manueller Workaround pro Job, falls nötig: `lp -o media=A4 ...`.
+
 **Drucker taucht nicht in `lpinfo -v` auf:**
 USB-Kabel/Steckplatz prüfen, `lsusb` auf dem Homeserver (Paket
 `usbutils` wird von der Rolle installiert) — der M2026 sollte als
