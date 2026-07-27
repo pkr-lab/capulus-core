@@ -182,6 +182,13 @@
     - (cups_print_server_device_uri | length == 0) or (cups_print_server_ppd | length == 0)
 
 # ---- Warteschlange ---------------------------------------------
+# -o media=... setzt die Papiergröße als Queue-Default: der QPDL-Filter
+# (Printer::loadInformation() in printer.cpp) verlangt eine per Job
+# aufgelöste PageSize/MediaSize-Option und bricht sonst mit "Cannot get
+# paper size information" ab — der PPD-*DefaultPageSize* allein reicht
+# unter dem modernen cups-filters-2.x-Kompatibilitäts-Layer (ppdFilterEmitJCL)
+# nicht mehr aus, ein Client, der media/PageSize nicht explizit mitgibt,
+# lieferte sonst leere Seiten. Siehe docs/38-printer.md.
 - name: Druckerwarteschlange anlegen/aktualisieren
   ansible.builtin.command:
     argv:
@@ -199,6 +206,8 @@
       - "{{ cups_print_server_printer_location }}"
       - "-o"
       - "printer-is-shared=true"
+      - "-o"
+      - "media={{ cups_print_server_media_size }}"
   changed_when: true
   when:
     - cups_print_server_enabled | bool
