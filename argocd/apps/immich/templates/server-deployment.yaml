@@ -6,7 +6,9 @@ metadata:
   labels:
     {{- include "immich.server.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.server.autoscaling.enabled }}
   replicas: {{ .Values.server.replicaCount }}
+  {{- end }}
   strategy:
     type: Recreate
   selector:
@@ -19,10 +21,20 @@ spec:
     spec:
       securityContext:
         {{- toYaml .Values.server.podSecurityContext | nindent 8 }}
-      {{- with .Values.server.affinity }}
+      # Erzwingt, dass alle Replicas auf demselben Node laufen — die
+      # "library"-PVC ist ReadWriteOnce (NFS, nur node-lokal gleichzeitig
+      # mountbar). Ohne das könnte der Scheduler bei >1 Replica einen
+      # anderen Node wählen; der Pod bliebe dann im ContainerCreating
+      # hängen (Multi-Attach-Fehler). .Values.server.affinity wird bewusst
+      # NICHT mehr zusätzlich eingebunden, um diese Regel nicht versehentlich
+      # zu überschreiben.
       affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  {{- include "immich.server.selectorLabels" . | nindent 18 }}
+              topologyKey: kubernetes.io/hostname
       {{- with .Values.server.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
