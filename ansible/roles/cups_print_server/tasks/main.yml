@@ -1,0 +1,160 @@
+---
+# ============================================================
+# cups_print_server role — USB-Drucker per CUPS im Heimnetz freigeben
+# ============================================================
+# Läuft auf homeserver. Installiert CUPS + Treiber-Pakete, aktiviert
+# Sharing (IPP/AirPrint via Avahi) und legt — sobald Device-URI und PPD
+# bekannt sind — eine Warteschlange für den lokal angeschlossenen
+# USB-Drucker an. Dokumentation: docs/38-printer.md.
+# ============================================================
+
+- name: CUPS-/Drucker-Pakete installieren
+  ansible.builtin.apt:
+    name: "{{ cups_print_server_packages }}"
+    state: "{{ 'latest' if auto_upgrade | bool else 'present' }}"
+    update_cache: true
+  when: cups_print_server_enabled | bool
+
+- name: Admin-Nutzer zur lpadmin-Gruppe hinzufügen
+  ansible.builtin.user:
+    name: "{{ item }}"
+    groups: lpadmin
+    append: true
+  loop: "{{ cups_print_server_admin_users }}"
+  when: cups_print_server_enabled | bool
+
+- name: cups + avahi-daemon aktivieren und starten
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - cups
+    - avahi-daemon
+  when: cups_print_server_enabled | bool
+
+# ---- Sharing / Remote-Zugriff --------------------------------
+- name: Aktuelle cupsd-Einstellungen auslesen
+  ansible.builtin.command: cupsctl
+  register: cups_print_server_current_settings
+  changed_when: false
+  when: cups_print_server_enabled | bool
+
+- name: CUPS-Sharing/Remote-Zugriff setzen
+  ansible.builtin.command:
+    argv:
+      - cupsctl
+      - "{{ '--remote-admin' if cups_print_server_remote_admin | bool else '--no-remote-admin' }}"
+      - "{{ '--remote-any' if cups_print_server_remote_any | bool else '--no-remote-any' }}"
+      - "{{ '--share-printers' if cups_print_server_share_printers | bool else '--no-share-printers' }}"
+  when:
+    - cups_print_server_enabled | bool
+    - >-
+      ('_remote_admin=' ~ (1 if cups_print_server_remote_admin | bool else 0) not in cups_print_server_current_settings.stdout)
+      or ('_remote_any=' ~ (1 if cups_print_server_remote_any | bool else 0) not in cups_print_server_current_settings.stdout)
+      or ('_share_printers=' ~ (1 if cups_print_server_share_printers | bool else 0) not in cups_print_server_current_settings.stdout)
+
+# ---- Debug-Hilfen: Device-URI + passende PPD ermitteln --------
+- name: Verfügbare Drucker-Device-URIs ermitteln
+  ansible.builtin.command: lpinfo -v
+  register: cups_print_server_detected_devices
+  changed_when: false
+  when: cups_print_server_enabled | bool
+
+- name: Erkannte Device-URIs anzeigen
+  ansible.builtin.debug:
+    msg: "{{ cups_print_server_detected_devices.stdout_lines | default([]) }}"
+  when: cups_print_server_enabled | bool
+
+- name: Verfügbare PPDs ermitteln
+  ansible.builtin.command: lpinfo -m
+  register: cups_print_server_available_ppds
+  changed_when: false
+  when: cups_print_server_enabled | bool
+
+- name: Samsung/SPL-passende PPDs anzeigen
+  ansible.builtin.debug:
+    msg: >-
+      {{ cups_print_server_available_ppds.stdout_lines
+         | default([])
+         | select('search', '(?i)samsung|spl')
+         | list
+         | default(['(keine gefunden — siehe docs/38-printer.md für Alternativen)'], true) }}
+  when: cups_print_server_enabled | bool
+
+- name: Warnen, wenn Device-URI/PPD noch nicht gesetzt sind
+  ansible.builtin.debug:
+    msg: >-
+      cups_print_server_device_uri und/oder cups_print_server_ppd sind noch
+      leer — die Warteschlange wird NICHT angelegt. Werte aus den
+      lpinfo-Ausgaben oben übernehmen und in ansible/group_vars/all.yml
+      eintragen, dann die Rolle erneut laufen lassen
+      (`make cups-print-server`). Siehe docs/38-printer.md.
+  when:
+    - cups_print_server_enabled | bool
+    - (cups_print_server_device_uri | length == 0) or (cups_print_server_ppd | length == 0)
+
+# ---- Warteschlange ---------------------------------------------
+- name: Druckerwarteschlange anlegen/aktualisieren
+  ansible.builtin.command:
+    argv:
+      - lpadmin
+      - "-p"
+      - "{{ cups_print_server_printer_name }}"
+      - "-E"
+      - "-v"
+      - "{{ cups_print_server_device_uri }}"
+      - "-m"
+      - "{{ cups_print_server_ppd }}"
+      - "-D"
+      - "{{ cups_print_server_printer_description }}"
+      - "-L"
+      - "{{ cups_print_server_printer_location }}"
+      - "-o"
+      - "printer-is-shared=true"
+  changed_when: true
+  when:
+    - cups_print_server_enabled | bool
+    - cups_print_server_device_uri | length > 0
+    - cups_print_server_ppd | length > 0
+
+- name: Warteschlange aktivieren
+  ansible.builtin.command:
+    argv: ["cupsenable", "{{ cups_print_server_printer_name }}"]
+  changed_when: true
+  when:
+    - cups_print_server_enabled | bool
+    - cups_print_server_device_uri | length > 0
+    - cups_print_server_ppd | length > 0
+
+- name: Job-Annahme für Warteschlange aktivieren
+  ansible.builtin.command:
+    argv: ["cupsaccept", "{{ cups_print_server_printer_name }}"]
+  changed_when: true
+  when:
+    - cups_print_server_enabled | bool
+    - cups_print_server_device_uri | length > 0
+    - cups_print_server_ppd | length > 0
+
+- name: Warteschlange als System-Default setzen
+  ansible.builtin.command:
+    argv: ["lpoptions", "-d", "{{ cups_print_server_printer_name }}"]
+  changed_when: true
+  when:
+    - cups_print_server_enabled | bool
+    - cups_print_server_set_default | bool
+    - cups_print_server_device_uri | length > 0
+    - cups_print_server_ppd | length > 0
+
+# ---- Verifikation ------------------------------------------
+- name: Status aller Warteschlangen anzeigen
+  ansible.builtin.command: lpstat -t
+  register: cups_print_server_status
+  changed_when: false
+  failed_when: false
+  when: cups_print_server_enabled | bool
+
+- name: Warteschlangen-Status ausgeben
+  ansible.builtin.debug:
+    msg: "{{ cups_print_server_status.stdout_lines | default([]) }}"
+  when: cups_print_server_enabled | bool

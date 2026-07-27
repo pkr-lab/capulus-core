@@ -268,6 +268,17 @@ scanner_gotify_token: !vault |
           6638346364623337390a643262646631393332623861373737616666363931656434303366373963
           3037
 
+# ---- Drucker (CUPS) ----------------------------------------
+# Samsung Xpress M2026 per USB direkt am Homeserver; cups_print_server
+# gibt ihn per IPP/AirPrint im LAN + Tailnet frei. Device-URI und PPD
+# erst nach dem ersten Rollen-Lauf bekannt — siehe docs/38-printer.md.
+#
+# Device-URI ermitteln (`lpinfo -v` auf dem Homeserver, zeigt der
+# Rollen-Lauf auch automatisch als Debug an):
+cups_print_server_device_uri: ""
+# Passende PPD ermitteln (`lpinfo -m | grep -i samsung`):
+cups_print_server_ppd: ""
+
 # ---- worker-0 (192.168.178.95) --------------------------
 # sudo-Passwort für worker-0 vault-verschlüsselt speichern:
 #   ansible-vault encrypt_string 'DEIN_SUDO_PW' --name 'vault_worker-0_become_password'

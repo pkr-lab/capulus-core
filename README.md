@@ -206,6 +206,7 @@ capulus-core/
 │   ├── 35-immich.md                  # Foto-/Video-Backup vom Handy
 │   ├── 36-nas-backup.md              # Externe USB-Platte am NAS: regelmäßige Backups
 │   ├── 37-cluster-power-manager.md   # Worker per Wake-on-LAN je nach Homeserver-Last dazuschalten
+│   ├── 38-printer.md                 # Samsung Xpress M2026 per CUPS im Heimnetz freigeben
 │   └── assets/banner.svg
 ├── ansible/
 │   ├── site.yml                      # Entry-Point
@@ -225,7 +226,8 @@ capulus-core/
 │       ├── semaphore_bootstrap/      # Projects/Inventories/Templates per API
 │       ├── wake_on_lan/              # WoL-Empfangsbereitschaft auf worker-0/worker-1
 │       ├── cluster_power_manager/    # Homeserver: weckt/schaltet Worker per WoL je nach Last
-│       └── cluster_power_manager_target/  # Worker: autorisiert Shutdown-Key (nur poweroff)
+│       ├── cluster_power_manager_target/  # Worker: autorisiert Shutdown-Key (nur poweroff)
+│       └── cups_print_server/        # Homeserver: USB-Drucker per IPP/AirPrint freigeben
 └── argocd/
     ├── bootstrap/root-applicationset.yaml  # Erkennt jedes Verzeichnis darunter
     └── apps/                               # Ein Ordner pro ArgoCD-Application
@@ -411,6 +413,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [Immich](docs/35-immich.md) | Foto-/Video-Backup vom Handy inkl. Gesichtserkennung, eigener NAS-Storage-Export |
 | [NAS-Backup](docs/36-nas-backup.md) | Externe USB-Platte am NAS: regelmäßige restic-Backups von volume1 + volume2 |
 | [Cluster Power Manager](docs/37-cluster-power-manager.md) | worker-0/worker-1 per Wake-on-LAN je nach Homeserver-Last automatisch dazu- und wieder abschalten |
+| [Drucker (CUPS)](docs/38-printer.md) | Samsung Xpress M2026 per USB am Homeserver, Freigabe im Heimnetz + Tailnet via IPP/AirPrint |
 
 ---
 

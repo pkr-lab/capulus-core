@@ -33,6 +33,8 @@
       tags: [resource-watchdog, thermal]
     - role: cluster_power_manager
       tags: [cluster-power-manager, power-management]
+    - role: cups_print_server
+      tags: [cups-print-server, printer]
 
   post_tasks:
     - name: Display setup summary
