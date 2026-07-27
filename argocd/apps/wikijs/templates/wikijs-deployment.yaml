@@ -6,7 +6,9 @@ metadata:
   labels:
     {{- include "wikijs.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.wikijs.autoscaling.enabled }}
   replicas: {{ .Values.wikijs.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "wikijs.selectorLabels" . | nindent 6 }}

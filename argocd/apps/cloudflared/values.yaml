@@ -8,7 +8,18 @@
 
 # Zwei Replicas = zwei unabhängige Edge-Verbindungen für denselben Tunnel
 # (cloudflared unterstützt das nativ — kein Leader-Election-Gedöns nötig).
+# Nur wirksam solange autoscaling.enabled=false ist — danach übernimmt der
+# HPA die Replica-Anzahl (minReplicas unten bewusst auf 2 gesetzt, um die
+# zwei unabhängigen Edge-Verbindungen als Minimum beizubehalten).
 replicaCount: 2
+
+# CPU-only: winziger Footprint (32Mi request/128Mi limit), nicht
+# speicherbound — eine Memory-Metrik würde hier nichts sinnvolles messen.
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 70
 
 image:
   repository: cloudflare/cloudflared
