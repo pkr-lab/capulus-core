@@ -1,5 +1,5 @@
 # Tech Context
-
+echo 0 | sudo tee /sys/class/backlight/intel_backlight/brightness
 ## Stack
 
 <!-- Programmiersprachen, Frameworks, wichtige Libraries. -->
