@@ -25,6 +25,13 @@ cups_print_server_printer_location: "Homeserver"
 cups_print_server_device_uri: ""
 cups_print_server_ppd: ""
 
+# Papiergröße als Queue-Default (CUPS-"media"-Keyword, z.B. "Letter",
+# "A4", "Legal") — bei manchen PPDs/Filtern (u.a. dem QPDL-Treiber, siehe
+# docs/38-printer.md) reicht der PPD-eigene *DefaultPageSize* nicht aus,
+# ein explizit als Queue-Default gesetztes `media=` verhindert leere
+# Ausdrucke bei Clients, die die Seitengröße nicht selbst mitgeben.
+cups_print_server_media_size: "A4"
+
 # Neu angelegte Warteschlange als System-Default setzen.
 cups_print_server_set_default: true
 
