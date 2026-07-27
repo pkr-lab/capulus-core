@@ -33,6 +33,14 @@
     - avahi-daemon
   when: cups_print_server_enabled | bool
 
+- name: Warten, bis cupsd auf Port 631 antwortet
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: 631
+    delay: 2
+    timeout: 30
+  when: cups_print_server_enabled | bool
+
 # ---- Sharing / Remote-Zugriff --------------------------------
 - name: Aktuelle cupsd-Einstellungen auslesen
   ansible.builtin.command: cupsctl
@@ -54,11 +62,86 @@
       or ('_remote_any=' ~ (1 if cups_print_server_remote_any | bool else 0) not in cups_print_server_current_settings.stdout)
       or ('_share_printers=' ~ (1 if cups_print_server_share_printers | bool else 0) not in cups_print_server_current_settings.stdout)
 
+# ---- Optional: QPDL-Community-Treiber für die M2020/M2026-Serie bauen --
+# Die Samsung Xpress M2020/M2021/M2022/M2026-Serie spricht ein neueres
+# "QPDL"-Protokoll, das im offiziellen printer-driver-splix-Paket fehlt.
+# Existiert nur als inoffizieller, nie ins offizielle OpenPrinting/splix
+# gemergter Patch — Quellcode wurde vor dem Einbau geprüft (siehe
+# docs/38-printer.md, Abschnitt "Warum dieser Fremdcode"). Bewusst
+# opt-in (cups_print_server_build_qpdl_driver) und auf einen festen
+# Commit gepinnt, damit ein späterer Push auf den Branch nicht unbemerkt
+# anderen Code einschleust.
+- name: Build-Abhängigkeiten für den QPDL-Treiber installieren
+  ansible.builtin.apt:
+    name:
+      - build-essential
+      - git
+      - libcups2-dev
+      - pkg-config
+    state: present
+  when:
+    - cups_print_server_enabled | bool
+    - cups_print_server_build_qpdl_driver | bool
+
+- name: QPDL-Treiber-Quellcode klonen (gepinnter Commit)
+  ansible.builtin.git:
+    repo: "{{ cups_print_server_qpdl_repo }}"
+    dest: "{{ cups_print_server_qpdl_build_dir }}"
+    version: "{{ cups_print_server_qpdl_repo_version }}"
+  when:
+    - cups_print_server_enabled | bool
+    - cups_print_server_build_qpdl_driver | bool
+
+- name: QPDL-Filter kompilieren
+  ansible.builtin.command:
+    cmd: make DISABLE_JBIG=1
+    chdir: "{{ cups_print_server_qpdl_build_dir }}/splix"
+    creates: "{{ cups_print_server_qpdl_build_dir }}/splix/optimized/rastertoqpdl"
+  when:
+    - cups_print_server_enabled | bool
+    - cups_print_server_build_qpdl_driver | bool
+
+- name: QPDL-Filter + PPDs installieren
+  # Bewusst OHNE `creates`-Guard: /usr/lib/cups/filter/rastertoqpdl wird
+  # bereits vom Basispaket printer-driver-splix mitgeliefert (der Patch
+  # behebt nur, dass die m2020-PPD beim ppd/-Unterbuild fehlte) — ein
+  # Guard auf diesen Pfad hätte den kompletten `make install`-Schritt
+  # (und damit genau den PPD-Rebuild) übersprungen. `make install` ist
+  # idempotent, ein Re-Run bei jedem Rollen-Lauf ist unproblematisch.
+  ansible.builtin.command:
+    cmd: make install DISABLE_JBIG=1
+    chdir: "{{ cups_print_server_qpdl_build_dir }}/splix"
+  register: cups_print_server_qpdl_install
+  changed_when: true
+  notify: Restart cups
+  when:
+    - cups_print_server_enabled | bool
+    - cups_print_server_build_qpdl_driver | bool
+
+- name: Install-Ausgabe des QPDL-Treibers anzeigen
+  ansible.builtin.debug:
+    msg: "{{ cups_print_server_qpdl_install.stdout_lines | default([]) }}"
+  when:
+    - cups_print_server_enabled | bool
+    - cups_print_server_build_qpdl_driver | bool
+
+- name: Handler sofort ausführen, damit lpinfo -m die neue PPD sieht
+  ansible.builtin.meta: flush_handlers
+
 # ---- Debug-Hilfen: Device-URI + passende PPD ermitteln --------
+# lpinfo durchsucht auch den dnssd-Backend (mDNS-Browse via Avahi) und kann
+# kurz nach einem cupsd-/avahi-Neustart oder einem cupsctl-Reload mit
+# "Internal Server Error" antworten, bis der Scheduler wieder voll bereit
+# ist — daher retries UND failed_when: false (reine Debug-Hilfe, darf den
+# Rollen-Lauf nicht zum Scheitern bringen).
 - name: Verfügbare Drucker-Device-URIs ermitteln
   ansible.builtin.command: lpinfo -v
   register: cups_print_server_detected_devices
   changed_when: false
+  failed_when: false
+  retries: 3
+  delay: 5
+  until: cups_print_server_detected_devices.rc == 0
   when: cups_print_server_enabled | bool
 
 - name: Erkannte Device-URIs anzeigen
@@ -70,6 +153,10 @@
   ansible.builtin.command: lpinfo -m
   register: cups_print_server_available_ppds
   changed_when: false
+  failed_when: false
+  retries: 3
+  delay: 5
+  until: cups_print_server_available_ppds.rc == 0
   when: cups_print_server_enabled | bool
 
 - name: Samsung/SPL-passende PPDs anzeigen
