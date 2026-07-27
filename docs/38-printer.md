@@ -68,7 +68,7 @@ den aktuellen Stand vorher per `cupsctl` ohne Argumente aus).
    `ansible/group_vars/all.yml` eintragen (Device-URI ist für den M2026
    bereits eingetragen):
    ```yaml
-   cups_print_server_ppd: "drv:///splix-samsung.drv/m2020.ppd"   # Beispiel — exakten Treffer aus lpinfo -m übernehmen
+   cups_print_server_ppd: "samsung/m2020.ppd"   # bestätigter Treffer für den M2026
    ```
 4. `make cups-print-server` erneut laufen lassen — legt jetzt die
    Warteschlange an, aktiviert sie und setzt sie als System-Default.
@@ -146,9 +146,10 @@ wer das nicht auf dem eigenen Homeserver haben möchte, setzt
 der Fallbacks unten.
 
 **Nach dem Build** zeigt `lpinfo -m | grep -i -E 'samsung|spl'` einen
-neuen Treffer wie `drv:///splix-samsung.drv/m2020.ppd Samsung M2020
-Series, 2.0.0` — dieser String kommt in
-`cups_print_server_ppd`.
+neuen Treffer `samsung/m2020.ppd Samsung M2020 Series` (statische PPD,
+kein `drv://`-Bundle-Eintrag) — dieser String kommt in
+`cups_print_server_ppd` (bereits für den M2026 eingetragen:
+`samsung/m2020.ppd`).
 
 **Falls der QPDL-Build nicht gewünscht ist (Fallback-Optionen):**
 
