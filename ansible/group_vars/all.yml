@@ -283,9 +283,8 @@ cups_print_server_device_uri: "usb://Samsung/M2020%20Series?serial=08HVB8GM1B087
 # quellcode-geprüfte QPDL-Treiber-Build (Details + Review-Notizen:
 # docs/38-printer.md).
 cups_print_server_build_qpdl_driver: true
-# Passende PPD nach dem Build ermitteln (`lpinfo -m | grep -i -E 'samsung|spl'`
-# — Treffer nach dem QPDL-Build z.B. "drv:///splix-samsung.drv/m2020.ppd"):
-cups_print_server_ppd: ""
+# Passende PPD nach dem Build (bestätigt per lpinfo -m auf homeserver):
+cups_print_server_ppd: "samsung/m2020.ppd"
 
 # ---- worker-0 (192.168.178.95) --------------------------
 # sudo-Passwort für worker-0 vault-verschlüsselt speichern:
