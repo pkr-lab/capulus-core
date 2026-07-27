@@ -233,12 +233,20 @@ aborted."` — der QPDL-Filter (`Printer::loadInformation()` in
 PageSize/Media-Option. Der PPD-eigene `*DefaultPageSize` allein reicht
 unter dem modernen cups-filters-2.x-Kompatibilitäts-Layer
 (`ppdFilterEmitJCL`, sichtbar im Log) nicht aus — ohne explizite Option
-liefert der Filter leere/keine Seiten. Behoben durch
-`cups_print_server_media_size` (Default `A4`), das die Rolle als
-Queue-Default per `lpadmin -o media=...` setzt — betrifft also nur
-Warteschlangen, die vor diesem Fix angelegt wurden; `make
-cups-print-server` erneut laufen lassen, um den Default nachzuziehen.
-Manueller Workaround pro Job, falls nötig: `lp -o media=A4 ...`.
+liefert der Filter leere/keine Seiten.
+
+Behoben durch `cups_print_server_media_size` (Default `A4`), das die
+Rolle als Queue-Default per `lpadmin -o PageSize=...` setzt. **Wichtig:**
+bewusst `PageSize` (der literale PPD-Options-Name), nicht `media` — mit
+`lpadmin -o media=...` reproduzierbar getestet, dass der Wert beim
+Anlegen der Warteschlange NICHT in der PPD markiert wird (der
+IPP-Alias `media` → `PageSize` wird nur bei der Job-Verarbeitung von
+`lp`/`lpr` aufgelöst, nicht von `lpadmin`); `lp -o media=A4 ...` als
+expliziter Job-Parameter funktioniert dagegen sofort. Betrifft nur
+Warteschlangen, die vor diesem Fix angelegt wurden — `make
+cups-print-server` erneut laufen lassen, um den Queue-Default
+nachzuziehen. Manueller Workaround pro Job, falls weiterhin nötig:
+`lp -o media=A4 ...` (oder `-o PageSize=A4`).
 
 **Drucker taucht nicht in `lpinfo -v` auf:**
 USB-Kabel/Steckplatz prüfen, `lsusb` auf dem Homeserver (Paket
