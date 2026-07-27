@@ -43,8 +43,9 @@ OBS / ffmpeg / Kamera ───────────────────�
 5. [Schritt 3 — Streamen (OBS/ffmpeg)](#schritt-3--streamen-obsffmpeg)
 6. [Verifizierung](#verifizierung)
 7. [Aufnahmen (optional)](#aufnahmen-optional)
-8. [Troubleshooting](#troubleshooting)
-9. [Rollback](#rollback)
+8. [Skalierung (HPA)](#skalierung-hpa)
+9. [Troubleshooting](#troubleshooting)
+10. [Rollback](#rollback)
 
 ---
 
@@ -254,6 +255,18 @@ Dieses Setup speichert standardmäßig **nichts** — reines Live-Durchreichen.
 Für Aufzeichnung auf Platte müsste `paths.all_others.record: yes` plus eine
 PVC (analog zu `argocd/apps/ntfy/templates/pvc.yaml`) ergänzt werden — bei
 Bedarf separat einrichten, um den Speicherbedarf bewusst zu halten.
+
+---
+
+## Skalierung (HPA)
+
+Skaliert per HPA auf 1–2 Replicas (CPU 75%). Wichtig: RTMP/RTSP-Publish-
+Verbindungen sind pro Pod langlebig — kube-proxy verteilt nur **neue**
+Verbindungen über die Service-IP auf Replicas, ein bereits verbundener
+Stream wandert nicht automatisch zu einem anderen Pod. Der HPA hilft also
+bei vielen gleichzeitigen neuen Verbindungen/Zuschauern, nicht dabei,
+einen einzelnen bestehenden Stream zu verteilen. Details für alle Apps:
+[39-hpa-autoscaling.md](39-hpa-autoscaling.md).
 
 ---
 

@@ -219,13 +219,13 @@ git push
 
 `cloudflared` unterstützt mehrere gleichzeitige Replicas für denselben
 Tunnel nativ (kein Leader-Election-Mechanismus nötig — jede Replica hält
-eigene Edge-Connections). Default in `values.yaml` ist `replicaCount: 2`.
-
-Höher schrauben, falls gewünscht:
-
-```yaml
-replicaCount: 3
-```
+eigene Edge-Connections). Die Replica-Zahl wird nicht mehr manuell über
+`replicaCount` gepflegt, sondern per HPA automatisch zwischen 2 (Minimum,
+für die zwei unabhängigen Edge-Verbindungen) und 4 geregelt, ausgelöst ab
+CPU 70% (`autoscaling` in `values.yaml`; Details für alle Apps:
+[39-hpa-autoscaling.md](39-hpa-autoscaling.md)). `replicaCount: 2` bleibt
+als Fallback-Wert stehen, greift aber nur, falls `autoscaling.enabled`
+auf `false` gesetzt wird.
 
 Da der Home-Server ein Single-Node-Cluster ist
 ([README.md](../README.md)), schützt eine höhere Replica-Zahl primär vor
