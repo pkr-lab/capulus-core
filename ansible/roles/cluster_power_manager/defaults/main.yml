@@ -21,15 +21,15 @@ cluster_power_manager_poll_seconds: 30
 # ---- Hochskalieren (Homeserver überlastet -> Worker aufwecken) --------
 # Sobald CPU ODER RAM auf dem Homeserver >= Schwelle ist, beginnt die
 # Sustain-Uhr zu laufen.
-cluster_power_manager_cpu_scale_up_threshold: 80
-cluster_power_manager_ram_scale_up_threshold: 80
+cluster_power_manager_cpu_scale_up_threshold: 60
+cluster_power_manager_ram_scale_up_threshold: 60
 # Wie lange die Last am/über der Schwelle bleiben muss, bevor der ERSTE
 # Worker (worker-0) geweckt wird.
-cluster_power_manager_scale_up_sustain_seconds: 300
+cluster_power_manager_scale_up_sustain_seconds: 60
 # Zusätzliche Zeit (addiert auf obige Sustain-Dauer), die die Last WEITER
 # am/über der Schwelle bleiben muss, bevor auch der ZWEITE Worker
 # (worker-1) geweckt wird — worker-0 ist zu diesem Zeitpunkt bereits wach.
-cluster_power_manager_scale_up_sustain_seconds_stage2: 300
+cluster_power_manager_scale_up_sustain_seconds_stage2: 200
 
 # ---- Herunterskalieren (Last wieder niedrig -> Worker ausschalten) ----
 # CPU UND RAM müssen BEIDE <= Schwelle sein (bewusst niedriger als die
@@ -46,10 +46,10 @@ cluster_power_manager_scale_down_sustain_seconds: 900
 # Mindest-Laufzeit eines Workers nach dem Aufwecken, bevor er überhaupt
 # für einen automatischen Shutdown in Frage kommt — zusätzliche
 # Anti-Flapping-Bremse unabhängig von der Scale-down-Sustain-Dauer.
-cluster_power_manager_min_uptime_seconds: 900
+cluster_power_manager_min_uptime_seconds: 300
 
 # ---- Wie lange auf "Ready" gewartet wird, nachdem WoL gesendet wurde --
-cluster_power_manager_ready_timeout_seconds: 180
+cluster_power_manager_ready_timeout_seconds: 120
 
 # ---- SSH-Zugang zum ferngesteuerten Poweroff --------------------------
 # Eigenes, hier generiertes Schlüsselpaar (NICHT der Semaphore-Key) —
