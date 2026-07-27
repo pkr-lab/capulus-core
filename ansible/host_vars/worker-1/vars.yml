@@ -11,4 +11,4 @@ k3s_agent_hostname: worker-1
 # (ansible/roles/wake_on_lan, ansible/roles/cluster_power_manager).
 # CHANGE: auf worker-1 selbst ermitteln, z.B.:
 #   ip link show | grep -A1 "^[0-9]*: en" | grep link/ether
-wake_on_lan_mac_address: "CHANGE_ME_run_ip_link_show_on_worker-1"
+wake_on_lan_mac_address: "b8:97:5a:ea:a4:fa"
