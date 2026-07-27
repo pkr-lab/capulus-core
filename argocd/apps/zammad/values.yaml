@@ -101,6 +101,13 @@ zammad:
 
     # ---- Nginx (Web-Frontend) --------------------------------
     nginx:
+      # null (nicht weggelassen), damit `replicas: {{ .Values.zammadConfig.nginx.replicas }}`
+      # leer rendert → Kubernetes behandelt das Feld als nicht gesetzt und
+      # defaultet bei der Erstellung auf 1, rührt es danach aber nicht mehr an.
+      # Verhindert, dass ArgoCDs selfHeal templates/nginx-hpa.yaml bei jedem
+      # Sync bekämpft (ein festes `1` hier würde die Deployment sofort nach
+      # jedem HPA-Scale-Up wieder auf 1 zurücksetzen).
+      replicas: null
       resources:
         requests:
           cpu: 25m
@@ -110,6 +117,13 @@ zammad:
 
     # ---- Rails-App-Server -----------------------------------
     railsserver:
+      # null (nicht weggelassen), damit `replicas: {{ .Values.zammadConfig.railsserver.replicas }}`
+      # leer rendert → Kubernetes behandelt das Feld als nicht gesetzt und
+      # defaultet bei der Erstellung auf 1, rührt es danach aber nicht mehr an.
+      # Verhindert, dass ArgoCDs selfHeal templates/railsserver-hpa.yaml bei
+      # jedem Sync bekämpft (ein festes `1` hier würde die Deployment sofort
+      # nach jedem HPA-Scale-Up wieder auf 1 zurücksetzen).
+      replicas: null
       resources:
         requests:
           cpu: 100m

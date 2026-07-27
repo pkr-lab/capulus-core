@@ -6,7 +6,9 @@ metadata:
   labels:
     {{- include "immich.ml.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.machineLearning.autoscaling.enabled }}
   replicas: {{ .Values.machineLearning.replicaCount }}
+  {{- end }}
   strategy:
     type: Recreate
   selector:
@@ -19,10 +21,18 @@ spec:
     spec:
       securityContext:
         {{- toYaml .Values.machineLearning.podSecurityContext | nindent 8 }}
-      {{- with .Values.machineLearning.affinity }}
+      # Erzwingt, dass alle Replicas auf demselben Node laufen — der
+      # model-cache ist ReadWriteOnce (siehe server-deployment.yaml für
+      # die ausführliche Begründung). .Values.machineLearning.affinity
+      # wird bewusst NICHT mehr zusätzlich eingebunden, um diese Regel
+      # nicht versehentlich zu überschreiben.
       affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  {{- include "immich.ml.selectorLabels" . | nindent 18 }}
+              topologyKey: kubernetes.io/hostname
       {{- with .Values.machineLearning.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
