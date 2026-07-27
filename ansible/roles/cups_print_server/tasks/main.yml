@@ -92,11 +92,76 @@
     - cups_print_server_enabled | bool
     - cups_print_server_build_qpdl_driver | bool
 
+# ---- Eigener Patch: PageSize-Fallback ----------------------------------
+# Printer::loadInformation() bricht mit "Cannot get paper size
+# information" ab, wenn cupsd der Legacy-PPD-Filterkette keine per Job
+# aufgelöste PageSize/media-Option mitgibt — beobachtet auf CUPS 2.4 /
+# cups-filters 2.x, selbst mit `lpadmin -o PageSize=...` als Queue-
+# Default (der Wert landet nachweislich nicht in /etc/cups/printers.conf).
+# Statt uns auf dieses brüchige Verhalten zu verlassen, patchen wir hier
+# selbst — anders als der QPDL-Treiber-Patch selbst ist das kein
+# Fremdcode, sondern ein von uns geschriebener, verstandener ~10-Zeilen-
+# Fix auf Basis der öffentlichen CUPS-PPD-API (ppdFindOption). Details:
+# docs/38-printer.md, Abschnitt "Warum dieser Fremdcode".
+- name: "Patch: PPDFile::getDefaultChoice() deklarieren (ppdfile.h)"
+  ansible.builtin.blockinfile:
+    path: "{{ cups_print_server_qpdl_build_dir }}/splix/include/ppdfile.h"
+    marker: "// {mark} ANSIBLE MANAGED BLOCK — cups_print_server PageSize-Fallback"
+    insertafter: 'Value\s+getPageSize\(const char \*name\);'
+    block: |
+        /**
+          * capulus-core: Fallback, falls cupsd keine per Job
+          * aufgelöste Option weitergibt — liest den PPD-eigenen
+          * *DefaultXxx-Wert direkt, ohne ppdFindMarkedChoice().
+          * Siehe docs/38-printer.md.
+          */
+        Value                   getDefaultChoice(const char *name);
+  when:
+    - cups_print_server_enabled | bool
+    - cups_print_server_build_qpdl_driver | bool
+
+- name: "Patch: PPDFile::getDefaultChoice() implementieren (ppdfile.cpp)"
+  ansible.builtin.blockinfile:
+    path: "{{ cups_print_server_qpdl_build_dir }}/splix/src/ppdfile.cpp"
+    marker: "// {mark} ANSIBLE MANAGED BLOCK — cups_print_server PageSize-Fallback"
+    insertbefore: '^/\* vim: set expandtab tabstop=4 shiftwidth=4 smarttab tw=80 cin enc=utf8: \*/$'
+    block: |
+      PPDValue PPDFile::getDefaultChoice(const char *name)
+      {
+          ppd_option_t *opt;
+          PPDValue val;
+
+          if (!(opt = ppdFindOption(_ppd, name)) || !opt->defchoice[0])
+              return val;
+          val.set(opt->defchoice);
+          return val;
+      }
+
+  when:
+    - cups_print_server_enabled | bool
+    - cups_print_server_build_qpdl_driver | bool
+
+- name: "Patch: Printer::loadInformation() nutzt den PageSize-Fallback (printer.cpp)"
+  ansible.builtin.blockinfile:
+    path: "{{ cups_print_server_qpdl_build_dir }}/splix/src/printer.cpp"
+    marker: "    // {mark} ANSIBLE MANAGED BLOCK — cups_print_server PageSize-Fallback"
+    insertbefore: '^    if \(!paperType\) \{$'
+    block: |
+        if (!paperType)
+            paperType = request.ppd()->getDefaultChoice("PageSize");
+  when:
+    - cups_print_server_enabled | bool
+    - cups_print_server_build_qpdl_driver | bool
+
 - name: QPDL-Filter kompilieren
+  # Bewusst OHNE `creates`-Guard (wie beim Install-Schritt): `make` ist
+  # selbst inkrementell (kompiliert nur geänderte Objektdateien neu) — ein
+  # externer Guard auf die fertige Binary hätte einen Rebuild nach obigem
+  # Patch verhindert.
   ansible.builtin.command:
     cmd: make DISABLE_JBIG=1
     chdir: "{{ cups_print_server_qpdl_build_dir }}/splix"
-    creates: "{{ cups_print_server_qpdl_build_dir }}/splix/optimized/rastertoqpdl"
+  changed_when: true
   when:
     - cups_print_server_enabled | bool
     - cups_print_server_build_qpdl_driver | bool
