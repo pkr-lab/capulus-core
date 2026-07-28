@@ -18,24 +18,34 @@ spec:
         {{- include "immich.postgresql.selectorLabels" . | nindent 8 }}
     spec:
       # ghcr.io/immich-app/postgres basiert auf dem offiziellen postgres-
-      # Image (UID/GID 999) — als 999 direkt starten, damit der interne
-      # chown-Fixup übersprungen wird (scheitert sonst auf dem NFS-Mount
-      # der "immich-nas"-StorageClass), analog zu docs/20-wikijs.md.
+      # Image (UID/GID 999) — ursprünglich wurde hier direkt als 999
+      # gestartet, um den internen chown-Fixup zu überspringen (analog zu
+      # docs/20-wikijs.md). Das reicht auf diesem NAS aber nicht.
       #
       # PGDATA zeigt bewusst auf "pgdata_fixed" statt "pgdata": Der NFS-
       # Export /volume2/immich-storage squasht auf diesem UGREEN-NAS-Modell
-      # (kein root_squash-Schalter in UGOS) jede Anfrage serverseitig auf
-      # eine feste UID/GID — welche genau, kann sich mit der NAS-Firmware/
-      # -Konfiguration ändern. Das alte "pgdata"-Verzeichnis war unter einer
-      # damals anderen Squash-Identität angelegt worden; dadurch konnte
-      # niemand mehr das von Postgres verlangte chmod 700 darauf ausführen
-      # (CrashLoopBackOff, "data directory has invalid permissions"). Fix:
-      # "pgdata_fixed" ist eine frische Kopie, neu angelegt unter der
-      # aktuellen Squash-Identität, auf der chmod 700 funktioniert.
+      # (kein root_squash-Schalter in UGOS) JEDE Anfrage serverseitig auf
+      # eine feste UID/GID — unabhängig davon, welche UID der Client (root
+      # oder sonst wer) tatsächlich verwendet. Aktuell ist das 1000:10.
+      # Das alte "pgdata"-Verzeichnis war unter einer damals anderen
+      # Squash-Identität angelegt worden; dadurch konnte niemand mehr das
+      # von Postgres verlangte chmod 700 darauf ausführen (CrashLoopBackOff,
+      # "data directory has invalid permissions"). Fix: "pgdata_fixed" ist
+      # eine frische Kopie, neu angelegt unter der aktuellen Squash-
+      # Identität — chmod 700 funktioniert darauf.
+      #
+      # runAsUser/runAsGroup müssen daher zwingend auf genau diese
+      # Squash-Identität (1000:10) gesetzt sein, NICHT auf 999: Postgres
+      # prüft beim Start zusätzlich zu den Modus-Bits, dass der eigene
+      # Prozess-User (getuid()) exakt dem Directory-Owner entspricht
+      # ("wrong ownership"-Fehler sonst) — und der Owner ist wegen des
+      # Squash immer 1000:10, egal was der Container deklariert. Ändert
+      # sich die Squash-Identität auf dem NAS künftig erneut, muss sowohl
+      # hier als auch bei "pgdata_fixed" (per Neukopie) nachgezogen werden.
       securityContext:
-        runAsUser: 999
-        runAsGroup: 999
-        fsGroup: 999
+        runAsUser: 1000
+        runAsGroup: 10
+        fsGroup: 10
       {{- with .Values.postgresql.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
