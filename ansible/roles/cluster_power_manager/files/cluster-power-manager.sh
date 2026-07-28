@@ -135,6 +135,23 @@ shutdown_worker() {
 
 logger -t cluster-power-manager "started (cpu_up=${CPU_SCALE_UP_THRESHOLD}% ram_up=${RAM_SCALE_UP_THRESHOLD}% cpu_down=${CPU_SCALE_DOWN_THRESHOLD}% ram_down=${RAM_SCALE_DOWN_THRESHOLD}% workers=${#worker_arr[@]})"
 
+# Bootstrap: ein Worker ist beim (Neu-)Start dieses Skripts bereits erreichbar
+# (Homeserver-Reboot, manueller Wake, State-Datei manuell geloescht, ...),
+# aber es existiert keine woke_at-Datei. Ohne diese wuerde das
+# MIN_UPTIME_SECONDS-Gate in shutdown_worker() NIE erfuellt sein, da woke_at=0
+# bleibt -- der Worker haenge dann dauerhaft fest und wuerde nie mehr
+# automatisch heruntergefahren. Zeitstempel also jetzt setzen, damit die
+# Mindest-Laufzeit ab diesem Skriptstart zaehlt.
+for entry in "${worker_arr[@]}"; do
+  name="${entry%%:*}"
+  rest="${entry#*:}"
+  ip="${rest%%:*}"
+  if [ ! -f "${STATE_DIR}/${name}.woke_at" ] && is_reachable "$ip"; then
+    logger -t cluster-power-manager "bootstrap: ${name} already reachable at startup, no woke_at found -- stamping now"
+    date +%s > "${STATE_DIR}/${name}.woke_at"
+  fi
+done
+
 while true; do
   cpu="$(cpu_percent)"
   ram="$(ram_percent)"
