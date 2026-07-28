@@ -1,8 +1,16 @@
-# 38 — Drucker: Samsung Xpress M2026 per CUPS im Heimnetz freigeben
+# 38 — Drucker: CUPS im Heimnetz freigeben
 
-Der Samsung Xpress M2026 hängt per USB-Kabel direkt am Homeserver
-(192.168.178.94). `cups_print_server` installiert CUPS + Treiber-Pakete
-und gibt die Warteschlange per **IPP** (Windows/Linux/macOS) und
+Zwei Drucker laufen über denselben `cupsd` auf dem Homeserver
+(192.168.178.94), verwaltet von der Ansible-Rolle `cups_print_server`:
+
+- **Samsung Xpress M2026** — hängt per USB-Kabel direkt am Homeserver.
+- **Samsung ML-1630W** — hängt per USB an einer FritzBox im
+  Mesh/Repeater-Modus (192.168.178.57) und wird von dieser als
+  Netzwerkdrucker über Raw-TCP Port 9100 geteilt (siehe
+  [Abschnitt weiter unten](#zweiter-drucker-samsung-ml-1630w-über-fritzbox)).
+
+`cups_print_server` installiert CUPS + Treiber-Pakete und gibt beide
+Warteschlangen per **IPP** (Windows/Linux/macOS) und
 **AirPrint/IPP-Everywhere via Avahi/mDNS** (iOS, Android, macOS) im
 gesamten Heimnetz frei — inklusive Tailnet, dank der bereits bestehenden
 Tailscale-Subnet-Route auf `local_subnet` (siehe
@@ -278,6 +286,67 @@ stattdessen `lpoptions -p Samsung_M2026 | grep shared` bzw. erneut
 Subnet-Route (`local_subnet`) im
 [Tailscale-Admin-Panel](https://login.tailscale.com/admin/machines)
 approved? Siehe [06-tailscale.md](06-tailscale.md#subnet-routing).
+
+---
+
+## Zweiter Drucker: Samsung ML-1630W über FritzBox
+
+```
+┌──────────── FritzBox Mesh/Repeater (192.168.178.57) ────────────┐
+│  Samsung ML-1630W ──USB──▶ teilt Drucker als Netzwerkdrucker    │
+│                              über Raw-TCP Port 9100             │
+└──────────────────────────────┬────────────────────────────────────┘
+                                │ LAN (gleiches Hauptnetz, keine
+                                │ Gast-WLAN-Isolation)
+                                ▼
+┌────────────────────── homeserver (192.168.178.94) ──────────────────────┐
+│  cupsd ──▶ Warteschlange "Samsung_ML-1630"                             │
+│            Device-URI: socket://192.168.178.57:9100                    │
+│            Treiber: printer-driver-splix (SPL2, bereits als Paket      │
+│            installiert — kein QPDL-Build nötig, anders als beim M2026) │
+└──────────────────────────────┬────────────────────────────────────────────┘
+                                │ LAN + Tailnet (wie oben, IPP/AirPrint)
+                                ▼
+                    iPhone/Android/Windows/Linux/Tailscale-Client
+```
+
+**Warum keine eigene Rolle/ArgoCD-App?** Der Homeserver betreibt bereits
+einen `cupsd` für den M2026. Ein zweiter `cupsd` (z.B. als Container über
+ArgoCD) würde auf Port 631 kollidieren und für denselben Zweck (Sharing
+eines bereits fertigen Netzwerkdruckers) unnötig doppelte Infrastruktur
+bedeuten — der ML-1630W braucht keinen USB-Passthrough, nur eine
+zusätzliche Warteschlange mit `socket://`-Device-URI. Die Rolle
+`cups_print_server` wurde daher um eine generische, vom M2026-Codepfad
+unabhängige Liste `cups_print_server_extra_queues` erweitert (siehe
+[ansible/roles/cups_print_server/tasks/main.yml](../ansible/roles/cups_print_server/tasks/main.yml)) —
+QPDL-Build und PageSize-Patch bleiben ausschließlich dem M2026 vorbehalten
+und werden vom ML-1630W-Setup nicht berührt.
+
+**Warum kein Vault?** Die Ziel-IP der FritzBox ist kein Secret (analog zur
+Device-URI des M2026, die ebenfalls im Klartext in `group_vars/all.yml`
+steht) — Vault wird in diesem Repo ausschließlich für echte Secrets
+(Passwörter, Tokens) genutzt.
+
+### Einrichtung
+
+1. `cups_print_server_extra_queues` in `ansible/group_vars/all.yml` enthält
+   bereits den Eintrag für `Samsung_ML-1630` mit
+   `device_uri: "socket://192.168.178.57:9100"`, aber (wie beim M2026 beim
+   ersten Lauf) noch **ohne** `ppd`.
+2. `make cups-print-server` einmal laufen lassen — installiert Pakete,
+   zeigt aber wegen fehlender `ppd` nur eine Warnung an und legt die
+   Warteschlange noch nicht an. Die Debug-Ausgabe
+   "Extra-Queues: Splix-Katalog nach passenden PPDs durchsuchen" listet
+   `lpinfo -m`-Treffer aus dem splix-Katalog (`(?i)splix|samsung|spl`).
+3. Passenden PPD-String (z.B. eine `ML-1630`- oder generische
+   SPL2/SPLc-PPD aus dem splix-Katalog) in den `ppd`-Wert des
+   `Samsung_ML-1630`-Eintrags in `ansible/group_vars/all.yml` eintragen.
+4. `make cups-print-server` erneut laufen lassen — legt jetzt die
+   Warteschlange an, aktiviert sie und teilt sie im LAN/Tailnet.
+
+Client-Einrichtung, Testen und Fehlerbehebung funktionieren analog zum
+M2026-Abschnitt oben (Warteschlangenname `Samsung_ML-1630` statt
+`Samsung_M2026`).
 
 ---
 
