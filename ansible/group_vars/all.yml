@@ -298,7 +298,7 @@ cups_print_server_ppd: "samsung/m2020.ppd"
 cups_print_server_extra_queues:
   - name: "Samsung_ML-1630"
     device_uri: "socket://192.168.178.57:9100"
-    ppd: ""
+    ppd: "drv:///splix-samsung.drv/ml1630.ppd"
     description: "Samsung ML-1630 (WiFi, homeserver)"
     location: "1.OG Repeater"
     media_size: "A4"
