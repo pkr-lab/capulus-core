@@ -21,6 +21,17 @@ spec:
       # Image (UID/GID 999) — als 999 direkt starten, damit der interne
       # chown-Fixup übersprungen wird (scheitert sonst auf dem NFS-Mount
       # der "immich-nas"-StorageClass), analog zu docs/20-wikijs.md.
+      #
+      # PGDATA zeigt bewusst auf "pgdata_fixed" statt "pgdata": Der NFS-
+      # Export /volume2/immich-storage squasht auf diesem UGREEN-NAS-Modell
+      # (kein root_squash-Schalter in UGOS) jede Anfrage serverseitig auf
+      # eine feste UID/GID — welche genau, kann sich mit der NAS-Firmware/
+      # -Konfiguration ändern. Das alte "pgdata"-Verzeichnis war unter einer
+      # damals anderen Squash-Identität angelegt worden; dadurch konnte
+      # niemand mehr das von Postgres verlangte chmod 700 darauf ausführen
+      # (CrashLoopBackOff, "data directory has invalid permissions"). Fix:
+      # "pgdata_fixed" ist eine frische Kopie, neu angelegt unter der
+      # aktuellen Squash-Identität, auf der chmod 700 funktioniert.
       securityContext:
         runAsUser: 999
         runAsGroup: 999
@@ -50,7 +61,7 @@ spec:
             - name: POSTGRES_INITDB_ARGS
               value: {{ .Values.postgresql.initdbArgs | quote }}
             - name: PGDATA
-              value: /var/lib/postgresql/data/pgdata
+              value: /var/lib/postgresql/data/pgdata_fixed
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
