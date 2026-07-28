@@ -311,6 +311,102 @@
     - cups_print_server_device_uri | length > 0
     - cups_print_server_ppd | length > 0
 
+# ---- Weitere Warteschlangen (Netzwerkdrucker, generisch) -------------
+# Unabhängig vom M2026-Einzeldrucker-Codepfad oben: legt für jeden
+# Eintrag in cups_print_server_extra_queues eine Warteschlange an. Kein
+# QPDL-Build, kein PageSize-Patch — gedacht für Drucker, die bereits
+# fertig gerastert per socket://-URI (Raw-TCP) ansprechbar sind. Siehe
+# docs/38-printer.md.
+- name: "Extra-Queues: Splix-Katalog nach passenden PPDs durchsuchen (Debug)"
+  ansible.builtin.debug:
+    msg: >-
+      {{ cups_print_server_available_ppds.stdout_lines
+         | default([])
+         | select('search', '(?i)splix|samsung|spl')
+         | list
+         | default(['(keine gefunden — siehe docs/38-printer.md)'], true) }}
+  when:
+    - cups_print_server_enabled | bool
+    - cups_print_server_extra_queues | length > 0
+
+- name: "Extra-Queues: warnen, wenn ppd noch nicht gesetzt ist"
+  ansible.builtin.debug:
+    msg: >-
+      Queue "{{ item.name }}": ppd ist noch leer — wird NICHT angelegt.
+      Passenden Treffer aus der Splix-Katalog-Debug-Ausgabe oben in
+      cups_print_server_extra_queues eintragen. Siehe docs/38-printer.md.
+  loop: "{{ cups_print_server_extra_queues }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - cups_print_server_enabled | bool
+    - (item.ppd | default('')) | length == 0
+
+- name: "Extra-Queues: Warteschlange anlegen/aktualisieren"
+  ansible.builtin.command:
+    argv:
+      - lpadmin
+      - "-p"
+      - "{{ item.name }}"
+      - "-E"
+      - "-v"
+      - "{{ item.device_uri }}"
+      - "-m"
+      - "{{ item.ppd }}"
+      - "-D"
+      - "{{ item.description | default(item.name) }}"
+      - "-L"
+      - "{{ item.location | default('') }}"
+      - "-o"
+      - "printer-is-shared=true"
+      - "-o"
+      - "PageSize={{ item.media_size | default('A4') }}"
+  loop: "{{ cups_print_server_extra_queues }}"
+  loop_control:
+    label: "{{ item.name }}"
+  changed_when: true
+  when:
+    - cups_print_server_enabled | bool
+    - (item.ppd | default('')) | length > 0
+    - (item.device_uri | default('')) | length > 0
+
+- name: "Extra-Queues: Warteschlange aktivieren"
+  ansible.builtin.command:
+    argv: ["cupsenable", "{{ item.name }}"]
+  loop: "{{ cups_print_server_extra_queues }}"
+  loop_control:
+    label: "{{ item.name }}"
+  changed_when: true
+  when:
+    - cups_print_server_enabled | bool
+    - (item.ppd | default('')) | length > 0
+    - (item.device_uri | default('')) | length > 0
+
+- name: "Extra-Queues: Job-Annahme aktivieren"
+  ansible.builtin.command:
+    argv: ["cupsaccept", "{{ item.name }}"]
+  loop: "{{ cups_print_server_extra_queues }}"
+  loop_control:
+    label: "{{ item.name }}"
+  changed_when: true
+  when:
+    - cups_print_server_enabled | bool
+    - (item.ppd | default('')) | length > 0
+    - (item.device_uri | default('')) | length > 0
+
+- name: "Extra-Queues: als System-Default setzen (falls gewünscht)"
+  ansible.builtin.command:
+    argv: ["lpoptions", "-d", "{{ item.name }}"]
+  loop: "{{ cups_print_server_extra_queues }}"
+  loop_control:
+    label: "{{ item.name }}"
+  changed_when: true
+  when:
+    - cups_print_server_enabled | bool
+    - item.set_default | default(false) | bool
+    - (item.ppd | default('')) | length > 0
+    - (item.device_uri | default('')) | length > 0
+
 # ---- Verifikation ------------------------------------------
 - name: Status aller Warteschlangen anzeigen
   ansible.builtin.command: lpstat -t

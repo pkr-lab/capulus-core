@@ -13,7 +13,7 @@ cups_print_server_enabled: true
 # Name erscheint in CUPS-/IPP-URLs — keine Leerzeichen/Sonderzeichen.
 cups_print_server_printer_name: "Samsung_M2026"
 cups_print_server_printer_description: "Samsung Xpress M2026 (USB, homeserver)"
-cups_print_server_printer_location: "Homeserver"
+cups_print_server_printer_location: "2.OG Homeserver"
 
 # Device-URI und PPD/Treiber MÜSSEN nach dem ersten Rollen-Lauf einmalig
 # manuell ermittelt werden: Drucker per USB anschließen, dann auf dem
@@ -74,3 +74,21 @@ cups_print_server_qpdl_repo: "https://gitlab.com/ScumCoder/splix.git"
 # ein späterer Push auf den Branch nicht unbemerkt anderen Code einschleust.
 cups_print_server_qpdl_repo_version: "f97086c367d926dc4b6f84facabc9c3029729cba"
 cups_print_server_qpdl_build_dir: "/usr/local/src/splix-qpdl"
+
+# ---- Weitere Warteschlangen (Netzwerkdrucker) -------------------------
+# Generische Liste zusätzlicher CUPS-Warteschlangen, unabhängig vom
+# obigen M2026-Einzeldrucker-Codepfad (kein QPDL-Build, keine PageSize-
+# Patches). Gedacht für Netzwerkdrucker, die bereits per socket://-URI
+# (Raw-TCP, z.B. Port 9100) erreichbar sind — z.B. ein per USB an einer
+# FritzBox hängender Drucker, den diese als Netzwerkdrucker teilt. Siehe
+# docs/38-printer.md.
+#
+# Schema je Eintrag:
+#   name:          Warteschlangenname (keine Leerzeichen/Sonderzeichen)
+#   device_uri:    z.B. "socket://192.168.178.57:9100"
+#   ppd:           lpinfo -m-Treffer (z.B. aus dem printer-driver-splix-Katalog)
+#   description:   Freitext für "-D"
+#   location:      Freitext für "-L"
+#   media_size:    PPD-*PageSize*-Choice-Name, Default "A4"
+#   set_default:   diese Queue als System-Default setzen (Default: false)
+cups_print_server_extra_queues: []
