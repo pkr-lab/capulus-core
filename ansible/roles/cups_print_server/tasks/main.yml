@@ -84,10 +84,18 @@
     - cups_print_server_build_qpdl_driver | bool
 
 - name: QPDL-Treiber-Quellcode klonen (gepinnter Commit)
+  # force: true, weil die PageSize-Fallback-Patches unten den Checkout bei
+  # jedem Lauf uncommitted verändern — ohne force lehnt das git-Modul ab
+  # zweiten Lauf mit "Local modifications exist" ab, obwohl der Tree schon
+  # auf dem richtigen (gepinnten) Commit steht. Unbedenklich: die
+  # verworfenen lokalen Änderungen sind exakt die Patches, die direkt im
+  # Anschluss deterministisch erneut angewendet werden (idempotenter
+  # Endzustand).
   ansible.builtin.git:
     repo: "{{ cups_print_server_qpdl_repo }}"
     dest: "{{ cups_print_server_qpdl_build_dir }}"
     version: "{{ cups_print_server_qpdl_repo_version }}"
+    force: true
   when:
     - cups_print_server_enabled | bool
     - cups_print_server_build_qpdl_driver | bool
