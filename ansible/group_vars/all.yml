@@ -286,6 +286,24 @@ cups_print_server_build_qpdl_driver: true
 # Passende PPD nach dem Build (bestätigt per lpinfo -m auf homeserver):
 cups_print_server_ppd: "samsung/m2020.ppd"
 
+# Samsung ML-1630W: hängt NICHT am Homeserver, sondern per USB an einer
+# FritzBox im Mesh/Repeater-Modus, die ihn als Netzwerkdrucker über
+# Raw-TCP Port 9100 teilt. FritzBox und Homeserver sind im selben
+# Hauptnetz (keine Gast-WLAN-Isolation) — direkter socket://-Zugriff
+# reicht, kein USB-Passthrough nötig. Spricht natives SPL2, das
+# printer-driver-splix (bereits installiert) regulär abdeckt — kein
+# QPDL-Build nötig. ppd erst nach dem ersten Rollen-Lauf einmalig per
+# lpinfo -m auf dem Homeserver ermitteln (Debug-Ausgabe der Rolle zeigt
+# passende Treffer) und hier eintragen. Siehe docs/38-printer.md.
+cups_print_server_extra_queues:
+  - name: "Samsung_ML-1630"
+    device_uri: "socket://192.168.178.57:9100"
+    ppd: ""
+    description: "Samsung ML-1630 (WiFi, homeserver)"
+    location: "1.OG Repeater"
+    media_size: "A4"
+    set_default: false
+
 # ---- worker-0 (192.168.178.95) --------------------------
 # sudo-Passwort für worker-0 vault-verschlüsselt speichern:
 #   ansible-vault encrypt_string 'DEIN_SUDO_PW' --name 'vault_worker-0_become_password'
