@@ -329,20 +329,21 @@ steht) — Vault wird in diesem Repo ausschließlich für echte Secrets
 
 ### Einrichtung
 
-1. `cups_print_server_extra_queues` in `ansible/group_vars/all.yml` enthält
-   bereits den Eintrag für `Samsung_ML-1630` mit
-   `device_uri: "socket://192.168.178.57:9100"`, aber (wie beim M2026 beim
-   ersten Lauf) noch **ohne** `ppd`.
-2. `make cups-print-server` einmal laufen lassen — installiert Pakete,
-   zeigt aber wegen fehlender `ppd` nur eine Warnung an und legt die
-   Warteschlange noch nicht an. Die Debug-Ausgabe
-   "Extra-Queues: Splix-Katalog nach passenden PPDs durchsuchen" listet
-   `lpinfo -m`-Treffer aus dem splix-Katalog (`(?i)splix|samsung|spl`).
-3. Passenden PPD-String (z.B. eine `ML-1630`- oder generische
-   SPL2/SPLc-PPD aus dem splix-Katalog) in den `ppd`-Wert des
-   `Samsung_ML-1630`-Eintrags in `ansible/group_vars/all.yml` eintragen.
-4. `make cups-print-server` erneut laufen lassen — legt jetzt die
-   Warteschlange an, aktiviert sie und teilt sie im LAN/Tailnet.
+`cups_print_server_extra_queues` in `ansible/group_vars/all.yml` enthält
+bereits den vollständigen Eintrag für `Samsung_ML-1630` —
+`device_uri: "socket://192.168.178.57:9100"` und `ppd:
+"drv:///splix-samsung.drv/ml1630.ppd"` (exakter Treffer im
+`printer-driver-splix`-Katalog für genau dieses Modell, per `lpinfo -m |
+grep -i -E 'splix|samsung|ml.?16|ml-?1630'` auf dem Homeserver bestätigt).
+`make cups-print-server` laufen lassen — legt die Warteschlange direkt an,
+aktiviert sie und teilt sie im LAN/Tailnet.
+
+Falls der Eintrag doch mal ohne `ppd` läuft (z.B. bei einem künftigen
+dritten Drucker): die Rolle installiert dann nur Pakete + Sharing und
+zeigt eine Warnung, ohne die Warteschlange anzulegen — passenden PPD-String
+aus der Debug-Ausgabe "Extra-Queues: Splix-Katalog nach passenden PPDs
+durchsuchen" (`lpinfo -m`, gefiltert auf `(?i)splix|samsung|spl`)
+übernehmen und erneut laufen lassen.
 
 Client-Einrichtung, Testen und Fehlerbehebung funktionieren analog zum
 M2026-Abschnitt oben (Warteschlangenname `Samsung_ML-1630` statt
