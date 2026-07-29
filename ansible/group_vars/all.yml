@@ -74,6 +74,13 @@ tailscale_hostname: "{{ hostname }}"
 # ---- Local network ----------------------------------------
 local_subnet: "192.168.178.0/24"
 
+# ---- Pi-hole (network-wide ad blocking) --------------------
+# Cluster-App: argocd/apps/pihole (Helm-Chart). dnsmasq (Rolle oben)
+# forwardet alle nicht-*.homeserver-Anfragen an diesen NodePort statt
+# direkt an die Fritz!Box — muss mit dnsService.nodePort in
+# argocd/apps/pihole/values.yaml übereinstimmen.
+pihole_dns_nodeport: 30053
+
 # ---- Semaphore UI -----------------------------------------
 # Master Ansible-Vault password — same value you type when running
 # `ansible-playbook --ask-vault-pass`. Semaphore uses this so playbooks

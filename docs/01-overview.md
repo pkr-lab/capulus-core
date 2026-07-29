@@ -189,6 +189,12 @@ Die Architektur — und warum der Home-Server bewusst **nicht** dein
 LAN-weiter DNS-Server sein sollte — steht in
 [`09-dns-architecture.md`](09-dns-architecture.md).
 
+Alle nicht-`*.homeserver`-Anfragen leitet dnsmasq an **Pi-hole**
+(`argocd/apps/pihole/`, NodePort `192.168.178.94:30053`) weiter statt
+direkt an die Fritz!Box — jedes Gerät, das dnsmasq bereits als DNS nutzt,
+bekommt so automatisch Werbeblocking. Details:
+[`09-dns-architecture.md#pi-hole-werbeblocking-im-dns-forward`](09-dns-architecture.md#pi-hole-werbeblocking-im-dns-forward).
+
 ### Scanner + Paperless-Pipeline
 
 Ein Fujitsu USB-Scanner hängt direkt am Host. `scanbd` hört auf den

@@ -164,6 +164,29 @@ bleibt funktional.
 
 ---
 
+## Pi-hole: Werbeblocking im DNS-Forward
+
+Seit `argocd/apps/pihole/` existiert, leitet dnsmasq alle nicht-`*.homeserver`-
+Anfragen nicht mehr direkt an die Fritz!Box weiter, sondern zuerst an Pi-hole
+(k3s-NodePort auf `192.168.178.94:30053`, siehe `pihole_dns_nodeport` in
+`ansible/group_vars/all.yml`). Pi-hole filtert Werbe-/Tracking-Domains heraus
+und reicht den Rest an die Fritz!Box weiter.
+
+```
+Client → dnsmasq (192.168.178.94:53)
+           ├── *.homeserver           → statische IPs (wie gehabt)
+           └── alles andere           → Pi-hole (NodePort :30053)
+                                            → Fritz!Box (192.168.178.1)
+                                            → Internet
+```
+
+Das betrifft **nur** Geräte, die dnsmasq bereits als DNS nutzen (siehe die
+drei Wege oben) — ohne Router-Änderung. Fällt Pi-hole aus, liefert dnsmasq
+schlicht keine Antwort für nicht-`*.homeserver`-Namen mehr (kein Fallback auf
+die Fritz!Box), bis der Pod wieder läuft; `*.homeserver` bleibt unberührt.
+
+---
+
 ## Was ist mit der "Local DNS server"-Option in der Fritz!Box?
 
 ```
