@@ -225,7 +225,10 @@ data:
             except Exception as exc:
                 print(f"[ERR] {path}: Download fehlgeschlagen: {exc}", file=sys.stderr)
                 continue
-            title = extract_title(content, slug)
+            # Titel bewusst nicht aus der Markdown-H1 ziehen — der
+            # konfigurierte slug (z. B. "ReadMe"/"Deploy") ist hier der
+            # gewünschte, feste Wiki.js-Titel.
+            title = slug
             try:
                 upsert(target_path, content, title, existing_pages.get(target_path))
             except Exception as exc:
