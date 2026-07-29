@@ -1,0 +1,87 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "wiki-docs-sync.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "wiki-docs-sync.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.schedule | quote }}
+  timeZone: {{ .Values.timezone | quote }}
+  suspend: {{ .Values.suspend }}
+  concurrencyPolicy: {{ .Values.concurrencyPolicy }}
+  failedJobsHistoryLimit: {{ .Values.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.successfulJobsHistoryLimit }}
+  jobTemplate:
+    metadata:
+      labels:
+        {{- include "wiki-docs-sync.selectorLabels" . | nindent 8 }}
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          annotations:
+            checksum/script: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+          labels:
+            {{- include "wiki-docs-sync.selectorLabels" . | nindent 12 }}
+        spec:
+          restartPolicy: Never
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          containers:
+            - name: sync
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command: ["python3", "/app/sync.py"]
+              env:
+                - name: GITHUB_OWNER
+                  value: {{ .Values.github.owner | quote }}
+                - name: GITHUB_REPO
+                  value: {{ .Values.github.repo | quote }}
+                - name: GITHUB_BRANCH
+                  value: {{ .Values.github.branch | quote }}
+                - name: GITHUB_DOCS_PATH
+                  value: {{ .Values.github.docsPath | quote }}
+                {{- if .Values.github.tokenSecretName }}
+                - name: GITHUB_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.github.tokenSecretName }}
+                      key: {{ .Values.github.tokenSecretKey }}
+                {{- end }}
+                - name: WIKIJS_API_URL
+                  value: {{ .Values.wikijs.url | quote }}
+                - name: WIKIJS_LOCALE
+                  value: {{ .Values.wikijs.locale | quote }}
+                - name: WIKIJS_PATH_PREFIX
+                  value: {{ .Values.wikijs.pathPrefix | quote }}
+                - name: WIKIJS_API_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.wikijs.tokenSecretName }}
+                      key: {{ .Values.wikijs.tokenSecretKey }}
+              resources:
+                {{- toYaml .Values.resources | nindent 16 }}
+              securityContext:
+                {{- toYaml .Values.securityContext | nindent 16 }}
+              volumeMounts:
+                - name: script
+                  mountPath: /app
+                  readOnly: true
+          volumes:
+            - name: script
+              configMap:
+                name: {{ include "wiki-docs-sync.fullname" . }}-script
+                defaultMode: 0555
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
