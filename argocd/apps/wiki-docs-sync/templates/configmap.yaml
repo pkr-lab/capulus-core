@@ -21,6 +21,7 @@ data:
     """
     import json
     import os
+    import re
     import sys
     import urllib.error
     import urllib.request
@@ -122,6 +123,17 @@ data:
         return fallback
 
 
+    def numbered_title(filename, content):
+        # Docs-Dateinamen tragen eine Sortiernummer (z. B. "01-overview.md"),
+        # die Markdown-H1 aber meist nicht — ohne sie fehlt die Nummer im
+        # Wiki.js-Sidebar-Titel, obwohl der Slug sie weiterhin enthält.
+        title = extract_title(content, filename[:-3])
+        match = re.match(r"(\d+)[-_.]*", filename)
+        if match and not title.startswith(match.group(1)):
+            return f"{match.group(1)} - {title}"
+        return title
+
+
     def list_wiki_pages_under_prefix():
         data = graphql("query { pages { list { id path locale } } }")
         prefix = f"{WIKIJS_PATH_PREFIX}/"
@@ -198,7 +210,7 @@ data:
             except Exception as exc:
                 print(f"[ERR] {filename}: Download fehlgeschlagen: {exc}", file=sys.stderr)
                 continue
-            title = extract_title(content, filename[:-3])
+            title = numbered_title(filename, content)
             try:
                 upsert(target_path, content, title, existing_pages.get(target_path))
             except Exception as exc:
