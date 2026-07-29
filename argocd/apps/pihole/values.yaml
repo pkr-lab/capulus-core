@@ -1,0 +1,104 @@
+---
+replicaCount: 1
+
+image:
+  repository: pihole/pihole
+  pullPolicy: IfNotPresent
+  # Pinned for reproducibility. Bump to track upstream releases:
+  # https://hub.docker.com/r/pihole/pihole/tags
+  tag: "2026.07.2"
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+# FTL braucht Root + zusätzliche Capabilities, um Port 53 zu binden.
+# Kein DHCP wird genutzt (Fritz!Box bleibt DHCP-Server) — NET_ADMIN/NET_RAW
+# sind trotzdem laut Upstream-Doku für volle FTL-Funktionalität nötig.
+securityContext:
+  runAsNonRoot: false
+  runAsUser: 0
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    add:
+      - NET_ADMIN
+      - NET_RAW
+      - NET_BIND_SERVICE
+    drop:
+      - ALL
+
+# Web-UI — ClusterIP + Ingress wie bei den anderen Apps.
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+# DNS — NodePort, damit der Host-dnsmasq (ansible/roles/dnsmasq) über
+# <network_static_ip>:<nodePort> dorthin weiterleiten kann, ohne den
+# Router anzufassen. Muss mit `pihole_dns_nodeport` in
+# ansible/group_vars/all.yml übereinstimmen.
+dnsService:
+  type: NodePort
+  port: 53
+  nodePort: 30053
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations: {}
+  hosts:
+    - host: pihole.homeserver
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+persistence:
+  enabled: true
+  storageClassName: local-path
+  size: 1Gi
+  accessMode: ReadWriteOnce
+  mountPath: /etc/pihole
+
+# Web-/API-Passwort kommt aus dem SealedSecret in templates/sealedsecret.yaml.
+# Erzeugen mit:
+#   echo -n "<klartext-passwort>" \
+#     | kubeseal --raw --namespace pihole --name pihole-webpassword \
+#         --from-file=/dev/stdin
+adminSecret:
+  enabled: true
+  secretName: pihole-webpassword
+  encryptedPassword: "REPLACE_ME_WITH_KUBESEAL_OUTPUT"
+
+# TZ + FTLCONF_* Umgebungsvariablen (Pi-hole v6 / FTL, kein separates
+# dnsmasq mehr im Container).
+config:
+  timezone: "Europe/Berlin"
+  # Fritz!Box bleibt der eigentliche Resolver — Pi-hole filtert nur.
+  dnsUpstreams: "192.168.178.1"
+  dnsListeningMode: "all"
+
+extraEnv: []
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
