@@ -19,6 +19,14 @@ github:
   repo: "capulus-core"
   branch: "main"
   docsPath: "docs"
+  # Zusätzliche Root-Level-Dateien, die direkt unter wikijs.pathPrefix
+  # (statt unter wikijs.docsSubpath) gespiegelt werden. `slug` bestimmt
+  # sowohl den Wiki.js-Seitenpfad als auch den Fallback-Titel.
+  extraFiles:
+    - path: "README.md"
+      slug: "ReadMe"
+    - path: "DEPLOY.md"
+      slug: "Deploy"
   # Optionaler GitHub-PAT (nur für die Contents-Listing-Anfrage relevant,
   # nicht für die Datei-Downloads über raw.githubusercontent.com). Bei
   # einem öffentlichen Repo im 15-Minuten-Takt nicht nötig
@@ -36,7 +44,11 @@ wikijs:
   # Locale — es wird NICHT Teil von pathPrefix, sondern separat gesetzt
   # und von Wiki.js automatisch vor den Pfad gehängt.
   locale: "en"
-  pathPrefix: "Github/capulus-core/docs"
+  pathPrefix: "Github/capulus-core"
+  # Unterordner unterhalb von pathPrefix, in den die docs/*.md-Dateien
+  # gespiegelt werden. github.extraFiles landen dagegen direkt unter
+  # pathPrefix (siehe oben).
+  docsSubpath: "docs"
   tokenSecretName: wiki-docs-sync-wikijs-token
   tokenSecretKey: token
 

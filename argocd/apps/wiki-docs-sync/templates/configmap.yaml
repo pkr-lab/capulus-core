@@ -29,12 +29,14 @@ data:
     GITHUB_REPO = os.environ["GITHUB_REPO"]
     GITHUB_BRANCH = os.environ["GITHUB_BRANCH"]
     GITHUB_DOCS_PATH = os.environ["GITHUB_DOCS_PATH"]
+    GITHUB_EXTRA_FILES = os.environ.get("GITHUB_EXTRA_FILES", "")
     GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 
     WIKIJS_API_URL = os.environ["WIKIJS_API_URL"].rstrip("/")
     WIKIJS_API_TOKEN = os.environ["WIKIJS_API_TOKEN"]
     WIKIJS_LOCALE = os.environ.get("WIKIJS_LOCALE", "en")
     WIKIJS_PATH_PREFIX = os.environ["WIKIJS_PATH_PREFIX"].strip("/")
+    WIKIJS_DOCS_SUBPATH = os.environ.get("WIKIJS_DOCS_SUBPATH", "docs").strip("/")
 
     GRAPHQL_ENDPOINT = f"{WIKIJS_API_URL}/graphql"
 
@@ -66,6 +68,21 @@ data:
         ]
 
 
+    def parse_extra_files():
+        pairs = []
+        for item in GITHUB_EXTRA_FILES.split(","):
+            item = item.strip()
+            if not item:
+                continue
+            path, _, slug = item.partition("=")
+            pairs.append((path.strip(), (slug or path).strip()))
+        return pairs
+
+
+    def fetch_extra_file(path):
+        return github_request(f"/repos/{GITHUB_OWNER}/{GITHUB_REPO}/contents/{path}?ref={GITHUB_BRANCH}")
+
+
     def graphql(query, variables=None):
         payload = json.dumps({"query": query, "variables": variables or {}}).encode()
         req = urllib.request.Request(
@@ -88,8 +105,12 @@ data:
         return body["data"]
 
 
-    def wiki_path(filename):
+    def docs_wiki_path(filename):
         slug = filename[:-3] if filename.endswith(".md") else filename
+        return f"{WIKIJS_PATH_PREFIX}/{WIKIJS_DOCS_SUBPATH}/{slug}"
+
+
+    def extra_wiki_path(slug):
         return f"{WIKIJS_PATH_PREFIX}/{slug}"
 
 
@@ -111,10 +132,7 @@ data:
         }
 
 
-    def upsert(filename, content, existing_id):
-        target_path = wiki_path(filename)
-        title = extract_title(content, filename[:-3])
-
+    def upsert(target_path, content, title, existing_id):
         if existing_id:
             graphql(
                 """
@@ -163,24 +181,43 @@ data:
 
     def main():
         docs = list_docs()
+        extra_files = parse_extra_files()
         print(f"[INFO] {len(docs)} Markdown-Dateien in {GITHUB_OWNER}/{GITHUB_REPO}/{GITHUB_DOCS_PATH} gefunden")
+        if extra_files:
+            print(f"[INFO] {len(extra_files)} zusätzliche Root-Dateien konfiguriert")
 
         existing_pages = list_wiki_pages_under_prefix()
         seen_paths = set()
 
         for entry in docs:
             filename = entry["name"]
-            target_path = wiki_path(filename)
+            target_path = docs_wiki_path(filename)
             seen_paths.add(target_path)
             try:
                 content = fetch_raw(entry["download_url"])
             except Exception as exc:
                 print(f"[ERR] {filename}: Download fehlgeschlagen: {exc}", file=sys.stderr)
                 continue
+            title = extract_title(content, filename[:-3])
             try:
-                upsert(filename, content, existing_pages.get(target_path))
+                upsert(target_path, content, title, existing_pages.get(target_path))
             except Exception as exc:
                 print(f"[ERR] {filename}: Wiki.js-Sync fehlgeschlagen: {exc}", file=sys.stderr)
+
+        for path, slug in extra_files:
+            target_path = extra_wiki_path(slug)
+            seen_paths.add(target_path)
+            try:
+                entry = fetch_extra_file(path)
+                content = fetch_raw(entry["download_url"])
+            except Exception as exc:
+                print(f"[ERR] {path}: Download fehlgeschlagen: {exc}", file=sys.stderr)
+                continue
+            title = extract_title(content, slug)
+            try:
+                upsert(target_path, content, title, existing_pages.get(target_path))
+            except Exception as exc:
+                print(f"[ERR] {path}: Wiki.js-Sync fehlgeschlagen: {exc}", file=sys.stderr)
 
         for path, page_id in existing_pages.items():
             if path not in seen_paths:
