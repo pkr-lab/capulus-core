@@ -112,7 +112,11 @@ data:
                 url: https://creativecommons.tankerkoenig.de/json/prices.php
                 parameters:
                   ids: "c40eefd2-1343-48f1-aafe-3e97f46222b0,effdf24b-44b3-4ddc-9c38-feedb636b05e,40b99699-12d6-48b4-9a90-9d8a9db99ba0"
+                  {{- if .Values.secrets.tankerkoenig.enabled }}
                   apikey: "${TANKERKOENIG_API_KEY}"
+                  {{- else }}
+                  apikey: ""
+                  {{- end }}
                 template: |
 {{ include "glance.fuelPricesTemplate" . | nindent 18 }}
 
