@@ -42,6 +42,14 @@ spec:
                   value: {{ .Values.github.branch | quote }}
                 - name: GITHUB_DOCS_PATH
                   value: {{ .Values.github.docsPath | quote }}
+                {{- if .Values.github.extraFiles }}
+                {{- $pairs := list }}
+                {{- range .Values.github.extraFiles }}
+                {{- $pairs = append $pairs (printf "%s=%s" .path .slug) }}
+                {{- end }}
+                - name: GITHUB_EXTRA_FILES
+                  value: {{ join "," $pairs | quote }}
+                {{- end }}
                 {{- if .Values.github.tokenSecretName }}
                 - name: GITHUB_TOKEN
                   valueFrom:
@@ -55,6 +63,8 @@ spec:
                   value: {{ .Values.wikijs.locale | quote }}
                 - name: WIKIJS_PATH_PREFIX
                   value: {{ .Values.wikijs.pathPrefix | quote }}
+                - name: WIKIJS_DOCS_SUBPATH
+                  value: {{ .Values.wikijs.docsSubpath | quote }}
                 - name: WIKIJS_API_TOKEN
                   valueFrom:
                     secretKeyRef:
