@@ -87,8 +87,11 @@ monitoring:
 #   echo -n "<dein-tankerkoenig-api-key>" \
 #     | kubeseal --raw --namespace glance --name glance-tankerkoenig-api-key \
 #         --from-file=/dev/stdin
-# Bis dahin liefert die API 401/leer und das Tankpreise-Widget bleibt leer
-# (kein Pod-Crash, siehe docs/41-glance.md).
+# Solange encryptedApiKey noch der Platzhalter ist, kann der sealed-secrets-
+# Controller ihn nicht entschlüsseln → kein Secret → der Pod bleibt in
+# CreateContainerConfigError hängen (TANKERKOENIG_API_KEY ist ein Pflicht-
+# secretKeyRef in deployment.yaml). Für einen Start ohne Tankpreise-Widget
+# stattdessen enabled: false setzen (siehe docs/41-glance.md).
 secrets:
   tankerkoenig:
     enabled: true
