@@ -127,31 +127,47 @@ inside these defines; hardcode any values instead (see docs/41-glance.md).
 <ul class="list list-gap-14">
   <li>
     <p class="color-highlight">homeserver (.94)</p>
+    {{ if .JSON.Exists "data.result.#(metric.instance==\"homeserver\")" }}
     <ul class="list-horizontal-text">
       <li>CPU {{ .JSON.Float "data.result.#(metric.instance==\"homeserver\").value.1" | printf "%.0f" }}%</li>
       <li>RAM {{ $mem.JSON.Float "data.result.#(metric.instance==\"homeserver\").value.1" | printf "%.0f" }}%</li>
     </ul>
+    {{ else }}
+    <p class="color-base">Offline / keine Daten</p>
+    {{ end }}
   </li>
   <li>
     <p class="color-highlight">worker-0 (.95)</p>
+    {{ if .JSON.Exists "data.result.#(metric.instance==\"worker-0\")" }}
     <ul class="list-horizontal-text">
       <li>CPU {{ .JSON.Float "data.result.#(metric.instance==\"worker-0\").value.1" | printf "%.0f" }}%</li>
       <li>RAM {{ $mem.JSON.Float "data.result.#(metric.instance==\"worker-0\").value.1" | printf "%.0f" }}%</li>
     </ul>
+    {{ else }}
+    <p class="color-base">Offline / keine Daten</p>
+    {{ end }}
   </li>
   <li>
     <p class="color-highlight">worker-1 (.96)</p>
+    {{ if .JSON.Exists "data.result.#(metric.instance==\"worker-1\")" }}
     <ul class="list-horizontal-text">
       <li>CPU {{ .JSON.Float "data.result.#(metric.instance==\"worker-1\").value.1" | printf "%.0f" }}%</li>
       <li>RAM {{ $mem.JSON.Float "data.result.#(metric.instance==\"worker-1\").value.1" | printf "%.0f" }}%</li>
     </ul>
+    {{ else }}
+    <p class="color-base">Offline / keine Daten</p>
+    {{ end }}
   </li>
   <li>
     <p class="color-highlight">ugreen-nas (.97)</p>
+    {{ if .JSON.Exists "data.result.#(metric.instance==\"ugreen-nas\")" }}
     <ul class="list-horizontal-text">
       <li>CPU {{ .JSON.Float "data.result.#(metric.instance==\"ugreen-nas\").value.1" | printf "%.0f" }}%</li>
       <li>RAM {{ $mem.JSON.Float "data.result.#(metric.instance==\"ugreen-nas\").value.1" | printf "%.0f" }}%</li>
     </ul>
+    {{ else }}
+    <p class="color-base">Offline / keine Daten</p>
+    {{ end }}
   </li>
 </ul>` -}}
 {{- end -}}
