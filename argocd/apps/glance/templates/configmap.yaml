@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "glance.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "glance.labels" . | nindent 4 }}
+data:
+  glance.yml: |
+    server:
+      host: 0.0.0.0
+      port: {{ .Values.service.targetPort }}
+
+    pages:
+      - name: Home
+        columns:
+          - size: small
+            widgets:
+              - type: search
+
+              - type: clock
+                hour-format: 24h
+                timezones:
+                  - timezone: Europe/Berlin
+                    label: Berlin
+
+              - type: bookmarks
+                groups:
+                  - title: Repo
+                    links:
+                      - title: capulus-core (GitHub)
+                        url: https://github.com/pkr-lab/capulus-core
+                      - title: ArgoCD-UI
+                        url: http://homeserver:30080
+
+          - size: full
+            widgets:
+              - type: monitor
+                title: Infrastruktur
+                cache: 1m
+                sites:
+                  - title: ArgoCD-UI
+                    url: http://homeserver:30080
+                  - title: Headlamp
+                    url: http://headlamp.homeserver
+                  - title: Semaphore
+                    url: http://semaphore.homeserver
+                  - title: Authentik
+                    url: http://authentik.homeserver
+                  - title: Grafana
+                    url: http://grafana.homeserver
+                  - title: Pi-hole
+                    url: http://pihole.homeserver
+                  - title: kubeseal-webgui
+                    url: http://kubeseal-webgui.homeserver
+                  - title: Argo Workflows
+                    url: http://argo-workflows.homeserver
+                  - title: MinIO Console
+                    url: http://minio.homeserver
+
+          - size: full
+            widgets:
+              - type: monitor
+                title: Apps & Produktivität
+                cache: 1m
+                sites:
+                  - title: Nextcloud
+                    url: http://nextcloud.homeserver
+                  - title: Immich
+                    url: http://immich.homeserver
+                  - title: Vaultwarden
+                    url: http://vault.homeserver
+                  - title: Paperless-ngx
+                    url: http://paperless.homeserver
+                  - title: Mealie
+                    url: http://mealie.homeserver
+                  - title: Grocy
+                    url: http://grocy.homeserver
+                  - title: n8n
+                    url: http://n8n.homeserver
+                  - title: Wiki.js
+                    url: http://wiki.homeserver
+                  - title: Zammad
+                    url: http://zammad.homeserver
+
+              - type: monitor
+                title: Benachrichtigung & Sonstiges
+                cache: 1m
+                sites:
+                  - title: Gotify
+                    url: http://gotify.homeserver
+                  - title: ntfy
+                    url: http://ntfy.homeserver
+                  - title: Uptime Kuma
+                    url: http://uptime-kuma.homeserver
+                  - title: MediaMTX (Stream)
+                    url: http://stream.homeserver
+                  - title: Alarmmonitor
+                    url: http://alamos-apager.homeserver

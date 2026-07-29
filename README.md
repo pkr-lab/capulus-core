@@ -210,6 +210,7 @@ capulus-core/
 │   ├── 38-printer.md                 # Samsung Xpress M2026 per CUPS im Heimnetz freigeben
 │   ├── 39-hpa-autoscaling.md         # Horizontale Autoskalierung (HPA) — welche Apps, welche Schwellenwerte
 │   ├── 40-pihole.md                  # Netzwerkweites Werbeblocking via Pi-hole
+│   ├── 41-glance.md                  # Dashboard mit Übersicht über alle Dienste
 │   └── assets/banner.svg
 ├── ansible/
 │   ├── site.yml                      # Entry-Point
@@ -260,7 +261,8 @@ capulus-core/
         ├── vaultwarden/              # Bitwarden-kompatibler Passwort-Manager
         ├── nextcloud/                # Datei-Sync, Kalender, Kontakte
         ├── immich/                   # Foto-/Video-Backup vom Handy
-        └── immich-storage/           # Dedizierter NFS-Export für Immich (/volume2)
+        ├── immich-storage/           # Dedizierter NFS-Export für Immich (/volume2)
+        └── glance/                   # Dashboard mit Übersicht über alle Dienste
 ```
 
 </details>
@@ -332,6 +334,7 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 | Vaultwarden | http://vault.homeserver |
 | Nextcloud | http://nextcloud.homeserver |
 | Immich | http://immich.homeserver |
+| Glance (Dashboard) | http://glance.homeserver |
 
 > Zusätzlich zu den internen `*.homeserver`-URLs können ausgewählte Dienste
 > über Cloudflare Tunnel öffentlich unter einer eigenen Domain erreichbar
@@ -421,6 +424,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [Drucker (CUPS)](docs/38-printer.md) | Samsung Xpress M2026 per USB am Homeserver, Freigabe im Heimnetz + Tailnet via IPP/AirPrint |
 | [Autoskalierung (HPA)](docs/39-hpa-autoscaling.md) | Welche Apps per HorizontalPodAutoscaler mitskalieren, welche bewusst nicht, und mit welchen Schwellenwerten |
 | [Pi-hole](docs/40-pihole.md) | Netzwerkweites Werbeblocking als DNS-Filter vor der Fritz!Box — kein Router-Eingriff nötig |
+| [Glance](docs/41-glance.md) | Dashboard mit Status-Übersicht über alle Dienste, Suchleiste, Uhr und Quick-Links |
 
 ---
 
