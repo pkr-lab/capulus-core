@@ -69,9 +69,16 @@ dem Pod heraus**. Das funktioniert, weil CoreDNS im Cluster
    `root-applicationset.yaml`), erstellt die `Application` `glance` und
    synct sie — kein manueller Schritt nötig. Dashboard danach unter
    **http://glance.homeserver**.
-2. **Tankpreise funktionieren erst mit echtem API-Key** (siehe unten) — bis
-   dahin bleibt das Widget leer/zeigt einen Fehler, der Pod läuft aber
-   normal weiter (kein Crash).
+2. **Ohne echten Tankerkönig-API-Key bleibt der Pod in
+   `CreateContainerConfigError` hängen** (siehe unten) —
+   `encryptedApiKey` ist als Platzhalter hinterlegt, den der
+   sealed-secrets-Controller nicht entschlüsseln kann, wodurch das Secret
+   fehlt, auf das `TANKERKOENIG_API_KEY` als Pflicht-Env im Deployment
+   verweist. Entweder Schritt "Tankerkönig-API-Key einrichten" abschließen,
+   oder `secrets.tankerkoenig.enabled: false` setzen, um ohne
+   Tankpreise-Widget zu starten (der `apikey`-Parameter wird dann
+   automatisch weggelassen statt auf eine nicht existierende Env-Var zu
+   verweisen — Letzteres würde Glance selbst am Start hindern).
 
 Verifizieren:
 
@@ -183,7 +190,8 @@ siehe [`06-tailscale.md`](06-tailscale.md)).
 | Symptom | Hinweis |
 |---|---|
 | Monitor-Eintrag zeigt "down", Dienst läuft aber | CoreDNS-Forward für `*.homeserver` prüfen: `kubectl -n glance exec deploy/glance -- wget -qO- http://pihole.homeserver` (oder ein anderer laufender Dienst). Schlägt das fehl, `argocd/apps/coredns-custom/configmap.yaml` und den `coredns`-Pod in `kube-system` prüfen |
-| Tankpreise-Widget leer / Fehler | `TANKERKOENIG_API_KEY` noch Platzhalter (`REPLACE_ME_WITH_KUBESEAL_OUTPUT`) — Schritt "Tankerkönig-API-Key einrichten" oben abschließen. Mit echtem Key aber weiter Fehler: `kubectl -n glance logs deploy/glance` bzw. Fehlertext direkt im Widget prüfen (401 = ungültiger Key, 429 = Rate-Limit) |
+| Pod hängt in `CreateContainerConfigError`, Event `Failed to unseal: illegal base64 data` | `encryptedApiKey` in `values.yaml` ist noch der Platzhalter `REPLACE_ME_WITH_KUBESEAL_OUTPUT` — Schritt "Tankerkönig-API-Key einrichten" oben abschließen, oder übergangsweise `secrets.tankerkoenig.enabled: false` setzen |
+| Tankpreise-Widget leer / Fehler (Pod läuft aber) | Key ist gesetzt, aber ungültig/abgelaufen — Fehlertext direkt im Widget bzw. `kubectl -n glance logs deploy/glance` prüfen (401 = ungültiger Key, 429 = Rate-Limit) |
 | Server-Status-Widget zeigt Fehler `context deadline exceeded` | VictoriaMetrics-Service-Name hat sich geändert (z. B. nach Helm-Chart-Upgrade des `monitoring`-Charts) — `kubectl -n monitoring get svc \| grep vmsingle` und `monitoring.vmQueryUrl` in `values.yaml` anpassen |
 | `glance.homeserver` löst nicht auf | Wildcard `*.homeserver` sollte ohne manuellen Eintrag funktionieren (siehe [`09-dns-architecture.md`](09-dns-architecture.md)); falls nicht, `make dnsmasq` erneut ausrollen |
 | Pod `CrashLoopBackOff` nach Config-Änderung | `glance.yml` in `templates/configmap.yaml` ist ungültiges YAML oder verstößt gegen das Glance-Schema — `kubectl -n glance logs deploy/glance` zeigt die genaue Parse-Fehlermeldung |
