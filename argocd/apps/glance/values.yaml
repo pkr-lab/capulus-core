@@ -63,6 +63,38 @@ ingress:
           pathType: Prefix
   tls: []
 
+# Standort für die beiden Wetter-Widgets — Andernach (nahe den unten
+# konfigurierten Tankstellen). Bei abweichendem Standort hier anpassen;
+# location ist für das native weather-Widget (Open-Meteo-Geocoding-Suche),
+# latitude/longitude für das custom-api "Wetter — Morgen"-Widget.
+weather:
+  location: "Andernach, Germany"
+  latitude: "50.4205"
+  longitude: "7.4061"
+
+# VictoriaMetrics-Query-API (bereits vorhandener Monitoring-Stack, siehe
+# argocd/apps/monitoring/) — liefert die CPU-/RAM-Werte fürs
+# "Server-Status"-Widget. Service-Name folgt der VictoriaMetrics-Operator-
+# Konvention `vmsingle-<VMSingle-CR-Name>`; bei einem Upgrade/Rename des
+# monitoring-Charts ggf. mit `kubectl -n monitoring get svc` prüfen.
+monitoring:
+  vmQueryUrl: "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428/api/v1/query"
+
+# Tankerkönig-API liefert die MTS-K-Pflichtmeldedaten (dieselben Preise, die
+# auch clever-tanken.de anzeigt) für die drei fest im ConfigMap hinterlegten
+# Tankstellen (Andernach, Plaidt, Mülheim-Kärlich). Kostenlosen Key
+# registrieren: https://creativecommons.tankerkoenig.de — danach:
+#   echo -n "<dein-tankerkoenig-api-key>" \
+#     | kubeseal --raw --namespace glance --name glance-tankerkoenig-api-key \
+#         --from-file=/dev/stdin
+# Bis dahin liefert die API 401/leer und das Tankpreise-Widget bleibt leer
+# (kein Pod-Crash, siehe docs/41-glance.md).
+secrets:
+  tankerkoenig:
+    enabled: true
+    secretName: glance-tankerkoenig-api-key
+    encryptedApiKey: "REPLACE_ME_WITH_KUBESEAL_OUTPUT"
+
 resources:
   requests:
     cpu: 25m
