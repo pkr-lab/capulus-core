@@ -28,12 +28,15 @@ github:
   tokenSecretKey: token
 
 wikijs:
-  url: "https://wiki.pke-lab.de"
+  # Interner ClusterIP-Service statt der öffentlichen Cloudflare-Tunnel-URL:
+  # Cloudflares Bot-Schutz blockt Requests von urllib (403, error code 1010),
+  # da der Sync-Job ohnehin im selben Cluster wie Wiki.js läuft.
+  url: "http://wikijs.wikijs.svc.cluster.local"
   # Wiki.js reserviert zweistellige Pfad-Segmente (z. B. "en") für das
   # Locale — es wird NICHT Teil von pathPrefix, sondern separat gesetzt
   # und von Wiki.js automatisch vor den Pfad gehängt.
   locale: "en"
-  pathPrefix: "Github/capulus-core"
+  pathPrefix: "capulus-core/docs"
   tokenSecretName: wiki-docs-sync-wikijs-token
   tokenSecretKey: token
 
