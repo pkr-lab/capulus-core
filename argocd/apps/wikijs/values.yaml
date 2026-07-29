@@ -25,13 +25,15 @@ wikijs:
   # danach übernimmt der HPA die Replica-Anzahl.
   replicaCount: 1
 
-  # Genuin zustandslos: Wiki.js speichert Seiten UND Assets vollständig in
-  # PostgreSQL (siehe Kommentar bei persistence unten) — kein PVC, keine
-  # podAffinity-Tricks nötig, mehrere Replicas sind ohne Weiteres sicher.
+  # Seiten/Assets liegen zwar vollständig in PostgreSQL, aber Wiki.js
+  # cached API-Enable-Status/Key-Validierung offenbar pro Pod-Instanz ohne
+  # Sync zwischen Replicas (ohne Redis o. Ä.) — mehrere gleichzeitig aktive
+  # Pods führten zu inkonsistenten "API Key invalid"/"API disabled"-Fehlern
+  # beim wiki-docs-sync. maxReplicas daher vorerst auf 1 gedeckelt.
   autoscaling:
     enabled: true
     minReplicas: 1
-    maxReplicas: 3
+    maxReplicas: 1
     targetCPUUtilizationPercentage: 75
     targetMemoryUtilizationPercentage: 80
 
