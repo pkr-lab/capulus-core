@@ -42,7 +42,7 @@ notify_shutdown() {
   curl --fail --silent --show-error --max-time 5 \
     --resolve "${NTFY_HOST}:80:${NTFY_IP}" \
     -H "Title: ${title}" \
-    -H "Priority: 5" \
+    -H "Priority: 2" \
     -H "Tags: rotating_light,stop_sign" \
     -d "$body" \
     "http://${NTFY_HOST}/${NTFY_TOPIC}" || true
