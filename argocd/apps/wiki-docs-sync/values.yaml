@@ -7,9 +7,9 @@ image:
 # CronJob-Schedule (Standard: alle 15 Minuten).
 schedule: "*/15 * * * *"
 timezone: "Europe/Berlin"
-# suspend: true lässt den CronJob inaktiv, bis das Wiki.js-Secret bewusst
-# gesetzt und geprüft wurde (siehe docs/21-wiki-docs-sync.md).
-suspend: true
+# Sync wurde manuell verifiziert (Pfad, README/DEPLOY, nummerierte Titel) —
+# CronJob läuft ab jetzt automatisch alle 15 Minuten.
+suspend: false
 concurrencyPolicy: Forbid
 failedJobsHistoryLimit: 3
 successfulJobsHistoryLimit: 3
