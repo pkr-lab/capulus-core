@@ -1,0 +1,77 @@
+---
+image:
+  repository: python
+  tag: "3.12-slim"
+  pullPolicy: IfNotPresent
+
+# CronJob-Schedule (Standard: alle 15 Minuten).
+schedule: "*/15 * * * *"
+timezone: "Europe/Berlin"
+# suspend: true lässt den CronJob inaktiv, bis das Wiki.js-Secret bewusst
+# gesetzt und geprüft wurde (siehe docs/21-wiki-docs-sync.md).
+suspend: true
+concurrencyPolicy: Forbid
+failedJobsHistoryLimit: 3
+successfulJobsHistoryLimit: 3
+
+github:
+  owner: "pkr-lab"
+  repo: "capulus-core"
+  branch: "main"
+  docsPath: "docs"
+  # Optionaler GitHub-PAT (nur für die Contents-Listing-Anfrage relevant,
+  # nicht für die Datei-Downloads über raw.githubusercontent.com). Bei
+  # einem öffentlichen Repo im 15-Minuten-Takt nicht nötig
+  # (unauthenticated: 60 req/h). Name/Key eines VORHANDENEN Secrets im
+  # Namespace — wird NICHT von diesem Chart angelegt.
+  tokenSecretName: ""
+  tokenSecretKey: token
+
+wikijs:
+  url: "https://wiki.pke-lab.de"
+  # Wiki.js reserviert zweistellige Pfad-Segmente (z. B. "en") für das
+  # Locale — es wird NICHT Teil von pathPrefix, sondern separat gesetzt
+  # und von Wiki.js automatisch vor den Pfad gehängt.
+  locale: "en"
+  pathPrefix: "Github/capulus-core"
+  tokenSecretName: wiki-docs-sync-wikijs-token
+  tokenSecretKey: token
+
+# Sealed Secret für den Wiki.js-API-Token
+# (Administration → Utilities → API Access in Wiki.js).
+secrets:
+  enabled: true
+  name: wiki-docs-sync-wikijs-token
+  # Versiegeln: echo -n '<TOKEN>' | kubeseal --raw --namespace wiki-docs-sync \
+  #             --name wiki-docs-sync-wikijs-token \
+  #             --controller-namespace sealed-secrets \
+  #             --controller-name sealed-secrets-controller
+  encryptedToken: "AgARpBo/OFUqBu7YXD0l42fKjNHJ+5732JGQRqEDX+VnAW609iJt2UfpC3udz2IKL2NuqI7lVdz9S6eo8ijzUzP1HCKEKhYGrbsBwRAV3dy7BbqdbGsZ+Smxf7botqTXllDqX1+LHAPFAhz0h0e3kukyZlg7DEkSIW5gfikix8vcyWSOn3H+GtNQtlyIMQOvGRhD/+z+Ti+Dn6AeVtbMExsSRjpk4pEs11JyNthdaorXADX+bn2Pwzw8224BfzuZyXOD3BAFPotHw7vCI8qZ4PL4BjbusLY2QmYMysPOx4P4G164SoUh9KLzWY++ShD9otFbUqOT8KzxWJu7Km0JfhqJihkNADavudLj01G4QjkrT3eIkDsrr9GBAXXGEUX9IQyqJbvCsB3RQfKCRlwCl+AiuqGI9e6yhmLHv/iMj179hmCQzKkfASk/iOCDcBeGY807hQhz3ErAjb7shQJJIRTER6Z8NNU4gehvuyqaOJ3ffcgolicG5VZ2AkXnVYsTGJv9ogO4Vy83nS7Zf10+fh5hS7P73ow8Qe30Eohxa/06xd062YtGH3osu4Qg/ZZ5JC3eTKJVAK0UPXDnCjK20jnrBHCh0BeR8PQEt87nO8IM42T6LQsy4nM3hx9im4bUZlJVURfMD6h/5iBu1YYKKUBI/2jZFX/IYxQ/DIt0ovk+Ii7qZ1Hjb4bhcbWmZ2ueLwxoiuzLeg5wT9ZfaAu1xfpha93i0ljs1SyTF3bU1RqG67Pd3P9n1GRTuLE4nFXy/EQgIvRArR3Keuxv3IYCnq6BW9l6Woy4051K4QPYHyeYvfeyl2ngl0NDaGFYSun+TuXQzHXT1I7EL7b69jZQySbaSiqlBu0FCvlU6F+0+mi6L8pwJCxT4/26lPSq17t6hgKR1IRqS+a/qEJuTdELomQXK3JRy0DiA0U7XbAe8Mynsq7+O/j1LpGmblv3hlyvPOjVxekR6054x+TrFO6MaCMl0xoVRPUGPnhH9jvcq9wZypOqscWt448fgG3+qGOaFXQdQ5paX0Lz5IYvjybDcEJUl8sK1BgsH21G6pGAb6vwm82HU/S3D7KiuQ58n7Lb9bLCAXBWF6XrxQOkNgNiUw/TF3W/4L0PmMOilVxK180WkfIZzTrLVwYl/FP+gIHiQCMXgHARAYyfAomeSDBKy7xnCo3ZvGhVrTdPm9ujoT3rfuZrCWGBoTX7oEcevmsncoA/hiopxKcaAIz3P1BsH3EbqzYbeJ+n31LyKRRUc3f1hsu9ltGbdyMDpy2dXRtrt/VTwXJjicdRnYAz/74NEwRQPQkhPLsbl2HWavGfm0eKIKxO07hT3k6MAUggWuhZxjdg6WeGDIMZW/DxTla5JoF8A4RIIdSF"
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  requests:
+    cpu: 5m
+    memory: 32Mi
+  limits:
+    cpu: 100m
+    memory: 64Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

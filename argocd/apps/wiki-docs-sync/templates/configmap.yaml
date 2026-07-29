@@ -1,0 +1,194 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "wiki-docs-sync.fullname" . }}-script
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "wiki-docs-sync.labels" . | nindent 4 }}
+data:
+  sync.py: |
+    #!/usr/bin/env python3
+    """
+    Docs -> Wiki.js Sync.
+
+    Pollt die GitHub Contents API für die Top-Level *.md-Dateien in `docs/`
+    des konfigurierten Repos und spiegelt sie via Wiki.js GraphQL-API unter
+    WIKIJS_LOCALE/WIKIJS_PATH_PREFIX. Volle Reconciliation bei jedem Lauf:
+    Wiki-Seiten unter dem Präfix, deren Quelldatei nicht mehr existiert,
+    werden gelöscht. Kein Cluster-State nötig — GitHub ist bei jedem Lauf
+    die alleinige Quelle der Wahrheit. Nutzt ausschließlich die
+    Python-Standardbibliothek.
+    """
+    import json
+    import os
+    import sys
+    import urllib.error
+    import urllib.request
+
+    GITHUB_OWNER = os.environ["GITHUB_OWNER"]
+    GITHUB_REPO = os.environ["GITHUB_REPO"]
+    GITHUB_BRANCH = os.environ["GITHUB_BRANCH"]
+    GITHUB_DOCS_PATH = os.environ["GITHUB_DOCS_PATH"]
+    GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+
+    WIKIJS_API_URL = os.environ["WIKIJS_API_URL"].rstrip("/")
+    WIKIJS_API_TOKEN = os.environ["WIKIJS_API_TOKEN"]
+    WIKIJS_LOCALE = os.environ.get("WIKIJS_LOCALE", "en")
+    WIKIJS_PATH_PREFIX = os.environ["WIKIJS_PATH_PREFIX"].strip("/")
+
+    GRAPHQL_ENDPOINT = f"{WIKIJS_API_URL}/graphql"
+
+
+    def github_request(path):
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        if GITHUB_TOKEN:
+            headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
+        req = urllib.request.Request(f"https://api.github.com{path}", headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read())
+
+
+    def fetch_raw(url):
+        with urllib.request.urlopen(url, timeout=15) as resp:
+            return resp.read().decode("utf-8")
+
+
+    def list_docs():
+        entries = github_request(
+            f"/repos/{GITHUB_OWNER}/{GITHUB_REPO}/contents/{GITHUB_DOCS_PATH}?ref={GITHUB_BRANCH}"
+        )
+        return [
+            e for e in entries
+            if e.get("type") == "file" and e.get("name", "").endswith(".md")
+        ]
+
+
+    def graphql(query, variables=None):
+        payload = json.dumps({"query": query, "variables": variables or {}}).encode()
+        req = urllib.request.Request(
+            GRAPHQL_ENDPOINT,
+            data=payload,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {WIKIJS_API_TOKEN}",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                body = json.loads(resp.read())
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode(errors="replace")
+            raise RuntimeError(f"HTTP {exc.code} von Wiki.js: {detail}") from exc
+        if body.get("errors"):
+            raise RuntimeError(json.dumps(body["errors"]))
+        return body["data"]
+
+
+    def wiki_path(filename):
+        slug = filename[:-3] if filename.endswith(".md") else filename
+        return f"{WIKIJS_PATH_PREFIX}/{slug}"
+
+
+    def extract_title(content, fallback):
+        for line in content.splitlines():
+            line = line.strip()
+            if line.startswith("# "):
+                return line[2:].strip()
+        return fallback
+
+
+    def list_wiki_pages_under_prefix():
+        data = graphql("query { pages { list { id path locale } } }")
+        prefix = f"{WIKIJS_PATH_PREFIX}/"
+        return {
+            p["path"]: p["id"]
+            for p in data["pages"]["list"]
+            if p["locale"] == WIKIJS_LOCALE and p["path"].startswith(prefix)
+        }
+
+
+    def upsert(filename, content, existing_id):
+        target_path = wiki_path(filename)
+        title = extract_title(content, filename[:-3])
+
+        if existing_id:
+            graphql(
+                """
+                mutation ($id: Int!, $content: String!, $title: String!) {
+                  pages {
+                    update(id: $id, content: $content, title: $title, isPublished: true) {
+                      responseResult { succeeded errorCode message }
+                    }
+                  }
+                }
+                """,
+                {"id": existing_id, "content": content, "title": title},
+            )
+            print(f"[UPDATE] /{WIKIJS_LOCALE}/{target_path}")
+        else:
+            graphql(
+                """
+                mutation ($path: String!, $content: String!, $title: String!, $locale: String!) {
+                  pages {
+                    create(
+                      path: $path, content: $content, title: $title, locale: $locale,
+                      editor: "markdown", isPublished: true, isPrivate: false,
+                      description: "", tags: []
+                    ) {
+                      responseResult { succeeded errorCode message }
+                    }
+                  }
+                }
+                """,
+                {"path": target_path, "content": content, "title": title, "locale": WIKIJS_LOCALE},
+            )
+            print(f"[CREATE] /{WIKIJS_LOCALE}/{target_path}")
+
+
+    def remove(path, page_id):
+        graphql(
+            """
+            mutation ($id: Int!) {
+              pages { delete(id: $id) { responseResult { succeeded errorCode message } } }
+            }
+            """,
+            {"id": page_id},
+        )
+        print(f"[DELETE] /{WIKIJS_LOCALE}/{path}")
+
+
+    def main():
+        docs = list_docs()
+        print(f"[INFO] {len(docs)} Markdown-Dateien in {GITHUB_OWNER}/{GITHUB_REPO}/{GITHUB_DOCS_PATH} gefunden")
+
+        existing_pages = list_wiki_pages_under_prefix()
+        seen_paths = set()
+
+        for entry in docs:
+            filename = entry["name"]
+            target_path = wiki_path(filename)
+            seen_paths.add(target_path)
+            try:
+                content = fetch_raw(entry["download_url"])
+            except Exception as exc:
+                print(f"[ERR] {filename}: Download fehlgeschlagen: {exc}", file=sys.stderr)
+                continue
+            try:
+                upsert(filename, content, existing_pages.get(target_path))
+            except Exception as exc:
+                print(f"[ERR] {filename}: Wiki.js-Sync fehlgeschlagen: {exc}", file=sys.stderr)
+
+        for path, page_id in existing_pages.items():
+            if path not in seen_paths:
+                try:
+                    remove(path, page_id)
+                except Exception as exc:
+                    print(f"[ERR] {path}: Löschen fehlgeschlagen: {exc}", file=sys.stderr)
+
+
+    if __name__ == "__main__":
+        main()

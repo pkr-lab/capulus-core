@@ -1,0 +1,17 @@
+apiVersion: v2
+name: wiki-docs-sync
+description: >
+  Pollt die GitHub Contents API für die Top-Level *.md-Dateien in `docs/`
+  eines konfigurierten Repos und spiegelt sie via Wiki.js GraphQL-API unter
+  einem festen Locale/Pfad-Präfix. Läuft als CronJob mit einem
+  Python-stdlib-Skript — keine externen Abhängigkeiten.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - github
+  - wikijs
+  - docs
+  - sync
+maintainers:
+  - name: home-server-admin
