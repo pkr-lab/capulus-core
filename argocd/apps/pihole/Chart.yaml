@@ -1,0 +1,16 @@
+---
+apiVersion: v2
+name: pihole
+description: Network-wide ad blocking via Pi-hole, used as the upstream DNS forwarder for the host dnsmasq.
+type: application
+version: 0.1.0
+appVersion: "2026.07.2"
+keywords:
+  - pihole
+  - dns
+  - adblock
+home: https://pi-hole.net
+sources:
+  - https://github.com/pi-hole/docker-pi-hole
+maintainers:
+  - name: home-server-admin

@@ -65,6 +65,7 @@ make install
 <tr><td>Kubernetes</td><td><strong>k3s</strong> (latest stable)</td><td>Single-Node, Traefik, CoreDNS, local-path, metrics-server</td></tr>
 <tr><td>GitOps</td><td><strong>ArgoCD</strong> + ApplicationSets</td><td>Verzeichnis unter <code>argocd/apps/</code> anlegen → pushen → deployed</td></tr>
 <tr><td>Split-DNS</td><td><strong>dnsmasq</strong> auf <code>tailscale0</code></td><td><code>*.homeserver</code> aus LAN und Tailnet auflösbar</td></tr>
+<tr><td>Werbeblocking</td><td><strong>Pi-hole</strong></td><td>Filtert DNS-Anfragen für alle Geräte, die dnsmasq bereits als DNS nutzen — kein Router-Eingriff nötig</td></tr>
 <tr><td>Web-Ansible</td><td><strong>Semaphore UI</strong></td><td>Ein-Klick-<code>git pull &amp;&amp; ansible-playbook</code> gegen das eigene LAN</td></tr>
 <tr><td>Monitoring</td><td><strong>VictoriaMetrics + Grafana</strong></td><td>Single-Node TSDB, vmagent, vmalert, Alertmanager, Dashboards</td></tr>
 <tr><td>Kubernetes-UI</td><td><strong>Headlamp</strong></td><td>Browser-Dashboard für den Cluster</td></tr>
@@ -208,6 +209,7 @@ capulus-core/
 │   ├── 37-cluster-power-manager.md   # Worker per Wake-on-LAN je nach Homeserver-Last dazuschalten
 │   ├── 38-printer.md                 # Samsung Xpress M2026 per CUPS im Heimnetz freigeben
 │   ├── 39-hpa-autoscaling.md         # Horizontale Autoskalierung (HPA) — welche Apps, welche Schwellenwerte
+│   ├── 40-pihole.md                  # Netzwerkweites Werbeblocking via Pi-hole
 │   └── assets/banner.svg
 ├── ansible/
 │   ├── site.yml                      # Entry-Point
@@ -217,7 +219,7 @@ capulus-core/
 │   ├── group_vars/all.yml            # Alle Knobs (vault-verschlüsselte Secrets)
 │   └── roles/
 │       ├── common/                   # Base-OS, Firewall, Pakete
-│       ├── dnsmasq/                  # Split-DNS für *.homeserver
+│       ├── dnsmasq/                  # Split-DNS für *.homeserver, forwardet Rest an Pi-hole
 │       ├── tailscale/                # VPN (WireGuard-Mesh)
 │       ├── k3s/                      # Kubernetes Control-Plane + Helm
 │       ├── k3s_agent/                # Kubernetes Worker-Node
@@ -243,6 +245,7 @@ capulus-core/
         ├── argo-workflows/           # Private CI/CD-Pipeline
         ├── minio/                    # S3-Artifact-Store für Argo Workflows
         ├── coredns-custom/           # Zusätzliche CoreDNS-Zonen
+        ├── pihole/                   # Netzwerkweites Werbeblocking (DNS-Filter vor der Fritz!Box)
         ├── sealed-secrets/           # SealedSecrets-Controller
         ├── authentik/                # Authentik Single-Sign-On
         ├── alamos-apager/            # Alarmmonitor-Kiosk-Verwaltung (ALAMOS AMweb)
@@ -315,6 +318,7 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 | Authentik | http://authentik.homeserver |
 | Gotify | http://gotify.homeserver |
 | ntfy | http://ntfy.homeserver |
+| Pi-hole | http://pihole.homeserver |
 | Argo Workflows | http://argo-workflows.homeserver |
 | MinIO Console | http://minio.homeserver |
 | kubeseal-webgui | http://kubeseal-webgui.homeserver |
@@ -416,6 +420,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [Cluster Power Manager](docs/37-cluster-power-manager.md) | worker-0/worker-1 per Wake-on-LAN je nach Homeserver-Last automatisch dazu- und wieder abschalten |
 | [Drucker (CUPS)](docs/38-printer.md) | Samsung Xpress M2026 per USB am Homeserver, Freigabe im Heimnetz + Tailnet via IPP/AirPrint |
 | [Autoskalierung (HPA)](docs/39-hpa-autoscaling.md) | Welche Apps per HorizontalPodAutoscaler mitskalieren, welche bewusst nicht, und mit welchen Schwellenwerten |
+| [Pi-hole](docs/40-pihole.md) | Netzwerkweites Werbeblocking als DNS-Filter vor der Fritz!Box — kein Router-Eingriff nötig |
 
 ---
 
