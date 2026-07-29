@@ -17,7 +17,7 @@ Verifikation eines lauffähigen Clusters mit ArgoCD und Tailscale.
 ## Schritt 1 — Repository klonen
 
 ```bash
-git clone https://github.com/PKE-Tech/capulus-core.git
+git clone https://github.com/pkr-lab/capulus-core.git
 cd capulus-core
 ```
 
