@@ -36,7 +36,7 @@ wikijs:
   # Locale — es wird NICHT Teil von pathPrefix, sondern separat gesetzt
   # und von Wiki.js automatisch vor den Pfad gehängt.
   locale: "en"
-  pathPrefix: "capulus-core/docs"
+  pathPrefix: "Github/capulus-core/docs"
   tokenSecretName: wiki-docs-sync-wikijs-token
   tokenSecretKey: token
 
