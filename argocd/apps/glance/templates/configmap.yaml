@@ -125,11 +125,11 @@ data:
                 cache: 1m
                 url: "{{ .Values.monitoring.vmQueryUrl }}"
                 parameters:
-                  query: "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\",instance=~\"homeserver|worker-0|worker-1|ugreen-nas\"}[5m])) * 100)"
+                  query: "label_replace(label_replace(label_replace(100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\",instance=~\"homeserver|worker-0|worker-1|ugreen-nas|192\\.168\\.178\\.94:9100|192\\.168\\.178\\.95:9100|192\\.168\\.178\\.96:9100\"}[5m])) * 100), \"instance\", \"homeserver\", \"instance\", \"^192\\.168\\.178\\.94:9100$\"), \"instance\", \"worker-0\", \"instance\", \"^192\\.168\\.178\\.95:9100$\"), \"instance\", \"worker-1\", \"instance\", \"^192\\.168\\.178\\.96:9100$\")"
                 subrequests:
                   mem:
                     url: "{{ .Values.monitoring.vmQueryUrl }}"
                     parameters:
-                      query: "(node_memory_MemTotal_bytes{instance=~\"homeserver|worker-0|worker-1|ugreen-nas\"} - node_memory_MemAvailable_bytes{instance=~\"homeserver|worker-0|worker-1|ugreen-nas\"}) / node_memory_MemTotal_bytes{instance=~\"homeserver|worker-0|worker-1|ugreen-nas\"} * 100"
+                      query: "label_replace(label_replace(label_replace((node_memory_MemTotal_bytes{instance=~\"homeserver|worker-0|worker-1|ugreen-nas|192\\.168\\.178\\.94:9100|192\\.168\\.178\\.95:9100|192\\.168\\.178\\.96:9100\"} - node_memory_MemAvailable_bytes{instance=~\"homeserver|worker-0|worker-1|ugreen-nas|192\\.168\\.178\\.94:9100|192\\.168\\.178\\.95:9100|192\\.168\\.178\\.96:9100\"}) / node_memory_MemTotal_bytes{instance=~\"homeserver|worker-0|worker-1|ugreen-nas|192\\.168\\.178\\.94:9100|192\\.168\\.178\\.95:9100|192\\.168\\.178\\.96:9100\"} * 100, \"instance\", \"homeserver\", \"instance\", \"^192\\.168\\.178\\.94:9100$\"), \"instance\", \"worker-0\", \"instance\", \"^192\\.168\\.178\\.95:9100$\"), \"instance\", \"worker-1\", \"instance\", \"^192\\.168\\.178\\.96:9100$\")"
                 template: |
 {{ include "glance.serverStatusTemplate" . | nindent 18 }}
