@@ -70,7 +70,7 @@ Bei privatem Repo Credentials über UI oder CLI hinterlegen:
 
 ```bash
 # HTTPS mit User/Password oder Token
-argocd repo add https://github.com/PKE-Tech/capulus-core.git \
+argocd repo add https://github.com/pkr-lab/capulus-core.git \
   --username YOUR_USER \
   --password YOUR_TOKEN
 
@@ -95,7 +95,7 @@ metadata:
 type: Opaque
 stringData:
   type: git
-  url: https://github.com/PKE-Tech/capulus-core.git
+  url: https://github.com/pkr-lab/capulus-core.git
   password: ghp_YOUR_GITHUB_TOKEN
   username: YOUR_USER
 ```
@@ -115,7 +115,7 @@ ArgoCD-Applications zu erzeugen.
 ```yaml
 generators:
   - git:
-      repoURL: https://github.com/PKE-Tech/capulus-core.git
+      repoURL: https://github.com/pkr-lab/capulus-core.git
       revision: HEAD
       directories:
         - path: "argocd/apps/*"
@@ -327,10 +327,10 @@ argocd app delete example-whoami --cascade
 argocd repo list
 
 # Repo hinzufügen
-argocd repo add https://github.com/PKE-Tech/capulus-core.git
+argocd repo add https://github.com/pkr-lab/capulus-core.git
 
 # Repo entfernen
-argocd repo rm https://github.com/PKE-Tech/capulus-core.git
+argocd repo rm https://github.com/pkr-lab/capulus-core.git
 ```
 
 **Accounts:**

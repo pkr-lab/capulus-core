@@ -117,7 +117,7 @@ Tailnet-Maschine mit `ARGO_SERVER=argo-workflows.homeserver:80` und
 
 ```bash
 argo submit -n argo-workflows --from workflowtemplate/git-ci \
-  -p repo=https://github.com/PKE-Tech/capulus-core.git \
+  -p repo=https://github.com/pkr-lab/capulus-core.git \
   -p revision=main \
   -p image=alpine:3.20 \
   -p cmd="ls -la && cat README.md | head"
