@@ -165,6 +165,20 @@ ugreen-nas) stehen im Define `glance.serverStatusTemplate` in `_helpers.tpl`
 sowie in den `parameters.query`-Werten in `configmap.yaml`. Die Werte sind
 absichtlich hart hinterlegt statt aus `values.yaml` generiert — siehe
 Kommentar in `_helpers.tpl`, warum Helm- und Glance-Template-Syntax
+
+> **Warum `label_replace(...)` in den Queries?** `node_cpu_seconds_total`/
+> `node_memory_*` tauchen im Cluster teils unter dem Hostnamen
+> (`instance="worker-0"`), teils unter der Host-IP samt Port
+> (`instance="192.168.178.94:9100"`) auf — vermutlich zwei unterschiedliche
+> Scrape-Pfade (node-exporter-Chart-Default vs. eine zusätzliche, auf den
+> Hostnamen relabelte Quelle, siehe `label_values(node_cpu_seconds_total,
+> instance)` in `argocd/apps/monitoring/templates/dashboard-homeservers.yaml`).
+> Die Queries matchen deshalb beide Formen und normalisieren die IP-Form per
+> `label_replace` auf den Hostnamen zurück, damit `glance.serverStatusTemplate`
+> (das per `metric.instance=="homeserver"` etc. selektiert) unabhängig davon
+> funktioniert, unter welcher Form die Daten tatsächlich vorliegen. Prüfen,
+> welche Form ein Node nutzt:
+> `kubectl -n glance exec deploy/glance -- wget -qO- 'http://<vmQueryUrl-Host>/api/v1/label/instance/values'`.
 (`{{ }}`) sich hier nicht mischen lassen.
 
 Vollständige Widget-Referenz: [glanceapp/glance – Configuration
@@ -193,6 +207,7 @@ siehe [`06-tailscale.md`](06-tailscale.md)).
 | Pod hängt in `CreateContainerConfigError`, Event `Failed to unseal: illegal base64 data` | `encryptedApiKey` in `values.yaml` ist noch der Platzhalter `REPLACE_ME_WITH_KUBESEAL_OUTPUT` — Schritt "Tankerkönig-API-Key einrichten" oben abschließen, oder übergangsweise `secrets.tankerkoenig.enabled: false` setzen |
 | Tankpreise-Widget leer / Fehler (Pod läuft aber) | Key ist gesetzt, aber ungültig/abgelaufen — Fehlertext direkt im Widget bzw. `kubectl -n glance logs deploy/glance` prüfen (401 = ungültiger Key, 429 = Rate-Limit) |
 | Server-Status-Widget zeigt Fehler `context deadline exceeded` | VictoriaMetrics-Service-Name hat sich geändert (z. B. nach Helm-Chart-Upgrade des `monitoring`-Charts) — `kubectl -n monitoring get svc \| grep vmsingle` und `monitoring.vmQueryUrl` in `values.yaml` anpassen |
+| Einzelner Node im Server-Status zeigt leer/0% | `instance`-Label dieses Nodes hat weder die Hostnamen- noch die drei fest hinterlegten IP:9100-Formen — siehe Kasten "Warum `label_replace(...)`" oben, mit dem `label/instance/values`-Befehl die tatsächliche Form ermitteln und in `configmap.yaml` ergänzen |
 | `glance.homeserver` löst nicht auf | Wildcard `*.homeserver` sollte ohne manuellen Eintrag funktionieren (siehe [`09-dns-architecture.md`](09-dns-architecture.md)); falls nicht, `make dnsmasq` erneut ausrollen |
 | Pod `CrashLoopBackOff` nach Config-Änderung | `glance.yml` in `templates/configmap.yaml` ist ungültiges YAML oder verstößt gegen das Glance-Schema — `kubectl -n glance logs deploy/glance` zeigt die genaue Parse-Fehlermeldung |
 | Änderung an `configmap.yaml`/`_helpers.tpl` kommt nicht an | Sollte durch die `checksum/config`-Annotation in `deployment.yaml` automatisch einen Pod-Neustart auslösen; falls nicht, manuell: `kubectl -n glance rollout restart deployment/glance` |

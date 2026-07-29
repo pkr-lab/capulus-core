@@ -70,10 +70,14 @@ inside these defines; hardcode any values instead (see docs/41-glance.md).
 
 {{- define "glance.weatherTomorrowTemplate" -}}
 {{- `{{ $code := .JSON.Int "daily.weathercode.1" }}
-<div class="text-center">
-  <div class="size-h1">{{ if eq $code 0 }}☀️{{ else if or (eq $code 1) (eq $code 2) (eq $code 3) }}⛅{{ else if or (eq $code 45) (eq $code 48) }}🌫️{{ else if or (eq $code 51) (eq $code 53) (eq $code 55) }}🌦️{{ else if or (eq $code 61) (eq $code 63) (eq $code 65) }}🌧️{{ else if or (eq $code 71) (eq $code 73) (eq $code 75) }}❄️{{ else if or (eq $code 80) (eq $code 81) (eq $code 82) }}🌧️{{ else if or (eq $code 95) (eq $code 96) (eq $code 99) }}⛈️{{ else }}🌡️{{ end }}</div>
-  <div class="size-h3 color-highlight">{{ .JSON.Float "daily.temperature_2m_max.1" | printf "%.0f" }}° / {{ .JSON.Float "daily.temperature_2m_min.1" | printf "%.0f" }}°</div>
-  <div class="size-h6 color-base">Regenwahrscheinlichkeit: {{ .JSON.Int "daily.precipitation_probability_max.1" }}%</div>
+<div class="widget-small-content-bounds">
+  <div class="size-h2 color-highlight text-center">{{ if eq $code 0 }}Klar{{ else if or (eq $code 1) (eq $code 2) (eq $code 3) }}Bewölkt{{ else if or (eq $code 45) (eq $code 48) }}Nebel{{ else if or (eq $code 51) (eq $code 53) (eq $code 55) }}Nieselregen{{ else if or (eq $code 61) (eq $code 63) (eq $code 65) }}Regen{{ else if or (eq $code 71) (eq $code 73) (eq $code 75) }}Schnee{{ else if or (eq $code 80) (eq $code 81) (eq $code 82) }}Regenschauer{{ else if or (eq $code 95) (eq $code 96) (eq $code 99) }}Gewitter{{ else }}Wechselhaft{{ end }}</div>
+  <div class="size-h4 text-center">{{ .JSON.Float "daily.temperature_2m_min.1" | printf "%.0f" }}° / {{ .JSON.Float "daily.temperature_2m_max.1" | printf "%.0f" }}°</div>
+  <div class="size-h5 text-center color-base margin-top-5">Regenwahrscheinlichkeit {{ .JSON.Int "daily.precipitation_probability_max.1" }}%</div>
+  <div class="flex items-center justify-center margin-top-15 gap-7 size-h5">
+    <div class="location-icon"></div>
+    <div class="text-truncate">Andernach, Deutschland</div>
+  </div>
 </div>` -}}
 {{- end -}}
 
