@@ -23,9 +23,14 @@ podSecurityContext: {}
 # FTL braucht Root + zusätzliche Capabilities, um Port 53 zu binden.
 # Kein DHCP wird genutzt (Fritz!Box bleibt DHCP-Server) — NET_ADMIN/NET_RAW
 # sind trotzdem laut Upstream-Doku für volle FTL-Funktionalität nötig.
-# SETFCAP wird gebraucht, damit der Start-Script per `setcap` die obigen
-# Capabilities auf das pihole-FTL-Binary selbst setzen kann — ohne SETFCAP
-# bricht der Start mit "unable to set CAP_SETFCAP effective capability" ab.
+#
+# Kein `drop: ALL` mehr: Pi-holes Entrypoint braucht beim Start intern das
+# normale Docker-Default-Capability-Set (u.a. CHOWN, SETGID, SETUID, FOWNER),
+# um von root auf den internen `pihole`-User zu wechseln und die Volume-
+# Dateien zu chownen. Mit `drop: ALL` fehlten genau diese und der Start
+# brach mit einer Kette von "Operation not permitted"-Fehlern ab. Da der
+# Container ohnehin als root läuft (Single-Tenant-Homeserver-Node), bringt
+# das selektive Droppen hier keinen relevanten Sicherheitsgewinn.
 securityContext:
   runAsNonRoot: false
   runAsUser: 0
@@ -35,10 +40,6 @@ securityContext:
     add:
       - NET_ADMIN
       - NET_RAW
-      - NET_BIND_SERVICE
-      - SETFCAP
-    drop:
-      - ALL
 
 # Web-UI — ClusterIP + Ingress wie bei den anderen Apps.
 service:
