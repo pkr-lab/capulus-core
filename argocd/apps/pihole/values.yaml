@@ -73,11 +73,13 @@ persistence:
 # Erzeugen mit:
 #   echo -n "<klartext-passwort>" \
 #     | kubeseal --raw --namespace pihole --name pihole-webpassword \
+#         --controller-name sealed-secrets-controller \
+#         --controller-namespace sealed-secrets \
 #         --from-file=/dev/stdin
 adminSecret:
   enabled: true
   secretName: pihole-webpassword
-  encryptedPassword: "REPLACE_ME_WITH_KUBESEAL_OUTPUT"
+  encryptedPassword: "AgC381jsWxCijeLyFpk1VjELkR40ozA4VHXMusbXiLm9Ho/VeW4m4pwSVvPydQbkATye9YhMU+TdMf1orh0SF2L8ClTvIojVFf4lh67YAeuLWSiLTfFD/Sr8R778O0XUKgK4DARbWEzT/Mtu563wbM1RoMu68OLPytXkyUq4Z9CDvQZr3YQS3MJ7cXZRK3vGgL/OBU/1GRO50QB5wFsw8xqo2iFdzMSgHDvZfmi6DB/5RV6NTOYe4fmYxUogzIoJ8GCOr2tnbv6eVJ6NPd4UZW7e9FIEK0tIAZOnL+ptT9yqf6MAkV3LgIPCmgNxkHsEm+Ey6hjGyjgfFEwk0ozYpkiiwrCvy1cdXSl0O6FuhNLFIZIPJYj8rEJsBrqeQ+jcZHs508nHcIL9Al3eox8Kz8DezNl/UwwASVKs32x633OA/V/QSKEk9PsX4xOrZSjWlg7xg/CIFECQUPsExf/E39sj6VsOsFNj3kJaGI6vjY8+MUUpuSEeeO5TrcxlA7Q4kbqlv2GwghfYacXsmS/sA8axa2kBGQFCd9F/JRKNEvL5+8JEppTe5UjzNJZhbnu+uFG5ARiLWkwZm3XsB/253V2ovalPezIfyq3l8WvCKQqH7hrYvqi6O6kvv0bbhCctSszNyL0nVgVF3aJLxwhyzuFx5P6hDPIi7I2wml/tXZM3ffLAz73Xr1/CQmZPeSM7es9QsxxNcHznKU/rHqpMC7f4JkZFbYvI6GsRT1g8j7IbIGHvwIhEHj6O/5znCLebCkm7jA=="
 
 # TZ + FTLCONF_* Umgebungsvariablen (Pi-hole v6 / FTL, kein separates
 # dnsmasq mehr im Container).
