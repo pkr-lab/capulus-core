@@ -114,7 +114,105 @@ Web-UI unter `http://pihole.homeserver/admin` mit dem Passwort aus 1.1
 
 ---
 
-## 2. Blocklisten & Ausnahmen pflegen
+## 2. Client-Geräte einrichten
+
+Damit ein Gerät tatsächlich durch Pi-hole gefiltert wird, muss es
+**dnsmasq auf dem Home-Server** (`192.168.178.94`, Port 53) als DNS-Server
+verwenden — dnsmasq leitet alle nicht-`*.homeserver`-Anfragen automatisch
+an Pi-hole weiter (siehe [`09-dns-architecture.md`](09-dns-architecture.md#pi-hole-werbeblocking-im-dns-forward)).
+
+> **Wichtig**: Trag niemals den Pi-hole-NodePort (`:30053`) direkt als
+> DNS-Server ein — Betriebssysteme erwarten DNS auf Port 53, den nur
+> dnsmasq bedient. Immer `192.168.178.94` verwenden.
+
+Auf jedem Gerät zwei DNS-Server eintragen:
+
+- **Primär**: `192.168.178.94` (dnsmasq → Pi-hole)
+- **Sekundär**: `192.168.178.1` (Fritz!Box-Fallback, falls der Home-Server
+  down ist — dann ohne Werbeblocking, aber Internet bleibt nutzbar)
+
+### Windows
+
+1. *Einstellungen → Netzwerk und Internet → WLAN* (oder *Ethernet*) →
+   Namen des verbundenen Netzwerks anklicken → *Hardwareeigenschaften →
+   DNS-Serverzuweisung: Bearbeiten*
+2. Von *Automatisch (DHCP)* auf *Manuell* umstellen, IPv4 aktivieren
+3. **Bevorzugter DNS**: `192.168.178.94`, **Alternativer DNS**:
+   `192.168.178.1` → *Speichern*
+
+Alternative per PowerShell (als Administrator):
+
+```powershell
+Get-NetAdapter                                          # Interface-Namen ermitteln, z. B. "Wi-Fi"
+Set-DnsClientServerAddress -InterfaceAlias "Wi-Fi" -ServerAddresses ("192.168.178.94","192.168.178.1")
+```
+
+### macOS
+
+1. *Systemeinstellungen → Netzwerk → WLAN* (oder *Ethernet*) → *Details…
+   → DNS*
+2. Mit **+** `192.168.178.94` hinzufügen, mit einem zweiten **+**
+   `192.168.178.1` → *OK → Anwenden*
+
+Alternative per Terminal:
+
+```bash
+networksetup -listallnetworkservices        # Dienstnamen ermitteln, z. B. "Wi-Fi"
+networksetup -setdnsservers "Wi-Fi" 192.168.178.94 192.168.178.1
+```
+
+### iPhone / iPad (iOS)
+
+1. *Einstellungen → WLAN* → **(i)**-Symbol neben dem verbundenen Netzwerk
+2. *DNS konfigurieren → Manuell*
+3. Bestehenden Eintrag löschen, **Server hinzufügen**: erst
+   `192.168.178.94`, dann `192.168.178.1` → *Fertig*
+
+Gilt nur für dieses eine WLAN und muss bei jedem neuen Netzwerk wiederholt
+werden; über Mobilfunk greift das Heimnetz ohnehin nicht. Für unterwegs
+stattdessen Tailscale mit Split-DNS nutzen (siehe
+[`09-dns-architecture.md → Weg 1`](09-dns-architecture.md)).
+
+### Android
+
+Menüführung variiert je nach Hersteller, im Kern immer:
+
+1. *Einstellungen → Netzwerk & Internet → WLAN* → Zahnrad beim
+   verbundenen Netzwerk → *Erweitert / IP-Einstellungen*
+2. Von *DHCP* auf **Statisch** umstellen
+3. **DNS 1**: `192.168.178.94`, **DNS 2**: `192.168.178.1` → *Speichern*
+
+> Bei "Statisch" verlangen manche Android-Versionen zusätzlich
+> IP-Adresse/Gateway/Subnetzmaske korrekt einzutragen (aus den aktuellen
+> WLAN-Details ablesen), sonst bricht die Verbindung ab. Die
+> **Private-DNS**-Funktion (DNS-over-TLS) ist hier **keine** Alternative,
+> da dafür ein gültiges TLS-Zertifikat auf dem DNS-Server nötig wäre, das
+> dnsmasq/Pi-hole hier nicht bereitstellt.
+
+### Linux (NetworkManager, z. B. Ubuntu Desktop)
+
+```bash
+nmcli con show                                                  # Verbindungsnamen ermitteln
+nmcli con modify "<verbindung>" ipv4.dns "192.168.178.94 192.168.178.1"
+nmcli con modify "<verbindung>" ipv4.ignore-auto-dns yes
+nmcli con up "<verbindung>"
+```
+
+### Verifizieren
+
+Auf dem jeweiligen Gerät (Terminal/Eingabeaufforderung, sofern vorhanden):
+
+```bash
+nslookup doubleclick.net 192.168.178.94   # sollte 0.0.0.0 / NXDOMAIN liefern
+nslookup github.com 192.168.178.94        # sollte normal auflösen
+```
+
+Oder einfacher: in der Pi-hole-Web-UI (`http://pihole.homeserver/admin`)
+unter **Query Log** prüfen, ob Anfragen von der IP des Geräts auftauchen.
+
+---
+
+## 3. Blocklisten & Ausnahmen pflegen
 
 Alles Weitere läuft über die Pi-hole-Web-UI (`http://pihole.homeserver`):
 
@@ -131,7 +229,7 @@ Pod-Neustarts, sind aber **nicht** in Git versioniert.
 
 ---
 
-## 3. Passwort rotieren
+## 4. Passwort rotieren
 
 Wie bei Gotify: per `kubeseal` aus einem neuen Klartext neu erzeugen,
 `adminSecret.encryptedPassword` in `values.yaml` ersetzen, committen +
@@ -140,7 +238,7 @@ ArgoCD es nicht automatisch prunt, dann den Pi-hole-Pod neu starten.
 
 ---
 
-## 4. Troubleshooting
+## 5. Troubleshooting
 
 | Symptom | Hinweis |
 |---|---|
