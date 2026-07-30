@@ -216,13 +216,35 @@ unter **Query Log** prüfen, ob Anfragen von der IP des Geräts auftauchen.
 
 Alles Weitere läuft über die Pi-hole-Web-UI (`http://pihole.homeserver`):
 
-- **Group Management → Adlists**: zusätzliche Blocklisten eintragen, danach
-  **Tools → Update Gravity**.
+- **Group Management → Adlists**: zusätzliche Blocklisten eintragen (URL zu
+  einer Listendatei, **keine** einzelne Domain — dafür siehe Denylist unten),
+  danach **Tools → Update Gravity**.
 - **Domains**: einzelne Domains manuell auf Allow-/Denylist setzen (z. B.
-  wenn eine legitime Seite fälschlich blockiert wird).
+  wenn eine legitime Seite fälschlich blockiert wird). Für ganze Domains
+  samt aller Subdomains (z. B. ein Ad-Netzwerk, das über viele
+  Rechenzentrums-Subdomains rotiert) `pihole --wild <domain>` verwenden statt
+  eines exakten Denylist-Eintrags — hosts-Format-Adlists blocken nur exakt
+  gelistete Namen, keine automatischen Wildcards.
 - **Query Log**: zeigt live, welche Domains angefragt und ggf. geblockt
   wurden — hilfreich zum Debuggen von "Seite lädt nicht mehr"-Fällen nach
-  dem Rollout.
+  dem Rollout, und um Ad-Domains zu finden, die trotz aktiver Listen noch
+  durchkommen.
+
+Aktuell eingetragene Adlists (Stand: initiales Setup):
+
+| Liste | Zweck |
+|---|---|
+| `StevenBlack/hosts` | Basis-Ad-/Tracking-Blockliste |
+| Firebog `Easylist.txt` | Werbung |
+| Firebog `AdguardDNS.txt` | Werbung (Ersatz für die tote `adguardteam.github.io`-URL) |
+| Firebog `Easyprivacy.txt` | Tracking/Telemetrie |
+| `urlhaus.abuse.ch` Hostfile | aktive Malware-/C2-Domains, sehr niedrige False-Positive-Rate |
+| Firebog `Prigent-Crypto.txt` | Krypto-Mining-Skripte im Browser |
+| Firebog `static/w3kbl.txt` | bewährte Suspicious-Domains-Liste |
+
+Bewusst **nicht** eingetragen: Firebog `Prigent-Ads.txt` (redundant zu den
+drei vorhandenen Ad-Listen) und `Prigent-Malware.txt` (248k Zeilen, bekannt
+für False-Positives in der Community — bei Bedarf gezielt nachrüsten).
 
 Diese Einstellungen liegen in der PVC (`/etc/pihole`) und überleben
 Pod-Neustarts, sind aber **nicht** in Git versioniert.
