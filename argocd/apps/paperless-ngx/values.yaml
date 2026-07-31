@@ -4,7 +4,13 @@ replicaCount: 1
 image:
   repository: ghcr.io/paperless-ngx/paperless-ngx
   pullPolicy: IfNotPresent
-  tag: "2.13.5"
+  # Zwischenschritt vor v3: laut Upstream-Doku ist der v3-Sprung nur ab 2.20.15
+  # unterstützt (aktuell hier gepinnt). Erst deployen, Migrationen durchlaufen
+  # lassen und verifizieren, DANN auf 3.0.4 heben. v3-Migrationsschritte dann:
+  # PAPERLESS_SECRET_KEY setzen, PAPERLESS_DBENGINE explizit setzen, deprecated
+  # Env-Vars umbenennen (CONSUMER_POLLING -> CONSUMER_POLLING_INTERVAL etc.),
+  # evtl. vorher decrypt_documents falls Verschlüsselung genutzt wird.
+  tag: "2.20.15"
 
 redis:
   image: redis:7-alpine
