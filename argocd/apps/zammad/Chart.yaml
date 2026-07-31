@@ -15,7 +15,7 @@ description: |
     - Memcached 0.13.x (CloudPirates OCI)
 type: application
 version: 0.1.0
-appVersion: "7.1.0"
+appVersion: "7.1.1"
 keywords:
   - zammad
   - helpdesk
@@ -29,4 +29,4 @@ maintainers:
 dependencies:
   - name: zammad
     repository: https://zammad.github.io/zammad-helm
-    version: "16.4.1"
+    version: "16.4.7"
