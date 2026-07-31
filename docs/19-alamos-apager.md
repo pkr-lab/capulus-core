@@ -55,6 +55,13 @@ Die App selbst kennt **keine echten AMweb-URLs** — die liegen ausschließlich
 im SealedSecret (siehe nächster Abschnitt). Ohne dieses Secret startet der
 Pod, aber `/start?station=...` antwortet mit `404`.
 
+**Bewusst kein Login vor `/start`/`/heartbeat`:** Der Pi ruft beide
+Endpunkte unbeaufsichtigt auf (Chromium-Kiosk beim Boot, Heartbeat-Timer
+alle 60s) und kann keinen Login-Dialog bedienen. Schutz ist stattdessen
+Netzwerkgrenze (LAN/Tailscale-only, kein öffentlicher Ingress) plus
+Kenntnis von Hostname *und* Stationsname — die echte AMweb-URL selbst
+bleibt zusätzlich als SealedSecret verschlüsselt.
+
 ## Neuen Standort hinzufügen
 
 1. Echte ALAMOS-AMweb-URL für den Standort aus dem Alamos-Account
@@ -118,6 +125,18 @@ einen `alamos-heartbeat.timer` (Default alle 60s, siehe
 `ansible/homeserver2.yml`) — unbeaufsichtigte Geräte sollen sich bei
 Überhitzung/Überlast selbst schützen.
 
+3. **Einmaliger manueller Login am Pi (nach dem ersten Deploy):** AMweb
+   verlangt beim Laden **Passwort** + **Verschlüsselungspasswort** über ein
+   Formular auf der Seite selbst — das lässt sich nicht automatisiert
+   ausfüllen. Chromium läuft deshalb bewusst **ohne** `--incognito`, damit
+   die Session (Cookies/LocalStorage) über Neustarts hinweg erhalten
+   bleibt. Direkt am Pi (Tastatur/Maus anschließen, oder per VNC/Remote):
+   Kiosk-Fenster öffnen, beide Passwörter einmalig eintragen. Danach läuft
+   der Pi unbeaufsichtigt weiter, bis die Chromium-Profildaten gelöscht
+   werden (z. B. bei SD-Karten-Neuflash) oder AMweb die Session invalidiert.
+   Beide Passwörter landen nie im Cluster/Git — reiner Browser-lokaler
+   Zustand auf dem jeweiligen Pi.
+
 Das Semaphore-Projekt **"alarm-kiosks"** ist nach `make semaphore-bootstrap`
 automatisch in der UI verfügbar (siehe
 [docs/08-semaphore.md](08-semaphore.md)) — **bewusst ohne** automatischen
@@ -141,6 +160,7 @@ Knopfdruck laufen.
 | Symptom | Check |
 |---|---|
 | Pi zeigt 404 statt AMweb-Seite | `kubectl -n alamos-apager get secret alamos-apager-stations -o jsonpath='{.data}'` — fehlt der Stationsname als Key? |
+| Pi zeigt AMweb-Login-Formular statt Alarmmonitor | Chromium-Session abgelaufen/gelöscht — einmaligen manuellen Login (Passwort + Verschlüsselungspasswort, siehe [Pi-Provisionierung](#pi-provisionierung-ansible)) am Pi wiederholen |
 | `alamos-apager.homeserver` löst nicht auf | Wildcard-DNS prüfen: `nslookup alamos-apager.homeserver` (siehe [docs/09-dns-architecture.md](09-dns-architecture.md)) |
 | Kein ntfy-Alarm bei Ausfall | `kubectl -n alamos-apager logs deploy/alamos-apager` — `NTFY_URL`/`NTFY_TOPIC` korrekt? ntfy-Topic im Client abonniert? |
 | Chromium startet nicht / schwarzer Bildschirm | Autologin auf dem Pi aktiv? `systemctl status alamos-kiosk` auf dem Pi |
