@@ -4,7 +4,7 @@ name: grocy
 description: Household ERP — inventory, shopping list, expiry dates, chores.
 type: application
 version: 0.1.0
-appVersion: "4.2.0"
+appVersion: "4.6.0"
 keywords:
   - grocy
   - household
