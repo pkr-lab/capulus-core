@@ -26,7 +26,7 @@ image:
   pullPolicy: IfNotPresent
   # Pinned für Reproduzierbarkeit. Releases:
   # https://github.com/cloudflare/cloudflared/releases
-  tag: "2025.7.0"
+  tag: "2026.7.3"
 
 nameOverride: ""
 fullnameOverride: ""

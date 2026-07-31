@@ -24,7 +24,7 @@ secrets:
   encryptedRedisPassword: "AgDMea3b4MoAFfa0yf9MtmtY7uKFBZcIc7gdkj4/nTHKtFaePimlkRT7ExiwzQp6MD86Wd1EAtU9vYLkgRRcgiCXwOEbDM1JdqBno92da1FVceQ4/08POTbcZ4SPRIYJlu/1+kSAbOiekBgjEmnwk3Vp4DyGj4at75XRdYND6eTbt+MF9wg7XnC6EkjADsd7vukuyBhNpj0biKnbv+Uvn4SCxDyw3eifGzK/MMgKlQhdBr6iG73VSpl8pg9tWvZxD8K897x/8IC0sjwNFQyueIRf0b2GkEq4BFxzEJgbgzcZer0GdKNnHkkXCxpg8tOshioR16k/yy4H6jwYxGkn8XEBhJzNbbqobFkQFISmL+ptQMdZM3/X8WvsNMwqrRr4/mstwmTOjDgNwGSEFGMK5pJ6QKqqRTu1VmSaQdpiBvMff1vPkQXm1EFo5g+sG2kFyJYK3/hbMVm3psGPqlBSJ86/IfY+Kktwld5hE5sbZ4cAO68Rm1+7lDHgJllcqBPNbfEJbbA8XDZbisv+6mV43bkMvOYx1vMrOctylNQYRN9L4i0qEamA1ZRexpSvnxxX2YrEJPPK3aDA1xVXLfkKDwffs4xtRC7c/t5+Bo6OBYWfMjrDHamyFU4v0wD63yXyyEz1poBeCNfE8TNzrOKjUcH5WYUd/L/4E7eQG0qK3qXZ5U5m/yLKufNcMCsa3enfyaL7G/WUs0xuenr+c80MOLyC/oCJwe4OY2yAf20iOaeW1g=="
 
 # ============================================================
-# Sub-Chart: zammad/zammad v16.4.1
+# Sub-Chart: zammad/zammad v16.4.7
 # Alle Keys unterhalb von `zammad:` landen beim upstream-Chart.
 # Upstream values.yaml:
 #   https://github.com/zammad/zammad-helm/blob/main/zammad/values.yaml

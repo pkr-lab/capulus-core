@@ -4,7 +4,7 @@ name: example-whoami
 description: Example whoami application for testing the ArgoCD GitOps pipeline.
 type: application
 version: 0.2.0
-appVersion: "1.10.3"
+appVersion: "1.12.0"
 keywords:
   - whoami
   - example
