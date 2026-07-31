@@ -70,23 +70,47 @@
     msg: "Tailscale connected: {{ tailscale_connected }}"
 
 # ---- Connect to Tailscale -----------------------------------
-# Pass the auth key via the TS_AUTHKEY env var so the secret never ends up
-# in the process list (unlike --authkey=tskey-auth-... on the command line).
-- name: Connect to Tailscale and advertise the local subnet
-  ansible.builtin.command: >
-    tailscale up
-    --hostname={{ tailscale_hostname }}
-    --advertise-routes={{ local_subnet }}
-    --accept-dns=true
-    --accept-routes=false
-    --timeout=60s
-  environment:
-    TS_AUTHKEY: "{{ tailscale_auth_key }}"
-  register: tailscale_up_result
-  changed_when: tailscale_up_result.rc == 0
-  failed_when: tailscale_up_result.rc != 0
-  no_log: true
+# `tailscale up` does NOT read TS_AUTHKEY from the environment — that's a
+# Docker-entrypoint convention, not something the CLI itself understands.
+# It only accepts the key via --authkey. To keep the secret out of the
+# process list (`ps aux`) we write it to a root-only tempfile and pass
+# --authkey=file:<path>, which `tailscale up --help` documents as reading
+# the key from disk.
+- name: Authenticate with Tailscale using auth key
   when: not tailscale_connected
+  block:
+    - name: Create temporary file for auth key
+      ansible.builtin.tempfile:
+        state: file
+        suffix: tsauthkey
+      register: tailscale_authkey_file
+
+    - name: Write auth key to temporary file
+      ansible.builtin.copy:
+        content: "{{ tailscale_auth_key }}"
+        dest: "{{ tailscale_authkey_file.path }}"
+        mode: '0600'
+      no_log: true
+
+    - name: Connect to Tailscale and advertise the local subnet
+      ansible.builtin.command: >
+        tailscale up
+        --authkey=file:{{ tailscale_authkey_file.path }}
+        --hostname={{ tailscale_hostname }}
+        --advertise-routes={{ local_subnet }}
+        --accept-dns=true
+        --accept-routes=false
+        --timeout=60s
+      register: tailscale_up_result
+      changed_when: tailscale_up_result.rc == 0
+      failed_when: tailscale_up_result.rc != 0
+      no_log: true
+  always:
+    - name: Remove temporary auth key file
+      ansible.builtin.file:
+        path: "{{ tailscale_authkey_file.path }}"
+        state: absent
+      when: tailscale_authkey_file.path | default('') != ''
 
 - name: Refresh Tailscale options (already connected — update hostname/routes)
   ansible.builtin.command: >
