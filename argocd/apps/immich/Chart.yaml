@@ -22,7 +22,7 @@ description: |
     - Valkey/Redis (Job-Queue)
 type: application
 version: 0.1.0
-appVersion: "v3.0.3"
+appVersion: "v3.1.0"
 keywords:
   - immich
   - photos
