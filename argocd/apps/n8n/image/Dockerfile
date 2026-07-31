@@ -21,7 +21,7 @@ RUN apk add --no-cache python3 make g++
 WORKDIR /build/n8n-custom-nodes
 RUN npm install n8n-nodes-imap@2.17.1 --omit=dev --legacy-peer-deps
 
-FROM n8nio/n8n:2.32.3
+FROM n8nio/n8n:2.32.7
 
 COPY --from=builder --chown=node:node /build/n8n-custom-nodes /opt/n8n-custom-nodes
 
