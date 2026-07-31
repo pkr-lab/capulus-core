@@ -76,8 +76,8 @@ bleibt zusätzlich als SealedSecret verschlüsselt.
      --from-literal=zentrale="https://amweb.alamos.cloud/...echte-url..." \
      | kubeseal --controller-namespace sealed-secrets \
          --controller-name sealed-secrets-controller -o yaml \
-     > argocd/apps/alamos-apager/sealedsecret-stations.yaml
-   git add argocd/apps/alamos-apager/sealedsecret-stations.yaml
+     > argocd/apps/alamos-apager/templates/sealedsecret-stations.yaml
+   git add argocd/apps/alamos-apager/templates/sealedsecret-stations.yaml
    git commit -m "feat(alamos-apager): add station <name>"
    git push
    ```
@@ -85,6 +85,10 @@ bleibt zusätzlich als SealedSecret verschlüsselt.
    **Wichtig:** Der Befehl muss **alle** Standorte auf einmal enthalten —
    jeder `kubeseal`-Lauf ersetzt das komplette Secret. Bestehende Keys also
    immer mit angeben, nicht nur den neuen.
+
+   **Wichtig:** Die Datei muss unter `templates/` liegen, nicht im
+   Chart-Root — ArgoCD/Helm wenden nur Dateien unter `templates/` an, alles
+   andere im Chart-Verzeichnis wird stillschweigend ignoriert.
 3. ArgoCD synct das Secret innerhalb von ~3 Minuten.
 4. Pi gemäß [Pi-Provisionierung](#pi-provisionierung-ansible) mit
    `alamos_kiosk_station: <name>` (identischer Name wie der Secret-Key)
