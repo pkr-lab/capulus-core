@@ -41,7 +41,7 @@ server:
     repository: ghcr.io/immich-app/immich-server
     pullPolicy: IfNotPresent
     # Pinned für Reproduzierbarkeit. Releases: https://github.com/immich-app/immich/releases
-    tag: "v3.0.3"
+    tag: "v3.1.0"
 
   # Offizielles Image — kein erzwungenes runAsNonRoot, analog zu
   # Nextcloud (siehe dortige Kommentare). "immich-nas" ist mit
@@ -135,7 +135,7 @@ machineLearning:
   image:
     repository: ghcr.io/immich-app/immich-machine-learning
     pullPolicy: IfNotPresent
-    tag: "v3.0.3"
+    tag: "v3.1.0"
 
   podSecurityContext: {}
   securityContext:
