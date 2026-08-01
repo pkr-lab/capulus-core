@@ -24,6 +24,20 @@ spec:
       serviceAccountName: {{ include "paperless-ngx.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        # s6-overlay in the 2.20.x+ image demands /run be owned by the
+        # container's UID (see securityContext.runAsUser below) and refuses
+        # to chown it itself when not running as root. fsGroup only fixes
+        # the GROUP ownership of mounted volumes, not the owning UID, so a
+        # short-lived root init container has to chown it explicitly first.
+        - name: fix-run-perms
+          image: busybox:1.36
+          command: ["chown", "1000:1000", "/run"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: run
+              mountPath: /run
       containers:
         # Redis-Sidecar — paperless benötigt Redis für Task-Queuing
         - name: redis
@@ -87,7 +101,16 @@ spec:
               mountPath: /usr/src/paperless/consume
             - name: export
               mountPath: /usr/src/paperless/export
+            # s6-overlay in the 2.20.x+ image insists /run be owned by the
+            # container's UID and refuses to chown it itself when not running
+            # as root (runAsUser: 1000 above). /run is baked into the image
+            # owned by root, so give it a fresh emptyDir instead — fsGroup
+            # 1000 (see podSecurityContext) makes k8s own it correctly.
+            - name: run
+              mountPath: /run
       volumes:
+        - name: run
+          emptyDir: {}
         - name: redis-data
           {{- if .Values.redis.persistence.enabled }}
           persistentVolumeClaim:
