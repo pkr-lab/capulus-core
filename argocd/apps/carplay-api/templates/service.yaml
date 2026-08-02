@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "carplay-api.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "carplay-api.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "carplay-api.selectorLabels" . | nindent 4 }}
