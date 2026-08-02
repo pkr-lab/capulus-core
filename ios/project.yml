@@ -1,0 +1,64 @@
+# XcodeGen project spec (https://github.com/yonaskolb/XcodeGen).
+#
+# Generated .xcodeproj files are near-impossible to hand-author or diff
+# correctly outside Xcode itself, so — like every other reproducible-infra
+# piece in this repo (Helm charts instead of hand-edited k8s YAML) — the
+# actual project is generated from this text file, not committed.
+#
+# Setup (once): brew install xcodegen
+# Generate:     cd ios && xcodegen generate
+# Then open CarPlayDashboard.xcodeproj in Xcode.
+
+name: CarPlayDashboard
+
+options:
+  bundleIdPrefix: com.yourname
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: true
+
+targets:
+  CarPlayDashboard:
+    type: application
+    platform: iOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: CarPlayDashboard
+        excludes:
+          - "Info.plist"
+          - "CarPlayDashboard.entitlements"
+    info:
+      path: CarPlayDashboard/Info.plist
+    entitlements:
+      path: CarPlayDashboard/CarPlayDashboard.entitlements
+    settings:
+      base:
+        PRODUCT_NAME: "Homeserver CarPlay Dashboard"
+        PRODUCT_BUNDLE_IDENTIFIER: com.yourname.homeserver-carplay
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1" # iPhone only, no iPad/Mac — see spec "Supported Platforms"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ENABLE_PREVIEWS: true
+    dependencies:
+      # Not weak-linked here since Simulator development (this project's
+      # current target, see ios/README.md "CarPlay-Entitlement") doesn't
+      # need it. Mark it "Optional" in Xcode's Frameworks list before an
+      # App Store/TestFlight-external submission made without a confirmed
+      # CarPlay entitlement.
+      - sdk: CarPlay.framework
+    scheme:
+      testTargets: []
+      gatherCoverageData: false
+
+schemes:
+  CarPlayDashboard:
+    build:
+      targets:
+        CarPlayDashboard: all
+    run:
+      config: Debug
+    archive:
+      config: Release
