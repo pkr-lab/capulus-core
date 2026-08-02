@@ -1,0 +1,161 @@
+---
+# ============================================================
+# carplay-api — Backend für das Homeserver-CarPlay-Dashboard.
+# Setup-/Betriebsanleitung: docs/43-carplay-api.md
+# ============================================================
+
+replicaCount: 1
+
+image:
+  # Über kaniko-build-push gebaut und gepusht, siehe README.md dieses
+  # Charts. Nach dem ersten Push hier Repository/Tag setzen.
+  repository: ghcr.io/CHANGEME/carplay-api
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# Nur nötig, falls das GHCR-Package privat ist:
+#   kubectl -n carplay-api create secret docker-registry ghcr-pull \
+#     --docker-server=ghcr.io --docker-username=<user> --docker-password=<pat>
+imagePullSecrets: []
+# - name: ghcr-pull
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Ein einzelner CarPlay-Client pollt alle 30s — Autoscaling bringt hier
+# nichts, würde nur die Upstream-Last (VictoriaMetrics/ntfy/Uptime-Kuma)
+# vervielfachen. Struktur bleibt für den Bedarfsfall stehen.
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 75
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations: {}
+  host: carplay-api.homeserver
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+# readOnlyRootFilesystem geht problemlos: der Server schreibt nichts auf
+# die eigene Root-FS, Config kommt komplett aus Env-Vars.
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+livenessProbe:
+  initialDelaySeconds: 3
+  periodSeconds: 15
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  initialDelaySeconds: 2
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+config:
+  logLevel: info
+  cacheTTLSeconds: "30"
+  apiTimeoutSeconds: "5"
+  rateLimitPerMinute: "100"
+
+  # Nur relevant für ein hypothetisches Web-Frontend — die iOS-App
+  # ignoriert CORS (URLSession ist kein Browser). Leer = keine
+  # Access-Control-Allow-Origin-Header werden je gesetzt.
+  corsAllowedOrigins: ""
+
+  # CIDRs der Proxies, denen X-Forwarded-For geglaubt wird (nötig, damit
+  # ipAllowlist unten und das Access-Log die echte Client-IP hinter Traefik
+  # sehen, nicht die Pod-IP von Traefik selbst). Mit `kubectl -n kube-system
+  # get pods -o wide` / Traefik-Chart-Werten den Pod-CIDR ermitteln.
+  trustedProxies: ""
+
+  # Netzwerk-Grenze für /api/*. Deaktiviert per Default, damit der erste
+  # Deploy nicht sofort alle aussperrt, falls trustedProxies oben noch nicht
+  # stimmt — siehe docs/43-carplay-api.md, Abschnitt "Absicherung", bevor
+  # das hier scharf geschaltet wird.
+  ipAllowlist:
+    enabled: false
+    # Tailscale-CGNAT-Bereich (docs/06-tailscale.md) + LAN-Subnetz.
+    cidrs: "100.64.0.0/10,192.168.178.0/24"
+
+  victoriaMetrics:
+    url: "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428"
+    # Regex-Alternation der instance-Labels, die aggregiert werden (siehe
+    # argocd/apps/glance für dasselbe Muster). Bei Rename/Erweiterung des
+    # Node-Fleets hier anpassen.
+    instanceFilter: "homeserver|worker-0|worker-1"
+
+  ntfy:
+    url: "http://ntfy.ntfy.svc.cluster.local"
+    topic: "alerts"
+    sinceWindow: "12h"
+    alertLimit: "10"
+
+  uptimeKuma:
+    url: "http://uptime-kuma.uptime-kuma.svc.cluster.local"
+    # Muss in der Uptime-Kuma-UI als Status-Page angelegt sein, mit allen
+    # anzuzeigenden Monitoren hinzugefügt — siehe docs/43-carplay-api.md.
+    slug: "homeserver"
+
+# CARPLAY_API_TOKEN — das Bearer-Token, das die iOS-App im Authorization-
+# Header schickt. enabled: true (Default) heißt: das Secret MUSS vor dem
+# ersten Sync versiegelt sein, sonst bleibt der Pod in
+# CreateContainerConfigError hängen (bewusst — ein Dashboard, das
+# Systemzustand + Alerts zeigt, sollte nicht ungeschützt starten).
+# Erzeugen (kubeseal-Zertifikat siehe docs/43-carplay-api.md
+# "Ersteinrichtung" Schritt 1, oder direkt via kubeseal-webgui.homeserver):
+#   openssl rand -hex 32
+#   echo -n "<token>" | kubeseal --raw \
+#     --namespace carplay-api --name carplay-api-token \
+#     --cert ~/homelab-certs/sealed-secrets.pem --from-file=/dev/stdin
+secrets:
+  apiToken:
+    enabled: true
+    secretName: carplay-api-token
+    secretKey: token
+    encryptedData: "AgA5HXzeApstKl8X1loFx2rz4bJTaTYAUiVh/XVJKScn7ZI5bf5++6+u5RIKfao8OAkP4m7UaD9zr13pisvMS2R04CoXsnTfQgfovOvUtc6nRq0G5Cgz5Q7w+//IdPwDIQ9YFKW0gIYmzAC3pRY077DhuatIpu+h7IXN8ApWg57XaX/lIF9BpG+v7hdR7clbF/pJGCBAR86vtw1uqiTIyzqnJjKnH7dP79pMkiPvqFjPzaS2GPr1Qg+R2CVXX4fGQNTB3/uj/4HDN7XvR1B9B2hVJVf37PtPxFaw6b6LZU45cdeRyBqk/VHM+2RxkOMr2AJgUzsN5AthOfMQpmrpTMNhgFPqy84Qjz56MSYq/MXrHtbQWP2Is3BypV/KSLChnVsTXPGLww7NDlTyhU8AUWrempik34ckzhsMigJA82hi0bnZYWr5ySAJcanVA4YPRkJo4o9e0ums0UNsq6O6npB44ju3bRGyC6FCe5bxlYbb6yzzmskuset6qzWtqrQe+y22TcBRR1TcOxbSoIPX8xV8csAfX+0JQHAxXqrJ/VWIk0NL2M/uglN4O25S9pPQQcQEPVSgWqa59nL8hliq5ifProrhRET3I8wQAQBJhe82MpbI0HT5CHdAAOjlyXxb0uhRlN/0bgGUYeI0mqavaDkFfiGhCK6ZGmGMAwh3dqaPF3zOQevV+UOFUFQCdh5+UgTqbWAzP7gBY+JFZ96Mqw8GIIWfSMKwknAt89MsTVisGe++3250YsRRO4qMfN0VmVXXOK2I2aGKQOaiYjQFZmRD"
+
+  # Nur nötig, falls ntfy irgendwann von auth-default-access: read-write
+  # (argocd/apps/ntfy/values.yaml) auf deny-all umgestellt wird.
+  ntfyToken:
+    enabled: false
+    secretName: carplay-api-ntfy-token
+    secretKey: token
+    encryptedData: "REPLACE_ME_WITH_KUBESEAL_OUTPUT"
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
