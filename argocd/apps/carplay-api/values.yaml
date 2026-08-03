@@ -143,7 +143,7 @@ config:
 #     --cert ~/homelab-certs/sealed-secrets.pem --from-file=/dev/stdin
 secrets:
   apiToken:
-    enabled: true
+    enabled: false
     secretName: carplay-api-token
     secretKey: token
     encryptedData: "AgCdhAhGTt7wsfaBk3Jj+QRKnSQfparn/wrsqvGjGo5hhQ2GlmRa7zezAz1y9TnHFWMKwt1o3GfZmuUOZW9jKWkxYGYZTt2vT7OttzBHDnR3zJ76GmVXMlDJ+XmtUZwEoVVFVnaA71nPKBfgU4i35c+Hg24JCKzXmpxByJ+vMJNM9ZYbXO/E4fzwxgEG8XvhZMeyVQYolgGmm2ePFYtwxIaJeFQLCsobfFMGwwV760dRYoXcIgJFQ+cKRKkVSZN7PQHMqhSrHCldBFCwWsdY5d29oYwQp4dQtO2/ZUcvenxXs3Av8wvnqr/LAcGGh74Nrq46v05lS2YGfhpjCB5mVogGFhDWEkfSmm09jLjqOGSEHoZeOQSVNfQUcFlYq9bkB+ySogjF8JMg7xbhMltWq0Mrw6GUdNl1IAEaoDrmnQUzyXCqgo7OzYkbsoHEuOY/WI4ZzyivyUGddnh/AIEGGPIFt2AtbCPVpLQ1GTdtgkQ2DyRbiEWws4fIxKQIpcq/0G5wovvAbi0jYWPUcMOd2xZuT4mjEOVkrHGuYuNlTh9Qyt42bbYyU4r5lGW0ZpcvwyQkwBeO4guUh0oK3OpdoBInYNZpNAOa+DekcoZYOmYJCwhajw1iREz4Yx2KhNODtNwUXCrpOSaoNTF6g6zkciOsrbQMTT3XkmuuthacAcePUrxLFJaMoyw6Lr+VqmsrlZMaTqfoYTzyx6T0OR7zj1ah01fTB7Jl7Km6iXDmSnaAOlfIedXYaTnIL7ymC/yAwvgvyGxD4AEUVibg8DcSgxr1"
