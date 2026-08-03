@@ -9,15 +9,15 @@ replicaCount: 1
 image:
   # Über kaniko-build-push gebaut und gepusht, siehe README.md dieses
   # Charts. Nach dem ersten Push hier Repository/Tag setzen.
-  repository: ghcr.io/CHANGEME/carplay-api
+  repository: ghcr.io/pkr-lab/carplay-api
   tag: "latest"
   pullPolicy: IfNotPresent
 
 # Nur nötig, falls das GHCR-Package privat ist:
 #   kubectl -n carplay-api create secret docker-registry ghcr-pull \
 #     --docker-server=ghcr.io --docker-username=<user> --docker-password=<pat>
-imagePullSecrets: []
-# - name: ghcr-pull
+imagePullSecrets:
+  - name: ghcr-pull
 
 nameOverride: ""
 fullnameOverride: ""
@@ -146,7 +146,7 @@ secrets:
     enabled: true
     secretName: carplay-api-token
     secretKey: token
-    encryptedData: "AgA5HXzeApstKl8X1loFx2rz4bJTaTYAUiVh/XVJKScn7ZI5bf5++6+u5RIKfao8OAkP4m7UaD9zr13pisvMS2R04CoXsnTfQgfovOvUtc6nRq0G5Cgz5Q7w+//IdPwDIQ9YFKW0gIYmzAC3pRY077DhuatIpu+h7IXN8ApWg57XaX/lIF9BpG+v7hdR7clbF/pJGCBAR86vtw1uqiTIyzqnJjKnH7dP79pMkiPvqFjPzaS2GPr1Qg+R2CVXX4fGQNTB3/uj/4HDN7XvR1B9B2hVJVf37PtPxFaw6b6LZU45cdeRyBqk/VHM+2RxkOMr2AJgUzsN5AthOfMQpmrpTMNhgFPqy84Qjz56MSYq/MXrHtbQWP2Is3BypV/KSLChnVsTXPGLww7NDlTyhU8AUWrempik34ckzhsMigJA82hi0bnZYWr5ySAJcanVA4YPRkJo4o9e0ums0UNsq6O6npB44ju3bRGyC6FCe5bxlYbb6yzzmskuset6qzWtqrQe+y22TcBRR1TcOxbSoIPX8xV8csAfX+0JQHAxXqrJ/VWIk0NL2M/uglN4O25S9pPQQcQEPVSgWqa59nL8hliq5ifProrhRET3I8wQAQBJhe82MpbI0HT5CHdAAOjlyXxb0uhRlN/0bgGUYeI0mqavaDkFfiGhCK6ZGmGMAwh3dqaPF3zOQevV+UOFUFQCdh5+UgTqbWAzP7gBY+JFZ96Mqw8GIIWfSMKwknAt89MsTVisGe++3250YsRRO4qMfN0VmVXXOK2I2aGKQOaiYjQFZmRD"
+    encryptedData: "AgCdhAhGTt7wsfaBk3Jj+QRKnSQfparn/wrsqvGjGo5hhQ2GlmRa7zezAz1y9TnHFWMKwt1o3GfZmuUOZW9jKWkxYGYZTt2vT7OttzBHDnR3zJ76GmVXMlDJ+XmtUZwEoVVFVnaA71nPKBfgU4i35c+Hg24JCKzXmpxByJ+vMJNM9ZYbXO/E4fzwxgEG8XvhZMeyVQYolgGmm2ePFYtwxIaJeFQLCsobfFMGwwV760dRYoXcIgJFQ+cKRKkVSZN7PQHMqhSrHCldBFCwWsdY5d29oYwQp4dQtO2/ZUcvenxXs3Av8wvnqr/LAcGGh74Nrq46v05lS2YGfhpjCB5mVogGFhDWEkfSmm09jLjqOGSEHoZeOQSVNfQUcFlYq9bkB+ySogjF8JMg7xbhMltWq0Mrw6GUdNl1IAEaoDrmnQUzyXCqgo7OzYkbsoHEuOY/WI4ZzyivyUGddnh/AIEGGPIFt2AtbCPVpLQ1GTdtgkQ2DyRbiEWws4fIxKQIpcq/0G5wovvAbi0jYWPUcMOd2xZuT4mjEOVkrHGuYuNlTh9Qyt42bbYyU4r5lGW0ZpcvwyQkwBeO4guUh0oK3OpdoBInYNZpNAOa+DekcoZYOmYJCwhajw1iREz4Yx2KhNODtNwUXCrpOSaoNTF6g6zkciOsrbQMTT3XkmuuthacAcePUrxLFJaMoyw6Lr+VqmsrlZMaTqfoYTzyx6T0OR7zj1ah01fTB7Jl7Km6iXDmSnaAOlfIedXYaTnIL7ymC/yAwvgvyGxD4AEUVibg8DcSgxr1"
 
   # Nur nötig, falls ntfy irgendwann von auth-default-access: read-write
   # (argocd/apps/ntfy/values.yaml) auf deny-all umgestellt wird.
