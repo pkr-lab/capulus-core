@@ -1,0 +1,6 @@
+**/*_test.go
+templates/
+values.yaml
+Chart.yaml
+README.md
+.git

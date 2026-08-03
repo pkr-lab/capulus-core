@@ -1,0 +1,253 @@
+// Command server runs carplay-api: a small read-only aggregation API that
+// combines VictoriaMetrics, ntfy and Uptime-Kuma into the single payload the
+// Homeserver CarPlay Dashboard iOS app polls every 30 seconds.
+package main
+
+import (
+	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"strconv"
+	"strings"
+	"syscall"
+	"time"
+
+	"github.com/gin-gonic/gin"
+
+	"carplay-api/internal/clients"
+	"carplay-api/internal/handlers"
+	"carplay-api/pkg/auth"
+	"carplay-api/pkg/metrics"
+)
+
+func main() {
+	cfg := loadConfig()
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.logLevel}))
+	slog.SetDefault(logger)
+
+	if err := run(cfg, logger); err != nil {
+		logger.Error("server exited with error", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run(cfg config, logger *slog.Logger) error {
+	if cfg.logLevel > slog.LevelDebug {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	vm := clients.NewVictoriaMetricsClient(cfg.vmURL, cfg.vmInstanceFilter, 3*time.Second, logger)
+	ntfy := clients.NewNtfyClient(cfg.ntfyURL, cfg.ntfyTopic, cfg.ntfyToken, 2*time.Second, logger)
+	kuma := clients.NewUptimeKumaClient(cfg.kumaURL, cfg.kumaSlug, 2*time.Second, logger)
+
+	stats := metrics.NewRegistry()
+	dashboardHandler := handlers.NewDashboardHandler(
+		vm, ntfy, kuma,
+		cfg.cacheTTL, cfg.apiTimeout,
+		cfg.ntfyLimit, cfg.ntfySince,
+		stats, logger,
+	)
+	healthHandler := handlers.NewHealthHandler(cfg.vmURL, cfg.ntfyURL, cfg.kumaURL, 2*time.Second)
+
+	router := gin.New()
+	if err := router.SetTrustedProxies(cfg.trustedProxies); err != nil {
+		return fmt.Errorf("setting trusted proxies: %w", err)
+	}
+
+	router.Use(gin.Recovery())
+	router.Use(requestLogger(logger))
+	router.Use(stats.Middleware())
+
+	if len(cfg.corsAllowedOrigins) > 0 {
+		router.Use(auth.CORS(cfg.corsAllowedOrigins))
+	}
+	if len(cfg.ipAllowlist) > 0 {
+		router.Use(auth.IPAllowlist(cfg.ipAllowlist))
+	}
+
+	rateLimiter := auth.NewRateLimiter(cfg.rateLimitPerMinute, time.Minute)
+
+	router.GET("/health", healthHandler.Handle)
+	router.GET("/metrics", stats.Handler())
+
+	api := router.Group("/api")
+	api.Use(rateLimiter.Middleware())
+	if cfg.bearerToken != "" {
+		api.Use(auth.BearerAuth(cfg.bearerToken))
+	} else {
+		logger.Warn("CARPLAY_API_TOKEN not set — /api/dashboard is running WITHOUT authentication")
+	}
+	api.GET("/dashboard", dashboardHandler.Handle)
+
+	srv := &http.Server{
+		Addr:              ":" + cfg.port,
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	serverErr := make(chan error, 1)
+	go func() {
+		logger.Info("carplay-api listening", "port", cfg.port)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serverErr <- err
+		}
+	}()
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	select {
+	case err := <-serverErr:
+		return fmt.Errorf("listen: %w", err)
+	case <-ctx.Done():
+		logger.Info("shutting down")
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	return srv.Shutdown(shutdownCtx)
+}
+
+// requestLogger emits one structured JSON line per request: method, path,
+// status, duration and a per-request trace ID. Deliberately excludes
+// headers and query strings — the Authorization bearer token and any other
+// sensitive value must never end up in logs.
+func requestLogger(logger *slog.Logger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		traceID := newTraceID()
+		c.Set("trace_id", traceID)
+		c.Header("X-Trace-Id", traceID)
+
+		start := time.Now()
+		c.Next()
+
+		path := c.FullPath()
+		if path == "" {
+			path = c.Request.URL.Path
+		}
+
+		logger.Info("request",
+			"trace_id", traceID,
+			"method", c.Request.Method,
+			"path", path,
+			"status", c.Writer.Status(),
+			"duration_ms", time.Since(start).Milliseconds(),
+			"client_ip", c.ClientIP(),
+		)
+	}
+}
+
+func newTraceID() string {
+	buf := make([]byte, 8)
+	if _, err := rand.Read(buf); err != nil {
+		return "unknown"
+	}
+	return hex.EncodeToString(buf)
+}
+
+type config struct {
+	port    string
+	logLevel slog.Level
+
+	cacheTTL   time.Duration
+	apiTimeout time.Duration
+
+	bearerToken        string
+	ipAllowlist        []string
+	corsAllowedOrigins []string
+	rateLimitPerMinute int
+	trustedProxies     []string
+
+	vmURL            string
+	vmInstanceFilter string
+
+	ntfyURL   string
+	ntfyTopic string
+	ntfyToken string
+	ntfySince string
+	ntfyLimit int
+
+	kumaURL  string
+	kumaSlug string
+}
+
+func loadConfig() config {
+	return config{
+		port:     getEnv("PORT", "8080"),
+		logLevel: parseLogLevel(getEnv("LOG_LEVEL", "info")),
+
+		cacheTTL:   time.Duration(getEnvInt("CACHE_TTL", 30)) * time.Second,
+		apiTimeout: time.Duration(getEnvInt("API_TIMEOUT", 5)) * time.Second,
+
+		bearerToken:        os.Getenv("CARPLAY_API_TOKEN"),
+		ipAllowlist:        splitCSV(os.Getenv("IP_ALLOWLIST_CIDRS")),
+		corsAllowedOrigins: splitCSV(os.Getenv("CORS_ALLOWED_ORIGINS")),
+		rateLimitPerMinute: getEnvInt("RATE_LIMIT_PER_MINUTE", 100),
+		trustedProxies:     splitCSV(os.Getenv("TRUSTED_PROXIES")),
+
+		vmURL:            getEnv("VM_URL", "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428"),
+		vmInstanceFilter: getEnv("VM_INSTANCE_FILTER", "homeserver|worker-0|worker-1"),
+
+		ntfyURL:   getEnv("NTFY_URL", "http://ntfy.ntfy.svc.cluster.local"),
+		ntfyTopic: getEnv("NTFY_TOPIC", "alerts"),
+		ntfyToken: os.Getenv("NTFY_TOKEN"),
+		ntfySince: getEnv("NTFY_SINCE", "12h"),
+		ntfyLimit: getEnvInt("NTFY_LIMIT", 10),
+
+		kumaURL:  getEnv("UPTIME_KUMA_URL", "http://uptime-kuma.uptime-kuma.svc.cluster.local"),
+		kumaSlug: getEnv("UPTIME_KUMA_SLUG", "homeserver"),
+	}
+}
+
+func getEnv(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
+func getEnvInt(key string, fallback int) int {
+	v := os.Getenv(key)
+	if v == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(v)
+	if err != nil {
+		return fallback
+	}
+	return parsed
+}
+
+func splitCSV(v string) []string {
+	if v == "" {
+		return nil
+	}
+	parts := strings.Split(v, ",")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if trimmed := strings.TrimSpace(p); trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
+}
+
+func parseLogLevel(v string) slog.Level {
+	switch strings.ToLower(v) {
+	case "debug":
+		return slog.LevelDebug
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
+}
