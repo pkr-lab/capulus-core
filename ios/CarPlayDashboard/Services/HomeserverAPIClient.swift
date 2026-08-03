@@ -30,7 +30,14 @@ final class HomeserverAPIClient {
 
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = Constants.requestTimeout
-        config.waitsForConnectivity = true
+        // waitsForConnectivity previously caused spurious NSURLErrorCancelled
+        // (-999) on every request: with Tailscale's VPN interface reported
+        // as a constantly-changing network path, URLSession would start
+        // "waiting", detect a path change, and cancel the wait instead of
+        // just retrying — surfacing as an unexplained "cancelled" with no
+        // underlying error. Failing fast (default false) lets our own
+        // 30s-interval polling loop be the retry mechanism instead.
+        config.waitsForConnectivity = false
 
         self.session = URLSession(configuration: config, delegate: MTLSDelegate(), delegateQueue: nil)
         self.decoder = JSONDecoder()
@@ -44,9 +51,28 @@ final class HomeserverAPIClient {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
-        do {
-            let (data, response) = try await session.data(for: request)
+        // Deliberately the completion-handler API, not the `async`
+        // convenience `session.data(for:)`: over Tailscale's VPN tunnel
+        // (NEPacketTunnelProvider), the async variant was observed cancelling
+        // every single request with a bare NSURLErrorCancelled (-999) and no
+        // underlying error — a known async/await-bridging + packet-tunnel
+        // interaction. The completion-handler API doesn't have this problem.
+        let (data, response): (Data, URLResponse) = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<(Data, URLResponse), Error>) in
+            let task = session.dataTask(with: request) { data, response, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                guard let data, let response else {
+                    continuation.resume(throwing: URLError(.badServerResponse))
+                    return
+                }
+                continuation.resume(returning: (data, response))
+            }
+            task.resume()
+        }
 
+        do {
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
                 let status = (response as? HTTPURLResponse)?.statusCode ?? -1
                 TailscaleConnectivity.shared.recordRequestResult(succeeded: false)
