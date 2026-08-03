@@ -55,7 +55,7 @@ final class DashboardViewModel: ObservableObject {
             // Deliberately keep the last-known `dashboard` value on failure
             // (see README "Offline-Verhalten") — a stale reading beats a
             // blank screen while driving.
-            self.error = error.localizedDescription
+            self.error = String(describing: error as NSError)
         }
 
         isLoading = false

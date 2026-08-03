@@ -34,13 +34,28 @@
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 
-	<!-- Required for scenes at all; configurationForConnecting in
-	     AppDelegate.swift supplies the actual per-role configuration, so no
-	     static UISceneConfigurations entries are needed here. -->
+	<!-- UIApplicationSupportsMultipleScenes alone isn't enough: on scene
+	     *restoration* (not first launch), iOS looks up the configuration
+	     name in this plist before ever calling AppDelegate's
+	     configurationForConnecting — an app-role entry matching the name
+	     returned there ("Default Configuration") has to exist here too, or
+	     restoration fails with "Info.plist contained no UIScene
+	     configuration dictionary". No delegate class needed for the
+	     app-role entry — SwiftUI's WindowGroup owns that scene. -->
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
 		<true/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+				</dict>
+			</array>
+		</dict>
 	</dict>
 
 	<!-- carplay-api.homeserver is plain HTTP, like every *.homeserver
