@@ -18,6 +18,11 @@ struct DashboardViewController: View {
                 VStack(alignment: .leading, spacing: 16) {
                     if !connectivity.isLikelyReachable {
                         OfflineBanner()
+                        if let error = viewModel.error {
+                            Text(error)
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
                     }
 
                     AlertsGridView(
