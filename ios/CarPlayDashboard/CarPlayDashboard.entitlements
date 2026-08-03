@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Required to run on real CarPlay hardware or via external TestFlight;
+	     NOT required for Xcode's CarPlay Simulator during development.
+	     Apple grants this per-App-ID after reviewing a written request
+	     against one of their fixed use-case categories — see
+	     ios/README.md "CarPlay-Entitlement" for why a generic system
+	     dashboard is unlikely to qualify, and which key to uncomment if
+	     you request under "Communication" instead.
+
+	     <key>com.apple.developer.carplay-communication</key>
+	     <true/>
+	-->
+
+	<!-- The original spec also asked for "Keychain Sharing" and "Network
+	     Extensions" entitlements here. Neither applies: Keychain Sharing is
+	     only needed to share items *between your own multiple apps/
+	     extensions* (this project has one target and stores its token
+	     under its own bundle ID, no sharing involved), and Network
+	     Extension entitlements are for apps that *implement* a VPN/DNS
+	     provider — this app doesn't; it just benefits from Tailscale's
+	     VPN already being active system-wide, which needs no entitlement
+	     on this app's part at all. -->
+</dict>
+</plist>
