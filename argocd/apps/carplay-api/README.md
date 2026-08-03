@@ -81,7 +81,7 @@ argo submit --from workflowtemplate/kaniko-build-push \
   -p repo=https://github.com/pkr-lab/capulus-core.git \
   -p revision=main \
   -p context=argocd/apps/carplay-api \
-  -p dockerfile=argocd/apps/carplay-api/Dockerfile \
+  -p dockerfile=Dockerfile \
   -p image=ghcr.io/<your-gh-username>/carplay-api:latest
 ```
 
