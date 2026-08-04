@@ -4,6 +4,8 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Homeserver Dashboard</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -18,6 +20,46 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+
+	<!-- No storyboard: the modern (iOS 14+) empty-dict form gives a plain
+	     launch screen without hand-authoring LaunchScreen.storyboard XML,
+	     which can't be validated without Xcode itself. -->
+	<key>UILaunchScreen</key>
+	<dict/>
+
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+
+	<!-- UIApplicationSupportsMultipleScenes alone isn't enough: on scene
+	     *restoration* (not first launch), iOS looks up the configuration
+	     name in this plist before ever calling AppDelegate's
+	     configurationForConnecting — an app-role entry matching the name
+	     returned there ("Default Configuration") has to exist here too, or
+	     restoration fails with "Info.plist contained no UIScene
+	     configuration dictionary". No delegate class needed for the
+	     app-role entry — SwiftUI's WindowGroup owns that scene. -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<true/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+
+	<!-- carplay-api.homeserver is plain HTTP, like every *.homeserver
+	     service in this cluster (see Constants.swift for why). -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSExceptionDomains</key>
