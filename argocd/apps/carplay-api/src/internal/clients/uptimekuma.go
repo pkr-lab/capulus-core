@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"time"
 
@@ -50,7 +51,10 @@ type kumaStatusPage struct {
 type kumaHeartbeat struct {
 	Status int    `json:"status"` // 0=down, 1=up, 2=pending, 3=maintenance
 	Time   string `json:"time"`
-	Ping   *int   `json:"ping"`
+	// Uptime-Kuma reports ping as a fractional millisecond value (e.g.
+	// 0.457 for a fast local check), not an integer — decoding straight
+	// into *int fails the whole heartbeat fetch.
+	Ping *float64 `json:"ping"`
 }
 
 type kumaHeartbeatResponse struct {
@@ -111,7 +115,7 @@ func (c *UptimeKumaClient) GetStatuses(ctx context.Context) ([]models.ServiceSta
 				status.Status = kumaStatusToString(latest.Status)
 				status.LastCheck = parseKumaTime(latest.Time, c.logger)
 				if latest.Ping != nil {
-					status.Ping = *latest.Ping
+					status.Ping = int(math.Round(*latest.Ping))
 				}
 			}
 
