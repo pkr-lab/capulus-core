@@ -10,7 +10,7 @@ image:
   # Über kaniko-build-push gebaut und gepusht, siehe README.md dieses
   # Charts. Nach dem ersten Push hier Repository/Tag setzen.
   repository: ghcr.io/pkr-lab/carplay-api
-  tag: "latest"
+  tag: "v2"
   pullPolicy: IfNotPresent
 
 # Nur nötig, falls das GHCR-Package privat ist:
@@ -113,10 +113,13 @@ config:
 
   victoriaMetrics:
     url: "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428"
-    # Regex-Alternation der instance-Labels, die aggregiert werden (siehe
-    # argocd/apps/glance für dasselbe Muster). Bei Rename/Erweiterung des
-    # Node-Fleets hier anpassen.
-    instanceFilter: "homeserver|worker-0|worker-1"
+    # Regex-Alternation der instance-Labels, die aggregiert werden. Die
+    # node-exporter-Targets in diesem Cluster tragen "IP:9100" als
+    # instance-Label (kein Hostname-Relabeling wie bei argocd/apps/glance
+    # angenommen) — per 2026-08-03 nur ein Node (192.168.178.94:9100),
+    # kein worker-0/worker-1. Matcht auf den Port statt feste Hostnamen,
+    # damit künftige Worker-Nodes automatisch mit reinkommen.
+    instanceFilter: ".*:9100"
 
   ntfy:
     url: "http://ntfy.ntfy.svc.cluster.local"
