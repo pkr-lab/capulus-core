@@ -60,12 +60,16 @@ env:
   # n8n.pke-lab.de wurde aus dem Cloudflare Tunnel entfernt (Security-Gründen,
   # siehe argocd/apps/cloudflared/values.yaml) — n8n ist jetzt nur noch intern
   # über n8n.homeserver (Traefik-Ingress ohne TLS) erreichbar. host/protocol
-  # müssen das widerspiegeln, sonst setzt n8n einen Secure-Cookie, den der
-  # Browser über die Klartext-HTTP-Verbindung nicht akzeptiert.
+  # spiegeln das wider.
   N8N_HOST: "n8n.homeserver"
   N8N_PORT: "5678"
   N8N_PROTOCOL: "http"
   WEBHOOK_URL: "http://n8n.homeserver/"
+  # N8N_SECURE_COOKIE ist ein von N8N_PROTOCOL unabhängiger Schalter und
+  # defaultet auf true — muss explizit auf false, sonst setzt n8n weiterhin
+  # ein Secure-Cookie, das der Browser über die Klartext-HTTP-Verbindung
+  # nicht akzeptiert (führt zum "secure cookie"-Fehler beim Login).
+  N8N_SECURE_COOKIE: "false"
   TZ: Europe/Berlin
   # SQLite als Datenbank (keine externe DB nötig im Home Lab)
   DB_TYPE: sqlite
