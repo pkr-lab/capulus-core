@@ -38,7 +38,7 @@ Node-IP von `homeserver`: `192.168.178.94`. Traefik-LoadBalancer-IP (MetalLB):
 | Vaultwarden | vaultwarden | vaultwarden:80 | vault.homeserver | vault.pke-lab.de |
 | Mealie | mealie | mealie:80 | mealie.homeserver | mealie.pke-lab.de |
 | Grocy | grocy | grocy:80 | grocy.homeserver | grocy.pke-lab.de |
-| n8n | n8n | n8n:80 | n8n.homeserver | n8n.pke-lab.de |
+| n8n | n8n | n8n:80 | n8n.homeserver | – (aus Cloudflare Tunnel entfernt, Security) |
 | Wiki.js | wikijs | wikijs:80 | wiki.homeserver | wiki.pke-lab.de |
 | Zammad | zammad | zammad-nginx:8080 | zammad.homeserver | support.pke-lab.de |
 | ntfy | ntfy | ntfy:80 | ntfy.homeserver | ntfy.pke-lab.de |
