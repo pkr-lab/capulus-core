@@ -1,0 +1,33 @@
+{{- if .Values.xibosignage.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: xibosignage-inbox-data
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: {{ .Values.xibosignage.inbox.size }}
+  storageClassName: ""
+  volumeName: xibosignage-inbox-pv
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: xibosignage-display-data
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: {{ .Values.xibosignage.display.size }}
+  storageClassName: ""
+  volumeName: xibosignage-display-pv
+{{- end }}

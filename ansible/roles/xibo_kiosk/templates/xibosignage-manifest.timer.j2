@@ -1,0 +1,11 @@
+# Managed by Ansible (xibo_kiosk role) — do not edit manually.
+[Unit]
+Description=Periodischer xibosignage manifest.json Scan
+
+[Timer]
+OnBootSec=15
+OnUnitActiveSec={{ xibo_kiosk_manifest_interval_seconds }}
+Unit=xibosignage-manifest.service
+
+[Install]
+WantedBy=timers.target

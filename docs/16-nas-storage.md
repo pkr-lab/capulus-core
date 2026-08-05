@@ -324,6 +324,86 @@ Auf dem NAS selbst über UGOS prüfen (Speicher-Manager → Auslastung).
 
 ---
 
+## Fixer Pfad statt dynamischer Subdir-Name
+
+Der `nfs-subdir-external-provisioner` benennt PVC-Unterverzeichnisse
+standardmäßig nach dem Muster `${namespace}-${pvcName}-${pvName}` — für
+reine Cluster-interne Nutzung ausreichend, aber ungeeignet, sobald ein
+Ordner auch von **außerhalb** des Clusters (ein anderer Host per rohem
+NFS-Mount, eine NAS-eigene Sync-App, o. Ä.) unter einem vorhersagbaren Pfad
+erreichbar sein muss. Zwei Techniken dafür, je nach Anwendungsfall:
+
+**1. Fixer Subdir-Name über die `nas`-StorageClass (nur Cluster-intern
+nötig):** Annotation `nfs.io/storage-path` auf der PVC erzwingt einen festen
+Ordnernamen statt des generierten Musters:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: meine-app-daten
+  namespace: meine-app
+  annotations:
+    nfs.io/storage-path: "meine-app-daten"   # exakter Ordnername unter k8s-storage
+spec:
+  storageClassName: nas
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 10Gi
+```
+
+**2. Statische PV mit fixem `nfs:`-Block (Cluster-Pod UND externe
+Konsumenten teilen sich denselben Ordner):** Wenn derselbe Ordner sowohl von
+einem Kubernetes-Pod als auch von einem Nicht-Kubernetes-Host (z. B. einem
+Raspberry Pi per `mount -t nfs`) gelesen/beschrieben werden soll, reicht die
+`nas`-StorageClass nicht — eine dynamisch vergebene PVC lässt sich von
+außerhalb des Clusters nicht vorhersagen. Stattdessen eine PV **ohne**
+StorageClass anlegen, die direkt auf einen von Hand gewählten Pfad zeigt,
+und die PVC per `volumeName` explizit daran binden:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: meine-app-shared-pv
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  nfs:
+    server: 192.168.178.97
+    path: /volume1/k8s-storage/meine-app-shared
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: meine-app-shared-data
+  namespace: meine-app
+spec:
+  accessModes: [ReadWriteMany]
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: ""
+  volumeName: meine-app-shared-pv
+```
+
+Der Zielordner (`meine-app-shared` im Beispiel) muss dabei **einmalig von
+Hand** unter dem Export-Root angelegt werden (siehe
+[Verbindung testen](#nfs-export-in-ugos-einrichten-manuell-kein-ansible-playbook)
+oben) — anders als bei der dynamischen `nas`-StorageClass legt hier niemand
+automatisch etwas an.
+
+Konkretes Beispiel für beide Situationen zusammen (Xibo-CMS-eigene Bibliothek
+über die dynamische `nas`-StorageClass, geteilter Inbox/Display-Ordner über
+die statische-PV-Technik für n8n **und** einen Raspberry Pi gleichzeitig):
+[docs/44-xibosignage.md](44-xibosignage.md).
+
+---
+
 ## Backups auf externer NAS-Platte
 
 Eine externe USB-Platte hängt direkt am UGREEN NAS und sichert regelmäßig

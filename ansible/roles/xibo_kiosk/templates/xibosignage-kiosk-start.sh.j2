@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Managed by Ansible (xibo_kiosk role) — do not edit manually.
+#
+# Startet Chromium im Kiosk-Modus gegen den lokalen Slideshow-Webserver.
+# Anders als alamos_kiosk (docs/19-alamos-apager.md) gibt es hier keinen
+# Login-Zustand zu erhalten — die Slideshow braucht keine Anmeldung, daher
+# bewusst MIT --incognito (kein Cache-/Profil-Aufbau über Neustarts hinweg).
+set -euo pipefail
+
+export DISPLAY=:0
+
+xset s off || true
+xset s noblank || true
+xset -dpms || true
+
+# Kurze Wartezeit, falls der Webserver-Unit-Start dem Kiosk-Start
+# nachhinkt (z.B. direkt nach einem Reboot).
+for _ in $(seq 1 30); do
+  curl --fail --silent --max-time 2 "http://127.0.0.1:{{ xibo_kiosk_http_port }}/" >/dev/null 2>&1 && break
+  sleep 1
+done
+
+exec chromium-browser \
+  --kiosk \
+  --incognito \
+  --noerrdialogs \
+  --disable-infobars \
+  --disable-session-crashed-bubble \
+  --autoplay-policy=no-user-gesture-required \
+  --check-for-update-interval=31536000 \
+  "http://127.0.0.1:{{ xibo_kiosk_http_port }}/"

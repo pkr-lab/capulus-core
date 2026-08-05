@@ -188,7 +188,7 @@ capulus-core/
 │   ├── 13-sso-authentik.md           # Single-Sign-On via Authentik
 │   ├── 14-cert-login.md              # Zertifikats-Authentifizierung via Traefik mTLS
 │   ├── 15-sso-alle-dienste.md        # SSO-Konfiguration für alle Dienste
-│   ├── 16-hdd-storage.md             # HDD-StorageClass auf worker-0
+│   ├── 16-nas-storage.md             # NAS-StorageClass (NFS, UGREEN NAS)
 │   ├── 17-zammad.md                  # Zammad Helpdesk/Ticket-System
 │   ├── 19-alamos-apager.md           # Alarmmonitor-Kiosk-Verwaltung (ALAMOS AMweb)
 │   ├── 20-wikijs.md                  # Wiki.js Team-Wiki
@@ -211,6 +211,9 @@ capulus-core/
 │   ├── 39-hpa-autoscaling.md         # Horizontale Autoskalierung (HPA) — welche Apps, welche Schwellenwerte
 │   ├── 40-pihole.md                  # Netzwerkweites Werbeblocking via Pi-hole
 │   ├── 41-glance.md                  # Dashboard mit Übersicht über alle Dienste
+│   ├── 42-port-uebersicht.md         # Port-/Ingress-Übersicht aller Apps
+│   ├── 43-carplay-api.md             # Homeserver-CarPlay-Dashboard-API (iOS-App)
+│   ├── 44-xibosignage.md             # Xibo CMS + Bilder-Slideshow auf Raspberry Pi 3B+
 │   └── assets/banner.svg
 ├── ansible/
 │   ├── site.yml                      # Entry-Point
@@ -231,7 +234,11 @@ capulus-core/
 │       ├── wake_on_lan/              # WoL-Empfangsbereitschaft auf worker-0/worker-1
 │       ├── cluster_power_manager/    # Homeserver: weckt/schaltet Worker per WoL je nach Last
 │       ├── cluster_power_manager_target/  # Worker: autorisiert Shutdown-Key (nur poweroff)
-│       └── cups_print_server/        # Homeserver: USB-Drucker per IPP/AirPrint freigeben
+│       ├── cups_print_server/        # Homeserver: USB-Drucker per IPP/AirPrint freigeben
+│       ├── thermal_watchdog/         # Selbst-Abschaltung bei Übertemperatur (alle Knoten + Kiosks)
+│       ├── resource_watchdog/        # Selbst-Abschaltung bei Dauerlast (alle Knoten + Kiosks)
+│       ├── alamos_kiosk/             # Raspberry Pi: Chromium-Kiosk + Heartbeat (ALAMOS AMweb)
+│       └── xibo_kiosk/               # Raspberry Pi 3B+: NFS-Bilder-Slideshow-Kiosk (xibosignage)
 └── argocd/
     ├── bootstrap/root-applicationset.yaml  # Erkennt jedes Verzeichnis darunter
     └── apps/                               # Ein Ordner pro ArgoCD-Application
@@ -262,7 +269,15 @@ capulus-core/
         ├── nextcloud/                # Datei-Sync, Kalender, Kontakte
         ├── immich/                   # Foto-/Video-Backup vom Handy
         ├── immich-storage/           # Dedizierter NFS-Export für Immich (/volume2)
-        └── glance/                   # Dashboard mit Übersicht über alle Dienste
+        ├── glance/                   # Dashboard mit Übersicht über alle Dienste
+        ├── nas-storage/              # NFS-Provisioner → StorageClass "nas" (/volume1)
+        ├── wikijs/                   # Wiki.js Team-Wiki
+        ├── zammad/                   # Helpdesk/Ticket-System
+        ├── tinyteller/               # Kleine Diktier-/Story-App
+        ├── wiki-docs-sync/           # CronJob: docs/ aus Git → Wiki.js, alle 15 Min.
+        ├── github-release-watcher/   # CronJob: neue GitHub-Releases → Zammad-Ticket
+        ├── carplay-api/              # Homeserver-CarPlay-Dashboard-API (iOS-App)
+        └── xibosignage/              # Xibo CMS: Medien-/Asset-Verwaltung für die Pi-Bilder-Slideshow
 ```
 
 </details>
@@ -335,6 +350,9 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 | Nextcloud | http://nextcloud.homeserver |
 | Immich | http://immich.homeserver |
 | Glance (Dashboard) | http://glance.homeserver |
+| Wiki.js | http://wiki.homeserver |
+| Zammad | http://zammad.homeserver |
+| Xibo CMS (xibosignage) | http://xibo.homeserver |
 
 > Zusätzlich zu den internen `*.homeserver`-URLs können ausgewählte Dienste
 > über Cloudflare Tunnel öffentlich unter einer eigenen Domain erreichbar
@@ -425,6 +443,9 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [Autoskalierung (HPA)](docs/39-hpa-autoscaling.md) | Welche Apps per HorizontalPodAutoscaler mitskalieren, welche bewusst nicht, und mit welchen Schwellenwerten |
 | [Pi-hole](docs/40-pihole.md) | Netzwerkweites Werbeblocking als DNS-Filter vor der Fritz!Box — kein Router-Eingriff nötig |
 | [Glance](docs/41-glance.md) | Dashboard mit Status-Übersicht über alle Dienste, Suchleiste, Uhr und Quick-Links |
+| [Port-Übersicht](docs/42-port-uebersicht.md) | Interner Service-Port, LAN- und externe Erreichbarkeit für jede App |
+| [CarPlay-API](docs/43-carplay-api.md) | Homeserver-CarPlay-Dashboard: Go/Gin-API für die iOS-App |
+| [xibosignage](docs/44-xibosignage.md) | Xibo CMS + Bilder-Slideshow auf Raspberry Pi 3B+, n8n-Workflow für automatisches Einspielen |
 
 ---
 
