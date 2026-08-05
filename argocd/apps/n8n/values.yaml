@@ -66,6 +66,12 @@ env:
   DB_TYPE: sqlite
   # Basis-Auth kann hier oder über Authentik (ForwardAuth) aktiviert werden
   N8N_BASIC_AUTH_ACTIVE: "true"
+  # n8n blockt Execute Command / Local File Trigger standardmäßig (OS-/
+  # Dateisystem-Zugriff, Sicherheitsrisiko bei Multi-Tenant-Instanzen) —
+  # in diesem Home-Lab hinter Basic-Auth bewusst wieder freigeschaltet,
+  # da der xibosignage-Workflow (docs/44-xibosignage.md) genau diese
+  # beiden Nodes braucht (Watch Inbox, Original archivieren).
+  NODES_EXCLUDE: "[]"
 
 resources:
   requests:
