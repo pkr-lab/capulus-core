@@ -1,0 +1,16 @@
+{{- if .Values.mysql.persistence.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "xibosignage.mysql.fullname" . }}-data
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "xibosignage.mysql.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.mysql.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.mysql.persistence.size }}
+  storageClassName: {{ .Values.mysql.persistence.storageClassName }}
+{{- end }}

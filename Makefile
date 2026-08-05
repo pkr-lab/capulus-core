@@ -109,6 +109,15 @@ alarm-kiosks: ## Alarmmonitor-Kiosks einrichten (Raspberry Pis, ALAMOS AMweb).
 alarm-kiosks-check: ## Dry-run des Alarmmonitor-Kiosk-Playbooks (keine Änderungen).
 	ansible-playbook -i $(INVENTORY) $(ALARM_PLAYBOOK) --check --diff $(VAULT_OPTS)
 
+.PHONY: xibo-kiosks xibo-kiosks-check
+XIBO_PLAYBOOK := $(ANSIBLE_DIR)/xibo-kiosks.yml
+
+xibo-kiosks: ## xibosignage-Displays einrichten (Raspberry Pi 3B+, Bilder-Slideshow, Tailscale).
+	ansible-playbook -i $(INVENTORY) $(XIBO_PLAYBOOK) $(VAULT_OPTS)
+
+xibo-kiosks-check: ## Dry-run des xibosignage-Displays-Playbooks (keine Änderungen).
+	ansible-playbook -i $(INVENTORY) $(XIBO_PLAYBOOK) --check --diff $(VAULT_OPTS)
+
 .PHONY: lint
 lint: ## Lint YAML, Ansible, and ALL Helm charts.
 	yamllint -c .yamllint ansible/ argocd/

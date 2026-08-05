@@ -1,0 +1,16 @@
+# Managed by Ansible (xibo_kiosk role) — do not edit manually.
+[Unit]
+Description=xibosignage Slideshow Kiosk
+After=graphical.target xibosignage-webserver.service
+Wants=xibosignage-webserver.service
+
+[Service]
+Type=simple
+User={{ xibo_kiosk_user }}
+Environment=DISPLAY=:0
+ExecStart=/usr/local/bin/xibosignage-kiosk-start.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target
