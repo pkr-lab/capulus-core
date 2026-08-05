@@ -152,15 +152,17 @@ cms:
     CMS_PHP_UPLOAD_MAX_FILESIZE: "512M"
     CMS_PHP_MAX_EXECUTION_TIME: "600"
 
-  # Erwartet vom Xibo-CMS-Image als eigenständige NFS-Squash-Identität
-  # (UGREEN-NAS all_squash auf 1000:10, siehe docs/16-nas-storage.md und
-  # das identische Problem/Fix bei wikijs/immich). Falls das CMS-Image
-  # zum ersten Start root braucht (chown auf /var/www/cms/library o.ä.),
-  # siehe docs/44-xibosignage.md → Fehlerbehebung.
-  securityContext:
-    runAsUser: 1000
-    runAsGroup: 10
-    fsGroup: 10
+  # Bewusst LEER, analog zu wikijs/immich (dort bekommt nur die DB
+  # runAsUser/runAsGroup=1000:10, siehe mysql-deployment.yaml — der
+  # App-Container läuft mit Default-User). Das offizielle xibo-cms-Image
+  # (kein "user:" in dessen docker-compose.yml) braucht beim ersten Start
+  # Root — entrypoint.sh schreibt /root/.my.cnf, konfiguriert Apache/PHP/
+  # cron unter /etc und schreibt web/settings.php im Container-eigenen
+  # Rootfs. Mit erzwungenem runAsUser: 1000 schlagen all diese Schritte
+  # mit "Permission denied" fehl (CrashLoopBackOff). Der NAS-Export nutzt
+  # no_root_squash (docs/16-nas-storage.md), Root-Zugriff auf die
+  # library/state-PVCs funktioniert daher problemlos.
+  securityContext: {}
 
   persistence:
     # Xibo verwaltet diesen Ordner exklusiv selbst (Medien-Bibliothek,
