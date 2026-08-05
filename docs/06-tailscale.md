@@ -110,6 +110,20 @@ oder ein Drucker.
 Die Ansible-Rolle konfiguriert den Server so, dass er das eigene Subnetz
 (`local_subnet`, Default `192.168.1.0/24`) advertised.
 
+**Nicht jeder Host soll Subnetz-Router sein:** Die Rolle liest dafür die
+Variable `tailscale_advertise_routes` (Default `{{ local_subnet }}`, siehe
+`ansible/roles/tailscale/defaults/main.yml`). Geräte, die nur selbst im
+Tailnet erreichbar sein sollen, ohne fremden LAN-Traffic weiterzuleiten —
+z. B. die xibosignage-Raspberry-Pis, siehe
+[docs/44-xibosignage.md](44-xibosignage.md) — setzen sie in ihren
+`group_vars` auf `""`, dann lässt die Rolle `--advertise-routes` beim
+`tailscale up`/`tailscale set`-Aufruf komplett weg:
+
+```yaml
+# ansible/group_vars/<gruppe>.yml
+tailscale_advertise_routes: ""
+```
+
 **Subnet-Routes freischalten:**
 
 Nach dem Playbook-Run die advertised Routes im Admin-Panel approven:

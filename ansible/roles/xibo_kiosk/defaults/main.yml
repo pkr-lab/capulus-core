@@ -1,0 +1,34 @@
+---
+# Kill-switch: auf false setzen (z.B. in host_vars) um Kiosk/Mount/Webserver auf
+# einem bestimmten Host zu deaktivieren, ohne die Rolle aus dem Playbook zu
+# entfernen (analog zu alamos_kiosk_enabled).
+xibo_kiosk_enabled: true
+
+# NFS-Server + fester Pfad des "xibosignage-display"-Ordners auf dem UGREEN
+# NAS. MUSS identisch zu argocd/apps/n8n values.yaml -> xibosignage.display
+# sein — n8n schreibt dorthin, dieser Pi liest read-only davon. Siehe
+# docs/44-xibosignage.md.
+xibo_kiosk_nfs_server: "192.168.178.97"
+xibo_kiosk_nfs_path: "/volume1/k8s-storage/xibosignage-display"
+xibo_kiosk_mount_point: "/mnt/xibosignage-display"
+
+# Kein echter Xibo-Player: Xibo unterstützt keinen Raspberry Pi offiziell
+# (docs/44-xibosignage.md). Stattdessen liefert ein winziger lokaler
+# Python-Webserver eine statische Slideshow-Seite aus, die den obigen
+# NFS-Mount periodisch neu einliest.
+xibo_kiosk_http_port: 8080
+xibo_kiosk_web_root: "/var/www/xibosignage-slideshow"
+
+# Wie oft der Manifest-Generator den Ordner neu scannt (Sekunden) —
+# bestimmt, mit welcher Verzögerung ein neues Bild aus xibosignage-display
+# in der Slideshow auftaucht.
+xibo_kiosk_manifest_interval_seconds: 30
+
+# Wie lange jedes Bild in der Slideshow gezeigt wird (Millisekunden).
+xibo_kiosk_slide_duration_ms: 10000
+
+# Linux-User, unter dessen grafischer Session (DISPLAY=:0) der Kiosk-Browser
+# läuft. Setzt voraus, dass Autologin für diesen User bereits eingerichtet
+# ist (Raspberry Pi Imager Option "Enable autologin") — das richtet diese
+# Rolle nicht zusätzlich ein (identisches Vorgehen wie alamos_kiosk).
+xibo_kiosk_user: "pi"
