@@ -96,8 +96,6 @@ tunnel:
         service: http://mediamtx.mediamtx.svc.cluster.local:8888
       - hostname: paperless.pke-lab.de
         service: http://paperless-ngx.paperless-ngx.svc.cluster.local:80
-      - hostname: n8n.pke-lab.de
-        service: http://n8n.n8n.svc.cluster.local:80
       - hostname: mealie.pke-lab.de
         service: http://mealie.mealie.svc.cluster.local:80
       - hostname: grocy.pke-lab.de
