@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "xibosignage.mysql.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "xibosignage.mysql.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  # Pflicht bei RWO-PVCs: kein zweiter Pod darf parallel auf dasselbe
+  # Volume zugreifen, während der alte noch terminiert (siehe wikijs/immich).
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "xibosignage.mysql.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "xibosignage.mysql.selectorLabels" . | nindent 8 }}
+    spec:
+      # Der NFS-Export der "nas"-StorageClass squasht auf diesem UGREEN-NAS
+      # jede Anfrage serverseitig auf die feste Identität 1000:10 (siehe
+      # docs/16-nas-storage.md und der identische Fix bei wikijs/immich
+      # Postgres). Das offizielle mysql-Image erkennt einen nicht-root
+      # Startprozess und überspringt seinen sonst root-only chown-Schritt —
+      # solange runAsUser/runAsGroup exakt der Squash-Identität entsprechen,
+      # initialisiert MySQL den Datadir beim ersten Start ohne Probleme.
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 10
+        fsGroup: 10
+      {{- with .Values.mysql.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: mysql
+          image: "{{ .Values.mysql.image.repository }}:{{ .Values.mysql.image.tag }}"
+          imagePullPolicy: {{ .Values.mysql.image.pullPolicy }}
+          ports:
+            - name: mysql
+              containerPort: 3306
+              protocol: TCP
+          env:
+            - name: MYSQL_DATABASE
+              value: {{ .Values.mysql.database | quote }}
+            - name: MYSQL_USER
+              value: {{ .Values.mysql.username | quote }}
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: db-password
+            # Kein CMS/Betrieb braucht den Root-User — ein zufälliges,
+            # nie ausgelesenes Root-Passwort ist sicherer als eines zu
+            # verwalten (identisch zum offiziellen xibo-docker docker-compose.yml).
+            - name: MYSQL_RANDOM_ROOT_PASSWORD
+              value: "yes"
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+          readinessProbe:
+            tcpSocket:
+              port: mysql
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 12
+          livenessProbe:
+            tcpSocket:
+              port: mysql
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.mysql.resources | nindent 12 }}
+      volumes:
+        - name: data
+          {{- if .Values.mysql.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "xibosignage.mysql.fullname" . }}-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

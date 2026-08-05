@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "xibosignage.mysql.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "xibosignage.mysql.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.mysql.service.port }}
+      targetPort: mysql
+      protocol: TCP
+      name: mysql
+  selector:
+    {{- include "xibosignage.mysql.selectorLabels" . | nindent 4 }}

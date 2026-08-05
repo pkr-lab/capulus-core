@@ -93,11 +93,16 @@
       no_log: true
 
     - name: Connect to Tailscale and advertise the local subnet
+      # --advertise-routes wird nur angehängt, wenn tailscale_advertise_routes
+      # gesetzt ist (Default: local_subnet). Für Hosts, die NICHT als
+      # Subnet-Router dienen sollen (z.B. die xibosignage-Pis, siehe
+      # ansible/xibo-kiosks.yml), auf "" setzen — dann bleibt der Host ein
+      # reiner Tailnet-Client ohne LAN-Weiterleitung.
       ansible.builtin.command: >
         tailscale up
         --authkey=file:{{ tailscale_authkey_file.path }}
         --hostname={{ tailscale_hostname }}
-        --advertise-routes={{ local_subnet }}
+        {{ ('--advertise-routes=' + tailscale_advertise_routes) if (tailscale_advertise_routes | default('') | length > 0) else '' }}
         --accept-dns=true
         --accept-routes=false
         --timeout=60s
@@ -116,7 +121,7 @@
   ansible.builtin.command: >
     tailscale set
     --hostname={{ tailscale_hostname }}
-    --advertise-routes={{ local_subnet }}
+    {{ ('--advertise-routes=' + tailscale_advertise_routes) if (tailscale_advertise_routes | default('') | length > 0) else '' }}
   register: tailscale_set_result
   changed_when: tailscale_set_result.rc == 0
   failed_when: false
@@ -149,8 +154,8 @@
       - "Tailscale status: Connected"
       - "Tailscale IP: {{ tailscale_ip.stdout | default('unknown') }}"
       - "Hostname: {{ tailscale_hostname }}"
-      - "Advertised subnet: {{ local_subnet }}"
-      - "NOTE: Approve the advertised subnet route in the admin panel:"
+      - "Advertised subnet: {{ tailscale_advertise_routes if (tailscale_advertise_routes | default('') | length > 0) else 'none (reiner Tailnet-Client)' }}"
+      - "NOTE: Approve the advertised subnet route in the admin panel (falls gesetzt):"
       - "      https://login.tailscale.com/admin/machines"
 
 - name: Ensure tailscaled is enabled at boot
