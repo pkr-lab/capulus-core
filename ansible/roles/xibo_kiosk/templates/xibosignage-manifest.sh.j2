@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Managed by Ansible (xibo_kiosk role) — do not edit manually.
+#
+# Scannt den NFS-gemounteten xibosignage-display-Ordner nach Bilddateien und
+# schreibt eine manifest.json in den Webroot, die slideshow.js periodisch
+# neu einliest. Bewusst kein echtes Xibo-Player-Protokoll — reine
+# Ordner-zu-JSON-Auflistung, siehe docs/44-xibosignage.md.
+set -euo pipefail
+
+MOUNT_POINT="{{ xibo_kiosk_mount_point }}"
+OUTPUT="{{ xibo_kiosk_web_root }}/manifest.json"
+TMP="$(mktemp "${OUTPUT}.XXXXXX")"
+
+cleanup() { rm -f "$TMP"; }
+trap cleanup EXIT
+
+mapfile -t files < <(
+  find "$MOUNT_POINT" -maxdepth 1 -type f \
+    \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.gif' -o -iname '*.webp' \) \
+    -printf '%f\n' 2>/dev/null | sort
+)
+
+{
+  printf '['
+  for i in "${!files[@]}"; do
+    [ "$i" -gt 0 ] && printf ','
+    printf '"media/%s"' "${files[$i]}"
+  done
+  printf ']\n'
+} > "$TMP"
+
+mv "$TMP" "$OUTPUT"
+trap - EXIT

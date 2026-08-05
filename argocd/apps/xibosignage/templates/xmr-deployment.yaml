@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "xibosignage.xmr.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "xibosignage.xmr.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "xibosignage.xmr.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "xibosignage.xmr.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: xmr
+          image: "{{ .Values.xmr.image.repository }}:{{ .Values.xmr.image.tag }}"
+          imagePullPolicy: {{ .Values.xmr.image.pullPolicy }}
+          ports:
+            - name: xmr
+              containerPort: 9505
+              protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: xmr
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            tcpSocket:
+              port: xmr
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.xmr.resources | nindent 12 }}

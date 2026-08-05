@@ -79,3 +79,24 @@ affinity: {}
 
 nodeSelector: {}
 tolerations: []
+
+# ============================================================
+# xibosignage-Inbox/Display-Ordner (siehe docs/44-xibosignage.md)
+#
+# Zwei statische NFS-PVs mit festem Pfad auf dem UGREEN NAS (nicht über die
+# dynamische "nas"-StorageClass, siehe templates/xibosignage-pv.yaml) werden
+# hier in den n8n-Pod gemountet, damit ein "Local File Trigger"-Workflow den
+# Inbox-Ordner beobachten und verarbeitete Bilder in den Display-Ordner
+# schreiben kann, den wiederum der Raspberry-Pi-Kiosk per rohem NFS-Mount
+# liest (ansible/roles/xibo_kiosk).
+xibosignage:
+  enabled: true
+  nfsServer: "192.168.178.97"
+  inbox:
+    nfsPath: "/volume1/k8s-storage/xibosignage-inbox"
+    mountPath: /data/xibosignage-inbox
+    size: 20Gi
+  display:
+    nfsPath: "/volume1/k8s-storage/xibosignage-display"
+    mountPath: /data/xibosignage-display
+    size: 20Gi

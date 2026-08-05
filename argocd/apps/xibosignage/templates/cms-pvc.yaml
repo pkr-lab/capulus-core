@@ -1,0 +1,35 @@
+{{- if .Values.cms.persistence.library.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "xibosignage.cms.fullname" . }}-library
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "xibosignage.cms.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.cms.persistence.library.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.cms.persistence.library.size }}
+  storageClassName: {{ .Values.cms.persistence.library.storageClassName }}
+---
+{{- end }}
+{{- if .Values.cms.persistence.state.enabled -}}
+# Bündelt custom/backup/userscripts/ca-certs (siehe cms-deployment.yaml
+# volumeMounts mit subPath) auf einer gemeinsamen PVC.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "xibosignage.cms.fullname" . }}-state
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "xibosignage.cms.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.cms.persistence.state.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.cms.persistence.state.size }}
+  storageClassName: {{ .Values.cms.persistence.state.storageClassName }}
+{{- end }}

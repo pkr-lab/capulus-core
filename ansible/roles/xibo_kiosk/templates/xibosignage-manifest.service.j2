@@ -1,0 +1,16 @@
+# Managed by Ansible (xibo_kiosk role) — do not edit manually.
+#
+# Bewusst kein "After=...mount" auf den NFS-Mount: der Mount-Unit-Name lässt
+# sich aus dem Pfad nicht zuverlässig ableiten (systemd-escape-Regeln).
+# Stattdessen ist das Skript selbst tolerant — ist der Mount kurz nicht da,
+# liefert `find` einfach nichts und die manifest.json wird leer geschrieben;
+# der nächste Timer-Lauf (alle {{ xibo_kiosk_manifest_interval_seconds }}s)
+# holt das automatisch nach.
+[Unit]
+Description=xibosignage manifest.json Generator
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/xibosignage-manifest.sh

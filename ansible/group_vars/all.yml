@@ -231,6 +231,34 @@ semaphore_projects:
     # Re-Run hier nur manuell per Knopfdruck laufen, nicht automatisch nachts
     # — siehe docs/20-alamos-apager.md.
 
+  - name: xibo-displays
+    description: >-
+      xibosignage-Displays (Raspberry Pi 3 B+, Bilder-Slideshow + Tailscale)
+      einrichten — siehe docs/44-xibosignage.md.
+    repository:
+      name: home-server-git
+      url: "{{ argocd_repo_url }}"
+      branch: main
+    environments:
+      - "{{ semaphore_default_environment }}"
+    inventories:
+      - name: xibo_displays
+        type: static
+        ssh_key: semaphore-ssh-key
+        content: |
+          [xibo_displays]
+          # Pi-Hostnamen hier eintragen, sobald vorhanden:
+          # wohnzimmer ansible_host=192.168.178.120
+    templates:
+      - name: "Deploy xibosignage Displays"
+        playbook: ansible/xibo-kiosks.yml
+        inventory: xibo_displays
+        environment: default-env
+        vault_key: vault-password
+        description: "Tailscale + Chromium-Slideshow-Kiosk auf den xibosignage-Displays."
+    # Bewusst kein Schedule, gleiches Prinzip wie bei alarm-kiosks: ein
+    # Re-Run soll hier nur manuell per Knopfdruck laufen.
+
 # ---- Scanner / Paperless Ingestion ------------------------
 # Fujitsu USB-Scanner direkt am Home-Server; scanbd hört auf den
 # Hardware-Button und schreibt Scans als PDF in den SMB-Share von

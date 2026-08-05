@@ -1,0 +1,36 @@
+---
+# ============================================================
+# xibosignage-Displays-Playbook (Raspberry Pi 3 B+, Bilder-Slideshow)
+# ============================================================
+#
+# Provisioniert die xibosignage-Displays: Tailscale (Fernzugriff/Verwaltung
+# ohne Portfreigabe), NFS-Mount des "xibosignage-display"-Ordners + lokaler
+# Chromium-Kiosk (ansible/roles/xibo_kiosk), plus Thermal-/Resource-Watchdog
+# (unbeaufsichtigte Geräte, gleiches Bundling wie bei den ALAMOS-Kiosks,
+# siehe ansible/alarm-kiosks.yml). Details: docs/44-xibosignage.md.
+#
+# Voraussetzungen:
+#   1. Raspberry Pi OS (Desktop) mit Autologin fuer den Kiosk-User
+#      bereits geflasht (Raspberry Pi Imager Option "Enable autologin").
+#   2. Host unter "xibo_displays" in ansible/inventory/hosts.yml eintragen.
+#   3. Eigenen Tailscale-Auth-Key + ggf. angepasste NFS-Werte in
+#      ansible/group_vars/xibo_displays.yml hinterlegen (vault-verschlüsselt).
+#
+# Aufruf:
+#   make xibo-kiosks
+# Dry-run:
+#   make xibo-kiosks-check
+# ============================================================
+
+- name: xibosignage-Displays einrichten
+  hosts: xibo_displays
+  become: true
+  roles:
+    - role: tailscale
+      tags: [tailscale, vpn]
+    - role: xibo_kiosk
+      tags: [xibo-kiosk, kiosk]
+    - role: thermal_watchdog
+      tags: [thermal-watchdog, thermal]
+    - role: resource_watchdog
+      tags: [resource-watchdog, thermal]
