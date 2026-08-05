@@ -1,0 +1,433 @@
+{
+  "name": "PaperlessWorkflow",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "coreImapAccount",
+        "resource": "email",
+        "mailboxPath": {
+          "__rl": true,
+          "mode": "list",
+          "value": "INBOX"
+        },
+        "emailDateRange": {
+          "since": "="
+        },
+        "emailFlags": {},
+        "emailSearchFilters": {},
+        "includeParts": [
+          "attachmentsInfo"
+        ]
+      },
+      "type": "CUSTOM.imap",
+      "typeVersion": 1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "c6ce6b30-8109-49cf-9c58-d580ddc96318",
+      "name": "GetEmailsList email",
+      "credentials": {
+        "imap": {
+          "id": "Tek5djc2wVXRoXtQ",
+          "name": "IMAP account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "3cbfbab5-3b34-4a16-a19c-981a2900abcc",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "authentication": "coreImapAccount",
+        "resource": "email",
+        "mailboxPath": {
+          "__rl": true,
+          "mode": "list",
+          "value": "INBOX"
+        },
+        "emailDateRange": {
+          "since": "={{ $now.minus(2, 'days').toFormat('dd-LLL-yyyy') }}"
+        },
+        "emailFlags": {},
+        "emailSearchFilters": {},
+        "includeParts": [
+          "attachmentsInfo"
+        ]
+      },
+      "type": "CUSTOM.imap",
+      "typeVersion": 1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "7ff4f3d7-c069-4c51-98d9-ecd1cb3749d0",
+      "name": "GetEmailsList email1",
+      "credentials": {
+        "imap": {
+          "id": "Tek5djc2wVXRoXtQ",
+          "name": "IMAP account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// ── Konfiguration ─────────────────────────────────────────────\nconst ADRESSEN = [\n  'paperless@edv-kretzer.de',\n  'p.kretzer29@gmail.com',\n  'peter.kretzer29@gmail.com',\n  'peterkretzer36@gmail.com',\n  'peterkretzer37@gmail.com',\n  'ichwillkeinewerbung9901@gmail.com',\n  'info@edv-kretzer.de',\n];\n\n// Bilder unter dieser Größe gelten als Deko (Logo/Pixel), nicht als Dokument\nconst MIN_IMAGE_SIZE = 40000; // 40 KB – bei Bedarf anpassen\n\n// Diese Typen sind immer echte Dokumente\nconst DOC_TYPES = [\n  'application/pdf',\n  'application/msword',\n  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',\n  'application/vnd.ms-excel',\n  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',\n];\nconst DOC_EXTS = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'odt', 'ods'];\n\n// ── MIME-Baum in einzelne Teile zerlegen ─────────────────────\nfunction leaves(node, acc) {\n  if (!node) return acc;\n  if (Array.isArray(node.childNodes)) {\n    node.childNodes.forEach(c => leaves(c, acc));\n  } else {\n    acc.push(node);\n  }\n  return acc;\n}\n\n// ── Einen Teil klassifizieren ─────────────────────────────────\nfunction classify(node) {\n  const type = (node.type || '').toLowerCase();\n  const fname =\n    (node.dispositionParameters && node.dispositionParameters.filename) ||\n    (node.parameters && node.parameters.name) || '';\n  const ext = fname.includes('.') ? fname.split('.').pop().toLowerCase() : '';\n  const size = node.size || 0;\n  const hasCid = !!node.id; // Content-ID → im Text eingebettet\n\n  // PDFs / Office-Dokumente → immer Dokument\n  if (DOC_TYPES.includes(type) || DOC_EXTS.includes(ext)) return 'document';\n\n  // Bilder: echtes Dokument nur, wenn NICHT eingebettet UND groß genug\n  if (type.startsWith('image/')) {\n    if (hasCid) return 'inline-image';       // Logo/Signatur/Kontaktfoto\n    if (size < MIN_IMAGE_SIZE) return 'small-image';\n    return 'document';                        // eigenständiges Foto/Scan\n  }\n\n  return 'other';\n}\n\n// ── Auswertung ────────────────────────────────────────────────\nconst json = $input.item.json;\nconst parts = leaves(json.bodyStructure, []);\n\nconst files = parts\n  .filter(p => {\n    const t = (p.type || '').toLowerCase();\n    return t && !t.startsWith('text/'); // Text ist nie eine Datei\n  })\n  .map(p => ({\n    type: p.type,\n    size: p.size || 0,\n    hasCid: !!p.id,\n    filename:\n      (p.dispositionParameters && p.dispositionParameters.filename) ||\n      (p.parameters && p.parameters.name) || null,\n    class: classify(p),\n  }));\n\njson.hasAttachment = files.length > 0;\njson.hasDocument = files.some(f => f.class === 'document');\njson.files = files; // Debug: zeigt Typ, Größe, CID, Klasse\n\njson.isMeineAdresse = (json.envelope && json.envelope.to ? json.envelope.to : [])\n  .some(r => ADRESSEN.includes((r.address || '').toLowerCase()));\n\nreturn $input.item;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        0
+      ],
+      "id": "abeeeeed-c287-40a4-ae86-2d2a92727c8e",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b87f4b1e-8ee2-4004-8f10-c8145b1c478a",
+              "leftValue": "={{ $json.hasAttachment }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "24ed7af7-3856-494f-adc7-1f5f3c2cb4c7",
+              "leftValue": "={{ $json.isMeineAdresse }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        592,
+        0
+      ],
+      "id": "378cec3e-8c6e-431f-9844-b7bac841bbc0",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "authentication": "coreImapAccount",
+        "resource": "email",
+        "operation": "moveEmail",
+        "sourceMailbox": {
+          "__rl": true,
+          "mode": "list",
+          "value": "INBOX"
+        },
+        "emailUid": "={{ $json.uid }}",
+        "destinationMailbox": {
+          "__rl": true,
+          "value": "paperless",
+          "mode": "list",
+          "cachedResultName": "paperless"
+        }
+      },
+      "type": "CUSTOM.imap",
+      "typeVersion": 1,
+      "position": [
+        816,
+        -80
+      ],
+      "id": "2d5505e1-8fac-4be0-9e62-50407b73c3f7",
+      "name": "MoveEmail email",
+      "credentials": {
+        "imap": {
+          "id": "Tek5djc2wVXRoXtQ",
+          "name": "IMAP account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "coreImapAccount",
+        "resource": "email",
+        "operation": "moveEmail",
+        "sourceMailbox": {
+          "__rl": true,
+          "mode": "list",
+          "value": "INBOX"
+        },
+        "emailUid": "={{ $json.uid }}",
+        "destinationMailbox": {
+          "__rl": true,
+          "value": "Trash",
+          "mode": "list",
+          "cachedResultName": "Trash"
+        }
+      },
+      "type": "CUSTOM.imap",
+      "typeVersion": 1,
+      "position": [
+        816,
+        96
+      ],
+      "id": "bfcf4168-e018-4948-b358-66abcd1a0f1e",
+      "name": "MoveEmail email1",
+      "credentials": {
+        "imap": {
+          "id": "Tek5djc2wVXRoXtQ",
+          "name": "IMAP account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "coreImapAccount",
+        "resource": "email",
+        "mailboxPath": {
+          "__rl": true,
+          "value": "Trash",
+          "mode": "list",
+          "cachedResultName": "Trash"
+        },
+        "emailDateRange": {},
+        "emailFlags": {},
+        "emailSearchFilters": {}
+      },
+      "type": "CUSTOM.imap",
+      "typeVersion": 1,
+      "position": [
+        416,
+        400
+      ],
+      "id": "40a76a43-0a2b-4c1f-84f1-cc359894a667",
+      "name": "GetEmailsList email2",
+      "credentials": {
+        "imap": {
+          "id": "Tek5djc2wVXRoXtQ",
+          "name": "IMAP account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Datum von vor 2 Tagen im IMAP-Format (z. B. \"24-Jul-2026\")\nconst months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\n\nconst d = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);\nconst tag = String(d.getDate()).padStart(2, '0');\nconst monat = months[d.getMonth()];\nconst jahr = d.getFullYear();\n\n$input.item.json.beforeDate = `${tag}-${monat}-${jahr}`;\n\nreturn $input.item;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        400
+      ],
+      "id": "961fc8a7-6f36-4a96-b02f-cc89d848a972",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6ccd5256-3e2f-4630-b7bf-fb06b83af950",
+              "leftValue": "={{ new Date($json.envelope.date) < new Date(Date.now() - 2*24*60*60*1000) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        608,
+        400
+      ],
+      "id": "7bdc396f-6b37-4348-a2e0-1ecfa54da876",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "authentication": "coreImapAccount",
+        "resource": "email",
+        "operation": "deleteEmail",
+        "mailboxPath": {
+          "__rl": true,
+          "value": "Trash",
+          "mode": "list",
+          "cachedResultName": "Trash"
+        },
+        "emailUid": "={{ $json.uid }}"
+      },
+      "type": "CUSTOM.imap",
+      "typeVersion": 1,
+      "position": [
+        816,
+        304
+      ],
+      "id": "bececd5c-738e-47dd-af40-50c477a61204",
+      "name": "DeleteEmail email",
+      "credentials": {
+        "imap": {
+          "id": "Tek5djc2wVXRoXtQ",
+          "name": "IMAP account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "GetEmailsList email1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetEmailsList email1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "MoveEmail email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "MoveEmail email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MoveEmail email1": {
+      "main": [
+        []
+      ]
+    },
+    "GetEmailsList email2": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "GetEmailsList email2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "DeleteEmail email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "Europe/Berlin",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "169dc0d9-cdbe-49e0-8a6d-0e7f5bedb27e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d3f71021076be8bdc8614296f3c7749ae0813e877410d7e61391b83252e612f7"
+  },
+  "nodeGroups": [],
+  "id": "TZ5S1i50bPxZHUmM",
+  "tags": []
+}
