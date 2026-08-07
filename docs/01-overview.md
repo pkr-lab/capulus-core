@@ -49,7 +49,7 @@ flowchart TB
     subgraph L4["SCHICHT 4 — ANWENDUNGEN (argocd/apps/)"]
         direction LR
         P1["Nextcloud · Immich · Paperless-NGX<br/>Wiki.js · Zammad · Vaultwarden"]
-        P2["Mealie · Grocy · n8n · Uptime Kuma<br/>Glance · MediaMTX · TinyTeller"]
+        P2["Mealie · Grocy · n8n · Uptime Kuma<br/>MediaMTX · TinyTeller"]
         P3["alamos-apager · github-release-watcher<br/>wiki-docs-sync · example-whoami · xibosignage"]
     end
 
@@ -210,7 +210,6 @@ flowchart TB
     AK -->|"ForwardAuth"| GO
     AK -->|"ForwardAuth"| VW
     AK -->|"ForwardAuth"| N8N["n8n"]
-    AK -->|"ForwardAuth"| GL["glance"]
 
     NASSC --> NC
     NASSC --> PL
@@ -281,7 +280,6 @@ flowchart TB
 | `grocy` | Haushalts- und Vorratsverwaltung | N · C | `grocy.homeserver` |
 | `n8n` | Automatisierungen ohne Code | A · N · C | `n8n.homeserver` |
 | `uptime-kuma` | Erreichbarkeits-Überwachung | L | `uptime-kuma.homeserver` |
-| `glance` | Startseite mit allen Diensten | A · S | `glance.homeserver` |
 | `mediamtx` | Live-Video: RTSP / RTMP / WebRTC / HLS | C | `stream.homeserver` |
 | `tinyteller` | kleine Diktier- und Story-App | — | `tinyteller.homeserver` |
 | `alamos-apager` | Alarmmonitor-Steuerung (ALAMOS AMweb) | S | `alamos-apager.homeserver` |
@@ -390,7 +388,7 @@ flowchart LR
 - Sicherung: NAS → restic → WD Elements 8 TB. Ohne diese Platte existiert keine Kopie der Nutzdaten. Das restic-Passwort ist der einzige Schlüssel — ohne es ist auch das Backup wertlos.
 
 **Anmeldung und Geheimnisse**
-- Authentik (mit eigenem PostgreSQL/Redis) → OIDC bzw. Traefik-ForwardAuth → Headlamp, Argo Workflows, MinIO, Grafana, Semaphore, Gotify, Vaultwarden, n8n, Glance
+- Authentik (mit eigenem PostgreSQL/Redis) → OIDC bzw. Traefik-ForwardAuth → Headlamp, Argo Workflows, MinIO, Grafana, Semaphore, Gotify, Vaultwarden, n8n
 - Fällt Authentik aus, kann sich an diesen Oberflächen niemand mehr anmelden; die Dienste selbst laufen weiter.
 - `sealed-secrets` muss vor allen Apps laufen, die ein SealedSecret mitbringen — sonst bleiben deren Pods ohne Zugangsdaten.
 - Ansible Vault schützt die Host-Geheimnisse (Tailscale-Key, sudo-Passwörter, SMB-Passwort); Sealed Secrets schützt die Cluster-Geheimnisse. Zwei getrennte Mechanismen, beide im Git-Repo.
@@ -431,7 +429,7 @@ EINTRITT   dnsmasq:53      Traefik:80/443      k3s-API:6443      ArgoCD:30080   
                                    |
                                    v
 SCHICHT 4  Nextcloud  Immich  Paperless  Wiki.js  Zammad  Vaultwarden  Mealie  Grocy
-           n8n  Uptime-Kuma  Glance  MediaMTX  TinyTeller  alamos-apager  xibosignage  + 2 CronJobs
+           n8n  Uptime-Kuma  MediaMTX  TinyTeller  alamos-apager  xibosignage  + 2 CronJobs
                                    |  braucht
                                    v
 SCHICHT 3  authentik(SSO)  sealed-secrets  monitoring  gotify/ntfy  cloudflared
