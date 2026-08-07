@@ -2,11 +2,11 @@ import SwiftUI
 
 /// The app's start screen: a short, visual overview of the fleet's
 /// metrics — Homeserver, NAS, worker-0, worker-1, whichever of those are
-/// currently on — plus alerts and service status.
+/// currently on — plus service status. Alerts live in their own tab, see
+/// AlertsView.swift.
 struct HomeView: View {
     @ObservedObject private var viewModel = DashboardViewModel.shared
     @ObservedObject private var connectivity = TailscaleConnectivity.shared
-    @State private var selectedAlert: Alert?
     @State private var selectedService: ServiceStatus?
 
     var body: some View {
@@ -20,10 +20,6 @@ struct HomeView: View {
 
                         HostCardsView(hosts: viewModel.dashboard?.hosts ?? [])
 
-                        AlertsGridView(
-                            alerts: viewModel.dashboard?.alerts ?? [],
-                            onSelect: { selectedAlert = $0 }
-                        )
                         StatusGridView(
                             statuses: viewModel.dashboard?.status ?? [],
                             onSelect: { selectedService = $0 }
@@ -45,9 +41,6 @@ struct HomeView: View {
             }
             .task {
                 viewModel.startAutoRefresh()
-            }
-            .sheet(item: $selectedAlert) { alert in
-                DetailView(kind: .alert(alert))
             }
             .sheet(item: Binding(
                 get: { selectedService.map(ServiceStatusDetailItem.init) },

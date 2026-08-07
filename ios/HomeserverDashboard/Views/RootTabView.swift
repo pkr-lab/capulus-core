@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// The whole app: two tabs (overview + control, the latter bundling
-/// brightness, wake/shutdown and an alerts overview), no CarPlay scene —
-/// this is a pure iPhone app now.
+/// The whole app: three tabs (overview, control — brightness + wake/shutdown
+/// — and a dedicated alerts overview), no CarPlay scene — this is a pure
+/// iPhone app now.
 struct RootTabView: View {
     var body: some View {
         TabView {
@@ -11,6 +11,9 @@ struct RootTabView: View {
 
             PowerView()
                 .tabItem { Label("Steuerung", systemImage: "power") }
+
+            AlertsView()
+                .tabItem { Label("Alerts", systemImage: "bell.fill") }
         }
         .tint(Theme.accentLight)
         .preferredColorScheme(.dark)
