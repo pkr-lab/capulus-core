@@ -41,8 +41,10 @@ spec:
                       fieldPath: metadata.namespace
                 - name: STATE_CONFIGMAP_NAME
                   value: {{ include "github-release-watcher.stateConfigMapName" . }}
+                - name: UPDATES_CONFIGMAP_NAME
+                  value: {{ include "github-release-watcher.updatesConfigMapName" . }}
                 - name: GITHUB_REPOS
-                  value: {{ .Values.github.repos | join "," | quote }}
+                  value: {{ $repoEntries := list }}{{ range .Values.github.repos }}{{ $repoEntries = append $repoEntries (printf "%s|%s|%s|%s|%t" .id .name .repo .currentVersion .notifyZammad) }}{{ end }}{{ join "," $repoEntries | quote }}
                 {{- if .Values.github.tokenSecretName }}
                 - name: GITHUB_TOKEN
                   valueFrom:
