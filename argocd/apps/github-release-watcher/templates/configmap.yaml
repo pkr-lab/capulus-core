@@ -202,21 +202,61 @@ data:
 
     def main():
         state_existed, state = load_state()
+        updates_existed, _ = load_configmap(UPDATES_CONFIGMAP, "updates.json", {})
         changed = False
+        update_entries = []
 
-        for repo in GITHUB_REPOS:
+        for entry in GITHUB_REPOS:
+            repo = entry["repo"]
             try:
                 release = latest_release(repo)
             except Exception as exc:
                 print(f"[ERR] {repo}: GitHub-Abfrage fehlgeschlagen: {exc}", file=sys.stderr)
+                # Letzten bekannten Stand aus state.json zeigen statt die
+                # App-Liste für diesen Eintrag ganz verschwinden zu lassen.
+                latest_tag = state.get(repo)
+                update_entries.append({
+                    "id": entry["id"],
+                    "name": entry["name"],
+                    "repo": repo,
+                    "current_version": entry["current_version"] or None,
+                    "latest_version": latest_tag,
+                    "latest_url": None,
+                    "has_update": (
+                        latest_tag != entry["current_version"]
+                        if entry["current_version"] and latest_tag
+                        else None
+                    ),
+                })
                 continue
 
             if release is None:
                 print(f"[SKIP] {repo}: keine Releases vorhanden")
+                update_entries.append({
+                    "id": entry["id"],
+                    "name": entry["name"],
+                    "repo": repo,
+                    "current_version": entry["current_version"] or None,
+                    "latest_version": None,
+                    "latest_url": None,
+                    "has_update": None,
+                })
                 continue
 
             tag = release.get("tag_name")
             previous = state.get(repo)
+
+            update_entries.append({
+                "id": entry["id"],
+                "name": entry["name"],
+                "repo": repo,
+                "current_version": entry["current_version"] or None,
+                "latest_version": tag,
+                "latest_url": release.get("html_url"),
+                # None (nicht False) wenn current_version nicht gepflegt ist
+                # -> App zeigt "unbekannt" statt fälschlich "aktuell".
+                "has_update": (tag != entry["current_version"]) if entry["current_version"] else None,
+            })
 
             if previous is None:
                 print(f"[INIT] {repo}: Baseline gesetzt auf {tag}")
@@ -226,18 +266,23 @@ data:
 
             if tag != previous:
                 print(f"[NEW] {repo}: {previous} -> {tag}")
-                try:
-                    notify_zammad(repo, release)
-                    state[repo] = tag
-                    changed = True
-                except Exception as exc:
-                    print(f"[ERR] {repo}: Zammad-Benachrichtigung fehlgeschlagen: {exc}", file=sys.stderr)
-                    # State NICHT aktualisieren -> naechster Lauf versucht es erneut.
+                state[repo] = tag
+                changed = True
+                if entry["notify_zammad"]:
+                    try:
+                        notify_zammad(repo, release)
+                    except Exception as exc:
+                        print(f"[ERR] {repo}: Zammad-Benachrichtigung fehlgeschlagen: {exc}", file=sys.stderr)
             else:
                 print(f"[OK] {repo}: kein neues Release ({tag})")
 
         if changed:
             save_state(state, state_existed)
+
+        save_configmap(UPDATES_CONFIGMAP, "updates.json", updates_existed, {
+            "updated_at": int(time.time()),
+            "repos": update_entries,
+        })
 
 
     if __name__ == "__main__":
