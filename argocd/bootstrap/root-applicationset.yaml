@@ -33,6 +33,24 @@ spec:
           kind: SealedSecret
           jsonPointers:
             - /status
+        # HPA-managed Deployments across all apps: the chart sets
+        # replicas: null so Kubernetes only defaults it once at creation,
+        # but ServerSideApply treats an explicit null as "clear this field",
+        # which resets it to the schema default (1) on every sync — fighting
+        # the HPA's scale-up and leaving the app permanently OutOfSync (seen
+        # on zammad-railsserver, docs/17-zammad.md). Ignoring /spec/replicas
+        # here only matches Applications that actually contain a resource
+        # with this exact kind+name, so it's a no-op for every other app.
+        - group: apps
+          kind: Deployment
+          name: zammad-railsserver
+          jsonPointers:
+            - /spec/replicas
+        - group: apps
+          kind: Deployment
+          name: zammad-nginx
+          jsonPointers:
+            - /spec/replicas
       syncPolicy:
         automated:
           prune: true
