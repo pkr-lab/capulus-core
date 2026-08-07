@@ -10,7 +10,7 @@ image:
   # Über kaniko-build-push gebaut und gepusht, siehe README.md dieses
   # Charts. Nach dem ersten Push hier Repository/Tag setzen.
   repository: ghcr.io/pkr-lab/carplay-api
-  tag: "v4"
+  tag: "v5"
   pullPolicy: IfNotPresent
 
 # Nur nötig, falls das GHCR-Package privat ist:
