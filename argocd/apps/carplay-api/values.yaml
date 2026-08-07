@@ -172,6 +172,17 @@ config:
       name: "Zammad"
       match: "zammad"
 
+  # GET /api/updates — liest die von github-release-watcher geschriebene
+  # Update-Status-ConfigMap in dessen (anderem!) Namespace, via In-Cluster-
+  # k8s-API + der cross-namespace RoleBinding aus argocd/apps/github-
+  # release-watcher/templates/role.yaml. Werte MÜSSEN zu dessen
+  # {{ include "github-release-watcher.fullname" . }}-updates passen — bei
+  # abweichendem Release-Namen dort entsprechend anpassen.
+  updates:
+    namespace: "github-release-watcher"
+    configMapName: "github-release-watcher-updates"
+    cacheTTLSeconds: "900"
+
   # power-agent läuft NICHT im Cluster — es ist ein privilegierter Prozess
   # direkt auf dem Homeserver-Host (ansible/roles/power_agent), der
   # Bildschirmhelligkeit + Wake-on-LAN + Poweroff für die App ausführt, weil

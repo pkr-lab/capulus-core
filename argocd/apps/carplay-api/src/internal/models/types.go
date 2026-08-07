@@ -59,6 +59,28 @@ type DashboardResponse struct {
 	UpdatedAt       int64             `json:"updated_at"`
 }
 
+// AppUpdate is one watched repo's update status, sourced from github-
+// release-watcher's updates ConfigMap (argocd/apps/github-release-watcher).
+// Pointer fields are nil when unknown — e.g. CurrentVersion is nil until
+// someone fills in config.services entries' currentVersion in that chart's
+// values.yaml, and HasUpdate stays nil (not false) whenever it can't be
+// determined, so the app shows "unbekannt" instead of a false "up to date".
+type AppUpdate struct {
+	ID             string  `json:"id"`
+	Name           string  `json:"name"`
+	Repo           string  `json:"repo"`
+	CurrentVersion *string `json:"current_version"`
+	LatestVersion  *string `json:"latest_version"`
+	LatestURL      *string `json:"latest_url"`
+	HasUpdate      *bool   `json:"has_update"`
+}
+
+// UpdatesResponse is the payload for GET /api/updates.
+type UpdatesResponse struct {
+	UpdatedAt int64       `json:"updated_at"`
+	Repos     []AppUpdate `json:"repos"`
+}
+
 // HealthResponse is the payload for GET /health.
 type HealthResponse struct {
 	Status    string            `json:"status"`
