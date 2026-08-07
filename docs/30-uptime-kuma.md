@@ -10,8 +10,13 @@ via ntfy, Gotify, E-Mail oder anderen Kanälen.
 
 ```
 uptime-kuma.homeserver  →  Traefik  →  uptime-kuma (Port 3001)
-                                            └── PVC: data (2 Gi, nas)
+                                            └── PVC: data (2 Gi, local-path)
 ```
+
+> **Warum `local-path` statt `nas`:** War testweise auf `nas`, ist aber nach
+> Umstellung des NAS auf `all_squash` (siehe [docs/16-nas-storage.md](16-nas-storage.md))
+> mit Permission-Fehlern abgestürzt und wurde zurück auf `local-path`
+> gestellt.
 
 ---
 

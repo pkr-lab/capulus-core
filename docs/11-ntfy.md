@@ -14,14 +14,14 @@ ntfy ist ein einfacher, selbst gehosteter Pub/Sub-Notification-Dienst. Im Gegens
 | Auth        | ✓                                   | ✓ (optional)                |
 | HTTP-API    | ✓                                   | ✓                           |
 
-**Empfehlung:** Gotify für interne Logs/Scanner-Status behalten; ntfy für iOS-Benachrichtigungen nutzen.
+**Empfehlung:** Gotify für interne Logs/Android behalten; ntfy für iOS-Benachrichtigungen nutzen.
 
 ---
 
 ## Architektur
 
 ```
-Scanner / ArgoCD-Alert / beliebiger curl-Sender
+Alertmanager / beliebiger curl-Sender
         │
         ▼
 ntfy-Server (http://ntfy.homeserver)
@@ -60,7 +60,7 @@ URL nach dem Deployment: **http://ntfy.homeserver**
 
 1. **ntfy-App** aus dem [App Store](https://apps.apple.com/app/ntfy/id1625396347) installieren
 2. App öffnen → **+** → Server-URL eintragen: `http://ntfy.homeserver`
-3. Topic abonnieren z.B. `homeserver` oder `scanner`
+3. Topic abonnieren, z.B. `homeserver` oder `alerts`
 4. Benachrichtigungen in den iOS-Einstellungen für ntfy erlauben
 
 > **Hinweis:** Das Topic ist öffentlich zugänglich solange `auth-default-access: read-write` gesetzt ist. Für private Topics Auth aktivieren (siehe unten).
@@ -71,7 +71,7 @@ URL nach dem Deployment: **http://ntfy.homeserver**
 
 ### Einfachste Form
 ```bash
-curl -d "Scan fertig" http://ntfy.homeserver/scanner
+curl -d "Hallo Welt" http://ntfy.homeserver/homeserver
 ```
 
 ### Mit Titel und Priorität
@@ -101,21 +101,6 @@ curl \
 ```
 
 Vollständige Emoji-Liste: https://docs.ntfy.sh/emojis/
-
----
-
-## Scanner-Integration
-
-In `ansible/roles/scanner/templates/scan_to_pdf.sh.j2` zusätzlich zu Gotify an ntfy senden:
-
-```bash
-# ntfy-Benachrichtigung (iOS)
-curl -s \
-  -H "Title: Scanner" \
-  -H "Tags: white_check_mark" \
-  -d "Scan fertig: ${FILENAME}" \
-  http://ntfy.homeserver/scanner || true
-```
 
 ---
 
