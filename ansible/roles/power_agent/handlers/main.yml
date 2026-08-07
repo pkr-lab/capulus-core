@@ -1,0 +1,7 @@
+---
+- name: Restart power agent
+  ansible.builtin.systemd:
+    name: power-agent
+    daemon_reload: true
+    state: restarted
+  when: power_agent_enabled | bool

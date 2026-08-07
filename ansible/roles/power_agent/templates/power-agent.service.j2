@@ -1,0 +1,15 @@
+# Managed by Ansible (power_agent role) — do not edit manually.
+[Unit]
+Description=power-agent - privileged brightness/WoL/poweroff HTTP API for the Homeserver Dashboard app
+After=network-online.target k3s.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/power-agent/config.env
+ExecStart=/usr/bin/python3 /usr/local/bin/power-agent.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

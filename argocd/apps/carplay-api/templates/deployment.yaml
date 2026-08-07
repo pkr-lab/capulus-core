@@ -52,6 +52,20 @@ spec:
                   name: {{ .Values.secrets.ntfyToken.secretName }}
                   key: {{ .Values.secrets.ntfyToken.secretKey }}
             {{- end }}
+            {{- if .Values.secrets.powerAgentToken.enabled }}
+            - name: POWER_AGENT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.powerAgentToken.secretName }}
+                  key: {{ .Values.secrets.powerAgentToken.secretKey }}
+            {{- end }}
+            {{- if .Values.secrets.shutdownConfirmationCode.enabled }}
+            - name: SHUTDOWN_CONFIRMATION_CODE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.shutdownConfirmationCode.secretName }}
+                  key: {{ .Values.secrets.shutdownConfirmationCode.secretKey }}
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /health

@@ -212,7 +212,7 @@ capulus-core/
 │   ├── 40-pihole.md                  # Netzwerkweites Werbeblocking via Pi-hole
 │   ├── 41-glance.md                  # Dashboard mit Übersicht über alle Dienste
 │   ├── 42-port-uebersicht.md         # Port-/Ingress-Übersicht aller Apps
-│   ├── 43-carplay-api.md             # Homeserver-CarPlay-Dashboard-API (iOS-App)
+│   ├── 43-carplay-api.md             # Homeserver-Dashboard-API (iOS-App, inkl. power-agent)
 │   ├── 44-xibosignage.md             # Xibo CMS + Bilder-Slideshow auf Raspberry Pi 3B+
 │   └── assets/banner.svg
 ├── ansible/
@@ -234,6 +234,7 @@ capulus-core/
 │       ├── wake_on_lan/              # WoL-Empfangsbereitschaft auf worker-0/worker-1
 │       ├── cluster_power_manager/    # Homeserver: weckt/schaltet Worker per WoL je nach Last
 │       ├── cluster_power_manager_target/  # Worker: autorisiert Shutdown-Key (nur poweroff)
+│       ├── power_agent/              # Homeserver: HTTP-API für manuelle Helligkeit/Wake/Shutdown aus der iOS-App
 │       ├── cups_print_server/        # Homeserver: USB-Drucker per IPP/AirPrint freigeben
 │       ├── thermal_watchdog/         # Selbst-Abschaltung bei Übertemperatur (alle Knoten + Kiosks)
 │       ├── resource_watchdog/        # Selbst-Abschaltung bei Dauerlast (alle Knoten + Kiosks)
@@ -276,7 +277,7 @@ capulus-core/
         ├── tinyteller/               # Kleine Diktier-/Story-App
         ├── wiki-docs-sync/           # CronJob: docs/ aus Git → Wiki.js, alle 15 Min.
         ├── github-release-watcher/   # CronJob: neue GitHub-Releases → Zammad-Ticket
-        ├── carplay-api/              # Homeserver-CarPlay-Dashboard-API (iOS-App)
+        ├── carplay-api/              # Homeserver-Dashboard-API für die iOS-App (Verzeichnisname historisch aus der CarPlay-Vorversion)
         └── xibosignage/              # Xibo CMS: Medien-/Asset-Verwaltung für die Pi-Bilder-Slideshow
 ```
 
@@ -444,7 +445,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [Pi-hole](docs/40-pihole.md) | Netzwerkweites Werbeblocking als DNS-Filter vor der Fritz!Box — kein Router-Eingriff nötig |
 | [Glance](docs/41-glance.md) | Dashboard mit Status-Übersicht über alle Dienste, Suchleiste, Uhr und Quick-Links |
 | [Port-Übersicht](docs/42-port-uebersicht.md) | Interner Service-Port, LAN- und externe Erreichbarkeit für jede App |
-| [CarPlay-API](docs/43-carplay-api.md) | Homeserver-CarPlay-Dashboard: Go/Gin-API für die iOS-App |
+| [Homeserver-Dashboard-API](docs/43-carplay-api.md) | Go/Gin-API + power-agent für die reine-iOS-App Homeserver Dashboard (Metriken, Alerts, Status, Helligkeit, Wake/Shutdown) |
 | [xibosignage](docs/44-xibosignage.md) | Xibo CMS + Bilder-Slideshow auf Raspberry Pi 3B+, n8n-Workflow für automatisches Einspielen |
 
 ---
