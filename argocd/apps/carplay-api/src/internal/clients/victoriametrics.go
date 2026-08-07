@@ -194,11 +194,17 @@ func clampPercent(v float64) float64 {
 
 // regexAlternation builds a PromQL label-matcher regex ("a|b|c") from exact
 // values, escaping each one so IPs' dots don't accidentally act as
-// wildcards.
+// wildcards. The escaped value is embedded in a double-quoted MetricsQL
+// string literal, so a single backslash (what regexp.QuoteMeta produces,
+// e.g. "192.168.0.1" -> `192\.168\.0\.1`) gets parsed by VictoriaMetrics as
+// a string-literal escape sequence and rejected with 422 ("cannot parse
+// string literal") since "\." isn't one it recognizes. Doubling the
+// backslash makes it decode back to a single one before the regex engine
+// sees it.
 func regexAlternation(values []string) string {
 	escaped := make([]string, len(values))
 	for i, v := range values {
-		escaped[i] = regexp.QuoteMeta(v)
+		escaped[i] = strings.ReplaceAll(regexp.QuoteMeta(v), `\`, `\\`)
 	}
 	return strings.Join(escaped, "|")
 }
