@@ -1,15 +1,13 @@
 import SwiftUI
 
-/// The whole app: three tabs (overview + the two subpages the spec asked
-/// for), no CarPlay scene — this is a pure iPhone app now.
+/// The whole app: two tabs (overview + control, the latter bundling
+/// brightness, wake/shutdown and an alerts overview), no CarPlay scene —
+/// this is a pure iPhone app now.
 struct RootTabView: View {
     var body: some View {
         TabView {
             HomeView()
                 .tabItem { Label("Übersicht", systemImage: "square.grid.2x2.fill") }
-
-            BrightnessView()
-                .tabItem { Label("Helligkeit", systemImage: "sun.max.fill") }
 
             PowerView()
                 .tabItem { Label("Steuerung", systemImage: "power") }
