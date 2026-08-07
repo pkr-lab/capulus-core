@@ -10,9 +10,12 @@ image:
 # mit Schrittweite verwenden.
 schedule: "0 */2 * * *"
 timezone: "Europe/Berlin"
-# suspend: true lässt den CronJob inaktiv, bis Secrets + Zammad-Gruppe
-# bewusst geprüft und aktiviert wurden (siehe docs/25-github-release-watcher.md).
-suspend: true
+# Aktiviert seit [siehe Commit] — Secrets (Zammad-Token) und Zammad-Gruppe
+# ("Capulus-Core::RepoBenachrichtigung") waren bereits für DocFlowEngine
+# geprüft; die 9 neu hinzugekommenen Self-Hosted-Apps haben notifyZammad:
+# false, erzeugen also KEINE Tickets, nur die App-Update-Liste (siehe
+# docs/25-github-release-watcher.md).
+suspend: false
 concurrencyPolicy: Forbid
 failedJobsHistoryLimit: 3
 successfulJobsHistoryLimit: 3
