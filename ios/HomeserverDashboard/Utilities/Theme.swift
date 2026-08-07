@@ -110,7 +110,12 @@ struct ScreenBackground<Content: View>: View {
     var body: some View {
         ZStack {
             Theme.backgroundGradient.ignoresSafeArea()
+            // Caps content at a phone-like column width so cards don't
+            // stretch edge-to-edge on iPad — has no effect on iPhone,
+            // where the screen is already narrower than the cap.
             content()
+                .frame(maxWidth: 700)
+                .frame(maxWidth: .infinity)
         }
     }
 }

@@ -1,13 +1,14 @@
 # Homeserver Dashboard (iOS)
 
-Pure SwiftUI iPhone app for [carplay-api](../argocd/apps/carplay-api/) —
-alerts (ntfy), per-host metrics (VictoriaMetrics) and service status
-(Uptime-Kuma) on a home screen, plus two control subpages: Homeserver
-screen brightness, and Wake-on-LAN/shutdown for the fleet.
+Pure SwiftUI universal (iPhone + iPad) app for
+[carplay-api](../argocd/apps/carplay-api/) — alerts (ntfy), per-host
+metrics (VictoriaMetrics) and service status (Uptime-Kuma) on a home
+screen, plus two control subpages: Homeserver screen brightness, and
+Wake-on-LAN/shutdown for the fleet.
 
 No CarPlay: the CarPlay scene, its entitlement, and the `CarPlay.framework`
 dependency have all been removed — this is a normal, App-Store-shippable
-iPhone app with no special Apple entitlement request needed for any of it.
+app with no special Apple entitlement request needed for any of it.
 
 ## Why HTTP, not HTTPS
 

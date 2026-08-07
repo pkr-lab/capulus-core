@@ -20,6 +20,7 @@ final class WeatherAPIClient {
         components.queryItems = [
             URLQueryItem(name: "latitude", value: Constants.Weather.latitude),
             URLQueryItem(name: "longitude", value: Constants.Weather.longitude),
+            URLQueryItem(name: "current", value: "temperature_2m"),
             URLQueryItem(name: "daily", value: "temperature_2m_max,temperature_2m_min,weathercode,precipitation_probability_max,windspeed_10m_max"),
             URLQueryItem(name: "timezone", value: "Europe/Berlin"),
             URLQueryItem(name: "forecast_days", value: "2"),
