@@ -1,11 +1,10 @@
 import SwiftUI
 
 /// Subpage 2: brightness, Wake-on-LAN + shutdown for worker-0/worker-1,
-/// shutdown (only — the Homeserver has no WoL path, it's the always-on
+/// and shutdown (only — the Homeserver has no WoL path, it's the always-on
 /// control plane, see docs/37-cluster-power-manager.md) for the Homeserver
 /// itself gated behind an extra warning + the same confirmation code as
-/// ArgoCD, and an alerts overview (also shown on Übersicht) — merged into
-/// one tab so control + "what needs attention" live together.
+/// ArgoCD. Alerts live in their own tab, see AlertsView.swift.
 struct PowerView: View {
     @ObservedObject private var dashboardViewModel = DashboardViewModel.shared
     @ObservedObject private var powerViewModel = PowerViewModel.shared
@@ -14,7 +13,6 @@ struct PowerView: View {
     @State private var showingSettings = false
     @State private var confirmingShutdown: PowerTarget?
     @State private var showingHomeserverWarning = false
-    @State private var selectedAlert: Alert?
 
     private func host(_ id: String) -> HostMetrics? {
         dashboardViewModel.dashboard?.hosts.first { $0.id == id }
@@ -57,11 +55,6 @@ struct PowerView: View {
                                 .font(.system(size: 13))
                                 .foregroundStyle(Theme.statusBad)
                         }
-
-                        AlertsGridView(
-                            alerts: dashboardViewModel.dashboard?.alerts ?? [],
-                            onSelect: { selectedAlert = $0 }
-                        )
                     }
                     .padding(16)
                 }
@@ -88,9 +81,6 @@ struct PowerView: View {
             }
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
-            }
-            .sheet(item: $selectedAlert) { alert in
-                DetailView(kind: .alert(alert))
             }
             .confirmationDialog(
                 confirmingShutdown.map { "\($0.displayName) wirklich herunterfahren?" } ?? "",
