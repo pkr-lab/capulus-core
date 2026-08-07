@@ -64,6 +64,7 @@ abfließen sollte, kann damit nichts anderes ausgeführt werden.
 | [`wake_on_lan`](../ansible/roles/wake_on_lan) | worker-0, worker-1 | Aktiviert WoL (`ethtool wol g`) persistent bei jedem Boot |
 | [`cluster_power_manager`](../ansible/roles/cluster_power_manager) | homeserver | Erzeugt den Shutdown-SSH-Key, deployt den Watchdog (`cluster-power-manager.service`) |
 | [`cluster_power_manager_target`](../ansible/roles/cluster_power_manager_target) | worker-0, worker-1 | Autorisiert den Public Key des Homeservers, beschränkt auf `poweroff` |
+| [`power_agent`](../ansible/roles/power_agent) | homeserver | HTTP-Gegenstück für **manuelle** Wake-/Shutdown-Taps aus der iOS-App (siehe [docs/43-carplay-api.md](43-carplay-api.md#power-agent)) — nutzt denselben SSH-Key, dieselbe `woke_at`-Buchführung und dieselbe Worker-Liste wie oben weiter, damit sich App-Taps und dieser automatische Last-Watchdog nicht widersprechen. Läuft direkt nach `cluster_power_manager` in `site.yml`. |
 
 Reihenfolge beim erstmaligen Rollout wichtig: `make install` (site.yml,
 erzeugt den SSH-Key auf homeserver) **vor** `make worker-0` /

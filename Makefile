@@ -30,7 +30,7 @@ check: ## Dry-run the full playbook (no changes applied).
 install: deps ## Provision the home server end-to-end.
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) $(VAULT_OPTS)
 
-.PHONY: common dnsmasq tailscale k3s k3s-agent argocd semaphore semaphore-targets semaphore-bootstrap semaphore-bootstrap-local worker-0 worker-0-check worker-1 worker-1-check cluster-power-manager cups-print-server
+.PHONY: common dnsmasq tailscale k3s k3s-agent argocd semaphore semaphore-targets semaphore-bootstrap semaphore-bootstrap-local worker-0 worker-0-check worker-1 worker-1-check cluster-power-manager power-agent cups-print-server
 common: ## Run only the `common` role (base OS, firewall, packages).
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags common $(VAULT_OPTS)
 
@@ -78,6 +78,9 @@ worker-1-check: ## Dry-run the worker-1 playbook (no changes applied).
 
 cluster-power-manager: ## Re-deploy only the cluster_power_manager role on homeserver (WoL scale-up/down).
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags cluster-power-manager $(VAULT_OPTS)
+
+power-agent: ## Re-deploy only the power_agent role on homeserver (brightness + manual WoL/poweroff HTTP API).
+	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags power-agent $(VAULT_OPTS)
 
 cups-print-server: ## Re-deploy only the cups_print_server role on homeserver (USB-Drucker per IPP/AirPrint).
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags cups-print-server $(VAULT_OPTS)

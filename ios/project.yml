@@ -7,9 +7,9 @@
 #
 # Setup (once): brew install xcodegen
 # Generate:     cd ios && xcodegen generate
-# Then open CarPlayDashboard.xcodeproj in Xcode.
+# Then open HomeserverDashboard.xcodeproj in Xcode.
 
-name: CarPlayDashboard
+name: HomeserverDashboard
 
 options:
   bundleIdPrefix: com.yourname
@@ -18,23 +18,48 @@ options:
   createIntermediateGroups: true
 
 targets:
-  CarPlayDashboard:
+  HomeserverDashboard:
     type: application
     platform: iOS
     deploymentTarget: "15.0"
     sources:
-      - path: CarPlayDashboard
+      - path: HomeserverDashboard
         excludes:
           - "Info.plist"
-          - "CarPlayDashboard.entitlements"
+          - "HomeserverDashboard.entitlements"
     info:
-      path: CarPlayDashboard/Info.plist
+      path: HomeserverDashboard/Info.plist
+      # XcodeGen *writes* this file from these properties on every
+      # `generate` — it does NOT merge with hand-edited content already at
+      # that path, it overwrites it outright. Everything the app needs
+      # (display name, launch screen, orientation, the ATS exception for
+      # *.homeserver) has to live here, in project.yml, not in the plist
+      # file itself, or it silently disappears on the next `xcodegen
+      # generate` and the app starts refusing every http://*.homeserver
+      # request.
+      properties:
+        CFBundleDisplayName: "Homeserver Dashboard"
+        LSRequiresIPhoneOS: true
+        # Modern (iOS 14+) empty-dict form gives a plain launch screen
+        # without hand-authoring LaunchScreen.storyboard XML, which can't
+        # be meaningfully validated without Xcode itself; this is Apple's
+        # own current recommendation.
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        # carplay-api.homeserver (and every other *.homeserver service) is
+        # plain HTTP behind Traefik — see Constants.swift for why.
+        NSAppTransportSecurity:
+          NSExceptionDomains:
+            homeserver:
+              NSIncludesSubdomains: true
+              NSExceptionAllowsInsecureHTTPLoads: true
     entitlements:
-      path: CarPlayDashboard/CarPlayDashboard.entitlements
+      path: HomeserverDashboard/HomeserverDashboard.entitlements
     settings:
       base:
-        PRODUCT_NAME: "Homeserver CarPlay Dashboard"
-        PRODUCT_BUNDLE_IDENTIFIER: com.yourname.homeserver-carplay
+        PRODUCT_NAME: "Homeserver Dashboard"
+        PRODUCT_BUNDLE_IDENTIFIER: com.yourname.homeserver-dashboard
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "5.0"
@@ -42,22 +67,15 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         ENABLE_PREVIEWS: true
-    dependencies:
-      # Not weak-linked here since Simulator development (this project's
-      # current target, see ios/README.md "CarPlay-Entitlement") doesn't
-      # need it. Mark it "Optional" in Xcode's Frameworks list before an
-      # App Store/TestFlight-external submission made without a confirmed
-      # CarPlay entitlement.
-      - sdk: CarPlay.framework
     scheme:
       testTargets: []
       gatherCoverageData: false
 
 schemes:
-  CarPlayDashboard:
+  HomeserverDashboard:
     build:
       targets:
-        CarPlayDashboard: all
+        HomeserverDashboard: all
     run:
       config: Debug
     archive:
