@@ -24,7 +24,7 @@ struct AlltagDashboardView: View {
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 40)
                         } else if let daily = forecast?.daily {
-                            TodayWeatherCard(day: daily.day(at: 0))
+                            TodayWeatherCard(day: daily.day(at: 0), currentTemp: forecast?.current?.temperature2m)
                             TomorrowWeatherCard(day: daily.day(at: 1))
 
                             HStack(spacing: 6) {
@@ -66,6 +66,7 @@ struct AlltagDashboardView: View {
 /// das ist die Karte, die man auf einen Blick lesen soll.
 private struct TodayWeatherCard: View {
     let day: DayForecast?
+    let currentTemp: Double?
 
     var body: some View {
         SectionCard(title: "Wetter — Heute", systemImage: "sun.max.fill") {
@@ -81,9 +82,14 @@ private struct TodayWeatherCard: View {
                             Text(day.condition)
                                 .font(.system(size: 20, weight: .semibold))
                                 .foregroundStyle(Theme.textPrimary)
+                            if let currentTemp {
+                                Text("\(Int(currentTemp.rounded()))°")
+                                    .font(.system(size: 36, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Theme.textPrimary)
+                            }
                             Text("\(Int(day.minTemp.rounded()))° / \(Int(day.maxTemp.rounded()))°")
-                                .font(.system(size: 36, weight: .bold, design: .rounded))
-                                .foregroundStyle(Theme.textPrimary)
+                                .font(.system(size: currentTemp == nil ? 36 : 15, weight: currentTemp == nil ? .bold : .medium, design: .rounded))
+                                .foregroundStyle(currentTemp == nil ? Theme.textPrimary : Theme.textMuted)
                         }
 
                         Spacer()
