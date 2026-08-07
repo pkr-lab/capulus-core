@@ -8,7 +8,6 @@ struct HomeView: View {
     @ObservedObject private var connectivity = TailscaleConnectivity.shared
     @State private var selectedAlert: Alert?
     @State private var selectedService: ServiceStatus?
-    @State private var showingSettings = false
 
     var body: some View {
         NavigationView {
@@ -41,15 +40,6 @@ struct HomeView: View {
                 }
             }
             .navigationTitle("Homeserver")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showingSettings = true
-                    } label: {
-                        Image(systemName: "gearshape")
-                    }
-                }
-            }
             .refreshable {
                 await viewModel.fetchDashboard()
             }
@@ -64,9 +54,6 @@ struct HomeView: View {
                 set: { selectedService = $0?.status }
             )) { item in
                 DetailView(kind: .service(item.status))
-            }
-            .sheet(isPresented: $showingSettings) {
-                SettingsView()
             }
         }
     }
