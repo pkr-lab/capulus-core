@@ -1,273 +1,462 @@
-# Architektur-Überblick
+# capulus-core — Home-Server-Architektur
 
-Dieses Dokument beschreibt die High-Level-Architektur des Home-Server-Setups.
+**Von der Hardware bis zur App: was auf was aufbaut.**
+GitOps-gesteuert, ein Ansible-Lauf, keine offenen Ports ins Internet.
 
----
-
-## System-Architektur
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          INTERNET                                   │
-└────────────────────────────┬────────────────────────────────────────┘
-                             │ WireGuard / Tailscale
-                             ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                    TAILSCALE VPN OVERLAY                            │
-│                  (100.x.x.x Adressbereich)                          │
-│                                                                     │
-│   ┌─────────────┐         ┌──────────────┐      ┌──────────────┐    │
-│   │  Laptop /   │         │    Phone /   │      │   Remote     │    │
-│   │  Desktop    │◄───────►│    Tablet    │      │   Machine    │    │
-│   └─────────────┘         └──────────────┘      └──────────────┘    │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │ Tailscale MagicDNS / IP
-                                ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│               k3s CLUSTER (3-Node) — Storage-Zugriff auf ALLEN Nodes gleich  │
-│                                                                              │
-│  ┌─────────────────────────────────────┐  ┌──────────────────────────────┐   │
-│  │  HOMESERVER — 192.168.178.94        │  │  worker-0/worker-1        │  │   │ 
-│  │  Control-Plane + Worker             │  │  192.168.178.95/.96          │   │
-│  │                                     │  │  reine k3s-Compute-Nodes     │   │
-│  │  ┌────────────┐ ┌───────────────┐   │  │  (identisch)                 │   │
-│  │  │ (Tailscale)│ │  split-DNS    │   │  │                              │   │
-│  │  └────────────┘ │  *.homeserver │   │  │  ┌──────────────────────┐    │   │
-│  │  ┌────────────┐ │  :53 LAN+TS   │   │  │  │  k3s-agent           │    │   │
-│  │  │  scanbd +  │ └───────────────┘   │  │  │  (kubelet + Flannel) │    │   │
-│  │  │  SANE      │                     │  │  └──────────────────────┘    │   │
-│  │  │  scan_.sh  │ ┌───────────────┐   │  │  nfs-common (NAS-Mounts)     │   │
-│  │  └────────────┘ │  UFW Firewall │   │  │                              │   │
-│  │                 └───────────────┘   │  └──────────────────────────────┘   │
-│  │  ┌───────────────────────────────┐  │                                     │
-│  │  │  k3s server (Control-Plane)   │  │                                     │
-│  │  │  ┌──────────┐ ┌───────────┐   │  │◄────── Flannel VXLAN (8472/UDP) ───►│
-│  │  │  │ Traefik  │ │  ArgoCD   │   │  │        kubelet API  (10250/TCP)     │
-│  │  │  │ :80/:443 │ │  :30080   │   │  │                                     │
-│  │  │  └──────────┘ └───────────┘   │  │                                     │
-│  │  │  argocd/apps/:                │  │                                     │
-│  │  │   monitoring, sealed-secrets, │  │                                     │
-│  │  │   semaphore, headlamp, gotify,│  │                                     │
-│  │  │   paperless-ngx, tinyteller,  │  │                                     │
-│  │  │   nas-storage, ...            │  │                                     │
-│  │  │  Flannel VXLAN 10.42.0.0/16   │  │                                     │
-│  │  │  local-path + nas StorageClass│  │                                     │
-│  │  └───────────────────────────────┘  │                                     │
-│  └─────────────────────────────────────┘                                     │
-└──────────────────────────────────────────────────────────────────────────────┘
-                                ▲
-                                │ NFS (jeder Node mountet gleich — siehe unten)
-                                │
-                  ┌───────────────────────────────────────┐
-                  │  UGREEN NAS — 192.168.178.97           │
-                  │  Storage-Pool: RAID1 (2×4TB), 2TB frei │
-                  │  NFS-Export → StorageClass "nas"       │
-                  │  (später: externe USB-Platte für       │
-                  │   Backups, siehe docs/16-nas-storage)  │
-                  └───────────────────────────────────────┘
-```
-
-Storage-Zugriff im Detail: alle drei k3s-Nodes (homeserver, worker-0,
-worker-1) mounten denselben NFS-Export vom NAS über die `nas`-
-StorageClass — anders als früher (worker-0-lokale `hdd`-StorageClass) ist
-kein Node mehr storage-technisch bevorzugt, der Scheduler verteilt frei.
-Details: [`16-nas-storage.md`](16-nas-storage.md).
-
-```
-                                ▲
-                                │ git pull (HTTPS/SSH)
-                                │
-┌─────────────────────────────────────────────────────────────────────┐
-│                    GIT REPOSITORY (GitHub)                          │
-│                                                                     │
-│   home-server/                                                      │
-│   └── argocd/apps/          ← ArgoCD beobachtet dieses Verzeichnis  │
-│       ├── example-whoami/   ← Jedes Unterverzeichnis = eine App     │
-│       ├── monitoring/                                               │
-│       ├── sealed-secrets/                                           │
-│       ├── kubeseal-webgui/                                          │
-│       ├── headlamp/                                                 │
-│       ├── semaphore/                                                │
-│       ├── gotify/                                                   │
-│       └── my-new-app/       ← Verzeichnis anlegen → auto-deployed   │
-└─────────────────────────────────────────────────────────────────────┘
-```
+Repo: `pkr-lab/capulus-core` · 3-Node-k3s-Cluster · 36 GitOps-Apps · Stand August 2026
 
 ---
 
-## GitOps-Flow
+## Lesehilfe
 
-```
-Developer                Git Repo               ArgoCD              k3s Cluster
-    │                       │                     │                      │
-    │── git push ──────────►│                     │                      │
-    │                       │◄── poll (3 min) ────│                      │
-    │                       │─── diff erkannt ───►│                      │
-    │                       │                     │── kubectl apply ────►│
-    │                       │                     │                      │── Pods laufen
-    │                       │                     │◄── Status-Sync ──────│
-    │                       │                     │── Sync complete      │
+| Kürzel | Bedeutung |
+|---|---|
+| **A** | Anmeldung über Authentik (SSO per OIDC oder Traefik-ForwardAuth) |
+| **S** | braucht ein Sealed Secret aus Git |
+| **N** | Daten auf dem NAS, StorageClass `nas` (`/volume1`, NFS) |
+| **I** | Daten auf dem NAS, StorageClass `immich-nas` (`/volume2`, NFS) |
+| **L** | Daten lokal auf der Knoten-SSD, StorageClass `local-path` |
+| **C** | öffentlich erreichbar über den Cloudflare Tunnel |
+| **D** | bringt eine eigene Datenbank mit (PostgreSQL / Redis / Elasticsearch) |
+
+Pfeile bedeuten durchgehend **„baut auf / braucht"**: Jede Schicht funktioniert nur,
+wenn die Schicht darunter läuft. Schicht 0 ist echte Hardware, Schicht 1–4 ist Software.
+Namen in `Schreibmaschinenschrift` sind Verzeichnisse bzw. Ansible-Rollen im Repo.
+
+---
+
+## 1. Gesamtbild: die fünf Schichten
+
+```mermaid
+flowchart TB
+    subgraph ACC["WER GREIFT ZU"]
+        direction LR
+        A1["Gerät im Heim-LAN<br/>192.168.178.0/24"]
+        A2["Tailscale-VPN<br/>unterwegs, 100.x"]
+        A3["Öffentliches Internet<br/>über Cloudflare Tunnel"]
+        A4["Git-Push<br/>Betreiber"]
+    end
+
+    subgraph ENT["EINTRITTSPUNKTE AUF DEM HOMESERVER"]
+        direction LR
+        E1["dnsmasq :53<br/>Split-DNS *.homeserver"]
+        E2["Traefik :80/:443<br/>Ingress"]
+        E3["k3s-API :6443"]
+        E4["ArgoCD :30080"]
+        E5["CUPS :631<br/>IPP / AirPrint"]
+    end
+
+    subgraph L4["SCHICHT 4 — ANWENDUNGEN (argocd/apps/)"]
+        direction LR
+        P1["Nextcloud · Immich · Paperless-NGX<br/>Wiki.js · Zammad · Vaultwarden"]
+        P2["Mealie · Grocy · n8n · Uptime Kuma<br/>Glance · MediaMTX · TinyTeller"]
+        P3["alamos-apager · github-release-watcher<br/>wiki-docs-sync · example-whoami · xibosignage"]
+    end
+
+    subgraph L3["SCHICHT 3 — PLATTFORMDIENSTE"]
+        direction LR
+        S1["authentik<br/>zentrale Anmeldung"]
+        S2["sealed-secrets<br/>kubeseal-webgui"]
+        S3["monitoring<br/>VictoriaMetrics + Grafana"]
+        S4["gotify · ntfy<br/>+ Alert-Brücken"]
+        S5["cloudflared · pihole<br/>coredns-custom"]
+        S6["nas-storage<br/>immich-storage"]
+        S7["minio · argo-workflows<br/>semaphore · headlamp"]
+    end
+
+    subgraph L2["SCHICHT 2 — CLUSTER-PLATTFORM"]
+        direction LR
+        K1["k3s server @ homeserver<br/>Traefik · CoreDNS · Flannel<br/>local-path · metrics-server"]
+        K2["k3s agent @ worker-0 / worker-1<br/>Join-Token, Flannel VXLAN 8472/UDP"]
+        K3["ArgoCD + ApplicationSet<br/>ein Ordner = eine App"]
+        K4["StorageClasses<br/>local-path · nas · immich-nas"]
+    end
+
+    subgraph L1["SCHICHT 1 — BETRIEBSSYSTEM & ANSIBLE"]
+        direction LR
+        O1["Ubuntu Server 26.04 LTS<br/>UFW · chrony · Swap aus"]
+        O2["UGOS auf dem NAS<br/>bewusst kein Ansible"]
+        O3["Raspberry Pi OS<br/>Chromium-Kiosk"]
+        O4["Ansible-Rollen<br/>make install / worker-0 / worker-1"]
+    end
+
+    subgraph L0["SCHICHT 0 — HARDWARE"]
+        direction LR
+        H1["HP ProBook 450 G9<br/>homeserver · .94 · 24/7"]
+        H2["Lenovo M90q<br/>worker-0 · .95 · WoL"]
+        H3["MSI Tower-PC<br/>worker-1 · .96 · WoL"]
+        H4["UGREEN NAS 4800plus<br/>ugreen-nas · .97 · RAID1"]
+        H5["WD Elements 8 TB<br/>USB am NAS · restic"]
+        H6["Samsung Xpress M2026<br/>USB am Homeserver"]
+        H7["Samsung ML-1630W<br/>USB an Fritz!Box · :9100"]
+    end
+
+    ACC -->|"nutzt"| ENT
+    ENT -->|"erreicht"| L4
+    L4 -->|"läuft auf / benötigt"| L3
+    L3 -->|"läuft in"| L2
+    L2 -->|"installiert durch"| L1
+    L1 -->|"läuft auf"| L0
 ```
 
 ---
 
-## Komponenten
+## 2. Hardware → Software: welches Gerät trägt was
 
-### Ubuntu 26.04 LTS (Base-OS)
+```mermaid
+flowchart LR
+    HP["HP ProBook 450 G9<br/>homeserver · 192.168.178.94<br/>läuft rund um die Uhr"]
+    LEN["Lenovo M90q<br/>worker-0 · 192.168.178.95"]
+    MSI["MSI Tower-PC<br/>worker-1 · 192.168.178.96"]
+    NAS["UGREEN NAS 4800plus<br/>ugreen-nas · 192.168.178.97<br/>RAID1 2x4 TB + 2 TB Reserve"]
+    WD["WD Elements 8 TB<br/>USB direkt am NAS"]
+    PR1["Samsung Xpress M2026<br/>USB am Homeserver"]
+    PR2["Samsung ML-1630W<br/>USB an einer Fritz!Box"]
+    FB["Fritz!Box<br/>Router, keine Portfreigabe"]
+    PI["Raspberry Pis<br/>Alarmmonitor-Kiosks"]
 
-Das Fundament des ganzen Stacks. Konfiguriert durch die Ansible-Rolle `common`:
+    HP --> CP["k3s server: Control-Plane + Worker"]
+    HP --> HOST["dnsmasq · Tailscale · UFW<br/>CUPS · Watchdogs · Power-Manager"]
+    LEN --> AG0["k3s agent worker-0"]
+    MSI --> AG1["k3s agent worker-1"]
+    NAS -->|"NFS /volume1"| SC1["StorageClass nas"]
+    NAS -->|"NFS /volume2"| SC2["StorageClass immich-nas"]
+    NAS --> EXP["node-exporter + smartctl-exporter<br/>als Docker-Container auf UGOS"]
+    NAS -->|"restic, verschlüsselt"| WD
+    PR1 --> CUPS["CUPS-Warteschlange<br/>eigener QPDL-Treiber-Build"]
+    PR2 -->|"socket://192.168.178.57:9100"| CUPS
+    FB --> LAN["LAN + Internet<br/>DNS-Ziel von Pi-hole"]
+    PI --> KIOSK["Chromium-Kiosk<br/>gegen alamos-apager"]
 
-- Vollständiges `apt dist-upgrade` bei jedem Ansible-Run (gesteuert über `auto_upgrade`)
-- `unattended-upgrades` aktiv für tägliche Sicherheits-Patches im Hintergrund
-- Automatischer Reboot, wenn `/var/run/reboot-required` existiert
-- UFW-Firewall mit minimal offenen Ports
-- Kernel-Module für Container-Netzwerk (`br_netfilter`, `overlay`)
-- sysctl-Tuning für Kubernetes-Anforderungen
-- Chrony für NTP-Zeitsync
-- Swap deaktiviert (Kubernetes-Pflicht)
+    CP --- AG0
+    CP --- AG1
+    SC1 --> APPS["Nextcloud, Paperless, Wiki.js, Zammad,<br/>Mealie, Grocy, n8n, MinIO, Vaultwarden"]
+    SC2 --> IMM["Immich"]
+```
 
-### k3s (Kubernetes-Distribution, 3-Node-Cluster)
-
-k3s ist eine CNCF-zertifizierte, produktionsreife Kubernetes-Distribution,
-optimiert für ressourcenarme Umgebungen.
-
-| Node          | IP                | Rolle                  | Service       |
-|---------------|-------------------|------------------------|---------------|
-| homeserver    | 192.168.178.94    | Control-Plane + Worker | k3s server    |
-| worker-0      | 192.168.178.95    | Worker                 | k3s agent     |
-| worker-1      | 192.168.178.96    | Worker                 | k3s agent     |
-
-worker-0 und worker-1 treten dem Cluster über `k3s agent` bei — der
-Join-Token wird per Ansible automatisch vom Control-Plane-Node gelesen.
-Kubernetes-Workloads werden vom Scheduler frei auf alle Nodes verteilt —
-beide Worker sind reine, austauschbare Compute-Nodes. Persistenter Storage
-liegt zentral auf dem UGREEN NAS (`nas`-StorageClass, NFS), nicht mehr
-lokal auf einem einzelnen Node — Details in
-[`16-nas-storage.md`](16-nas-storage.md). Paperless-NGX und TinyTeller
-laufen als reguläre k3s-Apps (`argocd/apps/paperless-ngx`,
-`argocd/apps/tinyteller`), nicht mehr als Docker-Compose auf einem
-bestimmten Host.
-
-Mitgelieferte Komponenten:
-
-- **Flannel** (VXLAN) für Pod-Networking (alle Nodes über UDP 8472)
-- **Traefik v2** als Default-Ingress-Controller (läuft auf Control-Plane)
-- **CoreDNS** für Cluster-DNS
-- **local-path Provisioner** für PersistentVolume-Storage
-- **metrics-server** für Resource-Metriken
-
-### ArgoCD (GitOps-Controller)
-
-ArgoCD beobachtet das Git-Repository und gleicht den Cluster-State mit dem
-gewünschten YAML-State ab. Wird per Helm-Chart in den `argocd`-Namespace deployt.
-
-Der **ApplicationSet**-Controller erlaubt dynamisches Erzeugen von Applications
-aus Verzeichnis-Patterns — neues Verzeichnis unter `argocd/apps/` anlegen,
-pushen, ArgoCD erzeugt automatisch eine neue Application und synct sie.
-
-### Tailscale (VPN)
-
-Tailscale liefert ein WireGuard-basiertes Mesh-VPN. Der Home-Server wird
-zum Knoten im eigenen Tailscale-Netz — alle Services sind von jedem
-Tailscale-Gerät per MagicDNS-Hostname oder Tailscale-IP erreichbar, ohne
-Portfreigaben am Router.
-
-### Traefik (Ingress-Controller)
-
-Wird mit k3s mitgeliefert und routet HTTP/HTTPS in den Cluster. Services
-werden über `Ingress`-Resourcen oder Traefiks `IngressRoute`-CRD exponiert.
-
-### dnsmasq (Split-DNS für `*.homeserver`)
-
-Auf dem Host läuft ein bare-metal `dnsmasq` und beantwortet die
-`*.homeserver`-Zone sowohl auf dem LAN-Interface als auch auf `tailscale0`.
-Jeder Eintrag in `dnsmasq_hosts` (`ansible/group_vars/all.yml`) löst auf
-die LAN-IP des Servers auf — so erreichst du Apps als `grafana.homeserver`,
-`argocd.homeserver` etc. aus LAN und Tailnet, ohne pro App den Router oder
-die Tailscale-Admin-Konsole anzufassen.
-Die Architektur — und warum der Home-Server bewusst **nicht** dein
-LAN-weiter DNS-Server sein sollte — steht in
-[`09-dns-architecture.md`](09-dns-architecture.md).
-
-Alle nicht-`*.homeserver`-Anfragen leitet dnsmasq an **Pi-hole**
-(`argocd/apps/pihole/`, NodePort `192.168.178.94:30053`) weiter statt
-direkt an die Fritz!Box — jedes Gerät, das dnsmasq bereits als DNS nutzt,
-bekommt so automatisch Werbeblocking. Details:
-[`09-dns-architecture.md#pi-hole-werbeblocking-im-dns-forward`](09-dns-architecture.md#pi-hole-werbeblocking-im-dns-forward).
-
-### Scanner + Paperless-Pipeline
-
-Ein Fujitsu USB-Scanner hängt direkt am Host. `scanbd` hört auf den
-Hardware-Button und triggert Shell-Skripte (`scan_button.sh` →
-`scan_to_pdf.sh`), die ein PDF erzeugen und auf einem CIFS-Mount der
-UGREEN NAS ablegen, wo Paperless-NGX es einliest. Optional werden
-Gotify-Push-Notifications aus denselben Skripten verschickt.
-Vollständiges Setup: [`10-gotify.md`](10-gotify.md).
-
-### Monitoring-Stack (VictoriaMetrics + Grafana)
-
-Deployt via `argocd/apps/monitoring/`. VMSingle hält 15 Tage TSDB auf
-einem `local-path`-PVC, VMAgent scrapet `VMServiceScrape`/`VMPodScrape`
-**und** auto-konvertierte Prometheus-`ServiceMonitor`-CRDs, Grafana
-liefert vorinstallierte Dashboards (Node Exporter Full, VictoriaMetrics,
-Kubernetes Views) unter `http://grafana.homeserver`. Grafana bekommt
-bewusst **keinen** HPA — läuft mit embedded SQLite auf einer
-ReadWriteOnce-PVC, mehrere Replicas würden sich die DB-Datei zerschießen
-(siehe [39-hpa-autoscaling.md](39-hpa-autoscaling.md)).
-
-### Sealed Secrets
-
-Der `sealed-secrets`-Controller von Bitnami (unter
-`argocd/apps/sealed-secrets/`) entschlüsselt cluster-interne
-`SealedSecret`-CRDs in normale Kubernetes-`Secret`s. `kubeseal-webgui`
-(`argocd/apps/kubeseal-webgui/`) ist eine kleine Browser-UI, die
-Klartext-Werte mit dem Public Key des Controllers verschlüsselt —
-ideal, um per-App-Secrets sicher ins GitOps-Repo zu committen. Skaliert
-per hand-geschriebenem HPA auf 1–2 Replicas (siehe
-[39-hpa-autoscaling.md](39-hpa-autoscaling.md)), da der Sealed-Secrets-
-Controller selbst zustandslos gegenüber dem Cluster-Key arbeitet.
-
-### Semaphore (Ansible-Web-UI)
-
-Läuft als k8s-Pod unter `argocd/apps/semaphore/`. Die Ansible-Rolle
-`semaphore_bootstrap` ruft die Semaphore-REST-API auf und legt
-Projects, Inventories, Repositories und Templates idempotent an —
-die UI ist nach dem ersten Playbook-Run sofort einsatzbereit.
+**Kernpunkt:** Der Homeserver ist der einzige Dauerläufer. Beide Worker sind
+austauschbare Rechenknoten ohne eigene Datenhaltung — der persistente Speicher
+liegt zentral auf dem NAS. Deshalb darf der Scheduler Pods frei verteilen, und
+deshalb hängt bei einem NAS-Ausfall ein Großteil der Apps.
 
 ---
 
-## Port-Übersicht
+## 3. GitOps-Kreislauf und der zweite Weg über Ansible
 
-| Port  | Protokoll | Komponente      | Scope                  | Zweck                                |
-|-------|-----------|-----------------|------------------------|--------------------------------------|
-| 22    | TCP       | SSH             | LAN + Tailscale        | Server-SSH-Zugriff                   |
-| 53    | UDP+TCP   | dnsmasq         | LAN + Tailscale        | Split-DNS für `*.homeserver`         |
-| 80    | TCP       | Traefik         | LAN + Tailscale        | HTTP-Ingress                         |
-| 443   | TCP       | Traefik         | LAN + Tailscale        | HTTPS-Ingress                        |
-| 6443  | TCP       | k3s API-Server  | LAN + Tailscale        | Kubernetes-API (+ Agent-Join)        |
-| 30080 | TCP       | ArgoCD NodePort | LAN + Tailscale        | ArgoCD-Web-UI (HTTP)                 |
-| 30443 | TCP       | ArgoCD NodePort | LAN + Tailscale        | ArgoCD-Web-UI (HTTPS)                |
-| 41641 | UDP       | Tailscale       | Internet               | WireGuard-VPN (Tailscale)            |
-| 10250 | TCP       | k3s-kubelet     | Cluster-intern (beide) | kubelet-API                          |
-| 8472  | UDP       | Flannel VXLAN   | Cluster-intern (beide) | Pod-Overlay-Netz zwischen den Nodes  |
+```mermaid
+sequenceDiagram
+    participant Dev as Betreiber
+    participant Git as GitHub pkr-lab/capulus-core
+    participant Argo as ArgoCD im Cluster
+    participant K3s as k3s-Cluster
+    participant Sem as Semaphore Web-UI
+    participant Host as Ubuntu-Hosts
+
+    Dev->>Git: git push (neuer Ordner in argocd/apps/)
+    Argo->>Git: pollt alle ~3 Minuten (nur Lesezugriff)
+    Argo->>Argo: Soll-Ist-Vergleich
+    Argo->>K3s: kubectl apply
+    K3s-->>Argo: Sync-Status zurück
+
+    Note over Dev,Host: Zweiter Weg — Hosts statt Cluster
+    Dev->>Host: make install (site.yml)
+    Sem->>Host: dieselben Playbooks per Knopfdruck
+    Sem->>Host: Zeitplan täglich 06:00
+```
+
+**Zwei getrennte Auslieferungswege, die sich nicht überschneiden:**
+
+| Weg | Was er verändert | Auslöser |
+|---|---|---|
+| ArgoCD | alles *im* Cluster (Apps, Plattformdienste) | Git-Push, dann automatisch |
+| Ansible | alles *unter* dem Cluster (OS, k3s, dnsmasq, Tailscale, Drucker, Watchdogs) | `make install`, Semaphore-Knopf, täglich 06:00 |
 
 ---
 
-## Netzwerk-Übersicht
+## 4. App-Abhängigkeiten quer durch den Stack
 
-| Netz                | CIDR              | Zweck                            |
-|---------------------|-------------------|----------------------------------|
-| Home-LAN            | 192.168.1.0/24    | Physikalisches Heimnetz          |
-| Tailscale-Overlay   | 100.64.0.0/10     | VPN-Mesh                         |
-| k3s-Pod-CIDR        | 10.42.0.0/16      | Pod-IPs                          |
-| k3s-Service-CIDR    | 10.43.0.0/16      | ClusterIP-Service-Adressen       |
+```mermaid
+flowchart TB
+    SS["sealed-secrets<br/>muss zuerst laufen"]
+    AK["authentik<br/>+ eigenes PostgreSQL/Redis"]
+    NASSC["StorageClass nas"]
+    IMSC["StorageClass immich-nas"]
+    LP["StorageClass local-path"]
+    CF["cloudflared<br/>Cloudflare Tunnel"]
+    MIN["minio"]
+    GO["gotify"]
+    NT["ntfy"]
+    TR["Traefik"]
+
+    SS --> AK
+    SS --> MON["monitoring"]
+    SS --> MIN
+    SS --> AW["argo-workflows"]
+    SS --> CF
+    SS --> IMMICH["immich"]
+    SS --> WIKI["wikijs"]
+    SS --> ZAM["zammad"]
+    SS --> NC["nextcloud"]
+    SS --> PL["paperless-ngx"]
+    SS --> VW["vaultwarden"]
+    SS --> PH["pihole"]
+    SS --> ALA["alamos-apager"]
+
+    AK -->|"OIDC"| HL["headlamp"]
+    AK -->|"OIDC"| AW
+    AK -->|"OIDC"| MIN
+    AK -->|"OIDC"| MON
+    AK -->|"ForwardAuth"| SEM["semaphore"]
+    AK -->|"ForwardAuth"| GO
+    AK -->|"ForwardAuth"| VW
+    AK -->|"ForwardAuth"| N8N["n8n"]
+    AK -->|"ForwardAuth"| GL["glance"]
+
+    NASSC --> NC
+    NASSC --> PL
+    NASSC --> WIKI
+    NASSC --> ZAM
+    NASSC --> VW
+    NASSC --> MEA["mealie"]
+    NASSC --> GRO["grocy"]
+    NASSC --> N8N
+    NASSC --> MIN
+    NASSC --> XIBO["xibosignage"]
+    IMSC --> IMMICH
+    LP --> MON
+    LP --> AK
+    LP --> GO
+    LP --> NT
+    LP --> PH
+    LP --> UK["uptime-kuma"]
+    LP --> SEM
+
+    MIN -->|"S3-Artefakte"| AW
+    GO --> GB["gotify-bridge<br/>Alertmanager-Webhook"]
+    NT --> NB["ntfy-bridge<br/>Alertmanager-Webhook"]
+    MON --> GB
+    MON --> NB
+    NT --> ALA
+    WIKI --> WDS["wiki-docs-sync<br/>CronJob alle 15 Min."]
+    ZAM --> GRW["github-release-watcher<br/>CronJob alle 2 h"]
+    TR --> ALLE["alle *.homeserver-Adressen"]
+    CF --> OEFF["wiki · ntfy · support · grafana · authentik<br/>stream · paperless · n8n · mealie<br/>grocy · vault · nextcloud .pke-lab.de"]
+```
 
 ---
 
-## Security-Modell
+## 5. App-Matrix (Schicht 3 und 4)
 
-- **Keine Ports ins Internet** — Remote-Zugriff ausschließlich über Tailscale.
-- **UFW-Firewall** blockt alles, was nicht explizit erlaubt ist.
-- **Tailscale-ACLs** können zusätzlich pro Gerät einschränken, welche Services erreichbar sind.
-- **ArgoCD** hat ausschließlich Read-Access auf das Git-Repo.
-- **Ansible-Vault** verschlüsselt sensitive Werte (Tailscale-Auth-Key, SMB-Password, Vault-Password, Tokens) at rest.
+### Schicht 3 — Plattformdienste
+
+| App (`argocd/apps/…`) | Aufgabe | Kürzel |
+|---|---|---|
+| `authentik` | zentrale Anmeldung, Identity Provider | A · L · S · D |
+| `sealed-secrets` | entschlüsselt SealedSecrets im Cluster | — |
+| `kubeseal-webgui` | Weboberfläche zum Verschlüsseln von Secrets | — |
+| `monitoring` | VictoriaMetrics, vmagent, vmalert, Alertmanager, Grafana | A · L · S · C |
+| `gotify` / `gotify-bridge` | Push an Android, Brücke von Alertmanager | A · L · S |
+| `ntfy` / `ntfy-bridge` | Push an iOS + Android, Brücke von Alertmanager | L · C |
+| `cloudflared` | Cloudflare Tunnel, ausgehende Verbindung nach außen | S |
+| `pihole` | Werbe- und Trackerfilter im DNS, NodePort 30053 | L · S |
+| `coredns-custom` | zusätzliche DNS-Zonen im Cluster | — |
+| `nas-storage` | NFS-Provisioner → StorageClass `nas` | — |
+| `immich-storage` | NFS-Provisioner → StorageClass `immich-nas` | — |
+| `minio` | S3-Speicher für Build-Artefakte | A · N · S |
+| `argo-workflows` | interne CI/CD-Pipelines, braucht MinIO | A · S |
+| `semaphore` | Weboberfläche, die Ansible-Playbooks startet | A · L |
+| `headlamp` | Kubernetes-Dashboard im Browser | A · S |
+
+### Schicht 4 — Anwendungen
+
+| App (`argocd/apps/…`) | Aufgabe | Kürzel | Adresse |
+|---|---|---|---|
+| `nextcloud` | Dateien, Kalender, Kontakte | N · L · S · D | `nextcloud.homeserver` |
+| `immich` | Fotoarchiv mit KI-Suche | I · S · D | `immich.homeserver` |
+| `paperless-ngx` | papierlose Dokumentenverwaltung | N · S · D · C | `paperless.homeserver` |
+| `wikijs` | Wiki, auch öffentlich | N · S · D · C | `wiki.homeserver` |
+| `zammad` | Ticketsystem / Helpdesk | N · L · S · D · C | `zammad.homeserver` |
+| `vaultwarden` | Passwort-Manager (Bitwarden-kompatibel) | A · N · L · S · C | `vault.homeserver` |
+| `mealie` | Rezepte und Essensplanung | N · C | `mealie.homeserver` |
+| `grocy` | Haushalts- und Vorratsverwaltung | N · C | `grocy.homeserver` |
+| `n8n` | Automatisierungen ohne Code | A · N · C | `n8n.homeserver` |
+| `uptime-kuma` | Erreichbarkeits-Überwachung | L | `uptime-kuma.homeserver` |
+| `glance` | Startseite mit allen Diensten | A · S | `glance.homeserver` |
+| `mediamtx` | Live-Video: RTSP / RTMP / WebRTC / HLS | C | `stream.homeserver` |
+| `tinyteller` | kleine Diktier- und Story-App | — | `tinyteller.homeserver` |
+| `alamos-apager` | Alarmmonitor-Steuerung (ALAMOS AMweb) | S | `alamos-apager.homeserver` |
+| `xibosignage` | Xibo CMS: Medien-/Asset-Verwaltung für die Raspberry-Pi-Bilder-Slideshow | N · S · D | `xibo.homeserver` |
+| `github-release-watcher` | neue Releases → Ticket in Zammad | S | — (CronJob) |
+| `wiki-docs-sync` | `docs/` aus Git → Wiki.js, alle 15 Min. | S | — (CronJob) |
+| `example-whoami` | Demo-App, belegt dass GitOps läuft | — | `whoami.homeserver` |
+
+---
+
+## 6. Hardware im Detail
+
+| Gerät | Rolle | Adresse | Trägt / liefert |
+|---|---|---|---|
+| HP ProBook 450 G9 | Control-Plane + Worker, 24/7 | `192.168.178.94` | k3s server, Traefik, ArgoCD, dnsmasq, Tailscale, CUPS, Watchdogs, Power-Manager |
+| Lenovo M90q | reiner Rechenknoten | `192.168.178.95` | k3s agent, per Wake-on-LAN geweckt (MAC `98:fa:9b:28:b0:22`) |
+| MSI Tower-PC | reiner Rechenknoten, zweite Reserve | `192.168.178.96` | k3s agent, per Wake-on-LAN geweckt (MAC `b8:97:5a:ea:a4:fa`) |
+| UGREEN NAS 4800plus | zentraler Speicher | `192.168.178.97` | 10 TB roh: 2×4 TB als RAID1 (≈ 4 TB nutzbar, eine Platte darf ausfallen) + 2 TB Reserve; NFS `/volume1` → `nas`, `/volume2` → `immich-nas`; node- und smartctl-Exporter als Docker-Container |
+| WD Elements 8 TB | Sicherung | USB am NAS | restic-Backup von `/volume1` + `/volume2`, inkrementell, dedupliziert, verschlüsselt, per UGOS-Aufgabenplaner |
+| Samsung Xpress M2026 | Drucker | USB am Homeserver | CUPS-Freigabe per IPP/AirPrint; braucht einen eigenen QPDL-Treiber-Build, weil splix und hplip die M2020-Serie nicht abdecken |
+| Samsung ML-1630W | Drucker | `192.168.178.57:9100` | hängt per USB an einer Fritz!Box, spricht SPL2 → `printer-driver-splix` genügt; zweite Warteschlange in CUPS |
+| Fritz!Box | Router | `192.168.178.1` | LAN und Internet, DNS-Ziel von Pi-hole, keine Portfreigabe nach außen |
+| Raspberry Pis | Alarmmonitor-Kiosks | frei | Chromium im Vollbild gegen `alamos-apager`, per Ansible verwaltet, mit Lebenszeichen-Meldung |
+| Raspberry Pi 3 B+ | xibosignage-Bilder-Slideshow | frei | Chromium im Vollbild gegen einen NFS-gemounteten Bilder-Ordner, kein offizieller Xibo-Player (siehe [`44-xibosignage.md`](44-xibosignage.md)) |
+
+---
+
+## 7. Ansible-Rollen und ihr Wirkungsbereich
+
+| Rolle | Läuft gegen | Zweck |
+|---|---|---|
+| `common` | homeserver | Basis-OS, UFW, Pakete, sysctl, chrony, Swap aus, optional statische IP |
+| `dnsmasq` | homeserver | Split-DNS `*.homeserver`, Weiterleitung an Pi-hole |
+| `tailscale` | homeserver, xibosignage-Displays | WireGuard-Mesh-VPN, Auth-Key aus Ansible Vault; auf Displays reiner Client ohne Subnetz-Advertising |
+| `k3s` | homeserver | Kubernetes-Control-Plane + Helm |
+| `k3s_agent` | worker-0, worker-1 | Cluster-Beitritt per Join-Token vom Control-Plane |
+| `argocd` | homeserver | ArgoCD per Helm + Bootstrap-ApplicationSet |
+| `semaphore_secrets` | homeserver | Bootstrap-Secret für den Semaphore-Pod |
+| `semaphore_targets` | alle verwalteten Hosts | SSH-Pubkey von Semaphore in `authorized_keys` |
+| `semaphore_bootstrap` | homeserver | Projekte, Inventories, Templates, Zeitpläne per REST-API |
+| `thermal_watchdog` | alle Knoten + Kiosks | Selbst-Abschaltung bei Übertemperatur |
+| `resource_watchdog` | alle Knoten + Kiosks | Selbst-Abschaltung bei Dauerlast |
+| `cluster_power_manager` | homeserver | weckt Worker per WoL, fährt sie per SSH wieder herunter |
+| `cluster_power_manager_target` | worker-0, worker-1 | autorisiert den Shutdown-Schlüssel, beschränkt auf `poweroff` |
+| `wake_on_lan` | worker-0, worker-1 | `ethtool wol g` bei jedem Boot |
+| `cups_print_server` | homeserver | Druckserver, QPDL-Treiber-Build, zweite Warteschlange |
+| `alamos_kiosk` | Raspberry Pis | Chromium-Kiosk + Heartbeat-Timer |
+| `xibo_kiosk` | Raspberry Pis (xibosignage-Displays) | NFS-Mount `xibosignage-display`, Manifest-Timer, Chromium-Slideshow-Kiosk (kein offizieller Xibo-Player, siehe [`44-xibosignage.md`](44-xibosignage.md)) |
+
+**Reihenfolge beim ersten Rollout:**
+
+```
+make install        # site.yml gegen homeserver  →  erzeugt Join-Token + Shutdown-Key
+make worker-0       # erst danach möglich
+make worker-1
+make alarm-kiosks   # optional, nur manuell
+make xibo-kiosks    # optional, nur manuell
+```
+
+---
+
+## 8. Netz, Ports, Namen
+
+```mermaid
+flowchart LR
+    CL["Client im LAN<br/>oder im Tailnet"] --> DNS["dnsmasq :53<br/>auf dem Homeserver"]
+    DNS -->|"*.homeserver"| IP["192.168.178.94"]
+    DNS -->|"alles andere"| PH["Pi-hole :30053<br/>im Cluster"]
+    PH --> FB["Fritz!Box"]
+    FB --> NET["Internet"]
+    IP --> TR["Traefik :80/:443"]
+    TR --> APP["die passende App"]
+    EXT["Besucher aus dem Internet"] --> CFE["Cloudflare Edge"]
+    CFE -.->|"ausgehender Tunnel,<br/>keine Portfreigabe"| CFD["cloudflared im Cluster"]
+    CFD --> APP
+```
+
+| Port | Protokoll | Komponente | Bereich |
+|---|---|---|---|
+| 22 | TCP | SSH | LAN + Tailnet |
+| 53 | UDP/TCP | dnsmasq Split-DNS | LAN + Tailnet |
+| 80 / 443 | TCP | Traefik Ingress | LAN + Tailnet |
+| 631 | TCP | CUPS (IPP/AirPrint) | LAN + Tailnet |
+| 6443 | TCP | k3s-API, Agent-Join | LAN + Tailnet |
+| 8472 | UDP | Flannel VXLAN | nur zwischen den Knoten |
+| 10250 | TCP | kubelet-API | nur zwischen den Knoten |
+| 30053 | TCP/UDP | Pi-hole NodePort | LAN |
+| 30080 / 30443 | TCP | ArgoCD-Weboberfläche | LAN + Tailnet |
+| 41641 | UDP | Tailscale/WireGuard | **ausgehend** ins Internet |
+
+| Netz | CIDR |
+|---|---|
+| Heim-LAN | `192.168.178.0/24` |
+| Tailscale-Overlay | `100.64.0.0/10` |
+| k3s-Pod-Netz | `10.42.0.0/16` |
+| k3s-Service-Netz | `10.43.0.0/16` |
+
+---
+
+## 9. Abhängigkeitsketten im Klartext
+
+**Speicher**
+- UGREEN NAS (RAID1) → NFS `/volume1` → `nas-storage` → StorageClass `nas` → Nextcloud, Paperless, Wiki.js, Zammad, Mealie, Grocy, n8n, MinIO, Vaultwarden
+- UGREEN NAS → `/volume2` → `immich-storage` → `immich-nas` → Immich, bewusst getrennt vom übrigen Cluster-Speicher
+- Steht das NAS, starten diese Apps nicht mehr. Apps auf `local-path` (Grafana, Gotify, ntfy, Pi-hole, Uptime Kuma, Authentik, Semaphore) laufen weiter.
+- Sicherung: NAS → restic → WD Elements 8 TB. Ohne diese Platte existiert keine Kopie der Nutzdaten. Das restic-Passwort ist der einzige Schlüssel — ohne es ist auch das Backup wertlos.
+
+**Anmeldung und Geheimnisse**
+- Authentik (mit eigenem PostgreSQL/Redis) → OIDC bzw. Traefik-ForwardAuth → Headlamp, Argo Workflows, MinIO, Grafana, Semaphore, Gotify, Vaultwarden, n8n, Glance
+- Fällt Authentik aus, kann sich an diesen Oberflächen niemand mehr anmelden; die Dienste selbst laufen weiter.
+- `sealed-secrets` muss vor allen Apps laufen, die ein SealedSecret mitbringen — sonst bleiben deren Pods ohne Zugangsdaten.
+- Ansible Vault schützt die Host-Geheimnisse (Tailscale-Key, sudo-Passwörter, SMB-Passwort); Sealed Secrets schützt die Cluster-Geheimnisse. Zwei getrennte Mechanismen, beide im Git-Repo.
+
+**Netz und Namen**
+- Anfrage → dnsmasq: `*.homeserver` löst dnsmasq selbst auf, alles andere geht gefiltert über Pi-hole an die Fritz!Box.
+- Danach übernimmt Traefik das Routing zur App. Ohne Traefik ist keine `*.homeserver`-Adresse erreichbar.
+- Pi-hole läuft im Cluster, dnsmasq auf dem Host: fällt der Cluster aus, fällt auch die Namensauflösung für Nicht-`*.homeserver`-Namen für alle Geräte aus, die dnsmasq als DNS nutzen. Deshalb ist der Homeserver bewusst **nicht** als LAN-weiter DNS-Server gesetzt.
+- Von außen: `cloudflared` → Service im Cluster. Ohne cloudflared bleiben nur LAN und Tailscale.
+
+**Rechenleistung und Reihenfolge**
+- Erst `make install` auf dem Homeserver (erzeugt Join-Token und Shutdown-Schlüssel), dann `make worker-0` / `make worker-1` — sonst können die Worker nicht beitreten.
+- Wake-on-LAN braucht zusätzlich die BIOS-Einstellung auf den Workern und die richtige MAC-Adresse in `ansible/host_vars/`.
+- Argo Workflows braucht MinIO als Artefaktspeicher; die Alarm-Brücken brauchen Gotify bzw. ntfy; `wiki-docs-sync` braucht Wiki.js; `github-release-watcher` braucht Zammad.
+- `cluster_power_manager` misst absichtlich ohne Prometheus: er liest `/proc/stat` und `/proc/meminfo` direkt, damit die Entscheidung auch dann funktioniert, wenn der Monitoring-Stack selbst unter Last steht.
+
+---
+
+## 10. Sicherheitsmodell in einem Absatz
+
+Kein eingehender Port aus dem Internet. Fernzugriff läuft über Tailscale, öffentliche
+Dienste ausschließlich über ausgehende Cloudflare-Verbindungen. UFW erlaubt 22, 53, 80,
+443, 631, 6443 und 30080/30443 nur im LAN und im Tailnet, nach außen nur 41641/UDP.
+ArgoCD hat ausschließlich Leserechte auf das Git-Repo. Der Shutdown-SSH-Key des
+Power-Managers ist per `command=`-Option fest auf `poweroff` beschränkt. Secrets liegen
+verschlüsselt in Git — Host-Werte per Ansible Vault, Cluster-Werte als SealedSecret, das
+nur der Controller im Cluster öffnen kann.
+
+---
+
+## ASCII-Kurzfassung (für Text-Umgebungen ohne Mermaid)
+
+```
+ZUGRIFF     LAN-Gerät      Tailscale-VPN      Internet (Cloudflare)      git push
+               |                 |                     |                    |
+               v                 v                     v                    v
+EINTRITT   dnsmasq:53      Traefik:80/443      k3s-API:6443      ArgoCD:30080   CUPS:631
+                                   |
+                                   v
+SCHICHT 4  Nextcloud  Immich  Paperless  Wiki.js  Zammad  Vaultwarden  Mealie  Grocy
+           n8n  Uptime-Kuma  Glance  MediaMTX  TinyTeller  alamos-apager  xibosignage  + 2 CronJobs
+                                   |  braucht
+                                   v
+SCHICHT 3  authentik(SSO)  sealed-secrets  monitoring  gotify/ntfy  cloudflared
+           pihole  nas-storage  immich-storage  minio  argo-workflows  semaphore  headlamp
+                                   |  läuft in
+                                   v
+SCHICHT 2  k3s server (homeserver) + 2x k3s agent  |  ArgoCD + ApplicationSet
+           StorageClasses: local-path (SSD)  nas (NFS /volume1)  immich-nas (NFS /volume2)
+                                   |  eingerichtet durch
+                                   v
+SCHICHT 1  Ubuntu 26.04 LTS (3 Hosts)   UGOS (NAS, manuell)   Raspberry Pi OS (Kiosk)
+           Ansible: common dnsmasq tailscale k3s k3s_agent argocd semaphore_*
+                    thermal/resource_watchdog cluster_power_manager wake_on_lan
+                    cups_print_server alamos_kiosk xibo_kiosk
+                                   |  läuft auf
+                                   v
+SCHICHT 0  HP ProBook 450 G9 (.94, 24/7)   Lenovo M90q (.95, WoL)   MSI Tower (.96, WoL)
+           UGREEN NAS 4800plus (.97, RAID1 2x4TB + 2TB Reserve)
+              +-- NFS --> StorageClasses nas / immich-nas
+              +-- restic --> WD Elements 8 TB (USB am NAS)
+           Samsung Xpress M2026 (USB am Homeserver, CUPS)
+           Samsung ML-1630W (USB an Fritz!Box, socket://192.168.178.57:9100)
+```
+
+---
+
+*Erzeugt aus dem Repo-Stand `main`, Juli 2026. capulus-core · Ubuntu 26.04 LTS · k3s ·
+ArgoCD · Tailscale · Ansible · MIT-Lizenz.*

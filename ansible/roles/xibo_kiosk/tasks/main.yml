@@ -1,0 +1,174 @@
+---
+# ============================================================
+# xibo_kiosk role — Raspberry-Pi-Bilder-Slideshow (xibosignage)
+# ============================================================
+# Kein echter Xibo-Player: Xibo unterstützt keinen Raspberry Pi offiziell
+# (docs/44-xibosignage.md). Stattdessen mountet der Pi read-only den
+# NFS-Ordner "xibosignage-display" (vom n8n-Workflow befüllt, siehe
+# argocd/apps/n8n/workflows/xibosignage-inbox-to-display.json) und zeigt
+# dessen Inhalt per Chromium-Kiosk gegen einen winzigen lokalen
+# Python-Webserver als Slideshow.
+# ============================================================
+
+- name: Pakete für NFS-Mount + Kiosk installieren
+  ansible.builtin.apt:
+    name:
+      - nfs-common
+      - chromium-browser
+      - unclutter
+      - x11-xserver-utils
+      - python3
+      - curl
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: xibo_kiosk_enabled | bool
+
+- name: Mount-Point für xibosignage-display anlegen
+  ansible.builtin.file:
+    path: "{{ xibo_kiosk_mount_point }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: xibo_kiosk_enabled | bool
+
+- name: xibosignage-display per NFS mounten (read-only)
+  ansible.posix.mount:
+    path: "{{ xibo_kiosk_mount_point }}"
+    src: "{{ xibo_kiosk_nfs_server }}:{{ xibo_kiosk_nfs_path }}"
+    fstype: nfs
+    opts: "ro,soft,timeo=30,retrans=2,_netdev"
+    state: mounted
+  when: xibo_kiosk_enabled | bool
+
+- name: Webroot für Slideshow anlegen
+  ansible.builtin.file:
+    path: "{{ xibo_kiosk_web_root }}"
+    state: directory
+    owner: "{{ xibo_kiosk_user }}"
+    group: "{{ xibo_kiosk_user }}"
+    mode: "0755"
+  when: xibo_kiosk_enabled | bool
+
+- name: Symlink "media" auf den NFS-Mount legen
+  ansible.builtin.file:
+    src: "{{ xibo_kiosk_mount_point }}"
+    dest: "{{ xibo_kiosk_web_root }}/media"
+    state: link
+    force: true
+  when: xibo_kiosk_enabled | bool
+
+- name: Statische Slideshow-Dateien deployen
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ xibo_kiosk_web_root }}/{{ item }}"
+    owner: "{{ xibo_kiosk_user }}"
+    group: "{{ xibo_kiosk_user }}"
+    mode: "0644"
+  loop:
+    - index.html
+    - slideshow.css
+    - slideshow.js
+  when: xibo_kiosk_enabled | bool
+
+- name: Slideshow-Konfiguration (config.js) deployen
+  ansible.builtin.template:
+    src: xibosignage-config.js.j2
+    dest: "{{ xibo_kiosk_web_root }}/config.js"
+    owner: "{{ xibo_kiosk_user }}"
+    group: "{{ xibo_kiosk_user }}"
+    mode: "0644"
+  when: xibo_kiosk_enabled | bool
+
+- name: Leere manifest.json anlegen (bis der erste Timer-Lauf sie ersetzt)
+  ansible.builtin.copy:
+    content: "[]\n"
+    dest: "{{ xibo_kiosk_web_root }}/manifest.json"
+    owner: "{{ xibo_kiosk_user }}"
+    group: "{{ xibo_kiosk_user }}"
+    mode: "0644"
+    force: false
+  when: xibo_kiosk_enabled | bool
+
+- name: Manifest-Generator-Skript deployen
+  ansible.builtin.template:
+    src: xibosignage-manifest.sh.j2
+    dest: /usr/local/bin/xibosignage-manifest.sh
+    owner: root
+    group: root
+    mode: "0755"
+  when: xibo_kiosk_enabled | bool
+  notify: Restart xibosignage manifest timer
+
+- name: Manifest-systemd-Service + Timer deployen
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - xibosignage-manifest.service
+    - xibosignage-manifest.timer
+  when: xibo_kiosk_enabled | bool
+  notify: Restart xibosignage manifest timer
+
+- name: Webserver-systemd-Service deployen
+  ansible.builtin.template:
+    src: xibosignage-webserver.service.j2
+    dest: /etc/systemd/system/xibosignage-webserver.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: xibo_kiosk_enabled | bool
+  notify: Restart xibosignage webserver
+
+- name: Kiosk-Start-Skript deployen
+  ansible.builtin.template:
+    src: xibosignage-kiosk-start.sh.j2
+    dest: /usr/local/bin/xibosignage-kiosk-start.sh
+    owner: root
+    group: root
+    mode: "0755"
+  when: xibo_kiosk_enabled | bool
+  notify: Restart xibosignage kiosk
+
+- name: Kiosk-systemd-Service deployen
+  ansible.builtin.template:
+    src: xibosignage-kiosk.service.j2
+    dest: /etc/systemd/system/xibosignage-kiosk.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: xibo_kiosk_enabled | bool
+  notify: Restart xibosignage kiosk
+
+- name: Manifest-Generator einmalig ausführen (erste manifest.json mit echtem Inhalt)
+  ansible.builtin.command: /usr/local/bin/xibosignage-manifest.sh
+  changed_when: false
+  when: xibo_kiosk_enabled | bool
+
+- name: Slideshow-Dienste aktivieren
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    daemon_reload: true
+    enabled: true
+    state: started
+  loop:
+    - xibosignage-webserver.service
+    - xibosignage-manifest.timer
+    - xibosignage-kiosk.service
+  when: xibo_kiosk_enabled | bool
+
+- name: Slideshow-Dienste deaktivieren (xibo_kiosk_enabled false)
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+  loop:
+    - xibosignage-kiosk.service
+    - xibosignage-manifest.timer
+    - xibosignage-webserver.service
+  when: not (xibo_kiosk_enabled | bool)
+  failed_when: false

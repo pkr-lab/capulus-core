@@ -6,3 +6,11 @@
 # a known-good codename:
 #   tailscale_repo_codename: noble
 tailscale_repo_codename: "{{ ansible_distribution_release }}"
+
+# Subnetz, das dieser Host im Tailnet advertised (Subnet-Routing, siehe
+# docs/06-tailscale.md). Default = das globale LAN (nur sinnvoll für den
+# Home-Server als Subnet-Router). Für Geräte, die NUR selbst im Tailnet
+# erreichbar sein sollen, ohne fremden Traffic weiterzuleiten (z.B. die
+# xibosignage-Raspberry-Pis, siehe ansible/xibo-kiosks.yml), auf "" setzen —
+# der Task unten lässt --advertise-routes dann komplett weg.
+tailscale_advertise_routes: "{{ local_subnet }}"

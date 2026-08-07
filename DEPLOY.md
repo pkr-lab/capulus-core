@@ -261,6 +261,32 @@ Rollout, Day-2-Betrieb und Troubleshooting: **[docs/23-cloudflare-deploy.md](doc
 
 ---
 
+## Schritt 9 — xibosignage einrichten (Digital Signage, optional)
+
+Xibo CMS + Bilder-Slideshow auf einem Raspberry Pi 3 B+. Voraussetzung:
+DB-Passwort mit kubeseal versiegeln, danach optional den Raspberry-Pi-
+Rollout durchführen.
+
+```bash
+# 1. DB-Passwort versiegeln und in argocd/apps/xibosignage/values.yaml eintragen
+echo -n 'EIN-STARKES-PASSWORT' | kubeseal --raw --namespace xibosignage \
+  --name xibosignage-secrets --controller-namespace sealed-secrets \
+  --controller-name sealed-secrets-controller
+
+# 2. NAS-Ordner für die Inbox/Display-Slideshow einmalig anlegen + n8n-App
+#    syncen lassen (siehe docs/44-xibosignage.md)
+
+# 3. Raspberry Pi 3 B+ eintragen (ansible/inventory/hosts.yml, Gruppe
+#    xibo_displays) und ausrollen
+make semaphore-targets
+make xibo-kiosks
+```
+
+Vollständige Anleitung inkl. Architektur, n8n-Workflow und Troubleshooting:
+**[docs/44-xibosignage.md](docs/44-xibosignage.md)**.
+
+---
+
 ## Service-URLs
 
 | Service | URL | Authentifizierung |
@@ -275,6 +301,7 @@ Rollout, Day-2-Betrieb und Troubleshooting: **[docs/23-cloudflare-deploy.md](doc
 | MinIO | http://minio.homeserver | OIDC via Authentik |
 | Paperless-NGX | http://worker-0:8000 | admin / aus Vault |
 | TinyTeller | http://worker-0:3002 | — |
+| Xibo CMS | http://xibo.homeserver | xibo_admin / Default-Passwort ändern! |
 
 **Extern per Cloudflare Tunnel** (nur die dort explizit eingetragenen
 Dienste, siehe [docs/22-cloudflare-tunnel.md](docs/22-cloudflare-tunnel.md)):
