@@ -194,7 +194,7 @@ secrets:
     enabled: false
     secretName: carplay-api-power-agent-token
     secretKey: token
-    encryptedData: "REPLACE_ME_WITH_KUBESEAL_OUTPUT"
+    encryptedData: "RAgB9JNaZrlilWaCeS4DcgncyZoxIhf7S+IgNrSRwJ11aDyqejZvPPXzYKSBhv8cJVO2pcnfJUUmGsRA5apYD06VVQyTFXBWbtC6V3XNxh6yeY/B9T+e0rRXXTPel50lTKXLS8fIeYmj8Ad775s47dH6FJR9LX9ITGC2mGoWtyO1yG5mqB+U5jhtIK6e3Y9MvxMqDSc5J6d1y6WzS5K16EmbMKW6u2boW4Igsg0ldxboYjXXwUNd57aMuzxXMwbYhH9vrL4Sh7rkTN/jcMsPPR2LnLYMp4ffHPlGR0LLqhs+RlD0grhSwYQcSQrBmWcwQLEhv9pHZYuoO907dcZOqwFgQhkua77BK1anca2ovnVEHrBzfp2+x2qmrjL0mlqHa8He9Q+Y2FvVmbyw0D3oZqOQ8N++HKt6AxG86PoBUrX/jDiod3HRQ8q4iccnRXYIQLWVDC+uJSef8RhseemJQ5EQFPnPr7gLjc8GABXaFN7tz4Wt5m2CpUGlbUYuJtTVWNXrzEUOavQPkQN6gFIBztZNLmLLtmN/0eN6NQwYiwJtICKsxnGlMGIVTznq2dnYy3wpwiEZrNXCZoEz0zj92eEpbCjW9CqjTTECWj3w3C2ZrW6Lp2jeehyFgb5XuZoM5f+sXfYpGyt/z/C1TqZ8xN92fKJ7yGkwTWh8LzAjzq7dySuS/LMN1hRX4BOtng8NOOE76uFdtddhmFoY+oYpCVOiNbsSmlS+6iaj2cIBb7GR2gPh+XhsNa5F6Dugurir7cXuynLLBg4S8nbXDtdeviE9j"
 
   # SHUTDOWN_CONFIRMATION_CODE — der Code, den die App vor einem
   # Homeserver-Shutdown abfragt (siehe ios/README.md). Bewusst kein
@@ -212,7 +212,7 @@ secrets:
     enabled: false
     secretName: carplay-api-shutdown-code
     secretKey: code
-    encryptedData: "REPLACE_ME_WITH_KUBESEAL_OUTPUT"
+    encryptedData: "AgAUqhhpdNTrLTyxJNGfnbPi2MwU+ELSOk5uJl+5bwx2FF167dClG8gVaV4zHqcPnHbsIUNhbkhEe1kYm5vT85HBIjqTpWGcn0IaFUiJa0JWeAVmDdUpexJe9jWSN4bB5r4JGOwWZQSw/5Ao425/DHxfoHvCI66mgj/bZuCAOtzRgain2CPZEQtHCso51xbVtXk5d8CO1dselCvFgrGWyvGNQYI6e30I9s6hD4P9ee7IIqeMr0ArtOljbwqsatH9/97xPTIaBfWoa3R9rmesgVEOWNB/WaaZZcGzavmpNlN8ciOTWpsWEtvl7MlBjHH0w/QRzMrMUOQUlNopZVPOrZZIUptRhYm+dhiGS/kkvltkTWppofH6Sl4Fy3Qh1QXfLAer2fJGeKKck/gXKmoodbLF5aVz2G5Msko8yssa2HDxa9+u3kYb1KAdlEjRfOs3yLzXKk5JRvr4icncYdxYPsQtX7M+K0S8daYbJrUL9aXO0Nc3ObG4jfAchGd1mVQSnLIojbz/oYxR7MCBqgR2OBSh5W/nOB/PEnEvmXEJ291JozdchxFIXRL+ETGLFZgCpPM8Krushq1L45iqmA2D148MgxWk3W9417yqMNDJvYOjcYcFN/pSDuCR5IZp6jLb1hEGRVF5E/4ooiz8Grm/FF4sgppI5qeyS4xVeyUmxf5FfsdfqzbdVRWE/NieCFiOefe5p5ECJPX34FyR/wyNh7/a"
 
 nodeSelector: {}
 tolerations: []
