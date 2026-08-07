@@ -10,9 +10,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"carplay-api/internal/models"
@@ -22,19 +25,27 @@ import (
 // instance (single-node vmsingle in this cluster, see
 // argocd/apps/monitoring/).
 type VictoriaMetricsClient struct {
-	baseURL        string
-	instanceFilter string // regex alternation, e.g. "homeserver|worker-0|worker-1"
-	httpClient     *http.Client
-	logger         *slog.Logger
+	baseURL    string
+	httpClient *http.Client
+	logger     *slog.Logger
 }
 
-func NewVictoriaMetricsClient(baseURL, instanceFilter string, timeout time.Duration, logger *slog.Logger) *VictoriaMetricsClient {
+func NewVictoriaMetricsClient(baseURL string, timeout time.Duration, logger *slog.Logger) *VictoriaMetricsClient {
 	return &VictoriaMetricsClient{
-		baseURL:        baseURL,
-		instanceFilter: instanceFilter,
-		httpClient:     &http.Client{Timeout: timeout},
-		logger:         logger,
+		baseURL:    baseURL,
+		httpClient: &http.Client{Timeout: timeout},
+		logger:     logger,
 	}
+}
+
+// HostConfig maps one monitored machine to the VictoriaMetrics "instance"
+// label node-exporter is scraped under (host_config.go / values.yaml
+// config.hosts — no relabeling to hostnames happens in this cluster's
+// scrape config, so it's "ip:9100", not "homeserver:9100").
+type HostConfig struct {
+	ID       string
+	Name     string
+	Instance string
 }
 
 type vmQueryResponse struct {
@@ -48,154 +59,148 @@ type vmQueryResponse struct {
 	} `json:"data"`
 }
 
-// query runs a PromQL instant query and returns the first sample's value.
-// Returns an error if the request fails, the response can't be parsed, or
-// the result vector is empty (no matching series — e.g. node_exporter not
-// scraped yet).
-func (c *VictoriaMetricsClient) query(ctx context.Context, promql string) (float64, error) {
+// queryByInstance runs a PromQL instant query expected to be grouped
+// `by (instance)` and returns one float64 per instance label value found in
+// the result vector. An instance missing from the map means "no series" for
+// that metric (query failed, or nothing scraped for it yet) — callers treat
+// that the same as zero rather than erroring the whole response.
+func (c *VictoriaMetricsClient) queryByInstance(ctx context.Context, promql string) (map[string]float64, error) {
 	endpoint := fmt.Sprintf("%s/api/v1/query?%s", c.baseURL, url.Values{"query": {promql}}.Encode())
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
-		return 0, fmt.Errorf("building request: %w", err)
+		return nil, fmt.Errorf("building request: %w", err)
 	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return 0, fmt.Errorf("querying victoriametrics: %w", err)
+		return nil, fmt.Errorf("querying victoriametrics: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return 0, fmt.Errorf("victoriametrics returned %d", resp.StatusCode)
+		return nil, fmt.Errorf("victoriametrics returned %d", resp.StatusCode)
 	}
 
 	var parsed vmQueryResponse
 	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
-		return 0, fmt.Errorf("decoding victoriametrics response: %w", err)
+		return nil, fmt.Errorf("decoding victoriametrics response: %w", err)
 	}
 
-	if parsed.Status != "success" || len(parsed.Data.Result) == 0 {
-		return 0, fmt.Errorf("no data for query %q", promql)
+	if parsed.Status != "success" {
+		return nil, fmt.Errorf("victoriametrics query status %q for %q", parsed.Status, promql)
 	}
 
-	raw, ok := parsed.Data.Result[0].Value[1].(string)
-	if !ok {
-		return 0, fmt.Errorf("unexpected value format for query %q", promql)
+	out := make(map[string]float64, len(parsed.Data.Result))
+	for _, series := range parsed.Data.Result {
+		instance := series.Metric["instance"]
+		if instance == "" {
+			continue
+		}
+		raw, ok := series.Value[1].(string)
+		if !ok {
+			continue
+		}
+		value, err := strconv.ParseFloat(raw, 64)
+		if err != nil {
+			continue
+		}
+		out[instance] = value
 	}
-
-	value, err := strconv.ParseFloat(raw, 64)
-	if err != nil {
-		return 0, fmt.Errorf("parsing value %q: %w", raw, err)
-	}
-
-	return value, nil
+	return out, nil
 }
 
-// GetMetrics assembles SystemMetrics from six independent PromQL queries run
-// concurrently. Each query degrades to its zero value on its own — the
-// returned error is non-nil only when every single query failed, which
-// callers use purely to flag VictoriaMetrics as unreachable in /health.
-func (c *VictoriaMetricsClient) GetMetrics(ctx context.Context) (models.SystemMetrics, error) {
-	type queryDef struct {
-		name  string
-		promql string
-		assign func(v float64)
+// GetHostMetrics assembles one HostMetrics per configured host from six
+// PromQL queries run concurrently, each grouped by instance so a single
+// round trip covers every host at once. A host absent from the "up" series,
+// or reporting up=0, comes back with Online=false and every metric at its
+// zero value — the caller (dashboard handler) relies on that to decide
+// whether a host card should show on the app's home screen at all.
+func (c *VictoriaMetricsClient) GetHostMetrics(ctx context.Context, hosts []HostConfig) []models.HostMetrics {
+	if len(hosts) == 0 {
+		return nil
 	}
 
-	var metrics models.SystemMetrics
-	var load1, load5, load15 float64
-	var uptimeSeconds float64
+	instances := make([]string, len(hosts))
+	for i, h := range hosts {
+		instances[i] = h.Instance
+	}
+	instanceMatch := fmt.Sprintf(`instance=~"%s"`, regexAlternation(instances))
 
-	instanceMatch := fmt.Sprintf(`instance=~"%s"`, c.instanceFilter)
-
+	type queryDef struct {
+		metric string
+		promql string
+	}
 	defs := []queryDef{
-		{
-			name:   "cpu",
-			promql: fmt.Sprintf(`100 - avg(rate(node_cpu_seconds_total{mode="idle",%s}[5m])) * 100`, instanceMatch),
-			assign: func(v float64) { metrics.CPU = v },
-		},
-		{
-			name: "ram",
-			promql: fmt.Sprintf(
-				`100 * (1 - sum(node_memory_MemAvailable_bytes{%s}) / sum(node_memory_MemTotal_bytes{%s}))`,
-				instanceMatch, instanceMatch,
-			),
-			assign: func(v float64) { metrics.RAM = v },
-		},
-		{
-			name: "disk",
-			promql: fmt.Sprintf(
-				`100 * (1 - sum(node_filesystem_avail_bytes{mountpoint="/",%s}) / sum(node_filesystem_size_bytes{mountpoint="/",%s}))`,
-				instanceMatch, instanceMatch,
-			),
-			assign: func(v float64) { metrics.Disk = v },
-		},
-		{
-			name:   "temperature",
-			promql: fmt.Sprintf(`max(node_hwmon_temp_celsius{%s})`, instanceMatch),
-			assign: func(v float64) { metrics.Temperature = v },
-		},
-		{
-			// Smallest uptime across the fleet = most recently booted node.
-			// node_boot_time_seconds is a boot *timestamp*, not a duration —
-			// it has to be subtracted from "now" to get an uptime.
-			name:   "uptime",
-			promql: fmt.Sprintf(`time() - max(node_boot_time_seconds{%s})`, instanceMatch),
-			assign: func(v float64) { uptimeSeconds = v },
-		},
-		{
-			name:   "load1",
-			promql: fmt.Sprintf(`avg(node_load1{%s})`, instanceMatch),
-			assign: func(v float64) { load1 = v },
-		},
-		{
-			name:   "load5",
-			promql: fmt.Sprintf(`avg(node_load5{%s})`, instanceMatch),
-			assign: func(v float64) { load5 = v },
-		},
-		{
-			name:   "load15",
-			promql: fmt.Sprintf(`avg(node_load15{%s})`, instanceMatch),
-			assign: func(v float64) { load15 = v },
-		},
+		{"up", fmt.Sprintf(`max by (instance) (up{%s})`, instanceMatch)},
+		{"cpu", fmt.Sprintf(`100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle",%s}[5m])) * 100)`, instanceMatch)},
+		{"ram", fmt.Sprintf(`100 * (1 - (node_memory_MemAvailable_bytes{%s} / node_memory_MemTotal_bytes{%s}))`, instanceMatch, instanceMatch)},
+		{"disk", fmt.Sprintf(`100 * (1 - (node_filesystem_avail_bytes{mountpoint="/",%s} / node_filesystem_size_bytes{mountpoint="/",%s}))`, instanceMatch, instanceMatch)},
+		{"temperature", fmt.Sprintf(`max by (instance) (node_hwmon_temp_celsius{%s})`, instanceMatch)},
+		{"boot", fmt.Sprintf(`max by (instance) (node_boot_time_seconds{%s})`, instanceMatch)},
 	}
 
 	type result struct {
-		name string
-		err  error
+		metric string
+		values map[string]float64
 	}
 	results := make(chan result, len(defs))
 
 	for _, def := range defs {
 		go func(d queryDef) {
-			v, err := c.query(ctx, d.promql)
-			if err == nil {
-				d.assign(v)
+			values, err := c.queryByInstance(ctx, d.promql)
+			if err != nil {
+				c.logger.Warn("victoriametrics host query failed", "metric", d.metric, "error", err)
 			}
-			results <- result{name: d.name, err: err}
+			results <- result{metric: d.metric, values: values}
 		}(def)
 	}
 
-	failures := 0
+	byMetric := make(map[string]map[string]float64, len(defs))
 	for range defs {
 		r := <-results
-		if r.err != nil {
-			failures++
-			c.logger.Warn("victoriametrics query failed", "metric", r.name, "error", r.err)
+		byMetric[r.metric] = r.values
+	}
+
+	now := float64(time.Now().Unix())
+	out := make([]models.HostMetrics, len(hosts))
+	for i, h := range hosts {
+		online := byMetric["up"][h.Instance] == 1
+
+		m := models.HostMetrics{ID: h.ID, Name: h.Name, Online: online}
+		if online {
+			m.CPU = clampPercent(byMetric["cpu"][h.Instance])
+			m.RAM = clampPercent(byMetric["ram"][h.Instance])
+			m.Disk = clampPercent(byMetric["disk"][h.Instance])
+			m.Temperature = byMetric["temperature"][h.Instance]
+			if boot, ok := byMetric["boot"][h.Instance]; ok && boot > 0 {
+				m.Uptime = formatUptime(now - boot)
+			}
 		}
+		out[i] = m
 	}
+	return out
+}
 
-	if failures == len(defs) {
-		metrics.Uptime = "N/A"
-		metrics.LoadAvg = "N/A"
-		return metrics, fmt.Errorf("all victoriametrics queries failed")
+func clampPercent(v float64) float64 {
+	if math.IsNaN(v) || v < 0 {
+		return 0
 	}
+	if v > 100 {
+		return 100
+	}
+	return v
+}
 
-	metrics.Uptime = formatUptime(uptimeSeconds)
-	metrics.LoadAvg = fmt.Sprintf("%.2f %.2f %.2f", load1, load5, load15)
-
-	return metrics, nil
+// regexAlternation builds a PromQL label-matcher regex ("a|b|c") from exact
+// values, escaping each one so IPs' dots don't accidentally act as
+// wildcards.
+func regexAlternation(values []string) string {
+	escaped := make([]string, len(values))
+	for i, v := range values {
+		escaped[i] = regexp.QuoteMeta(v)
+	}
+	return strings.Join(escaped, "|")
 }
 
 func formatUptime(seconds float64) string {

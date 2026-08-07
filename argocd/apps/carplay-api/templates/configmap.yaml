@@ -14,10 +14,16 @@ data:
   TRUSTED_PROXIES: {{ .Values.config.trustedProxies | quote }}
   IP_ALLOWLIST_CIDRS: {{ if .Values.config.ipAllowlist.enabled }}{{ .Values.config.ipAllowlist.cidrs | quote }}{{ else }}""{{ end }}
   VM_URL: {{ .Values.config.victoriaMetrics.url | quote }}
-  VM_INSTANCE_FILTER: {{ .Values.config.victoriaMetrics.instanceFilter | quote }}
+  {{- $hostEntries := list }}
+  {{- range .Values.config.hosts }}
+  {{- $hostEntries = append $hostEntries (printf "%s|%s|%s" .id .name .instance) }}
+  {{- end }}
+  HOSTS: {{ join "," $hostEntries | quote }}
   NTFY_URL: {{ .Values.config.ntfy.url | quote }}
   NTFY_TOPIC: {{ .Values.config.ntfy.topic | quote }}
   NTFY_SINCE: {{ .Values.config.ntfy.sinceWindow | quote }}
   NTFY_LIMIT: {{ .Values.config.ntfy.alertLimit | quote }}
   UPTIME_KUMA_URL: {{ .Values.config.uptimeKuma.url | quote }}
   UPTIME_KUMA_SLUG: {{ .Values.config.uptimeKuma.slug | quote }}
+  POWER_AGENT_URL: {{ .Values.config.powerAgent.url | quote }}
+  POWER_AGENT_TIMEOUT: {{ .Values.config.powerAgent.timeoutSeconds | quote }}

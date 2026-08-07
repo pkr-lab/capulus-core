@@ -52,7 +52,7 @@ Node-IP von `homeserver`: `192.168.178.94`. Traefik-LoadBalancer-IP (MetalLB):
 | Pi-hole (Web-UI) | pihole | pihole:80 | pihole.homeserver | — |
 | Alamos-Apager | alamos-apager | alamos-apager:8080 | alamos-apager.homeserver | — |
 | Xibo CMS | xibosignage | xibosignage-cms:80 | xibo.homeserver | — |
-| CarPlay-API | carplay-api | carplay-api:80 | carplay-api.homeserver | — |
+| Homeserver-Dashboard-API | carplay-api | carplay-api:80 | carplay-api.homeserver | — |
 | Tinyteller | tinyteller | tinyteller-frontend:80 | tinyteller.homeserver | — |
 | Argo Workflows | argo-workflows | argo-workflows-server:2746 | argo-workflows.homeserver | — |
 | Headlamp | headlamp | headlamp:80 | headlamp.homeserver | — |
