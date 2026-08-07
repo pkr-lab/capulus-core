@@ -23,6 +23,8 @@ struct WeatherForecast: Decodable {
         let temperature2mMin: [Double]
         let precipitationProbabilityMax: [Int]
         let windspeed10mMax: [Double]
+        let sunrise: [String]
+        let sunset: [String]
 
         enum CodingKeys: String, CodingKey {
             case weathercode
@@ -30,6 +32,7 @@ struct WeatherForecast: Decodable {
             case temperature2mMin = "temperature_2m_min"
             case precipitationProbabilityMax = "precipitation_probability_max"
             case windspeed10mMax = "windspeed_10m_max"
+            case sunrise, sunset
         }
 
         func day(at index: Int) -> DayForecast? {
@@ -37,7 +40,9 @@ struct WeatherForecast: Decodable {
                   temperature2mMin.indices.contains(index),
                   temperature2mMax.indices.contains(index),
                   precipitationProbabilityMax.indices.contains(index),
-                  windspeed10mMax.indices.contains(index)
+                  windspeed10mMax.indices.contains(index),
+                  sunrise.indices.contains(index),
+                  sunset.indices.contains(index)
             else { return nil }
 
             return DayForecast(
@@ -45,7 +50,9 @@ struct WeatherForecast: Decodable {
                 minTemp: temperature2mMin[index],
                 maxTemp: temperature2mMax[index],
                 precipitationProbability: precipitationProbabilityMax[index],
-                windSpeed: windspeed10mMax[index]
+                windSpeed: windspeed10mMax[index],
+                sunrise: sunrise[index],
+                sunset: sunset[index]
             )
         }
     }
@@ -57,9 +64,22 @@ struct DayForecast {
     let maxTemp: Double
     let precipitationProbability: Int
     let windSpeed: Double
+    /// Open-Meteo's local (no offset) "yyyy-MM-dd'T'HH:mm", already in
+    /// Europe/Berlin since that's the requested `timezone`.
+    let sunrise: String
+    let sunset: String
 
     var condition: String { WeatherCode.condition(for: code) }
     var symbolName: String { WeatherCode.symbolName(for: code) }
+    var sunriseDate: Date? { Self.isoLocalFormatter.date(from: sunrise) }
+    var sunsetDate: Date? { Self.isoLocalFormatter.date(from: sunset) }
+
+    private static let isoLocalFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm"
+        formatter.timeZone = TimeZone(identifier: "Europe/Berlin")
+        return formatter
+    }()
 }
 
 enum WeatherCode {
