@@ -76,6 +76,11 @@ struct DayForecast {
 
     private static let isoLocalFormatter: DateFormatter = {
         let formatter = DateFormatter()
+        // Fixed-format parsing needs a fixed locale — without this,
+        // DateFormatter falls back to the device's current locale/calendar
+        // (e.g. non-Gregorian regional calendar settings), `date(from:)`
+        // silently returns nil, and the whole sun-arc card disappears.
+        formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd'T'HH:mm"
         formatter.timeZone = TimeZone(identifier: "Europe/Berlin")
         return formatter
