@@ -25,6 +25,8 @@ struct HomeView: View {
                             onSelect: { selectedService = $0 }
                         )
 
+                        ServiceActivityCard(activity: viewModel.dashboard?.serviceActivity ?? [])
+
                         if let lastUpdate = viewModel.lastUpdate {
                             Text("Aktualisiert \(FormatterHelper.relativeTime(Int64(lastUpdate.timeIntervalSince1970)))")
                                 .font(.system(size: 12))
@@ -58,6 +60,72 @@ struct HomeView: View {
 private struct ServiceStatusDetailItem: Identifiable {
     let status: ServiceStatus
     var id: String { status.id }
+}
+
+/// Horizontaler Balken pro Dienst, absteigend nach Traefik-Request-Rate
+/// sortiert — Näherung für "wie viel Betrieb ist gerade wo", keine echte
+/// Nutzerzählung (Traefik kennt keine Identitäten, siehe
+/// Models/ServiceActivity.swift).
+private struct ServiceActivityCard: View {
+    let activity: [ServiceActivity]
+
+    private var sorted: [ServiceActivity] {
+        activity.sorted { $0.requestsPerSecond > $1.requestsPerSecond }
+    }
+
+    private var maxRate: Double {
+        max(sorted.first?.requestsPerSecond ?? 0, 0.1)
+    }
+
+    var body: some View {
+        SectionCard(title: "Dienst-Aktivität", systemImage: "chart.bar.fill") {
+            if sorted.isEmpty {
+                Text("Keine Daten")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.textMuted)
+            } else {
+                VStack(spacing: 10) {
+                    ForEach(sorted) { entry in
+                        ServiceActivityRow(entry: entry, maxRate: maxRate)
+                    }
+                }
+
+                Text("Traefik-Request-Rate (5-Min-Mittel) je Dienst — Näherung für Aktivität, keine Nutzerzahl.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.textMuted)
+            }
+        }
+    }
+}
+
+private struct ServiceActivityRow: View {
+    let entry: ServiceActivity
+    let maxRate: Double
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(entry.name)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Theme.textPrimary)
+                Spacer()
+                Text(String(format: "%.2f req/s", entry.requestsPerSecond))
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Theme.textMuted)
+            }
+
+            GeometryReader { geo in
+                RoundedRectangle(cornerRadius: Theme.radiusSmall / 2, style: .continuous)
+                    .fill(Theme.glassBackgroundStrong)
+                    .overlay(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: Theme.radiusSmall / 2, style: .continuous)
+                            .fill(Theme.accentLight)
+                            .frame(width: geo.size.width * min(entry.requestsPerSecond / maxRate, 1))
+                    }
+            }
+            .frame(height: 8)
+        }
+    }
 }
 
 private struct OfflineBanner: View {
