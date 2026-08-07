@@ -1,20 +1,50 @@
 import SwiftUI
 
-/// The whole app: three tabs (overview, control — brightness + wake/shutdown
-/// — and a dedicated alerts overview), no CarPlay scene — this is a pure
-/// iPhone app now.
+/// The whole app, in one of two modes picked at the top and persisted
+/// across launches (see DashboardMode):
+/// - PKR-Lab: the original 3 tabs — overview, control (brightness +
+///   wake/shutdown), alerts. Unchanged.
+/// - Alltag: weather dashboard, Tankstellen, News.
+/// No CarPlay scene — this is a pure iPhone app.
 struct RootTabView: View {
+    @AppStorage("dashboardMode") private var modeRaw = DashboardMode.pkrLab.rawValue
+
+    private var mode: DashboardMode {
+        DashboardMode(rawValue: modeRaw) ?? .pkrLab
+    }
+
     var body: some View {
-        TabView {
-            HomeView()
-                .tabItem { Label("Übersicht", systemImage: "square.grid.2x2.fill") }
+        VStack(spacing: 0) {
+            ModeSwitcher(mode: Binding(
+                get: { mode },
+                set: { modeRaw = $0.rawValue }
+            ))
 
-            PowerView()
-                .tabItem { Label("Steuerung", systemImage: "power") }
+            TabView {
+                switch mode {
+                case .pkrLab:
+                    HomeView()
+                        .tabItem { Label("Übersicht", systemImage: "square.grid.2x2.fill") }
 
-            AlertsView()
-                .tabItem { Label("Alerts", systemImage: "bell.fill") }
+                    PowerView()
+                        .tabItem { Label("Steuerung", systemImage: "power") }
+
+                    AlertsView()
+                        .tabItem { Label("Alerts", systemImage: "bell.fill") }
+
+                case .alltag:
+                    AlltagDashboardView()
+                        .tabItem { Label("Dashboard", systemImage: "square.grid.2x2.fill") }
+
+                    TankstellenView()
+                        .tabItem { Label("Tankstellen", systemImage: "fuelpump.fill") }
+
+                    NewsView()
+                        .tabItem { Label("News", systemImage: "newspaper.fill") }
+                }
+            }
         }
+        .background(Theme.backgroundDark2.ignoresSafeArea(edges: .top))
         .tint(Theme.accentLight)
         .preferredColorScheme(.dark)
         .onAppear(perform: configureTabBarAppearance)
@@ -29,5 +59,23 @@ struct RootTabView: View {
         appearance.backgroundColor = UIColor(Theme.backgroundDark2)
         UITabBar.appearance().standardAppearance = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance
+    }
+}
+
+/// The PKR-Lab/Alltag switch pinned above the tab content, always visible
+/// and reachable regardless of which tab is currently open — switching
+/// modes changes the whole tab set, not just one screen's content.
+private struct ModeSwitcher: View {
+    @Binding var mode: DashboardMode
+
+    var body: some View {
+        Picker("Modus", selection: $mode) {
+            Text("PKR-Lab").tag(DashboardMode.pkrLab)
+            Text("Alltag").tag(DashboardMode.alltag)
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 8)
     }
 }
