@@ -210,7 +210,6 @@ capulus-core/
 │   ├── 38-printer.md                 # Samsung Xpress M2026 per CUPS im Heimnetz freigeben
 │   ├── 39-hpa-autoscaling.md         # Horizontale Autoskalierung (HPA) — welche Apps, welche Schwellenwerte
 │   ├── 40-pihole.md                  # Netzwerkweites Werbeblocking via Pi-hole
-│   ├── 41-glance.md                  # Dashboard mit Übersicht über alle Dienste
 │   ├── 42-port-uebersicht.md         # Port-/Ingress-Übersicht aller Apps
 │   ├── 43-carplay-api.md             # Homeserver-Dashboard-API (iOS-App, inkl. power-agent)
 │   ├── 44-xibosignage.md             # Xibo CMS + Bilder-Slideshow auf Raspberry Pi 3B+
@@ -270,7 +269,6 @@ capulus-core/
         ├── nextcloud/                # Datei-Sync, Kalender, Kontakte
         ├── immich/                   # Foto-/Video-Backup vom Handy
         ├── immich-storage/           # Dedizierter NFS-Export für Immich (/volume2)
-        ├── glance/                   # Dashboard mit Übersicht über alle Dienste
         ├── nas-storage/              # NFS-Provisioner → StorageClass "nas" (/volume1)
         ├── wikijs/                   # Wiki.js Team-Wiki
         ├── zammad/                   # Helpdesk/Ticket-System
@@ -350,7 +348,6 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 | Vaultwarden | http://vault.homeserver |
 | Nextcloud | http://nextcloud.homeserver |
 | Immich | http://immich.homeserver |
-| Glance (Dashboard) | http://glance.homeserver |
 | Wiki.js | http://wiki.homeserver |
 | Zammad | http://zammad.homeserver |
 | Xibo CMS (xibosignage) | http://xibo.homeserver |
@@ -443,7 +440,6 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [Drucker (CUPS)](docs/38-printer.md) | Samsung Xpress M2026 per USB am Homeserver, Freigabe im Heimnetz + Tailnet via IPP/AirPrint |
 | [Autoskalierung (HPA)](docs/39-hpa-autoscaling.md) | Welche Apps per HorizontalPodAutoscaler mitskalieren, welche bewusst nicht, und mit welchen Schwellenwerten |
 | [Pi-hole](docs/40-pihole.md) | Netzwerkweites Werbeblocking als DNS-Filter vor der Fritz!Box — kein Router-Eingriff nötig |
-| [Glance](docs/41-glance.md) | Dashboard mit Status-Übersicht über alle Dienste, Suchleiste, Uhr und Quick-Links |
 | [Port-Übersicht](docs/42-port-uebersicht.md) | Interner Service-Port, LAN- und externe Erreichbarkeit für jede App |
 | [Homeserver-Dashboard-API](docs/43-carplay-api.md) | Go/Gin-API + power-agent für die reine-iOS-App Homeserver Dashboard (Metriken, Alerts, Status, Helligkeit, Wake/Shutdown) |
 | [xibosignage](docs/44-xibosignage.md) | Xibo CMS + Bilder-Slideshow auf Raspberry Pi 3B+, n8n-Workflow für automatisches Einspielen |

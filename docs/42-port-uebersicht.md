@@ -48,7 +48,6 @@ Node-IP von `homeserver`: `192.168.178.94`. Traefik-LoadBalancer-IP (MetalLB):
 | Gotify | gotify | gotify:80 | gotify.homeserver, gotify-api.homeserver | — (nur LAN/Tailnet) |
 | Uptime Kuma | uptime-kuma | uptime-kuma:80 | uptime-kuma.homeserver | — |
 | Semaphore | semaphore | semaphore:3000 | semaphore.homeserver, semaphore-api.homeserver | — |
-| Glance | glance | glance:80 | glance.homeserver | — |
 | Pi-hole (Web-UI) | pihole | pihole:80 | pihole.homeserver | — |
 | Alamos-Apager | alamos-apager | alamos-apager:8080 | alamos-apager.homeserver | — |
 | Xibo CMS | xibosignage | xibosignage-cms:80 | xibo.homeserver | — |

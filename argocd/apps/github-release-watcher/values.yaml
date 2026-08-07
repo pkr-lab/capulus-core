@@ -66,10 +66,9 @@ github:
     - id: paperless-ngx
       name: "Paperless-ngx"
       repo: "paperless-ngx/paperless-ngx"
-      # Aus argocd/apps/paperless-ngx/values.yaml image.tag "3.0.4" — "v"
-      # ergänzt. Zum Zeitpunkt dieser Eintragung ist v3.0.5 aktuell, d.h.
-      # die App zeigt hier direkt ein echtes verfügbares Update.
-      currentVersion: "v3.0.4"
+      # Aus argocd/apps/paperless-ngx/values.yaml image.tag "3.0.5" — "v"
+      # ergänzt.
+      currentVersion: "v3.0.5"
       notifyZammad: false
     - id: mealie
       name: "Mealie"
@@ -87,10 +86,10 @@ github:
     - id: n8n
       name: "n8n"
       repo: "n8n-io/n8n"
-      # Aus argocd/apps/n8n/values.yaml image.tag "2.32.7-imap" (custom
+      # Aus argocd/apps/n8n/values.yaml image.tag "2.33.7-imap" (custom
       # Image mit IMAP-Patch) — "-imap"-Suffix entfernt, n8n-io/n8n taggt
       # im Format "n8n@X.Y.Z" (Monorepo-Stil), nicht "vX.Y.Z".
-      currentVersion: "n8n@2.32.7"
+      currentVersion: "n8n@2.33.7"
       notifyZammad: false
     - id: wikijs
       name: "Wiki.js"
