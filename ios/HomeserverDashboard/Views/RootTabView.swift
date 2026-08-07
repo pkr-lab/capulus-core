@@ -5,7 +5,7 @@ import SwiftUI
 /// - PKR-Lab: the original 3 tabs — overview, control (brightness +
 ///   wake/shutdown), alerts. Unchanged.
 /// - Alltag: weather dashboard, Tankstellen, News.
-/// No CarPlay scene — this is a pure iPhone app.
+/// No CarPlay scene — universal iPhone/iPad app, no Mac.
 struct RootTabView: View {
     @AppStorage("dashboardMode") private var modeRaw = DashboardMode.pkrLab.rawValue
 
@@ -48,6 +48,11 @@ struct RootTabView: View {
         .tint(Theme.accentLight)
         .preferredColorScheme(.dark)
         .onAppear(perform: configureTabBarAppearance)
+        // Every tab's root is a single-screen NavigationView, not a
+        // master/detail pair — without .stack, iPad defaults to a
+        // two-column split (narrow sidebar + empty black detail pane).
+        // Style propagates down to all nested NavigationViews.
+        .navigationViewStyle(.stack)
     }
 
     /// Without this, UITabBar falls back to the system's translucent

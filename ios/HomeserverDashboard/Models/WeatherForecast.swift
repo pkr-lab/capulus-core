@@ -6,7 +6,16 @@ import Foundation
 /// (index 0) and tomorrow (index 1) instead of Glance's two separate
 /// widgets/requests.
 struct WeatherForecast: Decodable {
+    let current: Current?
     let daily: Daily
+
+    struct Current: Decodable {
+        let temperature2m: Double
+
+        enum CodingKeys: String, CodingKey {
+            case temperature2m = "temperature_2m"
+        }
+    }
 
     struct Daily: Decodable {
         let weathercode: [Int]
