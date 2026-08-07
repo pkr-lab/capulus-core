@@ -45,6 +45,7 @@ docs/43-carplay-api.md:
 | PUT | `/api/brightness` | Bearer token | Body `{"percent": 0-100}` — sets Homeserver screen brightness. |
 | POST | `/api/power/wake` | Bearer token | Body `{"target": "worker-0"\|"worker-1"}` — sends a WoL magic packet. |
 | POST | `/api/power/shutdown` | Bearer token | Body `{"target": "worker-0"\|"worker-1"\|"homeserver", "code"?: "..."}` — `code` required and checked against `SHUTDOWN_CONFIRMATION_CODE` only when `target` is `"homeserver"`. |
+| GET | `/api/updates` | Bearer token | Per-repo update status (name, current vs. latest GitHub release) read from the `github-release-watcher`'s `updates` ConfigMap — see [docs/25-github-release-watcher.md](../../../docs/25-github-release-watcher.md). |
 
 Brightness and power endpoints are proxied to **power-agent**
 (`ansible/roles/power_agent`), a small privileged daemon on the bare

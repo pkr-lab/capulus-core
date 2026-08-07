@@ -2,38 +2,11 @@
 
 Loki (+ Promtail) – ihr habt VictoriaMetrics/Grafana nur für Metriken, aber keine zentrale Log-Aggregation; passt direkt in den bestehenden Grafana-Stack.
 
-Vaultwarden – leichtgewichtiger Passwort-Manager (Bitwarden-kompatibel), sinnvoll als persönlicher Dienst hinter eurem bereits vorhandenen Authentik-SSO.
-
 ## Alltag / Produktivität
-
-        Lösche WindowsDeployment aus dem Repo gehe dazu alle dateien ienmal durch und lösche auch die verküpfungen sodass Windows deployment ganz raus ist.
-
-        Anschließend deploye bitte das folgende, erstelle oder passe dementsprechend die Docs an.
-
-        Paperless-ngx – digitalisiert Briefe, Rechnungen und Verträge per OCR und macht sie durchsuchbar; Scanner/Handy-Foto reinwerfen, Rest läuft automatisch.
-
-        Mealie – Rezeptverwaltung + Wochenplaner, importiert Rezepte direkt von Kochseiten per URL.
-
-        Grocy – Haushalts-ERP: Vorräte, Einkaufsliste, Ablaufdaten, Putzplan – nützlich, wenn ihr Lebensmittelverschwendung/Vorräte im Griff haben wollt.
-
-        n8n – Low-Code-Automatisierung (Zapier-Ersatz), z. B. "neue Rechnung in Paperless → Benachrichtigung via ntfy".
-
-        Uptime Kuma – einfache Status-Seite/Alerting für "ist Dienst X gerade erreichbar", ergänzt VictoriaMetrics für den schnellen Blick.
-
-        Grafana-Dashboard mit Pegelonline-API (WSV, öffentlich & kostenlos) – Rhein-Pegel Andernach live einbinden. Hochwasservorhersage RLP / Hochwasserzentralen.de (öffentlich & kostenlos) – ergänzt den reinen Ist-Pegel von Pegelonline um eine 24–48h-Vorhersage, relevant für vorausschauende Einsatzplanung statt nur Momentaufnahme.
-
-        ELWIS (Elektronischer Wasserstraßen-Informationsservice, öffentlich & kostenlos) – Schifffahrtsmeldungen, Sperrungen und Fahrwasser-Infos zum Rhein bei Andernach, gut als zusätzliches Grafana-Panel 
-
-        DWD Open Data API (Deutscher Wetterdienst, öffentlich & kostenlos) – Unwetter-/Sturmwarnungen für Andernach als Grafana-Panel
-
-
-Immich – Foto/Video-Backup vom Handy (Google-Photos-Ersatz), inkl. Gesichtserkennung und Timeline; spielt gut mit eurem MinIO/HDD-Storage zusammen.
-
-Nextcloud – Datei-Sync, Kalender, Kontakte; deckt mehr ab als Immich/Paperless einzeln, dafür schwerer (mehr RAM, mehr Wartung).
 
 Firefly III – persönliche Finanzverwaltung/Budgetierung, gut wenn ihr Ausgaben/Abos im Blick behalten wollt.
 
-Homepage (oder Homarr) – ein Dashboard mit Links/Status für alle eure Self-Hosted-Dienste statt Lesezeichen-Chaos.
+Homepage (oder Homarr) – ein Dashboard mit Links/Status für alle eure Self-Hosted-Dienste statt Lesezeichen-Chaos. (Glance wurde dafür testweise deployed und wieder entfernt — offen, ob eine der beiden Alternativen stattdessen sinnvoll ist.)
 
 ## Vereins-IT (DLRG OG Andernach)
 
@@ -57,7 +30,7 @@ Wichtig: auto_assign_org/Default-Rolle so setzen, dass ein neuer DLRG-Account ni
 Das ist eine echte Zugriffstrennung, nicht nur ein UI-Filter — DLRG-Nutzer können technisch nicht an eure k3s-/Infra-Metriken kommen.
 
 Was in diese DLRG-Org rein könnte
-Zusätzlich zu Pegelonline/DWD/Hochwasser/ELWIS (schon notiert):
+Zusätzlich zu Pegelonline/DWD/Hochwasser/ELWIS (bereits deployed, siehe [docs/31-rhein-dashboard.md](docs/31-rhein-dashboard.md)):
 
 Open-Meteo – kostenlose Wettervorhersage ohne API-Key, einfacher als DWD-Rohdaten zu parsen
 Sunrise-Sunset API – Sonnenuntergang für "Wachdienst-Ende"-Planung
@@ -67,11 +40,3 @@ Aggregierte Einsatzstunden aus NocoDB (nur Summen, keine personenbezogenen Rohda
 Belegungsplan-Übersicht (Booked Scheduler/CalDAV) – nur "Boot frei/belegt", nicht der volle interne Kalender
 Uptime-Status eurer Vereins-Dienste (Wiki, NocoDB) via Uptime Kuma – Status ja, Infra-Details nein
 Grundsatz: in die DLRG-Org nur aggregierte/öffentliche Daten, nichts, was Rückschlüsse auf eure interne Infrastruktur erlaubt.
-
-## iOS App (HomeserverDashboard) – Alltag-Modus
-
-Rhein-Pegel Andernach (Pegelonline-API, öffentlich, kein Key) – eigene Karte analog zur bestehenden Wetter-Karte, alltagsrelevanter als nur ein Grafana-Panel.
-
-Sonnenauf-/-untergang – kommt bei Open-Meteo im selben Request wie das bestehende Wetter mit (`daily=sunrise,sunset`), minimaler Zusatzaufwand.
-
-Kurzlink-Kacheln für die Self-Hosted-Dienste (Nextcloud, Immich, Paperless-ngx, Mealie, Grocy, Wiki.js, …) – im Glance-Dashboard schon als "Apps & Produktivität"-Monitor-Block vorhanden, in der App bisher nicht; einfache Link-Liste + Uptime-Kuma-Status, kein neuer Datendienst nötig.

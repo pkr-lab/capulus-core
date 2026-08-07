@@ -1,18 +1,23 @@
 # SSO für alle Dienste: Ein User, ein Passwort
 
-Dieser Guide verbindet die verbleibenden drei Dienste (Headlamp, Argo Workflows,
-MinIO) mit Authentik SSO. Nach Abschluss genügt ein einziger Login für alles.
+Dieser Guide verbindet Headlamp, Argo Workflows und MinIO mit Authentik SSO.
+**In der Praxis genutzt wird davon nur Forward Auth (Gotify, Semaphore)** —
+für Grafana/Headlamp/MinIO liegt zwar reale OIDC-Config mit echten Secrets
+im Cluster, sie ist aber laut Betreiber kein aktiv genutzter Login-Weg. Die
+Schritte unten bleiben als Referenz stehen (z. B. für eine Secret-Rotation
+oder falls OIDC doch produktiv genutzt werden soll). **Argo Workflows hat
+noch gar keine SSO-Anbindung.**
 
 **Aktueller Stand:**
 
 | Dienst | Typ | Status |
 |---|---|---|
-| Grafana | OIDC | bereits aktiv |
-| Gotify | Forward Auth | bereits aktiv |
-| Semaphore | Forward Auth | bereits aktiv |
-| Headlamp | OIDC | dieser Guide |
-| Argo Workflows | OIDC | dieser Guide |
-| MinIO | OIDC | dieser Guide |
+| Gotify | Forward Auth | live, aktiv genutzt |
+| Semaphore | Forward Auth | live, aktiv genutzt |
+| Grafana | OIDC | konfiguriert, kein genutzter Login-Weg |
+| Headlamp | OIDC | konfiguriert, kein genutzter Login-Weg |
+| MinIO | OIDC | konfiguriert, kein genutzter Login-Weg |
+| Argo Workflows | OIDC | noch offen — dieser Guide |
 
 ---
 
@@ -59,7 +64,12 @@ ssh ubuntu@192.168.178.94 \
 
 ---
 
-## Schritt 2 — Headlamp OIDC einrichten
+## Schritt 2 — Headlamp OIDC einrichten (konfiguriert, kein genutzter Login-Weg)
+
+> Config bereits vorhanden (`argocd/apps/headlamp/values.yaml` →
+> `config.oidc.externalSecret.enabled: true`), aber laut Betreiber nicht
+> der tatsächlich genutzte Zugriffsweg. Nur zur Referenz für eine
+> künftige Secret-Rotation.
 
 ### 2.1 — Provider in Authentik anlegen
 
@@ -197,7 +207,12 @@ argo-workflows:
 
 ---
 
-## Schritt 4 — MinIO OIDC einrichten
+## Schritt 4 — MinIO OIDC einrichten (konfiguriert, kein genutzter Login-Weg)
+
+> Config bereits vorhanden (`argocd/apps/minio/values.yaml` →
+> `minio.oidc.enabled: true`), aber laut Betreiber nicht der tatsächlich
+> genutzte Zugriffsweg. Nur zur Referenz für eine künftige
+> Secret-Rotation.
 
 ### 4.1 — Provider in Authentik anlegen
 
