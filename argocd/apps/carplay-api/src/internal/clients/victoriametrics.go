@@ -59,12 +59,12 @@ type vmQueryResponse struct {
 	} `json:"data"`
 }
 
-// queryByInstance runs a PromQL instant query expected to be grouped
-// `by (instance)` and returns one float64 per instance label value found in
-// the result vector. An instance missing from the map means "no series" for
-// that metric (query failed, or nothing scraped for it yet) — callers treat
-// that the same as zero rather than erroring the whole response.
-func (c *VictoriaMetricsClient) queryByInstance(ctx context.Context, promql string) (map[string]float64, error) {
+// queryGroupedBy runs a PromQL instant query expected to be grouped
+// `by (<label>)` and returns one float64 per value of that label found in
+// the result vector. A label value missing from the map means "no series"
+// for that metric (query failed, or nothing scraped for it yet) — callers
+// treat that the same as zero rather than erroring the whole response.
+func (c *VictoriaMetricsClient) queryGroupedBy(ctx context.Context, promql, label string) (map[string]float64, error) {
 	endpoint := fmt.Sprintf("%s/api/v1/query?%s", c.baseURL, url.Values{"query": {promql}}.Encode())
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
@@ -93,8 +93,8 @@ func (c *VictoriaMetricsClient) queryByInstance(ctx context.Context, promql stri
 
 	out := make(map[string]float64, len(parsed.Data.Result))
 	for _, series := range parsed.Data.Result {
-		instance := series.Metric["instance"]
-		if instance == "" {
+		key := series.Metric[label]
+		if key == "" {
 			continue
 		}
 		raw, ok := series.Value[1].(string)
@@ -105,9 +105,15 @@ func (c *VictoriaMetricsClient) queryByInstance(ctx context.Context, promql stri
 		if err != nil {
 			continue
 		}
-		out[instance] = value
+		out[key] = value
 	}
 	return out, nil
+}
+
+// queryByInstance is queryGroupedBy specialized to the "instance" label —
+// every host-metrics query below is grouped that way.
+func (c *VictoriaMetricsClient) queryByInstance(ctx context.Context, promql string) (map[string]float64, error) {
+	return c.queryGroupedBy(ctx, promql, "instance")
 }
 
 // GetHostMetrics assembles one HostMetrics per configured host from six
@@ -178,6 +184,52 @@ func (c *VictoriaMetricsClient) GetHostMetrics(ctx context.Context, hosts []Host
 			}
 		}
 		out[i] = m
+	}
+	return out
+}
+
+// ServiceConfig maps one self-hosted app to the substring its Traefik
+// "service" label is expected to contain (config.services in values.yaml).
+// Traefik's generated service-label format varies by provider/chart
+// version ("<ns>-<svc>-<port>@kubernetes" for a plain Ingress,
+// "...@kubernetescrd" for an IngressRoute) — matching by substring instead
+// of an exact label avoids having to pin that down without querying the
+// live cluster (`curl $VM_URL/api/v1/label/service/values`).
+type ServiceConfig struct {
+	ID    string
+	Name  string
+	Match string
+}
+
+// GetServiceActivity approximates "how busy is each self-hosted app right
+// now" from Traefik's request-rate metric (see argocd/apps/traefik-config)
+// — this is request volume, NOT distinct users; Traefik has no concept of
+// who's behind a request. Returns one entry per configured service,
+// RequestsPerSecond 0 for any service whose Match substring doesn't appear
+// in the current result set (not scraped yet, or genuinely idle).
+func (c *VictoriaMetricsClient) GetServiceActivity(ctx context.Context, services []ServiceConfig) []models.ServiceActivity {
+	if len(services) == 0 {
+		return nil
+	}
+
+	byRawService, err := c.queryGroupedBy(ctx, `sum by (service) (rate(traefik_service_requests_total[5m]))`, "service")
+	if err != nil {
+		c.logger.Warn("victoriametrics traefik query failed", "error", err)
+	}
+
+	out := make([]models.ServiceActivity, len(services))
+	for i, svc := range services {
+		var rate float64
+		for rawService, value := range byRawService {
+			if strings.Contains(rawService, svc.Match) {
+				rate += value
+			}
+		}
+		out[i] = models.ServiceActivity{
+			ID:                svc.ID,
+			Name:              svc.Name,
+			RequestsPerSecond: math.Round(rate*100) / 100,
+		}
 	}
 	return out
 }

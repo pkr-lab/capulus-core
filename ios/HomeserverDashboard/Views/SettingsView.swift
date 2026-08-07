@@ -6,6 +6,8 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var token: String = ""
     @State private var statusMessage: String?
+    @State private var tankerkoenigKey: String = ""
+    @State private var tankerkoenigStatusMessage: String?
 
     var body: some View {
         NavigationView {
@@ -32,6 +34,29 @@ struct SettingsView: View {
                             .foregroundColor(.secondary)
                     }
                 }
+
+                Section {
+                    SecureField("API-Key", text: $tankerkoenigKey)
+                        .textInputAutocapitalization(.never)
+                        .disableAutocorrection(true)
+                } header: {
+                    Text("Tankerkönig API-Key")
+                } footer: {
+                    Text("Für die Tankstellen-Seite im Alltag-Modus. Kostenlosen Key registrieren: creativecommons.tankerkoenig.de")
+                }
+
+                Section {
+                    Button("In Keychain speichern") { saveTankerkoenigKey() }
+                        .disabled(tankerkoenigKey.isEmpty)
+                    Button("Gespeicherten Key entfernen", role: .destructive) { removeTankerkoenigKey() }
+                }
+
+                if let tankerkoenigStatusMessage {
+                    Section {
+                        Text(tankerkoenigStatusMessage)
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
             .navigationTitle("Einstellungen")
             .toolbar {
@@ -42,6 +67,9 @@ struct SettingsView: View {
             .onAppear {
                 if (try? KeychainService.shared.getToken()) != nil {
                     statusMessage = "Es ist bereits ein Token gespeichert."
+                }
+                if (try? KeychainService.shared.getTankerkoenigAPIKey()) != nil {
+                    tankerkoenigStatusMessage = "Es ist bereits ein Key gespeichert."
                 }
             }
         }
@@ -60,5 +88,20 @@ struct SettingsView: View {
     private func remove() {
         KeychainService.shared.deleteToken()
         statusMessage = "Token entfernt."
+    }
+
+    private func saveTankerkoenigKey() {
+        do {
+            try KeychainService.shared.saveTankerkoenigAPIKey(tankerkoenigKey)
+            tankerkoenigStatusMessage = "Key gespeichert."
+            tankerkoenigKey = ""
+        } catch {
+            tankerkoenigStatusMessage = "Speichern fehlgeschlagen: \(error.localizedDescription)"
+        }
+    }
+
+    private func removeTankerkoenigKey() {
+        KeychainService.shared.deleteTankerkoenigAPIKey()
+        tankerkoenigStatusMessage = "Key entfernt."
     }
 }

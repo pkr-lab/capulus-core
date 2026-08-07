@@ -41,12 +41,44 @@ type ServiceStatus struct {
 	LastCheck int64   `json:"last_check"`
 }
 
+// ServiceActivity is one self-hosted app's current Traefik request rate —
+// an activity proxy, NOT a distinct-user count (Traefik has no notion of
+// identity, see clients.VictoriaMetricsClient.GetServiceActivity).
+type ServiceActivity struct {
+	ID                string  `json:"id"`
+	Name              string  `json:"name"`
+	RequestsPerSecond float64 `json:"requests_per_second"`
+}
+
 // DashboardResponse is the full payload for GET /api/dashboard.
 type DashboardResponse struct {
-	Alerts    []Alert         `json:"alerts"`
-	Hosts     []HostMetrics   `json:"hosts"`
-	Status    []ServiceStatus `json:"status"`
-	UpdatedAt int64           `json:"updated_at"`
+	Alerts          []Alert           `json:"alerts"`
+	Hosts           []HostMetrics     `json:"hosts"`
+	Status          []ServiceStatus   `json:"status"`
+	ServiceActivity []ServiceActivity `json:"service_activity"`
+	UpdatedAt       int64             `json:"updated_at"`
+}
+
+// AppUpdate is one watched repo's update status, sourced from github-
+// release-watcher's updates ConfigMap (argocd/apps/github-release-watcher).
+// Pointer fields are nil when unknown — e.g. CurrentVersion is nil until
+// someone fills in config.services entries' currentVersion in that chart's
+// values.yaml, and HasUpdate stays nil (not false) whenever it can't be
+// determined, so the app shows "unbekannt" instead of a false "up to date".
+type AppUpdate struct {
+	ID             string  `json:"id"`
+	Name           string  `json:"name"`
+	Repo           string  `json:"repo"`
+	CurrentVersion *string `json:"current_version"`
+	LatestVersion  *string `json:"latest_version"`
+	LatestURL      *string `json:"latest_url"`
+	HasUpdate      *bool   `json:"has_update"`
+}
+
+// UpdatesResponse is the payload for GET /api/updates.
+type UpdatesResponse struct {
+	UpdatedAt int64       `json:"updated_at"`
+	Repos     []AppUpdate `json:"repos"`
 }
 
 // HealthResponse is the payload for GET /health.

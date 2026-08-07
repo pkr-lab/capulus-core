@@ -67,3 +67,11 @@ Aggregierte Einsatzstunden aus NocoDB (nur Summen, keine personenbezogenen Rohda
 Belegungsplan-Übersicht (Booked Scheduler/CalDAV) – nur "Boot frei/belegt", nicht der volle interne Kalender
 Uptime-Status eurer Vereins-Dienste (Wiki, NocoDB) via Uptime Kuma – Status ja, Infra-Details nein
 Grundsatz: in die DLRG-Org nur aggregierte/öffentliche Daten, nichts, was Rückschlüsse auf eure interne Infrastruktur erlaubt.
+
+## iOS App (HomeserverDashboard) – Alltag-Modus
+
+Rhein-Pegel Andernach (Pegelonline-API, öffentlich, kein Key) – eigene Karte analog zur bestehenden Wetter-Karte, alltagsrelevanter als nur ein Grafana-Panel.
+
+Sonnenauf-/-untergang – kommt bei Open-Meteo im selben Request wie das bestehende Wetter mit (`daily=sunrise,sunset`), minimaler Zusatzaufwand.
+
+Kurzlink-Kacheln für die Self-Hosted-Dienste (Nextcloud, Immich, Paperless-ngx, Mealie, Grocy, Wiki.js, …) – im Glance-Dashboard schon als "Apps & Produktivität"-Monitor-Block vorhanden, in der App bisher nicht; einfache Link-Liste + Uptime-Kuma-Status, kein neuer Datendienst nötig.

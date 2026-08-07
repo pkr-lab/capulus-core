@@ -1,0 +1,28 @@
+# Scraped die in helmchartconfig.yaml aktivierten Traefik-Metriken für
+# VictoriaMetrics — analog zu argocd/apps/authentik/templates/
+# vmservicescrape.yaml (dort dieselbe Begründung: kein prometheus-operator
+# in diesem Cluster, nur die VictoriaMetrics-CRDs, daher VMServiceScrape
+# statt ServiceMonitor).
+#
+# Selector nur auf app.kubernetes.io/name: traefik (nicht zusätzlich auf
+# app.kubernetes.io/instance), weil k3s' Addon-Charts den Instance-Label-
+# Suffix je nach k3s-Version unterschiedlich benennen — mit
+# `kubectl get svc traefik -n kube-system --show-labels` prüfen und bei
+# Bedarf präzisieren, falls der Name-Selector in eurem Cluster nicht
+# eindeutig auf den Traefik-Service trifft.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: traefik-metrics
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: traefik
+  namespaceSelector:
+    matchNames:
+      - kube-system
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
