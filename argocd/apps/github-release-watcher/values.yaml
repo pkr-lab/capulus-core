@@ -41,42 +41,60 @@ github:
     - id: nextcloud
       name: "Nextcloud"
       repo: "nextcloud/server"
-      currentVersion: ""
+      # Aus argocd/apps/nextcloud/values.yaml image.tag "34.0.2-apache" —
+      # "-apache"-Suffix entfernt, "v" ergänzt (nextcloud/server taggt
+      # "vX.Y.Z", das Docker-Image "X.Y.Z-apache").
+      currentVersion: "v34.0.2"
       notifyZammad: false
     - id: immich
       name: "Immich"
       repo: "immich-app/immich"
-      currentVersion: ""
+      # Aus argocd/apps/immich/values.yaml image.tag — Docker-Tag- und
+      # Release-Tag-Format sind hier identisch ("vX.Y.Z").
+      currentVersion: "v3.1.0"
       notifyZammad: false
     - id: vaultwarden
       name: "Vaultwarden"
       repo: "dani-garcia/vaultwarden"
-      currentVersion: ""
+      # Aus argocd/apps/vaultwarden/values.yaml image.tag — Format
+      # identisch ("X.Y.Z", kein "v"-Präfix bei diesem Repo).
+      currentVersion: "1.37.1"
       notifyZammad: false
     - id: paperless-ngx
       name: "Paperless-ngx"
       repo: "paperless-ngx/paperless-ngx"
-      currentVersion: ""
+      # Aus argocd/apps/paperless-ngx/values.yaml image.tag "3.0.4" — "v"
+      # ergänzt. Zum Zeitpunkt dieser Eintragung ist v3.0.5 aktuell, d.h.
+      # die App zeigt hier direkt ein echtes verfügbares Update.
+      currentVersion: "v3.0.4"
       notifyZammad: false
     - id: mealie
       name: "Mealie"
       repo: "mealie-recipes/mealie"
-      currentVersion: ""
+      # Aus argocd/apps/mealie/values.yaml image.tag — Format identisch.
+      currentVersion: "v3.22.0"
       notifyZammad: false
     - id: grocy
       name: "Grocy"
       repo: "grocy/grocy"
-      currentVersion: ""
+      # Aus argocd/apps/grocy/values.yaml image.tag "4.6.0" — "v" ergänzt
+      # (linuxserver/grocy-Image taggt ohne "v", grocy/grocy-Releases mit).
+      currentVersion: "v4.6.0"
       notifyZammad: false
     - id: n8n
       name: "n8n"
       repo: "n8n-io/n8n"
-      currentVersion: ""
+      # Aus argocd/apps/n8n/values.yaml image.tag "2.32.7-imap" (custom
+      # Image mit IMAP-Patch) — "-imap"-Suffix entfernt, n8n-io/n8n taggt
+      # im Format "n8n@X.Y.Z" (Monorepo-Stil), nicht "vX.Y.Z".
+      currentVersion: "n8n@2.32.7"
       notifyZammad: false
     - id: wikijs
       name: "Wiki.js"
       repo: "requarks/wiki"
-      currentVersion: ""
+      # Aus argocd/apps/wikijs/values.yaml image.tag "2.5.314" — "v"
+      # ergänzt.
+      currentVersion: "v2.5.314"
       notifyZammad: false
     # Zammad selbst veröffentlicht keine GitHub Releases (nur Tags/eigener
     # Changelog) — /releases/latest liefert dafür dauerhaft 404, was der
@@ -86,7 +104,12 @@ github:
     - id: zammad
       name: "Zammad"
       repo: "zammad/zammad"
-      currentVersion: ""
+      # Aus argocd/apps/zammad/Chart.yaml appVersion (dortiges values.yaml
+      # pinnt keinen einfachen image.tag, das Zammad-Sub-Chart bringt seine
+      # Version selbst mit). Rein informativ — GitHub liefert für dieses
+      # Repo ohnehin dauerhaft 404 (s.o.), has_update bleibt also immer
+      # "unbekannt", egal was hier steht.
+      currentVersion: "7.1.1"
       notifyZammad: false
   # Optionaler GitHub-PAT für höheres Rate-Limit (unauthenticated: 60 req/h
   # — mit jetzt 10 Repos bei 120-Minuten-Takt knapp, ein PAT hebt das auf
