@@ -1,7 +1,21 @@
-# GitHub Release Watcher → Zammad-Benachrichtigung
+# GitHub Release Watcher → Zammad-Benachrichtigung + App-Update-Liste
 
 Der `github-release-watcher` pollt periodisch die GitHub-Releases-API für
-konfigurierte Repos und legt bei einem neuen Release ein Ticket in Zammad an.
+eine Liste konfigurierter Repos (aktuell 10, siehe `values.yaml`) und macht
+daraus zwei getrennte Dinge:
+
+1. **Zammad-Ticket** — nur für Repos mit `notifyZammad: true` (aktuell nur
+   `DocFlowEngine`); die übrigen 9 (Nextcloud, Immich, Vaultwarden,
+   Paperless-ngx, Mealie, Grocy, n8n, Wiki.js, Zammad selbst) erzeugen
+   bewusst **kein** Ticket.
+2. **App-Update-Liste** — bei **jedem** Lauf wird für **alle** Repos
+   `currentVersion` (aus `values.yaml`, manuell gepflegt) gegen die gerade
+   abgefragte GitHub-Version verglichen und das Ergebnis in eine eigene
+   `updates`-ConfigMap geschrieben. `carplay-api` liest genau diese
+   ConfigMap (siehe `templates/role.yaml`, RoleBinding in den
+   `carplay-api`-Namespace) und zeigt sie der iOS-App als Update-Status pro
+   Dienst — unabhängig davon, ob ein Repo Zammad-Tickets erzeugt oder nicht.
+
 Die Deployment-Konfiguration liegt unter `argocd/apps/github-release-watcher/`.
 
 ---
@@ -11,8 +25,9 @@ Die Deployment-Konfiguration liegt unter `argocd/apps/github-release-watcher/`.
 | Komponente     | Technologie                          | Namespace                 |
 |----------------|---------------------------------------|----------------------------|
 | Watcher        | Python 3.12 stdlib, `CronJob`         | `github-release-watcher`  |
-| State          | ConfigMap (letzter gesehener Tag/Repo)| `github-release-watcher`  |
-| Benachrichtigung| Zammad-Ticket via REST-API           | —                          |
+| State          | ConfigMap (letzter gesehener Tag/Repo, nur für `notifyZammad: true`-Repos)| `github-release-watcher`  |
+| App-Update-Liste| Separate ConfigMap (`currentVersion` vs. aktuelles GitHub-Release, alle Repos)| `github-release-watcher`, lesbar für `carplay-api` |
+| Benachrichtigung| Zammad-Ticket via REST-API (nur `notifyZammad: true`) | —            |
 | Secrets        | SealedSecrets                        | `github-release-watcher`  |
 
 **Warum Polling statt Webhook:** Der Cluster hat keinen öffentlichen Ingress
@@ -67,12 +82,26 @@ echo -n "<ZAMMAD_API_TOKEN>" | kubeseal --raw \
 
 ## Schritt 3 — `values.yaml` anpassen
 
-In `argocd/apps/github-release-watcher/values.yaml`:
+In `argocd/apps/github-release-watcher/values.yaml` ist `github.repos` eine
+Liste von Objekten, nicht nur `owner/repo`-Strings — pro Repo lässt sich
+`notifyZammad` einzeln steuern:
 
 ```yaml
 github:
   repos:
-    - "pkr-lab/DocFlowEngine"   # owner/repo, mehrere möglich
+    - id: docflowengine
+      name: "DocFlowEngine"
+      repo: "pkr-lab/DocFlowEngine"
+      currentVersion: ""       # "" = unbekannt, App zeigt keinen Update-Status
+      notifyZammad: true       # erzeugt bei neuem Release ein Zammad-Ticket
+    - id: mein-neuer-dienst
+      name: "Mein Dienst"
+      repo: "owner/repo"
+      # currentVersion MUSS zum tag_name-Stil des jeweiligen Repos passen
+      # (z.B. "v1.2.3" vs. "1.2.3" vs. "app@1.2.3") — vor dem Eintragen
+      # gegenprüfen: curl https://api.github.com/repos/<owner>/<repo>/releases/latest
+      currentVersion: "v1.2.3"
+      notifyZammad: false      # nur in der App-Update-Liste sichtbar, kein Ticket
 
 zammad:
   url: "http://zammad.homeserver"
@@ -82,6 +111,12 @@ zammad:
 secrets:
   encryptedToken: "<Ausgabe aus Schritt 2>"
 ```
+
+`currentVersion` ist **rein manuell gepflegt** (Git als Source of Truth) und
+muss nach jedem Upgrade des jeweiligen Diensts hier nachgezogen werden —
+sonst zeigt die App-Update-Liste einen falschen/veralteten Stand. Siehe auch
+die Kommentare direkt in `values.yaml`, die das für jeden aktuell
+eingetragenen Repo-Eintrag dokumentieren.
 
 > **`requesterEmail`:** Muss ein **bereits existierender** Zammad-User
 > (Login oder E-Mail) sein. Anders als beim E-Mail-Kanal legt die Ticket-API
@@ -165,19 +200,26 @@ kubectl -n github-release-watcher create job --from=cronjob/github-release-watch
    `python3 /app/watcher.py`
 2. Für jedes Repo in `github.repos`: `GET
    https://api.github.com/repos/<owner>/<repo>/releases/latest`
-3. Der zuletzt gesehene Tag pro Repo liegt in der ConfigMap
-   `github-release-watcher-state` im eigenen Namespace (wird vom Skript
-   selbst über die Kubernetes-API gelesen/geschrieben, RBAC ist auf genau
-   diese ConfigMap eingeschränkt — siehe `templates/role.yaml`)
-4. Bei neuem Tag: `POST {zammad.url}/api/v1/tickets` legt ein Ticket in der
-   konfigurierten Gruppe an; Zammads Agenten-Benachrichtigung übernimmt den
-   E-Mail-Versand
-5. State wird nur bei Erfolg aktualisiert — schlägt der Zammad-Call fehl,
-   versucht der nächste Lauf es erneut (kein verlorenes Release)
+3. **App-Update-Liste (alle Repos, jeder Lauf):** `currentVersion` aus
+   `values.yaml` wird gegen die gerade abgefragte GitHub-Version verglichen,
+   das Ergebnis landet in der `updates`-ConfigMap im eigenen Namespace.
+   `carplay-api` liest diese ConfigMap über ein eigenes, auf genau diese
+   ConfigMap eingeschränktes RoleBinding (`templates/role.yaml`) und zeigt
+   sie der iOS-App als Update-Status.
+4. **Zammad-Ticket (nur `notifyZammad: true`-Repos):** Der zuletzt gesehene
+   Tag pro Repo liegt zusätzlich in einer zweiten, getrennten ConfigMap
+   (`state`) im eigenen Namespace. Bei neuem Tag: `POST {zammad.url}/api/v1/
+   tickets` legt ein Ticket in der konfigurierten Gruppe an; Zammads
+   Agenten-Benachrichtigung übernimmt den E-Mail-Versand. State wird nur bei
+   Erfolg aktualisiert — schlägt der Zammad-Call fehl, versucht der nächste
+   Lauf es erneut (kein verlorenes Release).
 
-Diese State-ConfigMap ist **nicht** Teil der Helm-Templates (wird vom Skript
-zur Laufzeit angelegt), damit ArgoCDs `selfHeal`/`prune` sie nicht mit dem
-leeren Git-Stand überschreibt.
+Beide ConfigMaps sind **nicht** Teil der Helm-Templates (werden vom Skript
+zur Laufzeit angelegt/geschrieben), damit ArgoCDs `selfHeal`/`prune` sie
+nicht mit einem leeren Git-Stand überschreibt — die RBAC-Rules in
+`templates/role.yaml` erlauben dem ServiceAccount `create` sowie
+`get`/`patch`/`update` ausschließlich auf diese beiden konkreten
+ConfigMap-Namen.
 
 ---
 

@@ -1,6 +1,6 @@
 # 36 — NAS-Backup auf externe USB-Platte
 
-Löst den in [docs/16-nas-storage.md → Ausblick](16-nas-storage.md#ausblick-backups-auf-externer-nas-platte)
+Löst den in [docs/16-nas-storage.md → Backups auf externer NAS-Platte](16-nas-storage.md#backups-auf-externer-nas-platte)
 angekündigten Punkt ein: eine externe USB-Festplatte, direkt am UGREEN NAS
 angeschlossen, sichert regelmäßig **beide** Storage-Pools (`volume1` und
 `volume2`) — also sowohl den generischen Cluster-Storage

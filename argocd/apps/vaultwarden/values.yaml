@@ -88,7 +88,7 @@ adminSecret:
   enabled: true
   secretName: vaultwarden-admin
   # Generiert mit (Argon2-Hash empfohlen statt Klartext-Token):
-  #   docker run --rm vaultwarden/server:1.36.0 /vaultwarden hash
+  #   docker run --rm vaultwarden/server:1.37.1 /vaultwarden hash
   #   echo -n '<PHC-Hash-aus-obigem-Befehl>' \
   #     | kubeseal --raw --namespace vaultwarden --name vaultwarden-admin \
   #         --controller-namespace sealed-secrets \

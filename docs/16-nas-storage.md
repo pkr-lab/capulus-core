@@ -68,7 +68,10 @@ sind). Einrichtung über die UGOS-Weboberfläche:
 4. Exportpfad notieren (z. B. `/volume1/k8s-storage` — der genaue Pfad hängt
    vom NAS-Modell/UGOS-Version ab) und in
    `argocd/apps/nas-storage/deployment.yaml` (`NFS_SERVER`/`NFS_PATH` sowie
-   den `nfs`-Volume-Block) eintragen — dort stehen aktuell Platzhalter.
+   den `nfs`-Volume-Block) eintragen — dort stehen bereits die realen Werte
+   für dieses Setup (`NFS_SERVER: "192.168.178.97"`,
+   `NFS_PATH: "/volume1/k8s-storage"`), bei einem neuen NAS entsprechend
+   anpassen.
 5. Verbindung testen, bevor die App im Cluster deployed wird:
    ```bash
    # von einem k3s-Node aus:
@@ -159,13 +162,22 @@ Ausgabe abgleichen.
 
 ## Migrations-Runbook: `hdd` (worker-0/sda) → `nas` (NAS)
 
-Betroffen sind 9 PVCs über 8 Apps: `n8n`, `monitoring` (vmsingle),
-`paperless-ngx` (5× — data/media/consume/export/redis), `wikijs`
-(postgresql), `zammad` (2× — primary DB, redis), `mealie`, `grocy`,
-`uptime-kuma`, `minio`. `storageClassName` ist auf bestehenden PVCs
-unveränderlich — die `values.yaml`-Änderungen (bereits committet) sind daher
-gefahrlos: ArgoCD zeigt nur `OutOfSync`, bis die Daten pro App manuell
-migriert werden.
+Aktuell auf `nas`: `n8n`, `paperless-ngx` (5× — data/media/consume/export/
+redis), `wikijs` (postgresql), `zammad` (nur redis, nicht die primary DB —
+siehe unten), `mealie`, `grocy`, `minio` — insgesamt 11 PVCs über 7 Apps.
+
+**Nicht (mehr) auf `nas`, bewusst auf `local-path`:** `monitoring` (vmsingle)
+und `uptime-kuma` wurden versuchsweise migriert, dann aber zurück auf
+`local-path` gestellt, nachdem das NAS auf `all_squash` umgestellt wurde und
+beide Apps mit "permission denied" abstürzten (siehe Kommentare in den
+jeweiligen `values.yaml`). `zammad`s PostgreSQL-Primary läuft aus demselben
+Grund von Anfang an auf `local-path` (siehe Kommentar dort) — nur der
+Redis-Sub-Chart von Zammad ist auf `nas`. Vor einer erneuten Migration dieser
+drei Workloads erst klären, ob/wie sich das `all_squash`-Problem lösen lässt.
+
+`storageClassName` ist auf bestehenden PVCs unveränderlich — `values.yaml`-
+Änderungen allein bewirken nichts: ArgoCD zeigt dann nur `OutOfSync`, bis die
+Daten pro App manuell migriert werden (Ablauf unten).
 
 **Voraussetzung:** `nas-storage`-App ist deployt, `kubectl get storageclass
 nas` existiert, NFS-Export ist erreichbar (siehe oben).

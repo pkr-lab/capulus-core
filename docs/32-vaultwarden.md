@@ -40,7 +40,7 @@ Ein Klartext-`ADMIN_TOKEN` funktioniert, ist aber anfällig für
 Timing-Angriffe. Vaultwarden empfiehlt stattdessen einen Argon2-PHC-Hash:
 
 ```bash
-sudo docker run --rm -it vaultwarden/server:1.36.0 /vaultwarden hash
+sudo docker run --rm -it vaultwarden/server:1.37.1 /vaultwarden hash
 ```
 
 > **`-it` nicht vergessen** — ohne TTY/stdin bricht der Passwort-Prompt mit
@@ -187,7 +187,7 @@ später gewünscht.
 ## 6. Admin-Token rotieren
 
 ```bash
-docker run --rm vaultwarden/server:1.36.0 /vaultwarden hash
+docker run --rm vaultwarden/server:1.37.1 /vaultwarden hash
 ```
 
 Neuen Hash mit `kubeseal` versiegeln (Schritt 1.2), `encryptedAdminToken` in
@@ -196,26 +196,22 @@ Secret im Cluster löschen, falls ArgoCD es nicht automatisch prunt.
 
 ---
 
-## 7. Migration auf NAS-Storage
+## 7. Warum kein NAS-Storage für die Haupt-PVC
 
-`persistence.storageClassName` in `argocd/apps/vaultwarden/values.yaml`
-steht jetzt auf `nas` statt `local-path` (Homeserver-System-SSD) — damit
-liegt der Tresor künftig auf dem UGREEN NAS wie der Großteil der übrigen
-Apps (siehe [docs/16-nas-storage.md](16-nas-storage.md)). `storageClassName`
-ist auf einer bestehenden PVC **unveränderlich**: der reine `values.yaml`-
-Commit bewirkt noch keine Migration, ArgoCD zeigt nur `OutOfSync`, bis die
-Daten manuell umgezogen werden.
+Eine Migration von `persistence.storageClassName` auf die NFS-`nas`-
+StorageClass (wie beim Großteil der übrigen Apps, siehe
+[docs/16-nas-storage.md](16-nas-storage.md)) wurde erwogen, aber **bewusst
+verworfen**: das NAS erzwingt inzwischen `all_squash` (kein
+`no_root_squash` mehr verfügbar), was bei Vaultwardens SQLite-Datei zu
+Permission-Problemen führt — siehe Kommentar in
+`argocd/apps/vaultwarden/values.yaml`. Die Haupt-PVC bleibt daher auf
+`local-path` (Homeserver-System-SSD).
 
-Ablauf identisch zum generischen Migrations-Runbook — nur mit
-`NS=vaultwarden`, `APP_KIND=deployment`, `APP_NAME=vaultwarden`,
-`OLD_PVC=vaultwarden-data` (Namen vorher mit `kubectl -n vaultwarden get
-pvc,deploy` gegenprüfen):
-**[docs/16-nas-storage.md → Migrations-Runbook](16-nas-storage.md#migrations-runbook-hdd-worker-0sda--nas-nas)**
-
-Da Vaultwarden SQLite nutzt (siehe Architektur oben), unbedingt vor
-Schritt 2 (Herunterskalieren) sicherstellen, dass gerade keine
-Bitwarden-Clients aktiv syncen — offene Schreibvorgänge während der
-Migration führen sonst potenziell zu einer inkonsistenten Kopie.
+Stattdessen sichert ein nächtlicher `backup`-CronJob (eigene PVC, bewusst
+`storageClassName: nas`, siehe `backup-cronjob.yaml`) die SQLite-Datenbank
+per `sqlite3 .backup` (nutzt SQLites eigene Online-Backup-API, sicher auch
+bei einer laufenden, offenen DB) auf das NAS — Details:
+[docs/36-nas-backup.md](36-nas-backup.md).
 
 ---
 

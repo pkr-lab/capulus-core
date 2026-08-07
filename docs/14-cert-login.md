@@ -32,12 +32,32 @@ Benutzername + Passwort (oder TOTP) bleibt der Identity-Schritt.
 
 | Dienst          | Typ           | Status                          |
 |-----------------|---------------|---------------------------------|
-| Grafana         | OIDC          | bereits konfiguriert            |
-| Headlamp        | OIDC          | PR: feat/headlamp-oidc          |
-| Argo Workflows  | OIDC SSO      | PR: feat/argo-workflows-sso     |
-| MinIO           | OIDC          | PR: feat/minio-oidc             |
-| Gotify          | Forward Auth  | PR: feat/gotify-forwardauth     |
-| Semaphore       | Forward Auth  | PR: feat/semaphore-forwardauth  |
+| Grafana         | OIDC          | konfiguriert (reale Secrets im Cluster), aber laut Betreiber kein genutzter Login-Weg |
+| Headlamp        | OIDC          | konfiguriert (reale Secrets im Cluster), aber laut Betreiber kein genutzter Login-Weg |
+| MinIO           | OIDC          | konfiguriert (reale Secrets im Cluster), aber laut Betreiber kein genutzter Login-Weg |
+| Gotify          | Forward Auth  | live, aktiv genutzt             |
+| Semaphore       | Forward Auth  | live, aktiv genutzt             |
+| Argo Workflows  | OIDC SSO      | noch nicht aktiviert — `sso.enabled: false` in `argocd/apps/argo-workflows/values.yaml` (`authModes: [server]`) |
+
+> **Realitäts-Check (Stand: dieser Commit):** Betrieblich genutzt wird nur
+> **Forward Auth** (Gotify, Semaphore) über die Authentik-Middleware. Für
+> Grafana/Headlamp/MinIO liegen zwar reale (nicht-Platzhalter) OIDC-Secrets
+> im Cluster — der Betreiber nutzt diesen Login-Weg aber nicht aktiv, die
+> Config ist vorhanden, ohne der primäre Zugriffsweg zu sein. Argo Workflows
+> hat noch gar keine SSO-Anbindung. Der **mTLS-Teil (Schritt 2–4) wurde dagegen nie wie unten beschrieben
+> gebaut.** Was stattdessen existiert: eine deutlich leichtere, nur auf den
+> `authentik`-Namespace beschränkte `TLSOption` (`authentik-mtls`,
+> `RequestClientCert` = optional, **kein** Fehlschlag bei fehlendem Zert) in
+> `argocd/apps/authentik/templates/traefik-tls-option.yaml` — und die dazu
+> nötige Ingress-Annotation ist dort aktuell **auskommentiert**, die
+> TLSOption ist also im Cluster vorhanden, aber an keinem Ingress aktiv.
+> Es gibt kein `argocd/apps/traefik-mtls/`, keine `homelab-ca`-SealedSecret
+> in `kube-system` und kein verpflichtendes `RequireAndVerifyClientCert` für
+> mehrere Dienste. Die Schritte 2–4 unten bleiben als Plan gültig, falls das
+> vollständige Mandatory-mTLS-Setup doch noch umgesetzt werden soll — bau
+> aber nicht parallel eine zweite TLSOption, sondern erweitere/aktiviere die
+> bestehende `authentik-mtls` bzw. entscheide bewusst, sie durch die volle
+> `traefik-mtls`-Variante zu ersetzen.
 
 ---
 
@@ -307,9 +327,12 @@ zu Authentik weiter.
 
 ---
 
-### Headlamp
+### Headlamp (konfiguriert, kein aktiv genutzter Login-Weg)
 
-Voraussetzung: PR **feat/headlamp-oidc** gemergt.
+Config bereits vorhanden (`argocd/apps/headlamp/values.yaml` →
+`config.oidc.externalSecret`), OIDC ist aber laut Betreiber nicht der
+tatsächlich genutzte Zugriffsweg. Schritte hier nur zur Referenz, falls das
+Secret einmal rotiert werden muss.
 
 #### 6.1 — Provider in Authentik anlegen
 
@@ -339,9 +362,11 @@ Ausgabe in `argocd/apps/headlamp/templates/oidc-sealedsecret.yaml` eintragen
 
 ---
 
-### Argo Workflows
+### Argo Workflows (noch offen)
 
-Voraussetzung: PR **feat/argo-workflows-sso** gemergt.
+Einziger Dienst aus dieser Liste, der noch nicht umgestellt ist —
+`argocd/apps/argo-workflows/values.yaml` hat `sso.enabled: false` mit einem
+`TODO`-Kommentar, `authModes` steht noch auf `[server]`.
 
 #### 6.3 — Provider anlegen
 
@@ -368,9 +393,12 @@ Ausgabe in `argocd/apps/argo-workflows/templates/sso-sealedsecret.yaml` eintrage
 
 ---
 
-### MinIO
+### MinIO (konfiguriert, kein aktiv genutzter Login-Weg)
 
-Voraussetzung: PR **feat/minio-oidc** gemergt.
+Config bereits vorhanden (`argocd/apps/minio/values.yaml` →
+`oidc.enabled: true`), OIDC ist aber laut Betreiber nicht der tatsächlich
+genutzte Zugriffsweg. Schritte hier nur zur Referenz, falls das Secret
+einmal rotiert werden muss.
 
 #### 6.5 — Provider anlegen
 
@@ -397,9 +425,10 @@ Ausgabe in `argocd/apps/minio/templates/oidc-sealedsecret.yaml` eintragen.
 
 ---
 
-### Gotify
+### Gotify (bereits live)
 
-Voraussetzung: PR **feat/gotify-forwardauth** gemergt.
+Bereits konfiguriert — reale `authentik-authentik-forwardauth@kubernetescrd`
+Middleware-Annotation in `argocd/apps/gotify/values.yaml`.
 
 #### 6.7 — Forward-Auth-Provider anlegen
 
@@ -411,9 +440,10 @@ Voraussetzung: PR **feat/gotify-forwardauth** gemergt.
 
 ---
 
-### Semaphore
+### Semaphore (bereits live)
 
-Voraussetzung: PR **feat/semaphore-forwardauth** gemergt.
+Bereits konfiguriert — reale `authentik-authentik-forwardauth@kubernetescrd`
+Middleware-Annotation in `argocd/apps/semaphore/values.yaml`.
 
 #### 6.8 — Forward-Auth-Provider anlegen
 

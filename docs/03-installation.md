@@ -86,10 +86,6 @@ $EDITOR ansible/group_vars/all.yml
 | `hostname`                  | `homeserver`  | Hostname des Servers                                                   |
 | `dnsmasq_hosts`             | App-Liste     | Hostnamen, die von `dnsmasq` unter `*.homeserver` aufgelöst werden     |
 | `semaphore_vault_password`  | Vault-Block   | Ansible-Vault-Passwort, das Semaphore zur Laufzeit zum Decrypten nutzt |
-| `scanner_usb_vendor_id` / `scanner_usb_product_id` | leer | USB-IDs aus `lsusb` — Pflicht, wenn die Scanner-Rolle aktiv ist     |
-| `scanner_smb_share` / `scanner_smb_username` / `scanner_smb_password` | — | NAS-Share + Creds für das Paperless-`consume`-Verzeichnis    |
-| `scanner_gotify_enabled`    | `false`       | Gotify-Push-Notifications aus der Scan-Pipeline ein/aus                |
-| `scanner_gotify_url` / `scanner_gotify_token` | — | Gotify-Endpoint + (vault-verschlüsselter) App-Token                  |
 | `gotify_admin_password`     | Vault-Block   | Optional: Gotify-Admin-Passwort als Vault-Eintrag aufbewahren          |
 
 > **Tipp.** `auto_upgrade: false` setzen, wenn Reproduzierbarkeit wichtig ist
@@ -187,13 +183,15 @@ Vault-Passwort eingeben, wenn abgefragt.
 3. **tailscale** (~1 min) — Installiert Tailscale, joint das Tailnet mit dem vault-verschlüsselten Auth-Key.
 4. **k3s** (~5 min) — Installiert k3s, schreibt die kubeconfig, installiert Helm.
 5. **argocd** (~10 min) — Deployt ArgoCD per Helm-Chart und appliziert das Root-`ApplicationSet`.
-6. **scanner** (~2 min) — Installiert `sane` + `scanbd`, mountet die NAS per CIFS, verdrahtet den Fujitsu-USB-Scanner (braucht `scanner_usb_vendor_id`/`scanner_usb_product_id`).
-7. **semaphore_secrets** (~30 s) — Rendert das Bootstrap-Secret, das der in-Cluster-Semaphore-Pod liest.
+6. **semaphore_secrets** (~30 s) — Rendert das Bootstrap-Secret, das der in-Cluster-Semaphore-Pod liest.
+7. **thermal_watchdog** / **resource_watchdog** (~30 s) — Selbst-Abschaltung bei Übertemperatur bzw. Dauerlast.
+8. **cluster_power_manager** / **power_agent** (~30 s) — Wake-on-LAN-Steuerung der Worker je nach Last, HTTP-API für Helligkeit/Wake/Shutdown aus der iOS-App.
+9. **cups_print_server** (~1 min) — Richtet CUPS + Treiber für die per USB angeschlossenen Drucker ein (siehe [docs/38-printer.md](38-printer.md)).
 
 Im Anschluss an die host-zentrischen Rollen laufen zwei zusätzliche Plays:
 
-8. **semaphore_targets** (~30 s pro Target-Host) — Pusht den Semaphore-SSH-Public-Key in jeden Host der Inventory-Gruppe `semaphore_targets`.
-9. **semaphore_bootstrap** (~1 min) — Spricht die Semaphore-REST-API auf dem Home-Server an und legt Projects, Keys, Repositories, Inventories und Templates idempotent an.
+10. **semaphore_targets** (~30 s pro Target-Host) — Pusht den Semaphore-SSH-Public-Key in jeden Host der Inventory-Gruppe `semaphore_targets`.
+11. **semaphore_bootstrap** (~1 min) — Spricht die Semaphore-REST-API auf dem Home-Server an und legt Projects, Keys, Repositories, Inventories und Templates idempotent an.
 
 Am Ende druckt das Playbook eine Summary mit den URLs.
 

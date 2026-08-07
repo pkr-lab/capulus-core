@@ -12,8 +12,8 @@ und Timeline-Ansicht. Die Deployment-Konfiguration liegt unter
 
 | Komponente             | Technologie                                          | Namespace |
 |-------------------------|--------------------------------------------------------|-----------|
-| immich-server            | `ghcr.io/immich-app/immich-server:v3.0.3`              | `immich`  |
-| immich-machine-learning  | `ghcr.io/immich-app/immich-machine-learning:v3.0.3` (Gesichtserkennung, CLIP-Suche, reine CPU) | `immich`  |
+| immich-server            | `ghcr.io/immich-app/immich-server:v3.1.0`              | `immich`  |
+| immich-machine-learning  | `ghcr.io/immich-app/immich-machine-learning:v3.1.0` (Gesichtserkennung, CLIP-Suche, reine CPU) | `immich`  |
 | Datenbank                | PostgreSQL 14 + VectorChord (`ghcr.io/immich-app/postgres`) | `immich`  |
 | Job-Queue                | Valkey (Redis-kompatibel)                               | `immich`  |
 | Ingress                  | Traefik                                                | `immich`  |
@@ -205,8 +205,7 @@ server:
       readOnly: true
 ```
 
-Weitere, unabhängige Ordner lassen sich über `extraMounts` einbinden (analog
-zu Jellyfins `media.extraMounts`, siehe [docs/34-jellyfin.md](34-jellyfin.md)):
+Weitere, unabhängige Ordner lassen sich über `extraMounts` einbinden:
 
 ```yaml
     extraMounts:
