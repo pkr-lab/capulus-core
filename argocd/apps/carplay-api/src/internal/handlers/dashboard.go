@@ -21,12 +21,13 @@ import (
 // carries its own short timeout inside its client (see internal/clients);
 // overallTimeout is the outer budget across all three combined.
 type DashboardHandler struct {
-	vm    *clients.VictoriaMetricsClient
-	ntfy  *clients.NtfyClient
-	kuma  *clients.UptimeKumaClient
-	hosts []clients.HostConfig
-	cache *cache.TTLCache[models.DashboardResponse]
-	stats *metrics.Registry
+	vm       *clients.VictoriaMetricsClient
+	ntfy     *clients.NtfyClient
+	kuma     *clients.UptimeKumaClient
+	hosts    []clients.HostConfig
+	services []clients.ServiceConfig
+	cache    *cache.TTLCache[models.DashboardResponse]
+	stats    *metrics.Registry
 
 	overallTimeout time.Duration
 	ntfyLimit      int
@@ -40,6 +41,7 @@ func NewDashboardHandler(
 	ntfy *clients.NtfyClient,
 	kuma *clients.UptimeKumaClient,
 	hosts []clients.HostConfig,
+	services []clients.ServiceConfig,
 	cacheTTL, overallTimeout time.Duration,
 	ntfyLimit int,
 	ntfySince string,
@@ -51,6 +53,7 @@ func NewDashboardHandler(
 		ntfy:           ntfy,
 		kuma:           kuma,
 		hosts:          hosts,
+		services:       services,
 		cache:          cache.New[models.DashboardResponse](cacheTTL),
 		stats:          stats,
 		overallTimeout: overallTimeout,
@@ -74,9 +77,10 @@ func (h *DashboardHandler) Handle(c *gin.Context) {
 	alerts := []models.Alert{}
 	statuses := []models.ServiceStatus{}
 	var hostMetrics []models.HostMetrics
+	var serviceActivity []models.ServiceActivity
 
 	var wg sync.WaitGroup
-	wg.Add(3)
+	wg.Add(4)
 
 	go func() {
 		defer wg.Done()
@@ -106,13 +110,22 @@ func (h *DashboardHandler) Handle(c *gin.Context) {
 		statuses = result
 	}()
 
+	go func() {
+		defer wg.Done()
+		// Degrades internally too (query failure -> every service at 0
+		// requests/s, logged inside GetServiceActivity) — same
+		// no-all-or-nothing-failure reasoning as the host metrics above.
+		serviceActivity = h.vm.GetServiceActivity(ctx, h.services)
+	}()
+
 	wg.Wait()
 
 	response := models.DashboardResponse{
-		Alerts:    alerts,
-		Hosts:     hostMetrics,
-		Status:    statuses,
-		UpdatedAt: time.Now().Unix(),
+		Alerts:          alerts,
+		Hosts:           hostMetrics,
+		Status:          statuses,
+		ServiceActivity: serviceActivity,
+		UpdatedAt:       time.Now().Unix(),
 	}
 
 	h.cache.Set(response)

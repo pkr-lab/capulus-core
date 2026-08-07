@@ -50,7 +50,7 @@ func run(cfg config, logger *slog.Logger) error {
 
 	stats := metrics.NewRegistry()
 	dashboardHandler := handlers.NewDashboardHandler(
-		vm, ntfy, kuma, cfg.hosts,
+		vm, ntfy, kuma, cfg.hosts, cfg.services,
 		cfg.cacheTTL, cfg.apiTimeout,
 		cfg.ntfyLimit, cfg.ntfySince,
 		stats, logger,
@@ -171,8 +171,9 @@ type config struct {
 	rateLimitPerMinute int
 	trustedProxies     []string
 
-	vmURL string
-	hosts []clients.HostConfig
+	vmURL    string
+	hosts    []clients.HostConfig
+	services []clients.ServiceConfig
 
 	ntfyURL   string
 	ntfyTopic string
@@ -214,6 +215,21 @@ func loadConfig() config {
 				"worker-0|Worker 0|192.168.178.95:9100,"+
 				"worker-1|Worker 1|192.168.178.96:9100,"+
 				"nas|NAS|192.168.178.97:9100",
+		)),
+		// Default list mirrors the iOS app's Kurzlink-Kacheln
+		// (Constants.SelfHostedServices) — Match is a substring of the raw
+		// Traefik "service" metric label (see clients.ServiceConfig on why
+		// it's a substring, not an exact match).
+		services: parseServices(getEnv("SERVICES",
+			"nextcloud|Nextcloud|nextcloud,"+
+				"immich|Immich|immich,"+
+				"vaultwarden|Vaultwarden|vaultwarden,"+
+				"paperless|Paperless-ngx|paperless,"+
+				"mealie|Mealie|mealie,"+
+				"grocy|Grocy|grocy,"+
+				"n8n|n8n|n8n,"+
+				"wikijs|Wiki.js|wikijs,"+
+				"zammad|Zammad|zammad",
 		)),
 
 		ntfyURL:   getEnv("NTFY_URL", "http://ntfy.ntfy.svc.cluster.local"),
@@ -257,6 +273,30 @@ func parseHosts(v string) []clients.HostConfig {
 		})
 	}
 	return hosts
+}
+
+// parseServices reads the "id|name|match,id|name|match,..." format SERVICES
+// uses (values.yaml config.services), same shape as parseHosts. match is a
+// substring of the raw Traefik "service" metric label, see
+// clients.ServiceConfig.
+func parseServices(v string) []clients.ServiceConfig {
+	var services []clients.ServiceConfig
+	for _, entry := range strings.Split(v, ",") {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		parts := strings.SplitN(entry, "|", 3)
+		if len(parts) != 3 {
+			continue
+		}
+		services = append(services, clients.ServiceConfig{
+			ID:    strings.TrimSpace(parts[0]),
+			Name:  strings.TrimSpace(parts[1]),
+			Match: strings.TrimSpace(parts[2]),
+		})
+	}
+	return services
 }
 
 func getEnv(key, fallback string) string {

@@ -19,6 +19,11 @@ data:
   {{- $hostEntries = append $hostEntries (printf "%s|%s|%s" .id .name .instance) }}
   {{- end }}
   HOSTS: {{ join "," $hostEntries | quote }}
+  {{- $serviceEntries := list }}
+  {{- range .Values.config.services }}
+  {{- $serviceEntries = append $serviceEntries (printf "%s|%s|%s" .id .name .match) }}
+  {{- end }}
+  SERVICES: {{ join "," $serviceEntries | quote }}
   NTFY_URL: {{ .Values.config.ntfy.url | quote }}
   NTFY_TOPIC: {{ .Values.config.ntfy.topic | quote }}
   NTFY_SINCE: {{ .Values.config.ntfy.sinceWindow | quote }}
