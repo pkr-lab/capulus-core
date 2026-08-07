@@ -146,7 +146,13 @@ config:
 
   ntfy:
     url: "http://ntfy.ntfy.svc.cluster.local"
-    topic: "alerts"
+    # Comma-separated — ntfy's polling endpoint natively supports subscribing
+    # multiple topics this way (GET /topic1,topic2/json). These are the two
+    # topics that actually receive messages: Home-Lab (Alertmanager
+    # severity=critical, via argocd/apps/ntfy-bridge) and Home-Lab-System
+    # (thermal_watchdog/resource_watchdog/cluster_power_manager on the host).
+    # "alerts" (the old default) has no publisher — nothing ever showed up.
+    topic: "Home-Lab,Home-Lab-System"
     sinceWindow: "12h"
     alertLimit: "10"
 
