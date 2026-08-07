@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "xibosignage.cms.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "xibosignage.cms.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.cms.replicaCount }}
+  # RWO-PVCs (library/state): kein zweiter Pod darf parallel schreiben,
+  # während der alte noch terminiert.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "xibosignage.cms.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "xibosignage.cms.selectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.cms.securityContext | nindent 8 }}
+      {{- with .Values.cms.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.cms.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.cms.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: cms
+          image: "{{ .Values.cms.image.repository }}:{{ .Values.cms.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.cms.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.cms.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: MYSQL_HOST
+              value: {{ include "xibosignage.mysql.fullname" . | quote }}
+            - name: MYSQL_DATABASE
+              value: {{ .Values.mysql.database | quote }}
+            - name: MYSQL_USER
+              value: {{ .Values.mysql.username | quote }}
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: db-password
+            - name: XMR_HOST
+              value: {{ include "xibosignage.xmr.fullname" . | quote }}
+            - name: MEMCACHED_HOST
+              value: {{ include "xibosignage.memcached.fullname" . | quote }}
+            - name: MEMCACHED_PORT
+              value: "11211"
+            {{- if .Values.quickchart.enabled }}
+            - name: CMS_QUICK_CHART_URL
+              value: {{ printf "http://%s:3400" (include "xibosignage.quickchart.fullname" .) | quote }}
+            {{- end }}
+            {{- range $key, $val := .Values.cms.env }}
+            - name: {{ $key }}
+              value: {{ $val | quote }}
+            {{- end }}
+          # Das CMS-Image führt DB-Migrationen + das Install-Bootstrapping
+          # beim allerersten Start durch — kann mehrere Minuten dauern,
+          # daher großzügige initialDelaySeconds/failureThreshold.
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.cms.resources | nindent 12 }}
+          volumeMounts:
+            {{- if .Values.cms.persistence.library.enabled }}
+            - name: library
+              mountPath: /var/www/cms/library
+            {{- end }}
+            {{- if .Values.cms.persistence.state.enabled }}
+            - name: state
+              mountPath: /var/www/cms/custom
+              subPath: custom
+            - name: state
+              mountPath: /var/www/backup
+              subPath: backup
+            - name: state
+              mountPath: /var/www/cms/web/userscripts
+              subPath: userscripts
+            - name: state
+              mountPath: /var/www/cms/ca-certs
+              subPath: ca-certs
+            {{- end }}
+      volumes:
+        {{- if .Values.cms.persistence.library.enabled }}
+        - name: library
+          persistentVolumeClaim:
+            claimName: {{ include "xibosignage.cms.fullname" . }}-library
+        {{- end }}
+        {{- if .Values.cms.persistence.state.enabled }}
+        - name: state
+          persistentVolumeClaim:
+            claimName: {{ include "xibosignage.cms.fullname" . }}-state
+        {{- end }}

@@ -60,6 +60,12 @@ spec:
           volumeMounts:
             - name: data
               mountPath: {{ .Values.persistence.mountPath }}
+            {{- if .Values.xibosignage.enabled }}
+            - name: xibosignage-inbox
+              mountPath: {{ .Values.xibosignage.inbox.mountPath }}
+            - name: xibosignage-display
+              mountPath: {{ .Values.xibosignage.display.mountPath }}
+            {{- end }}
       volumes:
         - name: data
           {{- if .Values.persistence.enabled }}
@@ -68,6 +74,14 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
+        {{- if .Values.xibosignage.enabled }}
+        - name: xibosignage-inbox
+          persistentVolumeClaim:
+            claimName: xibosignage-inbox-data
+        - name: xibosignage-display
+          persistentVolumeClaim:
+            claimName: xibosignage-display-data
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
