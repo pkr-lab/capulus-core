@@ -12,6 +12,8 @@ final class DashboardViewModel: ObservableObject {
     @Published private(set) var error: String?
     @Published private(set) var lastUpdate: Date?
 
+    @Published private(set) var appUpdates: [AppUpdate] = []
+
     private var refreshTask: Task<Void, Never>?
     private let apiClient = HomeserverAPIClient()
     private let refreshInterval: TimeInterval = Constants.refreshInterval
@@ -51,5 +53,19 @@ final class DashboardViewModel: ObservableObject {
         }
 
         isLoading = false
+    }
+
+    /// Not part of the 30s auto-refresh loop — carplay-api caches this for
+    /// 15 min server-side and the watcher behind it only runs every 2h, so
+    /// polling it that often would just hit the cache for nothing. Called
+    /// once per HomeView appearance / pull-to-refresh instead.
+    func fetchUpdates() async {
+        do {
+            appUpdates = try await apiClient.getUpdates().repos
+        } catch {
+            // Silent failure by design: this is a "nice to know" card, not
+            // core dashboard data — an error here shouldn't show a banner
+            // on top of the fleet overview. Just keep the last-known list.
+        }
     }
 }

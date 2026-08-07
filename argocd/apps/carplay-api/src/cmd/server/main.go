@@ -58,6 +58,20 @@ func run(cfg config, logger *slog.Logger) error {
 	healthHandler := handlers.NewHealthHandler(cfg.vmURL, cfg.ntfyURL, cfg.kumaURL, 2*time.Second)
 	powerHandler := handlers.NewPowerHandler(powerAgent, cfg.shutdownConfirmationCode, logger)
 
+	// Only available when actually running in-cluster (needs the mounted
+	// ServiceAccount token) — nil here just means GET /api/updates always
+	// returns an empty list instead of failing the whole binary, e.g. for
+	// local `go run` outside k3s.
+	k8sConfigMaps, err := clients.NewK8sConfigMapClient()
+	if err != nil {
+		logger.Warn("k8s in-cluster client unavailable, /api/updates will always be empty", "error", err)
+		k8sConfigMaps = nil
+	}
+	updatesHandler := handlers.NewUpdatesHandler(
+		k8sConfigMaps, cfg.updatesNamespace, cfg.updatesConfigMapName,
+		cfg.updatesCacheTTL, logger,
+	)
+
 	router := gin.New()
 	if err := router.SetTrustedProxies(cfg.trustedProxies); err != nil {
 		return fmt.Errorf("setting trusted proxies: %w", err)
@@ -87,6 +101,7 @@ func run(cfg config, logger *slog.Logger) error {
 		logger.Warn("CARPLAY_API_TOKEN not set — /api/dashboard is running WITHOUT authentication")
 	}
 	api.GET("/dashboard", dashboardHandler.Handle)
+	api.GET("/updates", updatesHandler.Handle)
 	api.GET("/brightness", powerHandler.GetBrightness)
 	api.PUT("/brightness", powerHandler.SetBrightness)
 	api.POST("/power/wake", powerHandler.Wake)
@@ -159,7 +174,7 @@ func newTraceID() string {
 }
 
 type config struct {
-	port    string
+	port     string
 	logLevel slog.Level
 
 	cacheTTL   time.Duration
@@ -183,6 +198,13 @@ type config struct {
 
 	kumaURL  string
 	kumaSlug string
+
+	// See argocd/apps/github-release-watcher — different namespace than
+	// this pod, read via the in-cluster k8s API + a cross-namespace
+	// RoleBinding (role.yaml "...-updates-reader"), not HTTP.
+	updatesNamespace     string
+	updatesConfigMapName string
+	updatesCacheTTL      time.Duration
 
 	powerAgentURL     string
 	powerAgentToken   string
@@ -240,6 +262,10 @@ func loadConfig() config {
 
 		kumaURL:  getEnv("UPTIME_KUMA_URL", "http://uptime-kuma.uptime-kuma.svc.cluster.local"),
 		kumaSlug: getEnv("UPTIME_KUMA_SLUG", "homeserver"),
+
+		updatesNamespace:     getEnv("UPDATES_NAMESPACE", "github-release-watcher"),
+		updatesConfigMapName: getEnv("UPDATES_CONFIGMAP_NAME", "github-release-watcher-updates"),
+		updatesCacheTTL:      time.Duration(getEnvInt("UPDATES_CACHE_TTL", 900)) * time.Second,
 
 		powerAgentURL:     getEnv("POWER_AGENT_URL", "http://192.168.178.94:9101"),
 		powerAgentToken:   os.Getenv("POWER_AGENT_TOKEN"),

@@ -30,5 +30,8 @@ data:
   NTFY_LIMIT: {{ .Values.config.ntfy.alertLimit | quote }}
   UPTIME_KUMA_URL: {{ .Values.config.uptimeKuma.url | quote }}
   UPTIME_KUMA_SLUG: {{ .Values.config.uptimeKuma.slug | quote }}
+  UPDATES_NAMESPACE: {{ .Values.config.updates.namespace | quote }}
+  UPDATES_CONFIGMAP_NAME: {{ .Values.config.updates.configMapName | quote }}
+  UPDATES_CACHE_TTL: {{ .Values.config.updates.cacheTTLSeconds | quote }}
   POWER_AGENT_URL: {{ .Values.config.powerAgent.url | quote }}
   POWER_AGENT_TIMEOUT: {{ .Values.config.powerAgent.timeoutSeconds | quote }}

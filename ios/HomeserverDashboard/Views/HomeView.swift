@@ -27,6 +27,8 @@ struct HomeView: View {
 
                         ServiceActivityCard(activity: viewModel.dashboard?.serviceActivity ?? [])
 
+                        UpdatesCard(updates: viewModel.appUpdates)
+
                         if let lastUpdate = viewModel.lastUpdate {
                             Text("Aktualisiert \(FormatterHelper.relativeTime(Int64(lastUpdate.timeIntervalSince1970)))")
                                 .font(.system(size: 12))
@@ -39,10 +41,13 @@ struct HomeView: View {
             }
             .navigationTitle("Homeserver")
             .refreshable {
-                await viewModel.fetchDashboard()
+                async let dashboard: Void = viewModel.fetchDashboard()
+                async let updates: Void = viewModel.fetchUpdates()
+                _ = await (dashboard, updates)
             }
             .task {
                 viewModel.startAutoRefresh()
+                await viewModel.fetchUpdates()
             }
             .sheet(item: Binding(
                 get: { selectedService.map(ServiceStatusDetailItem.init) },
@@ -124,6 +129,74 @@ private struct ServiceActivityRow: View {
                     }
             }
             .frame(height: 8)
+        }
+    }
+}
+
+/// Welche self-hosted Apps eine neuere GitHub-Version haben als die in
+/// github-release-watcher/values.yaml hinterlegte currentVersion — siehe
+/// Models/AppUpdate.swift. hasUpdate == nil (noch keine currentVersion
+/// gepflegt) zeigt "unbekannt" statt fälschlich "aktuell".
+private struct UpdatesCard: View {
+    let updates: [AppUpdate]
+
+    private var available: [AppUpdate] { updates.filter { $0.hasUpdate == true } }
+    private var unknown: [AppUpdate] { updates.filter { $0.hasUpdate == nil } }
+
+    var body: some View {
+        if !updates.isEmpty {
+            SectionCard(title: "Updates", systemImage: "arrow.down.circle.fill") {
+                if available.isEmpty {
+                    Text("Alle Apps aktuell.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Theme.textMuted)
+                } else {
+                    VStack(spacing: 8) {
+                        ForEach(available) { update in
+                            UpdateRow(update: update)
+                        }
+                    }
+                }
+
+                if !unknown.isEmpty {
+                    Text("Kein bekannter aktueller Stand für \(unknown.map(\.name).joined(separator: ", ")) — currentVersion in github-release-watcher/values.yaml nachtragen.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Theme.textMuted)
+                }
+            }
+        }
+    }
+}
+
+private struct UpdateRow: View {
+    let update: AppUpdate
+
+    var body: some View {
+        Group {
+            if let url = update.latestURL {
+                Link(destination: url) { content }
+            } else {
+                content
+            }
+        }
+        .padding(10)
+        .background(Theme.glassBackgroundStrong)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous))
+    }
+
+    private var content: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(update.name)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Theme.textPrimary)
+                Text("\(update.currentVersion ?? "?") → \(update.latestVersion ?? "?")")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.textMuted)
+            }
+            Spacer()
+            Image(systemName: "arrow.up.circle.fill")
+                .foregroundStyle(Theme.statusWarning)
         }
     }
 }
