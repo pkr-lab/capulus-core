@@ -38,7 +38,7 @@ POWEROFF_BIN = os.environ.get("POWEROFF_BIN", "/usr/sbin/poweroff")
 # can be eyeballed side by side.
 TARGETS = {}
 for entry in os.environ.get("TARGETS", "").split():
-    name, ip, mac = entry.split(":")
+    name, ip, mac = entry.split(":", 2)
     TARGETS[name] = {"ip": ip, "mac": mac}
 
 os.environ["KUBECONFIG"] = KUBECONFIG_PATH
