@@ -1,6 +1,6 @@
 ---
 # ============================================================
-# carplay-api — Backend für das Homeserver-CarPlay-Dashboard.
+# carplay-api — Backend für die iOS-App Homeserver Dashboard.
 # Setup-/Betriebsanleitung: docs/43-carplay-api.md
 # ============================================================
 
@@ -22,7 +22,7 @@ imagePullSecrets:
 nameOverride: ""
 fullnameOverride: ""
 
-# Ein einzelner CarPlay-Client pollt alle 30s — Autoscaling bringt hier
+# Ein einzelner App-Client pollt alle 30s — Autoscaling bringt hier
 # nichts, würde nur die Upstream-Last (VictoriaMetrics/ntfy/Uptime-Kuma)
 # vervielfachen. Struktur bleibt für den Bedarfsfall stehen.
 autoscaling:
@@ -113,13 +113,36 @@ config:
 
   victoriaMetrics:
     url: "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428"
-    # Regex-Alternation der instance-Labels, die aggregiert werden. Die
-    # node-exporter-Targets in diesem Cluster tragen "IP:9100" als
-    # instance-Label (kein Hostname-Relabeling wie bei argocd/apps/glance
-    # angenommen) — per 2026-08-03 nur ein Node (192.168.178.94:9100),
-    # kein worker-0/worker-1. Matcht auf den Port statt feste Hostnamen,
-    # damit künftige Worker-Nodes automatisch mit reinkommen.
-    instanceFilter: ".*:9100"
+
+  # Ein Eintrag pro Host-Karte auf der App-Startseite. instance muss exakt
+  # dem VictoriaMetrics-"instance"-Label des node-exporter-Targets
+  # entsprechen (in diesem Cluster "IP:9100", kein Hostname-Relabeling) —
+  # mit `curl vmsingle.../api/v1/targets` prüfen, falls ein Host nie als
+  # "online" erscheint. Ein Host, der (noch) nicht gescraped wird oder
+  # gerade aus ist, liefert einfach online:false statt eines Fehlers, siehe
+  # docs/43-carplay-api.md.
+  hosts:
+    - id: homeserver
+      name: "Homeserver"
+      instance: "192.168.178.94:9100"
+    - id: worker-0
+      name: "Worker 0"
+      instance: "192.168.178.95:9100"
+    - id: worker-1
+      name: "Worker 1"
+      instance: "192.168.178.96:9100"
+    - id: nas
+      name: "NAS"
+      instance: "192.168.178.97:9100"
+
+  # power-agent läuft NICHT im Cluster — es ist ein privilegierter Prozess
+  # direkt auf dem Homeserver-Host (ansible/roles/power_agent), der
+  # Bildschirmhelligkeit + Wake-on-LAN + Poweroff für die App ausführt, weil
+  # der carplay-api-Pod bewusst unprivilegiert läuft (siehe
+  # podSecurityContext/securityContext unten) und keinen Host-Zugriff hat.
+  powerAgent:
+    url: "http://192.168.178.94:9101"
+    timeoutSeconds: "8"
 
   ntfy:
     url: "http://ntfy.ntfy.svc.cluster.local"
@@ -158,6 +181,38 @@ secrets:
     secretName: carplay-api-ntfy-token
     secretKey: token
     encryptedData: "REPLACE_ME_WITH_KUBESEAL_OUTPUT"
+
+  # POWER_AGENT_TOKEN — Bearer-Token, mit dem carplay-api sich beim
+  # power-agent (ansible/roles/power_agent, läuft auf dem Homeserver-Host)
+  # authentifiziert. MUSS mit dem Token übereinstimmen, das die Rolle dort
+  # via power_agent_token in /etc/power-agent/config.env einträgt — beide
+  # Werte kommen aus demselben `openssl rand -hex 32`. Ohne dieses Secret
+  # schlagen Helligkeit/Wake/Shutdown mit 502 fehl, der Rest der App bleibt
+  # nutzbar. Erzeugen wie secrets.apiToken oben, nur mit anderem
+  # --name/Namespace-Secret-Namen.
+  powerAgentToken:
+    enabled: false
+    secretName: carplay-api-power-agent-token
+    secretKey: token
+    encryptedData: "RAgB9JNaZrlilWaCeS4DcgncyZoxIhf7S+IgNrSRwJ11aDyqejZvPPXzYKSBhv8cJVO2pcnfJUUmGsRA5apYD06VVQyTFXBWbtC6V3XNxh6yeY/B9T+e0rRXXTPel50lTKXLS8fIeYmj8Ad775s47dH6FJR9LX9ITGC2mGoWtyO1yG5mqB+U5jhtIK6e3Y9MvxMqDSc5J6d1y6WzS5K16EmbMKW6u2boW4Igsg0ldxboYjXXwUNd57aMuzxXMwbYhH9vrL4Sh7rkTN/jcMsPPR2LnLYMp4ffHPlGR0LLqhs+RlD0grhSwYQcSQrBmWcwQLEhv9pHZYuoO907dcZOqwFgQhkua77BK1anca2ovnVEHrBzfp2+x2qmrjL0mlqHa8He9Q+Y2FvVmbyw0D3oZqOQ8N++HKt6AxG86PoBUrX/jDiod3HRQ8q4iccnRXYIQLWVDC+uJSef8RhseemJQ5EQFPnPr7gLjc8GABXaFN7tz4Wt5m2CpUGlbUYuJtTVWNXrzEUOavQPkQN6gFIBztZNLmLLtmN/0eN6NQwYiwJtICKsxnGlMGIVTznq2dnYy3wpwiEZrNXCZoEz0zj92eEpbCjW9CqjTTECWj3w3C2ZrW6Lp2jeehyFgb5XuZoM5f+sXfYpGyt/z/C1TqZ8xN92fKJ7yGkwTWh8LzAjzq7dySuS/LMN1hRX4BOtng8NOOE76uFdtddhmFoY+oYpCVOiNbsSmlS+6iaj2cIBb7GR2gPh+XhsNa5F6Dugurir7cXuynLLBg4S8nbXDtdeviE9j"
+
+  # SHUTDOWN_CONFIRMATION_CODE — der Code, den die App vor einem
+  # Homeserver-Shutdown abfragt (siehe ios/README.md). Bewusst kein
+  # Live-Check gegen ArgoCD (kein RBAC/Netzwerkpfad von diesem Pod aus
+  # nötig) — stattdessen manuell auf denselben Wert wie das aktuelle
+  # ArgoCD-Admin-Passwort setzen (docs/05-argocd.md) und bei jeder
+  # Passwort-Rotation hier mit erneuern:
+  #   echo -n "<argocd-admin-passwort>" | kubeseal --raw \
+  #     --namespace carplay-api --name carplay-api-shutdown-code \
+  #     --cert ~/homelab-certs/sealed-secrets.pem --from-file=/dev/stdin
+  # Bleibt enabled:false, blockiert POST /api/power/shutdown für
+  # target=homeserver mit 503 (siehe internal/handlers/power.go) statt
+  # einen leeren Code stillschweigend zu akzeptieren.
+  shutdownConfirmationCode:
+    enabled: false
+    secretName: carplay-api-shutdown-code
+    secretKey: code
+    encryptedData: "AgAUqhhpdNTrLTyxJNGfnbPi2MwU+ELSOk5uJl+5bwx2FF167dClG8gVaV4zHqcPnHbsIUNhbkhEe1kYm5vT85HBIjqTpWGcn0IaFUiJa0JWeAVmDdUpexJe9jWSN4bB5r4JGOwWZQSw/5Ao425/DHxfoHvCI66mgj/bZuCAOtzRgain2CPZEQtHCso51xbVtXk5d8CO1dselCvFgrGWyvGNQYI6e30I9s6hD4P9ee7IIqeMr0ArtOljbwqsatH9/97xPTIaBfWoa3R9rmesgVEOWNB/WaaZZcGzavmpNlN8ciOTWpsWEtvl7MlBjHH0w/QRzMrMUOQUlNopZVPOrZZIUptRhYm+dhiGS/kkvltkTWppofH6Sl4Fy3Qh1QXfLAer2fJGeKKck/gXKmoodbLF5aVz2G5Msko8yssa2HDxa9+u3kYb1KAdlEjRfOs3yLzXKk5JRvr4icncYdxYPsQtX7M+K0S8daYbJrUL9aXO0Nc3ObG4jfAchGd1mVQSnLIojbz/oYxR7MCBqgR2OBSh5W/nOB/PEnEvmXEJ291JozdchxFIXRL+ETGLFZgCpPM8Krushq1L45iqmA2D148MgxWk3W9417yqMNDJvYOjcYcFN/pSDuCR5IZp6jLb1hEGRVF5E/4ooiz8Grm/FF4sgppI5qeyS4xVeyUmxf5FfsdfqzbdVRWE/NieCFiOefe5p5ECJPX34FyR/wyNh7/a"
 
 nodeSelector: {}
 tolerations: []

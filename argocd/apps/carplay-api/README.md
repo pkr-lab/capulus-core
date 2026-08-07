@@ -1,8 +1,12 @@
 # carplay-api
 
-Read-only aggregation API for the **Homeserver CarPlay Dashboard** iOS app.
-Combines VictoriaMetrics (system metrics), ntfy (alerts) and Uptime-Kuma
-(service status) into one payload, cached for 30s, served over Gin.
+Backend for the **Homeserver Dashboard** iOS app (a pure iPhone app — no
+CarPlay component; this directory/namespace kept its name from an earlier
+CarPlay-oriented cut of the project). Combines VictoriaMetrics (per-host
+metrics), ntfy (alerts) and Uptime-Kuma (service status) into one payload,
+cached for 30s, served over Gin — plus brightness and Wake-on-LAN/shutdown
+endpoints proxied to power-agent (`ansible/roles/power_agent`) on the
+homeserver host.
 
 Full setup/operations guide: [`docs/43-carplay-api.md`](../../../docs/43-carplay-api.md).
 
@@ -36,7 +40,16 @@ docs/43-carplay-api.md:
 |---|---|---|---|
 | GET | `/health` | none | Liveness/readiness. Always 200 if the process is up; body reports per-dependency reachability for diagnostics. |
 | GET | `/metrics` | none (ClusterIP-internal) | Prometheus text exposition: request counts/durations, cache hit/miss. |
-| GET | `/api/dashboard` | Bearer token (if `CARPLAY_API_TOKEN` set) | Combined alerts + metrics + status, cached 30s. |
+| GET | `/api/dashboard` | Bearer token (if `CARPLAY_API_TOKEN` set) | Combined alerts + per-host metrics + status, cached 30s. |
+| GET | `/api/brightness` | Bearer token | Current Homeserver screen brightness, proxied to power-agent. |
+| PUT | `/api/brightness` | Bearer token | Body `{"percent": 0-100}` — sets Homeserver screen brightness. |
+| POST | `/api/power/wake` | Bearer token | Body `{"target": "worker-0"\|"worker-1"}` — sends a WoL magic packet. |
+| POST | `/api/power/shutdown` | Bearer token | Body `{"target": "worker-0"\|"worker-1"\|"homeserver", "code"?: "..."}` — `code` required and checked against `SHUTDOWN_CONFIRMATION_CODE` only when `target` is `"homeserver"`. |
+
+Brightness and power endpoints are proxied to **power-agent**
+(`ansible/roles/power_agent`), a small privileged daemon on the bare
+Homeserver host — this pod runs unprivileged and has no host/sysfs/SSH
+access of its own, see [docs/43-carplay-api.md](../../../docs/43-carplay-api.md#power-agent).
 
 ## Configuration (environment variables)
 
@@ -52,7 +65,7 @@ docs/43-carplay-api.md:
 | `RATE_LIMIT_PER_MINUTE` | `100` | Per-client-IP fixed-window limit on `/api/*`. |
 | `TRUSTED_PROXIES` | *(empty = trust none)* | CIDRs of proxies allowed to set `X-Forwarded-For` (needed for correct client IPs behind Traefik). |
 | `VM_URL` | `http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428` | VictoriaMetrics query API base. |
-| `VM_INSTANCE_FILTER` | `homeserver\|worker-0\|worker-1` | Regex alternation of `instance` labels to aggregate. |
+| `HOSTS` | see `values.yaml` `config.hosts` | `id\|name\|instance` triples, comma-separated — one per host card on the app's home screen. `instance` must match VictoriaMetrics' `instance` label exactly. |
 | `NTFY_URL` | `http://ntfy.ntfy.svc.cluster.local` | ntfy base URL. |
 | `NTFY_TOPIC` | `alerts` | Topic to poll. |
 | `NTFY_TOKEN` | *(empty)* | Optional ntfy access token (unneeded while ntfy's `auth-default-access` is `read-write`). |
@@ -60,6 +73,10 @@ docs/43-carplay-api.md:
 | `NTFY_LIMIT` | `10` | Max alerts returned. |
 | `UPTIME_KUMA_URL` | `http://uptime-kuma.uptime-kuma.svc.cluster.local` | Uptime-Kuma base URL. |
 | `UPTIME_KUMA_SLUG` | `homeserver` | Status-page slug to read. |
+| `POWER_AGENT_URL` | `http://192.168.178.94:9101` | Base URL of the power-agent daemon on the Homeserver host. |
+| `POWER_AGENT_TOKEN` | *(empty)* | Bearer token for power-agent. Unset = every brightness/power request fails with 502. |
+| `POWER_AGENT_TIMEOUT` | `8` | Timeout for power-agent calls, seconds — poweroff/WoL can take longer than the 3s VictoriaMetrics budget. |
+| `SHUTDOWN_CONFIRMATION_CODE` | *(empty)* | Required to match `code` on `POST /api/power/shutdown` with `target: "homeserver"`. Unset = homeserver shutdown always rejected with 503. |
 
 ## Local development
 
