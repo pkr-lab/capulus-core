@@ -50,6 +50,15 @@ final class HomeserverAPIClient {
         return try decode(DashboardPayload.self, from: data)
     }
 
+    /// Cached server-side for 15 min and the underlying watcher only runs
+    /// every 2h (see argocd/apps/github-release-watcher values.yaml) —
+    /// callers should fetch this once per view appearance, not on the
+    /// dashboard's 30s poll loop.
+    func getUpdates() async throws -> UpdatesResponse {
+        let (data, _) = try await request(method: "GET", path: "/api/updates")
+        return try decode(UpdatesResponse.self, from: data)
+    }
+
     func getBrightness() async throws -> Int {
         let (data, _) = try await request(method: "GET", path: "/api/brightness")
         return try decode(BrightnessResponse.self, from: data).percent

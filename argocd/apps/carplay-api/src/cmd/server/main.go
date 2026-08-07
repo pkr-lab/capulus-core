@@ -50,13 +50,27 @@ func run(cfg config, logger *slog.Logger) error {
 
 	stats := metrics.NewRegistry()
 	dashboardHandler := handlers.NewDashboardHandler(
-		vm, ntfy, kuma, cfg.hosts,
+		vm, ntfy, kuma, cfg.hosts, cfg.services,
 		cfg.cacheTTL, cfg.apiTimeout,
 		cfg.ntfyLimit, cfg.ntfySince,
 		stats, logger,
 	)
 	healthHandler := handlers.NewHealthHandler(cfg.vmURL, cfg.ntfyURL, cfg.kumaURL, 2*time.Second)
 	powerHandler := handlers.NewPowerHandler(powerAgent, cfg.shutdownConfirmationCode, logger)
+
+	// Only available when actually running in-cluster (needs the mounted
+	// ServiceAccount token) — nil here just means GET /api/updates always
+	// returns an empty list instead of failing the whole binary, e.g. for
+	// local `go run` outside k3s.
+	k8sConfigMaps, err := clients.NewK8sConfigMapClient()
+	if err != nil {
+		logger.Warn("k8s in-cluster client unavailable, /api/updates will always be empty", "error", err)
+		k8sConfigMaps = nil
+	}
+	updatesHandler := handlers.NewUpdatesHandler(
+		k8sConfigMaps, cfg.updatesNamespace, cfg.updatesConfigMapName,
+		cfg.updatesCacheTTL, logger,
+	)
 
 	router := gin.New()
 	if err := router.SetTrustedProxies(cfg.trustedProxies); err != nil {
@@ -87,6 +101,7 @@ func run(cfg config, logger *slog.Logger) error {
 		logger.Warn("CARPLAY_API_TOKEN not set — /api/dashboard is running WITHOUT authentication")
 	}
 	api.GET("/dashboard", dashboardHandler.Handle)
+	api.GET("/updates", updatesHandler.Handle)
 	api.GET("/brightness", powerHandler.GetBrightness)
 	api.PUT("/brightness", powerHandler.SetBrightness)
 	api.POST("/power/wake", powerHandler.Wake)
@@ -159,7 +174,7 @@ func newTraceID() string {
 }
 
 type config struct {
-	port    string
+	port     string
 	logLevel slog.Level
 
 	cacheTTL   time.Duration
@@ -171,8 +186,9 @@ type config struct {
 	rateLimitPerMinute int
 	trustedProxies     []string
 
-	vmURL string
-	hosts []clients.HostConfig
+	vmURL    string
+	hosts    []clients.HostConfig
+	services []clients.ServiceConfig
 
 	ntfyURL   string
 	ntfyTopic string
@@ -182,6 +198,13 @@ type config struct {
 
 	kumaURL  string
 	kumaSlug string
+
+	// See argocd/apps/github-release-watcher — different namespace than
+	// this pod, read via the in-cluster k8s API + a cross-namespace
+	// RoleBinding (role.yaml "...-updates-reader"), not HTTP.
+	updatesNamespace     string
+	updatesConfigMapName string
+	updatesCacheTTL      time.Duration
 
 	powerAgentURL     string
 	powerAgentToken   string
@@ -215,6 +238,21 @@ func loadConfig() config {
 				"worker-1|Worker 1|192.168.178.96:9100,"+
 				"nas|NAS|192.168.178.97:9100",
 		)),
+		// Default list mirrors the iOS app's Kurzlink-Kacheln
+		// (Constants.SelfHostedServices) — Match is a substring of the raw
+		// Traefik "service" metric label (see clients.ServiceConfig on why
+		// it's a substring, not an exact match).
+		services: parseServices(getEnv("SERVICES",
+			"nextcloud|Nextcloud|nextcloud,"+
+				"immich|Immich|immich,"+
+				"vaultwarden|Vaultwarden|vaultwarden,"+
+				"paperless|Paperless-ngx|paperless,"+
+				"mealie|Mealie|mealie,"+
+				"grocy|Grocy|grocy,"+
+				"n8n|n8n|n8n,"+
+				"wikijs|Wiki.js|wikijs,"+
+				"zammad|Zammad|zammad",
+		)),
 
 		ntfyURL:   getEnv("NTFY_URL", "http://ntfy.ntfy.svc.cluster.local"),
 		ntfyTopic: getEnv("NTFY_TOPIC", "alerts"),
@@ -224,6 +262,10 @@ func loadConfig() config {
 
 		kumaURL:  getEnv("UPTIME_KUMA_URL", "http://uptime-kuma.uptime-kuma.svc.cluster.local"),
 		kumaSlug: getEnv("UPTIME_KUMA_SLUG", "homeserver"),
+
+		updatesNamespace:     getEnv("UPDATES_NAMESPACE", "github-release-watcher"),
+		updatesConfigMapName: getEnv("UPDATES_CONFIGMAP_NAME", "github-release-watcher-updates"),
+		updatesCacheTTL:      time.Duration(getEnvInt("UPDATES_CACHE_TTL", 900)) * time.Second,
 
 		powerAgentURL:     getEnv("POWER_AGENT_URL", "http://192.168.178.94:9101"),
 		powerAgentToken:   os.Getenv("POWER_AGENT_TOKEN"),
@@ -257,6 +299,30 @@ func parseHosts(v string) []clients.HostConfig {
 		})
 	}
 	return hosts
+}
+
+// parseServices reads the "id|name|match,id|name|match,..." format SERVICES
+// uses (values.yaml config.services), same shape as parseHosts. match is a
+// substring of the raw Traefik "service" metric label, see
+// clients.ServiceConfig.
+func parseServices(v string) []clients.ServiceConfig {
+	var services []clients.ServiceConfig
+	for _, entry := range strings.Split(v, ",") {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		parts := strings.SplitN(entry, "|", 3)
+		if len(parts) != 3 {
+			continue
+		}
+		services = append(services, clients.ServiceConfig{
+			ID:    strings.TrimSpace(parts[0]),
+			Name:  strings.TrimSpace(parts[1]),
+			Match: strings.TrimSpace(parts[2]),
+		})
+	}
+	return services
 }
 
 func getEnv(key, fallback string) string {

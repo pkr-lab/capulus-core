@@ -40,6 +40,11 @@ targets:
       properties:
         CFBundleDisplayName: "Homeserver Dashboard"
         LSRequiresIPhoneOS: true
+        # The layout isn't built for iPad's resizable Split View/Slide
+        # Over/Stage Manager windows (no size-class-driven multi-column
+        # UI) — without this, iPadOS launches it as a small floating
+        # window instead of filling the screen.
+        UIRequiresFullScreen: true
         # Modern (iOS 14+) empty-dict form gives a plain launch screen
         # without hand-authoring LaunchScreen.storyboard XML, which can't
         # be meaningfully validated without Xcode itself; this is Apple's
@@ -47,6 +52,13 @@ targets:
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+        # iPad has no notion of a locked-portrait "phone" app — Apple
+        # expects rotation support there. iPhone stays portrait-only above.
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         # carplay-api.homeserver (and every other *.homeserver service) is
         # plain HTTP behind Traefik — see Constants.swift for why.
         NSAppTransportSecurity:
@@ -54,6 +66,14 @@ targets:
             homeserver:
               NSIncludesSubdomains: true
               NSExceptionAllowsInsecureHTTPLoads: true
+        # Alltag-Modus > Tankstellen: findet die nächste Nicht-Shell/Aral-
+        # Station per Tankerkönig-Umkreissuche (siehe LocationManager.swift).
+        NSLocationWhenInUseUsageDescription: "Wird verwendet, um im Alltag-Modus die nächstgelegene Tankstelle (ohne Shell/Aral) zu finden."
+        # Requested on demand (see LocationManager.requestLocation()) when
+        # only "Ungefährer Standort" is granted — otherwise the Tankerkönig
+        # radius search can miss stations that are genuinely nearby.
+        NSLocationTemporaryUsageDescriptionDictionary:
+          TankstellenSuche: "Für die Umkreissuche nach Tankstellen wird kurzzeitig eine genaue Standortangabe benötigt — sonst kann eine tatsächlich nahe Tankstelle knapp außerhalb des Suchradius fallen."
     entitlements:
       path: HomeserverDashboard/HomeserverDashboard.entitlements
     settings:
@@ -63,7 +83,7 @@ targets:
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "5.0"
-        TARGETED_DEVICE_FAMILY: "1" # iPhone only, no iPad/Mac — see spec "Supported Platforms"
+        TARGETED_DEVICE_FAMILY: "1,2" # Universal — iPhone and iPad, no Mac
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         ENABLE_PREVIEWS: true

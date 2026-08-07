@@ -41,3 +41,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- define "github-release-watcher.stateConfigMapName" -}}
 {{- printf "%s-state" (include "github-release-watcher.fullname" .) }}
 {{- end }}
+
+{{- define "github-release-watcher.updatesConfigMapName" -}}
+{{- printf "%s-updates" (include "github-release-watcher.fullname" .) }}
+{{- end }}
