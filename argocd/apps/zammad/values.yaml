@@ -64,6 +64,18 @@ zammad:
 
   # ---- Zammad App + Sub-Chart Konfiguration ------------------
   zammadConfig:
+    # ---- Init-Job: fester statt zufälliger Name ---------------
+    # Chart-Default (randomName: true) haengt "-{{uuidv4}}" an den Job-Namen
+    # an -> bei JEDEM Helm-Render (also jedem ArgoCD-Sync, auch No-Op-Syncs)
+    # entsteht ein "neuer" Job, den ArgoCD anlegen will, waehrend der alte
+    # (mit anderem Namen) noch existiert bzw. gepruned wird -> Applikation
+    # zeigt dauerhaft "OutOfSync". Fester Name macht den Job fuer ArgoCD
+    # wieder ein normales, stabil vergleichbares Objekt; ttlSecondsAfterFinished
+    # (Chart-Default 300s) raeumt den abgeschlossenen Job vor dem naechsten
+    # echten Upgrade zuverlaessig weg.
+    initJob:
+      randomName: false
+
     # ---- Elasticsearch deaktivieren (Ressourcenersparnis) ----
     # Zammad 7.x nutzt PostgreSQL-basierte Volltextsuche als Fallback.
     # Für Produktionseinsatz mit großem Ticketvolumen ES aktivieren.
