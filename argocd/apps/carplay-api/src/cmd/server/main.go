@@ -43,18 +43,20 @@ func run(cfg config, logger *slog.Logger) error {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	vm := clients.NewVictoriaMetricsClient(cfg.vmURL, cfg.vmInstanceFilter, 3*time.Second, logger)
+	vm := clients.NewVictoriaMetricsClient(cfg.vmURL, 3*time.Second, logger)
 	ntfy := clients.NewNtfyClient(cfg.ntfyURL, cfg.ntfyTopic, cfg.ntfyToken, 2*time.Second, logger)
 	kuma := clients.NewUptimeKumaClient(cfg.kumaURL, cfg.kumaSlug, 2*time.Second, logger)
+	powerAgent := clients.NewPowerAgentClient(cfg.powerAgentURL, cfg.powerAgentToken, cfg.powerAgentTimeout)
 
 	stats := metrics.NewRegistry()
 	dashboardHandler := handlers.NewDashboardHandler(
-		vm, ntfy, kuma,
+		vm, ntfy, kuma, cfg.hosts,
 		cfg.cacheTTL, cfg.apiTimeout,
 		cfg.ntfyLimit, cfg.ntfySince,
 		stats, logger,
 	)
 	healthHandler := handlers.NewHealthHandler(cfg.vmURL, cfg.ntfyURL, cfg.kumaURL, 2*time.Second)
+	powerHandler := handlers.NewPowerHandler(powerAgent, cfg.shutdownConfirmationCode, logger)
 
 	router := gin.New()
 	if err := router.SetTrustedProxies(cfg.trustedProxies); err != nil {
@@ -85,6 +87,10 @@ func run(cfg config, logger *slog.Logger) error {
 		logger.Warn("CARPLAY_API_TOKEN not set — /api/dashboard is running WITHOUT authentication")
 	}
 	api.GET("/dashboard", dashboardHandler.Handle)
+	api.GET("/brightness", powerHandler.GetBrightness)
+	api.PUT("/brightness", powerHandler.SetBrightness)
+	api.POST("/power/wake", powerHandler.Wake)
+	api.POST("/power/shutdown", powerHandler.Shutdown)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.port,
@@ -165,8 +171,8 @@ type config struct {
 	rateLimitPerMinute int
 	trustedProxies     []string
 
-	vmURL            string
-	vmInstanceFilter string
+	vmURL string
+	hosts []clients.HostConfig
 
 	ntfyURL   string
 	ntfyTopic string
@@ -176,6 +182,16 @@ type config struct {
 
 	kumaURL  string
 	kumaSlug string
+
+	powerAgentURL     string
+	powerAgentToken   string
+	powerAgentTimeout time.Duration
+
+	// Compared against the "code" field of POST /api/power/shutdown when
+	// Target is "homeserver" — deliberately kept in lockstep with the
+	// ArgoCD admin password by whoever rotates it (see
+	// docs/43-carplay-api.md), not verified live against ArgoCD itself.
+	shutdownConfirmationCode string
 }
 
 func loadConfig() config {
@@ -192,8 +208,13 @@ func loadConfig() config {
 		rateLimitPerMinute: getEnvInt("RATE_LIMIT_PER_MINUTE", 100),
 		trustedProxies:     splitCSV(os.Getenv("TRUSTED_PROXIES")),
 
-		vmURL:            getEnv("VM_URL", "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428"),
-		vmInstanceFilter: getEnv("VM_INSTANCE_FILTER", "homeserver|worker-0|worker-1"),
+		vmURL: getEnv("VM_URL", "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428"),
+		hosts: parseHosts(getEnv("HOSTS",
+			"homeserver|Homeserver|192.168.178.94:9100,"+
+				"worker-0|Worker 0|192.168.178.95:9100,"+
+				"worker-1|Worker 1|192.168.178.96:9100,"+
+				"nas|NAS|192.168.178.97:9100",
+		)),
 
 		ntfyURL:   getEnv("NTFY_URL", "http://ntfy.ntfy.svc.cluster.local"),
 		ntfyTopic: getEnv("NTFY_TOPIC", "alerts"),
@@ -203,7 +224,39 @@ func loadConfig() config {
 
 		kumaURL:  getEnv("UPTIME_KUMA_URL", "http://uptime-kuma.uptime-kuma.svc.cluster.local"),
 		kumaSlug: getEnv("UPTIME_KUMA_SLUG", "homeserver"),
+
+		powerAgentURL:     getEnv("POWER_AGENT_URL", "http://192.168.178.94:9101"),
+		powerAgentToken:   os.Getenv("POWER_AGENT_TOKEN"),
+		powerAgentTimeout: time.Duration(getEnvInt("POWER_AGENT_TIMEOUT", 8)) * time.Second,
+
+		shutdownConfirmationCode: os.Getenv("SHUTDOWN_CONFIRMATION_CODE"),
 	}
+}
+
+// parseHosts reads the "id|name|instance,id|name|instance,..." format HOSTS
+// uses (values.yaml config.hosts) into HostConfig entries. instance is the
+// VictoriaMetrics "instance" label for that machine's node-exporter target
+// (see clients.HostConfig) — not necessarily its hostname. Malformed
+// entries are silently skipped rather than crashing startup over a typo'd
+// Helm value.
+func parseHosts(v string) []clients.HostConfig {
+	var hosts []clients.HostConfig
+	for _, entry := range strings.Split(v, ",") {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		parts := strings.SplitN(entry, "|", 3)
+		if len(parts) != 3 {
+			continue
+		}
+		hosts = append(hosts, clients.HostConfig{
+			ID:       strings.TrimSpace(parts[0]),
+			Name:     strings.TrimSpace(parts[1]),
+			Instance: strings.TrimSpace(parts[2]),
+		})
+	}
+	return hosts
 }
 
 func getEnv(key, fallback string) string {

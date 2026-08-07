@@ -24,6 +24,7 @@ type DashboardHandler struct {
 	vm    *clients.VictoriaMetricsClient
 	ntfy  *clients.NtfyClient
 	kuma  *clients.UptimeKumaClient
+	hosts []clients.HostConfig
 	cache *cache.TTLCache[models.DashboardResponse]
 	stats *metrics.Registry
 
@@ -38,6 +39,7 @@ func NewDashboardHandler(
 	vm *clients.VictoriaMetricsClient,
 	ntfy *clients.NtfyClient,
 	kuma *clients.UptimeKumaClient,
+	hosts []clients.HostConfig,
 	cacheTTL, overallTimeout time.Duration,
 	ntfyLimit int,
 	ntfySince string,
@@ -48,6 +50,7 @@ func NewDashboardHandler(
 		vm:             vm,
 		ntfy:           ntfy,
 		kuma:           kuma,
+		hosts:          hosts,
 		cache:          cache.New[models.DashboardResponse](cacheTTL),
 		stats:          stats,
 		overallTimeout: overallTimeout,
@@ -70,7 +73,7 @@ func (h *DashboardHandler) Handle(c *gin.Context) {
 
 	alerts := []models.Alert{}
 	statuses := []models.ServiceStatus{}
-	var sysMetrics models.SystemMetrics
+	var hostMetrics []models.HostMetrics
 
 	var wg sync.WaitGroup
 	wg.Add(3)
@@ -87,11 +90,10 @@ func (h *DashboardHandler) Handle(c *gin.Context) {
 
 	go func() {
 		defer wg.Done()
-		result, err := h.vm.GetMetrics(ctx)
-		sysMetrics = result // always usable: zero-value fields on total failure
-		if err != nil {
-			h.logger.Warn("victoriametrics fetch degraded", "error", err)
-		}
+		// Per-host queries degrade internally (missing metric -> zero
+		// value, missing "up" series -> Online=false) — there's no
+		// all-or-nothing failure mode to log here.
+		hostMetrics = h.vm.GetHostMetrics(ctx, h.hosts)
 	}()
 
 	go func() {
@@ -108,7 +110,7 @@ func (h *DashboardHandler) Handle(c *gin.Context) {
 
 	response := models.DashboardResponse{
 		Alerts:    alerts,
-		Metrics:   sysMetrics,
+		Hosts:     hostMetrics,
 		Status:    statuses,
 		UpdatedAt: time.Now().Unix(),
 	}

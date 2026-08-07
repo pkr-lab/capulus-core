@@ -2,14 +2,14 @@
 apiVersion: v2
 name: carplay-api
 description: >
-  Read-only aggregation API (Go/Gin) for the Homeserver CarPlay Dashboard
-  iOS app — combines VictoriaMetrics, ntfy and Uptime-Kuma into one cached
-  JSON payload.
+  Aggregation + power-control API (Go/Gin) for the Homeserver Dashboard iOS
+  app — combines VictoriaMetrics, ntfy and Uptime-Kuma into one cached JSON
+  payload, plus brightness/Wake-on-LAN/shutdown proxied to power-agent.
 type: application
 version: 0.1.0
 appVersion: "1.0.0"
 keywords:
-  - carplay
+  - homeserver
   - dashboard
   - victoriametrics
   - ntfy

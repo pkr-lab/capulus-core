@@ -1,0 +1,107 @@
+---
+# ============================================================
+# power_agent role — privilegierter HTTP-Agent auf dem Homeserver für
+# Bildschirmhelligkeit + manuelles Wake-on-LAN/Poweroff aus der iOS-App.
+# Läuft NICHT im Cluster — carplay-api ruft ihn über die
+# Homeserver-LAN-IP:Port, siehe argocd/apps/carplay-api/values.yaml
+# config.powerAgent. UFW braucht dafür KEINE neue Regel: "Allow all
+# traffic from k3s pod CIDR" (ansible/roles/common) deckt Pod->Host schon
+# ab, unabhängig davon, auf welchem Node der carplay-api-Pod läuft
+# (Flannel-Overlay). Von außerhalb des Clusters ist Port 9101 dadurch
+# NICHT erreichbar — bewusst, siehe README/Absicherung.
+# ============================================================
+
+- name: Python3 installieren (Laufzeit für power-agent.py)
+  ansible.builtin.apt:
+    name: python3
+    state: present
+    update_cache: true
+  when: power_agent_enabled | bool
+
+- name: Config-Verzeichnis anlegen
+  ansible.builtin.file:
+    path: /etc/power-agent
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  when: power_agent_enabled | bool
+
+- name: Bearer-Token für power-agent erzeugen (falls noch nicht vorhanden)
+  ansible.builtin.shell:
+    cmd: "umask 077 && openssl rand -hex 32 > {{ power_agent_token_path }}"
+    creates: "{{ power_agent_token_path }}"
+  when: power_agent_enabled | bool
+
+- name: Token-Datei-Rechte absichern
+  ansible.builtin.file:
+    path: "{{ power_agent_token_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  when: power_agent_enabled | bool
+
+- name: Erzeugtes Token einlesen
+  ansible.builtin.slurp:
+    src: "{{ power_agent_token_path }}"
+  register: power_agent_token_raw
+  when: power_agent_enabled | bool
+
+- name: power-agent.py deployen
+  ansible.builtin.copy:
+    src: power-agent.py
+    dest: /usr/local/bin/power-agent.py
+    owner: root
+    group: root
+    mode: "0755"
+  when: power_agent_enabled | bool
+  notify: Restart power agent
+
+- name: Konfiguration templaten
+  ansible.builtin.template:
+    src: config.env.j2
+    dest: /etc/power-agent/config.env
+    owner: root
+    group: root
+    mode: "0600"
+  when: power_agent_enabled | bool
+  vars:
+    power_agent_token: "{{ power_agent_token_raw.content | b64decode | trim }}"
+  notify: Restart power agent
+
+- name: systemd-Unit deployen
+  ansible.builtin.template:
+    src: power-agent.service.j2
+    dest: /etc/systemd/system/power-agent.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: power_agent_enabled | bool
+  notify: Restart power agent
+
+- name: power-agent aktivieren und starten
+  ansible.builtin.systemd:
+    name: power-agent
+    daemon_reload: true
+    enabled: true
+    state: started
+  when: power_agent_enabled | bool
+
+- name: power-agent deaktivieren, falls power_agent_enabled false
+  ansible.builtin.systemd:
+    name: power-agent
+    enabled: false
+    state: stopped
+  when: not (power_agent_enabled | bool)
+  failed_when: false
+
+- name: Hinweis zum Sealed-Secret-Abgleich ausgeben
+  ansible.builtin.debug:
+    msg: >-
+      power-agent-Token liegt in {{ power_agent_token_path }} auf
+      {{ inventory_hostname }}. Falls dies ein Ersteinrichtung oder eine
+      Token-Rotation war: Wert auslesen und in
+      argocd/apps/carplay-api/values.yaml unter secrets.powerAgentToken neu
+      versiegeln (kubeseal) — sonst bekommt die App dauerhaft 502 auf
+      Helligkeit/Wake/Shutdown. Siehe docs/43-carplay-api.md "power-agent".
+  when: power_agent_enabled | bool
