@@ -54,6 +54,9 @@ targets:
             homeserver:
               NSIncludesSubdomains: true
               NSExceptionAllowsInsecureHTTPLoads: true
+        # Alltag-Modus > Tankstellen: findet die nächste Nicht-Shell/Aral-
+        # Station per Tankerkönig-Umkreissuche (siehe LocationManager.swift).
+        NSLocationWhenInUseUsageDescription: "Wird verwendet, um im Alltag-Modus die nächstgelegene Tankstelle (ohne Shell/Aral) zu finden."
     entitlements:
       path: HomeserverDashboard/HomeserverDashboard.entitlements
     settings:
