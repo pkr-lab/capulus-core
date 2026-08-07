@@ -92,7 +92,12 @@ resources:
 
 affinity: {}
 
-nodeSelector: {}
+# Custom Image (siehe image.repository oben) wird lokal gebaut und nur auf
+# dem homeserver-Node per "k3s ctr images import" eingespielt, kein
+# Registry-Push — ohne Pinning koennte der Pod auf einen Worker-Node
+# geschedult werden, wo das Image fehlt (ImagePullBackOff).
+nodeSelector:
+  kubernetes.io/hostname: homeserver
 tolerations: []
 
 # ============================================================
