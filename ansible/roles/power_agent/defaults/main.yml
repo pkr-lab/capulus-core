@@ -1,0 +1,44 @@
+---
+# ============================================================
+# power_agent — Defaults
+# ============================================================
+# Privilegierter HTTP-Agent auf dem Homeserver-Host (NICHT im k8s-Cluster,
+# siehe carplay-api podSecurityContext) für die Dinge, die der carplay-api-
+# Pod bewusst nicht selbst darf: Bildschirmhelligkeit (sysfs), manuelles
+# Wake-on-LAN und Poweroff für worker-0/worker-1 sowie den eigenen
+# Poweroff des Homeservers.
+#
+# Muss NACH cluster_power_manager im Playbook stehen — nutzt dessen
+# SSH-Key, kubeconfig, State-Dir und Worker-Liste weiter (siehe unten),
+# damit manuelle Aktionen aus der App und der automatische
+# Last-Watchdog dieselbe Buchführung (woke_at-Dateien) teilen statt sich
+# gegenseitig zu widersprechen.
+# ============================================================
+
+# Kill-switch: auf false setzen, um den Agenten abzuschalten, ohne die
+# Rolle aus dem Playbook zu entfernen.
+power_agent_enabled: true
+
+power_agent_port: 9101
+
+# Bearer-Token wird beim ersten Rollout einmalig mit `openssl rand -hex 32`
+# erzeugt und lokal unter diesem Pfad abgelegt (siehe tasks/main.yml) —
+# nicht hier als Variable gesetzt, weil derselbe Wert danach manuell in
+# argocd/apps/carplay-api/values.yaml (secrets.powerAgentToken) versiegelt
+# werden muss. Siehe docs/43-carplay-api.md "power-agent".
+power_agent_token_path: /etc/power-agent/token
+
+# HP ProBook 450 G9 (siehe docs/01-overview.md) — mit
+# `ls /sys/class/backlight/` auf dem Homeserver prüfen, falls sich das
+# Kernel-Backlight-Device je ändert (z.B. nach einem BIOS-/Kernel-Update).
+power_agent_backlight_path: /sys/class/backlight/intel_backlight/brightness
+power_agent_backlight_max_path: /sys/class/backlight/intel_backlight/max_brightness
+
+power_agent_poweroff_bin: /usr/sbin/poweroff
+
+# ---- Wiederverwendet von cluster_power_manager -------------------------
+power_agent_ssh_user: "{{ cluster_power_manager_ssh_user }}"
+power_agent_ssh_key: "{{ cluster_power_manager_ssh_key_path }}"
+power_agent_kubeconfig: "{{ cluster_power_manager_kubeconfig }}"
+power_agent_state_dir: "{{ cluster_power_manager_state_dir }}"
+power_agent_targets: "{{ cluster_power_manager_workers }}"
