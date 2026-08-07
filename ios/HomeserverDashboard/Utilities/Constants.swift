@@ -56,6 +56,34 @@ enum Constants {
         ]
     }
 
+    /// Pegelonline (WSV) — public REST API, no key needed. Station UUID
+    /// looked up once via `/stations.json?waters=RHEIN` for "ANDERNACH" and
+    /// hardcoded here, same pattern as Tankerkönig's fixed station IDs
+    /// above (a river gauge doesn't move, no need to re-look it up).
+    enum Pegel {
+        static let baseURL = URL(string: "https://www.pegelonline.wsv.de/webservices/rest-api/v2")!
+        static let stationUUID = "5735892a-ec65-4b29-97c5-50939aa9584e"
+        static let stationLabel = "Rhein-Pegel Andernach"
+    }
+
+    /// Kurzlink-Kacheln zu den self-hosted Apps aus Glances "Apps &
+    /// Produktivität"-Block (argocd/apps/glance/templates/configmap.yaml) —
+    /// reine Link-Liste, kein eigener Datendienst; Hosts aus den jeweiligen
+    /// argocd/apps/*/values.yaml Ingress-Definitionen.
+    enum SelfHostedServices {
+        static let all: [SelfHostedService] = [
+            SelfHostedService(name: "Nextcloud", systemImage: "icloud.fill", host: "nextcloud.homeserver"),
+            SelfHostedService(name: "Immich", systemImage: "photo.on.rectangle.angled", host: "immich.homeserver"),
+            SelfHostedService(name: "Vaultwarden", systemImage: "lock.fill", host: "vault.homeserver"),
+            SelfHostedService(name: "Paperless-ngx", systemImage: "doc.text.magnifyingglass", host: "paperless.homeserver"),
+            SelfHostedService(name: "Mealie", systemImage: "fork.knife", host: "mealie.homeserver"),
+            SelfHostedService(name: "Grocy", systemImage: "cart.fill", host: "grocy.homeserver"),
+            SelfHostedService(name: "n8n", systemImage: "arrow.triangle.branch", host: "n8n.homeserver"),
+            SelfHostedService(name: "Wiki.js", systemImage: "book.closed.fill", host: "wiki.homeserver"),
+            SelfHostedService(name: "Zammad", systemImage: "questionmark.bubble.fill", host: "zammad.homeserver"),
+        ]
+    }
+
     /// One headline each, no API key needed: Tagesschau's public (if
     /// unofficial) JSON endpoint, plus Heise's and WELT's public RSS/Atom
     /// feeds. Feed URLs/schemas aren't versioned by their providers — if one
