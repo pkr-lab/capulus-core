@@ -38,7 +38,7 @@ Node-IP von `homeserver`: `192.168.178.94`. Traefik-LoadBalancer-IP (MetalLB):
 | Vaultwarden | vaultwarden | vaultwarden:80 | vault.homeserver | vault.pke-lab.de |
 | Mealie | mealie | mealie:80 | mealie.homeserver | mealie.pke-lab.de |
 | Grocy | grocy | grocy:80 | grocy.homeserver | grocy.pke-lab.de |
-| n8n | n8n | n8n:80 | n8n.homeserver | n8n.pke-lab.de |
+| n8n | n8n | n8n:80 | n8n.homeserver | – (aus Cloudflare Tunnel entfernt, Security) |
 | Wiki.js | wikijs | wikijs:80 | wiki.homeserver | wiki.pke-lab.de |
 | Zammad | zammad | zammad-nginx:8080 | zammad.homeserver | support.pke-lab.de |
 | ntfy | ntfy | ntfy:80 | ntfy.homeserver | ntfy.pke-lab.de |
@@ -51,6 +51,8 @@ Node-IP von `homeserver`: `192.168.178.94`. Traefik-LoadBalancer-IP (MetalLB):
 | Glance | glance | glance:80 | glance.homeserver | — |
 | Pi-hole (Web-UI) | pihole | pihole:80 | pihole.homeserver | — |
 | Alamos-Apager | alamos-apager | alamos-apager:8080 | alamos-apager.homeserver | — |
+| Xibo CMS | xibosignage | xibosignage-cms:80 | xibo.homeserver | — |
+| CarPlay-API | carplay-api | carplay-api:80 | carplay-api.homeserver | — |
 | Tinyteller | tinyteller | tinyteller-frontend:80 | tinyteller.homeserver | — |
 | Argo Workflows | argo-workflows | argo-workflows-server:2746 | argo-workflows.homeserver | — |
 | Headlamp | headlamp | headlamp:80 | headlamp.homeserver | — |
@@ -107,6 +109,10 @@ angesprochen (Datenbanken, Caches, interne Bridges, Batch-Jobs):
 | MinIO S3-API | minio | 9000 |
 | Sealed Secrets Controller | sealed-secrets | 8080 |
 | VictoriaMetrics (vmsingle/vmagent/vmalert/vmalertmanager) | monitoring | 8428/8429/8080/9093 |
+| Xibo CMS MySQL | xibosignage | 3306 |
+| Xibo CMS XMR (Message-Relay) | xibosignage | 9505 |
+| Xibo CMS Memcached | xibosignage | 11211 |
+| Xibo CMS QuickChart | xibosignage | 3400 |
 
 **Reine Batch-Jobs ohne Service/Port**: `github-release-watcher` (CronJob,
 alle 2h) und `wiki-docs-sync` (CronJob, alle 15min) — laufen komplett

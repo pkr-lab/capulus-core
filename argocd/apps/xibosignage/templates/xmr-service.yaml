@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "xibosignage.xmr.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "xibosignage.xmr.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.xmr.service.port }}
+      targetPort: xmr
+      protocol: TCP
+      name: xmr
+  selector:
+    {{- include "xibosignage.xmr.selectorLabels" . | nindent 4 }}

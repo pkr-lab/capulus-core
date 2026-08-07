@@ -1,0 +1,19 @@
+# Managed by Ansible (xibo_kiosk role) — do not edit manually.
+#
+# Liefert die statische Slideshow-Seite (index.html/slideshow.js/manifest.json)
+# UND — über den Symlink "media" im Webroot — die Bilder aus dem
+# NFS-gemounteten xibosignage-display-Ordner aus. Nur auf localhost
+# gebunden: der Kiosk-Chromium auf demselben Pi ist der einzige Client.
+[Unit]
+Description=xibosignage Slideshow Webserver
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory={{ xibo_kiosk_web_root }}
+ExecStart=/usr/bin/python3 -m http.server {{ xibo_kiosk_http_port }} --bind 127.0.0.1 --directory {{ xibo_kiosk_web_root }}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
