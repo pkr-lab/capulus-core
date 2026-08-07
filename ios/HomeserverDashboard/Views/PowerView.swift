@@ -1,15 +1,20 @@
 import SwiftUI
 
-/// Subpage 2: Wake-on-LAN + shutdown for worker-0/worker-1, and shutdown
-/// (only — the Homeserver has no WoL path, it's the always-on control
-/// plane, see docs/37-cluster-power-manager.md) for the Homeserver itself,
-/// gated behind an extra warning + the same confirmation code as ArgoCD.
+/// Subpage 2: brightness, Wake-on-LAN + shutdown for worker-0/worker-1,
+/// shutdown (only — the Homeserver has no WoL path, it's the always-on
+/// control plane, see docs/37-cluster-power-manager.md) for the Homeserver
+/// itself gated behind an extra warning + the same confirmation code as
+/// ArgoCD, and an alerts overview (also shown on Übersicht) — merged into
+/// one tab so control + "what needs attention" live together.
 struct PowerView: View {
     @ObservedObject private var dashboardViewModel = DashboardViewModel.shared
     @ObservedObject private var powerViewModel = PowerViewModel.shared
+    @State private var sliderValue: Double = 50
+    @State private var isEditingBrightness = false
     @State private var showingSettings = false
     @State private var confirmingShutdown: PowerTarget?
     @State private var showingHomeserverWarning = false
+    @State private var selectedAlert: Alert?
 
     private func host(_ id: String) -> HostMetrics? {
         dashboardViewModel.dashboard?.hosts.first { $0.id == id }
@@ -20,6 +25,13 @@ struct PowerView: View {
             ScreenBackground {
                 ScrollView {
                     VStack(spacing: 16) {
+                        BrightnessCard(
+                            sliderValue: $sliderValue,
+                            isLoading: powerViewModel.isLoadingBrightness && powerViewModel.brightness == nil,
+                            error: powerViewModel.brightnessError,
+                            onEditingChanged: handleBrightnessEditingChanged
+                        )
+
                         PowerTargetCard(
                             target: .worker0,
                             isOnline: host("worker-0")?.online ?? false,
@@ -45,6 +57,11 @@ struct PowerView: View {
                                 .font(.system(size: 13))
                                 .foregroundStyle(Theme.statusBad)
                         }
+
+                        AlertsGridView(
+                            alerts: dashboardViewModel.dashboard?.alerts ?? [],
+                            onSelect: { selectedAlert = $0 }
+                        )
                     }
                     .padding(16)
                 }
@@ -59,8 +76,21 @@ struct PowerView: View {
                     }
                 }
             }
+            .task {
+                await powerViewModel.loadBrightness()
+                if let brightness = powerViewModel.brightness {
+                    sliderValue = Double(brightness)
+                }
+            }
+            .onChange(of: powerViewModel.brightness) { newValue in
+                guard !isEditingBrightness, let newValue else { return }
+                sliderValue = Double(newValue)
+            }
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
+            }
+            .sheet(item: $selectedAlert) { alert in
+                DetailView(kind: .alert(alert))
             }
             .confirmationDialog(
                 confirmingShutdown.map { "\($0.displayName) wirklich herunterfahren?" } ?? "",
@@ -94,6 +124,67 @@ struct PowerView: View {
                     onCancel: { showingHomeserverWarning = false },
                     error: powerViewModel.actionError
                 )
+            }
+        }
+    }
+
+    /// Applies the new value once the finger lifts, not on every frame the
+    /// slider moves — brightness writes hit sysfs on the homeserver host
+    /// through two network hops (this app -> carplay-api -> power-agent),
+    /// so streaming every intermediate value would just queue up stale
+    /// writes behind the current one.
+    private func handleBrightnessEditingChanged(_ editing: Bool) {
+        isEditingBrightness = editing
+        guard !editing else { return }
+        Task { await powerViewModel.setBrightness(percent: Int(sliderValue)) }
+    }
+}
+
+private struct BrightnessCard: View {
+    @Binding var sliderValue: Double
+    let isLoading: Bool
+    let error: String?
+    let onEditingChanged: (Bool) -> Void
+
+    var body: some View {
+        SectionCard(title: "Bildschirmhelligkeit", systemImage: "sun.max.fill") {
+            VStack(spacing: 18) {
+                if isLoading {
+                    ProgressView()
+                        .tint(Theme.textPrimary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 28)
+                } else {
+                    VStack(spacing: 14) {
+                        Text("\(Int(sliderValue))%")
+                            .font(.system(size: 44, weight: .bold, design: .rounded))
+                            .foregroundStyle(Theme.textPrimary)
+
+                        HStack(spacing: 12) {
+                            Image(systemName: "sun.min")
+                                .foregroundStyle(Theme.textMuted)
+                            Slider(
+                                value: $sliderValue,
+                                in: 1...100,
+                                step: 1,
+                                onEditingChanged: onEditingChanged
+                            )
+                            .tint(Theme.accentLight)
+                            Image(systemName: "sun.max")
+                                .foregroundStyle(Theme.textMuted)
+                        }
+                    }
+                }
+
+                if let error {
+                    Text(error)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.statusBad)
+                }
+
+                Text("Steuert den eingebauten Bildschirm des Homeservers (HP ProBook 450 G9).")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.textMuted)
             }
         }
     }
