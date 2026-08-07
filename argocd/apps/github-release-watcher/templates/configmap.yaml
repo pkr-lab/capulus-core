@@ -9,24 +9,63 @@ data:
   watcher.py: |
     #!/usr/bin/env python3
     """
-    GitHub-Release-Watcher -> Zammad-Bridge.
+    GitHub-Release-Watcher -> Zammad-Bridge + App-Update-Status.
 
-    Pollt die GitHub-Releases-API für eine Liste von Repos. Bei einem neuen
-    Release wird per Zammad-REST-API ein Ticket in einer Gruppe angelegt;
-    Zammads eigene Agenten-Benachrichtigung (Profil-Einstellungen) verschickt
-    daraufhin die E-Mail. Der zuletzt gesehene Tag pro Repo wird in einer
-    ConfigMap im eigenen Namespace persistiert (Zugriff über das
-    ServiceAccount-Token, kein kubectl nötig). Nutzt ausschließlich die
+    Pollt die GitHub-Releases-API für eine Liste von Repos.
+    - Bei einem neuen Release UND notify_zammad=true wird per Zammad-REST-API
+      ein Ticket in einer Gruppe angelegt; Zammads eigene Agenten-
+      Benachrichtigung (Profil-Einstellungen) verschickt daraufhin die
+      E-Mail. Der zuletzt gesehene Tag pro Repo wird dafür in der
+      state-ConfigMap persistiert (reines Kantenerkennungs-Gedächtnis, nicht
+      von außen gelesen).
+    - Bei JEDEM Lauf wird zusätzlich für alle Repos der aktuelle Stand
+      (current_version aus der Config vs. gerade abgefragte GitHub-Version)
+      in eine zweite, separate updates-ConfigMap geschrieben — das ist der
+      Teil, den carplay-api liest (siehe role.yaml) und der iOS-App als
+      Update-Liste zeigt. Getrennt von state.json, damit ein Lesezugriff
+      von außen niemals das interne Zammad-Kantenerkennungs-Gedächtnis
+      berühren kann.
+
+    Beide ConfigMaps liegen im eigenen Namespace, Zugriff über das
+    ServiceAccount-Token (kein kubectl nötig). Nutzt ausschließlich die
     Python-Standardbibliothek.
     """
     import json
     import os
     import ssl
     import sys
+    import time
     import urllib.error
     import urllib.request
 
-    GITHUB_REPOS = [r.strip() for r in os.environ["GITHUB_REPOS"].split(",") if r.strip()]
+
+    def parse_repos(raw):
+        # "id|name|owner/repo|currentVersion|notifyZammad" pro Eintrag,
+        # gleiche "|"-Konvention wie HOSTS/SERVICES in carplay-api
+        # (main.go parseHosts/parseServices) — ein Format für
+        # strukturierte Listen-Werte in diesem Repo, egal in welcher
+        # Sprache der Konsument geschrieben ist.
+        entries = []
+        for chunk in raw.split(","):
+            chunk = chunk.strip()
+            if not chunk:
+                continue
+            parts = chunk.split("|", 4)
+            if len(parts) != 5:
+                print(f"[WARN] GITHUB_REPOS-Eintrag ignoriert (erwarte 5 Felder): {chunk!r}", file=sys.stderr)
+                continue
+            id_, name, repo, current_version, notify_raw = parts
+            entries.append({
+                "id": id_,
+                "name": name,
+                "repo": repo,
+                "current_version": current_version,
+                "notify_zammad": notify_raw.strip().lower() == "true",
+            })
+        return entries
+
+
+    GITHUB_REPOS = parse_repos(os.environ["GITHUB_REPOS"])
     GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 
     ZAMMAD_URL = os.environ["ZAMMAD_URL"].rstrip("/")
@@ -36,6 +75,7 @@ data:
 
     NAMESPACE = os.environ["NAMESPACE"]
     STATE_CONFIGMAP = os.environ["STATE_CONFIGMAP_NAME"]
+    UPDATES_CONFIGMAP = os.environ["UPDATES_CONFIGMAP_NAME"]
 
     SA_DIR = "/var/run/secrets/kubernetes.io/serviceaccount"
     K8S_API = "https://{}:{}".format(
@@ -68,31 +108,39 @@ data:
             return exc.code, (json.loads(raw) if raw else {})
 
 
-    def load_state():
-        path = f"/api/v1/namespaces/{NAMESPACE}/configmaps/{STATE_CONFIGMAP}"
+    def load_configmap(name, data_key, default):
+        path = f"/api/v1/namespaces/{NAMESPACE}/configmaps/{name}"
         status, body = k8s_request("GET", path)
         if status == 200:
-            return True, json.loads(body.get("data", {}).get("state.json", "{}"))
+            return True, json.loads(body.get("data", {}).get(data_key, "null") or "null") or default
         if status == 404:
-            return False, {}
-        raise RuntimeError(f"Konnte State-ConfigMap nicht lesen: HTTP {status} {body}")
+            return False, default
+        raise RuntimeError(f"Konnte ConfigMap {name} nicht lesen: HTTP {status} {body}")
 
 
-    def save_state(state, existed):
+    def save_configmap(name, data_key, existed, value):
         cm = {
             "apiVersion": "v1",
             "kind": "ConfigMap",
-            "metadata": {"name": STATE_CONFIGMAP, "namespace": NAMESPACE},
-            "data": {"state.json": json.dumps(state)},
+            "metadata": {"name": name, "namespace": NAMESPACE},
+            "data": {data_key: json.dumps(value)},
         }
         if existed:
-            path = f"/api/v1/namespaces/{NAMESPACE}/configmaps/{STATE_CONFIGMAP}"
+            path = f"/api/v1/namespaces/{NAMESPACE}/configmaps/{name}"
             status, body = k8s_request("PATCH", path, cm)
         else:
             path = f"/api/v1/namespaces/{NAMESPACE}/configmaps"
             status, body = k8s_request("POST", path, cm)
         if status not in (200, 201):
-            raise RuntimeError(f"Konnte State-ConfigMap nicht schreiben: HTTP {status} {body}")
+            raise RuntimeError(f"Konnte ConfigMap {name} nicht schreiben: HTTP {status} {body}")
+
+
+    def load_state():
+        return load_configmap(STATE_CONFIGMAP, "state.json", {})
+
+
+    def save_state(state, existed):
+        save_configmap(STATE_CONFIGMAP, "state.json", existed, state)
 
 
     def latest_release(repo):
