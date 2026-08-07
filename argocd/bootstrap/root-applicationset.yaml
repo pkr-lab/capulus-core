@@ -1,6 +1,8 @@
-# Generated file — do not edit by hand.
-# Source: ansible/roles/argocd/templates/bootstrap-applicationset.yaml.j2
-# Regenerate: make render-bootstrap (updates repoURL from group_vars/all.yml)
+# Single source of truth for the bootstrap ApplicationSet.
+# The committed copy at argocd/bootstrap/root-applicationset.yaml is GENERATED
+# from this template — run `make render-bootstrap` after editing this file or
+# the argocd_repo_* / argocd_namespace vars in group_vars. Do not hand-edit the
+# committed copy.
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
@@ -51,6 +53,19 @@ spec:
           name: zammad-nginx
           jsonPointers:
             - /spec/replicas
+        # zammad-redis StatefulSet: Chart-Default setzt
+        # updateStrategy.rollingUpdate.maxUnavailable: 1 (Redis-Subchart-
+        # values.yaml), Cluster-Feature-Gate MaxUnavailableStatefulSet fehlt
+        # -> Server verwirft das Feld dauerhaft. Der ursprüngliche Versuch,
+        # es per "maxUnavailable: null" in values.yaml zu entfernen, wirkt
+        # lokal mit Helm v3, aber NICHT mit dem Helm v4 in argocd-repo-server
+        # (bestaetigt per "argocd app diff --core --hard-refresh": Desired
+        # enthaelt das Feld trotzdem) -> Dauerdiff. Deshalb hier ignorieren.
+        - group: apps
+          kind: StatefulSet
+          name: zammad-redis
+          jsonPointers:
+            - /spec/updateStrategy/rollingUpdate/maxUnavailable
       syncPolicy:
         automated:
           prune: true
