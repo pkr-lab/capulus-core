@@ -1,0 +1,10 @@
+---
+# Kill-switch: auf false setzen (z.B. in host_vars) um node_exporter auf
+# einem bestimmten Host zu deaktivieren, ohne die Rolle aus dem Playbook zu
+# entfernen (gleiches Prinzip wie alamos_kiosk_enabled).
+node_exporter_enabled: true
+
+# Debian-Paket "prometheus-node-exporter" lauscht standardmaessig auf
+# diesem Port — muss zum Port in der VMStaticScrape-Ressource passen
+# (argocd/apps/monitoring/templates/vmstaticscrape-*.yaml).
+node_exporter_port: 9100

@@ -1,0 +1,28 @@
+# Remote-write-Endpunkt fuer Tailscale-only-Hosts, die ihre Metriken selbst
+# pushen statt gescraped zu werden (aktuell nur der Banana-Pi-Alarmmonitor
+# "vereinsheim-alarmmonitor", siehe ansible/roles/vmagent und
+# docs/45-vereinsheim-alarmmonitor.md — Pods im Cluster haben keinen Pfad zu
+# Tailscale-Peers, daher kein VMStaticScrape wie bei ugreen-nas).
+#
+# Bewusst NUR /api/v1/write freigegeben, nicht die volle VictoriaMetrics-API
+# (Query etc. bleibt cluster-intern) — gleiches Netzwerkgrenzen-Prinzip wie
+# bei alamos-apager (siehe docs/19-alamos-apager.md): kein Auth vor diesem
+# Endpunkt, Schutz ist die LAN/Tailscale-Netzwerkgrenze.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vm-write
+  namespace: {{ .Release.Namespace }}
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: vm-write.homeserver
+      http:
+        paths:
+          - path: /api/v1/write
+            pathType: Prefix
+            backend:
+              service:
+                name: vmsingle-monitoring-victoria-metrics-k8s-stack
+                port:
+                  number: 8428

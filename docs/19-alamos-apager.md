@@ -55,6 +55,16 @@ Die App selbst kennt **keine echten AMweb-URLs** — die liegen ausschließlich
 im SealedSecret (siehe nächster Abschnitt). Ohne dieses Secret startet der
 Pod, aber `/start?station=...` antwortet mit `404`.
 
+**`/metrics` (Prometheus-Format, per `VMServiceScrape` gescraped):** exportiert
+je Standort den Unix-Zeitstempel der letzten erfolgreichen `/start`-Anfrage
+(`alamos_apager_last_start_timestamp_seconds`, = ein Kiosk-Browser hat die
+echte AMweb-URL tatsächlich angefragt) und des letzten Heartbeats
+(`alamos_apager_last_heartbeat_timestamp_seconds`), plus den aktuellen
+Down-Status (`alamos_apager_station_down`). Läuft cluster-intern, also
+unabhängig davon, ob ein Standort per LAN oder nur per Tailscale angebunden
+ist — genutzt vom Zammad-Ticket-Workflow des Banana-Pi-Standorts, siehe
+[docs/45-vereinsheim-alarmmonitor.md](45-vereinsheim-alarmmonitor.md).
+
 **Bewusst kein Login vor `/start`/`/heartbeat`:** Der Pi ruft beide
 Endpunkte unbeaufsichtigt auf (Chromium-Kiosk beim Boot, Heartbeat-Timer
 alle 60s) und kann keinen Login-Dialog bedienen. Schutz ist stattdessen

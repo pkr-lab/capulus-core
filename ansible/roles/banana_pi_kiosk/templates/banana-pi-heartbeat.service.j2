@@ -1,0 +1,10 @@
+# Managed by Ansible (banana_pi_kiosk role) — do not edit manually.
+[Unit]
+Description=Banana-Pi Alarmmonitor Heartbeat ({{ banana_pi_kiosk_station }})
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/banana-pi-heartbeat.env
+ExecStart=/usr/local/bin/banana-pi-heartbeat.sh
