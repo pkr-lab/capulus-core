@@ -86,14 +86,15 @@ authentik:
       limits:
         memory: 768Mi
 
-    # HPA — Server ist zustandslos (Web-UI + API), horizontales Skalieren
-    # ist ohne Weiteres sicher.
+    # HPA deaktiviert: Cluster läuft aktuell nur auf einem Node (homeserver,
+    # beide Worker NotReady) — mehrere Replicas bringen daher keine
+    # Ausfallsicherheit, nur zusätzlichen RAM-Verbrauch. Memory-basiertes
+    # Scaling hatte hier ohnehin ständig auf maxReplicas=3 hochskaliert,
+    # obwohl die CPU-Last nur einstellig war (Server pendelt sich einfach
+    # bei einem RAM-Sockel > 80% von request ein, das ist kein Lastsignal).
+    replicas: 1
     autoscaling:
-      enabled: true
-      minReplicas: 1
-      maxReplicas: 3
-      targetCPUUtilizationPercentage: 75
-      targetMemoryUtilizationPercentage: 80
+      enabled: false
 
     ingress:
       enabled: true
@@ -136,14 +137,11 @@ authentik:
       limits:
         memory: 768Mi
 
-    # HPA — Worker verarbeitet Background-/Celery-artige Tasks, kein
-    # Leader-Election-Singleton, daher unbedenklich mit >1 Replica.
+    # HPA deaktiviert — selber Grund wie beim Server (s.o.): Ein-Node-Cluster,
+    # zusätzliche Replicas bringen aktuell keine Ausfallsicherheit.
+    replicas: 1
     autoscaling:
-      enabled: true
-      minReplicas: 1
-      maxReplicas: 2
-      targetCPUUtilizationPercentage: 75
-      targetMemoryUtilizationPercentage: 80
+      enabled: false
 
   # ---- PostgreSQL (eingebettet) ---------------------------
   # Chart 2026.x nutzt library/postgres:17-bookworm statt des alten Bitnami-Images.
