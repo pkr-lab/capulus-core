@@ -1,0 +1,154 @@
+---
+# ============================================================
+# banana_pi_kiosk role — Banana-Pi-Alarmmonitor (ALAMOS AMweb, Armbian)
+# ============================================================
+# Wie alamos_kiosk (Raspberry Pi), aber fuer Armbian/Debian statt
+# Raspberry Pi OS: anderer Chromium-Paketname, kein Imager-Autologin-
+# Schalter (wird hier per getty-Drop-in + .bash_profile + startx
+# nachgebildet), und ein lokaler Failover-Supervisor, der bei
+# Nichterreichbarkeit von alamos-apager auf eine lokal hinterlegte,
+# Vault-verschluesselte Fallback-URL umschaltet (siehe
+# docs/45-vereinsheim-alarmmonitor.md und docs/19-alamos-apager.md).
+# ============================================================
+
+- name: Sicherstellen dass banana_pi_kiosk_station gesetzt ist
+  ansible.builtin.assert:
+    that:
+      - banana_pi_kiosk_station is defined
+      - banana_pi_kiosk_station | length > 0
+    fail_msg: >-
+      banana_pi_kiosk_station ist nicht gesetzt. Pro Host in
+      ansible/inventory/hosts.yml (Gruppe banana_pis) als Host-Var setzen
+      (muss zu einem Key im SealedSecret alamos-apager-stations passen).
+  when: banana_pi_kiosk_enabled | bool
+
+- name: Sicherstellen dass banana_pi_kiosk_fallback_url gesetzt und entschluesselt ist
+  ansible.builtin.assert:
+    that:
+      - banana_pi_kiosk_fallback_url is defined
+      - banana_pi_kiosk_fallback_url | length > 0
+      - "'CHANGE-ME' not in banana_pi_kiosk_fallback_url"
+    fail_msg: >-
+      banana_pi_kiosk_fallback_url ist nicht gesetzt (oder noch der
+      Platzhalter aus host_vars/{{ inventory_hostname }}/vault.yml). Echte
+      ALAMOS-AMweb-URL per `ansible-vault encrypt_string` eintragen — siehe
+      Kommentar in dieser Datei und docs/45-vereinsheim-alarmmonitor.md.
+  when: banana_pi_kiosk_enabled | bool
+
+- name: Kiosk-Pakete installieren (Debian-Paketnamen, nicht Raspbian)
+  ansible.builtin.apt:
+    name:
+      - chromium
+      - xserver-xorg
+      - xinit
+      - openbox
+      - unclutter
+      - x11-xserver-utils
+      - curl
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: banana_pi_kiosk_enabled | bool
+
+# ---- Autologin auf tty1 (kein Raspberry-Pi-Imager-Schalter auf Armbian) --
+- name: Verzeichnis fuer getty@tty1-Drop-in anlegen
+  ansible.builtin.file:
+    path: /etc/systemd/system/getty@tty1.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: banana_pi_kiosk_enabled | bool
+
+- name: Autologin-Drop-in fuer getty@tty1 deployen
+  ansible.builtin.template:
+    src: getty-autologin.conf.j2
+    dest: /etc/systemd/system/getty@tty1.service.d/autologin.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: banana_pi_kiosk_enabled | bool
+  notify: Reload getty@tty1
+
+- name: ".bash_profile von {{ banana_pi_kiosk_user }} um automatischen startx-Aufruf ergaenzen"
+  ansible.builtin.blockinfile:
+    path: "/home/{{ banana_pi_kiosk_user }}/.bash_profile"
+    create: true
+    owner: "{{ banana_pi_kiosk_user }}"
+    group: "{{ banana_pi_kiosk_user }}"
+    mode: "0644"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK (banana_pi_kiosk role)"
+    block: |
+      if [ -z "${DISPLAY:-}" ] && [ "$(tty)" = "/dev/tty1" ]; then
+        exec startx -- -nocursor
+      fi
+  when: banana_pi_kiosk_enabled | bool
+
+- name: .xinitrc deployen
+  ansible.builtin.template:
+    src: xinitrc.j2
+    dest: "/home/{{ banana_pi_kiosk_user }}/.xinitrc"
+    owner: "{{ banana_pi_kiosk_user }}"
+    group: "{{ banana_pi_kiosk_user }}"
+    mode: "0755"
+  when: banana_pi_kiosk_enabled | bool
+
+# ---- Kiosk-Supervisor (Normalbetrieb + lokaler Server-Fallback) --------
+- name: Kiosk-Supervisor-Skript deployen
+  ansible.builtin.template:
+    src: banana-pi-kiosk-supervisor.sh.j2
+    dest: /usr/local/bin/banana-pi-kiosk-supervisor.sh
+    owner: root
+    group: root
+    mode: "0755"
+  when: banana_pi_kiosk_enabled | bool
+
+# ---- Heartbeat (zentraler ntfy-Ausfall-Alarm in alamos-apager) ---------
+- name: Heartbeat-Skript deployen
+  ansible.builtin.copy:
+    src: banana-pi-heartbeat.sh
+    dest: /usr/local/bin/banana-pi-heartbeat.sh
+    owner: root
+    group: root
+    mode: "0755"
+  when: banana_pi_kiosk_enabled | bool
+  notify: Restart banana-pi heartbeat timer
+
+- name: Heartbeat-Environment-Datei deployen
+  ansible.builtin.template:
+    src: banana-pi-heartbeat.env.j2
+    dest: /etc/banana-pi-heartbeat.env
+    owner: root
+    group: root
+    mode: "0644"
+  when: banana_pi_kiosk_enabled | bool
+  notify: Restart banana-pi heartbeat timer
+
+- name: Heartbeat-systemd-Service + Timer deployen
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - banana-pi-heartbeat.service
+    - banana-pi-heartbeat.timer
+  when: banana_pi_kiosk_enabled | bool
+  notify: Restart banana-pi heartbeat timer
+
+- name: Heartbeat-Timer aktivieren
+  ansible.builtin.systemd:
+    name: banana-pi-heartbeat.timer
+    daemon_reload: true
+    enabled: true
+    state: started
+  when: banana_pi_kiosk_enabled | bool
+
+- name: Heartbeat-Timer deaktivieren (banana_pi_kiosk_enabled false)
+  ansible.builtin.systemd:
+    name: banana-pi-heartbeat.timer
+    enabled: false
+    state: stopped
+  when: not (banana_pi_kiosk_enabled | bool)
+  failed_when: false

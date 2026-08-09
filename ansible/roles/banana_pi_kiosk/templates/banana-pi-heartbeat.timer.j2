@@ -1,0 +1,11 @@
+# Managed by Ansible (banana_pi_kiosk role) — do not edit manually.
+[Unit]
+Description=Periodischer Banana-Pi Alarmmonitor Heartbeat ({{ banana_pi_kiosk_station }})
+
+[Timer]
+OnBootSec=30
+OnUnitActiveSec={{ banana_pi_kiosk_heartbeat_interval }}
+Unit=banana-pi-heartbeat.service
+
+[Install]
+WantedBy=timers.target

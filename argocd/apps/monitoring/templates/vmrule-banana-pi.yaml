@@ -1,0 +1,44 @@
+# Ausfallerkennung fuer den Banana-Pi-Alarmmonitor "vereinsheim-
+# alarmmonitor" auf Host-Ebene — unabhaengig vom App-Level-Heartbeat in
+# argocd/apps/alamos-apager (der nur ntfy ausloest, siehe
+# docs/19-alamos-apager.md).
+#
+# WICHTIG — absent_over_time statt up==0: dieser Host wird nicht vom Cluster
+# gescraped (Pods haben keinen Pfad zu Tailscale-Peers), sondern pusht seine
+# eigenen Metriken per remote_write (ansible/roles/vmagent, siehe
+# docs/45-vereinsheim-alarmmonitor.md). Faellt der Pi aus, wird "up" also
+# nicht auf 0 gesetzt (das wuerde eine laufende Scrape-Verbindung
+# voraussetzen) — die Zeitreihe hoert einfach auf, sich zu aktualisieren
+# und wird nach der VictoriaMetrics-Staleness-Frist als fehlend behandelt.
+# `up == 0` wuerde deshalb NIE feuern; absent_over_time erkennt stattdessen
+# "seit 10 Minuten kein einziger Sample mehr angekommen" — funktional genau
+# das, was wir wollen (Pi ODER Push-Pfad down).
+#
+# `for: 10m` bewusst traege (deutlich ueber einem kurzen Reboot), damit
+# nicht jeder Neustart sofort ein Ticket erzeugt. severity=critical ->
+# bestehende Alertmanager-Routen (gotify, ntfy) UND zusaetzlich die neue
+# n8n-Route (nur fuer genau diesen Alertnamen, siehe values.yaml) greifen.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: banana-pi-availability
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: banana-pi.availability
+      interval: 30s
+      rules:
+        - alert: BananaPiAlarmmonitorDown
+          expr: |
+            absent_over_time(up{job="node-exporter", instance="vereinsheim-alarmmonitor"}[10m])
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Vereinsheim-Alarmmonitor nicht erreichbar"
+            description: >-
+              Der Banana-Pi-Alarmmonitor "vereinsheim-alarmmonitor" hat seit
+              mehr als 10 Minuten keine Metriken mehr gepusht (vmagent-Push
+              via Tailscale down oder Geraet selbst nicht erreichbar). Loest
+              zusaetzlich zum ntfy-Alarm ein Zammad-Ticket via n8n aus
+              (info@edv-kretzer.de).
