@@ -105,11 +105,19 @@ victoria-metrics-k8s-stack:
   # Routing:
   #   alle Alerts (außer InfoInhibitor/Watchdog) → gotify-bridge
   #   zusätzlich severity=critical → auch ntfy /Home-Lab (iOS Push)
+  #   zusätzlich NUR alertname=BananaPiAlarmmonitorDown → auch n8n-Webhook
+  #     (-> Zammad-Ticket, siehe docs/45-vereinsheim-alarmmonitor.md). Rein
+  #     additiv: die anderen Alamos-Raspberry-Pis bekommen bewusst weiterhin
+  #     KEIN Ticket pro Ausfall (siehe docs/19-alamos-apager.md), nur dieser
+  #     eine Alertname bekommt den zusätzlichen Pfad.
   #
   # gotify-bridge: argocd/apps/gotify-bridge/ — übersetzt Alertmanager-JSON
   #   in Gotifys message-API. Token als Secret `gotify-bridge-token` anlegen
   #   (siehe argocd/apps/gotify-bridge/values.yaml).
   # ntfy: argocd/apps/ntfy/ — Alertmanager-Webhook wird direkt empfangen.
+  # n8n: argocd/apps/n8n/ — Webhook-Trigger des Workflows
+  #   "Banana-Pi-Down -> Zammad-Ticket"
+  #   (argocd/apps/n8n/workflows/banana-pi-down-to-zammad.json).
   alertmanager:
     enabled: true
     spec:
@@ -126,14 +134,21 @@ victoria-metrics-k8s-stack:
               - alertname=~"InfoInhibitor|Watchdog"
             receiver: blackhole
           # Match-all sibling: every alert reaching here goes to gotify, then
-          # (continue: true) falls through to the severity=critical route
+          # (continue: true) falls through to the next matching sibling
           # below. A bare top-level receiver does NOT get combined with a
           # matched child route — Alertmanager only falls back to it when no
-          # child matches at all — so the "default + critical" fan-out has
-          # to be modeled as explicit sibling routes.
+          # child matches at all — so the "default + critical (+ banana-pi)"
+          # fan-out has to be modeled as explicit sibling routes.
           - matchers:
               - severity=~".*"
             receiver: gotify
+            continue: true
+          # Nur dieser eine Alertname zusätzlich an n8n — muss VOR der
+          # severity=critical-Route stehen (die hat kein continue: true und
+          # würde die Auswertung sonst dort beenden).
+          - matchers:
+              - alertname="BananaPiAlarmmonitorDown"
+            receiver: n8n-banana-pi-down
             continue: true
           - matchers:
               - severity="critical"
@@ -148,6 +163,10 @@ victoria-metrics-k8s-stack:
           webhook_configs:
             - url: 'http://ntfy-bridge.ntfy-bridge.svc.cluster.local:8080/alert'
               send_resolved: true
+        - name: n8n-banana-pi-down
+          webhook_configs:
+            - url: 'http://n8n.n8n.svc.cluster.local/webhook/banana-pi-down'
+              send_resolved: false
       inhibit_rules:
         - target_matchers:
             - severity=~"warning|info"

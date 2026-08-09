@@ -12,7 +12,7 @@
 
 - name: Download Tailscale GPG signing key
   ansible.builtin.get_url:
-    url: "https://pkgs.tailscale.com/stable/ubuntu/{{ tailscale_repo_codename }}.noarmor.gpg"
+    url: "https://pkgs.tailscale.com/stable/{{ tailscale_repo_os }}/{{ tailscale_repo_codename }}.noarmor.gpg"
     dest: /usr/share/keyrings/tailscale-archive-keyring.gpg
     mode: '0644'
     force: false
@@ -21,7 +21,7 @@
   ansible.builtin.apt_repository:
     repo: >-
       deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg]
-      https://pkgs.tailscale.com/stable/ubuntu {{ tailscale_repo_codename }} main
+      https://pkgs.tailscale.com/stable/{{ tailscale_repo_os }} {{ tailscale_repo_codename }} main
     filename: tailscale
     state: present
     update_cache: true
@@ -98,13 +98,19 @@
       # Subnet-Router dienen sollen (z.B. die xibosignage-Pis, siehe
       # ansible/xibo-kiosks.yml), auf "" setzen — dann bleibt der Host ein
       # reiner Tailnet-Client ohne LAN-Weiterleitung.
+      #
+      # --accept-routes ist per Default false (Hosts sollen fremde Subnetz-
+      # Routen nicht blind uebernehmen). Hosts, die selbst KEIN LAN haben und
+      # ueber die vom Homeserver beworbene Route ins LAN muessen (z.B. die
+      # Banana-Pi-Alarmmonitore, siehe ansible/group_vars/banana_pis.yml),
+      # setzen tailscale_accept_routes: true.
       ansible.builtin.command: >
         tailscale up
         --authkey=file:{{ tailscale_authkey_file.path }}
         --hostname={{ tailscale_hostname }}
         {{ ('--advertise-routes=' + tailscale_advertise_routes) if (tailscale_advertise_routes | default('') | length > 0) else '' }}
         --accept-dns=true
-        --accept-routes=false
+        --accept-routes={{ tailscale_accept_routes | bool | lower }}
         --timeout=60s
       register: tailscale_up_result
       changed_when: tailscale_up_result.rc == 0
@@ -122,6 +128,7 @@
     tailscale set
     --hostname={{ tailscale_hostname }}
     {{ ('--advertise-routes=' + tailscale_advertise_routes) if (tailscale_advertise_routes | default('') | length > 0) else '' }}
+    --accept-routes={{ tailscale_accept_routes | bool | lower }}
   register: tailscale_set_result
   changed_when: tailscale_set_result.rc == 0
   failed_when: false
