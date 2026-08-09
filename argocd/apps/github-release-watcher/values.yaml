@@ -76,13 +76,6 @@ github:
       # Aus argocd/apps/mealie/values.yaml image.tag — Format identisch.
       currentVersion: "v3.22.0"
       notifyZammad: false
-    - id: grocy
-      name: "Grocy"
-      repo: "grocy/grocy"
-      # Aus argocd/apps/grocy/values.yaml image.tag "4.6.0" — "v" ergänzt
-      # (linuxserver/grocy-Image taggt ohne "v", grocy/grocy-Releases mit).
-      currentVersion: "v4.6.0"
-      notifyZammad: false
     - id: n8n
       name: "n8n"
       repo: "n8n-io/n8n"

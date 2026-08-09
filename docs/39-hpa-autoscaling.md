@@ -144,7 +144,7 @@ einzige durchgehend laufende Node ist (siehe
 **SQLite/embedded Datenbank auf RWO-Storage** — mehrere Pods würden sich
 dieselbe DB-Datei zerschießen:
 
-- grocy, mealie, n8n, paperless-ngx, vaultwarden (alle explizit SQLite,
+- mealie, n8n, paperless-ngx, vaultwarden (alle explizit SQLite,
   siehe jeweilige Doku)
 - ntfy, gotify (Cache-/Auth-Datei auf der PVC)
 - uptime-kuma (zusätzlich hart auf den Homeserver-Node gepinnt)
@@ -152,7 +152,7 @@ dieselbe DB-Datei zerschießen:
 - monitoring/Grafana — läuft mit `persistence.type: pvc` (RWO,
   `local-path`) und ohne externe DB-Anbindung, also embedded SQLite;
   der Grafana-Subchart hat zwar natives `autoscaling.*`, das würde hier
-  aber dieselbe Klasse von Problem erzeugen wie bei Vaultwarden/Grocy
+  aber dieselbe Klasse von Problem erzeugen wie bei Vaultwarden
 
 **Single-Writer/Standalone-Datenspeicher:**
 
