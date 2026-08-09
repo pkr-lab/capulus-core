@@ -121,6 +121,15 @@ xibo-kiosks: ## xibosignage-Displays einrichten (Raspberry Pi 3B+, Bilder-Slides
 xibo-kiosks-check: ## Dry-run des xibosignage-Displays-Playbooks (keine Änderungen).
 	ansible-playbook -i $(INVENTORY) $(XIBO_PLAYBOOK) --check --diff $(VAULT_OPTS)
 
+.PHONY: banana-pi-kiosks banana-pi-kiosks-check
+BANANA_PI_PLAYBOOK := $(ANSIBLE_DIR)/banana-pi-kiosks.yml
+
+banana-pi-kiosks: ## Banana-Pi-Alarmmonitore einrichten (Armbian, ALAMOS AMweb + Server-Fallback).
+	ansible-playbook -i $(INVENTORY) $(BANANA_PI_PLAYBOOK) $(VAULT_OPTS)
+
+banana-pi-kiosks-check: ## Dry-run des Banana-Pi-Alarmmonitor-Playbooks (keine Änderungen).
+	ansible-playbook -i $(INVENTORY) $(BANANA_PI_PLAYBOOK) --check --diff $(VAULT_OPTS)
+
 .PHONY: lint
 lint: ## Lint YAML, Ansible, and ALL Helm charts.
 	yamllint -c .yamllint ansible/ argocd/

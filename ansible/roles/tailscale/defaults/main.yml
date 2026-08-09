@@ -7,6 +7,19 @@
 #   tailscale_repo_codename: noble
 tailscale_repo_codename: "{{ ansible_distribution_release }}"
 
+# Tailscale hostet getrennte APT-Repos für Ubuntu und Debian
+# (pkgs.tailscale.com/stable/{ubuntu,debian}/<codename>). Bisher lief diese
+# Rolle nur auf Ubuntu (homeserver/worker-*), daher war das hart auf
+# "ubuntu" kodiert. Armbian meldet sich als Debian (ansible_distribution ==
+# "Debian", Codename z.B. "trixie") — ohne diese Umschaltung wuerde die
+# Rolle versuchen, das (nicht existierende) Ubuntu-Repo fuer den
+# Debian-Codenamen zu installieren.
+tailscale_repo_os: "{{ 'debian' if ansible_distribution == 'Debian' else 'ubuntu' }}"
+
+# Siehe Kommentar bei "Connect to Tailscale and advertise the local subnet"
+# unten — false = fremde Subnetz-Routen NICHT automatisch uebernehmen.
+tailscale_accept_routes: false
+
 # Subnetz, das dieser Host im Tailnet advertised (Subnet-Routing, siehe
 # docs/06-tailscale.md). Default = das globale LAN (nur sinnvoll für den
 # Home-Server als Subnet-Router). Für Geräte, die NUR selbst im Tailnet

@@ -1,0 +1,33 @@
+---
+# Kill-switch: auf false setzen (z.B. in host_vars) um den Metriken-Push auf
+# einem bestimmten Host zu deaktivieren, ohne die Rolle aus dem Playbook zu
+# entfernen (gleiches Prinzip wie node_exporter_enabled).
+vmagent_enabled: true
+
+# VictoriaMetrics-Release, siehe https://github.com/VictoriaMetrics/VictoriaMetrics/releases
+# Asset-Namensschema: vmutils-linux-{arch}-v{version}.tar.gz
+vmagent_version: "1.149.0"
+
+# Der Banana Pi M2 Ultra (Allwinner R40, Cortex-A7) ist reines ARMv7/32-Bit
+# (kein aarch64) — daher "arm", nicht "arm64". Bei anderer Hardware
+# anpassen (siehe Asset-Liste im GitHub-Release).
+vmagent_arch: "arm"
+
+vmagent_download_url: >-
+  https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v{{ vmagent_version }}/vmutils-linux-{{ vmagent_arch }}-v{{ vmagent_version }}.tar.gz
+
+# Versionierter Installationspfad statt fixem /usr/local/bin/vmagent — ein
+# Versions-Bump legt automatisch ein neues Verzeichnis an statt eine
+# moeglicherweise noch laufende alte Binary zu ueberschreiben.
+vmagent_install_dir: "/opt/vmagent-{{ vmagent_version }}"
+
+# Wohin vmagent scraped (node_exporter laeuft lokal auf demselben Host,
+# siehe ansible/roles/node_exporter) und wie oft.
+vmagent_node_exporter_port: 9100
+vmagent_scrape_interval: "30s"
+
+# Wohin gepusht wird (Prometheus-remote_write-Endpunkt, per Traefik-Ingress
+# exponiert — siehe argocd/apps/monitoring/templates/ingress-vm-write.yaml).
+# MUSS pro Host/Gruppe gesetzt werden (siehe ansible/group_vars/banana_pis.yml)
+# — kein Default, damit ein fehlender Wert laut auffaellt.
+# vmagent_remote_write_url: "http://vm-write.homeserver/api/v1/write"
