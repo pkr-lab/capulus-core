@@ -1,12 +1,12 @@
 # GitHub Release Watcher → Zammad-Benachrichtigung + App-Update-Liste
 
 Der `github-release-watcher` pollt periodisch die GitHub-Releases-API für
-eine Liste konfigurierter Repos (aktuell 10, siehe `values.yaml`) und macht
+eine Liste konfigurierter Repos (aktuell 9, siehe `values.yaml`) und macht
 daraus zwei getrennte Dinge:
 
 1. **Zammad-Ticket** — nur für Repos mit `notifyZammad: true` (aktuell nur
-   `DocFlowEngine`); die übrigen 9 (Nextcloud, Immich, Vaultwarden,
-   Paperless-ngx, Mealie, Grocy, n8n, Wiki.js, Zammad selbst) erzeugen
+   `DocFlowEngine`); die übrigen 8 (Nextcloud, Immich, Vaultwarden,
+   Paperless-ngx, Mealie, n8n, Wiki.js, Zammad selbst) erzeugen
    bewusst **kein** Ticket.
 2. **App-Update-Liste** — bei **jedem** Lauf wird für **alle** Repos
    `currentVersion` (aus `values.yaml`, manuell gepflegt) gegen die gerade

@@ -198,7 +198,6 @@ capulus-core/
 │   ├── 25-github-release-watcher.md  # GitHub-Release → Zammad-E-Mail-Benachrichtigung
 │   ├── 26-paperless-ngx.md           # Dokumentenmanagement mit OCR
 │   ├── 27-mealie.md                  # Rezeptverwaltung + Wochenplaner
-│   ├── 28-grocy.md                   # Haushalts-ERP
 │   ├── 29-n8n.md                     # Low-Code-Automatisierung
 │   ├── 30-uptime-kuma.md             # Status-Seite und Service-Alerting
 │   ├── 31-rhein-dashboard.md         # Grafana: Pegelonline, DWD, ELWIS, Hochwasser RLP
@@ -262,7 +261,6 @@ capulus-core/
         ├── semaphore/                # Ansible-Web-UI
         ├── paperless-ngx/            # Dokumentenmanagement mit OCR
         ├── mealie/                   # Rezeptverwaltung + Wochenplaner
-        ├── grocy/                    # Haushalts-ERP (Vorräte, Einkauf, Ablaufdaten)
         ├── n8n/                      # Low-Code-Automatisierung
         ├── uptime-kuma/              # Status-Seite und Service-Alerting
         ├── vaultwarden/              # Bitwarden-kompatibler Passwort-Manager
@@ -342,7 +340,6 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 | MediaMTX (Live-Stream-Playback) | http://stream.homeserver |
 | Paperless-ngx | http://paperless.homeserver |
 | Mealie | http://mealie.homeserver |
-| Grocy | http://grocy.homeserver |
 | n8n | http://n8n.homeserver |
 | Uptime Kuma | http://uptime-kuma.homeserver |
 | Vaultwarden | http://vault.homeserver |
@@ -428,7 +425,6 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [GitHub Release Watcher](docs/25-github-release-watcher.md) | Neue GitHub-Releases erkennen und per Zammad-Ticket eine E-Mail-Benachrichtigung auslösen |
 | [Paperless-ngx](docs/26-paperless-ngx.md) | Dokumentenmanagement mit OCR — Briefe, Rechnungen, Verträge scannen und durchsuchen |
 | [Mealie](docs/27-mealie.md) | Rezeptverwaltung + Wochenplaner mit URL-Import |
-| [Grocy](docs/28-grocy.md) | Haushalts-ERP: Vorräte, Einkaufsliste, Ablaufdaten, Putzplan |
 | [n8n](docs/29-n8n.md) | Low-Code-Automatisierung — Dienste verknüpfen ohne Programmieren |
 | [Uptime Kuma](docs/30-uptime-kuma.md) | Status-Seite und Alerting für alle Dienste |
 | [Rhein-Dashboard](docs/31-rhein-dashboard.md) | Grafana: Pegelonline, DWD-Warnungen, ELWIS, Hochwasservorhersage RLP |

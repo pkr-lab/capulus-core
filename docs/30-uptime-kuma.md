@@ -48,7 +48,6 @@ anlegen (erscheint beim ersten Besuch automatisch).
 | Paperless | http://paperless.homeserver | HTTP |
 | Mealie | http://mealie.homeserver | HTTP |
 | n8n | http://n8n.homeserver | HTTP |
-| Grocy | http://grocy.homeserver | HTTP |
 | worker-0 (Ping) | 192.168.178.95 | Ping |
 
 ---

@@ -77,7 +77,6 @@ enum Constants {
             SelfHostedService(name: "Vaultwarden", systemImage: "lock.fill", host: "vault.homeserver"),
             SelfHostedService(name: "Paperless-ngx", systemImage: "doc.text.magnifyingglass", host: "paperless.homeserver"),
             SelfHostedService(name: "Mealie", systemImage: "fork.knife", host: "mealie.homeserver"),
-            SelfHostedService(name: "Grocy", systemImage: "cart.fill", host: "grocy.homeserver"),
             SelfHostedService(name: "n8n", systemImage: "arrow.triangle.branch", host: "n8n.homeserver"),
             SelfHostedService(name: "Wiki.js", systemImage: "book.closed.fill", host: "wiki.homeserver"),
             SelfHostedService(name: "Zammad", systemImage: "questionmark.bubble.fill", host: "zammad.homeserver"),
