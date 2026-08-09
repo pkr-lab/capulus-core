@@ -259,6 +259,41 @@ semaphore_projects:
     # Bewusst kein Schedule, gleiches Prinzip wie bei alarm-kiosks: ein
     # Re-Run soll hier nur manuell per Knopfdruck laufen.
 
+  - name: banana-pi-kiosks
+    description: >-
+      Banana-Pi-Alarmmonitore (Armbian, ALAMOS AMweb + lokaler
+      Server-Fallback) einrichten — siehe docs/45-vereinsheim-alarmmonitor.md.
+      ACHTUNG: funktioniert per Semaphore NUR solange der Pi noch am LAN
+      haengt (Phase 1) — Semaphore laeuft selbst als Pod im Cluster und hat
+      wie jeder Pod keinen Netzwerkpfad zu Tailscale-Peers. Nach dem Umzug
+      an den Tailscale-only-Standort (Phase 2) nur noch per `make
+      banana-pi-kiosks` von einer im Tailnet angemeldeten Maschine aus
+      re-provisionieren, nicht mehr per Semaphore-UI.
+    repository:
+      name: home-server-git
+      url: "{{ argocd_repo_url }}"
+      branch: main
+    environments:
+      - "{{ semaphore_default_environment }}"
+    inventories:
+      - name: banana_pis
+        type: static
+        ssh_key: semaphore-ssh-key
+        content: |
+          [banana_pis]
+          # ansible_host gilt nur fuer Phase 1 (Pi noch am LAN) — siehe
+          # docs/45-vereinsheim-alarmmonitor.md.
+          vereinsheim-alarmmonitor ansible_host=192.168.178.100 banana_pi_kiosk_station=vereinsheim-alarmmonitor
+    templates:
+      - name: "Deploy Banana-Pi Alarmmonitore"
+        playbook: ansible/banana-pi-kiosks.yml
+        inventory: banana_pis
+        environment: default-env
+        vault_key: vault-password
+        description: "Chromium-Kiosk + Server-Fallback + node_exporter + Watchdogs auf den Banana-Pi-Alarmmonitoren."
+    # Bewusst kein Schedule, gleiches Prinzip wie bei alarm-kiosks: ein
+    # Re-Run soll hier nur manuell per Knopfdruck laufen.
+
 # ---- Scanner / Paperless Ingestion ------------------------
 # Fujitsu USB-Scanner direkt am Home-Server; scanbd hört auf den
 # Hardware-Button und schreibt Scans als PDF in den SMB-Share von

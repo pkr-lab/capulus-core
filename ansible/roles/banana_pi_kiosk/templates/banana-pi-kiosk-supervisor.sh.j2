@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# Managed by Ansible (banana_pi_kiosk role) — do not edit manually.
+#
+# X-Session-Client (gestartet ueber ~/.xinitrc): haelt die X-Session am
+# Leben und verwaltet Chromium selbst als Kindprozess, damit ein URL-Wechsel
+# (Normalbetrieb <-> Fallback) OHNE X-Neustart moeglich ist — xinit beendet
+# die Session sonst, sobald der Client-Prozess (dieses Skript) endet.
+#
+# Normalbetrieb: {{ banana_pi_kiosk_base_url }}/start?station={{ banana_pi_kiosk_station }}
+# (Cluster loest serverseitig zur echten AMweb-URL auf, siehe
+# docs/19-alamos-apager.md).
+#
+# Fallback (alamos-apager {{ banana_pi_kiosk_failover_fail_threshold }}x in
+# Folge nicht erreichbar): lokal hinterlegte echte AMweb-URL (siehe
+# host_vars/{{ inventory_hostname }}/vault.yml). Gleiches Chromium-Profil in
+# beiden Faellen (kein --incognito) — der einmalige manuelle AMweb-Login
+# (Passwort + Verschluesselungspasswort) deckt beide Pfade ab, da beide auf
+# dieselbe AMweb-Domain zeigen. Details: docs/45-vereinsheim-alarmmonitor.md.
+set -uo pipefail
+
+BASE_URL="{{ banana_pi_kiosk_base_url }}"
+STATION="{{ banana_pi_kiosk_station }}"
+NORMAL_URL="${BASE_URL}/start?station=${STATION}"
+FALLBACK_URL="{{ banana_pi_kiosk_fallback_url }}"
+POLL_SECONDS={{ banana_pi_kiosk_failover_poll_seconds }}
+FAIL_THRESHOLD={{ banana_pi_kiosk_failover_fail_threshold }}
+RECOVER_THRESHOLD={{ banana_pi_kiosk_failover_recover_threshold }}
+
+xset s off || true
+xset s noblank || true
+xset -dpms || true
+unclutter -idle 0.5 -root &
+
+chromium_pid=""
+current_mode=""  # "normal" oder "fallback"
+
+start_chromium() {
+  local url="$1"
+  chromium \
+    --kiosk \
+    --noerrdialogs \
+    --disable-infobars \
+    --disable-session-crashed-bubble \
+    --autoplay-policy=no-user-gesture-required \
+    "${url}" &
+  chromium_pid=$!
+}
+
+stop_chromium() {
+  if [ -n "${chromium_pid}" ] && kill -0 "${chromium_pid}" 2>/dev/null; then
+    kill "${chromium_pid}" 2>/dev/null
+    wait "${chromium_pid}" 2>/dev/null
+  fi
+}
+
+switch_to() {
+  local mode="$1" url="$2"
+  [ "${mode}" = "${current_mode}" ] && return
+  logger -t banana-pi-kiosk "wechsle zu ${mode} (${url})"
+  stop_chromium
+  start_chromium "${url}"
+  current_mode="${mode}"
+}
+
+# Start immer im Normalbetrieb — die erste Pruefung im Loop unten korrigiert
+# das innerhalb von POLL_SECONDS x FAIL_THRESHOLD, falls der Cluster beim
+# Boot des Pi bereits nicht erreichbar ist.
+switch_to "normal" "${NORMAL_URL}"
+
+fail_count=0
+ok_count=0
+while true; do
+  sleep "${POLL_SECONDS}"
+
+  if curl --fail --silent --show-error --max-time 5 "${BASE_URL}/heartbeat?station=${STATION}" >/dev/null 2>&1; then
+    fail_count=0
+    ok_count=$((ok_count + 1))
+    if [ "${current_mode}" = "fallback" ] && [ "${ok_count}" -ge "${RECOVER_THRESHOLD}" ]; then
+      switch_to "normal" "${NORMAL_URL}"
+    fi
+  else
+    ok_count=0
+    fail_count=$((fail_count + 1))
+    if [ "${current_mode}" = "normal" ] && [ "${fail_count}" -ge "${FAIL_THRESHOLD}" ]; then
+      switch_to "fallback" "${FALLBACK_URL}"
+    fi
+  fi
+
+  # Chromium abgestuerzt (unabhaengig vom Fallback-Zustand)? Im aktuellen
+  # Modus neu starten, ohne auf die naechste Zustandsaenderung zu warten.
+  if [ -n "${chromium_pid}" ] && ! kill -0 "${chromium_pid}" 2>/dev/null; then
+    logger -t banana-pi-kiosk "chromium (${current_mode}) abgestuerzt, starte neu"
+    if [ "${current_mode}" = "fallback" ]; then
+      start_chromium "${FALLBACK_URL}"
+    else
+      start_chromium "${NORMAL_URL}"
+    fi
+  fi
+done

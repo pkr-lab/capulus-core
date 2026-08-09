@@ -1,0 +1,145 @@
+{
+  "name": "Banana-Pi-Down -> Zammad-Ticket",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "banana-pi-down",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "b1b1b1b1-0001-4000-8000-000000000001",
+      "name": "Alertmanager Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 300],
+      "webhookId": "banana-pi-down"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428/api/v1/query",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "last_over_time((100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\",instance=\"vereinsheim-alarmmonitor\"}[5m])) * 100))[30m:1m])"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b1b1b1b1-0002-4000-8000-000000000002",
+      "name": "CPU abfragen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428/api/v1/query",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "last_over_time(((node_memory_MemTotal_bytes{instance=\"vereinsheim-alarmmonitor\"} - node_memory_MemAvailable_bytes{instance=\"vereinsheim-alarmmonitor\"}) / node_memory_MemTotal_bytes{instance=\"vereinsheim-alarmmonitor\"} * 100)[30m:1m])"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b1b1b1b1-0003-4000-8000-000000000003",
+      "name": "RAM abfragen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [780, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428/api/v1/query",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "last_over_time(avg by (instance) (node_hwmon_temp_celsius{instance=\"vereinsheim-alarmmonitor\"})[30m:1m])"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b1b1b1b1-0004-4000-8000-000000000004",
+      "name": "Temperatur abfragen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1040, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// CHANGE-ME: Zammad-Gruppe + Requester ggf. anpassen (siehe docs/25-github-release-watcher.md fuer die Regeln dazu -- ZAMMAD_REQUESTER_EMAIL muss ein bereits existierender Zammad-User sein).\nconst ZAMMAD_GROUP = 'Users';\nconst ZAMMAD_REQUESTER_EMAIL = 'info@edv-kretzer.de';\n\nconst cpuRes = $('CPU abfragen').item.json;\nconst ramRes = $('RAM abfragen').item.json;\nconst tempRes = $('Temperatur abfragen').item.json;\nconst webhookBody = $('Alertmanager Webhook').item.json.body || {};\n\nfunction firstValue(res) {\n  const result = res && res.data && res.data.result;\n  if (!result || result.length === 0) return null;\n  return parseFloat(result[0].value[1]);\n}\n\nconst cpu = firstValue(cpuRes);\nconst ram = firstValue(ramRes);\nconst temp = firstValue(tempRes);\n\nfunction fmt(v, unit) {\n  return (v === null || Number.isNaN(v)) ? 'unbekannt' : `${v.toFixed(1)} ${unit}`;\n}\n\nconst alert = (webhookBody.alerts && webhookBody.alerts[0]) || {};\nconst description = (alert.annotations && alert.annotations.description)\n  || 'Vereinsheim-Alarmmonitor antwortet nicht mehr.';\nconst startsAt = alert.startsAt || new Date().toISOString();\n\nconst bodyHtml = [\n  `<p>${description}</p>`,\n  '<p><strong>Letzte bekannte Metriken vor dem Ausfall</strong> (nicht live -- der Pi ist ja gerade nicht erreichbar):</p>',\n  '<ul>',\n  `<li>CPU: ${fmt(cpu, '%')}</li>`,\n  `<li>RAM: ${fmt(ram, '%')}</li>`,\n  `<li>Temperatur: ${fmt(temp, '\u00b0C')}</li>`,\n  '</ul>',\n  `<p>Alarm seit: ${startsAt}</p>`,\n  '<p>Details: Grafana-Dashboard \"Home Server Auslastung\" (uid homeserver-auslastung), Instance vereinsheim-alarmmonitor.</p>',\n].join('\\n');\n\nreturn [{\n  json: {\n    title: 'Vereinsheim-Alarmmonitor nicht erreichbar',\n    group: ZAMMAD_GROUP,\n    customer: ZAMMAD_REQUESTER_EMAIL,\n    article: {\n      subject: 'Vereinsheim-Alarmmonitor nicht erreichbar',\n      body: bodyHtml,\n      content_type: 'text/html',\n      type: 'note',\n      internal: false,\n    },\n  },\n}];"
+      },
+      "id": "b1b1b1b1-0005-4000-8000-000000000005",
+      "name": "Ticket-Payload bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://zammad.homeserver/api/v1/tickets",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "b1b1b1b1-0006-4000-8000-000000000006",
+      "name": "Zammad-Ticket erstellen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "Zammad API Token"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Alertmanager Webhook": {
+      "main": [[{ "node": "CPU abfragen", "type": "main", "index": 0 }]]
+    },
+    "CPU abfragen": {
+      "main": [[{ "node": "RAM abfragen", "type": "main", "index": 0 }]]
+    },
+    "RAM abfragen": {
+      "main": [[{ "node": "Temperatur abfragen", "type": "main", "index": 0 }]]
+    },
+    "Temperatur abfragen": {
+      "main": [[{ "node": "Ticket-Payload bauen", "type": "main", "index": 0 }]]
+    },
+    "Ticket-Payload bauen": {
+      "main": [[{ "node": "Zammad-Ticket erstellen", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Webhook-Ziel fuer die neue Alertmanager-Route 'n8n-banana-pi-down' (nur alertname=BananaPiAlarmmonitorDown, siehe argocd/apps/monitoring/values.yaml). Fragt bei Ausloesung die letzten bekannten CPU/RAM/Temperatur-Werte aus VictoriaMetrics ab (der Pi selbst ist ja gerade nicht erreichbar) und erstellt darueber ein Zammad-Ticket; die Mail-Benachrichtigung an info@edv-kretzer.de laeuft ueber Zammads eigene Agenten-Benachrichtigung, nicht ueber einen eigenen E-Mail-Node. NACH DEM IMPORT: Node 'Zammad-Ticket erstellen' -> Credential 'Zammad API Token' (Header-Auth, Header-Name 'Authorization', Value 'Token token=<ZAMMAD_TOKEN>') neu zuweisen -- Credential-IDs werden beim Workflow-Import nicht mit uebernommen. Details: docs/45-vereinsheim-alarmmonitor.md."
+  }
+}

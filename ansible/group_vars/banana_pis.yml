@@ -1,0 +1,51 @@
+---
+# ============================================================
+# group_vars für die Inventory-Gruppe "banana_pis"
+# (Banana-Pi-Alarmmonitore, Armbian — siehe
+# docs/45-vereinsheim-alarmmonitor.md und ansible/banana-pi-kiosks.yml)
+# ============================================================
+#
+# Anders als bei den Raspberry-Pi-Alarmmonitoren (ansible/alarm-kiosks.yml,
+# LAN-verbunden) haengt "vereinsheim-alarmmonitor" nach der Ersteinrichtung
+# NUR noch per Tailscale am Netz (kein direkter LAN-Zugriff zum
+# Homeserver-Netz mehr). Deshalb laeuft hier zusaetzlich die tailscale-Rolle
+# UND es gelten andere Route-Einstellungen als bei den xibosignage-Displays
+# (die vollen LAN-Zugriff haben und Tailscale nur fuer Fernwartung nutzen).
+
+# Eigener Tailscale-Hostname pro Pi statt des globalen "hostname"
+# (group_vars/all.yml, dort auf den Home-Server bezogen).
+tailscale_hostname: "{{ inventory_hostname }}"
+
+# Reiner Tailnet-Client: dieser Pi soll NICHT selbst als Subnetz-Router
+# auftreten — das macht bereits der Home-Server (group_vars/all.yml).
+tailscale_advertise_routes: ""
+
+# ABWEICHEND von xibo_displays (dort false, da die Displays ohnehin volles
+# LAN haben): dieser Pi hat KEIN eigenes LAN mehr und muss daher die vom
+# Home-Server beworbene Route (192.168.178.0/24) uebernehmen, um
+# alamos-apager.homeserver & Co. ueberhaupt zu erreichen. Setzt voraus, dass
+# diese Route im Tailscale-Adminpanel (https://login.tailscale.com/admin/machines)
+# fuer den Home-Server genehmigt ist.
+tailscale_accept_routes: true
+
+# Eigener Tailscale-Auth-Key fuer diese Geraete-Gruppe — NICHT den Key des
+# Home-Servers (group_vars/all.yml) wiederverwenden (typischerweise
+# Single-Use und bereits verbraucht).
+tailscale_auth_key: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          31316537383632343230343238323965376163643866363836373162333063306239356666346137
+          3166356665376530353263363364316138646163613833630a346638306532363335333736623461
+          30336634643933376233343136316135396436306362613861333532343231653764653838303632
+          3231663165663963660a363934653635393033383434636639653764336333326433663664373137
+          38353237613263613138383631646632323033333738633664643235666636373732653838646161
+          30333366353235653535663932353937646162383434663339633936333634353631626432656439
+          656539343061396330363236326338353636
+
+# ---- Metriken-Push (vmagent) --------------------------------
+# Cluster-seitiges Scrapen (wie bei ugreen-nas/VMStaticScrape) scheidet aus,
+# da Pods im Cluster keinen Pfad zu Tailscale-Peers haben. Stattdessen
+# schickt ein lokaler vmagent die Metriken selbst per remote_write raus,
+# ueber denselben Weg (Traefik auf dem Home-Server, per Tailscale Split-DNS
+# + Route erreichbar), den der Kiosk-Browser ohnehin schon braucht. Siehe
+# ansible/roles/vmagent und argocd/apps/monitoring/templates/ingress-vm-write.yaml.
+vmagent_remote_write_url: "http://vm-write.homeserver/api/v1/write"

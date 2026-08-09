@@ -1,0 +1,10 @@
+---
+hostname: vereinsheim-alarmmonitor
+
+# Lokale Fallback-URL fuer den Kiosk-Browser, falls
+# alamos-apager.homeserver nicht erreichbar ist (siehe
+# ansible/roles/banana_pi_kiosk und docs/45-vereinsheim-alarmmonitor.md).
+# Bewusster Bruch mit der sonstigen Alamos-Regel "Secret bleibt im
+# Cluster" — nur fuer diesen Host. Wert liegt verschluesselt in
+# vault.yml, hier nur die Referenz.
+banana_pi_kiosk_fallback_url: "{{ vault_vereinsheim_alarmmonitor_fallback_url }}"
