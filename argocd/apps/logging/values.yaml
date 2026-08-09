@@ -1,0 +1,50 @@
+---
+# ============================================================
+# Logging-Stack — Werte für victoria-logs-single (Backend) und
+# victoria-logs-collector (DaemonSet).
+#
+# Upstream values.yaml Referenz:
+#   https://github.com/VictoriaMetrics/helm-charts/blob/master/charts/victoria-logs-single/values.yaml
+#   https://github.com/VictoriaMetrics/helm-charts/blob/master/charts/victoria-logs-collector/values.yaml
+# Docs:
+#   https://docs.victoriametrics.com/helm/victoria-logs-single/
+#   https://docs.victoriametrics.com/helm/victoria-logs-collector/
+# ============================================================
+
+# ---- VictoriaLogs Storage (single-node) ---------------------
+victoria-logs-single:
+  server:
+    retentionPeriod: 14   # Tage; Container-Logs sind kurzlebiger als Metriken (vmsingle: 15d)
+
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+    persistentVolume:
+      enabled: true
+      storageClassName: local-path
+      size: 10Gi
+
+    # local-path bindet den Pod an den Node, auf dem die PVC zuerst
+    # provisioniert wird — wie vmsingle fest auf homeserver (siehe
+    # argocd/apps/monitoring/values.yaml).
+    nodeSelector:
+      kubernetes.io/hostname: homeserver
+
+# ---- Log-Collector (DaemonSet, ein Pod pro Node) -------------
+victoria-logs-collector:
+  # Kein Pfad in der URL -> Collector hängt automatisch /insert/native an.
+  remoteWrite:
+    - url: http://logging-victoria-logs-single-server:9428
+
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 150m
+      memory: 128Mi
