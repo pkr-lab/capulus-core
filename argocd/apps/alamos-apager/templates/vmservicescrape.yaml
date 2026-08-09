@@ -1,0 +1,24 @@
+# Cluster-interner Scrape von alamos-apager selbst (siehe /metrics-Endpunkt
+# in configmap-script.yaml) — funktioniert unabhaengig davon, ob ein
+# Standort per LAN oder nur per Tailscale angebunden ist, weil alamos-apager
+# immer im Cluster laeuft. Liefert je Standort den Zeitstempel der letzten
+# erfolgreichen /start-Anfrage (= Kiosk hat die echte AMweb-URL tatsaechlich
+# angefragt) und des letzten Heartbeats. Genutzt vom
+# "Banana-Pi-Down -> Zammad-Ticket"-n8n-Workflow, siehe
+# docs/45-vereinsheim-alarmmonitor.md.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: {{ include "alamos-apager.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "alamos-apager.selectorLabels" . | nindent 6 }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
