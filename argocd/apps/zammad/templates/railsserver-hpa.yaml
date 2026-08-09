@@ -18,6 +18,10 @@ spec:
     name: zammad-railsserver
   minReplicas: 1
   maxReplicas: 3
+  # Nur CPU als Scaling-Signal — Memory-Utilization triggerte hier ständig
+  # auf maxReplicas hoch, obwohl die CPU-Last einstellig blieb: railsserver
+  # pendelt sich einfach dauerhaft > 80% von request ein (normales
+  # RAM-Verhalten des Rails-Prozesses), das ist kein echtes Lastsignal.
   metrics:
     - type: Resource
       resource:
@@ -25,12 +29,6 @@ spec:
         target:
           type: Utilization
           averageUtilization: 75
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: 80
   behavior:
     scaleDown:
       stabilizationWindowSeconds: 300

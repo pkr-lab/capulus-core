@@ -13,6 +13,9 @@ spec:
     name: {{ include "nextcloud.fullname" . }}
   minReplicas: {{ .Values.nextcloud.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.nextcloud.autoscaling.maxReplicas }}
+  # Nur CPU als Scaling-Signal — Memory-Utilization hielt hier ständig 2/2
+  # Replicas, obwohl die tatsächliche Auslastung weit unter dem Target lag;
+  # RAM-Verbrauch ist kein zuverlässiges Lastsignal für diesen Prozess.
   metrics:
     - type: Resource
       resource:
@@ -20,12 +23,6 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ .Values.nextcloud.autoscaling.targetCPUUtilizationPercentage }}
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: {{ .Values.nextcloud.autoscaling.targetMemoryUtilizationPercentage }}
   behavior:
     scaleDown:
       stabilizationWindowSeconds: 300
