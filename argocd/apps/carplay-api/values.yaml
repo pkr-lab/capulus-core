@@ -159,9 +159,6 @@ config:
     - id: mealie
       name: "Mealie"
       match: "mealie"
-    - id: grocy
-      name: "Grocy"
-      match: "grocy"
     - id: n8n
       name: "n8n"
       match: "n8n"

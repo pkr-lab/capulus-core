@@ -164,7 +164,7 @@ Ausgabe abgleichen.
 
 Aktuell auf `nas`: `n8n`, `paperless-ngx` (5× — data/media/consume/export/
 redis), `wikijs` (postgresql), `zammad` (nur redis, nicht die primary DB —
-siehe unten), `mealie`, `grocy`, `minio` — insgesamt 11 PVCs über 7 Apps.
+siehe unten), `mealie`, `minio` — insgesamt 10 PVCs über 6 Apps.
 
 **Nicht (mehr) auf `nas`, bewusst auf `local-path`:** `monitoring` (vmsingle)
 und `uptime-kuma` wurden versuchsweise migriert, dann aber zurück auf

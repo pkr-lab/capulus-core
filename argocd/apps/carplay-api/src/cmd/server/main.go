@@ -248,7 +248,6 @@ func loadConfig() config {
 				"vaultwarden|Vaultwarden|vaultwarden,"+
 				"paperless|Paperless-ngx|paperless,"+
 				"mealie|Mealie|mealie,"+
-				"grocy|Grocy|grocy,"+
 				"n8n|n8n|n8n,"+
 				"wikijs|Wiki.js|wikijs,"+
 				"zammad|Zammad|zammad",

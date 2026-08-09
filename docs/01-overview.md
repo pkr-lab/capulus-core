@@ -49,7 +49,7 @@ flowchart TB
     subgraph L4["SCHICHT 4 — ANWENDUNGEN (argocd/apps/)"]
         direction LR
         P1["Nextcloud · Immich · Paperless-NGX<br/>Wiki.js · Zammad · Vaultwarden"]
-        P2["Mealie · Grocy · n8n · Uptime Kuma<br/>MediaMTX · TinyTeller"]
+        P2["Mealie · n8n · Uptime Kuma<br/>MediaMTX · TinyTeller"]
         P3["alamos-apager · github-release-watcher<br/>wiki-docs-sync · example-whoami · xibosignage"]
     end
 
@@ -130,7 +130,7 @@ flowchart LR
 
     CP --- AG0
     CP --- AG1
-    SC1 --> APPS["Nextcloud, Paperless, Wiki.js, Zammad,<br/>Mealie, Grocy, n8n, MinIO, Vaultwarden"]
+    SC1 --> APPS["Nextcloud, Paperless, Wiki.js, Zammad,<br/>Mealie, n8n, MinIO, Vaultwarden"]
     SC2 --> IMM["Immich"]
 ```
 
@@ -217,7 +217,6 @@ flowchart TB
     NASSC --> ZAM
     NASSC --> VW
     NASSC --> MEA["mealie"]
-    NASSC --> GRO["grocy"]
     NASSC --> N8N
     NASSC --> MIN
     NASSC --> XIBO["xibosignage"]
@@ -239,7 +238,7 @@ flowchart TB
     WIKI --> WDS["wiki-docs-sync<br/>CronJob alle 15 Min."]
     ZAM --> GRW["github-release-watcher<br/>CronJob alle 2 h"]
     TR --> ALLE["alle *.homeserver-Adressen"]
-    CF --> OEFF["wiki · ntfy · support · grafana · authentik<br/>stream · paperless · n8n · mealie<br/>grocy · vault · nextcloud .pke-lab.de"]
+    CF --> OEFF["wiki · ntfy · support · grafana · authentik<br/>stream · paperless · n8n · mealie<br/>vault · nextcloud .pke-lab.de"]
 ```
 
 ---
@@ -277,7 +276,6 @@ flowchart TB
 | `zammad` | Ticketsystem / Helpdesk | N · L · S · D · C | `zammad.homeserver` |
 | `vaultwarden` | Passwort-Manager (Bitwarden-kompatibel) | A · N · L · S · C | `vault.homeserver` |
 | `mealie` | Rezepte und Essensplanung | N · C | `mealie.homeserver` |
-| `grocy` | Haushalts- und Vorratsverwaltung | N · C | `grocy.homeserver` |
 | `n8n` | Automatisierungen ohne Code | A · N · C | `n8n.homeserver` |
 | `uptime-kuma` | Erreichbarkeits-Überwachung | L | `uptime-kuma.homeserver` |
 | `mediamtx` | Live-Video: RTSP / RTMP / WebRTC / HLS | C | `stream.homeserver` |
@@ -382,7 +380,7 @@ flowchart LR
 ## 9. Abhängigkeitsketten im Klartext
 
 **Speicher**
-- UGREEN NAS (RAID1) → NFS `/volume1` → `nas-storage` → StorageClass `nas` → Nextcloud, Paperless, Wiki.js, Zammad, Mealie, Grocy, n8n, MinIO, Vaultwarden
+- UGREEN NAS (RAID1) → NFS `/volume1` → `nas-storage` → StorageClass `nas` → Nextcloud, Paperless, Wiki.js, Zammad, Mealie, n8n, MinIO, Vaultwarden
 - UGREEN NAS → `/volume2` → `immich-storage` → `immich-nas` → Immich, bewusst getrennt vom übrigen Cluster-Speicher
 - Steht das NAS, starten diese Apps nicht mehr. Apps auf `local-path` (Grafana, Gotify, ntfy, Pi-hole, Uptime Kuma, Authentik, Semaphore) laufen weiter.
 - Sicherung: NAS → restic → WD Elements 8 TB. Ohne diese Platte existiert keine Kopie der Nutzdaten. Das restic-Passwort ist der einzige Schlüssel — ohne es ist auch das Backup wertlos.
@@ -428,7 +426,7 @@ ZUGRIFF     LAN-Gerät      Tailscale-VPN      Internet (Cloudflare)      git pu
 EINTRITT   dnsmasq:53      Traefik:80/443      k3s-API:6443      ArgoCD:30080   CUPS:631
                                    |
                                    v
-SCHICHT 4  Nextcloud  Immich  Paperless  Wiki.js  Zammad  Vaultwarden  Mealie  Grocy
+SCHICHT 4  Nextcloud  Immich  Paperless  Wiki.js  Zammad  Vaultwarden  Mealie
            n8n  Uptime-Kuma  MediaMTX  TinyTeller  alamos-apager  xibosignage  + 2 CronJobs
                                    |  braucht
                                    v
