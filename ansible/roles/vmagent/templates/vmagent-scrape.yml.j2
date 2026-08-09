@@ -1,0 +1,8 @@
+# Managed by Ansible (vmagent role) — do not edit manually.
+scrape_configs:
+  - job_name: node-exporter
+    scrape_interval: {{ vmagent_scrape_interval }}
+    static_configs:
+      - targets: ["127.0.0.1:{{ vmagent_node_exporter_port }}"]
+        labels:
+          instance: {{ inventory_hostname }}

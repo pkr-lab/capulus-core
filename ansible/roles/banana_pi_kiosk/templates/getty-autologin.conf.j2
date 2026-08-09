@@ -1,0 +1,11 @@
+# Managed by Ansible (banana_pi_kiosk role) — do not edit manually.
+#
+# Autologin auf tty1 fuer {{ banana_pi_kiosk_user }} — Armbian hat keinen
+# Raspberry-Pi-Imager-aehnlichen Autologin-Schalter, daher richtet diese
+# Rolle das selbst ein (anders als alamos_kiosk/xibo_kiosk, die das dem
+# Imaging-Schritt ueberlassen). Das ~/.bash_profile von
+# {{ banana_pi_kiosk_user }} startet darauf aufbauend automatisch X (siehe
+# bash_profile-Block).
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin {{ banana_pi_kiosk_user }} --noclear %I $TERM

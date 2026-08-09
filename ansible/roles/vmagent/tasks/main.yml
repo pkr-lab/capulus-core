@@ -1,0 +1,109 @@
+---
+# ============================================================
+# vmagent role — Metriken-Push fuer Tailscale-only-Hosts
+# ============================================================
+# Fuer Hosts ohne direkten LAN-Pfad zum Cluster (siehe
+# ansible/group_vars/banana_pis.yml): Cluster-seitiges Scrapen wie bei
+# ugreen-nas (VMStaticScrape) scheidet aus, da Pods im Cluster keinen Pfad
+# zu Tailscale-Peers haben (kein Subnet-Router ins Pod-Netz). Stattdessen
+# installiert diese Rolle vmagent als statische Binary (kein Debian-Paket
+# verfuegbar) und laesst ihn lokal node_exporter scrapen + per remote_write
+# an argocd/apps/monitoring/templates/ingress-vm-write.yaml pushen. Details:
+# docs/45-vereinsheim-alarmmonitor.md.
+# ============================================================
+
+- name: Sicherstellen dass vmagent_remote_write_url gesetzt ist
+  ansible.builtin.assert:
+    that:
+      - vmagent_remote_write_url is defined
+      - vmagent_remote_write_url | length > 0
+    fail_msg: >-
+      vmagent_remote_write_url ist nicht gesetzt — siehe
+      ansible/group_vars/banana_pis.yml.
+  when: vmagent_enabled | bool
+
+- name: System-User fuer vmagent anlegen
+  ansible.builtin.user:
+    name: vmagent
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+  when: vmagent_enabled | bool
+
+- name: Verzeichnis fuer lokalen remote_write-Puffer anlegen
+  ansible.builtin.file:
+    path: /var/lib/vmagent
+    state: directory
+    owner: vmagent
+    group: vmagent
+    mode: "0750"
+  when: vmagent_enabled | bool
+
+- name: Konfigurationsverzeichnis anlegen
+  ansible.builtin.file:
+    path: /etc/vmagent
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: vmagent_enabled | bool
+
+- name: vmutils-Release herunterladen
+  ansible.builtin.get_url:
+    url: "{{ vmagent_download_url }}"
+    dest: "/usr/local/src/vmutils-linux-{{ vmagent_arch }}-v{{ vmagent_version }}.tar.gz"
+    mode: "0644"
+    force: false
+  when: vmagent_enabled | bool
+
+- name: vmagent-Binary entpacken
+  ansible.builtin.unarchive:
+    src: "/usr/local/src/vmutils-linux-{{ vmagent_arch }}-v{{ vmagent_version }}.tar.gz"
+    dest: "{{ vmagent_install_dir }}"
+    remote_src: true
+    creates: "{{ vmagent_install_dir }}/vmagent-prod"
+  when: vmagent_enabled | bool
+
+- name: vmagent-Binary ausfuehrbar machen
+  ansible.builtin.file:
+    path: "{{ vmagent_install_dir }}/vmagent-prod"
+    owner: root
+    group: root
+    mode: "0755"
+  when: vmagent_enabled | bool
+
+- name: Scrape-Konfiguration deployen
+  ansible.builtin.template:
+    src: vmagent-scrape.yml.j2
+    dest: /etc/vmagent/scrape.yml
+    owner: root
+    group: root
+    mode: "0644"
+  when: vmagent_enabled | bool
+  notify: Restart vmagent
+
+- name: vmagent-systemd-Service deployen
+  ansible.builtin.template:
+    src: vmagent.service.j2
+    dest: /etc/systemd/system/vmagent.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: vmagent_enabled | bool
+  notify: Restart vmagent
+
+- name: vmagent aktivieren und starten
+  ansible.builtin.systemd:
+    name: vmagent.service
+    daemon_reload: true
+    enabled: true
+    state: started
+  when: vmagent_enabled | bool
+
+- name: vmagent deaktivieren (vmagent_enabled false)
+  ansible.builtin.systemd:
+    name: vmagent.service
+    enabled: false
+    state: stopped
+  when: not (vmagent_enabled | bool)
+  failed_when: false

@@ -1,0 +1,12 @@
+---
+- name: Restart banana-pi heartbeat timer
+  ansible.builtin.systemd:
+    name: banana-pi-heartbeat.timer
+    daemon_reload: true
+    state: restarted
+
+- name: Reload getty@tty1
+  ansible.builtin.systemd:
+    daemon_reload: true
+    name: getty@tty1.service
+    state: restarted
