@@ -40,7 +40,6 @@ nextcloud:
     minReplicas: 1
     maxReplicas: 2
     targetCPUUtilizationPercentage: 75
-    targetMemoryUtilizationPercentage: 80
 
   image:
     repository: nextcloud
