@@ -201,6 +201,9 @@ victoria-metrics-k8s-stack:
       # Infinity: direkte HTTP/JSON-API-Abfragen in Grafana-Panels —
       # wird für Pegelonline, DWD und ELWIS-Dashboards benötigt.
       - yesoreyeram-infinity-datasource
+      # VictoriaLogs: Datasource für zentrales Logging, siehe
+      # argocd/apps/logging/.
+      - victoriametrics-logs-datasource
 
     admin:
       existingSecret: "grafana-admin"        # leave empty → auto-generated password
