@@ -12,9 +12,20 @@ data:
   # seinen eigenen Stationsnamen (siehe ansible/roles/alamos_kiosk).
   #   GET /start?station=<name>     -> 302 Redirect zur AMweb-URL
   #   GET /heartbeat?station=<name> -> Pi-Lebenszeichen, alle paar Sekunden
+  #   GET /metrics                  -> Prometheus-Metriken (siehe unten)
   # Ein Background-Thread prüft periodisch, ob ein Standort länger als
   # HEARTBEAT_TIMEOUT_SECONDS keinen Heartbeat gesendet hat, und meldet das
   # per ntfy (kein Zammad-Ticket — siehe docs/19-alamos-apager.md).
+  #
+  # /metrics exportiert je Standort den Zeitstempel der letzten erfolgreichen
+  # /start-Anfrage (= der Kiosk-Browser hat die echte AMweb-URL tatsächlich
+  # angefragt) und des letzten Heartbeats — genutzt vom
+  # "Banana-Pi-Down -> Zammad-Ticket"-Workflow (argocd/apps/n8n/workflows),
+  # um im Ticket zu zeigen, wann der Standort zuletzt erfolgreich war (siehe
+  # docs/45-vereinsheim-alarmmonitor.md). Cluster-intern per VMServiceScrape
+  # gescraped (vmservicescrape.yaml) — funktioniert unabhängig davon, ob ein
+  # Standort per LAN oder Tailscale angebunden ist, da alamos-apager selbst
+  # immer im Cluster läuft.
   app.py: |
     #!/usr/bin/env python3
     import os
@@ -31,6 +42,14 @@ data:
 
     STATIONS_DIR = "/etc/alamos-apager/stations"
     DATA_DIR = "/data"
+
+    # Einzelne Klammer-Variablen statt zwei geschweifte Klammern direkt
+    # hintereinander im f-String, weil dieses Skript in einem Helm-Chart
+    # eingebettet ist: doppelte geschweifte Klammern im Quelltext wuerden
+    # von Helms Go-Template-Engine als Template-Direktive interpretiert und
+    # den Chart-Render brechen.
+    LBRACE = "{"
+    RBRACE = "}"
 
 
     def send_to_ntfy(title: str, message: str, priority: int, tags: str) -> None:
@@ -62,6 +81,10 @@ data:
 
     def heartbeat_path(station):
         return os.path.join(DATA_DIR, f"{station}.hb")
+
+
+    def start_path(station):
+        return os.path.join(DATA_DIR, f"{station}.start")
 
 
     def watchdog_loop():
@@ -116,6 +139,8 @@ data:
                     return
                 with open(station_file) as f:
                     target_url = f.read().strip()
+                os.makedirs(DATA_DIR, exist_ok=True)
+                open(start_path(station), "w").close()
                 self._respond(302, b"", {"Location": target_url})
                 return
 
@@ -139,6 +164,36 @@ data:
                     except Exception as exc:
                         print(f"ntfy-Resolve fehlgeschlagen für {station}: {exc}")
                 self._respond(200, b"ok")
+                return
+
+            if path == "/metrics":
+                lines = [
+                    "# HELP alamos_apager_last_start_timestamp_seconds Unix-Zeitstempel der letzten erfolgreichen /start-Anfrage (Kiosk hat die echte AMweb-URL tatsaechlich angefragt).",
+                    "# TYPE alamos_apager_last_start_timestamp_seconds gauge",
+                    "# HELP alamos_apager_last_heartbeat_timestamp_seconds Unix-Zeitstempel des letzten Heartbeats.",
+                    "# TYPE alamos_apager_last_heartbeat_timestamp_seconds gauge",
+                    "# HELP alamos_apager_station_down 1 wenn der Standort aktuell als down markiert ist (Heartbeat laenger als HEARTBEAT_TIMEOUT_SECONDS ueberfaellig), sonst 0.",
+                    "# TYPE alamos_apager_station_down gauge",
+                ]
+                for station in known_stations():
+                    start_file = start_path(station)
+                    if os.path.exists(start_file):
+                        ts = os.path.getmtime(start_file)
+                        lines.append(
+                            f'alamos_apager_last_start_timestamp_seconds{LBRACE}station="{station}"{RBRACE} {ts}'
+                        )
+                    hb_file = heartbeat_path(station)
+                    if os.path.exists(hb_file):
+                        ts = os.path.getmtime(hb_file)
+                        lines.append(
+                            f'alamos_apager_last_heartbeat_timestamp_seconds{LBRACE}station="{station}"{RBRACE} {ts}'
+                        )
+                    is_down = 1 if os.path.exists(down_flag_path(station)) else 0
+                    lines.append(
+                        f'alamos_apager_station_down{LBRACE}station="{station}"{RBRACE} {is_down}'
+                    )
+                body = ("\n".join(lines) + "\n").encode("utf-8")
+                self._respond(200, body, {"Content-Type": "text/plain; version=0.0.4"})
                 return
 
             self._respond(404, b"not found")

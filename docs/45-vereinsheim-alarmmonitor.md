@@ -245,22 +245,45 @@ absent_over_time(up{...}[10m]) für vereinsheim-alarmmonitor
       1. letzte bekannte CPU/RAM/Temperatur-Werte aus VictoriaMetrics holen
          (der Pi selbst ist ja gerade nicht erreichbar — das sind KEINE
          Live-Daten, sondern der letzte Stand vor dem Ausfall)
-      2. Zammad-Ticket erstellen (POST /api/v1/tickets, gleiches Muster
+      2. Zeitstempel der letzten erfolgreichen /start-Anfrage holen (=
+         wann hat der Kiosk zuletzt die echte AMweb-URL angefragt) —
+         kommt NICHT vom Pi, sondern von alamos-apager selbst
+         (`/metrics`, siehe docs/19-alamos-apager.md), das immer im
+         Cluster läuft und daher unabhängig vom Tailscale-Status des Pi
+         abfragbar ist
+      3. Zammad-Ticket erstellen (POST /api/v1/tickets, gleiches Muster
          wie argocd/apps/github-release-watcher)
   → Zammads eigene Agenten-Benachrichtigung verschickt die Mail an
-    info@edv-kretzer.de (kein separater E-Mail-Node in n8n nötig)
+    p.kretzer29@gmail.com (kein separater E-Mail-Node in n8n nötig)
 ```
 
 Die bestehenden gotify-/ntfy-Routen bleiben für diesen Alert (und alle
 anderen) unverändert bestehen — die n8n-Route kommt rein additiv dazu
 (`continue: true`, siehe Kommentar in `values.yaml`).
 
+**Woher "letzte AMweb-Anfrage" kommt:** `alamos-apager` (die geteilte
+Cluster-Komponente aus [docs/19-alamos-apager.md](19-alamos-apager.md))
+merkt sich jetzt zusätzlich zum Heartbeat auch den Zeitstempel jeder
+erfolgreichen `/start`-Anfrage (also wann der Kiosk-Browser zuletzt
+tatsächlich die echte AMweb-URL angefragt hat) und exportiert das über
+einen eigenen `/metrics`-Endpunkt (`alamos_apager_last_start_timestamp_seconds`,
+siehe `argocd/apps/alamos-apager/templates/configmap-script.yaml` +
+`vmservicescrape.yaml`). Das läuft cluster-intern und ist damit — anders
+als die node_exporter-Metriken des Pi selbst — auch dann abfragbar, wenn
+der Pi/Tailscale gerade down ist. Betrifft alle Alamos-Standorte
+gleichermaßen, nicht nur diesen.
+
 **Einmalige manuelle Schritte:**
 
-1. **Zammad:** `info@edv-kretzer.de` als Agent-Account anlegen (falls noch
+1. **Zammad:** `p.kretzer29@gmail.com` als Agent-Account anlegen (falls noch
    nicht vorhanden), Mitglied der Ticket-Gruppe (Default im Workflow:
-   `Users` — bei Bedarf im Code-Node "Ticket-Payload bauen" anpassen)
-   machen und unter **Profil → Benachrichtigungen** die Mail-Benachrichtigung
+   `Support::Administration` — angenommen als Untergruppe "Administration"
+   von "Support", `::` ist der von der Zammad-API erwartete Trenner für
+   Untergruppen, siehe docs/25-github-release-watcher.md; falls es
+   stattdessen eine einzelne Gruppe mit dem wörtlichen Namen
+   "Support / Administration" ist, im Code-Node "Ticket-Payload bauen"
+   entsprechend anpassen) machen und unter **Profil → Benachrichtigungen**
+   die Mail-Benachrichtigung
    für "Neues Ticket" aktivieren (Zammad-Standard: aktiviert). Gleiches
    Prinzip wie [docs/25-github-release-watcher.md, Schritt 4](25-github-release-watcher.md#schritt-4--agenten-benachrichtigung-in-zammad-prüfen).
 2. **Zammad-API-Token erzeugen:** Profil → Token Access → Neuer Token,
