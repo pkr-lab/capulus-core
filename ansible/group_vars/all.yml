@@ -283,7 +283,7 @@ semaphore_projects:
           [banana_pis]
           # ansible_host gilt nur fuer Phase 1 (Pi noch am LAN) — siehe
           # docs/45-vereinsheim-alarmmonitor.md.
-          vereinsheim-alarmmonitor ansible_host=192.168.178.100 banana_pi_kiosk_station=vereinsheim-alarmmonitor
+          vereinsheim-alarmmonitor ansible_host=192.168.178.129 ansible_user=pela banana_pi_kiosk_user=pela banana_pi_kiosk_station=vereinsheim-alarmmonitor
     templates:
       - name: "Deploy Banana-Pi Alarmmonitore"
         playbook: ansible/banana-pi-kiosks.yml
