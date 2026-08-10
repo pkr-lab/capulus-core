@@ -58,7 +58,7 @@ Tailscale nicht per Ansible installieren, wenn Tailscale der einzige Weg
 zum Gerät ist. Deshalb zwei Phasen:
 
 - **Phase 1 (Ersteinrichtung):** Pi hängt kurz am LAN,
-  `ansible_host` = LAN-IP (`192.168.178.100`). Der erste
+  `ansible_host` = LAN-IP (`192.168.178.129`). Der erste
   `make banana-pi-kiosks`-Lauf installiert dabei auch Tailscale
   (`ansible/roles/tailscale`, siehe `ansible/group_vars/banana_pis.yml`
   für den eigenen Tailscale-Auth-Key — **nicht** den Homeserver-Key aus
@@ -107,7 +107,7 @@ Autologin" bei den anderen Kiosks):
 2. Erstboot: Root-Login, Kiosk-User anlegen (Konvention: `pi`, siehe
    `banana_pi_kiosk_user` in `ansible/roles/banana_pi_kiosk/defaults/main.yml`).
 3. Netzwerk/SSH so einrichten, dass der Host **noch am LAN** per
-   `ansible_host` aus dem Inventory (`192.168.178.100`, Phase 1) erreichbar
+   `ansible_host` aus dem Inventory (`192.168.178.129`, Phase 1) erreichbar
    ist — siehe [Netzwerk: Tailscale-only](#netzwerk-tailscale-only).
 4. `make semaphore-targets` laufen lassen (pusht den Semaphore-SSH-Key,
    Host ist bereits unter `semaphore_targets` in
