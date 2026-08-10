@@ -155,8 +155,8 @@ private struct BrightnessCard: View {
                                 .foregroundStyle(Theme.textMuted)
                             Slider(
                                 value: $sliderValue,
-                                in: 1...100,
-                                step: 1,
+                                in: 0...100,
+                                step: 5,
                                 onEditingChanged: onEditingChanged
                             )
                             .tint(Theme.accentLight)
