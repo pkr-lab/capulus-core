@@ -1,0 +1,742 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-vereinsheim-alarmmonitor
+  namespace: {{ .Release.Namespace }}
+  labels:
+    grafana_dashboard: "1"
+data:
+  vereinsheim-alarmmonitor.json: |
+    {
+      "annotations": {"list": []},
+      "description": "Alles Wichtige zum Banana-Pi-Alarmmonitor 'vereinsheim-alarmmonitor' auf einen Blick: Rhein-Pegel Andernach (oben, gleiche Quelle wie dashboard-rhein-andernach.yaml), Erreichbarkeit, Uptime, CPU/RAM/Temperatur/Disk sowie der ALAMOS-Status (letzte AMweb-Anfrage, letzter Heartbeat). Geraete-Metriken kommen per vmagent-Push (Tailscale-only-Standort, kein Cluster-Scrape), siehe docs/45-vereinsheim-alarmmonitor.md.",
+      "editable": true,
+      "graphTooltip": 1,
+      "links": [],
+      "panels": [
+        {
+          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "decimals": 0,
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "blue", "value": null},
+                  {"color": "green", "value": 100},
+                  {"color": "yellow", "value": 400},
+                  {"color": "orange", "value": 600},
+                  {"color": "red", "value": 800}
+                ]
+              },
+              "unit": "cm",
+              "min": 0
+            }
+          },
+          "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
+          "id": 20,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+              "refId": "A",
+              "type": "json",
+              "source": "url",
+              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/ANDERNACH/W/measurements.json?start=PT3H",
+              "url_options": {"method": "GET", "data": ""},
+              "parser": "simple",
+              "root_selector": "",
+              "columns": [
+                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
+                {"selector": "value", "type": "number", "alias": "Wasserstand (cm)"}
+              ],
+              "format": "timeseries"
+            }
+          ],
+          "title": "Rhein Andernach — Aktueller Pegel",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "cm",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 400},
+                  {"color": "orange", "value": 600},
+                  {"color": "red", "value": 800}
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Wasserstand Vorhersage (cm)"},
+                "properties": [
+                  {"id": "color", "value": {"mode": "fixed", "fixedColor": "purple"}},
+                  {"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [10, 6]}},
+                  {"id": "custom.fillOpacity", "value": 0}
+                ]
+              }
+            ]
+          },
+          "gridPos": {"h": 10, "w": 18, "x": 6, "y": 0},
+          "id": 21,
+          "options": {
+            "legend": {"calcs": ["lastNotNull", "min", "max"], "displayMode": "table", "placement": "bottom"},
+            "tooltip": {"mode": "multi", "sort": "desc"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+              "refId": "A",
+              "type": "json",
+              "source": "url",
+              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/ANDERNACH/W/measurements.json?start=P2D",
+              "url_options": {"method": "GET", "data": ""},
+              "parser": "simple",
+              "root_selector": "",
+              "columns": [
+                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
+                {"selector": "value", "type": "number", "alias": "Wasserstand (cm)"}
+              ],
+              "format": "timeseries"
+            },
+            {
+              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+              "refId": "B",
+              "type": "json",
+              "source": "url",
+              "url": "https://www.hochwasser.rlp.de/api/v1/measurement-site/27100400",
+              "url_options": {"method": "GET", "data": ""},
+              "parser": "backend",
+              "root_selector": "W.predictions.p50",
+              "columns": [
+                {"selector": "x", "type": "timestamp", "alias": "time"},
+                {"selector": "y", "type": "number", "alias": "Wasserstand Vorhersage (cm)"}
+              ],
+              "format": "timeseries"
+            }
+          ],
+          "title": "Rhein-Pegel Andernach — 48h Verlauf",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "decimals": 0,
+              "unit": "cm",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "blue", "value": null},
+                  {"color": "yellow", "value": 400},
+                  {"color": "orange", "value": 600},
+                  {"color": "red", "value": 800}
+                ]
+              }
+            }
+          },
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 6},
+          "id": 22,
+          "options": {
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "showThresholdLabels": true,
+            "showThresholdMarkers": true
+          },
+          "targets": [
+            {
+              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+              "refId": "A",
+              "type": "json",
+              "source": "url",
+              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/ANDERNACH/W/measurements.json?start=PT1H",
+              "url_options": {"method": "GET", "data": ""},
+              "parser": "simple",
+              "root_selector": "",
+              "columns": [
+                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
+                {"selector": "value", "type": "number", "alias": "Wasserstand (cm)"}
+              ],
+              "format": "timeseries"
+            }
+          ],
+          "title": "Pegel Gauge",
+          "type": "gauge"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 90},
+                  {"color": "red", "value": 300}
+                ]
+              },
+              "unit": "s"
+            }
+          },
+          "gridPos": {"h": 4, "w": 4, "x": 0, "y": 10},
+          "id": 1,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "time() - timestamp(up{job=\"node-exporter\",instance=\"vereinsheim-alarmmonitor\"})",
+              "instant": true,
+              "legendFormat": "Zuletzt gesehen vor",
+              "refId": "A"
+            }
+          ],
+          "title": "Zuletzt gesehen vor",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [],
+              "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]},
+              "unit": "s"
+            }
+          },
+          "gridPos": {"h": 4, "w": 4, "x": 4, "y": 10},
+          "id": 2,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "node_time_seconds{instance=\"vereinsheim-alarmmonitor\"} - node_boot_time_seconds{instance=\"vereinsheim-alarmmonitor\"}",
+              "instant": true,
+              "legendFormat": "Uptime",
+              "refId": "A"
+            }
+          ],
+          "title": "Uptime",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 70},
+                  {"color": "red", "value": 90}
+                ]
+              },
+              "unit": "percent",
+              "max": 100,
+              "min": 0
+            }
+          },
+          "gridPos": {"h": 4, "w": 4, "x": 8, "y": 10},
+          "id": 3,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\",instance=\"vereinsheim-alarmmonitor\"}[5m])) * 100)",
+              "instant": true,
+              "legendFormat": "CPU",
+              "refId": "A"
+            }
+          ],
+          "title": "CPU",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 70},
+                  {"color": "red", "value": 90}
+                ]
+              },
+              "unit": "percent",
+              "max": 100,
+              "min": 0
+            }
+          },
+          "gridPos": {"h": 4, "w": 4, "x": 12, "y": 10},
+          "id": 4,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "(node_memory_MemTotal_bytes{instance=\"vereinsheim-alarmmonitor\"} - node_memory_MemAvailable_bytes{instance=\"vereinsheim-alarmmonitor\"}) / node_memory_MemTotal_bytes{instance=\"vereinsheim-alarmmonitor\"} * 100",
+              "instant": true,
+              "legendFormat": "RAM",
+              "refId": "A"
+            }
+          ],
+          "title": "RAM",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 70},
+                  {"color": "red", "value": 85}
+                ]
+              },
+              "unit": "celsius"
+            }
+          },
+          "gridPos": {"h": 4, "w": 4, "x": 16, "y": 10},
+          "id": 5,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "avg(node_hwmon_temp_celsius{instance=\"vereinsheim-alarmmonitor\"})",
+              "instant": true,
+              "legendFormat": "Temperatur",
+              "refId": "A"
+            }
+          ],
+          "title": "Temperatur",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 75},
+                  {"color": "red", "value": 90}
+                ]
+              },
+              "unit": "percent",
+              "max": 100,
+              "min": 0
+            }
+          },
+          "gridPos": {"h": 4, "w": 4, "x": 20, "y": 10},
+          "id": 6,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "(node_filesystem_size_bytes{instance=\"vereinsheim-alarmmonitor\",mountpoint=\"/\",fstype!~\"tmpfs|overlay\"} - node_filesystem_avail_bytes{instance=\"vereinsheim-alarmmonitor\",mountpoint=\"/\",fstype!~\"tmpfs|overlay\"}) / node_filesystem_size_bytes{instance=\"vereinsheim-alarmmonitor\",mountpoint=\"/\",fstype!~\"tmpfs|overlay\"} * 100",
+              "instant": true,
+              "legendFormat": "Disk (/)",
+              "refId": "A"
+            }
+          ],
+          "title": "Disk (/)",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 120},
+                  {"color": "red", "value": 3600}
+                ]
+              },
+              "unit": "s"
+            }
+          },
+          "gridPos": {"h": 4, "w": 8, "x": 0, "y": 14},
+          "id": 7,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "time() - alamos_apager_last_start_timestamp_seconds{station=\"vereinsheim-alarmmonitor\"}",
+              "instant": true,
+              "legendFormat": "Letzte AMweb-Anfrage vor",
+              "refId": "A"
+            }
+          ],
+          "title": "Letzte AMweb-Anfrage (alamos-apager /start)",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 120},
+                  {"color": "red", "value": 300}
+                ]
+              },
+              "unit": "s"
+            }
+          },
+          "gridPos": {"h": 4, "w": 8, "x": 8, "y": 14},
+          "id": 8,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "time() - alamos_apager_last_heartbeat_timestamp_seconds{station=\"vereinsheim-alarmmonitor\"}",
+              "instant": true,
+              "legendFormat": "Letzter Heartbeat vor",
+              "refId": "A"
+            }
+          ],
+          "title": "Letzter Heartbeat (alamos-apager)",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [
+                {"type": "value", "options": {"0": {"text": "OK", "color": "green"}, "1": {"text": "OFFLINE", "color": "red"}}}
+              ],
+              "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+              "unit": "none"
+            }
+          },
+          "gridPos": {"h": 4, "w": 8, "x": 16, "y": 14},
+          "id": 9,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "alamos_apager_station_down{station=\"vereinsheim-alarmmonitor\"}",
+              "instant": true,
+              "legendFormat": "Standort-Status",
+              "refId": "A"
+            }
+          ],
+          "title": "Alamos-Standort-Status",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "percent",
+              "max": 100,
+              "min": 0
+            }
+          },
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 18},
+          "id": 10,
+          "options": {
+            "legend": {"calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom"},
+            "tooltip": {"mode": "multi", "sort": "desc"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\",instance=\"vereinsheim-alarmmonitor\"}[5m])) * 100)",
+              "legendFormat": "CPU",
+              "refId": "A"
+            }
+          ],
+          "title": "CPU Auslastung",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "bytes"
+            }
+          },
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 26},
+          "id": 11,
+          "options": {
+            "legend": {"calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom"},
+            "tooltip": {"mode": "multi", "sort": "desc"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "node_memory_MemTotal_bytes{instance=\"vereinsheim-alarmmonitor\"} - node_memory_MemAvailable_bytes{instance=\"vereinsheim-alarmmonitor\"}",
+              "legendFormat": "Genutzt",
+              "refId": "A"
+            },
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "node_memory_MemTotal_bytes{instance=\"vereinsheim-alarmmonitor\"}",
+              "legendFormat": "Gesamt",
+              "refId": "B"
+            }
+          ],
+          "title": "RAM Auslastung",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "celsius"
+            }
+          },
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 34},
+          "id": 12,
+          "options": {
+            "legend": {"calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom"},
+            "tooltip": {"mode": "multi", "sort": "desc"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "node_hwmon_temp_celsius{instance=\"vereinsheim-alarmmonitor\"}",
+              "legendFormat": "{{ "{{chip}}" }} {{ "{{sensor}}" }}",
+              "refId": "A"
+            }
+          ],
+          "title": "Temperatur Verlauf",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "Bps"
+            }
+          },
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 42},
+          "id": 13,
+          "options": {
+            "legend": {"calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom"},
+            "tooltip": {"mode": "multi", "sort": "desc"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "rate(node_network_receive_bytes_total{instance=\"vereinsheim-alarmmonitor\",device!~\"lo|veth.*|br.*|cali.*|tunl.*|tailscale.*\"}[5m])",
+              "legendFormat": "RX {{ "{{device}}" }}",
+              "refId": "A"
+            },
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "rate(node_network_transmit_bytes_total{instance=\"vereinsheim-alarmmonitor\",device!~\"lo|veth.*|br.*|cali.*|tunl.*|tailscale.*\"}[5m])",
+              "legendFormat": "TX {{ "{{device}}" }}",
+              "refId": "B"
+            }
+          ],
+          "title": "Netzwerk",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "percent",
+              "max": 100,
+              "min": 0
+            }
+          },
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 50},
+          "id": 14,
+          "options": {
+            "legend": {"calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom"},
+            "tooltip": {"mode": "multi", "sort": "desc"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "(node_filesystem_size_bytes{instance=\"vereinsheim-alarmmonitor\",mountpoint=\"/\",fstype!~\"tmpfs|overlay\"} - node_filesystem_avail_bytes{instance=\"vereinsheim-alarmmonitor\",mountpoint=\"/\",fstype!~\"tmpfs|overlay\"}) / node_filesystem_size_bytes{instance=\"vereinsheim-alarmmonitor\",mountpoint=\"/\",fstype!~\"tmpfs|overlay\"} * 100",
+              "legendFormat": "Disk (/)",
+              "refId": "A"
+            }
+          ],
+          "title": "Disk-Auslastung Verlauf (SD-Karte/eMMC)",
+          "type": "timeseries"
+        }
+      ],
+      "refresh": "30s",
+      "schemaVersion": 38,
+      "tags": ["homelab", "alamos", "banana-pi", "rhein", "pegel"],
+      "templating": {
+        "list": [
+          {
+            "current": {},
+            "hide": 0,
+            "includeAll": false,
+            "label": "Datasource",
+            "multi": false,
+            "name": "datasource",
+            "options": [],
+            "query": "prometheus",
+            "refresh": 1,
+            "type": "datasource"
+          }
+        ]
+      },
+      "time": {"from": "now-6h", "to": "now"},
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "Vereinsheim-Alarmmonitor",
+      "uid": "vereinsheim-alarmmonitor",
+      "version": 1
+    }
