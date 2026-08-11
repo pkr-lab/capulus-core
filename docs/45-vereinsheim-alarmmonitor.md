@@ -254,7 +254,7 @@ absent_over_time(up{...}[10m]) für vereinsheim-alarmmonitor
       3. Zammad-Ticket erstellen (POST /api/v1/tickets, gleiches Muster
          wie argocd/apps/github-release-watcher)
   → Zammads eigene Agenten-Benachrichtigung verschickt die Mail an
-    p.kretzer29@gmail.com (kein separater E-Mail-Node in n8n nötig)
+    info@edv-kretzer.de (kein separater E-Mail-Node in n8n nötig)
 ```
 
 Die bestehenden gotify-/ntfy-Routen bleiben für diesen Alert (und alle
@@ -275,7 +275,7 @@ gleichermaßen, nicht nur diesen.
 
 **Einmalige manuelle Schritte:**
 
-1. **Zammad:** `p.kretzer29@gmail.com` als Agent-Account anlegen (falls noch
+1. **Zammad:** `info@edv-kretzer.de` als Agent-Account anlegen (falls noch
    nicht vorhanden), Mitglied der Ticket-Gruppe (Default im Workflow:
    `Support::Administration` — angenommen als Untergruppe "Administration"
    von "Support", `::` ist der von der Zammad-API erwartete Trenner für
