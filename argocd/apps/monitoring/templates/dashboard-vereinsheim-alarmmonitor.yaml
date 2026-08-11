@@ -733,7 +733,7 @@ data:
           }
         ]
       },
-      "time": {"from": "now-6h", "to": "now"},
+      "time": {"from": "now-2d", "to": "now+2d"},
       "timepicker": {},
       "timezone": "browser",
       "title": "Vereinsheim-Alarmmonitor",
