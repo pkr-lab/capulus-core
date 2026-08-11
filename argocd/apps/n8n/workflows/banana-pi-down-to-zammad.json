@@ -99,7 +99,7 @@
           "parameters": [
             {
               "name": "query",
-              "value": "last_over_time(alamos_apager_last_start_timestamp_seconds{station=\"vereinsheim-alarmmonitor\"}[5m])"
+              "value": "last_over_time(alamos_apager_last_start_timestamp_seconds{station=\"1002011_Fahrzeughalle\"}[5m])"
             }
           ]
         },

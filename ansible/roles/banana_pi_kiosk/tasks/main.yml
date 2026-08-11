@@ -168,3 +168,33 @@
     state: stopped
   when: not (banana_pi_kiosk_enabled | bool)
   failed_when: false
+
+# ---- Taeglicher automatischer Neustart -----------------------------------
+- name: Daily-Reboot-systemd-Service + Timer deployen
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - banana-pi-daily-reboot.service
+    - banana-pi-daily-reboot.timer
+  when: banana_pi_kiosk_enabled | bool and banana_pi_kiosk_daily_reboot_enabled | bool
+  notify: Restart banana-pi daily reboot timer
+
+- name: Daily-Reboot-Timer aktivieren
+  ansible.builtin.systemd:
+    name: banana-pi-daily-reboot.timer
+    daemon_reload: true
+    enabled: true
+    state: started
+  when: banana_pi_kiosk_enabled | bool and banana_pi_kiosk_daily_reboot_enabled | bool
+
+- name: Daily-Reboot-Timer deaktivieren (banana_pi_kiosk_daily_reboot_enabled false)
+  ansible.builtin.systemd:
+    name: banana-pi-daily-reboot.timer
+    enabled: false
+    state: stopped
+  when: not (banana_pi_kiosk_daily_reboot_enabled | bool) or not (banana_pi_kiosk_enabled | bool)
+  failed_when: false
