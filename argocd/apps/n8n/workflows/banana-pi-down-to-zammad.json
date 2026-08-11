@@ -12,7 +12,10 @@
       "name": "Alertmanager Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [260, 300],
+      "position": [
+        260,
+        300
+      ],
       "webhookId": "banana-pi-down"
     },
     {
@@ -34,7 +37,10 @@
       "name": "CPU abfragen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [520, 300]
+      "position": [
+        520,
+        300
+      ]
     },
     {
       "parameters": {
@@ -55,7 +61,10 @@
       "name": "RAM abfragen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [780, 300]
+      "position": [
+        780,
+        300
+      ]
     },
     {
       "parameters": {
@@ -76,7 +85,10 @@
       "name": "Temperatur abfragen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1040, 300]
+      "position": [
+        1040,
+        300
+      ]
     },
     {
       "parameters": {
@@ -97,17 +109,23 @@
       "name": "Letzte AMweb-Anfrage abfragen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1300, 300]
+      "position": [
+        1300,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// CHANGE-ME: Zammad-Gruppe + Requester ggf. anpassen (siehe docs/25-github-release-watcher.md fuer die Regeln dazu -- ZAMMAD_REQUESTER_EMAIL muss ein bereits existierender Zammad-User sein). Gruppe 'Support / Administration' angenommen als Unterguppe 'Administration' von 'Support' -> Zammad-API erwartet dafuer '::' als Trenner (siehe docs/25); falls es stattdessen eine einzelne Gruppe mit genau diesem Namen ist, hier auf 'Support / Administration' aendern.\nconst ZAMMAD_GROUP = 'Support::Administration';\nconst ZAMMAD_REQUESTER_EMAIL = 'p.kretzer29@gmail.com';\n\nconst cpuRes = $('CPU abfragen').item.json;\nconst ramRes = $('RAM abfragen').item.json;\nconst tempRes = $('Temperatur abfragen').item.json;\nconst lastStartRes = $('Letzte AMweb-Anfrage abfragen').item.json;\nconst webhookBody = $('Alertmanager Webhook').item.json.body || {};\n\nfunction firstValue(res) {\n  const result = res && res.data && res.data.result;\n  if (!result || result.length === 0) return null;\n  return parseFloat(result[0].value[1]);\n}\n\nconst cpu = firstValue(cpuRes);\nconst ram = firstValue(ramRes);\nconst temp = firstValue(tempRes);\nconst lastStartEpoch = firstValue(lastStartRes);\nconst lastStartText = (lastStartEpoch === null || Number.isNaN(lastStartEpoch))\n  ? 'nie / unbekannt (alamos-apager hat noch keine /start-Anfrage fuer diese Station verzeichnet)'\n  : new Date(lastStartEpoch * 1000).toISOString();\n\nfunction fmt(v, unit) {\n  return (v === null || Number.isNaN(v)) ? 'unbekannt' : `${v.toFixed(1)} ${unit}`;\n}\n\nconst alert = (webhookBody.alerts && webhookBody.alerts[0]) || {};\nconst description = (alert.annotations && alert.annotations.description)\n  || 'Vereinsheim-Alarmmonitor antwortet nicht mehr.';\nconst startsAt = alert.startsAt || new Date().toISOString();\n\nconst bodyHtml = [\n  `<p>${description}</p>`,\n  `<p><strong>Letzte erfolgreiche Anfrage der Alarmmonitor-Adresse</strong> (Kiosk hat zuletzt die echte AMweb-URL ueber alamos-apager angefragt): ${lastStartText}</p>`,\n  '<p><strong>Letzte bekannte Metriken vor dem Ausfall</strong> (nicht live -- der Pi ist ja gerade nicht erreichbar):</p>',\n  '<ul>',\n  `<li>CPU: ${fmt(cpu, '%')}</li>`,\n  `<li>RAM: ${fmt(ram, '%')}</li>`,\n  `<li>Temperatur: ${fmt(temp, '\u00b0C')}</li>`,\n  '</ul>',\n  `<p>Alarm seit: ${startsAt}</p>`,\n  '<p>Details: Grafana-Dashboard \"Home Server Auslastung\" (uid homeserver-auslastung), Instance vereinsheim-alarmmonitor.</p>',\n].join('\\n');\n\nreturn [{\n  json: {\n    title: 'Vereinsheim-Alarmmonitor nicht erreichbar',\n    group: ZAMMAD_GROUP,\n    customer: ZAMMAD_REQUESTER_EMAIL,\n    article: {\n      subject: 'Vereinsheim-Alarmmonitor nicht erreichbar',\n      body: bodyHtml,\n      content_type: 'text/html',\n      type: 'note',\n      internal: false,\n    },\n  },\n}];"
+        "jsCode": "// CHANGE-ME: Zammad-Gruppe + Requester ggf. anpassen (siehe docs/25-github-release-watcher.md fuer die Regeln dazu -- ZAMMAD_REQUESTER_EMAIL muss ein bereits existierender Zammad-User sein). Gruppe 'Support / Administration' angenommen als Unterguppe 'Administration' von 'Support' -> Zammad-API erwartet dafuer '::' als Trenner (siehe docs/25); falls es stattdessen eine einzelne Gruppe mit genau diesem Namen ist, hier auf 'Support / Administration' aendern.\nconst ZAMMAD_GROUP = 'Support::Administration';\nconst ZAMMAD_REQUESTER_EMAIL = 'p.kretzer29@gmail.com';\n\nconst cpuRes = $('CPU abfragen').item.json;\nconst ramRes = $('RAM abfragen').item.json;\nconst tempRes = $('Temperatur abfragen').item.json;\nconst lastStartRes = $('Letzte AMweb-Anfrage abfragen').item.json;\nconst webhookBody = $('Alertmanager Webhook').item.json.body || {};\n\nfunction firstValue(res) {\n  const result = res && res.data && res.data.result;\n  if (!result || result.length === 0) return null;\n  return parseFloat(result[0].value[1]);\n}\n\nconst cpu = firstValue(cpuRes);\nconst ram = firstValue(ramRes);\nconst temp = firstValue(tempRes);\nconst lastStartEpoch = firstValue(lastStartRes);\nconst lastStartText = (lastStartEpoch === null || Number.isNaN(lastStartEpoch))\n  ? 'nie / unbekannt (alamos-apager hat noch keine /start-Anfrage fuer diese Station verzeichnet)'\n  : new Date(lastStartEpoch * 1000).toISOString();\n\nfunction fmt(v, unit) {\n  return (v === null || Number.isNaN(v)) ? 'unbekannt' : `${v.toFixed(1)} ${unit}`;\n}\n\nconst alert = (webhookBody.alerts && webhookBody.alerts[0]) || {};\nconst description = (alert.annotations && alert.annotations.description)\n  || 'Vereinsheim-Alarmmonitor antwortet nicht mehr.';\nconst startsAt = alert.startsAt || new Date().toISOString();\n\nconst bodyText = [\n  description,\n  '',\n  `Letzte erfolgreiche Anfrage der Alarmmonitor-Adresse (Kiosk hat zuletzt die echte AMweb-URL ueber alamos-apager angefragt): ${lastStartText}`,\n  '',\n  'Letzte bekannte Metriken vor dem Ausfall (nicht live -- der Pi ist ja gerade nicht erreichbar):',\n  `- CPU: ${fmt(cpu, '%')}`,\n  `- RAM: ${fmt(ram, '%')}`,\n  `- Temperatur: ${fmt(temp, '°C')}`,\n  '',\n  `Alarm seit: ${startsAt}`,\n  '',\n  'Details: Grafana-Dashboard \"Home Server Auslastung\" (uid homeserver-auslastung), Instance vereinsheim-alarmmonitor.',\n].join('\\n');\n\nreturn [{\n  json: {\n    title: 'Vereinsheim-Alarmmonitor nicht erreichbar',\n    group: ZAMMAD_GROUP,\n    customer: ZAMMAD_REQUESTER_EMAIL,\n    article: {\n      subject: 'Vereinsheim-Alarmmonitor nicht erreichbar',\n      body: bodyText,\n      content_type: 'text/plain',\n      type: 'note',\n      internal: false,\n    },\n  },\n}];"
       },
       "id": "b1b1b1b1-0005-4000-8000-000000000005",
       "name": "Ticket-Payload bauen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1560, 300]
+      "position": [
+        1560,
+        300
+      ]
     },
     {
       "parameters": {
@@ -116,7 +134,10 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
@@ -130,7 +151,10 @@
       "name": "Zammad-Ticket erstellen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1820, 300],
+      "position": [
+        1820,
+        300
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "REPLACE_ME_NACH_IMPORT",
@@ -141,22 +165,70 @@
   ],
   "connections": {
     "Alertmanager Webhook": {
-      "main": [[{ "node": "CPU abfragen", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "CPU abfragen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "CPU abfragen": {
-      "main": [[{ "node": "RAM abfragen", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "RAM abfragen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "RAM abfragen": {
-      "main": [[{ "node": "Temperatur abfragen", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Temperatur abfragen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Temperatur abfragen": {
-      "main": [[{ "node": "Letzte AMweb-Anfrage abfragen", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Letzte AMweb-Anfrage abfragen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Letzte AMweb-Anfrage abfragen": {
-      "main": [[{ "node": "Ticket-Payload bauen", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Ticket-Payload bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Ticket-Payload bauen": {
-      "main": [[{ "node": "Zammad-Ticket erstellen", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Zammad-Ticket erstellen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
