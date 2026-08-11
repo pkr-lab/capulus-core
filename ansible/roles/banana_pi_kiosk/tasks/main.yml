@@ -50,6 +50,22 @@
     cache_valid_time: 3600
   when: banana_pi_kiosk_enabled | bool
 
+# ---- Vorinstallierten Display-Manager deaktivieren -----------------------
+# Das Armbian-Image bringt lightdm mit, das beim Boot eine eigene X-Session
+# auf :0 (tty7) startet — parallel zu unserer eigenen manuellen X-Session
+# auf :1 (tty1) via Autologin unten. Auf einem 2-GB-RAM-Geraet unnoetiger
+# Speicherverbrauch und moeglicher Mitverursacher der Chromium-Absturz-
+# schleife (siehe docs/45-vereinsheim-alarmmonitor.md). "failed_when: false",
+# da der Dienst je nach Image ggf. gar nicht existiert.
+- name: lightdm stoppen und deaktivieren (falls vorhanden)
+  ansible.builtin.systemd:
+    name: lightdm
+    enabled: false
+    state: stopped
+    masked: true
+  when: banana_pi_kiosk_enabled | bool
+  failed_when: false
+
 # ---- Autologin auf tty1 (kein Raspberry-Pi-Imager-Schalter auf Armbian) --
 - name: Verzeichnis fuer getty@tty1-Drop-in anlegen
   ansible.builtin.file:

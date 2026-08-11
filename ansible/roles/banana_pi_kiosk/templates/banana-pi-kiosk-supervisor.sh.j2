@@ -42,6 +42,10 @@ start_chromium() {
     --disable-infobars \
     --disable-session-crashed-bubble \
     --autoplay-policy=no-user-gesture-required \
+    --disable-gpu \
+    --disable-gpu-rasterization \
+    --disable-software-rasterizer \
+    --no-sandbox \
     "${url}" &
   chromium_pid=$!
 }
