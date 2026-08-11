@@ -2,11 +2,13 @@
 
 Dieser Guide verbindet Headlamp, Argo Workflows und MinIO mit Authentik SSO.
 **In der Praxis genutzt wird davon nur Forward Auth (Gotify, Semaphore)** —
-für Grafana/Headlamp/MinIO liegt zwar reale OIDC-Config mit echten Secrets
-im Cluster, sie ist aber laut Betreiber kein aktiv genutzter Login-Weg. Die
+für Headlamp/MinIO liegt zwar reale OIDC-Config mit echten Secrets im
+Cluster, sie ist aber laut Betreiber kein aktiv genutzter Login-Weg. Die
 Schritte unten bleiben als Referenz stehen (z. B. für eine Secret-Rotation
 oder falls OIDC doch produktiv genutzt werden soll). **Argo Workflows hat
-noch gar keine SSO-Anbindung.**
+noch gar keine SSO-Anbindung.** Grafana meldet sich bewusst **nicht** über
+Authentik an, sondern nutzt den eingebauten Grafana-Login (Secret
+`grafana-admin`).
 
 **Aktueller Stand:**
 
@@ -14,7 +16,7 @@ noch gar keine SSO-Anbindung.**
 |---|---|---|
 | Gotify | Forward Auth | live, aktiv genutzt |
 | Semaphore | Forward Auth | live, aktiv genutzt |
-| Grafana | OIDC | konfiguriert, kein genutzter Login-Weg |
+| Grafana | lokaler Login | kein Authentik — bewusst entfernt |
 | Headlamp | OIDC | konfiguriert, kein genutzter Login-Weg |
 | MinIO | OIDC | konfiguriert, kein genutzter Login-Weg |
 | Argo Workflows | OIDC | noch offen — dieser Guide |
@@ -53,7 +55,7 @@ ssh ubuntu@192.168.178.94 \
    - **Password:** sicheres Passwort wählen
 3. Speichern.
 
-**User zur Admin-Gruppe hinzufügen** (für Grafana + ArgoCD Admin-Rechte):
+**User zur Admin-Gruppe hinzufügen** (für ArgoCD Admin-Rechte):
 
 1. **Directory → Groups → authentik Admins** öffnen
 2. Tab **Members → Add member**
@@ -328,13 +330,6 @@ ssh ubuntu@192.168.178.94 \
 2. Button **Login with SSO** → Weiterleitung zu Authentik
 3. Login mit `pke` / Passwort
 4. → MinIO Console
-
-### Grafana (bereits aktiv, zum Testen)
-
-1. Browser → `http://grafana.homeserver`
-2. Direktweiterleitung zu Authentik (kein Grafana-Login-Screen)
-3. Login mit `pke` / Passwort
-4. → Grafana Dashboard
 
 ---
 

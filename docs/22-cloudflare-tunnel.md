@@ -314,8 +314,9 @@ für bis zu 50 Nutzer kostenlos):
 Für Dienste mit echten externen Nutzern (z. B. Zammad-Ticket-Erstellung
 durch DLRG-Mitglieder ohne Cluster-Zugriff) ist Option B die richtige
 Wahl. Für Dienste, die nur du selbst von unterwegs brauchst (z. B.
-Grafana), reicht die Kombination aus bestehendem Authentik-Login **plus**
-einer Access-Policy auf deine eigene E-Mail-Adresse.
+Grafana, das seit dem Entfernen des Authentik-Logins nur noch den
+eigenen lokalen Grafana-Login hat), reicht eine Access-Policy auf deine
+eigene E-Mail-Adresse als zusätzliche Absicherung.
 
 ---
 
@@ -326,7 +327,7 @@ einer Access-Policy auf deine eigene E-Mail-Adresse.
 | **Wiki.js** | Freigeben | SOPs, Alarm-/Ausrückeordnung, Checklisten — genau die Inhalte, die im Wachdienst *unterwegs*, ohne VPN gebraucht werden. Reiner Lesezugriff für die meisten Nutzer, geringes Risiko. Mit Cloudflare Access (Option B) auf DLRG-Mitglieder einschränken. |
 | **ntfy** | Freigeben | Push-Benachrichtigungen (z. B. Unwetterwarnung, Alarmmonitor offline) müssen genau dann ankommen, wenn das Handy *nicht* im Heimnetz/Tailnet hängt. Ohne externe Erreichbarkeit verpuffen Alerts im Ernstfall. |
 | **Zammad** | Freigeben (mit Access-Policy) | Sinnvoll, wenn Tickets/Support-Anfragen auch von Leuten ohne VPN-Zugang reinkommen sollen. Cloudflare Access oder mindestens ein Rate-Limit vorschalten, da das Formular öffentlich erreichbar ist. |
-| **Grafana** | Optional | Praktisch, um Pegel-/Wetter-Dashboards unterwegs zu checken. Nur mit Authentik-OIDC **und** Cloudflare-Access-Policy auf den eigenen Account freigeben — sonst sind Cluster-/Infra-Metriken öffentlich einsehbar. |
+| **Grafana** | Optional | Praktisch, um Pegel-/Wetter-Dashboards unterwegs zu checken. Login läuft über den lokalen Grafana-Account (kein Authentik mehr). Zusätzlich mit Cloudflare-Access-Policy auf den eigenen Account freigeben — sonst sind Cluster-/Infra-Metriken hinter nur einem Passwort öffentlich erreichbar. |
 | **Immich** | Freigeben | Kernanwendungsfall ist automatisches Foto-Backup vom Handy — ohne externe Erreichbarkeit synct die App nur im WLAN. Absicherung über den eigenen Immich-Login (E-Mail + Passwort, optional 2FA). |
 | **Nextcloud** | Freigeben | Datei-Sync/Kalender/Kontakte sind für Mobile-/Desktop-Clients unterwegs gedacht. Eigener Login schützt den Zugriff, siehe [docs/33-nextcloud.md](33-nextcloud.md). |
 | **ArgoCD** | Nicht freigeben | Voller GitOps-Controller-Zugriff auf den Cluster. Bleibt Tailscale-only. |

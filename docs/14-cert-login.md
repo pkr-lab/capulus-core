@@ -20,8 +20,9 @@ Traefik (TLSOption: RequireAndVerifyClientCert → Home-Lab-CA)
 Authentik (Login: Benutzername + Passwort / TOTP wie bisher)
     │  OIDC-Token / Session / ForwardAuth
     ▼
-Grafana · Headlamp · Argo Workflows · MinIO   ← OIDC
+Headlamp · Argo Workflows · MinIO             ← OIDC
 Gotify  · Semaphore                           ← Forward Auth
+Grafana                                       ← eigener lokaler Login (kein Authentik)
 ```
 
 **Was das Zertifikat tut:** Netzwerk-Zugangskontrolle — nur Geräte mit
@@ -32,7 +33,7 @@ Benutzername + Passwort (oder TOTP) bleibt der Identity-Schritt.
 
 | Dienst          | Typ           | Status                          |
 |-----------------|---------------|---------------------------------|
-| Grafana         | OIDC          | konfiguriert (reale Secrets im Cluster), aber laut Betreiber kein genutzter Login-Weg |
+| Grafana         | lokaler Login | kein Authentik — bewusst entfernt |
 | Headlamp        | OIDC          | konfiguriert (reale Secrets im Cluster), aber laut Betreiber kein genutzter Login-Weg |
 | MinIO           | OIDC          | konfiguriert (reale Secrets im Cluster), aber laut Betreiber kein genutzter Login-Weg |
 | Gotify          | Forward Auth  | live, aktiv genutzt             |
@@ -41,10 +42,11 @@ Benutzername + Passwort (oder TOTP) bleibt der Identity-Schritt.
 
 > **Realitäts-Check (Stand: dieser Commit):** Betrieblich genutzt wird nur
 > **Forward Auth** (Gotify, Semaphore) über die Authentik-Middleware. Für
-> Grafana/Headlamp/MinIO liegen zwar reale (nicht-Platzhalter) OIDC-Secrets
+> Headlamp/MinIO liegen zwar reale (nicht-Platzhalter) OIDC-Secrets
 > im Cluster — der Betreiber nutzt diesen Login-Weg aber nicht aktiv, die
-> Config ist vorhanden, ohne der primäre Zugriffsweg zu sein. Argo Workflows
-> hat noch gar keine SSO-Anbindung. Der **mTLS-Teil (Schritt 2–4) wurde dagegen nie wie unten beschrieben
+> Config ist vorhanden, ohne der primäre Zugriffsweg zu sein. Grafana wurde
+> bewusst von Authentik-OIDC auf den eigenen lokalen Login umgestellt. Argo
+> Workflows hat noch gar keine SSO-Anbindung. Der **mTLS-Teil (Schritt 2–4) wurde dagegen nie wie unten beschrieben
 > gebaut.** Was stattdessen existiert: eine deutlich leichtere, nur auf den
 > `authentik`-Namespace beschränkte `TLSOption` (`authentik-mtls`,
 > `RequestClientCert` = optional, **kein** Fehlschlag bei fehlendem Zert) in
@@ -320,10 +322,10 @@ Settings → Privacy & Security → View Certificates → Your Certificates → 
 
 ## Schritt 6 — Pro App verbinden
 
-### Grafana (bereits konfiguriert)
+### Grafana
 
-Keine Änderung nötig. Nach Cert-Check durch Traefik leitet Grafana automatisch
-zu Authentik weiter.
+Nutzt bewusst **keinen** Authentik-Login mehr. Nach Cert-Check durch Traefik
+zeigt Grafana seinen eigenen Login-Screen (Secret `grafana-admin`).
 
 ---
 
@@ -523,7 +525,7 @@ curl --cert ~/homelab-certs/client.crt \
 curl --cacert ~/homelab-certs/ca.crt \
      https://authentik.homeserver/  # erwartet: 400 Bad Request
 
-# 4. Browser: Grafana öffnen → Browser fragt nach Zertifikat → Authentik-Login
+# 4. Browser: Grafana öffnen → Browser fragt nach Zertifikat → Grafana-Login (lokal)
 open http://grafana.homeserver
 ```
 
