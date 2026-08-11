@@ -41,4 +41,4 @@ spec:
               mehr als 10 Minuten keine Metriken mehr gepusht (vmagent-Push
               via Tailscale down oder Geraet selbst nicht erreichbar). Loest
               zusaetzlich zum ntfy-Alarm ein Zammad-Ticket via n8n aus
-              (p.kretzer29@gmail.com).
+              (info@edv-kretzer.de).
