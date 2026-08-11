@@ -147,13 +147,17 @@ zammad:
     scheduler:
       # Läuft (wie railsserver) die volle Rails-App dauerhaft; bei Backlog-
       # Verarbeitung (z.B. viele SearchIndexJobs nach einem Neustart) reichten
-      # 512Mi nicht aus → OOMKilled. Limit an railsserver angeglichen.
+      # 512Mi nicht aus → OOMKilled. Limit an railsserver angeglichen (1Gi).
+      # Reichte ebenfalls nicht dauerhaft — Pod lief in einer OOM-Crash-Loop
+      # (529 Restarts in 18 Tagen), wodurch u.a. Mail-Jobs (z.B. Agent-
+      # Einladungsmails) mitten in der Verarbeitung verloren gingen. Weiter
+      # auf 1.5Gi angehoben.
       resources:
         requests:
           cpu: 50m
           memory: 256Mi
         limits:
-          memory: 1Gi
+          memory: 1.5Gi
 
     # ---- Websocket-Server -----------------------------------
     websocket:
