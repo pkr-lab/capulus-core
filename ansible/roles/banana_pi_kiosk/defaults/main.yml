@@ -14,7 +14,7 @@ banana_pi_kiosk_base_url: "http://alamos-apager.homeserver"
 # ansible/inventory/hosts.yml, Gruppe banana_pis) und muss zu einem Key im
 # SealedSecret alamos-apager-stations passen — kein Default, damit ein
 # fehlender Wert laut auffaellt statt eine falsche Station anzuzeigen.
-# banana_pi_kiosk_station: "vereinsheim-alarmmonitor"
+# banana_pi_kiosk_station: "1002011_Fahrzeughalle"  # Beispiel -- reale Alamos-Stationskennung, NICHT der Monitoring-Instance-Name
 
 # Echte ALAMOS-AMweb-URL als lokaler Fallback, falls
 # {{ banana_pi_kiosk_base_url }} nicht erreichbar ist (Server/Cluster down).
@@ -51,3 +51,13 @@ banana_pi_kiosk_failover_fail_threshold: 3
 # reicht, damit der Monitor moeglichst schnell wieder auf dem zentral
 # verwalteten Pfad laeuft).
 banana_pi_kiosk_failover_recover_threshold: 1
+
+# ---- Taeglicher automatischer Neustart -----------------------------------
+# Unbeaufsichtigtes Kiosk-Geraet — ein taeglicher Reboot raeumt Chromium-
+# Prozesszustand/Speicher auf, unabhaengig von der Absturzschleifen-Ursache.
+# Kill-switch: auf false setzen, um den Reboot-Timer zu deaktivieren.
+banana_pi_kiosk_daily_reboot_enabled: true
+
+# Uhrzeit (systemd OnCalendar-Zeitformat, lokale Zeit des Pi) fuer den
+# taeglichen Neustart.
+banana_pi_kiosk_daily_reboot_time: "00:00:00"

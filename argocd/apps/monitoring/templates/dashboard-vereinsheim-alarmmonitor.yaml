@@ -450,7 +450,7 @@ data:
           "targets": [
             {
               "datasource": {"type": "prometheus", "uid": "${datasource}"},
-              "expr": "time() - alamos_apager_last_start_timestamp_seconds{station=\"vereinsheim-alarmmonitor\"}",
+              "expr": "time() - alamos_apager_last_start_timestamp_seconds{station=\"1002011_Fahrzeughalle\"}",
               "instant": true,
               "legendFormat": "Letzte AMweb-Anfrage vor",
               "refId": "A"
@@ -489,7 +489,7 @@ data:
           "targets": [
             {
               "datasource": {"type": "prometheus", "uid": "${datasource}"},
-              "expr": "time() - alamos_apager_last_heartbeat_timestamp_seconds{station=\"vereinsheim-alarmmonitor\"}",
+              "expr": "time() - alamos_apager_last_heartbeat_timestamp_seconds{station=\"1002011_Fahrzeughalle\"}",
               "instant": true,
               "legendFormat": "Letzter Heartbeat vor",
               "refId": "A"
@@ -523,7 +523,7 @@ data:
           "targets": [
             {
               "datasource": {"type": "prometheus", "uid": "${datasource}"},
-              "expr": "alamos_apager_station_down{station=\"vereinsheim-alarmmonitor\"}",
+              "expr": "alamos_apager_station_down{station=\"1002011_Fahrzeughalle\"}",
               "instant": true,
               "legendFormat": "Standort-Status",
               "refId": "A"

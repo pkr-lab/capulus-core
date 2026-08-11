@@ -10,3 +10,9 @@
     daemon_reload: true
     name: getty@tty1.service
     state: restarted
+
+- name: Restart banana-pi daily reboot timer
+  ansible.builtin.systemd:
+    name: banana-pi-daily-reboot.timer
+    daemon_reload: true
+    state: restarted
