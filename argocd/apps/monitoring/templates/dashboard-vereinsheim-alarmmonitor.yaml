@@ -218,7 +218,6 @@ data:
             {
               "datasource": {"type": "prometheus", "uid": "${datasource}"},
               "expr": "time() - timestamp(up{job=\"node-exporter\",instance=\"vereinsheim-alarmmonitor\"})",
-              "instant": true,
               "legendFormat": "Zuletzt gesehen vor",
               "refId": "A"
             }
@@ -250,7 +249,6 @@ data:
             {
               "datasource": {"type": "prometheus", "uid": "${datasource}"},
               "expr": "node_time_seconds{instance=\"vereinsheim-alarmmonitor\"} - node_boot_time_seconds{instance=\"vereinsheim-alarmmonitor\"}",
-              "instant": true,
               "legendFormat": "Uptime",
               "refId": "A"
             }
@@ -291,7 +289,6 @@ data:
             {
               "datasource": {"type": "prometheus", "uid": "${datasource}"},
               "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\",instance=\"vereinsheim-alarmmonitor\"}[5m])) * 100)",
-              "instant": true,
               "legendFormat": "CPU",
               "refId": "A"
             }
@@ -332,7 +329,6 @@ data:
             {
               "datasource": {"type": "prometheus", "uid": "${datasource}"},
               "expr": "(node_memory_MemTotal_bytes{instance=\"vereinsheim-alarmmonitor\"} - node_memory_MemAvailable_bytes{instance=\"vereinsheim-alarmmonitor\"}) / node_memory_MemTotal_bytes{instance=\"vereinsheim-alarmmonitor\"} * 100",
-              "instant": true,
               "legendFormat": "RAM",
               "refId": "A"
             }
@@ -371,7 +367,6 @@ data:
             {
               "datasource": {"type": "prometheus", "uid": "${datasource}"},
               "expr": "avg(node_hwmon_temp_celsius{instance=\"vereinsheim-alarmmonitor\"})",
-              "instant": true,
               "legendFormat": "Temperatur",
               "refId": "A"
             }
@@ -412,7 +407,6 @@ data:
             {
               "datasource": {"type": "prometheus", "uid": "${datasource}"},
               "expr": "(node_filesystem_size_bytes{instance=\"vereinsheim-alarmmonitor\",mountpoint=\"/\",fstype!~\"tmpfs|overlay\"} - node_filesystem_avail_bytes{instance=\"vereinsheim-alarmmonitor\",mountpoint=\"/\",fstype!~\"tmpfs|overlay\"}) / node_filesystem_size_bytes{instance=\"vereinsheim-alarmmonitor\",mountpoint=\"/\",fstype!~\"tmpfs|overlay\"} * 100",
-              "instant": true,
               "legendFormat": "Disk (/)",
               "refId": "A"
             }
@@ -451,7 +445,6 @@ data:
             {
               "datasource": {"type": "prometheus", "uid": "${datasource}"},
               "expr": "time() - alamos_apager_last_start_timestamp_seconds{station=\"1002011_Fahrzeughalle\"}",
-              "instant": true,
               "legendFormat": "Letzte AMweb-Anfrage vor",
               "refId": "A"
             }
@@ -490,7 +483,6 @@ data:
             {
               "datasource": {"type": "prometheus", "uid": "${datasource}"},
               "expr": "time() - alamos_apager_last_heartbeat_timestamp_seconds{station=\"1002011_Fahrzeughalle\"}",
-              "instant": true,
               "legendFormat": "Letzter Heartbeat vor",
               "refId": "A"
             }
@@ -524,7 +516,6 @@ data:
             {
               "datasource": {"type": "prometheus", "uid": "${datasource}"},
               "expr": "alamos_apager_station_down{station=\"1002011_Fahrzeughalle\"}",
-              "instant": true,
               "legendFormat": "Standort-Status",
               "refId": "A"
             }
