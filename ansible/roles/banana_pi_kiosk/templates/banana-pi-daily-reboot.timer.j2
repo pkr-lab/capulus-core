@@ -1,0 +1,13 @@
+# Managed by Ansible (banana_pi_kiosk role) — do not edit manually.
+[Unit]
+Description=Taeglicher automatischer Neustart um {{ banana_pi_kiosk_daily_reboot_time }} (Banana-Pi-Alarmmonitor)
+
+[Timer]
+OnCalendar=*-*-* {{ banana_pi_kiosk_daily_reboot_time }}
+# Bewusst KEIN Persistent=true: soll nur zur geplanten Uhrzeit ausloesen,
+# nicht sofort nachholen, falls der Pi zu diesem Zeitpunkt gerade aus war
+# (sonst reboottet er direkt beim naechsten Hochfahren erneut).
+Persistent=false
+
+[Install]
+WantedBy=timers.target
