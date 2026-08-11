@@ -9,14 +9,17 @@ Authentik ist ein Open-Source Identity Provider (IdP). Er stellt OIDC/OAuth2 ber
 ```
 Browser  →  Traefik  →  authentik.homeserver  (Authentik)
                               ↕ OIDC/OAuth2
-          Grafana · ArgoCD · Headlamp · Argo Workflows · MinIO
+                ArgoCD · Headlamp · Argo Workflows · MinIO
                               ↕ Forward Auth (Traefik-Middleware)
                          Gotify · Semaphore
 ```
 
+> Grafana meldet sich **nicht mehr** über Authentik an — Login läuft über
+> den eingebauten Grafana-Admin-Account (Secret `grafana-admin`,
+> `argocd/apps/monitoring/values.yaml`).
+
 | Dienst           | Integrations-Typ        | Authentik-Vorlage |
 |------------------|-------------------------|-------------------|
-| Grafana          | OIDC OAuth2             | —                 |
 | ArgoCD           | OIDC (extern)           | —                 |
 | Headlamp         | OIDC                    | —                 |
 | Argo Workflows   | OIDC SSO                | —                 |
@@ -124,103 +127,27 @@ mit, `values.yaml` schaltet sie nur ein. Details für alle Apps:
 
 ---
 
-## Schritt 4 — OIDC-Integration: Grafana
+## Schritt 4 — OIDC-Integration: ArgoCD
 
-### 4.1 — OAuth2-Provider in Authentik anlegen
+ArgoCD hat einen eingebauten Dex OIDC-Connector. Für externe Provider diesen deaktivieren.
+
+### 4.1 — Authentik-Provider anlegen
 
 In der Authentik Admin-UI (**http://authentik.homeserver/if/admin/**):
 
 1. **Applications → Providers → Erstellen → OAuth2/OpenID Provider**
 2. Werte:
-   - Name: `Grafana`
+   - Name: `ArgoCD`
    - Client type: `Confidential`
-   - Redirect URIs: `http://grafana.homeserver/login/generic_oauth`
-   - Scopes: `openid`, `email`, `profile`
+   - Redirect URI: `http://192.168.178.94:30080/auth/callback`
+   - Scopes: `openid`, `email`, `profile`, `groups`
 3. Notiere `Client ID` und `Client Secret`.
 4. **Applications → Erstellen**:
-   - Name: `Grafana`
-   - Provider: `Grafana`
-   - Launch URL: `http://grafana.homeserver`
+   - Name: `ArgoCD`
+   - Provider: `ArgoCD`
+   - Launch URL: `http://192.168.178.94:30080`
 
-### 4.2 — Grafana-Values aktualisieren
-
-In `argocd/apps/monitoring/values.yaml` unter `victoria-metrics-k8s-stack.grafana`:
-
-```yaml
-grafana:
-  envFromSecret: grafana-oauth-secret        # Secret wird in Schritt 4.3 angelegt
-  grafana.ini:
-    server:
-      domain: grafana.homeserver
-      root_url: "http://grafana.homeserver"
-    auth.generic_oauth:
-      enabled: true
-      name: "Authentik"
-      icon: "signin"
-      allow_sign_up: true
-      auto_login: true
-      client_id: "TP7bdPbe2ozhgzmScJ73UhJVJXeGCyOSHTGcxfpB"
-      client_secret: "$__env{GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET}"
-      scopes: "openid email profile"
-      auth_url: "http://authentik.homeserver/application/o/authorize/"
-      token_url: "http://authentik.homeserver/application/o/token/"
-      api_url: "http://authentik.homeserver/application/o/userinfo/"
-      groups_attribute_path: "groups"
-      role_attribute_path: "contains(groups[*], 'authentik Admins') && 'Admin' || 'Viewer'"
-```
-
-> `auto_login: true` sorgt dafür, dass Grafana automatisch zu Authentik weiterleitet, ohne den eigenen Login-Screen zu zeigen.
-> `$__env{...}` lässt Grafana den Wert zur Laufzeit aus der Umgebungsvariable lesen — kein Klartext im Git.
-
-### 4.3 — client_secret als SealedSecret absichern
-
-Das `client_secret` darf **nicht** im Klartext in `values.yaml` landen. Grafana liest es stattdessen aus der Umgebungsvariable `GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET`, die via `envFromSecret` aus einem versiegelten Kubernetes Secret injiziert wird.
-
-**Secret versiegeln (einmalig von der Workstation):**
-
-```bash
-echo -n "<DEIN_CLIENT_SECRET>" | kubeseal --raw \
-  --namespace monitoring \
-  --name grafana-oauth-secret \
-  --controller-namespace sealed-secrets \
-  --controller-name sealed-secrets
-```
-
-Die Ausgabe (langer Base64-Blob) in eine neue Datei eintragen:
-
-```yaml
-# argocd/apps/monitoring/templates/grafana-oauth-sealedsecret.yaml
-apiVersion: bitnami.com/v1alpha1
-kind: SealedSecret
-metadata:
-  name: grafana-oauth-secret
-  namespace: monitoring
-spec:
-  encryptedData:
-    GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: "<AUSGABE_VON_KUBESEAL>"
-  template:
-    metadata:
-      name: grafana-oauth-secret
-      namespace: monitoring
-    type: Opaque
-```
-
-Nach dem Commit entschlüsselt der sealed-secrets-Controller das Secret automatisch. Grafana liest `GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET` via `envFromSecret: grafana-oauth-secret` (s. Schritt 4.2).
-
----
-
-## Schritt 5 — OIDC-Integration: ArgoCD
-
-ArgoCD hat einen eingebauten Dex OIDC-Connector. Für externe Provider diesen deaktivieren.
-
-### 5.1 — Authentik-Provider anlegen
-
-Analog zu Schritt 4.1:
-- Name: `ArgoCD`
-- Redirect URI: `http://192.168.178.94:30080/auth/callback`
-- Scopes: `openid`, `email`, `profile`, `groups`
-
-### 5.2 — ArgoCD ConfigMap
+### 4.2 — ArgoCD ConfigMap
 
 In `argocd/apps/argocd/` (falls du eine eigene App-Konfiguration hast) oder direkt als ConfigMap:
 
@@ -268,13 +195,13 @@ kubectl -n argocd create secret generic argocd-secret \
 
 ---
 
-## Schritt 6 — OIDC-Integration: Headlamp
+## Schritt 5 — OIDC-Integration: Headlamp
 
-### 6.1 — Provider anlegen
+### 5.1 — Provider anlegen
 
 - Redirect URI: `http://headlamp.homeserver/oidc-callback`
 
-### 6.2 — Headlamp-Values
+### 5.2 — Headlamp-Values
 
 In `argocd/apps/headlamp/values.yaml`:
 
@@ -290,7 +217,7 @@ headlamp:
 
 ---
 
-## Schritt 7 — OIDC-Integration: MinIO
+## Schritt 6 — OIDC-Integration: MinIO
 
 Im MinIO-Helm-Chart oder in der MinIO-Konsole (**http://minio.homeserver**):
 
@@ -303,11 +230,11 @@ Im MinIO-Helm-Chart oder in der MinIO-Konsole (**http://minio.homeserver**):
 
 ---
 
-## Schritt 8 — Forward Auth: Gotify & Semaphore
+## Schritt 7 — Forward Auth: Gotify & Semaphore
 
 Für Dienste ohne native OIDC-Unterstützung übernimmt Traefik die Authentifizierung via Forward Auth.
 
-### 8.1 — Authentik Proxy Provider anlegen
+### 7.1 — Authentik Proxy Provider anlegen
 
 In der Authentik Admin-UI für jeden Dienst:
 
@@ -316,7 +243,7 @@ In der Authentik Admin-UI für jeden Dienst:
 3. External Host: z.B. `http://gotify.homeserver`
 4. **Application anlegen** und Provider zuweisen.
 
-### 8.2 — Traefik-Middleware deployen
+### 7.2 — Traefik-Middleware deployen
 
 Lege eine gemeinsame Middleware an (z.B. in einem eigenen Namespace oder als Teil der Authentik-App):
 
@@ -345,7 +272,7 @@ spec:
       - X-authentik-meta-version
 ```
 
-### 8.3 — Ingress-Annotation für geschützte Dienste
+### 7.3 — Ingress-Annotation für geschützte Dienste
 
 ```yaml
 annotations:
@@ -405,21 +332,9 @@ ssh ubuntu@192.168.178.94 \
 
 ### OIDC-Login schlägt fehl ("invalid_client")
 
-- Client ID / Secret in den Grafana/ArgoCD-Werten mit Authentik vergleichen.
+- Client ID / Secret in den ArgoCD-Werten mit Authentik vergleichen.
 - Redirect URI in Authentik muss **exakt** mit der konfigurierten URL übereinstimmen (inkl. Protokoll und Pfad).
 - Browser-Entwicklertools → Network-Tab → OIDC-Request prüfen.
-
-### Grafana leitet nicht automatisch zu Authentik weiter
-
-`auto_login: true` funktioniert nur, wenn genau ein OAuth2-Provider konfiguriert ist. Lokale Logins werden dann komplett deaktiviert. Notfall-Zugang über:
-
-```bash
-# Grafana-Pod direkt ansteuern (ohne OIDC)
-ssh ubuntu@192.168.178.94 \
-  'sudo kubectl -n monitoring exec -it \
-   $(sudo kubectl -n monitoring get pod -l app.kubernetes.io/name=grafana -o name) \
-   -- grafana-cli admin reset-admin-password NEUES_PASSWORT'
-```
 
 ### Authentik-Admin-Passwort vergessen
 
@@ -437,6 +352,5 @@ ssh ubuntu@192.168.178.94 \
 ## Weiterführende Links
 
 - [Authentik Helm-Chart Docs](https://docs.goauthentik.io/docs/installation/kubernetes)
-- [Authentik Grafana-Integration](https://docs.goauthentik.io/integrations/services/grafana/)
 - [Authentik ArgoCD-Integration](https://docs.goauthentik.io/integrations/services/argo-cd/)
 - [Authentik Traefik Forward Auth](https://docs.goauthentik.io/docs/providers/proxy/server_traefik)
