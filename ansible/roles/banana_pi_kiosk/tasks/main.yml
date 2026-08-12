@@ -169,7 +169,7 @@
   when: not (banana_pi_kiosk_enabled | bool)
   failed_when: false
 
-# ---- Taeglicher automatischer Neustart -----------------------------------
+# ---- Taeglicher Kiosk-Session-Neustart (kein Kernel-Reboot) --------------
 - name: Daily-Reboot-systemd-Service + Timer deployen
   ansible.builtin.template:
     src: "{{ item }}.j2"
