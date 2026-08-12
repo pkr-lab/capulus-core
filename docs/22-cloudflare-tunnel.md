@@ -318,6 +318,48 @@ Grafana, das seit dem Entfernen des Authentik-Logins nur noch den
 eigenen lokalen Grafana-Login hat), reicht eine Access-Policy auf deine
 eigene E-Mail-Adresse als zusätzliche Absicherung.
 
+### Konkret: Access-Policy für Grafana anlegen
+
+Grafana (`grafana.pke-lab.de`) hat keinen Authentik-Login mehr (siehe
+[docs/13-sso-authentik.md](13-sso-authentik.md)) und ist über den Tunnel
+öffentlich erreichbar — ohne Access-Policy schützt nur noch das lokale
+Grafana-Passwort die Cluster-/Infra-Metriken. Empfohlenes Setup:
+
+1. [Zero Trust Dashboard](https://one.dash.cloudflare.com) → **Access →
+   Applications → Add an application → Self-hosted**.
+2. **Application domain:** `grafana.pke-lab.de` (kompletter Hostname, kein
+   Pfad-Suffix nötig — die Policy greift dann für die ganze App).
+3. **Session Duration:** z. B. `24h` — danach muss die Cloudflare-Login-Seite
+   erneut durchlaufen werden, auch wenn die Grafana-Session selbst länger
+   gilt.
+4. **Identity provider:** Standard reicht **One-Time PIN** (Cloudflare
+   verschickt einen Code per E-Mail, kein zusätzlicher Account nötig).
+5. **Policy** anlegen:
+   - Name: z. B. `grafana-only-me`
+   - Action: `Allow`
+   - Include: `Emails` → deine eigene Adresse
+     (`ichwillkeinewerbung9901@gmail.com` oder die, die du tatsächlich
+     nutzt)
+6. Speichern. Ab jetzt zeigt Cloudflare **vor** dem Grafana-Login-Screen
+   erst die Access-Seite — ein Angreifer muss also sowohl den
+   One-Time-PIN-Check als auch das Grafana-Passwort umgehen.
+
+**Testen:**
+
+```bash
+# Ohne gültige Access-Session sollte Cloudflare die Login-Seite zeigen,
+# nicht direkt Grafana:
+curl -sI https://grafana.pke-lab.de | head -1
+# Im Browser: Inkognito-Fenster öffnen → grafana.pke-lab.de →
+# es muss zuerst die Cloudflare-Access-Seite kommen, nicht der
+# Grafana-Login.
+```
+
+> Diese Policy lebt ausschließlich im Cloudflare-Zero-Trust-Dashboard —
+> es gibt dafür keine Repräsentation in diesem Repo (kein Terraform o. Ä.
+> für Cloudflare Access im Einsatz). Bei einem Cloudflare-Account-Wechsel
+> oder Reset muss sie manuell neu angelegt werden.
+
 ---
 
 ## Welche Dienste eignen sich zur Freigabe?
