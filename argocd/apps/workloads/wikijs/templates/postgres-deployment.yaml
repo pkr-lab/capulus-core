@@ -34,7 +34,7 @@ spec:
       # "pgdata_fixed" ist eine frische Kopie, neu angelegt unter der
       # aktuellen Squash-Identität — chmod 700 funktioniert darauf. Gleiches
       # Problem/gleicher Fix wie bei Immich, siehe
-      # argocd/apps/immich/templates/postgres-deployment.yaml.
+      # argocd/apps/workloads/immich/templates/postgres-deployment.yaml.
       #
       # runAsUser/runAsGroup müssen daher zwingend auf genau diese
       # Squash-Identität (1000:10) gesetzt sein, NICHT auf 999: Postgres

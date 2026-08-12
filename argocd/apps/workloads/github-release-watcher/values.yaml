@@ -44,7 +44,7 @@ github:
     - id: nextcloud
       name: "Nextcloud"
       repo: "nextcloud/server"
-      # Aus argocd/apps/nextcloud/values.yaml image.tag "34.0.2-apache" —
+      # Aus argocd/apps/workloads/nextcloud/values.yaml image.tag "34.0.2-apache" —
       # "-apache"-Suffix entfernt, "v" ergänzt (nextcloud/server taggt
       # "vX.Y.Z", das Docker-Image "X.Y.Z-apache").
       currentVersion: "v34.0.2"
@@ -52,34 +52,34 @@ github:
     - id: immich
       name: "Immich"
       repo: "immich-app/immich"
-      # Aus argocd/apps/immich/values.yaml image.tag — Docker-Tag- und
+      # Aus argocd/apps/workloads/immich/values.yaml image.tag — Docker-Tag- und
       # Release-Tag-Format sind hier identisch ("vX.Y.Z").
       currentVersion: "v3.1.0"
       notifyZammad: false
     - id: vaultwarden
       name: "Vaultwarden"
       repo: "dani-garcia/vaultwarden"
-      # Aus argocd/apps/vaultwarden/values.yaml image.tag — Format
+      # Aus argocd/apps/workloads/vaultwarden/values.yaml image.tag — Format
       # identisch ("X.Y.Z", kein "v"-Präfix bei diesem Repo).
       currentVersion: "1.37.1"
       notifyZammad: false
     - id: paperless-ngx
       name: "Paperless-ngx"
       repo: "paperless-ngx/paperless-ngx"
-      # Aus argocd/apps/paperless-ngx/values.yaml image.tag "3.0.5" — "v"
+      # Aus argocd/apps/workloads/paperless-ngx/values.yaml image.tag "3.0.5" — "v"
       # ergänzt.
       currentVersion: "v3.0.5"
       notifyZammad: false
     - id: mealie
       name: "Mealie"
       repo: "mealie-recipes/mealie"
-      # Aus argocd/apps/mealie/values.yaml image.tag — Format identisch.
+      # Aus argocd/apps/workloads/mealie/values.yaml image.tag — Format identisch.
       currentVersion: "v3.22.0"
       notifyZammad: false
     - id: n8n
       name: "n8n"
       repo: "n8n-io/n8n"
-      # Aus argocd/apps/n8n/values.yaml image.tag "2.33.7-imap" (custom
+      # Aus argocd/apps/workloads/n8n/values.yaml image.tag "2.33.7-imap" (custom
       # Image mit IMAP-Patch) — "-imap"-Suffix entfernt, n8n-io/n8n taggt
       # im Format "n8n@X.Y.Z" (Monorepo-Stil), nicht "vX.Y.Z".
       currentVersion: "n8n@2.33.7"
@@ -87,7 +87,7 @@ github:
     - id: wikijs
       name: "Wiki.js"
       repo: "requarks/wiki"
-      # Aus argocd/apps/wikijs/values.yaml image.tag "2.5.314" — "v"
+      # Aus argocd/apps/workloads/wikijs/values.yaml image.tag "2.5.314" — "v"
       # ergänzt.
       currentVersion: "v2.5.314"
       notifyZammad: false
@@ -99,7 +99,7 @@ github:
     - id: zammad
       name: "Zammad"
       repo: "zammad/zammad"
-      # Aus argocd/apps/zammad/Chart.yaml appVersion (dortiges values.yaml
+      # Aus argocd/apps/workloads/zammad/Chart.yaml appVersion (dortiges values.yaml
       # pinnt keinen einfachen image.tag, das Zammad-Sub-Chart bringt seine
       # Version selbst mit). Rein informativ — GitHub liefert für dieses
       # Repo ohnehin dauerhaft 404 (s.o.), has_update bleibt also immer
@@ -113,7 +113,7 @@ github:
   tokenSecretName: ""
   tokenSecretKey: token
 
-# ServiceAccount-Name von carplay-api (siehe argocd/apps/carplay-api/
+# ServiceAccount-Name von carplay-api (siehe argocd/apps/workloads/carplay-api/
 # templates/serviceaccount.yaml) — Ziel des RoleBindings in role.yaml, das
 # ihm Lesezugriff auf die Update-Status-ConfigMap dieses Namespace gibt.
 # Vor dem Deploy prüfen: `kubectl get sa -n carplay-api`.

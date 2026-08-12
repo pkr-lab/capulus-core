@@ -9,7 +9,7 @@ spec:
       interval: 30s
       rules:
         # Reine Warnstufen (severity: warning → nur Gotify, siehe
-        # argocd/apps/monitoring/values.yaml). Die Shutdown-Schwellen für
+        # argocd/apps/platform/monitoring/values.yaml). Die Shutdown-Schwellen für
         # CPU/RAM (90%) laufen NICHT über Alertmanager, sondern über den
         # lokalen resource_watchdog auf dem Host selbst
         # (ansible/roles/resource_watchdog) — gleiches Prinzip wie beim

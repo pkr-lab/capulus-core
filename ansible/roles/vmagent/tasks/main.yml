@@ -8,7 +8,7 @@
 # zu Tailscale-Peers haben (kein Subnet-Router ins Pod-Netz). Stattdessen
 # installiert diese Rolle vmagent als statische Binary (kein Debian-Paket
 # verfuegbar) und laesst ihn lokal node_exporter scrapen + per remote_write
-# an argocd/apps/monitoring/templates/ingress-vm-write.yaml pushen. Details:
+# an argocd/apps/platform/monitoring/templates/ingress-vm-write.yaml pushen. Details:
 # docs/45-vereinsheim-alarmmonitor.md.
 # ============================================================
 

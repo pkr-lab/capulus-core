@@ -6,5 +6,5 @@ node_exporter_enabled: true
 
 # Debian-Paket "prometheus-node-exporter" lauscht standardmaessig auf
 # diesem Port — muss zum Port in der VMStaticScrape-Ressource passen
-# (argocd/apps/monitoring/templates/vmstaticscrape-*.yaml).
+# (argocd/apps/platform/monitoring/templates/vmstaticscrape-*.yaml).
 node_exporter_port: 9100

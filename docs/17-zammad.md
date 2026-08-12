@@ -1,7 +1,7 @@
 # Zammad Helpdesk / Ticket-System
 
 Zammad ist ein Open-Source Helpdesk- und Ticketing-System.  
-Die Deployment-Konfiguration liegt unter `argocd/apps/zammad/`.
+Die Deployment-Konfiguration liegt unter `argocd/apps/workloads/zammad/`.
 
 ---
 
@@ -31,8 +31,8 @@ Homeserver-SSD ist das unkritisch.
 ## Voraussetzungen
 
 - ArgoCD läuft und das Root-ApplicationSet ist aktiv (`argocd/bootstrap/root-applicationset.yaml`)
-- Sealed-Secrets Controller ist installiert (`argocd/apps/sealed-secrets/`)
-- **`nas-storage`-App ist deployt** (`argocd/apps/nas-storage/`) und die
+- Sealed-Secrets Controller ist installiert (`argocd/apps/platform/sealed-secrets/`)
+- **`nas-storage`-App ist deployt** (`argocd/apps/platform/nas-storage/`) und die
   StorageClass `nas` existiert: `kubectl get storageclass nas`
 - **NAS ist online und der NFS-Export erreichbar** (siehe
   [docs/16-nas-storage.md](16-nas-storage.md)) — sonst bleiben die
@@ -104,7 +104,7 @@ ArgoCD lädt die Abhängigkeit beim Sync selbst herunter.
 Für lokale Tests (`helm template`, `helm lint`) einmalig ausführen:
 
 ```bash
-cd argocd/apps/zammad
+cd argocd/apps/workloads/zammad
 helm dependency update
 ```
 
@@ -113,7 +113,7 @@ helm dependency update
 ## Schritt 3 — Deployment via ArgoCD
 
 Nach dem Commit der Änderungen erkennt das Root-ApplicationSet den neuen Ordner  
-`argocd/apps/zammad/` automatisch und erstellt die ArgoCD-Application.
+`argocd/apps/workloads/zammad/` automatisch und erstellt die ArgoCD-Application.
 
 ```
 ArgoCD → Home → zammad
@@ -175,7 +175,7 @@ ansible-playbook ansible/site.yml --tags dnsmasq
 
 Aktuell ist nur `zammad.homeserver` (intern, HTTP) konfiguriert. Für einen
 öffentlichen Zugriff per Domain zuerst einen weiteren Host in
-`argocd/apps/zammad/values.yaml` → `zammad.ingress.hosts` ergänzen, dann TLS
+`argocd/apps/workloads/zammad/values.yaml` → `zammad.ingress.hosts` ergänzen, dann TLS
 aktivieren:
 
 ```yaml

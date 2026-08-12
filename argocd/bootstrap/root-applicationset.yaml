@@ -3,6 +3,17 @@
 # from this template — run `make render-bootstrap` after editing this file or
 # the argocd_repo_* / argocd_namespace vars in group_vars. Do not hand-edit the
 # committed copy.
+#
+# Apps live under argocd/apps/platform/<app> or argocd/apps/workloads/<app>
+# (see docs/49-argocd-projects.md) — each app keeps its own namespace
+# (destination.namespace is still just the app's basename, unaffected by the
+# extra directory level), but is assigned to the matching AppProject
+# (argocd/bootstrap/projects.yaml) via the per-generator template override
+# below. This is a deliberate two-generator setup instead of deriving the
+# project from the path string: per-generator `template.spec.project` is a
+# well-established ApplicationSet feature, whereas string-splitting the path
+# in Go-template would add a dependency on sprig functions that isn't worth
+# the risk here.
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
@@ -17,12 +28,22 @@ spec:
         repoURL: "https://github.com/pkr-lab/capulus-core.git"
         revision: "main"
         directories:
-          - path: "argocd/apps/*"
+          - path: "argocd/apps/platform/*"
+      template:
+        spec:
+          project: platform
+    - git:
+        repoURL: "https://github.com/pkr-lab/capulus-core.git"
+        revision: "main"
+        directories:
+          - path: "argocd/apps/workloads/*"
+      template:
+        spec:
+          project: workloads
   template:
     metadata:
       name: "{{.path.basename}}"
     spec:
-      project: default
       source:
         repoURL: "https://github.com/pkr-lab/capulus-core.git"
         targetRevision: "main"

@@ -4,7 +4,7 @@ name: argo-workflows
 description: |
   Argo Workflows as the home-server's private CI engine.
   Controller + Server/UI in server auth-mode (open on LAN/Tailnet), with MinIO
-  (argocd/apps/minio) as the S3 artifact repository and log archive.
+  (argocd/apps/platform/minio) as the S3 artifact repository and log archive.
 
   Split of concerns: Argo Workflows = CI (build/test/lint, image builds via
   Kaniko → GHCR), ArgoCD = CD (deploy). Triggers: manual (UI / `argo submit`)

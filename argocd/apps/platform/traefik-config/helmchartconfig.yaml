@@ -5,7 +5,7 @@
 # k3s' interner helm-controller wendet das an, sobald das CR existiert).
 #
 # WICHTIG: explizites metadata.namespace: kube-system nötig (wie bei
-# argocd/apps/coredns-custom/configmap.yaml) — sonst landet das Objekt in
+# argocd/apps/platform/coredns-custom/configmap.yaml) — sonst landet das Objekt in
 # der Namensraum-Konvention des root-ApplicationSet (Namespace
 # "traefik-config", passend zum Ordnernamen), wo es der helm-controller nie
 # findet, weil der nur nach HelmChartConfig mit demselben Namen UND

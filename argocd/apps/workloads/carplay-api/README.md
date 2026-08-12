@@ -92,13 +92,13 @@ curl localhost:8080/health
 
 There's no GitHub Actions in this repo — image builds go through the
 `kaniko-build-push` Argo WorkflowTemplate already installed by
-`argocd/apps/argo-workflows/`:
+`argocd/apps/platform/argo-workflows/`:
 
 ```bash
 argo submit --from workflowtemplate/kaniko-build-push \
   -p repo=https://github.com/pkr-lab/capulus-core.git \
   -p revision=main \
-  -p context=argocd/apps/carplay-api \
+  -p context=argocd/apps/workloads/carplay-api \
   -p dockerfile=Dockerfile \
   -p image=ghcr.io/<your-gh-username>/carplay-api:latest
 ```

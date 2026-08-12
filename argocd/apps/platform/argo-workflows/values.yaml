@@ -75,7 +75,7 @@ argo-workflows:
       pathType: Prefix
 
   # S3 artifact repository + log archive, backed by the MinIO app
-  # (argocd/apps/minio) reachable cluster-internally. Credentials come from the
+  # (argocd/apps/platform/minio) reachable cluster-internally. Credentials come from the
   # argo-artifacts-s3 Secret rendered by templates/artifact-secret-sealedsecret.yaml.
   artifactRepository:
     archiveLogs: true

@@ -31,7 +31,7 @@ victoria-logs-single:
 
     # local-path bindet den Pod an den Node, auf dem die PVC zuerst
     # provisioniert wird — wie vmsingle fest auf homeserver (siehe
-    # argocd/apps/monitoring/values.yaml).
+    # argocd/apps/platform/monitoring/values.yaml).
     nodeSelector:
       kubernetes.io/hostname: homeserver
 

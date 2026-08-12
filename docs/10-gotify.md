@@ -1,7 +1,7 @@
 # Gotify Push-Benachrichtigungen
 
 [Gotify](https://gotify.net) läuft als ArgoCD-verwaltete App im k3s-Cluster
-(`argocd/apps/gotify/`). Der Android/iOS-Gotify-Client (oder einer der
+(`argocd/apps/platform/gotify/`). Der Android/iOS-Gotify-Client (oder einer der
 Desktop-/CLI-Clients) abonniert den Server und zeigt Push-Benachrichtigungen
 an — aktuell primär für Alertmanager-Alerts aus dem Monitoring-Stack:
 
@@ -9,10 +9,10 @@ an — aktuell primär für Alertmanager-Alerts aus dem Monitoring-Stack:
 VictoriaMetrics Alertmanager ─webhook──> gotify-bridge (k3s) ─push──> Gotify ─push──> Handy
 ```
 
-`gotify-bridge` (`argocd/apps/gotify-bridge/`) übersetzt Alertmanager-Webhooks
+`gotify-bridge` (`argocd/apps/platform/gotify-bridge/`) übersetzt Alertmanager-Webhooks
 in Gotify-Push-Nachrichten; das App-Token dafür liegt als Kubernetes-Secret
 im `gotify-bridge`-Namespace (siehe Kommentar in
-`argocd/apps/gotify-bridge/values.yaml`). Jede andere App im Cluster kann
+`argocd/apps/platform/gotify-bridge/values.yaml`). Jede andere App im Cluster kann
 genauso einen eigenen Application-Token in der Gotify-Web-UI anlegen und
 direkt gegen `http://gotify.homeserver/message` pushen.
 
@@ -34,7 +34,7 @@ Klartext bei einer Rotation nicht verloren geht.
 
 ### 1.2 SealedSecret-Ciphertext erzeugen
 
-Der Cluster-Controller (bereits über `argocd/apps/sealed-secrets/` deployt)
+Der Cluster-Controller (bereits über `argocd/apps/platform/sealed-secrets/` deployt)
 akzeptiert nur Ciphertext, der mit seinem Public Key erzeugt wurde. Der
 einfachste Weg ist die Web-UI unter <http://kubeseal-webgui.homeserver>:
 
@@ -58,7 +58,7 @@ echo -n 'DEIN_STARKES_ADMIN_PW' \
 
 ### 1.3 Ciphertext in `values.yaml` eintragen
 
-`argocd/apps/gotify/values.yaml` öffnen und den Platzhalter ersetzen:
+`argocd/apps/platform/gotify/values.yaml` öffnen und den Platzhalter ersetzen:
 
 ```yaml
 adminSecret:
@@ -71,7 +71,7 @@ adminSecret:
 Committen + pushen:
 
 ```bash
-git add argocd/apps/gotify/values.yaml
+git add argocd/apps/platform/gotify/values.yaml
 git commit -m "feat(gotify): set sealed admin password"
 git push
 ```
@@ -111,7 +111,7 @@ Bei `http://gotify.homeserver` mit `admin` + dem Passwort aus 1.1 einloggen.
 2. Den generierten Token (langer opaker String) kopieren und als Kubernetes-
    Secret bzw. SealedSecret der jeweiligen App hinterlegen — z. B. für
    `gotify-bridge` siehe Kommentar in
-   `argocd/apps/gotify-bridge/values.yaml`.
+   `argocd/apps/platform/gotify-bridge/values.yaml`.
 3. Manueller Push-Test (Token-Sanity-Check):
 
 ```bash

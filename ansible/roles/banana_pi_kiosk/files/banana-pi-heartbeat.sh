@@ -7,7 +7,7 @@
 # der Request fehl (Cluster/DNS kurz weg), passiert nichts weiter — der
 # lokale Failover-Supervisor (banana-pi-kiosk-supervisor.sh) kuemmert sich
 # unabhaengig davon um die Browser-Umschaltung, dieser Timer hier steuert
-# NUR den zentralen ntfy-Ausfall-Alarm in argocd/apps/alamos-apager.
+# NUR den zentralen ntfy-Ausfall-Alarm in argocd/apps/workloads/alamos-apager.
 set -uo pipefail
 
 BASE_URL="${BASE_URL:?BASE_URL not set}"

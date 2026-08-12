@@ -199,7 +199,7 @@ type config struct {
 	kumaURL  string
 	kumaSlug string
 
-	// See argocd/apps/github-release-watcher — different namespace than
+	// See argocd/apps/workloads/github-release-watcher — different namespace than
 	// this pod, read via the in-cluster k8s API + a cross-namespace
 	// RoleBinding (role.yaml "...-updates-reader"), not HTTP.
 	updatesNamespace     string

@@ -1,6 +1,6 @@
 # Ausfallerkennung fuer den Banana-Pi-Alarmmonitor "vereinsheim-
 # alarmmonitor" auf Host-Ebene — unabhaengig vom App-Level-Heartbeat in
-# argocd/apps/alamos-apager (der nur ntfy ausloest, siehe
+# argocd/apps/workloads/alamos-apager (der nur ntfy ausloest, siehe
 # docs/19-alamos-apager.md).
 #
 # WICHTIG — absent_over_time statt up==0: dieser Host wird nicht vom Cluster

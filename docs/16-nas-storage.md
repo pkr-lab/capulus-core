@@ -11,7 +11,7 @@ homeserver/worker-0/worker-1 verteilen.
 > **Zweiter, dedizierter Export für Immich:** Neben `nas` (→
 > `/volume1/k8s-storage`) existiert eine zweite, unabhängige StorageClass
 > `immich-nas` (→ `/volume2/immich-storage`, App
-> `argocd/apps/immich-storage/`) — bewusst getrennt, damit die
+> `argocd/apps/platform/immich-storage/`) — bewusst getrennt, damit die
 > Fotobibliothek nicht im geteilten Cluster-Storage-Export landet. Details:
 > [docs/35-immich.md](35-immich.md).
 
@@ -67,7 +67,7 @@ sind). Einrichtung über die UGOS-Weboberfläche:
    - Squash: `no_root_squash` (der Provisioner legt Verzeichnisse als root an)
 4. Exportpfad notieren (z. B. `/volume1/k8s-storage` — der genaue Pfad hängt
    vom NAS-Modell/UGOS-Version ab) und in
-   `argocd/apps/nas-storage/deployment.yaml` (`NFS_SERVER`/`NFS_PATH` sowie
+   `argocd/apps/platform/nas-storage/deployment.yaml` (`NFS_SERVER`/`NFS_PATH` sowie
    den `nfs`-Volume-Block) eintragen — dort stehen bereits die realen Werte
    für dieses Setup (`NFS_SERVER: "192.168.178.97"`,
    `NFS_PATH: "/volume1/k8s-storage"`), bei einem neuen NAS entsprechend
@@ -106,7 +106,7 @@ kubectl get storageclass nas
 kubectl get pvc -A | grep nas
 ```
 
-Die App `nas-storage` (`argocd/apps/nas-storage/`) deployt dafür den
+Die App `nas-storage` (`argocd/apps/platform/nas-storage/`) deployt dafür den
 `nfs-subdir-external-provisioner`, der PVCs als Unterverzeichnisse auf dem
 NFS-Export anlegt.
 
@@ -118,7 +118,7 @@ Das NAS ist kein k3s-Node und wird daher nicht vom `prometheus-node-exporter`-
 DaemonSet erfasst. Stattdessen laufen zwei Exporter **manuell als Docker-
 Container direkt auf dem NAS** (UGOS unterstützt Docker über die App
 "Container Manager"/SSH — analog zum Docker-Compose-Setup auf anderen
-UGREEN-Geräten in diesem Fleet). `argocd/apps/monitoring/templates/
+UGREEN-Geräten in diesem Fleet). `argocd/apps/platform/monitoring/templates/
 vmstaticscrape-ugreen-nas.yaml` zapft beide per `VMStaticScrape` an; das
 Dashboard `dashboard-homeservers.yaml` erwartet die Metriken unter
 `instance="ugreen-nas"`.
@@ -272,7 +272,7 @@ argocd app set $NS --sync-policy automated --auto-prune --self-heal
 
 Lief vorher **nicht** über die `hdd`-StorageClass, sondern als
 Docker-Compose direkt auf worker-0 (`/opt/...`, System-SSD). Ist jetzt eine
-eigene ArgoCD-App (`argocd/apps/tinyteller`) und braucht kein
+eigene ArgoCD-App (`argocd/apps/workloads/tinyteller`) und braucht kein
 PVC-Migrations-Runbook wie oben — **tinyteller** ist zustandslos, nichts zu
 migrieren, einfach die neue App syncen lassen.
 

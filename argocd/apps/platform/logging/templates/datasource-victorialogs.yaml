@@ -4,7 +4,7 @@ metadata:
   name: datasource-victorialogs
   # Grafana läuft im monitoring-Namespace; der Sidecar dort sucht per
   # searchNamespace: ALL nach ConfigMaps mit dem Label unten (siehe
-  # argocd/apps/monitoring/values.yaml, grafana.sidecar.datasources).
+  # argocd/apps/platform/monitoring/values.yaml, grafana.sidecar.datasources).
   namespace: monitoring
   labels:
     grafana_datasource: "1"

@@ -111,13 +111,13 @@ victoria-metrics-k8s-stack:
   #     KEIN Ticket pro Ausfall (siehe docs/19-alamos-apager.md), nur dieser
   #     eine Alertname bekommt den zusätzlichen Pfad.
   #
-  # gotify-bridge: argocd/apps/gotify-bridge/ — übersetzt Alertmanager-JSON
+  # gotify-bridge: argocd/apps/platform/gotify-bridge/ — übersetzt Alertmanager-JSON
   #   in Gotifys message-API. Token als Secret `gotify-bridge-token` anlegen
-  #   (siehe argocd/apps/gotify-bridge/values.yaml).
-  # ntfy: argocd/apps/ntfy/ — Alertmanager-Webhook wird direkt empfangen.
-  # n8n: argocd/apps/n8n/ — Webhook-Trigger des Workflows
+  #   (siehe argocd/apps/platform/gotify-bridge/values.yaml).
+  # ntfy: argocd/apps/platform/ntfy/ — Alertmanager-Webhook wird direkt empfangen.
+  # n8n: argocd/apps/workloads/n8n/ — Webhook-Trigger des Workflows
   #   "Banana-Pi-Down -> Zammad-Ticket"
-  #   (argocd/apps/n8n/workflows/banana-pi-down-to-zammad.json).
+  #   (argocd/apps/workloads/n8n/workflows/banana-pi-down-to-zammad.json).
   alertmanager:
     enabled: true
     spec:
@@ -221,7 +221,7 @@ victoria-metrics-k8s-stack:
       # wird für Pegelonline, DWD und ELWIS-Dashboards benötigt.
       - yesoreyeram-infinity-datasource
       # VictoriaLogs: Datasource für zentrales Logging, siehe
-      # argocd/apps/logging/.
+      # argocd/apps/platform/logging/.
       - victoriametrics-logs-datasource
 
     admin:

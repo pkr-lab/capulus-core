@@ -292,7 +292,7 @@ capulus-core/
 
 ## Monitoring
 
-Ein schlanker VictoriaMetrics-+-Grafana-Stack lebt unter `argocd/apps/monitoring/` und wird automatisch von ArgoCD ausgerollt.
+Ein schlanker VictoriaMetrics-+-Grafana-Stack lebt unter `argocd/apps/platform/monitoring/` und wird automatisch von ArgoCD ausgerollt.
 
 <details>
 <summary><strong>Stack-Details</strong></summary>
@@ -381,7 +381,7 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 <tbody>
 <tr><td>Keine öffentlichen Ports</td><td>Zugriff ausschließlich über LAN, Tailscale-VPN oder gezielt per Cloudflare Tunnel (ausgehende Verbindung, kein Port-Forwarding)</td></tr>
 <tr><td>UFW-Firewall</td><td>Erlaubt nur SSH, HTTP/HTTPS, k3s-API, ArgoCD-NodePort (HTTPS-only), Flannel, Tailscale-UDP</td></tr>
-<tr><td>Opt-in externe Erreichbarkeit</td><td>Nur explizit in <code>argocd/apps/cloudflared/values.yaml</code> eingetragene Dienste sind öffentlich erreichbar, alles andere bleibt intern</td></tr>
+<tr><td>Opt-in externe Erreichbarkeit</td><td>Nur explizit in <code>argocd/apps/platform/cloudflared/values.yaml</code> eingetragene Dienste sind öffentlich erreichbar, alles andere bleibt intern</td></tr>
 <tr><td>Brute-Force-Schutz</td><td>CrowdSec beobachtet SSH- und Traefik-Logs und lässt einen Firewall-Bouncer auffällige IPs sperren, siehe <a href="docs/46-crowdsec.md">docs/46-crowdsec.md</a></td></tr>
 <tr><td>Ansible-Vault</td><td>Sensitive Secrets verschlüsselt at rest</td></tr>
 <tr><td>ArgoCD Read-only</td><td>Hat ausschließlich Read-Access auf das Git-Repo</td></tr>

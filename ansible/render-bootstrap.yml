@@ -6,9 +6,17 @@
   hosts: localhost
   connection: local
   gather_facts: false
+  vars_files:
+    - "{{ playbook_dir }}/roles/argocd/defaults/main.yml"
   tasks:
     - name: Render argocd/bootstrap/root-applicationset.yaml from the role template
       ansible.builtin.template:
         src: "{{ playbook_dir }}/roles/argocd/templates/bootstrap-applicationset.yaml.j2"
         dest: "{{ playbook_dir }}/../argocd/bootstrap/root-applicationset.yaml"
+        mode: "0644"
+
+    - name: Render argocd/bootstrap/projects.yaml from the role template
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/roles/argocd/templates/bootstrap-appprojects.yaml.j2"
+        dest: "{{ playbook_dir }}/../argocd/bootstrap/projects.yaml"
         mode: "0644"

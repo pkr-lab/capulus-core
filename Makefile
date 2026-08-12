@@ -138,7 +138,7 @@ lint: ## Lint YAML, Ansible, and ALL Helm charts.
 	yamllint -c .yamllint ansible/ argocd/
 	ansible-lint $(ANSIBLE_DIR)/
 	@if command -v helm >/dev/null; then \
-	    for chart in argocd/apps/*/; do \
+	    for chart in argocd/apps/*/*/; do \
 	        [ -f "$${chart}Chart.yaml" ] || continue; \
 	        if grep -q '^dependencies:' "$${chart}Chart.yaml"; then \
 	            echo "==> helm dependency build $${chart}"; \

@@ -30,12 +30,12 @@ freigeben, Secrets rotieren, Troubleshooting.
 
 - Tunnel via `cloudflared tunnel create` angelegt (docs/22, Schritt 2).
 - `tunnel.id` und `tunnel.encryptedCredentialsJson` in
-  `argocd/apps/cloudflared/values.yaml` eingetragen.
+  `argocd/apps/platform/cloudflared/values.yaml` eingetragen.
 - Mindestens ein DNS-Route-Eintrag via `cloudflared tunnel route dns`
   angelegt (docs/22, Schritt 4).
 - ArgoCD läuft und das Root-ApplicationSet ist aktiv
   (`argocd/bootstrap/root-applicationset.yaml`).
-- Sealed-Secrets-Controller ist deployt (`argocd/apps/sealed-secrets/`).
+- Sealed-Secrets-Controller ist deployt (`argocd/apps/platform/sealed-secrets/`).
 
 ---
 
@@ -45,12 +45,12 @@ Wie jede andere App in diesem Repo läuft das Deployment rein über Git —
 kein zusätzlicher Ansible- oder Helm-Befehl nötig:
 
 ```bash
-git add argocd/apps/cloudflared
+git add argocd/apps/platform/cloudflared
 git commit -m "feat(cloudflared): add Cloudflare Tunnel for external access"
 git push
 ```
 
-ArgoCD erkennt das neue Verzeichnis `argocd/apps/cloudflared/` innerhalb
+ArgoCD erkennt das neue Verzeichnis `argocd/apps/platform/cloudflared/` innerhalb
 von ca. 3 Minuten, legt die `Application` **cloudflared** im gleichnamigen
 Namespace an und synct sie automatisch (`syncPolicy.automated` im
 Root-ApplicationSet).
@@ -132,7 +132,7 @@ ssh ubuntu@192.168.178.94 'sudo kubectl -n monitoring get svc'
 > ausführen.
 
 ```yaml
-# argocd/apps/cloudflared/values.yaml
+# argocd/apps/platform/cloudflared/values.yaml
 tunnel:
   ingress:
     rules:
@@ -145,7 +145,7 @@ tunnel:
 ```
 
 ```bash
-git add argocd/apps/cloudflared/values.yaml
+git add argocd/apps/platform/cloudflared/values.yaml
 git commit -m "feat(cloudflared): expose grafana externally"
 git push
 ```
@@ -173,7 +173,7 @@ mangels passender Regel nur noch `defaultService: http_status:404`:
 
 ```bash
 # Eintrag aus tunnel.ingress.rules in values.yaml löschen, dann
-git add argocd/apps/cloudflared/values.yaml
+git add argocd/apps/platform/cloudflared/values.yaml
 git commit -m "feat(cloudflared): remove grafana from external access"
 git push
 ```
@@ -208,7 +208,7 @@ cloudflared tunnel route dns homeserver "*.deine-domain.de"
 #      cloudflared tunnel route dns homeserver wiki.deine-domain.de
 #      cloudflared tunnel route dns homeserver ntfy.deine-domain.de
 
-git add argocd/apps/cloudflared/values.yaml
+git add argocd/apps/platform/cloudflared/values.yaml
 git commit -m "fix(cloudflared): rotate tunnel credentials"
 git push
 ```
@@ -284,7 +284,7 @@ Ciphertext neu erzeugen und `values.yaml` korrigieren.
 Wie jede andere App per Git-Revert:
 
 ```bash
-git log --oneline -- argocd/apps/cloudflared
+git log --oneline -- argocd/apps/platform/cloudflared
 git revert <commit-hash>
 git push
 ```

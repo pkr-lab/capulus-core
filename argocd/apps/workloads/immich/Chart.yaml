@@ -8,7 +8,7 @@ description: |
   Persistenz (Fotobibliothek, Postgres, ML-Modell-Cache) liegt auf der
   dedizierten "immich-nas"-StorageClass (/volume2/immich-storage,
   getrennt vom generischen "nas"-Export k3s-storage — siehe
-  docs/35-immich.md und argocd/apps/immich-storage/).
+  docs/35-immich.md und argocd/apps/platform/immich-storage/).
 
   Web-Interface:
     http://immich.homeserver

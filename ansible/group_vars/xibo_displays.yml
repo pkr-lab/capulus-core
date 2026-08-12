@@ -29,6 +29,6 @@ tailscale_advertise_routes: ""
 #           ...
 
 # NFS-Server + Pfad des "xibosignage-display"-Ordners. MUSS identisch zu
-# argocd/apps/n8n values.yaml -> xibosignage.display sein.
+# argocd/apps/workloads/n8n values.yaml -> xibosignage.display sein.
 xibo_kiosk_nfs_server: "192.168.178.97"
 xibo_kiosk_nfs_path: "/volume1/k8s-storage/xibosignage-display"

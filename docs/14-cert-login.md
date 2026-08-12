@@ -38,7 +38,7 @@ Benutzername + Passwort (oder TOTP) bleibt der Identity-Schritt.
 | MinIO           | OIDC          | konfiguriert (reale Secrets im Cluster), aber laut Betreiber kein genutzter Login-Weg |
 | Gotify          | Forward Auth  | live, aktiv genutzt             |
 | Semaphore       | Forward Auth  | live, aktiv genutzt             |
-| Argo Workflows  | OIDC SSO      | noch nicht aktiviert — `sso.enabled: false` in `argocd/apps/argo-workflows/values.yaml` (`authModes: [server]`) |
+| Argo Workflows  | OIDC SSO      | noch nicht aktiviert — `sso.enabled: false` in `argocd/apps/platform/argo-workflows/values.yaml` (`authModes: [server]`) |
 
 > **Realitäts-Check (Stand: dieser Commit):** Betrieblich genutzt wird nur
 > **Forward Auth** (Gotify, Semaphore) über die Authentik-Middleware. Für
@@ -50,7 +50,7 @@ Benutzername + Passwort (oder TOTP) bleibt der Identity-Schritt.
 > gebaut.** Was stattdessen existiert: eine deutlich leichtere, nur auf den
 > `authentik`-Namespace beschränkte `TLSOption` (`authentik-mtls`,
 > `RequestClientCert` = optional, **kein** Fehlschlag bei fehlendem Zert) in
-> `argocd/apps/authentik/templates/traefik-tls-option.yaml` — und die dazu
+> `argocd/apps/platform/authentik/templates/traefik-tls-option.yaml` — und die dazu
 > nötige Ingress-Annotation ist dort aktuell **auskommentiert**, die
 > TLSOption ist also im Cluster vorhanden, aber an keinem Ingress aktiv.
 > Es gibt kein `argocd/apps/traefik-mtls/`, keine `homelab-ca`-SealedSecret
@@ -172,7 +172,7 @@ echo "tls.crt: $(seal_file ~/homelab-certs/server.crt)"
 echo "tls.key: $(seal_file ~/homelab-certs/server.key)"
 ```
 
-Ausgabe in `argocd/apps/authentik/values.yaml` eintragen:
+Ausgabe in `argocd/apps/platform/authentik/values.yaml` eintragen:
 
 ```yaml
 tls:
@@ -260,7 +260,7 @@ ssh ubuntu@192.168.178.94 \
 ## Schritt 4 — IngressRoutes auf mTLS umstellen
 
 Für jeden Dienst muss die IngressRoute die TLSOption referenzieren.
-Beispiel für Authentik (`argocd/apps/authentik/ingressroute.yaml`):
+Beispiel für Authentik (`argocd/apps/platform/authentik/ingressroute.yaml`):
 
 ```yaml
 apiVersion: traefik.io/v1alpha1
@@ -331,7 +331,7 @@ zeigt Grafana seinen eigenen Login-Screen (Secret `grafana-admin`).
 
 ### Headlamp (konfiguriert, kein aktiv genutzter Login-Weg)
 
-Config bereits vorhanden (`argocd/apps/headlamp/values.yaml` →
+Config bereits vorhanden (`argocd/apps/platform/headlamp/values.yaml` →
 `config.oidc.externalSecret`), OIDC ist aber laut Betreiber nicht der
 tatsächlich genutzte Zugriffsweg. Schritte hier nur zur Referenz, falls das
 Secret einmal rotiert werden muss.
@@ -359,7 +359,7 @@ echo "clientId:     $(seal '<DEINE_CLIENT_ID>')"
 echo "clientSecret: $(seal '<DEIN_CLIENT_SECRET>')"
 ```
 
-Ausgabe in `argocd/apps/headlamp/templates/oidc-sealedsecret.yaml` eintragen
+Ausgabe in `argocd/apps/platform/headlamp/templates/oidc-sealedsecret.yaml` eintragen
 (Felder `encryptedClientId` und `encryptedClientSecret`).
 
 ---
@@ -367,7 +367,7 @@ Ausgabe in `argocd/apps/headlamp/templates/oidc-sealedsecret.yaml` eintragen
 ### Argo Workflows (noch offen)
 
 Einziger Dienst aus dieser Liste, der noch nicht umgestellt ist —
-`argocd/apps/argo-workflows/values.yaml` hat `sso.enabled: false` mit einem
+`argocd/apps/platform/argo-workflows/values.yaml` hat `sso.enabled: false` mit einem
 `TODO`-Kommentar, `authModes` steht noch auf `[server]`.
 
 #### 6.3 — Provider anlegen
@@ -391,13 +391,13 @@ echo "clientId:     $(seal '<CLIENT_ID>')"
 echo "clientSecret: $(seal '<CLIENT_SECRET>')"
 ```
 
-Ausgabe in `argocd/apps/argo-workflows/templates/sso-sealedsecret.yaml` eintragen.
+Ausgabe in `argocd/apps/platform/argo-workflows/templates/sso-sealedsecret.yaml` eintragen.
 
 ---
 
 ### MinIO (konfiguriert, kein aktiv genutzter Login-Weg)
 
-Config bereits vorhanden (`argocd/apps/minio/values.yaml` →
+Config bereits vorhanden (`argocd/apps/platform/minio/values.yaml` →
 `oidc.enabled: true`), OIDC ist aber laut Betreiber nicht der tatsächlich
 genutzte Zugriffsweg. Schritte hier nur zur Referenz, falls das Secret
 einmal rotiert werden muss.
@@ -423,14 +423,14 @@ echo "clientId:     $(seal '<CLIENT_ID>')"
 echo "clientSecret: $(seal '<CLIENT_SECRET>')"
 ```
 
-Ausgabe in `argocd/apps/minio/templates/oidc-sealedsecret.yaml` eintragen.
+Ausgabe in `argocd/apps/platform/minio/templates/oidc-sealedsecret.yaml` eintragen.
 
 ---
 
 ### Gotify (bereits live)
 
 Bereits konfiguriert — reale `authentik-authentik-forwardauth@kubernetescrd`
-Middleware-Annotation in `argocd/apps/gotify/values.yaml`.
+Middleware-Annotation in `argocd/apps/platform/gotify/values.yaml`.
 
 #### 6.7 — Forward-Auth-Provider anlegen
 
@@ -445,7 +445,7 @@ Middleware-Annotation in `argocd/apps/gotify/values.yaml`.
 ### Semaphore (bereits live)
 
 Bereits konfiguriert — reale `authentik-authentik-forwardauth@kubernetescrd`
-Middleware-Annotation in `argocd/apps/semaphore/values.yaml`.
+Middleware-Annotation in `argocd/apps/platform/semaphore/values.yaml`.
 
 #### 6.8 — Forward-Auth-Provider anlegen
 

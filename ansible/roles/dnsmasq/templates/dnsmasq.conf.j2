@@ -2,9 +2,9 @@
 # Wildcard-DNS: alle *.homeserver-Namen → network_static_ip
 # Neue Services brauchen keinen manuellen Eintrag mehr.
 
-# Upstream DNS: Pi-hole (k3s NodePort, argocd/apps/pihole). Pi-hole selbst
+# Upstream DNS: Pi-hole (k3s NodePort, argocd/apps/platform/pihole). Pi-hole selbst
 # leitet gefilterte Anfragen an die Fritz!Box weiter (siehe dnsUpstreams in
-# argocd/apps/pihole/values.yaml). So bekommt jedes Gerät, das dnsmasq
+# argocd/apps/platform/pihole/values.yaml). So bekommt jedes Gerät, das dnsmasq
 # bereits als DNS nutzt (siehe docs/09-dns-architecture.md), automatisch
 # Werbeblocking — ganz ohne Router-Konfiguration.
 no-resolv

@@ -3,8 +3,8 @@
 [Immich](https://immich.app) ist ein selbst gehostetes Foto-/Video-Backup
 (Google-Photos-Ersatz) mit automatischem Handy-Upload, Gesichtserkennung
 und Timeline-Ansicht. Die Deployment-Konfiguration liegt unter
-`argocd/apps/immich/`, der zugehörige NAS-Storage unter
-`argocd/apps/immich-storage/`.
+`argocd/apps/workloads/immich/`, der zugehörige NAS-Storage unter
+`argocd/apps/platform/immich-storage/`.
 
 ---
 
@@ -51,7 +51,7 @@ eigenes RAID-Volume unabhängig vom übrigen Cluster-Storage planen, ohne
 dass ein einzelner großer Fotobestand den gemeinsamen `k8s-storage`-Export
 volllaufen lässt.
 
-`argocd/apps/immich-storage/` deployt dafür einen zweiten
+`argocd/apps/platform/immich-storage/` deployt dafür einen zweiten
 `nfs-subdir-external-provisioner` (eigener `PROVISIONER_NAME`, eigene
 RBAC-Ressourcen, eigener Namespace `immich-storage`) — technisch identisch
 zum bestehenden `nas-storage`-Setup aus
@@ -63,7 +63,7 @@ gerichtet.
 ## Voraussetzungen
 
 - ArgoCD läuft und das Root-ApplicationSet ist aktiv
-- Sealed-Secrets Controller ist installiert (`argocd/apps/sealed-secrets/`)
+- Sealed-Secrets Controller ist installiert (`argocd/apps/platform/sealed-secrets/`)
 - **NFS-Export `/volume2/immich-storage` in UGOS eingerichtet** (Schritt 1
   unten) — die IP/Firewall-Konfiguration ist identisch zum bestehenden
   `k8s-storage`-Export, nur mit neuer Freigabe auf `volume2`
@@ -84,9 +84,9 @@ diesmal auf `volume2`:
    - Berechtigung: Lese-/Schreibzugriff
    - Squash: `no_root_squash`
 3. Exportpfad prüfen — falls abweichend von `/volume2/immich-storage`,
-   sowohl `argocd/apps/immich-storage/deployment.yaml`
+   sowohl `argocd/apps/platform/immich-storage/deployment.yaml`
    (`NFS_SERVER`/`NFS_PATH` sowie den `nfs`-Volume-Block) **als auch**
-   `argocd/apps/immich-storage/storageclass.yaml`-Kommentar entsprechend
+   `argocd/apps/platform/immich-storage/storageclass.yaml`-Kommentar entsprechend
    anpassen.
 4. Verbindung testen:
    ```bash
@@ -94,7 +94,7 @@ diesmal auf `volume2`:
    touch /mnt/test && ls /mnt && sudo umount /mnt
    ```
 
-Danach `argocd/apps/immich-storage/` deployen lassen (Root-ApplicationSet
+Danach `argocd/apps/platform/immich-storage/` deployen lassen (Root-ApplicationSet
 erkennt den neuen Ordner automatisch) und verifizieren:
 
 ```bash
@@ -114,7 +114,7 @@ echo -n "$DB_PASS" | kubeseal --raw \
   --controller-name sealed-secrets-controller
 ```
 
-Ausgabe in `argocd/apps/immich/values.yaml` eintragen:
+Ausgabe in `argocd/apps/workloads/immich/values.yaml` eintragen:
 
 ```yaml
 secrets:
@@ -192,7 +192,7 @@ kopieren/synchronisieren, z. B.:
 /volume2/immich-storage/external/onedrive/<deine Ordnerstruktur>
 ```
 
-### Schritt B — Mount in `argocd/apps/immich/values.yaml` aktivieren
+### Schritt B — Mount in `argocd/apps/workloads/immich/values.yaml` aktivieren
 
 ```yaml
 server:
@@ -238,7 +238,7 @@ schreibt keine Metadaten in den externen Ordner zurück.
 ## Externe Erreichbarkeit (Cloudflare Tunnel)
 
 `immich.pke-lab.de` ist bereits in
-`argocd/apps/cloudflared/values.yaml` eingetragen (zeigt auf
+`argocd/apps/platform/cloudflared/values.yaml` eingetragen (zeigt auf
 `immich-server.immich.svc.cluster.local:80`). Das ist hier **kein
 optionales Extra**, sondern für den Kernanwendungsfall
 (automatisches Foto-Backup vom Handy) notwendig — ohne Erreichbarkeit von

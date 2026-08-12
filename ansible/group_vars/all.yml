@@ -75,10 +75,10 @@ tailscale_hostname: "{{ hostname }}"
 local_subnet: "192.168.178.0/24"
 
 # ---- Pi-hole (network-wide ad blocking) --------------------
-# Cluster-App: argocd/apps/pihole (Helm-Chart). dnsmasq (Rolle oben)
+# Cluster-App: argocd/apps/platform/pihole (Helm-Chart). dnsmasq (Rolle oben)
 # forwardet alle nicht-*.homeserver-Anfragen an diesen NodePort statt
 # direkt an die Fritz!Box — muss mit dnsService.nodePort in
-# argocd/apps/pihole/values.yaml übereinstimmen.
+# argocd/apps/platform/pihole/values.yaml übereinstimmen.
 pihole_dns_nodeport: 30053
 
 # ---- Semaphore UI -----------------------------------------
@@ -319,7 +319,7 @@ scanner_smb_password: !vault |
           3031
 
 # ---- Gotify push notifications ----------------------------
-# Cluster-App: argocd/apps/gotify (Helm-Chart). Workflow + kubeseal-Schritte
+# Cluster-App: argocd/apps/platform/gotify (Helm-Chart). Workflow + kubeseal-Schritte
 # stehen in docs/10-gotify.md.
 #
 # 1) Admin-Passwort für das initiale Login (SealedSecret im Cluster):
