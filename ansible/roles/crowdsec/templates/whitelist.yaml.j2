@@ -1,0 +1,12 @@
+# Managed by Ansible (crowdsec role) — do not edit by hand.
+# CrowdSec ships a default whitelist for RFC1918 ranges, but the Tailscale
+# CGNAT range (100.64.0.0/10) isn't RFC1918 and needs an explicit entry.
+# The LAN subnet is listed here too, explicitly, instead of relying on the
+# upstream default file's exact contents.
+name: local/whitelist
+description: "Trusted local networks (LAN + Tailscale) — never banned"
+whitelist:
+  reason: "Trusted local networks"
+  cidr:
+    - "{{ local_subnet }}"
+    - "100.64.0.0/10"
