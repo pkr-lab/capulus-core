@@ -42,7 +42,7 @@ flowchart TB
         E1["dnsmasq :53<br/>Split-DNS *.homeserver"]
         E2["Traefik :80/:443<br/>Ingress"]
         E3["k3s-API :6443"]
-        E4["ArgoCD :30080"]
+        E4["ArgoCD :30443"]
         E5["CUPS :631<br/>IPP / AirPrint"]
     end
 
@@ -365,7 +365,7 @@ flowchart LR
 | 8472 | UDP | Flannel VXLAN | nur zwischen den Knoten |
 | 10250 | TCP | kubelet-API | nur zwischen den Knoten |
 | 30053 | TCP/UDP | Pi-hole NodePort | LAN |
-| 30080 / 30443 | TCP | ArgoCD-Weboberfläche | LAN + Tailnet |
+| 30443 | TCP | ArgoCD-Weboberfläche (HTTPS) | LAN + Tailnet |
 | 41641 | UDP | Tailscale/WireGuard | **ausgehend** ins Internet |
 
 | Netz | CIDR |
@@ -410,7 +410,7 @@ flowchart LR
 
 Kein eingehender Port aus dem Internet. Fernzugriff läuft über Tailscale, öffentliche
 Dienste ausschließlich über ausgehende Cloudflare-Verbindungen. UFW erlaubt 22, 53, 80,
-443, 631, 6443 und 30080/30443 nur im LAN und im Tailnet, nach außen nur 41641/UDP.
+443, 631, 6443 und 30443 nur im LAN und im Tailnet, nach außen nur 41641/UDP.
 ArgoCD hat ausschließlich Leserechte auf das Git-Repo. Der Shutdown-SSH-Key des
 Power-Managers ist per `command=`-Option fest auf `poweroff` beschränkt. Secrets liegen
 verschlüsselt in Git — Host-Werte per Ansible Vault, Cluster-Werte als SealedSecret, das
@@ -424,7 +424,7 @@ nur der Controller im Cluster öffnen kann.
 ZUGRIFF     LAN-Gerät      Tailscale-VPN      Internet (Cloudflare)      git push
                |                 |                     |                    |
                v                 v                     v                    v
-EINTRITT   dnsmasq:53      Traefik:80/443      k3s-API:6443      ArgoCD:30080   CUPS:631
+EINTRITT   dnsmasq:53      Traefik:80/443      k3s-API:6443      ArgoCD:30443   CUPS:631
                                    |
                                    v
 SCHICHT 4  Nextcloud  Immich  Paperless  Wiki.js  Zammad  Vaultwarden  Mealie

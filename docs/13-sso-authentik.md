@@ -139,13 +139,13 @@ In der Authentik Admin-UI (**http://authentik.homeserver/if/admin/**):
 2. Werte:
    - Name: `ArgoCD`
    - Client type: `Confidential`
-   - Redirect URI: `http://192.168.178.94:30080/auth/callback`
+   - Redirect URI: `https://192.168.178.94:30443/auth/callback`
    - Scopes: `openid`, `email`, `profile`, `groups`
 3. Notiere `Client ID` und `Client Secret`.
 4. **Applications → Erstellen**:
    - Name: `ArgoCD`
    - Provider: `ArgoCD`
-   - Launch URL: `http://192.168.178.94:30080`
+   - Launch URL: `https://192.168.178.94:30443`
 
 ### 4.2 — ArgoCD ConfigMap
 
@@ -158,7 +158,7 @@ metadata:
   name: argocd-cm
   namespace: argocd
 data:
-  url: "http://192.168.178.94:30080"
+  url: "https://192.168.178.94:30443"
   oidc.config: |
     name: Authentik
     issuer: http://authentik.homeserver/application/o/argocd/

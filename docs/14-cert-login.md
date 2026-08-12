@@ -461,7 +461,7 @@ Middleware-Annotation in `argocd/apps/semaphore/values.yaml`.
 
 #### 6.9 — Provider anlegen
 
-- Redirect URI: `http://192.168.178.94:30080/auth/callback`
+- Redirect URI: `https://192.168.178.94:30443/auth/callback`
 - Scopes: `openid`, `email`, `profile`, `groups`
 
 #### 6.10 — argocd-cm & argocd-secret patchen
@@ -481,7 +481,7 @@ metadata:
   name: argocd-cm
   namespace: argocd
 data:
-  url: "http://192.168.178.94:30080"
+  url: "https://192.168.178.94:30443"
   oidc.config: |
     name: Authentik
     issuer: http://authentik.homeserver/application/o/argocd/
