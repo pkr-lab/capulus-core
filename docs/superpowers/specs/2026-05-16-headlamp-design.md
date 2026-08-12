@@ -17,12 +17,12 @@ Add [Headlamp](https://headlamp.dev) as a Kubernetes web UI to the home-server s
 
 ### Approach
 
-Wrapper Helm chart in `argocd/apps/headlamp/` with the official `headlamp-k8s/headlamp` chart as a dependency. ArgoCD runs `helm dependency build` natively; no extra pipeline steps needed.
+Wrapper Helm chart in `argocd/apps/platform/headlamp/` with the official `headlamp-k8s/headlamp` chart as a dependency. ArgoCD runs `helm dependency build` natively; no extra pipeline steps needed.
 
 ### Directory Structure
 
 ```
-argocd/apps/headlamp/
+argocd/apps/platform/headlamp/
 ├── Chart.yaml                      # wrapper chart + headlamp dependency
 ├── values.yaml                     # ingress, SA, resource overrides
 └── templates/

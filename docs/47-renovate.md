@@ -20,7 +20,7 @@ Sicherheitsupdates.
 Config liegt in [`renovate.json`](../renovate.json) im Repo-Root.
 
 **Bewusst ausgenommen:** `**/charts/**` (vendored `.tgz`-Subcharts, z. B.
-`argocd/apps/authentik/charts/authentik-*.tgz`) und `Chart.lock` — die werden
+`argocd/apps/platform/authentik/charts/authentik-*.tgz`) und `Chart.lock` — die werden
 weiterhin manuell per `helm dependency update` aktualisiert, nicht per
 Renovate-PR gegen eine generierte Lockdatei.
 

@@ -188,7 +188,7 @@ kubeseal --raw \
 ```
 
 Den ausgegebenen Ciphertext in
-`argocd/apps/cloudflared/values.yaml` unter
+`argocd/apps/platform/cloudflared/values.yaml` unter
 `tunnel.encryptedCredentialsJson` eintragen.
 
 > Alternativ per Web-UI: <http://kubeseal-webgui.homeserver>, Namespace
@@ -251,7 +251,7 @@ Beide Varianten lassen sich auch manuell im Dashboard unter
 
 ## Schritt 5 — values.yaml befüllen
 
-`argocd/apps/cloudflared/values.yaml` öffnen und ausfüllen:
+`argocd/apps/platform/cloudflared/values.yaml` öffnen und ausfüllen:
 
 ```yaml
 tunnel:

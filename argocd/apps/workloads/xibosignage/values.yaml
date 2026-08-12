@@ -167,7 +167,7 @@ cms:
   persistence:
     # Xibo verwaltet diesen Ordner exklusiv selbst (Medien-Bibliothek,
     # interne Dateinamen/Hashes) — NICHT der Ordner, in den n8n/OnlineSync
-    # Rohdateien legt (das ist argocd/apps/n8n xibosignage-inbox/-display,
+    # Rohdateien legt (das ist argocd/apps/workloads/n8n xibosignage-inbox/-display,
     # siehe docs/44-xibosignage.md).
     library:
       enabled: true

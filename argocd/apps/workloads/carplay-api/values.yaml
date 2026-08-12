@@ -138,7 +138,7 @@ config:
   # Für die "Dienst-Aktivität"-Grafik im PKR-Lab-Dashboard (Alltag-Modus
   # hat eine eigene, unabhängige Kurzlink-Liste, siehe ios/.../Constants.
   # SelfHostedServices) — braucht die Traefik-Metriken aus
-  # argocd/apps/traefik-config. match ist ein Teilstring des rohen Traefik
+  # argocd/apps/platform/traefik-config. match ist ein Teilstring des rohen Traefik
   # "service"-Metrik-Labels (Format variiert je nach Provider/Chart-
   # Version), KEIN exakter Wert — vor dem Deploy mit
   # `curl $VM_URL/api/v1/label/service/values` gegenprüfen und bei Bedarf
@@ -171,8 +171,9 @@ config:
 
   # GET /api/updates — liest die von github-release-watcher geschriebene
   # Update-Status-ConfigMap in dessen (anderem!) Namespace, via In-Cluster-
-  # k8s-API + der cross-namespace RoleBinding aus argocd/apps/github-
-  # release-watcher/templates/role.yaml. Werte MÜSSEN zu dessen
+  # k8s-API + der cross-namespace RoleBinding aus
+  # argocd/apps/workloads/github-release-watcher/templates/role.yaml.
+  # Werte MÜSSEN zu dessen
   # {{ include "github-release-watcher.fullname" . }}-updates passen — bei
   # abweichendem Release-Namen dort entsprechend anpassen.
   updates:
@@ -194,7 +195,7 @@ config:
     # Comma-separated — ntfy's polling endpoint natively supports subscribing
     # multiple topics this way (GET /topic1,topic2/json). These are the two
     # topics that actually receive messages: Home-Lab (Alertmanager
-    # severity=critical, via argocd/apps/ntfy-bridge) and Home-Lab-System
+    # severity=critical, via argocd/apps/platform/ntfy-bridge) and Home-Lab-System
     # (thermal_watchdog/resource_watchdog/cluster_power_manager on the host).
     # "alerts" (the old default) has no publisher — nothing ever showed up.
     topic: "Home-Lab,Home-Lab-System"
@@ -226,7 +227,7 @@ secrets:
     encryptedData: "AgCFpnTA/P1wqPtwBw/FEJY3OVuj6kZ64EfKLMNi5tkBIm8B/qAi+C7865HzccRRT5UhYRyE89CBctu3sr/18rGST9EpwwaFTbjpI8MVYOQ8+pn+eLu6Tjb1LrVWl3ZQn66smYp9xYlHamPXo0PxQrHViFIllerjZ9nPP7uAjswjDemG6U2wW9bslECFqS6V0h1eTci3HXRKmIrr6QSdwicNqiiKfxHAi9JTvfg7zmZ20eiYLRjnXvGksySppVWYzmaa7T/Oa4ac4UAUnAKgSjr0K9HhXfygysjUfI3yqc47YOR9o1IDNlfdIKwNmrLWjKgKETobhaLg4uFQcnG720CVlGkAt0nLt4QRvQl3RRDd7TAIVRGMPb4Boezx9OzjZ2HgfaM1QcrW+4Koi9Sq4Phanq9PXsS2KS0CncSozPTd1d//M2evHY4Hx0ySzR1u7OGOxFEyKH3ooheg08AwYPgtc0nygfjbSxTB2UO26rT8hQSC3xQ78wDjdrleiFKxz1iBBNm7kJOffZ6m0+eIQy5vz+lwufak+k6fW2PN/C/01Nhztte/G1UnybMWtaGOBp/tfdNz9Hy+T0ao/6q6Ne3t0KxndXpPFhtdXQbAy30jsIKIrs3iMvxn1XlBaNVFsdc2w9TPdAz/HJ2yi7IjzVpTEHa/0HVi1cxJ9lMR1ZRifd9k0+kA7D98RoH1tOCHP8TaIo9yZsaykwjLDvIHOtWOnY/Eg1P17l2AYt7HReNSBv90csXgTPwCiOMJE8i3/GKRTdiEarXPfUtkfSJM+Wlg"
 
   # Nur nötig, falls ntfy irgendwann von auth-default-access: read-write
-  # (argocd/apps/ntfy/values.yaml) auf deny-all umgestellt wird.
+  # (argocd/apps/platform/ntfy/values.yaml) auf deny-all umgestellt wird.
   ntfyToken:
     enabled: false
     secretName: carplay-api-ntfy-token

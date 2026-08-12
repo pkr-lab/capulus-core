@@ -20,7 +20,7 @@ data:
   # /metrics exportiert je Standort den Zeitstempel der letzten erfolgreichen
   # /start-Anfrage (= der Kiosk-Browser hat die echte AMweb-URL tatsächlich
   # angefragt) und des letzten Heartbeats — genutzt vom
-  # "Banana-Pi-Down -> Zammad-Ticket"-Workflow (argocd/apps/n8n/workflows),
+  # "Banana-Pi-Down -> Zammad-Ticket"-Workflow (argocd/apps/workloads/n8n/workflows),
   # um im Ticket zu zeigen, wann der Standort zuletzt erfolgreich war (siehe
   # docs/45-vereinsheim-alarmmonitor.md). Cluster-intern per VMServiceScrape
   # gescraped (vmservicescrape.yaml) — funktioniert unabhängig davon, ob ein

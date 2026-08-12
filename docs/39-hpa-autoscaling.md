@@ -20,7 +20,7 @@ das Limit selbst erhöht werden. Für Immich konkret: viele parallele
 Uploads verteilen sich jetzt auf mehrere `immich-server`-Pods, ein
 einzelnes 4K-Video, das für sich allein schon >4Gi RAM braucht, crasht
 trotzdem (siehe `server.resources.limits` in
-[argocd/apps/immich/values.yaml](../argocd/apps/immich/values.yaml)).
+[argocd/apps/workloads/immich/values.yaml](../argocd/apps/workloads/immich/values.yaml)).
 
 ---
 

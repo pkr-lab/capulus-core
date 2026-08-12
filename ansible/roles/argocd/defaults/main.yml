@@ -1,0 +1,47 @@
+---
+# Single source of truth for the platform/workloads namespace-tier split
+# (docs/49-argocd-projects.md). Used to build each AppProject's allowed
+# `destinations` and to label the resulting namespaces with `security-tier`.
+# Keep in sync with the folders under argocd/apps/platform/ and
+# argocd/apps/workloads/ — each entry here is also the app's namespace name
+# (destination.namespace == the app's folder basename, see
+# bootstrap-applicationset.yaml.j2).
+argocd_platform_apps:
+  - authentik
+  - sealed-secrets
+  - kubeseal-webgui
+  - monitoring
+  - logging
+  - gotify
+  - gotify-bridge
+  - ntfy
+  - ntfy-bridge
+  - cloudflared
+  - pihole
+  - coredns-custom
+  - nas-storage
+  - immich-storage
+  - minio
+  - argo-workflows
+  - semaphore
+  - headlamp
+  - traefik-config
+
+argocd_workloads_apps:
+  - alamos-apager
+  - carplay-api
+  - example-whoami
+  - github-release-watcher
+  - immich
+  - mealie
+  - mediamtx
+  - n8n
+  - nextcloud
+  - paperless-ngx
+  - tinyteller
+  - uptime-kuma
+  - vaultwarden
+  - wiki-docs-sync
+  - wikijs
+  - xibosignage
+  - zammad

@@ -3,7 +3,7 @@
 # alamos_kiosk role — Raspberry-Pi-Alarmmonitor (ALAMOS AMweb)
 # ============================================================
 # Macht den Pi zu einem reinen Kiosk-Display: Chromium zeigt die
-# Cluster-Redirect-URL (argocd/apps/alamos-apager), die echte AMweb-URL und
+# Cluster-Redirect-URL (argocd/apps/workloads/alamos-apager), die echte AMweb-URL und
 # alle Heartbeat/Alerting-Logik bleiben im Cluster. Ein systemd-Timer pingt
 # periodisch den Heartbeat-Endpunkt, damit ein Ausfall zentral per ntfy
 # erkannt wird (siehe docs/20-alamos-apager.md).

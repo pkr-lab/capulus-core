@@ -1,7 +1,7 @@
 import Foundation
 
 /// One ntfy notification. Mirrors `models.Alert` in carplay-api
-/// (argocd/apps/carplay-api/src/internal/models/types.go) — field names and
+/// (argocd/apps/workloads/carplay-api/src/internal/models/types.go) — field names and
 /// JSON keys must stay in lockstep with the backend.
 struct Alert: Codable, Identifiable, Equatable {
     let id: String

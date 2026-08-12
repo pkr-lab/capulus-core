@@ -1,0 +1,63 @@
+# Single source of truth for the two bootstrap AppProjects (platform /
+# workloads namespace-tier split, see docs/49-argocd-projects.md).
+# GENERATED alongside the ApplicationSet — run `make render-bootstrap` after
+# editing this file, argocd_platform_apps/argocd_workloads_apps in
+# ansible/roles/argocd/defaults/main.yml, or the argocd_repo_*/argocd_namespace
+# vars in group_vars. Applied by the argocd role BEFORE the ApplicationSet,
+# because Applications referencing a project that doesn't exist yet fail sync.
+#
+# Deliberately NOT restricting clusterResourceWhitelist/namespaceResourceWhitelist
+# here (both stay as permissive as ArgoCD's built-in "default" project) —
+# several platform apps install CRDs (victoria-metrics-operator, sealed-secrets)
+# and locking resource kinds down without first observing real usage risks
+# breaking existing, working syncs. The security value in this first pass is
+# `sourceRepos` (only this repo) and `destinations` (only the tier's own
+# namespaces) — resource-kind whitelisting is a deliberate later refinement,
+# not an oversight.
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: {{ argocd_namespace }}
+spec:
+  description: >-
+    Plattformdienste (Schicht 3): Identity/Secrets/Netzwerk/Monitoring-
+    Infrastruktur, auf die andere Apps aufbauen. Admin-/Infrastruktur-
+    Charakter, siehe docs/01-overview.md Abschnitt 5.
+  sourceRepos:
+    - "{{ argocd_repo_url }}"
+  destinations:
+{% for app in argocd_platform_apps %}
+    - server: https://kubernetes.default.svc
+      namespace: {{ app }}
+{% endfor %}
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: workloads
+  namespace: {{ argocd_namespace }}
+spec:
+  description: >-
+    Anwendungen (Schicht 4): Apps mit echtem Nutzerkreis (Familie, Vereins-
+    mitglieder, Kunden), siehe docs/01-overview.md Abschnitt 5.
+  sourceRepos:
+    - "{{ argocd_repo_url }}"
+  destinations:
+{% for app in argocd_workloads_apps %}
+    - server: https://kubernetes.default.svc
+      namespace: {{ app }}
+{% endfor %}
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

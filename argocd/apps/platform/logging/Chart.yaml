@@ -9,7 +9,7 @@ description: |
   - Collector: läuft auf jedem Node, liest Pod-/Container-Logs direkt (kein
     manuelles hostPath-Mounting nötig, das übernimmt der Chart) und pusht sie
     an VictoriaLogs.
-  - Storage: VictoriaLogs single-node, wie vmsingle in argocd/apps/monitoring
+  - Storage: VictoriaLogs single-node, wie vmsingle in argocd/apps/platform/monitoring
     per local-path auf dem Node "homeserver" gepinnt.
   - UI: Abfrage über Grafana (Namespace monitoring) mit der Datasource
     "VictoriaLogs" (LogsQL), siehe templates/datasource-victorialogs.yaml.

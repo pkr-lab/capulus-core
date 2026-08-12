@@ -58,7 +58,7 @@ persistence:
 
 env:
   # n8n.pke-lab.de wurde aus dem Cloudflare Tunnel entfernt (Security-Gründen,
-  # siehe argocd/apps/cloudflared/values.yaml) — n8n ist jetzt nur noch intern
+  # siehe argocd/apps/platform/cloudflared/values.yaml) — n8n ist jetzt nur noch intern
   # über n8n.homeserver (Traefik-Ingress ohne TLS) erreichbar. host/protocol
   # spiegeln das wider.
   N8N_HOST: "n8n.homeserver"

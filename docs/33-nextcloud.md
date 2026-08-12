@@ -2,7 +2,7 @@
 
 [Nextcloud](https://nextcloud.com) ist eine selbst gehostete
 Datei-Sync-, Kalender- und Kontakte-Plattform (Google-Drive-/-Workspace-
-Ersatz). Die Deployment-Konfiguration liegt unter `argocd/apps/nextcloud/`.
+Ersatz). Die Deployment-Konfiguration liegt unter `argocd/apps/workloads/nextcloud/`.
 
 ---
 
@@ -33,15 +33,15 @@ von der App-Installation wachsen können.
 ## Voraussetzungen
 
 - ArgoCD läuft und das Root-ApplicationSet ist aktiv (`argocd/bootstrap/root-applicationset.yaml`)
-- Sealed-Secrets Controller ist installiert (`argocd/apps/sealed-secrets/`)
-- **`nas-storage`-App ist deployt** (`argocd/apps/nas-storage/`) und die
+- Sealed-Secrets Controller ist installiert (`argocd/apps/platform/sealed-secrets/`)
+- **`nas-storage`-App ist deployt** (`argocd/apps/platform/nas-storage/`) und die
   StorageClass `nas` existiert: `kubectl get storageclass nas`
 - **NAS ist online und der NFS-Export erreichbar** (siehe
   [docs/16-nas-storage.md](16-nas-storage.md)) — sonst bleiben die PVCs
   auf `Pending`
 - `kubeseal` CLI ist lokal installiert
 - `kubectl` ist mit dem Cluster verbunden
-- (Optional, für externen Zugriff) `argocd/apps/cloudflared/` ist bereits
+- (Optional, für externen Zugriff) `argocd/apps/platform/cloudflared/` ist bereits
   deployt — die Ingress-Regel für `nextcloud.pke-lab.de` ist schon
   eingetragen (siehe [docs/23-cloudflare-deploy.md](23-cloudflare-deploy.md))
 
@@ -70,7 +70,7 @@ echo -n "$ADMIN_PASS" | kubeseal --raw \
 # → Ausgabe als encryptedAdminPassword eintragen
 ```
 
-Beide Ausgaben in `argocd/apps/nextcloud/values.yaml` eintragen:
+Beide Ausgaben in `argocd/apps/workloads/nextcloud/values.yaml` eintragen:
 
 ```yaml
 secrets:
@@ -90,7 +90,7 @@ secrets:
 ## Schritt 2 — Deployment via ArgoCD
 
 Nach dem Commit erkennt das Root-ApplicationSet den neuen Ordner
-`argocd/apps/nextcloud/` automatisch:
+`argocd/apps/workloads/nextcloud/` automatisch:
 
 ```bash
 kubectl get pods -n nextcloud -w
@@ -120,7 +120,7 @@ gegen `/status.php`).
 ## Externe Erreichbarkeit (Cloudflare Tunnel)
 
 `nextcloud.pke-lab.de` ist bereits in
-`argocd/apps/cloudflared/values.yaml` eingetragen (zeigt auf den
+`argocd/apps/platform/cloudflared/values.yaml` eingetragen (zeigt auf den
 internen `nextcloud.nextcloud.svc.cluster.local:80`-Service). Für
 Mobile-/Desktop-Sync-Clients außerhalb von LAN/Tailscale:
 

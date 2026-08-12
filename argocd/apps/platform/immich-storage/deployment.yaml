@@ -1,5 +1,5 @@
 # Eigener nfs-subdir-external-provisioner für Immich, getrennt vom
-# generischen "nas"-Export (argocd/apps/nas-storage/). Grund: Immich-Daten
+# generischen "nas"-Export (argocd/apps/platform/nas-storage/). Grund: Immich-Daten
 # (Fotos/Videos + Postgres) sollen in einem eigenen NFS-Export
 # (/volume2/immich-storage) liegen statt im geteilten /volume1/k8s-storage,
 # damit Kapazitätsplanung und Backup für die Fotobibliothek unabhängig vom
