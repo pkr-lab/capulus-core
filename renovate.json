@@ -4,23 +4,36 @@
     "config:recommended",
     ":dependencyDashboard"
   ],
+  "timezone": "Europe/Berlin",
+  "schedule": ["before 6am on monday"],
+  "labels": ["dependencies"],
+  "commitMessagePrefix": "feat(deps):",
+  "helm-values": {
+    "fileMatch": ["^argocd/apps/.+/values\\.yaml$"]
+  },
+  "helmv3": {
+    "fileMatch": ["^argocd/apps/.+/Chart\\.yaml$"]
+  },
+  "github-actions": {
+    "enabled": true
+  },
   "packageRules": [
     {
-      "description": "Auto-merge patch and minor updates of the kubeseal-webgui OCI Helm chart; major updates open a PR for manual review.",
-      "matchManagers": ["helmv3"],
-      "matchDatasources": ["docker"],
-      "matchPackageNames": ["/kubeseal-webgui/"],
-      "matchUpdateTypes": ["patch", "minor"],
-      "automerge": true
+      "description": "Vendored/pulled-in subcharts (Chart.lock, charts/*.tgz) are refreshed manually via `helm dependency update`, not by Renovate opening PRs against generated lockfiles.",
+      "matchFileNames": ["**/charts/**", "**/Chart.lock"],
+      "enabled": false
     },
     {
-      "description": "Auto-merge patch and minor Zammad Helm chart updates; major versions require manual review.",
-      "matchManagers": ["helmv3"],
-      "matchDatasources": ["helm"],
-      "matchPackageNames": ["zammad"],
-      "matchUpdateTypes": ["patch", "minor"],
-      "automerge": true
+      "description": "Group all Helm chart + image tag bumps for a single app into one PR instead of one PR per field.",
+      "matchFileNames": ["argocd/apps/**"],
+      "groupName": "{{packageFileDir}}"
+    },
+    {
+      "description": "Security patch releases land immediately, not on the weekly schedule.",
+      "matchUpdateTypes": ["patch"],
+      "schedule": ["at any time"]
     }
   ],
-  "platformAutomerge": true
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 0
 }

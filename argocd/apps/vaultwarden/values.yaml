@@ -72,10 +72,10 @@ env:
   # Seit Vaultwarden 1.30 läuft der Websocket-Server auf demselben Port wie
   # die HTTP-API — kein separater Port/Service nötig.
   WEBSOCKET_ENABLED: "true"
-  # Nach dem Anlegen des eigenen Accounts (siehe docs/32-vaultwarden.md)
-  # auf "false" setzen, damit der Server nicht offen für neue Registrierungen
-  # im Internet steht.
-  SIGNUPS_ALLOWED: "true"
+  # Fest auf "false" — Registrierung bleibt über die /admin-Oberfläche
+  # möglich (siehe docs/32-vaultwarden.md), der Server steht damit nicht
+  # dauerhaft offen für neue Registrierungen im Internet.
+  SIGNUPS_ALLOWED: "false"
   # Deaktiviert die (ohnehin meist ungenutzte) öffentliche Organisations-
   # Registrierung.
   INVITATIONS_ALLOWED: "true"

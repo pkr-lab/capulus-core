@@ -1,0 +1,7 @@
+# Managed by Ansible (crowdsec role) — do not edit by hand.
+# SSH brute-force detection source, read from the systemd journal.
+source: journalctl
+journalctl_filter:
+  - "_SYSTEMD_UNIT=ssh.service"
+labels:
+  type: syslog

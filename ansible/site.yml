@@ -17,6 +17,8 @@
   roles:
     - role: common
       tags: [common, base]
+    - role: crowdsec
+      tags: [crowdsec, security]
     - role: dnsmasq
       tags: [dnsmasq, dns]
     - role: tailscale
@@ -45,8 +47,8 @@
           - "======================================"
           - "Home Server Setup Complete!"
           - "======================================"
-          - "ArgoCD UI:    http://{{ ansible_default_ipv4.address }}:30080"
-          - "ArgoCD/TS:    http://{{ hostname }}:30080"
+          - "ArgoCD UI:    https://{{ ansible_default_ipv4.address }}:30443"
+          - "ArgoCD/TS:    https://{{ hostname }}:30443"
           - "Semaphore UI: http://semaphore.homeserver"
           - "kubectl:      kubectl get nodes"
           - "======================================"
