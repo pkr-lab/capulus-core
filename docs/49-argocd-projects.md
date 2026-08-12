@@ -63,24 +63,31 @@ die Namespaces.
 
 ```mermaid
 flowchart TB
-    G1["Git-Generator #1<br/>argocd/apps/platform/*"] -->|"template.spec.project: platform"| APPS1["Applications<br/>(je App = eigener Namespace,<br/>wie bisher)"]
-    G2["Git-Generator #2<br/>argocd/apps/workloads/*"] -->|"template.spec.project: workloads"| APPS2["Applications<br/>(je App = eigener Namespace,<br/>wie bisher)"]
+    AS1["ApplicationSet home-server-apps-platform<br/>Generator: argocd/apps/platform/*<br/>spec.project: platform (fest codiert)"] --> APPS1["Applications<br/>(je App = eigener Namespace,<br/>wie bisher)"]
+    AS2["ApplicationSet home-server-apps-workloads<br/>Generator: argocd/apps/workloads/*<br/>spec.project: workloads (fest codiert)"] --> APPS2["Applications<br/>(je App = eigener Namespace,<br/>wie bisher)"]
     APPS1 --> PP["AppProject platform<br/>destinations: nur Platform-Namespaces"]
     APPS2 --> PW["AppProject workloads<br/>destinations: nur Workload-Namespaces"]
 ```
 
-Ein `ApplicationSet` mit **zwei Git-Generatoren** statt einem: jeder
-Generator scannt nur seinen eigenen Tier-Ordner und trägt per
-Generator-Level-`template`-Override das passende `project` ein. Der
-gemeinsame Top-Level-`template`-Block (Name, `source.path`,
-`destination.namespace`, `ignoreDifferences`, `syncPolicy`) bleibt für beide
-Generatoren identisch — nur `spec.project` unterscheidet sich.
+**Zwei komplett getrennte `ApplicationSet`-Ressourcen** (`home-server-apps-platform`,
+`home-server-apps-workloads`) statt einer einzigen mit zwei Generatoren.
+Jede ist strukturell identisch zur ursprünglichen, einzelnen
+`home-server-apps` — nur der Directory-Glob und der literale `project:`-Wert
+unterscheiden sich.
 
-**Warum nicht das Project aus dem Pfad ableiten** (z. B.
-`{{(splitList "/" .path.path) | index 2}}`)? Funktioniert vermutlich auch,
-aber macht die Vorlage von Sprig-Funktionsverfügbarkeit und exakter
-Pfadsegment-Indizierung abhängig — zwei Generatoren mit je einem simplen,
-literalen `project:`-Wert sind weniger fehleranfällig und leichter zu lesen.
+> **Zwei verworfene Ansätze, damit niemand sie nochmal versucht:**
+> 1. *Eine* ApplicationSet mit zwei Git-Generatoren, die je einen
+>    `template.spec.project`-Override tragen. `spec.generators[].template`
+>    existiert auf der installierten ApplicationSet-CRD schlicht nicht
+>    außerhalb von `matrix`/`merge`-Generatoren — `kubectl apply` wurde mit
+>    `unknown field spec.generators[0].template` abgelehnt (strict decoding,
+>    kein Teil-Apply, der Cluster blieb unverändert).
+> 2. *Eine* ApplicationSet, die `spec.project` per Go-Template aus dem Pfad
+>    ableitet (`{{(splitList "/" .path.path) | index 2}}`, Sprig-Funktionen).
+>    Syntaktisch gültig, aber nie gegen den echten ApplicationSet-Controller
+>    verifiziert — nicht das Risiko wert, wenn zwei unabhängige, strukturell
+>    bereits bewiesene ApplicationSets (dieser Ansatz) ganz ohne unsichere
+>    Templating-Features auskommen.
 
 Quelle:
 [`ansible/roles/argocd/templates/bootstrap-applicationset.yaml.j2`](../ansible/roles/argocd/templates/bootstrap-applicationset.yaml.j2)
