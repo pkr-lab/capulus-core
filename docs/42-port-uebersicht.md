@@ -75,7 +75,7 @@ Cloudflare Tunnel direkt auf den jeweiligen Service (an Traefik vorbei), siehe
 | MediaMTX Publish (RTSP) | 8554 | NodePort `homeserver:31554` | s.o., nur LAN/Tailnet |
 | MediaMTX WebRTC | 8889 | Nur ClusterIP intern | Kein eigener Ingress-Host, wird intern vom HLS-Player-Frontend genutzt |
 | MediaMTX API | 9997 | Nur ClusterIP intern | Kein externer Zugriff |
-| ArgoCD | 80/443 | NodePort `homeserver:30080` / `homeserver:30443` | Kein Ingress-Host, direkter NodePort-Zugriff |
+| ArgoCD | 443 | NodePort `homeserver:30443` (HTTPS) | Kein Ingress-Host, direkter NodePort-Zugriff. HTTP-NodePort (30080) bewusst nicht in UFW freigegeben |
 | Tailscale (SSH/Admin) | — | Tailnet-IP des Nodes | Siehe [docs/06-tailscale.md](06-tailscale.md) |
 
 NodePorts sind laut bestehenden UFW-Regeln bereits auf LAN/Tailnet beschränkt
