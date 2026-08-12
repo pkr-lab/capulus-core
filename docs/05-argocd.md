@@ -8,13 +8,20 @@ Dieses Dokument behandelt ArgoCD-Zugriff, Konfiguration und GitOps-Alltag.
 
 ### Web-UI
 
-ArgoCD läuft als NodePort-Service auf den Ports **30080** (HTTP) und **30443** (HTTPS).
+ArgoCD läuft als NodePort-Service auf Port **30443** (HTTPS). Der HTTP-NodePort
+(30080) ist absichtlich **nicht** in der UFW-Firewall freigegeben — ArgoCD hat
+vollen GitOps-Controller-Zugriff auf den Cluster, das Initial-Passwort und
+spätere Logins sollen nicht im Klartext über LAN/Tailnet gehen.
 
 ```
-http://<server-ip>:30080
-http://homeserver:30080          (via Tailscale-MagicDNS)
-http://100.x.x.x:30080           (via Tailscale-IP)
+https://<server-ip>:30443
+https://homeserver:30443          (via Tailscale-MagicDNS)
+https://100.x.x.x:30443           (via Tailscale-IP)
 ```
+
+Das Zertifikat ist selbstsigniert (Standard-ArgoCD-Setup) — der Browser zeigt
+eine Zertifikatswarnung, die du bestätigen musst (`argocd`-CLI braucht dafür
+`--insecure`, siehe unten).
 
 ### Initial-Credentials
 
@@ -34,7 +41,7 @@ kubectl -n argocd get secret argocd-initial-admin-secret \
 
 ## Erst-Login und Passwortwechsel
 
-1. `http://<server-ip>:30080` öffnen.
+1. `https://<server-ip>:30443` öffnen (Zertifikatswarnung bestätigen).
 2. Login mit `admin` + Initial-Passwort.
 3. **User-Icon** oben links anklicken.
 4. **User Info**.
@@ -270,11 +277,11 @@ brew install argocd
 **Authentifizierung:**
 
 ```bash
-# Login
-argocd login 192.168.1.100:30080 --username admin --password <password> --insecure
+# Login (--insecure wegen selbstsigniertem Zertifikat)
+argocd login 192.168.1.100:30443 --username admin --password <password> --insecure
 
 # Via Tailscale
-argocd login homeserver:30080 --username admin --password <password> --insecure
+argocd login homeserver:30443 --username admin --password <password> --insecure
 
 # Aktueller Context
 argocd context
@@ -385,7 +392,7 @@ wird der Sync sofort nach jedem Push ausgelöst:
 
 1. GitHub-Repo → **Settings → Webhooks**.
 2. **Add webhook**.
-3. Payload-URL: `http://<tailscale-ip>:30080/api/webhook`.
+3. Payload-URL: `https://<tailscale-ip>:30443/api/webhook`.
 4. Content type: `application/json`.
 5. **Just the push event**.
 6. **Add webhook**.
