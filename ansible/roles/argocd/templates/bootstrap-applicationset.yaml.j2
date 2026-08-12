@@ -1,4 +1,4 @@
-# Single source of truth for the bootstrap ApplicationSet.
+# Single source of truth for the bootstrap ApplicationSets.
 # The committed copy at argocd/bootstrap/root-applicationset.yaml is GENERATED
 # from this template — run `make render-bootstrap` after editing this file or
 # the argocd_repo_* / argocd_namespace vars in group_vars. Do not hand-edit the
@@ -7,18 +7,28 @@
 # Apps live under argocd/apps/platform/<app> or argocd/apps/workloads/<app>
 # (see docs/49-argocd-projects.md) — each app keeps its own namespace
 # (destination.namespace is still just the app's basename, unaffected by the
-# extra directory level), but is assigned to the matching AppProject
-# (argocd/bootstrap/projects.yaml) via the per-generator template override
-# below. This is a deliberate two-generator setup instead of deriving the
-# project from the path string: per-generator `template.spec.project` is a
-# well-established ApplicationSet feature, whereas string-splitting the path
-# in Go-template would add a dependency on sprig functions that isn't worth
-# the risk here.
+# directory nesting). Two SEPARATE ApplicationSet resources below (one per
+# tier) each carry a hardcoded, literal `spec.project` — deliberately not a
+# single ApplicationSet with a derived/templated project value.
+#
+# History, so nobody re-attempts either of these two rejected approaches:
+#   1. A single ApplicationSet with per-generator `template.spec.project`
+#      overrides (one git generator per tier). `spec.generators[].template`
+#      does NOT exist on the installed ApplicationSet CRD outside
+#      `matrix`/`merge` generators — kubectl apply was rejected outright with
+#      "unknown field spec.generators[0].template" (strict decoding, no
+#      partial apply, cluster was unaffected by the failed attempt).
+#   2. A single ApplicationSet deriving `spec.project` from the directory
+#      path via Go-template + sprig (`{{(splitList "/" .path.path) | index 2}}`).
+#      Never actually verified against the live ApplicationSet controller —
+#      not worth re-testing when two independent, structurally-proven
+#      ApplicationSets (this file) need zero uncertain templating features.
 ---
+{% for tier in ["platform", "workloads"] %}
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: home-server-apps
+  name: home-server-apps-{{ tier }}
   namespace: {{ argocd_namespace }}
 spec:
   goTemplate: true
@@ -28,22 +38,12 @@ spec:
         repoURL: "{{ argocd_repo_url }}"
         revision: "{{ argocd_repo_revision }}"
         directories:
-          - path: "argocd/apps/platform/*"
-      template:
-        spec:
-          project: platform
-    - git:
-        repoURL: "{{ argocd_repo_url }}"
-        revision: "{{ argocd_repo_revision }}"
-        directories:
-          - path: "argocd/apps/workloads/*"
-      template:
-        spec:
-          project: workloads
+          - path: "argocd/apps/{{ tier }}/*"
   template:
     metadata:
       name: "{{ '{{' }}.path.basename{{ '}}' }}"
     spec:
+      project: {{ tier }}
       source:
         repoURL: "{{ argocd_repo_url }}"
         targetRevision: "{{ argocd_repo_revision }}"
@@ -104,3 +104,7 @@ spec:
           - CreateNamespace=true
           - ServerSideApply=true
           - SkipDryRunOnMissingResource=true
+{% if not loop.last %}
+---
+{% endif %}
+{% endfor %}
