@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "wikijs.postgresql.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "wikijs.postgresql.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  # Pflicht bei RWO-PVCs: kein zweiter Pod darf parallel auf dasselbe
+  # Volume zugreifen, während der alte noch terminiert.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "wikijs.postgresql.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "wikijs.postgresql.selectorLabels" . | nindent 8 }}
+    spec:
+      # Offizielles postgres-Image läuft als UID/GID 999 — das reicht auf
+      # diesem NAS aber nicht (siehe unten).
+      #
+      # PGDATA zeigt bewusst auf "pgdata_fixed" statt "pgdata": Der NFS-
+      # Export der "nas"-StorageClass (/volume1/k8s-storage) squasht auf
+      # diesem UGREEN-NAS-Modell (kein root_squash-Schalter in UGOS) JEDE
+      # Anfrage serverseitig auf eine feste UID/GID — unabhängig davon,
+      # welche UID der Client tatsächlich verwendet. Aktuell ist das
+      # 1000:10. Das alte "pgdata"-Verzeichnis war unter einer damals
+      # anderen Squash-Identität (999:999) angelegt worden; dadurch konnte
+      # niemand mehr das von Postgres verlangte chmod 700 darauf ausführen
+      # (CrashLoopBackOff, "data directory has invalid permissions"). Fix:
+      # "pgdata_fixed" ist eine frische Kopie, neu angelegt unter der
+      # aktuellen Squash-Identität — chmod 700 funktioniert darauf. Gleiches
+      # Problem/gleicher Fix wie bei Immich, siehe
+      # argocd/apps/workloads/immich/templates/postgres-deployment.yaml.
+      #
+      # runAsUser/runAsGroup müssen daher zwingend auf genau diese
+      # Squash-Identität (1000:10) gesetzt sein, NICHT auf 999: Postgres
+      # prüft beim Start zusätzlich zu den Modus-Bits, dass der eigene
+      # Prozess-User (getuid()) exakt dem Directory-Owner entspricht
+      # ("wrong ownership"-Fehler sonst) — und der Owner ist wegen des
+      # Squash immer 1000:10, egal was der Container deklariert. Ändert
+      # sich die Squash-Identität auf dem NAS künftig erneut, muss sowohl
+      # hier als auch bei "pgdata_fixed" (per Neukopie) nachgezogen werden.
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 10
+        fsGroup: 10
+      {{- with .Values.postgresql.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: postgresql
+          image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
+          imagePullPolicy: {{ .Values.postgresql.image.pullPolicy }}
+          ports:
+            - name: postgresql
+              containerPort: 5432
+              protocol: TCP
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.postgresql.database | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.postgresql.username | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: db-password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata_fixed
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.postgresql.username | quote }}
+                - -d
+                - {{ .Values.postgresql.database | quote }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.postgresql.username | quote }}
+                - -d
+                - {{ .Values.postgresql.database | quote }}
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.postgresql.resources | nindent 12 }}
+      volumes:
+        - name: data
+          {{- if .Values.postgresql.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "wikijs.postgresql.fullname" . }}-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

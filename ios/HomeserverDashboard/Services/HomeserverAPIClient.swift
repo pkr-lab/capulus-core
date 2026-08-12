@@ -51,7 +51,7 @@ final class HomeserverAPIClient {
     }
 
     /// Cached server-side for 15 min and the underlying watcher only runs
-    /// every 2h (see argocd/apps/github-release-watcher values.yaml) —
+    /// every 2h (see argocd/apps/workloads/github-release-watcher values.yaml) —
     /// callers should fetch this once per view appearance, not on the
     /// dashboard's 30s poll loop.
     func getUpdates() async throws -> UpdatesResponse {

@@ -46,14 +46,14 @@ flowchart TB
         E5["CUPS :631<br/>IPP / AirPrint"]
     end
 
-    subgraph L4["SCHICHT 4 — ANWENDUNGEN (argocd/apps/)"]
+    subgraph L4["SCHICHT 4 — ANWENDUNGEN (argocd/apps/workloads/)"]
         direction LR
         P1["Nextcloud · Immich · Paperless-NGX<br/>Wiki.js · Zammad · Vaultwarden"]
         P2["Mealie · n8n · Uptime Kuma<br/>MediaMTX · TinyTeller"]
         P3["alamos-apager · github-release-watcher<br/>wiki-docs-sync · example-whoami · xibosignage"]
     end
 
-    subgraph L3["SCHICHT 3 — PLATTFORMDIENSTE"]
+    subgraph L3["SCHICHT 3 — PLATTFORMDIENSTE (argocd/apps/platform/)"]
         direction LR
         S1["authentik<br/>zentrale Anmeldung"]
         S2["sealed-secrets<br/>kubeseal-webgui"]
@@ -152,7 +152,7 @@ sequenceDiagram
     participant Sem as Semaphore Web-UI
     participant Host as Ubuntu-Hosts
 
-    Dev->>Git: git push (neuer Ordner in argocd/apps/)
+    Dev->>Git: git push (neuer Ordner in argocd/apps/platform/ oder /workloads/)
     Argo->>Git: pollt alle ~3 Minuten (nur Lesezugriff)
     Argo->>Argo: Soll-Ist-Vergleich
     Argo->>K3s: kubectl apply
@@ -245,14 +245,21 @@ flowchart TB
 
 ## 5. App-Matrix (Schicht 3 und 4)
 
-### Schicht 3 — Plattformdienste
+Seit [docs/49-argocd-projects.md](49-argocd-projects.md) ist diese
+Schicht-3/Schicht-4-Trennung nicht mehr nur konzeptionell, sondern auch die
+tatsächliche Git-Ordnerstruktur (`argocd/apps/platform/…` bzw.
+`argocd/apps/workloads/…`) und das zugewiesene ArgoCD-AppProject
+(`platform` bzw. `workloads`).
 
-| App (`argocd/apps/…`) | Aufgabe | Kürzel |
+### Schicht 3 — Plattformdienste (`argocd/apps/platform/…`, AppProject `platform`)
+
+| App | Aufgabe | Kürzel |
 |---|---|---|
 | `authentik` | zentrale Anmeldung, Identity Provider | A · L · S · D |
 | `sealed-secrets` | entschlüsselt SealedSecrets im Cluster | — |
 | `kubeseal-webgui` | Weboberfläche zum Verschlüsseln von Secrets | — |
 | `monitoring` | VictoriaMetrics, vmagent, vmalert, Alertmanager, Grafana | A · L · S · C |
+| `logging` | Log-Aggregation (VictoriaLogs) | L · S |
 | `gotify` / `gotify-bridge` | Push an Android, Brücke von Alertmanager | A · L · S |
 | `ntfy` / `ntfy-bridge` | Push an iOS + Android, Brücke von Alertmanager | L · C |
 | `cloudflared` | Cloudflare Tunnel, ausgehende Verbindung nach außen | S |
@@ -264,10 +271,11 @@ flowchart TB
 | `argo-workflows` | interne CI/CD-Pipelines, braucht MinIO | A · S |
 | `semaphore` | Weboberfläche, die Ansible-Playbooks startet | A · L |
 | `headlamp` | Kubernetes-Dashboard im Browser | A · S |
+| `traefik-config` | Traefik-Zusatzkonfiguration (HelmChartConfig, Metrics-Scrape) | — |
 
-### Schicht 4 — Anwendungen
+### Schicht 4 — Anwendungen (`argocd/apps/workloads/…`, AppProject `workloads`)
 
-| App (`argocd/apps/…`) | Aufgabe | Kürzel | Adresse |
+| App | Aufgabe | Kürzel | Adresse |
 |---|---|---|---|
 | `nextcloud` | Dateien, Kalender, Kontakte | N · L · S · D | `nextcloud.homeserver` |
 | `immich` | Fotoarchiv mit KI-Suche | I · S · D | `immich.homeserver` |
@@ -285,6 +293,7 @@ flowchart TB
 | `github-release-watcher` | neue Releases → Ticket in Zammad | S | — (CronJob) |
 | `wiki-docs-sync` | `docs/` aus Git → Wiki.js, alle 15 Min. | S | — (CronJob) |
 | `example-whoami` | Demo-App, belegt dass GitOps läuft | — | `whoami.homeserver` |
+| `carplay-api` | Homeserver-Dashboard-API für die iOS-App | S | `carplay-api.homeserver` |
 
 ---
 
@@ -411,10 +420,15 @@ flowchart LR
 Kein eingehender Port aus dem Internet. Fernzugriff läuft über Tailscale, öffentliche
 Dienste ausschließlich über ausgehende Cloudflare-Verbindungen. UFW erlaubt 22, 53, 80,
 443, 631, 6443 und 30443 nur im LAN und im Tailnet, nach außen nur 41641/UDP.
-ArgoCD hat ausschließlich Leserechte auf das Git-Repo. Der Shutdown-SSH-Key des
+ArgoCD hat ausschließlich Leserechte auf das Git-Repo. Innerhalb von ArgoCD trennen
+zwei AppProjects (`platform` / `workloads`, siehe
+[docs/49-argocd-projects.md](49-argocd-projects.md)) Infrastruktur-Apps von
+Anwendungen mit echtem Nutzerkreis — jede App darf nur in ihren eigenen,
+namentlich erlaubten Namespace deployen. Der Shutdown-SSH-Key des
 Power-Managers ist per `command=`-Option fest auf `poweroff` beschränkt. Secrets liegen
 verschlüsselt in Git — Host-Werte per Ansible Vault, Cluster-Werte als SealedSecret, das
-nur der Controller im Cluster öffnen kann.
+nur der Controller im Cluster öffnen kann. CrowdSec beobachtet SSH- und Traefik-Logs
+und sperrt auffällige IPs per Firewall-Bouncer (siehe [docs/46-crowdsec.md](46-crowdsec.md)).
 
 ---
 

@@ -27,7 +27,7 @@ vmagent_node_exporter_port: 9100
 vmagent_scrape_interval: "30s"
 
 # Wohin gepusht wird (Prometheus-remote_write-Endpunkt, per Traefik-Ingress
-# exponiert — siehe argocd/apps/monitoring/templates/ingress-vm-write.yaml).
+# exponiert — siehe argocd/apps/platform/monitoring/templates/ingress-vm-write.yaml).
 # MUSS pro Host/Gruppe gesetzt werden (siehe ansible/group_vars/banana_pis.yml)
 # — kein Default, damit ein fehlender Wert laut auffaellt.
 # vmagent_remote_write_url: "http://vm-write.homeserver/api/v1/write"

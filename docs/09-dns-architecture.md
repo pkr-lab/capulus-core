@@ -166,7 +166,7 @@ bleibt funktional.
 
 ## Pi-hole: Werbeblocking im DNS-Forward
 
-Seit `argocd/apps/pihole/` existiert, leitet dnsmasq alle nicht-`*.homeserver`-
+Seit `argocd/apps/platform/pihole/` existiert, leitet dnsmasq alle nicht-`*.homeserver`-
 Anfragen nicht mehr direkt an die Fritz!Box weiter, sondern zuerst an Pi-hole
 (k3s-NodePort auf `192.168.178.94:30053`, siehe `pihole_dns_nodeport` in
 `ansible/group_vars/all.yml`). Pi-hole filtert Werbe-/Tracking-Domains heraus

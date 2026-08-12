@@ -1,7 +1,7 @@
 # Homeserver Dashboard (iOS)
 
 Pure SwiftUI universal (iPhone + iPad) app for
-[carplay-api](../argocd/apps/carplay-api/) — alerts (ntfy), per-host
+[carplay-api](../argocd/apps/workloads/carplay-api/) — alerts (ntfy), per-host
 metrics (VictoriaMetrics) and service status (Uptime-Kuma) on a home
 screen, plus two control subpages: Homeserver screen brightness, and
 Wake-on-LAN/shutdown for the fleet.

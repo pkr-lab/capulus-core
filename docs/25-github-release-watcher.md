@@ -16,7 +16,7 @@ daraus zwei getrennte Dinge:
    `carplay-api`-Namespace) und zeigt sie der iOS-App als Update-Status pro
    Dienst — unabhängig davon, ob ein Repo Zammad-Tickets erzeugt oder nicht.
 
-Die Deployment-Konfiguration liegt unter `argocd/apps/github-release-watcher/`.
+Die Deployment-Konfiguration liegt unter `argocd/apps/workloads/github-release-watcher/`.
 
 ---
 
@@ -82,7 +82,7 @@ echo -n "<ZAMMAD_API_TOKEN>" | kubeseal --raw \
 
 ## Schritt 3 — `values.yaml` anpassen
 
-In `argocd/apps/github-release-watcher/values.yaml` ist `github.repos` eine
+In `argocd/apps/workloads/github-release-watcher/values.yaml` ist `github.repos` eine
 Liste von Objekten, nicht nur `owner/repo`-Strings — pro Repo lässt sich
 `notifyZammad` einzeln steuern:
 
@@ -151,7 +151,7 @@ der gewählten `zammad.group`:
 ## Schritt 5 — Deployment via ArgoCD
 
 Nach dem Commit erkennt das Root-ApplicationSet den neuen Ordner
-`argocd/apps/github-release-watcher/` automatisch.
+`argocd/apps/workloads/github-release-watcher/` automatisch.
 
 ```
 ArgoCD → Home → github-release-watcher

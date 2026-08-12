@@ -27,7 +27,7 @@ vault.pke-lab.de         →  Cloudflare Tunnel → vaultwarden (Port 80)
   brechen — anders als bei reinen Web-UIs (z. B. Gotify), die kein eigenes
   Client-Protokoll haben.
 - **Extern erreichbar** über den bestehenden Cloudflare Tunnel
-  (`argocd/apps/cloudflared/values.yaml`), damit Handy-App und
+  (`argocd/apps/platform/cloudflared/values.yaml`), damit Handy-App und
   Browser-Erweiterung auch unterwegs syncen können.
 
 ---
@@ -98,7 +98,7 @@ echo -n '$argon2id$...' \
 
 ### 1.3 Ciphertext in `values.yaml` eintragen
 
-`argocd/apps/vaultwarden/values.yaml` öffnen und den Platzhalter ersetzen:
+`argocd/apps/workloads/vaultwarden/values.yaml` öffnen und den Platzhalter ersetzen:
 
 ```yaml
 adminSecret:
@@ -110,7 +110,7 @@ adminSecret:
 Committen + pushen (macht der Nutzer selbst):
 
 ```bash
-git add argocd/apps/vaultwarden/values.yaml
+git add argocd/apps/workloads/vaultwarden/values.yaml
 git commit -m "feat(vaultwarden): set sealed admin token"
 git push
 ```
@@ -204,7 +204,7 @@ StorageClass (wie beim Großteil der übrigen Apps, siehe
 verworfen**: das NAS erzwingt inzwischen `all_squash` (kein
 `no_root_squash` mehr verfügbar), was bei Vaultwardens SQLite-Datei zu
 Permission-Problemen führt — siehe Kommentar in
-`argocd/apps/vaultwarden/values.yaml`. Die Haupt-PVC bleibt daher auf
+`argocd/apps/workloads/vaultwarden/values.yaml`. Die Haupt-PVC bleibt daher auf
 `local-path` (Homeserver-System-SSD).
 
 Stattdessen sichert ein nächtlicher `backup`-CronJob (eigene PVC, bewusst

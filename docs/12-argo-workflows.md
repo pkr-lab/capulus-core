@@ -1,9 +1,9 @@
 # Argo Workflows (private CI/CD)
 
 [Argo Workflows](https://argo-workflows.readthedocs.io) läuft als
-ArgoCD-verwaltete App (`argocd/apps/argo-workflows/`) und ist die private
+ArgoCD-verwaltete App (`argocd/apps/platform/argo-workflows/`) und ist die private
 CI-Engine des Home-Servers. Es ist mit einer kleinen MinIO-Instanz
-(`argocd/apps/minio/`) gekoppelt, die als S3-kompatibles Artifact-Repository
+(`argocd/apps/platform/minio/`) gekoppelt, die als S3-kompatibles Artifact-Repository
 und Log-Archiv dient.
 
 Aufgabenteilung:
@@ -51,7 +51,7 @@ seal() {  # seal <namespace> <secret-name> <value-on-stdin>
 
 ### 1.1 MinIO-Root-Credentials (Namespace `minio`)
 
-User/Passwort wählen, beide versiegeln, in `argocd/apps/minio/values.yaml`
+User/Passwort wählen, beide versiegeln, in `argocd/apps/platform/minio/values.yaml`
 einfügen (`rootCreds.encryptedRootUser` / `encryptedRootPassword`):
 
 ```bash
@@ -62,7 +62,7 @@ printf 'CHANGE-ME-strong-pw' | seal minio minio-root   # -> encryptedRootPasswor
 ### 1.2 Argo-Artifact-S3-Zugriff (Namespace `argo-workflows`)
 
 **Dieselben Werte** wie die MinIO-Root-Credentials — einfügen in
-`argocd/apps/argo-workflows/values.yaml`
+`argocd/apps/platform/argo-workflows/values.yaml`
 (`artifactSecret.encryptedAccessKey` / `encryptedSecretKey`):
 
 ```bash
@@ -146,7 +146,7 @@ deployen (CD bleibt bei ArgoCD).
 
 `nightly-home-server-lint` liefert **suspendiert** aus. `cmd` auf einen
 echten Lint-Befehl in
-`argocd/apps/argo-workflows/templates/cronworkflow.yaml` anpassen, dann
+`argocd/apps/platform/argo-workflows/templates/cronworkflow.yaml` anpassen, dann
 fortsetzen:
 
 ```bash

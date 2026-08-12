@@ -1,0 +1,132 @@
+{
+  "name": "xibosignage: Inbox -> Display",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerOn": "folder",
+        "path": "/data/xibosignage-inbox",
+        "events": ["add"],
+        "options": {}
+      },
+      "id": "a1a1a1a1-0001-4000-8000-000000000001",
+      "name": "Watch Inbox",
+      "type": "n8n-nodes-base.localFileTrigger",
+      "typeVersion": 1,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{$json.path}}",
+              "rightValue": "\\.(jpe?g|png|gif|webp)$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1a1a1a1-0002-4000-8000-000000000002",
+      "name": "Nur Bilddateien",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "={{$json.path}}",
+        "options": {}
+      },
+      "id": "a1a1a1a1-0003-4000-8000-000000000003",
+      "name": "Originaldatei lesen",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [780, 300]
+    },
+    {
+      "parameters": {
+        "operation": "resize",
+        "width": 1920,
+        "height": 1080,
+        "options": {
+          "resizeOption": "onlyIfLarger"
+        }
+      },
+      "id": "a1a1a1a1-0004-4000-8000-000000000004",
+      "name": "Auf Pi-Auflösung skalieren",
+      "type": "n8n-nodes-base.editImage",
+      "typeVersion": 1,
+      "position": [1040, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const path = require('path');\nconst originalPath = $('Watch Inbox').item.json.path;\nconst base = path.basename(originalPath, path.extname(originalPath));\nconst safeBase = base.replace(/[^a-zA-Z0-9_-]/g, '_');\nconst timestamp = Date.now();\n\n$input.item.json.originalPath = originalPath;\n$input.item.json.outputPath = `/data/xibosignage-display/${safeBase}-${timestamp}.jpg`;\n\nreturn $input.item;"
+      },
+      "id": "a1a1a1a1-0005-4000-8000-000000000005",
+      "name": "Zieldateiname bestimmen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 300]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{$json.outputPath}}",
+        "options": {}
+      },
+      "id": "a1a1a1a1-0006-4000-8000-000000000006",
+      "name": "In Display-Ordner schreiben",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "command": "=mkdir -p /data/xibosignage-inbox/processed && mv \"{{$('Zieldateiname bestimmen').item.json.originalPath}}\" /data/xibosignage-inbox/processed/"
+      },
+      "id": "a1a1a1a1-0007-4000-8000-000000000007",
+      "name": "Original archivieren",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1820, 300]
+    }
+  ],
+  "connections": {
+    "Watch Inbox": {
+      "main": [[{ "node": "Nur Bilddateien", "type": "main", "index": 0 }]]
+    },
+    "Nur Bilddateien": {
+      "main": [[{ "node": "Originaldatei lesen", "type": "main", "index": 0 }]]
+    },
+    "Originaldatei lesen": {
+      "main": [[{ "node": "Auf Pi-Auflösung skalieren", "type": "main", "index": 0 }]]
+    },
+    "Auf Pi-Auflösung skalieren": {
+      "main": [[{ "node": "Zieldateiname bestimmen", "type": "main", "index": 0 }]]
+    },
+    "Zieldateiname bestimmen": {
+      "main": [[{ "node": "In Display-Ordner schreiben", "type": "main", "index": 0 }]]
+    },
+    "In Display-Ordner schreiben": {
+      "main": [[{ "node": "Original archivieren", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Beobachtet /data/xibosignage-inbox (NFS-Mount, siehe argocd/apps/workloads/n8n/values.yaml -> xibosignage), skaliert neue Bilder auf Pi-3B+-taugliche Aufloesung und schreibt sie nach /data/xibosignage-display, von wo der Raspberry-Pi-Kiosk (ansible/roles/xibo_kiosk) sie per NFS liest und als Slideshow zeigt. Details: docs/44-xibosignage.md."
+  }
+}

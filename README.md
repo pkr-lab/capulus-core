@@ -63,7 +63,7 @@ make install
 <tbody>
 <tr><td>Betriebssystem</td><td><strong>Ubuntu Server 26.04 LTS</strong></td><td>Gehärtet, UFW-Firewall, NTP-synced, Swap off</td></tr>
 <tr><td>Kubernetes</td><td><strong>k3s</strong> (latest stable)</td><td>Single-Node, Traefik, CoreDNS, local-path, metrics-server</td></tr>
-<tr><td>GitOps</td><td><strong>ArgoCD</strong> + ApplicationSets</td><td>Verzeichnis unter <code>argocd/apps/</code> anlegen → pushen → deployed</td></tr>
+<tr><td>GitOps</td><td><strong>ArgoCD</strong> + ApplicationSets</td><td>Verzeichnis unter <code>argocd/apps/platform/</code> oder <code>argocd/apps/workloads/</code> anlegen → pushen → deployed</td></tr>
 <tr><td>Split-DNS</td><td><strong>dnsmasq</strong> auf <code>tailscale0</code></td><td><code>*.homeserver</code> aus LAN und Tailnet auflösbar</td></tr>
 <tr><td>Werbeblocking</td><td><strong>Pi-hole</strong></td><td>Filtert DNS-Anfragen für alle Geräte, die dnsmasq bereits als DNS nutzen — kein Router-Eingriff nötig</td></tr>
 <tr><td>Web-Ansible</td><td><strong>Semaphore UI</strong></td><td>Ein-Klick-<code>git pull &amp;&amp; ansible-playbook</code> gegen das eigene LAN</td></tr>
@@ -215,6 +215,7 @@ capulus-core/
 │   ├── 46-crowdsec.md                # Brute-Force-Schutz für SSH und Traefik
 │   ├── 47-renovate.md                # Automatische Update-PRs für Helm-Charts/Images
 │   ├── 48-release-automation.md      # GitHub Release bei jedem Merge auf main
+│   ├── 49-argocd-projects.md         # Platform/Workloads-AppProject-Trennung
 │   └── assets/banner.svg
 ├── renovate.json                     # Renovate-Konfiguration (siehe docs/47-renovate.md)
 ├── .releaserc.json                   # semantic-release-Konfiguration (siehe docs/48-release-automation.md)
@@ -248,42 +249,48 @@ capulus-core/
 │       ├── alamos_kiosk/             # Raspberry Pi: Chromium-Kiosk + Heartbeat (ALAMOS AMweb)
 │       └── xibo_kiosk/               # Raspberry Pi 3B+: NFS-Bilder-Slideshow-Kiosk (xibosignage)
 └── argocd/
-    ├── bootstrap/root-applicationset.yaml  # Erkennt jedes Verzeichnis darunter
-    └── apps/                               # Ein Ordner pro ArgoCD-Application
-        ├── example-whoami/
-        ├── gotify/                   # Push-Notifications (Android)
-        ├── gotify-bridge/            # Alertmanager → Gotify Webhook-Bridge
-        ├── ntfy/                     # Push-Notifications (iOS + Android)
-        ├── ntfy-bridge/              # Alertmanager → ntfy Webhook-Bridge
-        ├── headlamp/                 # Kubernetes-Web-Dashboard
-        ├── kubeseal-webgui/          # Sealed-Secrets-Verschlüsselungs-UI
-        ├── monitoring/               # VictoriaMetrics + Grafana
-        ├── argo-workflows/           # Private CI/CD-Pipeline
-        ├── minio/                    # S3-Artifact-Store für Argo Workflows
-        ├── coredns-custom/           # Zusätzliche CoreDNS-Zonen
-        ├── pihole/                   # Netzwerkweites Werbeblocking (DNS-Filter vor der Fritz!Box)
-        ├── sealed-secrets/           # SealedSecrets-Controller
-        ├── authentik/                # Authentik Single-Sign-On
-        ├── alamos-apager/            # Alarmmonitor-Kiosk-Verwaltung (ALAMOS AMweb)
-        ├── cloudflared/               # Cloudflare Tunnel — externe Erreichbarkeit
-        ├── mediamtx/                  # Live-Streaming (RTMP/RTSP → HLS)
-        ├── semaphore/                # Ansible-Web-UI
-        ├── paperless-ngx/            # Dokumentenmanagement mit OCR
-        ├── mealie/                   # Rezeptverwaltung + Wochenplaner
-        ├── n8n/                      # Low-Code-Automatisierung
-        ├── uptime-kuma/              # Status-Seite und Service-Alerting
-        ├── vaultwarden/              # Bitwarden-kompatibler Passwort-Manager
-        ├── nextcloud/                # Datei-Sync, Kalender, Kontakte
-        ├── immich/                   # Foto-/Video-Backup vom Handy
-        ├── immich-storage/           # Dedizierter NFS-Export für Immich (/volume2)
-        ├── nas-storage/              # NFS-Provisioner → StorageClass "nas" (/volume1)
-        ├── wikijs/                   # Wiki.js Team-Wiki
-        ├── zammad/                   # Helpdesk/Ticket-System
-        ├── tinyteller/               # Kleine Diktier-/Story-App
-        ├── wiki-docs-sync/           # CronJob: docs/ aus Git → Wiki.js, alle 15 Min.
-        ├── github-release-watcher/   # CronJob: neue GitHub-Releases → Zammad-Ticket
-        ├── carplay-api/              # Homeserver-Dashboard-API für die iOS-App (Verzeichnisname historisch aus der CarPlay-Vorversion)
-        └── xibosignage/              # Xibo CMS: Medien-/Asset-Verwaltung für die Pi-Bilder-Slideshow
+    ├── bootstrap/
+    │   ├── root-applicationset.yaml  # Zwei Git-Generatoren: platform/* und workloads/*
+    │   └── projects.yaml             # AppProjects "platform" und "workloads"
+    └── apps/                         # Ein Ordner pro ArgoCD-Application, je Tier
+        ├── platform/                 # AppProject "platform" — Schicht 3, siehe docs/49-argocd-projects.md
+        │   ├── authentik/            # Authentik Single-Sign-On
+        │   ├── sealed-secrets/       # SealedSecrets-Controller
+        │   ├── kubeseal-webgui/      # Sealed-Secrets-Verschlüsselungs-UI
+        │   ├── monitoring/           # VictoriaMetrics + Grafana
+        │   ├── logging/              # Log-Aggregation (VictoriaLogs)
+        │   ├── gotify/               # Push-Notifications (Android)
+        │   ├── gotify-bridge/        # Alertmanager → Gotify Webhook-Bridge
+        │   ├── ntfy/                 # Push-Notifications (iOS + Android)
+        │   ├── ntfy-bridge/          # Alertmanager → ntfy Webhook-Bridge
+        │   ├── cloudflared/          # Cloudflare Tunnel — externe Erreichbarkeit
+        │   ├── pihole/               # Netzwerkweites Werbeblocking (DNS-Filter vor der Fritz!Box)
+        │   ├── coredns-custom/       # Zusätzliche CoreDNS-Zonen
+        │   ├── nas-storage/          # NFS-Provisioner → StorageClass "nas" (/volume1)
+        │   ├── immich-storage/       # Dedizierter NFS-Export für Immich (/volume2)
+        │   ├── minio/                # S3-Artifact-Store für Argo Workflows
+        │   ├── argo-workflows/       # Private CI/CD-Pipeline
+        │   ├── semaphore/            # Ansible-Web-UI
+        │   ├── headlamp/             # Kubernetes-Web-Dashboard
+        │   └── traefik-config/       # Traefik-Zusatzkonfiguration
+        └── workloads/                # AppProject "workloads" — Schicht 4, siehe docs/49-argocd-projects.md
+            ├── example-whoami/
+            ├── alamos-apager/        # Alarmmonitor-Kiosk-Verwaltung (ALAMOS AMweb)
+            ├── mediamtx/             # Live-Streaming (RTMP/RTSP → HLS)
+            ├── paperless-ngx/        # Dokumentenmanagement mit OCR
+            ├── mealie/               # Rezeptverwaltung + Wochenplaner
+            ├── n8n/                  # Low-Code-Automatisierung
+            ├── uptime-kuma/          # Status-Seite und Service-Alerting
+            ├── vaultwarden/          # Bitwarden-kompatibler Passwort-Manager
+            ├── nextcloud/            # Datei-Sync, Kalender, Kontakte
+            ├── immich/               # Foto-/Video-Backup vom Handy
+            ├── wikijs/               # Wiki.js Team-Wiki
+            ├── zammad/               # Helpdesk/Ticket-System
+            ├── tinyteller/           # Kleine Diktier-/Story-App
+            ├── wiki-docs-sync/       # CronJob: docs/ aus Git → Wiki.js, alle 15 Min.
+            ├── github-release-watcher/  # CronJob: neue GitHub-Releases → Zammad-Ticket
+            ├── carplay-api/          # Homeserver-Dashboard-API für die iOS-App (Verzeichnisname historisch aus der CarPlay-Vorversion)
+            └── xibosignage/          # Xibo CMS: Medien-/Asset-Verwaltung für die Pi-Bilder-Slideshow
 ```
 
 </details>
@@ -292,7 +299,7 @@ capulus-core/
 
 ## Monitoring
 
-Ein schlanker VictoriaMetrics-+-Grafana-Stack lebt unter `argocd/apps/monitoring/` und wird automatisch von ArgoCD ausgerollt.
+Ein schlanker VictoriaMetrics-+-Grafana-Stack lebt unter `argocd/apps/platform/monitoring/` und wird automatisch von ArgoCD ausgerollt.
 
 <details>
 <summary><strong>Stack-Details</strong></summary>
@@ -319,14 +326,25 @@ kubectl -n monitoring get secret monitoring-grafana \
 
 ## Application hinzufügen (GitOps-Weg)
 
+Erst entscheiden: **Platform** (Infrastruktur/Admin-Charakter) oder
+**Workloads** (echter Nutzerkreis) — siehe
+[docs/49-argocd-projects.md](docs/49-argocd-projects.md).
+
 ```bash
-mkdir -p argocd/apps/my-app
+mkdir -p argocd/apps/workloads/my-app
 # Plain Kubernetes-YAML, kustomization.yaml oder ein Helm-Chart hineinlegen.
-git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
+
+# my-app in argocd_workloads_apps (ansible/roles/argocd/defaults/main.yml) ergänzen,
+# dann:
+make render-bootstrap
+
+git add argocd/apps/workloads/my-app/ ansible/roles/argocd/defaults/main.yml argocd/bootstrap/
+git commit -m "feat(apps): add my-app"
+git push
 ```
 
-> Innerhalb von ~3 Minuten erkennt ArgoCD das neue Verzeichnis, erstellt eine `Application` namens `my-app` im Namespace `my-app` und synct sie.
-> Details: **[docs/05-argocd.md](docs/05-argocd.md)**
+> Innerhalb von ~3 Minuten erkennt ArgoCD das neue Verzeichnis, erstellt eine `Application` namens `my-app` im Namespace `my-app` (AppProject `workloads`) und synct sie.
+> Details: **[docs/05-argocd.md](docs/05-argocd.md)**, **[docs/49-argocd-projects.md](docs/49-argocd-projects.md)**
 
 ---
 
@@ -381,10 +399,11 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 <tbody>
 <tr><td>Keine öffentlichen Ports</td><td>Zugriff ausschließlich über LAN, Tailscale-VPN oder gezielt per Cloudflare Tunnel (ausgehende Verbindung, kein Port-Forwarding)</td></tr>
 <tr><td>UFW-Firewall</td><td>Erlaubt nur SSH, HTTP/HTTPS, k3s-API, ArgoCD-NodePort (HTTPS-only), Flannel, Tailscale-UDP</td></tr>
-<tr><td>Opt-in externe Erreichbarkeit</td><td>Nur explizit in <code>argocd/apps/cloudflared/values.yaml</code> eingetragene Dienste sind öffentlich erreichbar, alles andere bleibt intern</td></tr>
+<tr><td>Opt-in externe Erreichbarkeit</td><td>Nur explizit in <code>argocd/apps/platform/cloudflared/values.yaml</code> eingetragene Dienste sind öffentlich erreichbar, alles andere bleibt intern</td></tr>
 <tr><td>Brute-Force-Schutz</td><td>CrowdSec beobachtet SSH- und Traefik-Logs und lässt einen Firewall-Bouncer auffällige IPs sperren, siehe <a href="docs/46-crowdsec.md">docs/46-crowdsec.md</a></td></tr>
 <tr><td>Ansible-Vault</td><td>Sensitive Secrets verschlüsselt at rest</td></tr>
 <tr><td>ArgoCD Read-only</td><td>Hat ausschließlich Read-Access auf das Git-Repo</td></tr>
+<tr><td>ArgoCD-AppProjects</td><td>Zwei Projects (<code>platform</code> / <code>workloads</code>) trennen Infrastruktur-Apps von Anwendungen mit echtem Nutzerkreis — jede App darf nur in ihren eigenen Namespace deployen, siehe <a href="docs/49-argocd-projects.md">docs/49-argocd-projects.md</a></td></tr>
 </tbody>
 </table>
 
@@ -451,6 +470,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [CrowdSec](docs/46-crowdsec.md) | Brute-Force-Schutz für SSH und Traefik, Firewall-Bouncer, Whitelist für LAN/Tailnet |
 | [Renovate](docs/47-renovate.md) | Automatische Update-PRs für Helm-Chart-Versionen und Image-Tags |
 | [Release-Automatisierung](docs/48-release-automation.md) | GitHub Release + Changelog bei jedem Merge auf `main` via semantic-release |
+| [ArgoCD-Projects](docs/49-argocd-projects.md) | Platform/Workloads-AppProject-Trennung, Ordnerstruktur, neue App hinzufügen |
 
 ---
 

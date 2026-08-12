@@ -1,0 +1,173 @@
+---
+image:
+  repository: python
+  tag: "3.12-slim"
+  pullPolicy: IfNotPresent
+
+# CronJob-Schedule (Standard: alle 120 Minuten / 2 Stunden).
+# Hinweis: "*/120" im Minuten-Feld ist KEIN gültiger Cron-Ausdruck für
+# "alle 120 Minuten" (Minuten-Feld ist auf 0-59 begrenzt) — Stunden-Feld
+# mit Schrittweite verwenden.
+schedule: "0 */2 * * *"
+timezone: "Europe/Berlin"
+# Aktiviert seit [siehe Commit] — Secrets (Zammad-Token) und Zammad-Gruppe
+# ("Capulus-Core::RepoBenachrichtigung") waren bereits für DocFlowEngine
+# geprüft; die 9 neu hinzugekommenen Self-Hosted-Apps haben notifyZammad:
+# false, erzeugen also KEINE Tickets, nur die App-Update-Liste (siehe
+# docs/25-github-release-watcher.md).
+suspend: false
+concurrencyPolicy: Forbid
+failedJobsHistoryLimit: 3
+successfulJobsHistoryLimit: 3
+
+github:
+  # Zu überwachende Repos. currentVersion ist die AKTUELL bei euch
+  # deployte Version — rein manuell gepflegt (Git als Source of Truth,
+  # gleiches Prinzip wie überall sonst in diesem Repo), MUSS nach jedem
+  # Upgrade des jeweiligen Diensts hier nachgezogen werden, sonst zeigt die
+  # App-Update-Liste falsche/veraltete Ergebnisse. Leer = "unbekannt", die
+  # App zeigt dann keinen Update-Status statt eines falschen an. Format
+  # muss zum jeweiligen tag_name-Stil des Repos passen (z. B. n8n taggt
+  # "n8n@2.33.7", nicht "v2.33.7" — vor dem Ausfüllen mit
+  # `curl https://api.github.com/repos/<owner>/<repo>/releases/latest`
+  # gegenprüfen).
+  #
+  # notifyZammad: true erzeugt bei einem neuen Release weiterhin ein
+  # Zammad-Ticket (bisheriges Verhalten, nur für DocFlowEngine aktiv);
+  # false zeigt neue Releases NUR in der App-Update-Liste.
+  repos:
+    - id: docflowengine
+      name: "DocFlowEngine"
+      repo: "pkr-lab/DocFlowEngine"
+      currentVersion: ""
+      notifyZammad: true
+    - id: nextcloud
+      name: "Nextcloud"
+      repo: "nextcloud/server"
+      # Aus argocd/apps/workloads/nextcloud/values.yaml image.tag "34.0.2-apache" —
+      # "-apache"-Suffix entfernt, "v" ergänzt (nextcloud/server taggt
+      # "vX.Y.Z", das Docker-Image "X.Y.Z-apache").
+      currentVersion: "v34.0.2"
+      notifyZammad: false
+    - id: immich
+      name: "Immich"
+      repo: "immich-app/immich"
+      # Aus argocd/apps/workloads/immich/values.yaml image.tag — Docker-Tag- und
+      # Release-Tag-Format sind hier identisch ("vX.Y.Z").
+      currentVersion: "v3.1.0"
+      notifyZammad: false
+    - id: vaultwarden
+      name: "Vaultwarden"
+      repo: "dani-garcia/vaultwarden"
+      # Aus argocd/apps/workloads/vaultwarden/values.yaml image.tag — Format
+      # identisch ("X.Y.Z", kein "v"-Präfix bei diesem Repo).
+      currentVersion: "1.37.1"
+      notifyZammad: false
+    - id: paperless-ngx
+      name: "Paperless-ngx"
+      repo: "paperless-ngx/paperless-ngx"
+      # Aus argocd/apps/workloads/paperless-ngx/values.yaml image.tag "3.0.5" — "v"
+      # ergänzt.
+      currentVersion: "v3.0.5"
+      notifyZammad: false
+    - id: mealie
+      name: "Mealie"
+      repo: "mealie-recipes/mealie"
+      # Aus argocd/apps/workloads/mealie/values.yaml image.tag — Format identisch.
+      currentVersion: "v3.22.0"
+      notifyZammad: false
+    - id: n8n
+      name: "n8n"
+      repo: "n8n-io/n8n"
+      # Aus argocd/apps/workloads/n8n/values.yaml image.tag "2.33.7-imap" (custom
+      # Image mit IMAP-Patch) — "-imap"-Suffix entfernt, n8n-io/n8n taggt
+      # im Format "n8n@X.Y.Z" (Monorepo-Stil), nicht "vX.Y.Z".
+      currentVersion: "n8n@2.33.7"
+      notifyZammad: false
+    - id: wikijs
+      name: "Wiki.js"
+      repo: "requarks/wiki"
+      # Aus argocd/apps/workloads/wikijs/values.yaml image.tag "2.5.314" — "v"
+      # ergänzt.
+      currentVersion: "v2.5.314"
+      notifyZammad: false
+    # Zammad selbst veröffentlicht keine GitHub Releases (nur Tags/eigener
+    # Changelog) — /releases/latest liefert dafür dauerhaft 404, was der
+    # Watcher bereits als "keine Releases vorhanden" behandelt (kein
+    # Fehler, taucht in der App-Liste einfach nie als "Update verfügbar"
+    # auf). Drin lassen kostet nichts, falls sich das mal ändert.
+    - id: zammad
+      name: "Zammad"
+      repo: "zammad/zammad"
+      # Aus argocd/apps/workloads/zammad/Chart.yaml appVersion (dortiges values.yaml
+      # pinnt keinen einfachen image.tag, das Zammad-Sub-Chart bringt seine
+      # Version selbst mit). Rein informativ — GitHub liefert für dieses
+      # Repo ohnehin dauerhaft 404 (s.o.), has_update bleibt also immer
+      # "unbekannt", egal was hier steht.
+      currentVersion: "7.1.1"
+      notifyZammad: false
+  # Optionaler GitHub-PAT für höheres Rate-Limit (unauthenticated: 60 req/h
+  # — mit jetzt 10 Repos bei 120-Minuten-Takt knapp, ein PAT hebt das auf
+  # 5000 req/h). Name/Key eines VORHANDENEN Secrets im Namespace — wird
+  # NICHT von diesem Chart angelegt.
+  tokenSecretName: ""
+  tokenSecretKey: token
+
+# ServiceAccount-Name von carplay-api (siehe argocd/apps/workloads/carplay-api/
+# templates/serviceaccount.yaml) — Ziel des RoleBindings in role.yaml, das
+# ihm Lesezugriff auf die Update-Status-ConfigMap dieses Namespace gibt.
+# Vor dem Deploy prüfen: `kubectl get sa -n carplay-api`.
+carplayApiServiceAccountName: "carplay-api"
+
+zammad:
+  url: "http://zammad.homeserver"
+  # Zammad-Gruppe, in der das Ticket angelegt wird. Agenten dieser Gruppe
+  # erhalten eine E-Mail, sofern ihre Profil-Benachrichtigungen für
+  # "Neues Ticket" aktiviert sind (Zammad-Standardverhalten).
+  # Bei Untergruppen erwartet der Ticket-API-Lookup den vollqualifizierten
+  # Namen mit "::" als Trenner (z.B. "ParentGruppe::Untergruppe").
+  group: "Capulus-Core::RepoBenachrichtigung"
+  # E-Mail-Adresse, die als Ticket-Anfrager (customer) gesetzt wird.
+  # MUSS vor dem Aktivieren (suspend: false) angepasst werden.
+  requesterEmail: "peterkretzer36@gmail.com"
+  tokenSecretName: github-release-watcher-zammad-token
+  tokenSecretKey: token
+
+# Sealed Secret für den Zammad-API-Token (Profile → Token Access in Zammad).
+secrets:
+  enabled: true
+  name: github-release-watcher-zammad-token
+  encryptedToken: "AgAygzToP904BRm4X1G5ubrqnAU9SHthyyRRkcZwJKfI18jjUiPdBtfchFCWyngDNaqCpPJhYxj7yklGoPg2LWNG7ic0hD1HzXf4GKgYhm88oXkcZJmfkdnwFCCGEbcMwLzgwh6lCSmXK0pyL4xu8UtNK2cy1gXRgTBp1T+KxYcL5+/AwHyBtSfoQ/98itGjBR1p/lerKmzvor7OXTKKyt9DZymKG0iZ4psAfL/oSa5l3fcb4cVEDkK5+oODBuMumShiyRQYIHXK7cSSp49B8DmwR0Y0xigFV+RXW6ZopPf5ysn9Ay7sNencD6FfuzaC55SeS5iI0gE6VZkaZSkFZRzQ6y8T+MjEVbHzDfNemC3QISWttnRIbucnvfyN/4SLFP3d4WIEOAtz/xfrQC1raAWe1MDzRRnPMcqFwFRU4YjSl6RZ1s/TT5Xq2qXfeZjYY70QVqArVEwUTokrPrMNwYkqcyTpdRgnh1W2rl6NMQabrDEwTrpOzsr/eaKpKQvWX69im1H1K+QvfA4VRm6mqDNieO8vsAgutUUNHcdJ02XL1gmqGQ1Dt1FtM7Ypu/lKrsRNsTjQTq7zsJrhrC/SoNG7osgnWSKhsUqJK9KqXySFREeX8Sm2/NbWZWoOXZ1rWvWfO6873MalXYiuz9vm0jm6twxqvUpUSuEqSa7rwM6p5B6ReLmZyif1Oy4Xj0hjN/t45KhAin+Xbbk2yxlrZEbEv24YZ5kFByfkyiXC8ysf+3ndD7aN9OsTa16yd4L84tZ0YeOh/1TkLdGG0FuXsJFo"
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  requests:
+    cpu: 5m
+    memory: 32Mi
+  limits:
+    cpu: 100m
+    memory: 64Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
