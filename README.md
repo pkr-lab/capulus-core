@@ -212,7 +212,15 @@ capulus-core/
 │   ├── 42-port-uebersicht.md         # Port-/Ingress-Übersicht aller Apps
 │   ├── 43-carplay-api.md             # Homeserver-Dashboard-API (iOS-App, inkl. power-agent)
 │   ├── 44-xibosignage.md             # Xibo CMS + Bilder-Slideshow auf Raspberry Pi 3B+
+│   ├── 46-crowdsec.md                # Brute-Force-Schutz für SSH und Traefik
+│   ├── 47-renovate.md                # Automatische Update-PRs für Helm-Charts/Images
+│   ├── 48-release-automation.md      # GitHub Release bei jedem Merge auf main
 │   └── assets/banner.svg
+├── renovate.json                     # Renovate-Konfiguration (siehe docs/47-renovate.md)
+├── .releaserc.json                   # semantic-release-Konfiguration (siehe docs/48-release-automation.md)
+├── .github/
+│   └── workflows/
+│       └── release.yml               # semantic-release bei jedem Push auf main
 ├── ansible/
 │   ├── site.yml                      # Entry-Point
 │   ├── requirements.yml              # Galaxy-Collections
@@ -221,6 +229,7 @@ capulus-core/
 │   ├── group_vars/all.yml            # Alle Knobs (vault-verschlüsselte Secrets)
 │   └── roles/
 │       ├── common/                   # Base-OS, Firewall, Pakete
+│       ├── crowdsec/                 # Brute-Force-Schutz (SSH + Traefik-Logs)
 │       ├── dnsmasq/                  # Split-DNS für *.homeserver, forwardet Rest an Pi-hole
 │       ├── tailscale/                # VPN (WireGuard-Mesh)
 │       ├── k3s/                      # Kubernetes Control-Plane + Helm
@@ -371,8 +380,9 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 <thead><tr><th>Prinzip</th><th>Umsetzung</th></tr></thead>
 <tbody>
 <tr><td>Keine öffentlichen Ports</td><td>Zugriff ausschließlich über LAN, Tailscale-VPN oder gezielt per Cloudflare Tunnel (ausgehende Verbindung, kein Port-Forwarding)</td></tr>
-<tr><td>UFW-Firewall</td><td>Erlaubt nur SSH, HTTP/HTTPS, k3s-API, ArgoCD-NodePort, Flannel, Tailscale-UDP</td></tr>
+<tr><td>UFW-Firewall</td><td>Erlaubt nur SSH, HTTP/HTTPS, k3s-API, ArgoCD-NodePort (HTTPS-only), Flannel, Tailscale-UDP</td></tr>
 <tr><td>Opt-in externe Erreichbarkeit</td><td>Nur explizit in <code>argocd/apps/cloudflared/values.yaml</code> eingetragene Dienste sind öffentlich erreichbar, alles andere bleibt intern</td></tr>
+<tr><td>Brute-Force-Schutz</td><td>CrowdSec beobachtet SSH- und Traefik-Logs und lässt einen Firewall-Bouncer auffällige IPs sperren, siehe <a href="docs/46-crowdsec.md">docs/46-crowdsec.md</a></td></tr>
 <tr><td>Ansible-Vault</td><td>Sensitive Secrets verschlüsselt at rest</td></tr>
 <tr><td>ArgoCD Read-only</td><td>Hat ausschließlich Read-Access auf das Git-Repo</td></tr>
 </tbody>
@@ -438,6 +448,9 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [Port-Übersicht](docs/42-port-uebersicht.md) | Interner Service-Port, LAN- und externe Erreichbarkeit für jede App |
 | [Homeserver-Dashboard-API](docs/43-carplay-api.md) | Go/Gin-API + power-agent für die reine-iOS-App Homeserver Dashboard (Metriken, Alerts, Status, Helligkeit, Wake/Shutdown) |
 | [xibosignage](docs/44-xibosignage.md) | Xibo CMS + Bilder-Slideshow auf Raspberry Pi 3B+, n8n-Workflow für automatisches Einspielen |
+| [CrowdSec](docs/46-crowdsec.md) | Brute-Force-Schutz für SSH und Traefik, Firewall-Bouncer, Whitelist für LAN/Tailnet |
+| [Renovate](docs/47-renovate.md) | Automatische Update-PRs für Helm-Chart-Versionen und Image-Tags |
+| [Release-Automatisierung](docs/48-release-automation.md) | GitHub Release + Changelog bei jedem Merge auf `main` via semantic-release |
 
 ---
 
