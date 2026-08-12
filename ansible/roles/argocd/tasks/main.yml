@@ -187,11 +187,12 @@
   ansible.builtin.debug:
     var: argocd_appset_apply.stdout
 
-- name: Wait for ApplicationSet to be processed
+- name: Wait for ApplicationSets to be processed
   ansible.builtin.command: >
-    kubectl get applicationsets home-server-apps
+    kubectl get applicationsets home-server-apps-{{ item }}
     --namespace {{ argocd_namespace }}
     -o jsonpath='{.status.conditions[?(@.type=="ErrorOccurred")].status}'
+  loop: ["platform", "workloads"]
   register: argocd_appset_status
   changed_when: false
   failed_when: false

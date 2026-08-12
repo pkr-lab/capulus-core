@@ -63,24 +63,31 @@ die Namespaces.
 
 ```mermaid
 flowchart TB
-    G1["Git-Generator #1<br/>argocd/apps/platform/*"] -->|"template.spec.project: platform"| APPS1["Applications<br/>(je App = eigener Namespace,<br/>wie bisher)"]
-    G2["Git-Generator #2<br/>argocd/apps/workloads/*"] -->|"template.spec.project: workloads"| APPS2["Applications<br/>(je App = eigener Namespace,<br/>wie bisher)"]
+    AS1["ApplicationSet home-server-apps-platform<br/>Generator: argocd/apps/platform/*<br/>spec.project: platform (fest codiert)"] --> APPS1["Applications<br/>(je App = eigener Namespace,<br/>wie bisher)"]
+    AS2["ApplicationSet home-server-apps-workloads<br/>Generator: argocd/apps/workloads/*<br/>spec.project: workloads (fest codiert)"] --> APPS2["Applications<br/>(je App = eigener Namespace,<br/>wie bisher)"]
     APPS1 --> PP["AppProject platform<br/>destinations: nur Platform-Namespaces"]
     APPS2 --> PW["AppProject workloads<br/>destinations: nur Workload-Namespaces"]
 ```
 
-Ein `ApplicationSet` mit **zwei Git-Generatoren** statt einem: jeder
-Generator scannt nur seinen eigenen Tier-Ordner und trägt per
-Generator-Level-`template`-Override das passende `project` ein. Der
-gemeinsame Top-Level-`template`-Block (Name, `source.path`,
-`destination.namespace`, `ignoreDifferences`, `syncPolicy`) bleibt für beide
-Generatoren identisch — nur `spec.project` unterscheidet sich.
+**Zwei komplett getrennte `ApplicationSet`-Ressourcen** (`home-server-apps-platform`,
+`home-server-apps-workloads`) statt einer einzigen mit zwei Generatoren.
+Jede ist strukturell identisch zur ursprünglichen, einzelnen
+`home-server-apps` — nur der Directory-Glob und der literale `project:`-Wert
+unterscheiden sich.
 
-**Warum nicht das Project aus dem Pfad ableiten** (z. B.
-`{{(splitList "/" .path.path) | index 2}}`)? Funktioniert vermutlich auch,
-aber macht die Vorlage von Sprig-Funktionsverfügbarkeit und exakter
-Pfadsegment-Indizierung abhängig — zwei Generatoren mit je einem simplen,
-literalen `project:`-Wert sind weniger fehleranfällig und leichter zu lesen.
+> **Zwei verworfene Ansätze, damit niemand sie nochmal versucht:**
+> 1. *Eine* ApplicationSet mit zwei Git-Generatoren, die je einen
+>    `template.spec.project`-Override tragen. `spec.generators[].template`
+>    existiert auf der installierten ApplicationSet-CRD schlicht nicht
+>    außerhalb von `matrix`/`merge`-Generatoren — `kubectl apply` wurde mit
+>    `unknown field spec.generators[0].template` abgelehnt (strict decoding,
+>    kein Teil-Apply, der Cluster blieb unverändert).
+> 2. *Eine* ApplicationSet, die `spec.project` per Go-Template aus dem Pfad
+>    ableitet (`{{(splitList "/" .path.path) | index 2}}`, Sprig-Funktionen).
+>    Syntaktisch gültig, aber nie gegen den echten ApplicationSet-Controller
+>    verifiziert — nicht das Risiko wert, wenn zwei unabhängige, strukturell
+>    bereits bewiesene ApplicationSets (dieser Ansatz) ganz ohne unsichere
+>    Templating-Features auskommen.
 
 Quelle:
 [`ansible/roles/argocd/templates/bootstrap-applicationset.yaml.j2`](../ansible/roles/argocd/templates/bootstrap-applicationset.yaml.j2)
@@ -142,10 +149,31 @@ blockiert.
 
 Diese Umstrukturierung ändert **keine** Kubernetes-Ressourcen (keine PVCs,
 keine Secrets, keine Pods bewegen sich) — `destination.namespace` bleibt für
-jede App exakt wie vorher. ArgoCD erkennt beim nächsten Sync lediglich einen
-geänderten `source.path` pro (unverändert benannter) Application und synct
-denselben Inhalt von einem neuen Pfad aus. Trotzdem: nach dem Merge auf
-`main` einmal `kubectl get applications -n argocd` prüfen, ob alle 36 Apps
-weiterhin `Synced`/`Healthy` sind, und `make argocd` laufen lassen, damit die
-AppProjects + das Namespace-Label auch tatsächlich angewendet werden (siehe
-[docs/05-argocd.md](05-argocd.md) für den vollen Befehlsablauf).
+jede App exakt wie vorher. Trotzdem ist die Reihenfolge beim Umschalten
+wichtig, weil beide Git-Generatoren (alt wie neu) fest gegen
+`revision: main` scannen — **nicht** gegen den gerade lokal ausgecheckten
+Branch:
+
+1. **Erst `feat-update-security` nach `main` mergen.** Vor dem Merge findet
+   der neue Generator-Pfad (`argocd/apps/platform/*` /
+   `argocd/apps/workloads/*`) auf `main` noch nichts — ein `make argocd` vor
+   dem Merge legt zwar gefahrlos zwei neue, aber leere ApplicationSets an
+   (0 Apps gefunden), während die alte `home-server-apps` unangetastet
+   weiterläuft und alle 36 Apps von der alten Struktur auf `main` sync.
+2. **Danach `make argocd` laufen lassen** — legt `home-server-apps-platform`
+   und `home-server-apps-workloads` an bzw. aktualisiert sie, wendet beide
+   AppProjects an, labelt die Namespaces.
+3. **Verifizieren:** `kubectl get applications -n argocd` — alle 36 Apps
+   sollten `Synced`/`Healthy` sein, jetzt im jeweils richtigen AppProject
+   (`kubectl get applications -n argocd -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.project}{"\n"}{end}'`).
+4. **Erst danach die alte ApplicationSet manuell löschen:**
+   `kubectl -n argocd delete applicationset home-server-apps`. Nicht vorher
+   — sie ist bis Schritt 3 die einzige Quelle, die die 36 Applications aktiv
+   hält.
+5. Wurde bei Schritt 1 die Reihenfolge vertauscht (Merge vor Anwenden der
+   AppProjects) und die alte ApplicationSet ist bereits weg, bevor die neuen
+   etwas gefunden haben: nicht in Panik geraten — die von ArgoCD verwalteten
+   Kubernetes-Ressourcen (Deployments, Services, PVCs, …) hängen nicht per
+   `ownerReference` an der Application-Ressource, ein kurzzeitig fehlendes
+   Application-Objekt löscht keine laufenden Pods. `make argocd` erneut
+   laufen lassen stellt die Applications wieder her.
