@@ -52,12 +52,17 @@ banana_pi_kiosk_failover_fail_threshold: 3
 # verwalteten Pfad laeuft).
 banana_pi_kiosk_failover_recover_threshold: 1
 
-# ---- Taeglicher automatischer Neustart -----------------------------------
-# Unbeaufsichtigtes Kiosk-Geraet — ein taeglicher Reboot raeumt Chromium-
-# Prozesszustand/Speicher auf, unabhaengig von der Absturzschleifen-Ursache.
-# Kill-switch: auf false setzen, um den Reboot-Timer zu deaktivieren.
+# ---- Taeglicher Kiosk-Session-Neustart ------------------------------------
+# Unbeaufsichtigtes Kiosk-Geraet — ein taeglicher Neustart der tty1-Session
+# (getty@tty1 -> startx -> X/openbox/Chromium) raeumt Chromium-Prozess-
+# zustand/Speicher auf, unabhaengig von der Absturzschleifen-Ursache. Bewusst
+# KEIN Kernel-/Firmware-Reboot (systemctl reboot / /usr/sbin/reboot) — auf
+# diesem Board (Armbian "Community Supported") ist der Warm-Reset-Pfad
+# unzuverlaessig, siehe Kommentar in
+# templates/banana-pi-daily-reboot.service.j2. Kill-switch: auf false setzen,
+# um den Timer zu deaktivieren.
 banana_pi_kiosk_daily_reboot_enabled: true
 
 # Uhrzeit (systemd OnCalendar-Zeitformat, lokale Zeit des Pi) fuer den
-# taeglichen Neustart.
+# taeglichen Kiosk-Session-Neustart.
 banana_pi_kiosk_daily_reboot_time: "00:00:00"

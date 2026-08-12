@@ -133,7 +133,7 @@ Rollen, in dieser Reihenfolge (siehe `ansible/banana-pi-kiosks.yml`):
 | `tailscale` | Netzwerk-Anbindung (siehe oben) — läuft zuerst, alles Weitere braucht ggf. schon `*.homeserver` |
 | `node_exporter` | Metriken-Quelle (Port 9100, nur lokal) |
 | `vmagent` | Pusht die Metriken aktiv an den Cluster (siehe [Grafana](#grafana-push-statt-pull)) |
-| `banana_pi_kiosk` | X11-Autologin, Chromium-Kiosk, Server-Fallback-Supervisor, Heartbeat, täglicher Neustart um 00:00 Uhr |
+| `banana_pi_kiosk` | X11-Autologin, Chromium-Kiosk, Server-Fallback-Supervisor, Heartbeat, täglicher Kiosk-Session-Neustart um 00:00 Uhr (kein Kernel-Reboot, siehe Kommentar in `banana-pi-daily-reboot.service.j2` — Warm-Reset auf diesem Board unzuverlässig) |
 | `thermal_watchdog` | Selbstschutz bei Übertemperatur (gleiches Bundling wie bei den Alamos-Pis) |
 | `resource_watchdog` | Selbstschutz bei CPU/RAM-Sättigung |
 

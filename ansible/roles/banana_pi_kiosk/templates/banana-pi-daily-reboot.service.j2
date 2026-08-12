@@ -1,7 +1,17 @@
 # Managed by Ansible (banana_pi_kiosk role) — do not edit manually.
+#
+# Bewusst KEIN /usr/sbin/reboot (voller Kernel-Neustart): auf diesem Board
+# (Banana Pi M2 Ultra, Armbian "Community Supported", siehe
+# docs/45-vereinsheim-alarmmonitor.md) ist der Warm-Reset-Pfad unzuverlaessig
+# -- der Pi ist nach einem echten Reboot einmal komplett aus geblieben und
+# war nur noch per physischem Stromzyklus wieder zu erreichen (Vereinsheim
+# haengt nur per Tailscale dran, kein LAN-Fallback). Stattdessen wird nur
+# die tty1-Session (getty -> startx -> X/openbox/Chromium) durchgestartet --
+# raeumt Chromium-Prozesszustand/Speicher genauso auf, ohne das Kernel-/
+# Firmware-Risiko.
 [Unit]
-Description=Taeglicher automatischer Neustart (Banana-Pi-Alarmmonitor)
+Description=Taeglicher Kiosk-Session-Neustart (Banana-Pi-Alarmmonitor)
 
 [Service]
 Type=oneshot
-ExecStart=/usr/sbin/reboot
+ExecStart=/usr/bin/systemctl restart getty@tty1.service
