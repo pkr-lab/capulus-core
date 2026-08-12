@@ -46,7 +46,7 @@ kurzen Timeout (VictoriaMetrics 3s, ntfy/Kuma je 2s). Fällt eine Quelle
 aus, liefert `/api/dashboard` trotzdem `200` mit den übrigen Spalten
 gefüllt und der ausgefallenen Spalte leer/auf 0 — siehe
 Quellcode-Kommentare in
-`argocd/apps/carplay-api/src/internal/handlers/dashboard.go`. Metriken
+`argocd/apps/workloads/carplay-api/src/internal/handlers/dashboard.go`. Metriken
 kommen pro Host (`hosts[]` im Payload, siehe `config.hosts` in
 `values.yaml`), nicht mehr als ein einziger Flotten-Durchschnitt — ein
 Host, der gerade aus ist, taucht mit `online: false` auf, alle
@@ -85,7 +85,7 @@ Setup: `power_agent` läuft in `site.yml` direkt nach
 `cluster_power_manager` (`make power-agent` für einen gezielten
 Re-Deploy). Beim ersten Rollout erzeugt die Rolle ein Bearer-Token unter
 `/etc/power-agent/token` auf dem Homeserver — dieser Wert muss danach
-manuell in `argocd/apps/carplay-api/values.yaml` unter
+manuell in `argocd/apps/workloads/carplay-api/values.yaml` unter
 `secrets.powerAgentToken` versiegelt werden (kubeseal), siehe Kommentar
 dort. Ohne passendes Secret bekommt die App dauerhaft `502` auf
 Helligkeit/Wake/Shutdown, der Rest des Dashboards bleibt aber nutzbar.
@@ -146,7 +146,7 @@ funktioniert hätte), wurde angepasst:
      --cert ~/homelab-certs/sealed-secrets.pem --from-file=/dev/stdin
    ```
 
-   Das Ergebnis in `argocd/apps/carplay-api/values.yaml` unter
+   Das Ergebnis in `argocd/apps/workloads/carplay-api/values.yaml` unter
    `secrets.apiToken.encryptedData` eintragen. `$TOKEN` selbst geht in die
    iOS-App (Keychain, siehe `ios/README.md`) — nie ins Git.
 
@@ -223,8 +223,8 @@ Kein GitHub Actions in diesem Repo — Image-Builds laufen über das
 argo submit --from workflowtemplate/kaniko-build-push \
   -p repo=https://github.com/pkr-lab/capulus-core.git \
   -p revision=main \
-  -p context=argocd/apps/carplay-api \
-  -p dockerfile=argocd/apps/carplay-api/Dockerfile \
+  -p context=argocd/apps/workloads/carplay-api \
+  -p dockerfile=argocd/apps/workloads/carplay-api/Dockerfile \
   -p image=ghcr.io/<dein-gh-username>/carplay-api:latest
 ```
 
@@ -257,8 +257,8 @@ Vier unabhängige Schichten, keine davon mTLS (siehe oben):
 
 ## Konfiguration (values.yaml)
 
-Vollständige Liste + Defaults: `argocd/apps/carplay-api/values.yaml`
-(kommentiert) und `argocd/apps/carplay-api/README.md` (Env-Var-Tabelle).
+Vollständige Liste + Defaults: `argocd/apps/workloads/carplay-api/values.yaml`
+(kommentiert) und `argocd/apps/workloads/carplay-api/README.md` (Env-Var-Tabelle).
 Die wichtigsten:
 
 | Key | Bedeutung |

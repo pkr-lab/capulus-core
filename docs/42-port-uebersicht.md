@@ -20,7 +20,7 @@ Wichtig: **cloudflared braucht keinen Port-Forward am Router.** Der Tunnel
 baut die Verbindung von innen nach außen auf (siehe
 [docs/22-cloudflare-tunnel.md](22-cloudflare-tunnel.md)). Welche Hostnamen
 extern erreichbar sind, steht ausschließlich in
-`argocd/apps/cloudflared/values.yaml` (`ingress.rules`) — nicht jede App mit
+`argocd/apps/platform/cloudflared/values.yaml` (`ingress.rules`) — nicht jede App mit
 LAN-Ingress ist automatisch auch extern erreichbar.
 
 Node-IP von `homeserver`: `192.168.178.94`. Traefik-LoadBalancer-IP (MetalLB):
@@ -62,7 +62,7 @@ Alle `*.homeserver`-Hosts laufen über Traefik auf `192.168.178.200:80` (bzw.
 `:443` mit TLS, sofern konfiguriert) — kein individueller Port pro App nötig,
 Traefik routet per Host-Header. Alle `*.pke-lab.de`-Hosts laufen über den
 Cloudflare Tunnel direkt auf den jeweiligen Service (an Traefik vorbei), siehe
-`argocd/apps/cloudflared/values.yaml`.
+`argocd/apps/platform/cloudflared/values.yaml`.
 
 ---
 
@@ -126,7 +126,7 @@ Tunnel-Client, baut die Verbindung ausschließlich nach außen auf.
 | Ich will ändern... | Datei |
 |---|---|
 | LAN-Hostname (`*.homeserver`) einer App | `argocd/apps/<app>/values.yaml` → `ingress.hosts[].host` |
-| Externe Erreichbarkeit (`*.pke-lab.de`) hinzufügen/entfernen | `argocd/apps/cloudflared/values.yaml` → `ingress.rules` |
+| Externe Erreichbarkeit (`*.pke-lab.de`) hinzufügen/entfernen | `argocd/apps/platform/cloudflared/values.yaml` → `ingress.rules` |
 | Internen Service-Port einer App | `argocd/apps/<app>/values.yaml` → `service.port`/`targetPort` (Chart-abhängig) |
 | NodePort (Pi-hole DNS, MediaMTX Publish) | `argocd/apps/<app>/values.yaml` → `service.nodePort`/`publishService.ports.*.nodePort` — danach ggf. UFW-Regel auf neuen Port anpassen |
 | ArgoCD-Zugriffsport | `argocd/apps/argocd`-Bootstrap bzw. Helm-Values des ArgoCD-Charts selbst (nicht Teil der App-Wrapper-Charts) |

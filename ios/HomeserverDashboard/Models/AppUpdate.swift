@@ -2,8 +2,9 @@ import Foundation
 
 /// One watched repo's update status. Mirrors `models.AppUpdate` /
 /// `models.UpdatesResponse` in carplay-api, itself sourced from github-
-/// release-watcher's updates ConfigMap (argocd/apps/github-release-
-/// watcher). Optional fields are nil when unknown — e.g. `hasUpdate` stays
+/// release-watcher's updates ConfigMap
+/// (argocd/apps/workloads/github-release-watcher). Optional fields are nil
+/// when unknown — e.g. `hasUpdate` stays
 /// nil (not false) whenever `currentVersion` hasn't been filled in on the
 /// backend, so the UI can show "unbekannt" instead of a false "aktuell".
 struct AppUpdate: Codable, Identifiable, Equatable {

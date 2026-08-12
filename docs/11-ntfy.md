@@ -40,7 +40,7 @@ Das `upstream-base-url: https://ntfy.sh` in der Konfiguration aktiviert diesen R
 ArgoCD deployt ntfy automatisch sobald der Branch auf `main` gemergt ist:
 
 ```
-argocd/apps/ntfy/
+argocd/apps/platform/ntfy/
 ├── Chart.yaml
 ├── values.yaml
 └── templates/

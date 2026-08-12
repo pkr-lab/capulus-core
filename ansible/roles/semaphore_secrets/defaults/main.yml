@@ -7,7 +7,7 @@
 semaphore_namespace: semaphore
 
 # Name of the Secret consumed by the Semaphore Deployment
-# (must match `bootstrapSecretName` in argocd/apps/semaphore/values.yaml).
+# (must match `bootstrapSecretName` in argocd/apps/platform/semaphore/values.yaml).
 semaphore_bootstrap_secret_name: semaphore-bootstrap
 
 # Local directory on the home-server where generated material persists

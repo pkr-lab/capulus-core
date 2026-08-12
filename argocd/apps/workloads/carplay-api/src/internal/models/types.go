@@ -60,7 +60,7 @@ type DashboardResponse struct {
 }
 
 // AppUpdate is one watched repo's update status, sourced from github-
-// release-watcher's updates ConfigMap (argocd/apps/github-release-watcher).
+// release-watcher's updates ConfigMap (argocd/apps/workloads/github-release-watcher).
 // Pointer fields are nil when unknown — e.g. CurrentVersion is nil until
 // someone fills in config.services entries' currentVersion in that chart's
 // values.yaml, and HasUpdate stays nil (not false) whenever it can't be

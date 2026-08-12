@@ -5,7 +5,7 @@
 # ============================================================
 #
 # Provisioniert die Raspberry-Pi-Alarmmonitore: Chromium-Kiosk gegen
-# argocd/apps/alamos-apager (zentrale Stations-URL + Heartbeat-Alerting),
+# argocd/apps/workloads/alamos-apager (zentrale Stations-URL + Heartbeat-Alerting),
 # plus Thermal-/Resource-Watchdog (unbeaufsichtigte Geraete, gleiches
 # Bundling wie worker-0 in ansible/homeserver2.yml).
 #

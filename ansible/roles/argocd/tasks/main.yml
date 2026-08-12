@@ -147,6 +147,25 @@
       - "=================================================="
   when: argocd_show_initial_password | default(false) | bool
 
+# ---- Bootstrap AppProjects (must exist before the ApplicationSet syncs) ----
+# Applications referencing a project that doesn't exist yet fail sync, so
+# these are applied before the ApplicationSet below.
+- name: Template bootstrap AppProjects
+  ansible.builtin.template:
+    src: bootstrap-appprojects.yaml.j2
+    dest: /tmp/argocd-bootstrap-appprojects.yaml
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Apply bootstrap AppProjects
+  ansible.builtin.command: >
+    kubectl apply -f /tmp/argocd-bootstrap-appprojects.yaml
+  register: argocd_appprojects_apply
+  changed_when: "'created' in argocd_appprojects_apply.stdout or 'configured' in argocd_appprojects_apply.stdout"
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
 # ---- Bootstrap ApplicationSet ------------------------------
 - name: Template bootstrap ApplicationSet
   ansible.builtin.template:
@@ -195,6 +214,32 @@
 - name: Display Applications
   ansible.builtin.debug:
     msg: "{{ argocd_apps_list.stdout_lines | default(['No applications found yet — ArgoCD is polling Git']) }}"
+
+# ---- Namespace security-tier labels -------------------------
+# Best-effort: on a brand-new namespace, ArgoCD only creates it once the
+# ApplicationSet has actually synced that Application (can lag behind this
+# playbook run, see docs/49-argocd-projects.md). `failed_when: false` so a
+# not-yet-existing namespace doesn't fail the whole play — re-running
+# `make argocd` later catches up on any it missed.
+- name: Label platform-tier namespaces with security-tier=platform
+  ansible.builtin.command: >
+    kubectl label namespace {{ item }} security-tier=platform --overwrite
+  loop: "{{ argocd_platform_apps }}"
+  register: argocd_platform_label
+  changed_when: "'labeled' in argocd_platform_label.stdout"
+  failed_when: false
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+- name: Label workloads-tier namespaces with security-tier=workload
+  ansible.builtin.command: >
+    kubectl label namespace {{ item }} security-tier=workload --overwrite
+  loop: "{{ argocd_workloads_apps }}"
+  register: argocd_workloads_label
+  changed_when: "'labeled' in argocd_workloads_label.stdout"
+  failed_when: false
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
 
 # ---- Clean up temp files -----------------------------------
 - name: Remove temporary Helm values file

@@ -9,7 +9,7 @@
 # anders als Übertemperatur keine unmittelbare Hardware-Gefahr ist. Die
 # reinen Warnschwellen (80% CPU, 70% RAM, 70% Disk) laufen separat über
 # VMRule/Alertmanager
-# (argocd/apps/monitoring/templates/vmrule-resources.yaml).
+# (argocd/apps/platform/monitoring/templates/vmrule-resources.yaml).
 # ============================================================
 
 - name: Deploy resource watchdog script

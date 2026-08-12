@@ -17,12 +17,13 @@ import (
 // binary otherwise has zero Kubernetes API surface, see docs/43-carplay-
 // api.md "power-agent" section on why it stays unprivileged). Mirrors the
 // same minimal approach github-release-watcher's Python watcher already
-// uses for its own state ConfigMap (argocd/apps/github-release-watcher/
+// uses for its own state ConfigMap (argocd/apps/workloads/github-release-watcher/
 // templates/configmap.yaml).
 //
 // Needs the RoleBinding granting this pod's ServiceAccount `get` on that
-// specific ConfigMap in its namespace — see argocd/apps/github-release-
-// watcher/templates/role.yaml ("...-updates-reader").
+// specific ConfigMap in its namespace — see
+// argocd/apps/workloads/github-release-watcher/templates/role.yaml
+// ("...-updates-reader").
 type K8sConfigMapClient struct {
 	apiServer  string
 	token      string

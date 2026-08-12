@@ -54,7 +54,7 @@ securityContext:
 # Interner Service — HLS-Playback + WebRTC + API/Metrics. Nur Cluster-intern
 # per ClusterIP erreichbar; welche Ports zusätzlich extern (Traefik-Ingress,
 # Cloudflare Tunnel) freigegeben werden, steuert ausschließlich `ingress`
-# unten bzw. `argocd/apps/cloudflared/values.yaml`.
+# unten bzw. `argocd/apps/platform/cloudflared/values.yaml`.
 service:
   type: ClusterIP
   ports:
@@ -81,7 +81,7 @@ publishService:
 
 # Ingress für Browser-Playback — sowohl intern (stream.homeserver) als auch
 # extern über den Cloudflare Tunnel (stream.pke-lab.de, siehe
-# argocd/apps/cloudflared/values.yaml). Absicherung läuft komplett über
+# argocd/apps/platform/cloudflared/values.yaml). Absicherung läuft komplett über
 # mediamtx' eigene interne Auth (siehe `auth` unten) — der Browser bekommt
 # beim Öffnen einen normalen HTTP-Basic-Auth-Dialog von mediamtx selbst,
 # kein externer Identity-Provider nötig. Details: docs/24-mediamtx.md.

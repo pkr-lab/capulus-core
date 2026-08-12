@@ -24,7 +24,7 @@
 | Copy+Rename | `ansible/roles/day_pilot/` (von ugreen-paperless/roles/day-pilot) |
 | Create | `ansible/ugreen-nas.yml` |
 | Modify | `Makefile` |
-| Create | `argocd/apps/monitoring/ugreen-nas-scrape.yaml` |
+| Create | `argocd/apps/platform/monitoring/ugreen-nas-scrape.yaml` |
 | Modify | `ansible/group_vars/all.yml` |
 | Modify | `CLAUDE.md` |
 
@@ -443,13 +443,13 @@ git commit -m "feat(nas): add make nas and nas-check targets"
 ## Task 9: NAS-Monitoring in k8s-Stack integrieren
 
 **Files:**
-- Create: `argocd/apps/monitoring/ugreen-nas-scrape.yaml`
+- Create: `argocd/apps/platform/monitoring/ugreen-nas-scrape.yaml`
 
 VMAgent (via victoria-metrics-k8s-stack) hat `selectAllByDefault: true` und picked `VMStaticScrape`-CRDs aus allen Namespaces automatisch auf.
 
 - [ ] **Schritt 1: VMStaticScrape-Manifest erstellen**
 
-Erstelle `argocd/apps/monitoring/ugreen-nas-scrape.yaml`:
+Erstelle `argocd/apps/platform/monitoring/ugreen-nas-scrape.yaml`:
 
 ```yaml
 ---
@@ -485,7 +485,7 @@ spec:
 - [ ] **Schritt 2: YAML-Lint**
 
 ```bash
-yamllint -c .yamllint argocd/apps/monitoring/ugreen-nas-scrape.yaml
+yamllint -c .yamllint argocd/apps/platform/monitoring/ugreen-nas-scrape.yaml
 ```
 
 Erwartung: Keine Fehler.
@@ -493,7 +493,7 @@ Erwartung: Keine Fehler.
 - [ ] **Schritt 3: Committen**
 
 ```bash
-git add argocd/apps/monitoring/ugreen-nas-scrape.yaml
+git add argocd/apps/platform/monitoring/ugreen-nas-scrape.yaml
 git commit -m "feat(monitoring): add VMStaticScrape for ugreen-nas node-exporter and cadvisor"
 ```
 

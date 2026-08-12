@@ -24,7 +24,7 @@ power_agent_port: 9101
 # Bearer-Token wird beim ersten Rollout einmalig mit `openssl rand -hex 32`
 # erzeugt und lokal unter diesem Pfad abgelegt (siehe tasks/main.yml) —
 # nicht hier als Variable gesetzt, weil derselbe Wert danach manuell in
-# argocd/apps/carplay-api/values.yaml (secrets.powerAgentToken) versiegelt
+# argocd/apps/workloads/carplay-api/values.yaml (secrets.powerAgentToken) versiegelt
 # werden muss. Siehe docs/43-carplay-api.md "power-agent".
 power_agent_token_path: /etc/power-agent/token
 

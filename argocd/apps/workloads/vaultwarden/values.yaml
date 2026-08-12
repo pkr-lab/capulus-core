@@ -67,7 +67,7 @@ persistence:
 env:
   # Öffentliche Basis-URL — wird von Vaultwarden für Links (E-Mails, Icons,
   # U2F/WebAuthn-Origin-Check) genutzt. Muss zur extern erreichbaren Domain
-  # passen (siehe argocd/apps/cloudflared/values.yaml).
+  # passen (siehe argocd/apps/platform/cloudflared/values.yaml).
   DOMAIN: "https://vault.pke-lab.de"
   # Seit Vaultwarden 1.30 läuft der Websocket-Server auf demselben Port wie
   # die HTTP-API — kein separater Port/Service nötig.

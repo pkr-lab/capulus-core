@@ -23,7 +23,7 @@ import (
 
 // VictoriaMetricsClient queries a Prometheus-API-compatible VictoriaMetrics
 // instance (single-node vmsingle in this cluster, see
-// argocd/apps/monitoring/).
+// argocd/apps/platform/monitoring/).
 type VictoriaMetricsClient struct {
 	baseURL    string
 	httpClient *http.Client
@@ -202,7 +202,7 @@ type ServiceConfig struct {
 }
 
 // GetServiceActivity approximates "how busy is each self-hosted app right
-// now" from Traefik's request-rate metric (see argocd/apps/traefik-config)
+// now" from Traefik's request-rate metric (see argocd/apps/platform/traefik-config)
 // — this is request volume, NOT distinct users; Traefik has no concept of
 // who's behind a request. Returns one entry per configured service,
 // RequestsPerSecond 0 for any service whose Match substring doesn't appear

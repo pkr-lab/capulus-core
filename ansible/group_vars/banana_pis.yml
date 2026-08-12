@@ -47,5 +47,5 @@ tailscale_auth_key: !vault |
 # schickt ein lokaler vmagent die Metriken selbst per remote_write raus,
 # ueber denselben Weg (Traefik auf dem Home-Server, per Tailscale Split-DNS
 # + Route erreichbar), den der Kiosk-Browser ohnehin schon braucht. Siehe
-# ansible/roles/vmagent und argocd/apps/monitoring/templates/ingress-vm-write.yaml.
+# ansible/roles/vmagent und argocd/apps/platform/monitoring/templates/ingress-vm-write.yaml.
 vmagent_remote_write_url: "http://vm-write.homeserver/api/v1/write"
