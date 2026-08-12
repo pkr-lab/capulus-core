@@ -17,6 +17,8 @@
   roles:
     - role: common
       tags: [common, base]
+    - role: crowdsec
+      tags: [crowdsec, security]
     - role: dnsmasq
       tags: [dnsmasq, dns]
     - role: tailscale
