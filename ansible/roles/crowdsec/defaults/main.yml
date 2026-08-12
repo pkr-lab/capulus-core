@@ -1,0 +1,15 @@
+---
+# Collections to install from the CrowdSec Hub. "sshd" covers SSH
+# brute-force, "linux" is the generic base collection it depends on,
+# "traefik" parses Traefik access logs for scan/bruteforce patterns
+# (see docs/46-crowdsec.md for the log-path caveat).
+crowdsec_collections:
+  - crowdsecurity/sshd
+  - crowdsecurity/linux
+  - crowdsecurity/traefik
+
+# Glob for Traefik's container log file on the host filesystem (containerd
+# CRI log layout via k3s). Verify after rollout — see
+# docs/46-crowdsec.md#traefik-log-verifizieren — and override in
+# ansible/group_vars/all.yml if it doesn't match anything.
+crowdsec_traefik_log_glob: "/var/log/containers/*traefik*.log"

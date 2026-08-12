@@ -30,9 +30,12 @@ check: ## Dry-run the full playbook (no changes applied).
 install: deps ## Provision the home server end-to-end.
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) $(VAULT_OPTS)
 
-.PHONY: common dnsmasq tailscale k3s k3s-agent argocd semaphore semaphore-targets semaphore-bootstrap semaphore-bootstrap-local worker-0 worker-0-check worker-1 worker-1-check cluster-power-manager power-agent cups-print-server
+.PHONY: common crowdsec dnsmasq tailscale k3s k3s-agent argocd semaphore semaphore-targets semaphore-bootstrap semaphore-bootstrap-local worker-0 worker-0-check worker-1 worker-1-check cluster-power-manager power-agent cups-print-server
 common: ## Run only the `common` role (base OS, firewall, packages).
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags common $(VAULT_OPTS)
+
+crowdsec: ## Run only the `crowdsec` role (SSH + Traefik brute-force protection).
+	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags crowdsec $(VAULT_OPTS)
 
 dnsmasq: ## Run only the `dnsmasq` role (split-DNS for *.homeserver).
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags dnsmasq $(VAULT_OPTS)
