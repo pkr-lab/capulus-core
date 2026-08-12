@@ -7,7 +7,7 @@
 # Temperatur zu lange zu hoch bleibt. Läuft bewusst unabhängig vom
 # Cluster, damit der Schutz auch greift, wenn der Cluster wegen der
 # Hitze schon klemmt. Ergänzt den Grafana/Alertmanager-Alert ab 80°C
-# (argocd/apps/monitoring/templates/vmrule-temperature.yaml), der
+# (argocd/apps/platform/monitoring/templates/vmrule-temperature.yaml), der
 # parallel über Gotify/ntfy warnt.
 # ============================================================
 

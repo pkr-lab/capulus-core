@@ -116,24 +116,41 @@ kubectl apply -f repo-secret.yaml
 ## ApplicationSet-Struktur
 
 Das Bootstrap-`ApplicationSet` (`argocd/bootstrap/root-applicationset.yaml`) nutzt
-den Git-Directory-Generator, um aus Unterverzeichnissen automatisch
-ArgoCD-Applications zu erzeugen.
+**zwei** Git-Directory-Generatoren — einen pro Namespace-Tier (Platform/
+Workloads, siehe [docs/49-argocd-projects.md](49-argocd-projects.md)) — um aus
+Unterverzeichnissen automatisch ArgoCD-Applications zu erzeugen.
 
 ```yaml
 generators:
   - git:
       repoURL: https://github.com/pkr-lab/capulus-core.git
-      revision: HEAD
+      revision: main
       directories:
-        - path: "argocd/apps/*"
+        - path: "argocd/apps/platform/*"
+    template:
+      spec:
+        project: platform
+  - git:
+      repoURL: https://github.com/pkr-lab/capulus-core.git
+      revision: main
+      directories:
+        - path: "argocd/apps/workloads/*"
+    template:
+      spec:
+        project: workloads
 ```
 
 **Funktionsweise:**
 
-- ArgoCD scannt `argocd/apps/` im Git-Repo.
+- ArgoCD scannt `argocd/apps/platform/` und `argocd/apps/workloads/` im
+  Git-Repo (getrennt, je Generator).
 - Jedes Unterverzeichnis wird zu einer ArgoCD-**Application**.
-- Application-Name = Verzeichnisname.
-- Ziel-Namespace = Verzeichnisname.
+- Application-Name = Verzeichnisname der App (nicht des Tiers).
+- Ziel-Namespace = Verzeichnisname der App — **die zusätzliche
+  Tier-Ebene ändert nichts an Namespaces**, nur an der Pfadstruktur in Git.
+- AppProject = `platform` bzw. `workloads`, je nachdem welcher Generator die
+  App gefunden hat (siehe [docs/49-argocd-projects.md](49-argocd-projects.md)
+  für die Details der AppProject-`destinations`).
 - ArgoCD synct den Inhalt des Verzeichnisses in den Cluster.
 
 **Beispielhafte Verzeichnis-Struktur** (Auszug — vollständige, aktuell gepflegte
@@ -141,24 +158,29 @@ Liste aller Apps: [README.md → Repository-Layout](../README.md#repository-layo
 
 ```
 argocd/apps/
-├── example-whoami/      → Referenz-Helm-Chart als Wiring-Test
-├── gotify/              → Push-Notification-Server (Android/iOS-Client)
-├── headlamp/            → Web-basiertes Kubernetes-Dashboard
-├── kubeseal-webgui/     → Browser-UI, die Werte mit dem
-│                          SealedSecrets-Public-Key des Clusters verschlüsselt
-├── monitoring/          → VictoriaMetrics + Grafana + node-exporter +
-│                          kube-state-metrics + Alertmanager
-├── sealed-secrets/      → bitnami-labs SealedSecrets-Controller
-│                          (entschlüsselt SealedSecret-CRDs zu Secrets)
-├── semaphore/           → Web-UI zum Ausführen von Ansible-Playbooks
-└── ...                  → und viele weitere, siehe README.md
+├── platform/             → Schicht-3-Plattformdienste (AppProject: platform)
+│   ├── authentik/        → Zentrale Anmeldung, Identity Provider
+│   ├── kubeseal-webgui/  → Browser-UI, die Werte mit dem
+│   │                        SealedSecrets-Public-Key des Clusters verschlüsselt
+│   ├── monitoring/       → VictoriaMetrics + Grafana + node-exporter +
+│   │                        kube-state-metrics + Alertmanager
+│   ├── sealed-secrets/   → bitnami-labs SealedSecrets-Controller
+│   │                        (entschlüsselt SealedSecret-CRDs zu Secrets)
+│   └── ...               → und weitere, siehe README.md
+└── workloads/            → Schicht-4-Anwendungen (AppProject: workloads)
+    ├── example-whoami/   → Referenz-Helm-Chart als Wiring-Test
+    ├── vaultwarden/      → Bitwarden-kompatibler Passwort-Manager
+    ├── zammad/           → Helpdesk/Ticket-System
+    └── ...               → und weitere, siehe README.md
 ```
 
 Jedes Verzeichnis wird zu einer `Application` mit gleichem Namen und Namespace.
-Eine neue App ist drei Schritte entfernt: Verzeichnis unter `argocd/apps/<name>/`
-anlegen (plain Manifests, `kustomization.yaml` **oder** Helm-Chart mit
-`Chart.yaml` + `values.yaml`), committen, pushen — ArgoCD greift in
-~3 Minuten zu.
+Eine neue App ist vier Schritte entfernt: Tier entscheiden, Verzeichnis unter
+`argocd/apps/platform/<name>/` oder `argocd/apps/workloads/<name>/` anlegen
+(plain Manifests, `kustomization.yaml` **oder** Helm-Chart mit `Chart.yaml` +
+`values.yaml`), Namen in `argocd_platform_apps`/`argocd_workloads_apps`
+(`ansible/roles/argocd/defaults/main.yml`) ergänzen, committen, pushen —
+ArgoCD greift in ~3 Minuten zu.
 
 ---
 
@@ -166,17 +188,28 @@ anlegen (plain Manifests, `kustomization.yaml` **oder** Helm-Chart mit
 
 Der GitOps-Workflow für neue Apps:
 
-1. Verzeichnis `argocd/apps/<app-name>/` anlegen.
-2. Kubernetes-Manifests oder Helm-Chart hineinlegen.
-3. `git add` + `git commit` + `git push`.
-4. ArgoCD erkennt das neue Verzeichnis innerhalb von ~3 Minuten.
-5. ArgoCD erzeugt eine Application und synct sie.
+1. Tier entscheiden: **Platform** (Infrastruktur/Admin-Charakter) oder
+   **Workloads** (echter Nutzerkreis) — siehe
+   [docs/49-argocd-projects.md](49-argocd-projects.md#die-zwei-tiers).
+2. Verzeichnis `argocd/apps/platform/<app-name>/` oder
+   `argocd/apps/workloads/<app-name>/` anlegen.
+3. Kubernetes-Manifests oder Helm-Chart hineinlegen.
+4. `<app-name>` in `argocd_platform_apps` bzw. `argocd_workloads_apps`
+   (`ansible/roles/argocd/defaults/main.yml`) ergänzen — sonst fehlt der
+   AppProject-`destinations`-Eintrag und der Sync schlägt mit
+   `application destination namespace ... is not permitted in project ...`
+   fehl.
+5. `make render-bootstrap` laufen lassen (aktualisiert die committeten
+   Kopien unter `argocd/bootstrap/`).
+6. `git add` + `git commit` + `git push`.
+7. ArgoCD erkennt das neue Verzeichnis innerhalb von ~3 Minuten.
+8. ArgoCD erzeugt eine Application im richtigen AppProject und synct sie.
 
-**Beispiel: App mit Plain-Manifest**
+**Beispiel: App mit Plain-Manifest** (hier als Workload-App)
 
 ```bash
-mkdir -p argocd/apps/my-app
-cat > argocd/apps/my-app/deployment.yaml << 'EOF'
+mkdir -p argocd/apps/workloads/my-app
+cat > argocd/apps/workloads/my-app/deployment.yaml << 'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -199,7 +232,10 @@ spec:
             - containerPort: 80
 EOF
 
-git add argocd/apps/my-app/
+# my-app in argocd_workloads_apps (ansible/roles/argocd/defaults/main.yml) ergänzen,
+# dann: make render-bootstrap
+
+git add argocd/apps/workloads/my-app/ ansible/roles/argocd/defaults/main.yml argocd/bootstrap/
 git commit -m "feat: add my-app"
 git push
 ```
@@ -207,7 +243,7 @@ git push
 **Beispiel: App als Helm-Chart**
 
 ```bash
-mkdir -p argocd/apps/my-helm-app/templates
+mkdir -p argocd/apps/workloads/my-helm-app/templates
 
 # Chart.yaml, values.yaml, templates/ — standard Helm-Chart-Struktur
 # ArgoCD erkennt Chart.yaml und behandelt das Verzeichnis als Helm-Chart
@@ -245,7 +281,7 @@ Für eine App, die manuell kontrolliert werden soll, ein eigenes
 `Application`-Manifest hinterlegen, das die Sync-Policy überschreibt:
 
 ```yaml
-# argocd/apps/my-careful-app/argocd-application.yaml
+# argocd/apps/workloads/my-careful-app/argocd-application.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

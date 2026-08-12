@@ -68,7 +68,7 @@ ssh ubuntu@192.168.178.94 \
 
 ## Schritt 2 — Headlamp OIDC einrichten (konfiguriert, kein genutzter Login-Weg)
 
-> Config bereits vorhanden (`argocd/apps/headlamp/values.yaml` →
+> Config bereits vorhanden (`argocd/apps/platform/headlamp/values.yaml` →
 > `config.oidc.externalSecret.enabled: true`), aber laut Betreiber nicht
 > der tatsächlich genutzte Zugriffsweg. Nur zur Referenz für eine
 > künftige Secret-Rotation.
@@ -119,7 +119,7 @@ echo "encryptedClientSecret: $(seal "$CLIENT_SECRET")"
 
 ### 2.4 — values.yaml befüllen
 
-In [argocd/apps/headlamp/values.yaml](../argocd/apps/headlamp/values.yaml) eintragen:
+In [argocd/apps/platform/headlamp/values.yaml](../argocd/apps/platform/headlamp/values.yaml) eintragen:
 
 ```yaml
 oidcSecret:
@@ -186,7 +186,7 @@ echo "encryptedClientSecret: $(seal "$CLIENT_SECRET")"
 
 ### 3.4 — values.yaml befüllen
 
-In [argocd/apps/argo-workflows/values.yaml](../argocd/apps/argo-workflows/values.yaml) eintragen:
+In [argocd/apps/platform/argo-workflows/values.yaml](../argocd/apps/platform/argo-workflows/values.yaml) eintragen:
 
 ```yaml
 ssoSecret:
@@ -211,7 +211,7 @@ argo-workflows:
 
 ## Schritt 4 — MinIO OIDC einrichten (konfiguriert, kein genutzter Login-Weg)
 
-> Config bereits vorhanden (`argocd/apps/minio/values.yaml` →
+> Config bereits vorhanden (`argocd/apps/platform/minio/values.yaml` →
 > `minio.oidc.enabled: true`), aber laut Betreiber nicht der tatsächlich
 > genutzte Zugriffsweg. Nur zur Referenz für eine künftige
 > Secret-Rotation.
@@ -262,7 +262,7 @@ echo "encryptedClientSecret: $(seal "$CLIENT_SECRET")"
 
 ### 4.4 — values.yaml befüllen
 
-In [argocd/apps/minio/values.yaml](../argocd/apps/minio/values.yaml) eintragen:
+In [argocd/apps/platform/minio/values.yaml](../argocd/apps/platform/minio/values.yaml) eintragen:
 
 ```yaml
 minio:
@@ -289,9 +289,9 @@ oidcSecret:
 ## Schritt 5 — Commit und Deploy
 
 ```bash
-git add argocd/apps/headlamp/values.yaml \
-        argocd/apps/argo-workflows/values.yaml \
-        argocd/apps/minio/values.yaml
+git add argocd/apps/platform/headlamp/values.yaml \
+        argocd/apps/platform/argo-workflows/values.yaml \
+        argocd/apps/platform/minio/values.yaml
 git commit -m "feat(sso): enable OIDC for headlamp, argo-workflows, minio"
 git push
 ```

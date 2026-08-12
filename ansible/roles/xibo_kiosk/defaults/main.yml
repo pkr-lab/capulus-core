@@ -5,7 +5,7 @@
 xibo_kiosk_enabled: true
 
 # NFS-Server + fester Pfad des "xibosignage-display"-Ordners auf dem UGREEN
-# NAS. MUSS identisch zu argocd/apps/n8n values.yaml -> xibosignage.display
+# NAS. MUSS identisch zu argocd/apps/workloads/n8n values.yaml -> xibosignage.display
 # sein — n8n schreibt dorthin, dieser Pi liest read-only davon. Siehe
 # docs/44-xibosignage.md.
 xibo_kiosk_nfs_server: "192.168.178.97"

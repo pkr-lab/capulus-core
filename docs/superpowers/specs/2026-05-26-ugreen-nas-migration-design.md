@@ -19,7 +19,7 @@ erfolgreicher Migration archiviert.
 - Rolle `day_pilot` (umbenannt von `day-pilot`)
 
 **Nicht migriert (fallen weg):**
-- `gotify` — Instanz läuft bereits als k8s-App im Cluster (`argocd/apps/gotify`)
+- `gotify` — Instanz läuft bereits als k8s-App im Cluster (`argocd/apps/platform/gotify`)
 - `monitoring` — wird in bestehenden VictoriaMetrics/Grafana-Stack im Cluster integriert
 - `paperless-ai` — kubepi existiert nicht mehr
 - `scanner-pi` — kubepi existiert nicht mehr
@@ -107,7 +107,7 @@ nas-check   # Dry-run (--check) des NAS-Playbooks
 Die `node_exporter_nas`-Rolle deployt Node-Exporter (Port 9100) und cAdvisor
 (Port 18080) per Docker Compose auf dem NAS.
 
-Im Cluster wird `argocd/apps/monitoring/` um einen `VMStaticScrape` erweitert,
+Im Cluster wird `argocd/apps/platform/monitoring/` um einen `VMStaticScrape` erweitert,
 der auf `jays-ugreen:9100` und `jays-ugreen:18080` zeigt. Kein separater
 Grafana-/Prometheus-Stack auf dem NAS.
 

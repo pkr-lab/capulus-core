@@ -52,7 +52,7 @@ OBS / ffmpeg / Kamera ───────────────────�
 ## Voraussetzungen
 
 - ArgoCD läuft, Root-ApplicationSet aktiv (`argocd/bootstrap/root-applicationset.yaml`).
-- Cloudflare Tunnel ist eingerichtet (`argocd/apps/cloudflared/`, siehe
+- Cloudflare Tunnel ist eingerichtet (`argocd/apps/platform/cloudflared/`, siehe
   [docs/22-cloudflare-tunnel.md](22-cloudflare-tunnel.md)) — dieses Dokument
   ergänzt dort lediglich einen neuen `hostname`-Eintrag, keine neue
   Tunnel-Einrichtung nötig.
@@ -84,9 +84,9 @@ nicht, ohne gültiges Nutzername/Passwort-Paar lehnt mediamtx den Publish ab.
 
 ## Schritt 1 — Chart deployen
 
-Der Chart liegt bereits unter `argocd/apps/mediamtx/` (Helm-Chart, analog zu
+Der Chart liegt bereits unter `argocd/apps/workloads/mediamtx/` (Helm-Chart, analog zu
 `ntfy`/`cloudflared`). Relevante Werte in
-[argocd/apps/mediamtx/values.yaml](../argocd/apps/mediamtx/values.yaml):
+[argocd/apps/workloads/mediamtx/values.yaml](../argocd/apps/workloads/mediamtx/values.yaml):
 
 ```yaml
 publishService:
@@ -111,7 +111,7 @@ Committen und pushen (wie jede andere App in diesem Repo, siehe
 [docs/05-argocd.md](05-argocd.md)):
 
 ```bash
-git add argocd/apps/mediamtx docs/24-mediamtx.md
+git add argocd/apps/workloads/mediamtx docs/24-mediamtx.md
 git commit -m "feat(mediamtx): add live-streaming server with internal auth"
 git push
 ```
@@ -155,7 +155,7 @@ echo -n "<streamer-passwort>" | openssl dgst -binary -sha256 | openssl base64
 ```
 
 Beide Ausgaben mit `sha256:`-Präfix in
-[argocd/apps/mediamtx/values.yaml](../argocd/apps/mediamtx/values.yaml)
+[argocd/apps/workloads/mediamtx/values.yaml](../argocd/apps/workloads/mediamtx/values.yaml)
 unter `auth.streamer.user` / `auth.streamer.pass` eintragen.
 
 ### 2.2 — Zuschauer-Zugang (Read/Playback)
@@ -169,7 +169,7 @@ echo -n "<viewer-passwort>" | openssl dgst -binary -sha256 | openssl base64
 
 > Für mehrere Zuschauer mit unterschiedlichen Passwörtern: den `viewer`-
 > Eintrag in `authInternalUsers`
-> ([templates/configmap.yaml](../argocd/apps/mediamtx/templates/configmap.yaml))
+> ([templates/configmap.yaml](../argocd/apps/workloads/mediamtx/templates/configmap.yaml))
 > um weitere Einträge mit `action: read` / `action: playback` ergänzen —
 > analog zum bestehenden Muster, ein Eintrag pro Person.
 
@@ -253,7 +253,7 @@ ffmpeg -re -i input.mp4 -c copy -f rtsp "rtsp://<server-ip>:31554/test"
 
 Dieses Setup speichert standardmäßig **nichts** — reines Live-Durchreichen.
 Für Aufzeichnung auf Platte müsste `paths.all_others.record: yes` plus eine
-PVC (analog zu `argocd/apps/ntfy/templates/pvc.yaml`) ergänzt werden — bei
+PVC (analog zu `argocd/apps/platform/ntfy/templates/pvc.yaml`) ergänzt werden — bei
 Bedarf separat einrichten, um den Speicherbedarf bewusst zu halten.
 
 ---
@@ -295,7 +295,7 @@ korrekt scheinen:**
 
 **`stream.pke-lab.de` zeigt 404/502:**
 
-Prüfen, ob `argocd/apps/cloudflared/values.yaml` den `stream.pke-lab.de`-
+Prüfen, ob `argocd/apps/platform/cloudflared/values.yaml` den `stream.pke-lab.de`-
 Eintrag enthält, auf `mediamtx.mediamtx.svc.cluster.local:8888` zeigt und
 der `cloudflared`-Pod die neue Config geladen hat (siehe [docs/23 →
 ConfigMap-Änderung kommt nicht im Pod
@@ -351,7 +351,7 @@ hashen (Schritt 2.1) und in `values.yaml` eintragen.
 Wie jede andere App per Git-Revert:
 
 ```bash
-git log --oneline -- argocd/apps/mediamtx
+git log --oneline -- argocd/apps/workloads/mediamtx
 git revert <commit-hash>
 git push
 ```

@@ -2,7 +2,7 @@
 
 Wiki.js ist ein Open-Source-Wiki/Knowledge-Base-System mit Markdown-Editor,
 eingebauten Benutzergruppen und pfadbasierten Zugriffsregeln (Page Rules).
-Die Deployment-Konfiguration liegt unter `argocd/apps/wikijs/`.
+Die Deployment-Konfiguration liegt unter `argocd/apps/workloads/wikijs/`.
 
 ---
 
@@ -36,8 +36,8 @@ Homeserver-System-SSD.
 ## Voraussetzungen
 
 - ArgoCD läuft und das Root-ApplicationSet ist aktiv (`argocd/bootstrap/root-applicationset.yaml`)
-- Sealed-Secrets Controller ist installiert (`argocd/apps/sealed-secrets/`)
-- **`nas-storage`-App ist deployt** (`argocd/apps/nas-storage/`) und die
+- Sealed-Secrets Controller ist installiert (`argocd/apps/platform/sealed-secrets/`)
+- **`nas-storage`-App ist deployt** (`argocd/apps/platform/nas-storage/`) und die
   StorageClass `nas` existiert: `kubectl get storageclass nas`
 - **NAS ist online und der NFS-Export erreichbar** (siehe
   [docs/16-nas-storage.md](16-nas-storage.md)) — sonst bleibt die
@@ -68,7 +68,7 @@ echo -n "$DB_PASS" | kubeseal --raw \
   --controller-name sealed-secrets-controller
 ```
 
-Die Ausgabe in `argocd/apps/wikijs/values.yaml` eintragen:
+Die Ausgabe in `argocd/apps/workloads/wikijs/values.yaml` eintragen:
 
 ```yaml
 secrets:
@@ -84,7 +84,7 @@ secrets:
 ## Schritt 2 — Deployment via ArgoCD
 
 Nach dem Commit der Änderungen erkennt das Root-ApplicationSet den neuen Ordner
-`argocd/apps/wikijs/` automatisch und erstellt die ArgoCD-Application.
+`argocd/apps/workloads/wikijs/` automatisch und erstellt die ArgoCD-Application.
 
 ```
 ArgoCD → Home → wikijs
@@ -284,7 +284,7 @@ Callback-URL übereinstimmen (inkl. `<strategy-id>`, kein Trailing Slash).
 | **Gesamt**    | ~150m       | ~512Mi       | ~1Gi      | 20Gi auf dem NAS         |
 
 Die 20Gi für PostgreSQL sind ein Startwert (Seiten + Assets liegen beide in
-der DB) — bei Bedarf in `argocd/apps/wikijs/values.yaml` unter
+der DB) — bei Bedarf in `argocd/apps/workloads/wikijs/values.yaml` unter
 `postgresql.persistence.size` erhöhen.
 
 ---

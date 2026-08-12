@@ -16,7 +16,7 @@ Browser  →  Traefik  →  authentik.homeserver  (Authentik)
 
 > Grafana meldet sich **nicht mehr** über Authentik an — Login läuft über
 > den eingebauten Grafana-Admin-Account (Secret `grafana-admin`,
-> `argocd/apps/monitoring/values.yaml`).
+> `argocd/apps/platform/monitoring/values.yaml`).
 
 | Dienst           | Integrations-Typ        | Authentik-Vorlage |
 |------------------|-------------------------|-------------------|
@@ -79,7 +79,7 @@ echo "encryptedBootstrapEmail:    $(seal "$BOOTSTRAP_EMAIL")"
 
 ### 1.3 — values.yaml befüllen
 
-Die Ausgabe aus 1.2 in `argocd/apps/authentik/values.yaml` eintragen:
+Die Ausgabe aus 1.2 in `argocd/apps/platform/authentik/values.yaml` eintragen:
 
 ```yaml
 credentials:
@@ -97,7 +97,7 @@ credentials:
 
 ## Schritt 2 — Deployment via ArgoCD
 
-Nach dem Commit auf `main` erkennt ArgoCD das neue `argocd/apps/authentik/`-Verzeichnis innerhalb von ca. 3 Minuten und synct automatisch.
+Nach dem Commit auf `main` erkennt ArgoCD das neue `argocd/apps/platform/authentik/`-Verzeichnis innerhalb von ca. 3 Minuten und synct automatisch.
 
 ```bash
 # Manuell auslösen:
@@ -203,7 +203,7 @@ kubectl -n argocd create secret generic argocd-secret \
 
 ### 5.2 — Headlamp-Values
 
-In `argocd/apps/headlamp/values.yaml`:
+In `argocd/apps/platform/headlamp/values.yaml`:
 
 ```yaml
 headlamp:
@@ -248,7 +248,7 @@ In der Authentik Admin-UI für jeden Dienst:
 Lege eine gemeinsame Middleware an (z.B. in einem eigenen Namespace oder als Teil der Authentik-App):
 
 ```yaml
-# argocd/apps/authentik/templates/traefik-middleware.yaml
+# argocd/apps/platform/authentik/templates/traefik-middleware.yaml
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
@@ -285,7 +285,7 @@ annotations:
 
 ## Argo Workflows
 
-Argo Workflows unterstützt OIDC nativ. Im `argocd/apps/argo-workflows/values.yaml`:
+Argo Workflows unterstützt OIDC nativ. Im `argocd/apps/platform/argo-workflows/values.yaml`:
 
 ```yaml
 argo-workflows:
