@@ -149,10 +149,31 @@ blockiert.
 
 Diese Umstrukturierung ändert **keine** Kubernetes-Ressourcen (keine PVCs,
 keine Secrets, keine Pods bewegen sich) — `destination.namespace` bleibt für
-jede App exakt wie vorher. ArgoCD erkennt beim nächsten Sync lediglich einen
-geänderten `source.path` pro (unverändert benannter) Application und synct
-denselben Inhalt von einem neuen Pfad aus. Trotzdem: nach dem Merge auf
-`main` einmal `kubectl get applications -n argocd` prüfen, ob alle 36 Apps
-weiterhin `Synced`/`Healthy` sind, und `make argocd` laufen lassen, damit die
-AppProjects + das Namespace-Label auch tatsächlich angewendet werden (siehe
-[docs/05-argocd.md](05-argocd.md) für den vollen Befehlsablauf).
+jede App exakt wie vorher. Trotzdem ist die Reihenfolge beim Umschalten
+wichtig, weil beide Git-Generatoren (alt wie neu) fest gegen
+`revision: main` scannen — **nicht** gegen den gerade lokal ausgecheckten
+Branch:
+
+1. **Erst `feat-update-security` nach `main` mergen.** Vor dem Merge findet
+   der neue Generator-Pfad (`argocd/apps/platform/*` /
+   `argocd/apps/workloads/*`) auf `main` noch nichts — ein `make argocd` vor
+   dem Merge legt zwar gefahrlos zwei neue, aber leere ApplicationSets an
+   (0 Apps gefunden), während die alte `home-server-apps` unangetastet
+   weiterläuft und alle 36 Apps von der alten Struktur auf `main` sync.
+2. **Danach `make argocd` laufen lassen** — legt `home-server-apps-platform`
+   und `home-server-apps-workloads` an bzw. aktualisiert sie, wendet beide
+   AppProjects an, labelt die Namespaces.
+3. **Verifizieren:** `kubectl get applications -n argocd` — alle 36 Apps
+   sollten `Synced`/`Healthy` sein, jetzt im jeweils richtigen AppProject
+   (`kubectl get applications -n argocd -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.project}{"\n"}{end}'`).
+4. **Erst danach die alte ApplicationSet manuell löschen:**
+   `kubectl -n argocd delete applicationset home-server-apps`. Nicht vorher
+   — sie ist bis Schritt 3 die einzige Quelle, die die 36 Applications aktiv
+   hält.
+5. Wurde bei Schritt 1 die Reihenfolge vertauscht (Merge vor Anwenden der
+   AppProjects) und die alte ApplicationSet ist bereits weg, bevor die neuen
+   etwas gefunden haben: nicht in Panik geraten — die von ArgoCD verwalteten
+   Kubernetes-Ressourcen (Deployments, Services, PVCs, …) hängen nicht per
+   `ownerReference` an der Application-Ressource, ein kurzzeitig fehlendes
+   Application-Objekt löscht keine laufenden Pods. `make argocd` erneut
+   laufen lassen stellt die Applications wieder her.
