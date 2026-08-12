@@ -7,13 +7,19 @@
 # Apps live under argocd/apps/platform/<app> or argocd/apps/workloads/<app>
 # (see docs/49-argocd-projects.md) — each app keeps its own namespace
 # (destination.namespace is still just the app's basename, unaffected by the
-# extra directory level), but is assigned to the matching AppProject
-# (argocd/bootstrap/projects.yaml) via the per-generator template override
-# below. This is a deliberate two-generator setup instead of deriving the
-# project from the path string: per-generator `template.spec.project` is a
-# well-established ApplicationSet feature, whereas string-splitting the path
-# in Go-template would add a dependency on sprig functions that isn't worth
-# the risk here.
+# extra directory level), and is assigned to the matching AppProject
+# (argocd/bootstrap/projects.yaml) by deriving `spec.project` from the
+# directory path itself (2nd path segment: "platform" or "workloads" — those
+# names were chosen to match the AppProject names exactly, so no extra
+# mapping is needed).
+#
+# NOTE: an earlier version of this template used a per-generator
+# `template.spec.project` override (one generator per tier). That field does
+# NOT exist on the ApplicationSet CRD outside of `matrix`/`merge` generators —
+# `kubectl apply` rejected it outright with "unknown field
+# spec.generators[0].template" (strict decoding, no partial apply, cluster
+# was unaffected). Splitting the path in the single shared template below is
+# the form that's actually valid against the installed CRD.
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
@@ -28,22 +34,12 @@ spec:
         repoURL: "https://github.com/pkr-lab/capulus-core.git"
         revision: "main"
         directories:
-          - path: "argocd/apps/platform/*"
-      template:
-        spec:
-          project: platform
-    - git:
-        repoURL: "https://github.com/pkr-lab/capulus-core.git"
-        revision: "main"
-        directories:
-          - path: "argocd/apps/workloads/*"
-      template:
-        spec:
-          project: workloads
+          - path: "argocd/apps/*/*"
   template:
     metadata:
       name: "{{.path.basename}}"
     spec:
+      project: "{{(splitList \"/\" .path.path) | index 2}}"
       source:
         repoURL: "https://github.com/pkr-lab/capulus-core.git"
         targetRevision: "main"
