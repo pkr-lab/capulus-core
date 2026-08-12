@@ -115,42 +115,62 @@ kubectl apply -f repo-secret.yaml
 
 ## ApplicationSet-Struktur
 
-Das Bootstrap-`ApplicationSet` (`argocd/bootstrap/root-applicationset.yaml`) nutzt
-**zwei** Git-Directory-Generatoren — einen pro Namespace-Tier (Platform/
-Workloads, siehe [docs/49-argocd-projects.md](49-argocd-projects.md)) — um aus
-Unterverzeichnissen automatisch ArgoCD-Applications zu erzeugen.
+Seit [docs/49-argocd-projects.md](49-argocd-projects.md) gibt es **zwei
+separate Bootstrap-`ApplicationSet`-Ressourcen** statt einer einzigen —
+`home-server-apps-platform` und `home-server-apps-workloads`
+(`argocd/bootstrap/root-applicationset.yaml`, zwei YAML-Dokumente in einer
+Datei). Jede ist strukturell identisch, bis auf Directory-Glob und
+`spec.project`:
 
 ```yaml
-generators:
-  - git:
-      repoURL: https://github.com/pkr-lab/capulus-core.git
-      revision: main
-      directories:
-        - path: "argocd/apps/platform/*"
-    template:
-      spec:
-        project: platform
-  - git:
-      repoURL: https://github.com/pkr-lab/capulus-core.git
-      revision: main
-      directories:
-        - path: "argocd/apps/workloads/*"
-    template:
-      spec:
-        project: workloads
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: home-server-apps-platform
+spec:
+  generators:
+    - git:
+        repoURL: https://github.com/pkr-lab/capulus-core.git
+        revision: main
+        directories:
+          - path: "argocd/apps/platform/*"
+  template:
+    spec:
+      project: platform   # fest codiert, kein Templating
+      # ...
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: home-server-apps-workloads
+spec:
+  generators:
+    - git:
+        directories:
+          - path: "argocd/apps/workloads/*"
+  template:
+    spec:
+      project: workloads   # fest codiert, kein Templating
+      # ...
 ```
+
+> Bewusst **zwei getrennte Ressourcen** statt einer mit zwei Generatoren oder
+> einem aus dem Pfad abgeleiteten Project-Wert — beide Alternativen wurden
+> verworfen, Details und Begründung in
+> [docs/49-argocd-projects.md](49-argocd-projects.md#wie-es-technisch-funktioniert).
 
 **Funktionsweise:**
 
 - ArgoCD scannt `argocd/apps/platform/` und `argocd/apps/workloads/` im
-  Git-Repo (getrennt, je Generator).
+  Git-Repo (getrennt, je eigenes ApplicationSet).
 - Jedes Unterverzeichnis wird zu einer ArgoCD-**Application**.
 - Application-Name = Verzeichnisname der App (nicht des Tiers).
 - Ziel-Namespace = Verzeichnisname der App — **die zusätzliche
   Tier-Ebene ändert nichts an Namespaces**, nur an der Pfadstruktur in Git.
-- AppProject = `platform` bzw. `workloads`, je nachdem welcher Generator die
-  App gefunden hat (siehe [docs/49-argocd-projects.md](49-argocd-projects.md)
-  für die Details der AppProject-`destinations`).
+- AppProject = `platform` bzw. `workloads`, je nachdem welches
+  ApplicationSet die App gefunden hat (siehe
+  [docs/49-argocd-projects.md](49-argocd-projects.md) für die Details der
+  AppProject-`destinations`).
 - ArgoCD synct den Inhalt des Verzeichnisses in den Cluster.
 
 **Beispielhafte Verzeichnis-Struktur** (Auszug — vollständige, aktuell gepflegte
