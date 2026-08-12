@@ -41,7 +41,7 @@ anlegen (erscheint beim ersten Besuch automatisch).
 | Monitor | URL | Typ |
 |---|---|---|
 | Grafana | http://grafana.homeserver | HTTP |
-| ArgoCD | http://`<server-ip>`:30080 | HTTP |
+| ArgoCD | https://`<server-ip>`:30443 | HTTPS (selbstsigniert) |
 | Authentik | http://authentik.homeserver | HTTP |
 | ntfy | http://ntfy.homeserver | HTTP |
 | Semaphore | http://semaphore.homeserver | HTTP |

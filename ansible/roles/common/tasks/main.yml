@@ -206,13 +206,6 @@
     proto: tcp
     comment: "k3s Kubernetes API"
 
-- name: Allow ArgoCD NodePort HTTP (port 30080)
-  community.general.ufw:
-    rule: allow
-    port: "30080"
-    proto: tcp
-    comment: "ArgoCD web UI HTTP"
-
 - name: Allow ArgoCD NodePort HTTPS (port 30443)
   community.general.ufw:
     rule: allow

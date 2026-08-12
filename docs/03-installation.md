@@ -293,14 +293,16 @@ kubectl -n argocd get secret argocd-initial-admin-secret \
 Im Browser öffnen:
 
 ```
-http://<server-ip>:30080
+https://<server-ip>:30443
 ```
 
 Oder via Tailscale-MagicDNS (sofern aktiviert):
 
 ```
-http://homeserver:30080
+https://homeserver:30443
 ```
+
+Das Zertifikat ist selbstsigniert — Browser-Warnung bestätigen.
 
 Login:
 
@@ -330,7 +332,7 @@ brew install argocd
 Login:
 
 ```bash
-argocd login <server-ip>:30080 --username admin --password <initial-passwort> --insecure
+argocd login <server-ip>:30443 --username admin --password <initial-passwort> --insecure
 ```
 
 ### kubectl von der Control-Machine
