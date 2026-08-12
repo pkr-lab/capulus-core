@@ -1,4 +1,4 @@
-# Single source of truth for the bootstrap ApplicationSet.
+# Single source of truth for the bootstrap ApplicationSets.
 # The committed copy at argocd/bootstrap/root-applicationset.yaml is GENERATED
 # from this template — run `make render-bootstrap` after editing this file or
 # the argocd_repo_* / argocd_namespace vars in group_vars. Do not hand-edit the
@@ -7,24 +7,28 @@
 # Apps live under argocd/apps/platform/<app> or argocd/apps/workloads/<app>
 # (see docs/49-argocd-projects.md) — each app keeps its own namespace
 # (destination.namespace is still just the app's basename, unaffected by the
-# extra directory level), and is assigned to the matching AppProject
-# (argocd/bootstrap/projects.yaml) by deriving `spec.project` from the
-# directory path itself (2nd path segment: "platform" or "workloads" — those
-# names were chosen to match the AppProject names exactly, so no extra
-# mapping is needed).
+# directory nesting). Two SEPARATE ApplicationSet resources below (one per
+# tier) each carry a hardcoded, literal `spec.project` — deliberately not a
+# single ApplicationSet with a derived/templated project value.
 #
-# NOTE: an earlier version of this template used a per-generator
-# `template.spec.project` override (one generator per tier). That field does
-# NOT exist on the ApplicationSet CRD outside of `matrix`/`merge` generators —
-# `kubectl apply` rejected it outright with "unknown field
-# spec.generators[0].template" (strict decoding, no partial apply, cluster
-# was unaffected). Splitting the path in the single shared template below is
-# the form that's actually valid against the installed CRD.
+# History, so nobody re-attempts either of these two rejected approaches:
+#   1. A single ApplicationSet with per-generator `template.spec.project`
+#      overrides (one git generator per tier). `spec.generators[].template`
+#      does NOT exist on the installed ApplicationSet CRD outside
+#      `matrix`/`merge` generators — kubectl apply was rejected outright with
+#      "unknown field spec.generators[0].template" (strict decoding, no
+#      partial apply, cluster was unaffected by the failed attempt).
+#   2. A single ApplicationSet deriving `spec.project` from the directory
+#      path via a Go-template expression using sprig's splitList/index
+#      functions on `.path.path`. Never actually verified against the live
+#      ApplicationSet controller —
+#      not worth re-testing when two independent, structurally-proven
+#      ApplicationSets (this file) need zero uncertain templating features.
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: home-server-apps
+  name: home-server-apps-platform
   namespace: argocd
 spec:
   goTemplate: true
@@ -34,12 +38,92 @@ spec:
         repoURL: "https://github.com/pkr-lab/capulus-core.git"
         revision: "main"
         directories:
-          - path: "argocd/apps/*/*"
+          - path: "argocd/apps/platform/*"
   template:
     metadata:
       name: "{{.path.basename}}"
     spec:
-      project: "{{(splitList \"/\" .path.path) | index 2}}"
+      project: platform
+      source:
+        repoURL: "https://github.com/pkr-lab/capulus-core.git"
+        targetRevision: "main"
+        path: "{{.path.path}}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{.path.basename}}"
+      ignoreDifferences:
+        - group: bitnami.com
+          kind: SealedSecret
+          jsonPointers:
+            - /status
+        # HPA-managed Deployments across all apps: the chart sets
+        # replicas: null so Kubernetes only defaults it once at creation,
+        # but ServerSideApply treats an explicit null as "clear this field",
+        # which resets it to the schema default (1) on every sync — fighting
+        # the HPA's scale-up and leaving the app permanently OutOfSync (seen
+        # on zammad-railsserver, docs/17-zammad.md). Ignoring /spec/replicas
+        # here only matches Applications that actually contain a resource
+        # with this exact kind+name, so it's a no-op for every other app.
+        - group: apps
+          kind: Deployment
+          name: zammad-railsserver
+          jsonPointers:
+            - /spec/replicas
+        - group: apps
+          kind: Deployment
+          name: zammad-nginx
+          jsonPointers:
+            - /spec/replicas
+        # zammad-redis StatefulSet: Chart-Default setzt
+        # updateStrategy.rollingUpdate.maxUnavailable: 1 (Redis-Subchart-
+        # values.yaml), Cluster-Feature-Gate MaxUnavailableStatefulSet fehlt
+        # -> Server verwirft das Feld dauerhaft. Der ursprüngliche Versuch,
+        # es per "maxUnavailable: null" in values.yaml zu entfernen, wirkt
+        # lokal mit Helm v3, aber NICHT mit dem Helm v4 in argocd-repo-server
+        # (bestaetigt per "argocd app diff --core --hard-refresh": Desired
+        # enthaelt das Feld trotzdem) -> Dauerdiff. Deshalb hier ignorieren.
+        - group: apps
+          kind: StatefulSet
+          name: zammad-redis
+          jsonPointers:
+            - /spec/updateStrategy/rollingUpdate/maxUnavailable
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        # CRD/CR bootstrap (e.g. victoria-metrics-operator installs the
+        # VMSingle CRD and a VMSingle resource in one sync) needs the
+        # dry-run skip + retry to converge on the first reconciliation.
+        retry:
+          limit: 5
+          backoff:
+            duration: 10s
+            factor: 2
+            maxDuration: 5m
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+          - SkipDryRunOnMissingResource=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: home-server-apps-workloads
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: "https://github.com/pkr-lab/capulus-core.git"
+        revision: "main"
+        directories:
+          - path: "argocd/apps/workloads/*"
+  template:
+    metadata:
+      name: "{{.path.basename}}"
+    spec:
+      project: workloads
       source:
         repoURL: "https://github.com/pkr-lab/capulus-core.git"
         targetRevision: "main"

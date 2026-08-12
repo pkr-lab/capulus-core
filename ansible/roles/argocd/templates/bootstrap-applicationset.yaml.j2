@@ -19,8 +19,9 @@
 #      "unknown field spec.generators[0].template" (strict decoding, no
 #      partial apply, cluster was unaffected by the failed attempt).
 #   2. A single ApplicationSet deriving `spec.project` from the directory
-#      path via Go-template + sprig (`{{(splitList "/" .path.path) | index 2}}`).
-#      Never actually verified against the live ApplicationSet controller —
+#      path via a Go-template expression using sprig's splitList/index
+#      functions on `.path.path`. Never actually verified against the live
+#      ApplicationSet controller —
 #      not worth re-testing when two independent, structurally-proven
 #      ApplicationSets (this file) need zero uncertain templating features.
 ---
