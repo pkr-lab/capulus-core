@@ -4,7 +4,7 @@
 # Small privileged HTTP daemon that runs directly on the homeserver host
 # (NOT inside the k8s cluster) and does the handful of things carplay-api's
 # pod deliberately can't do for itself, because that pod runs unprivileged
-# (see argocd/apps/carplay-api/values.yaml podSecurityContext): read/write
+# (see argocd/apps/workloads/carplay-api/values.yaml podSecurityContext): read/write
 # the laptop's screen backlight over sysfs, send Wake-on-LAN magic packets,
 # and SSH-poweroff worker-0/worker-1 using the same forced-command key
 # cluster_power_manager already generates and worker-0/worker-1 already

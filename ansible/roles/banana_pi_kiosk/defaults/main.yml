@@ -4,7 +4,7 @@
 # entfernen (gleiches Prinzip wie alamos_kiosk_enabled).
 banana_pi_kiosk_enabled: true
 
-# Basis-URL des alamos-apager Helm Charts (argocd/apps/alamos-apager).
+# Basis-URL des alamos-apager Helm Charts (argocd/apps/workloads/alamos-apager).
 # Normalbetrieb: der Pi zeigt "{{ banana_pi_kiosk_base_url }}/start?station=
 # {{ banana_pi_kiosk_station }}", der Cluster loest serverseitig zur echten
 # ALAMOS-AMweb-URL auf (siehe docs/19-alamos-apager.md).
@@ -33,7 +33,7 @@ banana_pi_kiosk_user: "pi"
 
 # Wie oft der Pi ein Lebenszeichen an den Cluster sendet (Sekunden, gleiches
 # Prinzip wie bei alamos_kiosk — steuert NUR den ntfy-Ausfall-Alarm in
-# argocd/apps/alamos-apager, nicht die Fallback-Umschaltung unten).
+# argocd/apps/workloads/alamos-apager, nicht die Fallback-Umschaltung unten).
 banana_pi_kiosk_heartbeat_interval: 60
 
 # ---- Server-Fallback (lokaler Supervisor, nicht der Cluster-Heartbeat) --

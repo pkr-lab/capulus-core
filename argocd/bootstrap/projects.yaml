@@ -1,0 +1,127 @@
+# Single source of truth for the two bootstrap AppProjects (platform /
+# workloads namespace-tier split, see docs/49-argocd-projects.md).
+# GENERATED alongside the ApplicationSet — run `make render-bootstrap` after
+# editing this file, argocd_platform_apps/argocd_workloads_apps in
+# ansible/roles/argocd/defaults/main.yml, or the argocd_repo_*/argocd_namespace
+# vars in group_vars. Applied by the argocd role BEFORE the ApplicationSet,
+# because Applications referencing a project that doesn't exist yet fail sync.
+#
+# Deliberately NOT restricting clusterResourceWhitelist/namespaceResourceWhitelist
+# here (both stay as permissive as ArgoCD's built-in "default" project) —
+# several platform apps install CRDs (victoria-metrics-operator, sealed-secrets)
+# and locking resource kinds down without first observing real usage risks
+# breaking existing, working syncs. The security value in this first pass is
+# `sourceRepos` (only this repo) and `destinations` (only the tier's own
+# namespaces) — resource-kind whitelisting is a deliberate later refinement,
+# not an oversight.
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+spec:
+  description: >-
+    Plattformdienste (Schicht 3): Identity/Secrets/Netzwerk/Monitoring-
+    Infrastruktur, auf die andere Apps aufbauen. Admin-/Infrastruktur-
+    Charakter, siehe docs/01-overview.md Abschnitt 5.
+  sourceRepos:
+    - "https://github.com/pkr-lab/capulus-core.git"
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: authentik
+    - server: https://kubernetes.default.svc
+      namespace: sealed-secrets
+    - server: https://kubernetes.default.svc
+      namespace: kubeseal-webgui
+    - server: https://kubernetes.default.svc
+      namespace: monitoring
+    - server: https://kubernetes.default.svc
+      namespace: logging
+    - server: https://kubernetes.default.svc
+      namespace: gotify
+    - server: https://kubernetes.default.svc
+      namespace: gotify-bridge
+    - server: https://kubernetes.default.svc
+      namespace: ntfy
+    - server: https://kubernetes.default.svc
+      namespace: ntfy-bridge
+    - server: https://kubernetes.default.svc
+      namespace: cloudflared
+    - server: https://kubernetes.default.svc
+      namespace: pihole
+    - server: https://kubernetes.default.svc
+      namespace: coredns-custom
+    - server: https://kubernetes.default.svc
+      namespace: nas-storage
+    - server: https://kubernetes.default.svc
+      namespace: immich-storage
+    - server: https://kubernetes.default.svc
+      namespace: minio
+    - server: https://kubernetes.default.svc
+      namespace: argo-workflows
+    - server: https://kubernetes.default.svc
+      namespace: semaphore
+    - server: https://kubernetes.default.svc
+      namespace: headlamp
+    - server: https://kubernetes.default.svc
+      namespace: traefik-config
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: workloads
+  namespace: argocd
+spec:
+  description: >-
+    Anwendungen (Schicht 4): Apps mit echtem Nutzerkreis (Familie, Vereins-
+    mitglieder, Kunden), siehe docs/01-overview.md Abschnitt 5.
+  sourceRepos:
+    - "https://github.com/pkr-lab/capulus-core.git"
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: alamos-apager
+    - server: https://kubernetes.default.svc
+      namespace: carplay-api
+    - server: https://kubernetes.default.svc
+      namespace: example-whoami
+    - server: https://kubernetes.default.svc
+      namespace: github-release-watcher
+    - server: https://kubernetes.default.svc
+      namespace: immich
+    - server: https://kubernetes.default.svc
+      namespace: mealie
+    - server: https://kubernetes.default.svc
+      namespace: mediamtx
+    - server: https://kubernetes.default.svc
+      namespace: n8n
+    - server: https://kubernetes.default.svc
+      namespace: nextcloud
+    - server: https://kubernetes.default.svc
+      namespace: paperless-ngx
+    - server: https://kubernetes.default.svc
+      namespace: tinyteller
+    - server: https://kubernetes.default.svc
+      namespace: uptime-kuma
+    - server: https://kubernetes.default.svc
+      namespace: vaultwarden
+    - server: https://kubernetes.default.svc
+      namespace: wiki-docs-sync
+    - server: https://kubernetes.default.svc
+      namespace: wikijs
+    - server: https://kubernetes.default.svc
+      namespace: xibosignage
+    - server: https://kubernetes.default.svc
+      namespace: zammad
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

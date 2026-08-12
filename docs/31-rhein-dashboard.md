@@ -71,7 +71,7 @@ HTTP-API-Abfragen aus Grafana-Panels heraus ermöglicht (kein extra Scraper
 oder Exporter nötig).
 
 Das Plugin wird automatisch beim Grafana-Start installiert (Eintrag in
-`argocd/apps/monitoring/values.yaml` unter `grafana.plugins`).
+`argocd/apps/platform/monitoring/values.yaml` unter `grafana.plugins`).
 
 Die Datasource (`uid: infinity`) wird über den ConfigMap
 `datasource-infinity` im Monitoring-Namespace bereitgestellt.
@@ -87,7 +87,7 @@ www.hochwasser-rlp.de
 opendata.dwd.de
 ```
 
-Weitere Hosts können in `argocd/apps/monitoring/templates/datasource-infinity.yaml`
+Weitere Hosts können in `argocd/apps/platform/monitoring/templates/datasource-infinity.yaml`
 ergänzt werden.
 
 ---

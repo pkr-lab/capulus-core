@@ -1,0 +1,124 @@
+---
+# Values passed through to the argo-workflows sub-chart (everything under the
+# `argo-workflows:` key). Top-level blocks below configure this chart's own
+# templates/ (SealedSecrets) — they are NOT passed to the sub-chart.
+argo-workflows:
+  # Restrict controller + server to the release namespace (argo-workflows).
+  # Simpler and safer than cluster-wide for a single-user home CI.
+  singleNamespace: true
+
+  crds:
+    install: true
+    keep: false
+
+  # ServiceAccount + RBAC that workflow pods run as.
+  workflow:
+    serviceAccount:
+      create: true
+      name: argo-workflow
+    rbac:
+      create: true
+
+  controller:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  server:
+    # SSO-Modus via Authentik OIDC.
+    # Anleitung: docs/15-sso-alle-dienste.md → Schritt 3
+    # TODO: Zurück auf [sso] setzen sobald alle drei SealedSecrets neu versiegelt sind:
+    #   - argo-workflows-sso (clientId, clientSecret) → Authentik OIDC-App
+    #   - argo-artifacts-s3 (accesskey, secretkey) → MinIO Root-Credentials
+    #   - ghcr-push (.dockerconfigjson) → GHCR-Token
+    # Zum Aktivieren: authModes auf [sso] setzen, sso.enabled: true
+    # (erst nach dem Eintragen der Secrets in ssoSecret unten)
+    authModes:
+      - server
+    # Serve plain HTTP — TLS is terminated/none behind Traefik on the LAN.
+    secure: false
+    sso:
+      enabled: false
+      issuer: "http://authentik.homeserver/application/o/argo-workflows/"
+      clientId:
+        name: argo-workflows-sso
+        key: clientId
+      clientSecret:
+        name: argo-workflows-sso
+        key: clientSecret
+      redirectUrl: "http://argo-workflows.homeserver/oauth2/callback"
+      scopes:
+        - openid
+        - profile
+        - email
+        - groups
+      rbac:
+        enabled: true
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+    ingress:
+      enabled: true
+      ingressClassName: traefik
+      hosts:
+        - argo-workflows.homeserver
+      paths:
+        - /
+      pathType: Prefix
+
+  # S3 artifact repository + log archive, backed by the MinIO app
+  # (argocd/apps/platform/minio) reachable cluster-internally. Credentials come from the
+  # argo-artifacts-s3 Secret rendered by templates/artifact-secret-sealedsecret.yaml.
+  artifactRepository:
+    archiveLogs: true
+    s3:
+      endpoint: minio.minio.svc.cluster.local:9000
+      bucket: argo-artifacts
+      insecure: true
+      keyFormat: "artifacts/{{workflow.name}}/{{pod.name}}"
+      accessKeySecret:
+        name: argo-artifacts-s3
+        key: accesskey
+      secretKeySecret:
+        name: argo-artifacts-s3
+        key: secretkey
+
+# --- Consumed by this chart's own templates/ (NOT the sub-chart) ---
+# SealedSecrets. Seal real values against the cluster controller, e.g.:
+#   echo -n "<value>" | kubeseal --raw --namespace argo-workflows \
+#     --name argo-artifacts-s3 --controller-name sealed-secrets-controller \
+#     --controller-namespace sealed-secrets --from-file=/dev/stdin
+# See docs/12-argo-workflows.md for the full workflow (incl. the GHCR token).
+
+# SSO — OIDC-Credentials für Authentik.
+# Anleitung: docs/15-sso-alle-dienste.md → Schritt 3.3
+# 1. kubeseal-Befehle aus der Anleitung ausführen
+# 2. Ausgabe hier eintragen
+# 3. enabled auf true setzen
+# 4. Gleichzeitig oben authModes: [sso] und sso.enabled: true setzen
+ssoSecret:
+  enabled: true
+  name: argo-workflows-sso
+  encryptedClientId: "AgAokCrBK4T0zdr5PfSteI4FcmEqYT8fRUQucALSZNVMiwcfLtFRRt/4M2GqLFC2on6isXuC3jvwKm24IeJniAy8u+wOmvZTGpBb6y5+KS6KkPFssLuUIx2NeiZrppYTKnilNjpV9cdNqr+CMu2gLHGXocekEZiyKEnZtOjpGXTF+8j9R0ZY564MFlLqJVZObgZVQ3usnr6zUJfLVD8rukF6J7zprRQ7GSsRNlRF9ccAvYrzfXxxBFikmgygvyKSRs+yPXD9+mFnhYlTxGbiXITFVvuvti5saPgogC3gyX8M0NDW2vWaeHVaoBIX4ULuXq/MZtZ6z9h7hyY0+L9KZDzpkmL6ut8WhNMRQkfPDbH2C5wdKHSU36O639OuHLEG9TDnfV1xKDAhhFh/tv5q+KPsHwgMee20jiug3zZnWGyaXEKFM7PoobeUb2nd/UzFeGWWZ13lpd97iSk4frbGWtam/THowaVNTRFHUCweqOWq4PU+ozjb0gKwHaVZvQRgn8pmEaLgwQ2MA1Q6EeZPDTQxAiPdHd9ZZekemZqWjt2KUsMhWue1zTwI9u/2jZ+Tp2EJ97223uRvB6zNbFYdyIFUty6wrvi9qyg/cmElBXO9oDtlNJy61Ws9grhYW70X7Ywovosc5eao8zq7UKOnUzg3A7hiZPbpXJKZ/htnENELfjFBQCtaWT2wouglsFpxTgqDeVBOAf7Fu2HAIH18qRMYN7OhiapEJs6JsXx2dqx+2bILwg7O3KJm"
+  encryptedClientSecret: "AgCEVr0mWV/oFvuWD4WvwK4r+aGpLDy2OzkCNfyBXEPCd33phcqvilshpbC/LcYGIymgUyLWKoNQmGGcZKL1rq1t9PfCRezHOsb4iBo29qek1GbKNZPjKh9PBb39Cb5Q3MYQnnI0E9EUMVzNAGQji2HkQ0aNAj1zQYRkQZ0R0kQVpgCIqozl7xCqO6GA/8xuyvwnfSxmJzT93F5rCs546jeEnFrkmb3YKaDOKIwQVs3VFohisK1M5V1QuPrsXR5uprUEO8uHdoR6u+rSHlaKAWBUJ8cPuWuXuI9pQf7mnXs6H4MYs+S4IJMsSF8dGZanzYlOtAQWJ5La0klRK5mwzxJj34cczydLZJNj7hBLpyJDzHFJjIM8Szf/CaH5nd+Wpu2CHkm9h+bUJejSdKIW/oED5WM0TqLxWYQtGlyoM7EpNZKvWQKYcE+3gAk7fE4hHcCsgNrs0OtxxSnPH1JTLgJ8DxDTWnMes9jOqEyzZ8PVCUar7F+K3Lk0lXtovvIy3MCvzraG9GGcDPU2GBt7fmGV04TX4PaNEna3Om0wM1TZ5f9VhzlrwZVpsIEDBFfAnr+64PmmgbVqoDZPDyH6KLUlaOkzioObHF4mctWPlgMFBiCyWepBeyqP3BFa+Lj0tZ9SJxFchXmVHr6u4e7Rn0JjxVgY3GL51BFBf+EkrJAkxpGROe7sHyaHODoR6q3xkrddz+HCNq5/5I1iHe2PDeJVfRhGHS6aSREed7dwFBp+mvGUmDts0Qrs7TxT33FB45flwvttDHMWOILDCkmVlOhW9Hhs1Dh9ep2//K/8eLY8AKYZCyVAI3FZaPGOSMlkBuuuvDhHtyVt4S2CRH5XBb/R/2XYbXesL0NOjq+sP0/4jg=="
+
+# S3 access for the artifact repository — must match the MinIO root creds.
+artifactSecret:
+  name: argo-artifacts-s3
+  encryptedAccessKey: "AgBPMd/qPy1oGVUqegPgilKgacACDntc3UXdyVOiro1I5KqhsC1SAnrYA+0dsWmwmEFdS6V+2zeHZO6ln1/8l22Ndr/8n2dK3kUnLGltxmNfyNSQqt7dRhYmvBoYRJTWOH/dKDXqeKIaH+1YlZee59fmDpk7Ti7yPVEGIQUjjnKw4jHbSicNInTBTjPGfaGDNxOkfMeSaWZxzNN1Uu03yVn0RvHrHzXDqO5a0C63mnlyioNx0YwduS/8bqgc2YGGfpoJPHN12oueUAn05xmEHCOf04M3NTfmxPTusIDdScSDliXOhMbnMqlXY61zRuKjVdNu3fQ0hBGWnCA6IJ45xuVRGMtQvCVrpYth53IYy7Jk+KB3ZJsvAnzLQdcASVu75DkpfBFJ0aBDDqiRh7jhpNTBrsHW7G/kHEbTRorUh/no59iBB6iUDsfmv6zpvcUUtDtvekY+OfpLmKnRe+aILIva53PvLXyVT9UAeE2XvnIutDQhRVO54mnI25Ot/R0Pdtl7qC83uvRMpJfVpaNsKpUSS708MjuT8zgLIY+t7r3pHa7nJoJTnkfFHm52oeHFak272Zq7jUXkntfiAMgyKKqvCHapD22tYOKJXzRt2CzuDUWsAQ1XAOgps6Vb9GzSAPRYK0MuXKHk8qCv2SkubtpS01WEUXj88UuE/vcxaiLHVjt+LbUy09t9FbOmNh34Wr1ppSrYug=="
+  encryptedSecretKey: "AgCyCJJbO4BQ4J0lh96ouMOocB3yRaMe8uMHHBOnb62jE74EtRw3h7VQ4QVXcfHO7Fp/6prDU6EjJHOBCVAJhu0rs14xi9NNAG2C/cE738PAhP8iv7ksXm4/fK44tfQBvieCWvJ1hFZnrgI/disU5PKShExevvQ6NbNxwPLfC3R9myRdEZGkGgL3NEPb8/komBwSjaf9TLyHl3Ou/+N1zob1G8j6RTcVFWyY/5303oblwOQutYQ/WI481aBsFsMSEqhXT1qoVfJXmkDirZs0c7iosvm75ygpLndoXY4mJPoYnWd6HB9UPLAhkKcPD6DbctdBE3GPRPIw/zptu2JGh/lDM+gijo/AwnvAUfVVUHGX0STihFzpEaAkPyhSONxO8s05Z9HR/E61B/IeMRVAUZkeUONv673CZVZMZYXSVxWO2Ej1u9l5Zv3vR3h31weBzGCii7FEQ00fG5l1S/vkYhE2lZChZ4HFsqHZfEfKBAlF2zuToEHNXCcmCpMD4KUNpKJDumD+kUjMQHuPrOw4fq7bBqpoOCj6nZDBsmZ+kocPjG3AO4ERUw5AY4YygaXwKI3KF//IZMA0Eox5G2Mch4MU1ihcjwsufzw8PtoMJS+h9KWby/kYeIQVWWwfYdIsCQTxlUPEd0UAisEk3f7xd4EeV9g3U+G9WWUNFmXtTR0PHWBP18dB9EH/7qmBU9gi+f6rYHqUF8CQkqQW+A=="
+
+# Docker config json for Kaniko to push images to GHCR (ghcr.io/jaydee94/...).
+# Build the dockerconfigjson, then seal it under the `.dockerconfigjson` key.
+ghcrSecret:
+  enabled: true
+  name: ghcr-push
+  encryptedDockerConfigJson: "AgAHktYV9wVCu8hUMV8E5D6cjg6mRuDwrLjjemKSePUqO79e9R25E5p2ydEHiEhz9+EuqMyI+NEJrp+jxUwxc46AMt8/g4EyNCHizZMU+HRTYbfrGBjdmYIDoNRgQedp3vaB9o1HFbmAaqNIoZ+W5EyyX2P+aixQTRUtsdwkhgXW8S4KwRas1fywoWwODsWz7urdmYpluP9keDJfGJcvO7VHuBVghRz3mf+2kz8uO8YKRtwx+SPrvMS1ETVrEPVpvFp62QEXm0Vo+P8V5oyiUW1B7QVqmraOFyOD0JympRJ6G/nWeSzCXGxk+vLn5U5Z8O+L3W+19OeVmBkqd6AiBCmCmh8aVhs+1cRi+tQrzhdLhPCTiIiro47SPHmT5b9OCJmpoCOGSFFBwXB7yu95ZLt8LAP7G33+VZsbIYYVxF9Gx7UW6YmUssPDHEPt+XdhQPMtzdp+JMXreUv/LkqsAqIXbpbuS/I2+Ux7JrZMUpdtUWTVMEJEgmqrI+qS8wvxkP9EkD9HqOgq/PzLNbEO2BhJakJR1ZNDwvD2ME7n7vyrRezHGQ54WF4mOCN5JDiZFbGXQAX0/O4A+0v/r4XnV3V+tnIctxntVEi1pMyDTvJEp6k7YRTQCJjTBo7W2R5Amvh+++ois0y3Y2iLe1oNkgC7U5hYVUoOFYOqZnKu5RMOhXYOJeVBSMCSOihoDpLI61aD7RJwJ2hSWRF1R1cCxAFAwR8YoWg6v2d5tpl6Wqz95GxlJw/nPS8L1zegSpsyyIg6qHEw3GbmSDVTmkZvo2sd0Z5YIMSPW39EiZ2s6vxDJ6xHzcHqLbTavWyijwU="

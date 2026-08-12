@@ -1,0 +1,271 @@
+---
+# ============================================================
+# carplay-api — Backend für die iOS-App Homeserver Dashboard.
+# Setup-/Betriebsanleitung: docs/43-carplay-api.md
+# ============================================================
+
+replicaCount: 1
+
+image:
+  # Über kaniko-build-push gebaut und gepusht, siehe README.md dieses
+  # Charts. Nach dem ersten Push hier Repository/Tag setzen.
+  repository: ghcr.io/pkr-lab/carplay-api
+  tag: "v5"
+  pullPolicy: IfNotPresent
+
+# Nur nötig, falls das GHCR-Package privat ist:
+#   kubectl -n carplay-api create secret docker-registry ghcr-pull \
+#     --docker-server=ghcr.io --docker-username=<user> --docker-password=<pat>
+imagePullSecrets:
+  - name: ghcr-pull
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Ein einzelner App-Client pollt alle 30s — Autoscaling bringt hier
+# nichts, würde nur die Upstream-Last (VictoriaMetrics/ntfy/Uptime-Kuma)
+# vervielfachen. Struktur bleibt für den Bedarfsfall stehen.
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 75
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations: {}
+  host: carplay-api.homeserver
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+# readOnlyRootFilesystem geht problemlos: der Server schreibt nichts auf
+# die eigene Root-FS, Config kommt komplett aus Env-Vars.
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+livenessProbe:
+  initialDelaySeconds: 3
+  periodSeconds: 15
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  initialDelaySeconds: 2
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+config:
+  logLevel: info
+  cacheTTLSeconds: "30"
+  apiTimeoutSeconds: "5"
+  rateLimitPerMinute: "100"
+
+  # Nur relevant für ein hypothetisches Web-Frontend — die iOS-App
+  # ignoriert CORS (URLSession ist kein Browser). Leer = keine
+  # Access-Control-Allow-Origin-Header werden je gesetzt.
+  corsAllowedOrigins: ""
+
+  # CIDRs der Proxies, denen X-Forwarded-For geglaubt wird (nötig, damit
+  # ipAllowlist unten und das Access-Log die echte Client-IP hinter Traefik
+  # sehen, nicht die Pod-IP von Traefik selbst). Mit `kubectl -n kube-system
+  # get pods -o wide` / Traefik-Chart-Werten den Pod-CIDR ermitteln.
+  trustedProxies: ""
+
+  # Netzwerk-Grenze für /api/*. Deaktiviert per Default, damit der erste
+  # Deploy nicht sofort alle aussperrt, falls trustedProxies oben noch nicht
+  # stimmt — siehe docs/43-carplay-api.md, Abschnitt "Absicherung", bevor
+  # das hier scharf geschaltet wird.
+  ipAllowlist:
+    enabled: false
+    # Tailscale-CGNAT-Bereich (docs/06-tailscale.md) + LAN-Subnetz.
+    cidrs: "100.64.0.0/10,192.168.178.0/24"
+
+  victoriaMetrics:
+    url: "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428"
+
+  # Ein Eintrag pro Host-Karte auf der App-Startseite. instance muss exakt
+  # dem VictoriaMetrics-"instance"-Label des node-exporter-Targets
+  # entsprechen (in diesem Cluster "IP:9100", kein Hostname-Relabeling) —
+  # mit `curl vmsingle.../api/v1/targets` prüfen, falls ein Host nie als
+  # "online" erscheint. Ein Host, der (noch) nicht gescraped wird oder
+  # gerade aus ist, liefert einfach online:false statt eines Fehlers, siehe
+  # docs/43-carplay-api.md.
+  hosts:
+    - id: homeserver
+      name: "Homeserver"
+      instance: "192.168.178.94:9100"
+    - id: worker-0
+      name: "Worker 0"
+      instance: "192.168.178.95:9100"
+    - id: worker-1
+      name: "Worker 1"
+      instance: "192.168.178.96:9100"
+    - id: nas
+      name: "NAS"
+      instance: "192.168.178.97:9100"
+
+  # Für die "Dienst-Aktivität"-Grafik im PKR-Lab-Dashboard (Alltag-Modus
+  # hat eine eigene, unabhängige Kurzlink-Liste, siehe ios/.../Constants.
+  # SelfHostedServices) — braucht die Traefik-Metriken aus
+  # argocd/apps/platform/traefik-config. match ist ein Teilstring des rohen Traefik
+  # "service"-Metrik-Labels (Format variiert je nach Provider/Chart-
+  # Version), KEIN exakter Wert — vor dem Deploy mit
+  # `curl $VM_URL/api/v1/label/service/values` gegenprüfen und bei Bedarf
+  # anpassen.
+  services:
+    - id: nextcloud
+      name: "Nextcloud"
+      match: "nextcloud"
+    - id: immich
+      name: "Immich"
+      match: "immich"
+    - id: vaultwarden
+      name: "Vaultwarden"
+      match: "vaultwarden"
+    - id: paperless
+      name: "Paperless-ngx"
+      match: "paperless"
+    - id: mealie
+      name: "Mealie"
+      match: "mealie"
+    - id: n8n
+      name: "n8n"
+      match: "n8n"
+    - id: wikijs
+      name: "Wiki.js"
+      match: "wikijs"
+    - id: zammad
+      name: "Zammad"
+      match: "zammad"
+
+  # GET /api/updates — liest die von github-release-watcher geschriebene
+  # Update-Status-ConfigMap in dessen (anderem!) Namespace, via In-Cluster-
+  # k8s-API + der cross-namespace RoleBinding aus
+  # argocd/apps/workloads/github-release-watcher/templates/role.yaml.
+  # Werte MÜSSEN zu dessen
+  # {{ include "github-release-watcher.fullname" . }}-updates passen — bei
+  # abweichendem Release-Namen dort entsprechend anpassen.
+  updates:
+    namespace: "github-release-watcher"
+    configMapName: "github-release-watcher-updates"
+    cacheTTLSeconds: "900"
+
+  # power-agent läuft NICHT im Cluster — es ist ein privilegierter Prozess
+  # direkt auf dem Homeserver-Host (ansible/roles/power_agent), der
+  # Bildschirmhelligkeit + Wake-on-LAN + Poweroff für die App ausführt, weil
+  # der carplay-api-Pod bewusst unprivilegiert läuft (siehe
+  # podSecurityContext/securityContext unten) und keinen Host-Zugriff hat.
+  powerAgent:
+    url: "http://192.168.178.94:9101"
+    timeoutSeconds: "8"
+
+  ntfy:
+    url: "http://ntfy.ntfy.svc.cluster.local"
+    # Comma-separated — ntfy's polling endpoint natively supports subscribing
+    # multiple topics this way (GET /topic1,topic2/json). These are the two
+    # topics that actually receive messages: Home-Lab (Alertmanager
+    # severity=critical, via argocd/apps/platform/ntfy-bridge) and Home-Lab-System
+    # (thermal_watchdog/resource_watchdog/cluster_power_manager on the host).
+    # "alerts" (the old default) has no publisher — nothing ever showed up.
+    topic: "Home-Lab,Home-Lab-System"
+    sinceWindow: "12h"
+    alertLimit: "10"
+
+  uptimeKuma:
+    url: "http://uptime-kuma.uptime-kuma.svc.cluster.local"
+    # Muss in der Uptime-Kuma-UI als Status-Page angelegt sein, mit allen
+    # anzuzeigenden Monitoren hinzugefügt — siehe docs/43-carplay-api.md.
+    slug: "homeserver"
+
+# CARPLAY_API_TOKEN — das Bearer-Token, das die iOS-App im Authorization-
+# Header schickt. enabled: true (Default) heißt: das Secret MUSS vor dem
+# ersten Sync versiegelt sein, sonst bleibt der Pod in
+# CreateContainerConfigError hängen (bewusst — ein Dashboard, das
+# Systemzustand + Alerts zeigt, sollte nicht ungeschützt starten).
+# Erzeugen (kubeseal-Zertifikat siehe docs/43-carplay-api.md
+# "Ersteinrichtung" Schritt 1, oder direkt via kubeseal-webgui.homeserver):
+#   openssl rand -hex 32
+#   echo -n "<token>" | kubeseal --raw \
+#     --namespace carplay-api --name carplay-api-token \
+#     --cert ~/homelab-certs/sealed-secrets.pem --from-file=/dev/stdin
+secrets:
+  apiToken:
+    enabled: true
+    secretName: carplay-api-token
+    secretKey: token
+    encryptedData: "AgCFpnTA/P1wqPtwBw/FEJY3OVuj6kZ64EfKLMNi5tkBIm8B/qAi+C7865HzccRRT5UhYRyE89CBctu3sr/18rGST9EpwwaFTbjpI8MVYOQ8+pn+eLu6Tjb1LrVWl3ZQn66smYp9xYlHamPXo0PxQrHViFIllerjZ9nPP7uAjswjDemG6U2wW9bslECFqS6V0h1eTci3HXRKmIrr6QSdwicNqiiKfxHAi9JTvfg7zmZ20eiYLRjnXvGksySppVWYzmaa7T/Oa4ac4UAUnAKgSjr0K9HhXfygysjUfI3yqc47YOR9o1IDNlfdIKwNmrLWjKgKETobhaLg4uFQcnG720CVlGkAt0nLt4QRvQl3RRDd7TAIVRGMPb4Boezx9OzjZ2HgfaM1QcrW+4Koi9Sq4Phanq9PXsS2KS0CncSozPTd1d//M2evHY4Hx0ySzR1u7OGOxFEyKH3ooheg08AwYPgtc0nygfjbSxTB2UO26rT8hQSC3xQ78wDjdrleiFKxz1iBBNm7kJOffZ6m0+eIQy5vz+lwufak+k6fW2PN/C/01Nhztte/G1UnybMWtaGOBp/tfdNz9Hy+T0ao/6q6Ne3t0KxndXpPFhtdXQbAy30jsIKIrs3iMvxn1XlBaNVFsdc2w9TPdAz/HJ2yi7IjzVpTEHa/0HVi1cxJ9lMR1ZRifd9k0+kA7D98RoH1tOCHP8TaIo9yZsaykwjLDvIHOtWOnY/Eg1P17l2AYt7HReNSBv90csXgTPwCiOMJE8i3/GKRTdiEarXPfUtkfSJM+Wlg"
+
+  # Nur nötig, falls ntfy irgendwann von auth-default-access: read-write
+  # (argocd/apps/platform/ntfy/values.yaml) auf deny-all umgestellt wird.
+  ntfyToken:
+    enabled: false
+    secretName: carplay-api-ntfy-token
+    secretKey: token
+    encryptedData: "REPLACE_ME_WITH_KUBESEAL_OUTPUT"
+
+  # POWER_AGENT_TOKEN — Bearer-Token, mit dem carplay-api sich beim
+  # power-agent (ansible/roles/power_agent, läuft auf dem Homeserver-Host)
+  # authentifiziert. MUSS mit dem Token übereinstimmen, das die Rolle dort
+  # via power_agent_token in /etc/power-agent/config.env einträgt — beide
+  # Werte kommen aus demselben `openssl rand -hex 32`. Ohne dieses Secret
+  # schlagen Helligkeit/Wake/Shutdown mit 502 fehl, der Rest der App bleibt
+  # nutzbar. Erzeugen wie secrets.apiToken oben, nur mit anderem
+  # --name/Namespace-Secret-Namen.
+  powerAgentToken:
+    enabled: true
+    secretName: carplay-api-power-agent-token
+    secretKey: token
+    encryptedData: "AgCgwkjNu+4nPKN//47J2M3BOlx0mz+v+UJBAh6IZfwa7v9hn67KosBaRxvhWTQJMR8a7aTp3dsVeadAjf2bDD3ilxa1U6Ey0eywmU1ivUXl20bgS3etJsJDsk1AWCGH96Aa96Sb0zEbG0hQKqovAnh+8AaHQOkFQ5ELU3PNOPPeZ7ZEb0exRf4Ywal0gJyKI3UJs4BMrMJIt06mwpFmnaK5xGaluvwAEPCE3qnIRgVZwgF+6RZPh+qpIqWkMJGU4Kb7wi/aXYWAoSp8mPEhVZD4B9rvnOI+ATaOw+REaEp0ZKFmPA6eiLkJLgSG+mHHSF7XTI277vONeAj7jXi1mrNB+Lxxq+LLpHPN8Bh+/rSiWyCyJwDeSUO29tunFYK+J6+rEa2ylTMCClxjtkos7a1SPGtqYfTrGL0uf8xzivhcdaPHWQ4NliXyydaJLE/IBGiD7CriGrsJFmUId31QQnT5ju2R3XoFsOCtCOi+AgtauBVkPzgDgjKDb8vgr4wK9qmNgK7HTY1KGuu6jcPYvY1e2V48U7YoKUPy+iTUkMDb/whVgexMtqS0Xe/tapiFyXO8nTH4P+jZZWqsx4baSURnBKqffVikOCL7QvLGp1Uk3EiI1/LTYT+lqm+N9I6mwmd8yZ/dEp+98COgtc60dMiccev4BdG+mePEZG/SACPxgfqaiLyojUPiGJmKBXln0c7/wfQdKlQOZYOAiewMdz9uKJ6CQG2dOTPYE+dpTPZ8dZhUjbasnXbaiNAzhUg6HUdMZ9ejNec6UhTQSYOQUpYv"
+
+  # SHUTDOWN_CONFIRMATION_CODE — der Code, den die App vor einem
+  # Homeserver-Shutdown abfragt (siehe ios/README.md). Bewusst kein
+  # Live-Check gegen ArgoCD (kein RBAC/Netzwerkpfad von diesem Pod aus
+  # nötig) — stattdessen manuell auf denselben Wert wie das aktuelle
+  # ArgoCD-Admin-Passwort setzen (docs/05-argocd.md) und bei jeder
+  # Passwort-Rotation hier mit erneuern:
+  #   echo -n "<argocd-admin-passwort>" | kubeseal --raw \
+  #     --namespace carplay-api --name carplay-api-shutdown-code \
+  #     --cert ~/homelab-certs/sealed-secrets.pem --from-file=/dev/stdin
+  # Bleibt enabled:false, blockiert POST /api/power/shutdown für
+  # target=homeserver mit 503 (siehe internal/handlers/power.go) statt
+  # einen leeren Code stillschweigend zu akzeptieren.
+  shutdownConfirmationCode:
+    enabled: false
+    secretName: carplay-api-shutdown-code
+    secretKey: code
+    encryptedData: "AgAUqhhpdNTrLTyxJNGfnbPi2MwU+ELSOk5uJl+5bwx2FF167dClG8gVaV4zHqcPnHbsIUNhbkhEe1kYm5vT85HBIjqTpWGcn0IaFUiJa0JWeAVmDdUpexJe9jWSN4bB5r4JGOwWZQSw/5Ao425/DHxfoHvCI66mgj/bZuCAOtzRgain2CPZEQtHCso51xbVtXk5d8CO1dselCvFgrGWyvGNQYI6e30I9s6hD4P9ee7IIqeMr0ArtOljbwqsatH9/97xPTIaBfWoa3R9rmesgVEOWNB/WaaZZcGzavmpNlN8ciOTWpsWEtvl7MlBjHH0w/QRzMrMUOQUlNopZVPOrZZIUptRhYm+dhiGS/kkvltkTWppofH6Sl4Fy3Qh1QXfLAer2fJGeKKck/gXKmoodbLF5aVz2G5Msko8yssa2HDxa9+u3kYb1KAdlEjRfOs3yLzXKk5JRvr4icncYdxYPsQtX7M+K0S8daYbJrUL9aXO0Nc3ObG4jfAchGd1mVQSnLIojbz/oYxR7MCBqgR2OBSh5W/nOB/PEnEvmXEJ291JozdchxFIXRL+ETGLFZgCpPM8Krushq1L45iqmA2D148MgxWk3W9417yqMNDJvYOjcYcFN/pSDuCR5IZp6jLb1hEGRVF5E/4ooiz8Grm/FF4sgppI5qeyS4xVeyUmxf5FfsdfqzbdVRWE/NieCFiOefe5p5ECJPX34FyR/wyNh7/a"
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

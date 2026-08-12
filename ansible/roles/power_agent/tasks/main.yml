@@ -3,7 +3,7 @@
 # power_agent role — privilegierter HTTP-Agent auf dem Homeserver für
 # Bildschirmhelligkeit + manuelles Wake-on-LAN/Poweroff aus der iOS-App.
 # Läuft NICHT im Cluster — carplay-api ruft ihn über die
-# Homeserver-LAN-IP:Port, siehe argocd/apps/carplay-api/values.yaml
+# Homeserver-LAN-IP:Port, siehe argocd/apps/workloads/carplay-api/values.yaml
 # config.powerAgent. UFW braucht dafür KEINE neue Regel: "Allow all
 # traffic from k3s pod CIDR" (ansible/roles/common) deckt Pod->Host schon
 # ab, unabhängig davon, auf welchem Node der carplay-api-Pod läuft
@@ -101,7 +101,7 @@
       power-agent-Token liegt in {{ power_agent_token_path }} auf
       {{ inventory_hostname }}. Falls dies ein Ersteinrichtung oder eine
       Token-Rotation war: Wert auslesen und in
-      argocd/apps/carplay-api/values.yaml unter secrets.powerAgentToken neu
+      argocd/apps/workloads/carplay-api/values.yaml unter secrets.powerAgentToken neu
       versiegeln (kubeseal) — sonst bekommt die App dauerhaft 502 auf
       Helligkeit/Wake/Shutdown. Siehe docs/43-carplay-api.md "power-agent".
   when: power_agent_enabled | bool

@@ -38,7 +38,7 @@ seinen eigenen Stationsnamen, die echte AMweb-URL bleibt serverseitig.
 
 ## Cluster-Komponente: Helm Chart `alamos-apager`
 
-Liegt unter `argocd/apps/alamos-apager/`, wird wie jede andere App in
+Liegt unter `argocd/apps/workloads/alamos-apager/`, wird wie jede andere App in
 `argocd/apps/*` automatisch von ArgoCD erkannt und ausgerollt (siehe
 [docs/05-argocd.md](05-argocd.md)) — keine manuelle Registrierung nötig.
 
@@ -86,8 +86,8 @@ bleibt zusätzlich als SealedSecret verschlüsselt.
      --from-literal=zentrale="https://amweb.alamos.cloud/...echte-url..." \
      | kubeseal --controller-namespace sealed-secrets \
          --controller-name sealed-secrets-controller -o yaml \
-     > argocd/apps/alamos-apager/templates/sealedsecret-stations.yaml
-   git add argocd/apps/alamos-apager/templates/sealedsecret-stations.yaml
+     > argocd/apps/workloads/alamos-apager/templates/sealedsecret-stations.yaml
+   git add argocd/apps/workloads/alamos-apager/templates/sealedsecret-stations.yaml
    git commit -m "feat(alamos-apager): add station <name>"
    git push
    ```
