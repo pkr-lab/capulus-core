@@ -125,11 +125,11 @@ Tunnel-Client, baut die Verbindung ausschließlich nach außen auf.
 
 | Ich will ändern... | Datei |
 |---|---|
-| LAN-Hostname (`*.homeserver`) einer App | `argocd/apps/<app>/values.yaml` → `ingress.hosts[].host` |
+| LAN-Hostname (`*.homeserver`) einer App | `argocd/apps/<platform\|workloads>/<app>/values.yaml` → `ingress.hosts[].host` |
 | Externe Erreichbarkeit (`*.pke-lab.de`) hinzufügen/entfernen | `argocd/apps/platform/cloudflared/values.yaml` → `ingress.rules` |
-| Internen Service-Port einer App | `argocd/apps/<app>/values.yaml` → `service.port`/`targetPort` (Chart-abhängig) |
-| NodePort (Pi-hole DNS, MediaMTX Publish) | `argocd/apps/<app>/values.yaml` → `service.nodePort`/`publishService.ports.*.nodePort` — danach ggf. UFW-Regel auf neuen Port anpassen |
-| ArgoCD-Zugriffsport | `argocd/apps/argocd`-Bootstrap bzw. Helm-Values des ArgoCD-Charts selbst (nicht Teil der App-Wrapper-Charts) |
+| Internen Service-Port einer App | `argocd/apps/<platform\|workloads>/<app>/values.yaml` → `service.port`/`targetPort` (Chart-abhängig) |
+| NodePort (Pi-hole DNS, MediaMTX Publish) | `argocd/apps/<platform\|workloads>/<app>/values.yaml` → `service.nodePort`/`publishService.ports.*.nodePort` — danach ggf. UFW-Regel auf neuen Port anpassen |
+| ArgoCD-Zugriffsport | ArgoCD-Bootstrap (`ansible/roles/argocd/`) bzw. Helm-Values des ArgoCD-Charts selbst (nicht Teil der App-Wrapper-Charts) |
 
 Nach jeder Änderung: committen + pushen, ArgoCD synct automatisch
 (`automated: {prune: true, selfHeal: true}` ist für alle Apps aktiv).
