@@ -234,9 +234,31 @@ Namespace für Namespace migrieren, ohne die anderen 34 anzufassen —
 die Policy-Objekte, deren Inhalt sich tatsächlich geändert hat.
 
 **Reihenfolge** (aus docs/51): unkritische Apps zuerst, dann Apps mit
-eigener DB, zuletzt Plattform-Namespaces. Aktueller Stand: `example-whoami`,
-`tinyteller` in der Liste (13.08.2026) — beide zustandslose Demo-Apps ohne
-Abhängigkeiten zu anderen Namespaces, ideal zur Musterverifikation.
+eigener DB, zuletzt Plattform-Namespaces.
+
+**Batch 1 (13.08.2026, verifiziert):** `example-whoami`, `tinyteller` —
+beide zustandslose Demo-Apps ohne Abhängigkeiten zu anderen Namespaces,
+ideal zur Musterverifikation. HTTP-Check nach Rollout: beide `200`,
+`podSelector: {}` in der Policy bestätigt, ArgoCD weiterhin `Healthy`.
+
+**Batch 2 (13.08.2026, Rollout aussehend):** `wikijs`, `mealie`, `n8n` —
+Apps mit eigener DB/eigenem State, komplett im selben Namespace (Postgres
+bei wikijs, In-Pod-SQLite bei mealie/n8n), keine Cross-Namespace-
+Abhängigkeit für den Normalbetrieb.
+
+> **Gefundene Lücke, nicht Teil dieses Batches:** Ein n8n-Workflow
+> (`argocd/apps/workloads/n8n/workflows/banana-pi-down-to-zammad.json`)
+> fragt VictoriaMetrics direkt per HTTP ab
+> (`vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428`) —
+> ein Workload→Platform-Zugriff. Der Workflow ist aktuell `"active": false`,
+> daher kein akuter Ausfall. Würde er aktiviert, schlägt die Abfrage an
+> `monitoring`s **schon seit Batch 1 aktiver** groben Tier-Policy fehl (die
+> erlaubt Ingress nur aus dem `platform`-Tier, n8n ist `workload`). Falls
+> der Workflow gebraucht wird: entweder `monitoring` selbst eine explizite
+> Zusatz-Ausnahme für `n8n` geben (analog zur `kube-system`/`monitoring`-
+> Ausnahme), oder den Workflow stattdessen über den öffentlichen
+> Grafana-/VictoriaMetrics-Ingress via `kube-system` laufen lassen statt
+> direkt per ClusterIP.
 
 **Rollout für die beiden Piloten:**
 

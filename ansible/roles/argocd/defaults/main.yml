@@ -64,3 +64,10 @@ argocd_apply_network_policies: true
 argocd_network_policy_refined_namespaces:
   - example-whoami
   - tinyteller
+  # Batch 2 (13.08.2026): Apps mit eigener DB, komplett im selben Namespace
+  # (Postgres/State läuft dort, keine Cross-Namespace-Abhängigkeit für den
+  # Normalbetrieb geprüft — siehe docs/52 für den n8n-Sonderfall, ein
+  # inaktiver Workflow, der VictoriaMetrics in `monitoring` direkt abfragt).
+  - wikijs
+  - mealie
+  - n8n
