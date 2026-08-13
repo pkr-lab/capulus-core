@@ -1,0 +1,21 @@
+# Security-Härtung Phase 5 (docs/51-security-hardening-roadmap.md,
+# docs/54-internal-tls.md): hinterlegt das *.homeserver-Wildcard-Zertifikat
+# (siehe sealedsecret-wildcard-tls.yaml, selber Namespace) als
+# Traefik-Default-Zertifikat. Der Name "default" ist kein Freitext — das
+# ist die von Traefik selbst reservierte Sonder-Ressource, die automatisch
+# für jeden Router/jedes Entrypoint greift, das nicht explizit ein anderes
+# TLSStore referenziert. Ohne das würde jeder Router weiterhin auf
+# Traefiks selbst-signiertes Default-Zertifikat zurückfallen (Browser-
+# Warnung trotz Verschlüsselung).
+#
+# Bewusst NICHT pro App/Ingress einzeln konfiguriert (z. B. via
+# `spec.tls.secretName` auf jedem der 36 Ingress-Objekte) — ein einziges
+# TLSStore deckt alle *.homeserver-Hosts ab, ohne 36 Dateien anzufassen.
+apiVersion: traefik.io/v1alpha1
+kind: TLSStore
+metadata:
+  name: default
+  namespace: kube-system
+spec:
+  defaultCertificate:
+    secretName: homeserver-wildcard-tls
