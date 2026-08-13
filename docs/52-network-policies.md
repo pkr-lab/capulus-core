@@ -5,9 +5,14 @@ grobe Default-Deny-NetworkPolicy je `security-tier`, damit ein
 kompromittierter Pod (z. B. n8n) nicht mehr uneingeschränkt auf
 Postgres/Redis/Services in fremden Namespaces zugreifen kann.
 
-**Status (13.08.2026): Schritt 1 live, Schritt 2 läuft (5 von 36
-Namespaces verfeinert).** `argocd_apply_network_policies: true` ist
-dauerhafter Default in
+**Status (13.08.2026): Fertig.** Schritt 1 + Schritt 2 komplett live, alle
+36 App-Namespaces auf die strikte Policy verfeinert (nur eigener Namespace
++ kube-system + monitoring + cloudflared + gezielte Extra-Ausnahmen, keine
+pauschale Tier-Erlaubnis mehr). Verifiziert: ArgoCD weiterhin 35/36
+`Healthy` (`monitoring` unverändert `Progressing`, vorbestehend),
+HTTP-Stichproben lokal (`*.homeserver`) **und** extern über den
+Cloudflare-Tunnel (`*.pke-lab.de`) erfolgreich, `cloudflared`-Logs sauber.
+`argocd_apply_network_policies: true` ist dauerhafter Default in
 [ansible/roles/argocd/defaults/main.yml](../ansible/roles/argocd/defaults/main.yml).
 
 ---
@@ -377,14 +382,30 @@ durch Intra-Tier gedeckt, braucht jetzt eine explizite
 Workload-Namespaces verfeinert** — übrig bleiben nur noch die 19
 Plattform-Namespaces als letzter Batch.
 
-**Letzter Batch (offen): Plattform-Namespaces.** Hier ist am ehesten mit
-unerwarteten Cross-Namespace-Abhängigkeiten zu rechnen (Authentik-
-Outposts, Semaphore→Authentik, Minio→Authentik-OIDC, ArgoWorkflows→Minio/
-Monitoring, Monitoring→Gotify-Bridge/Ntfy-Bridge — alle bereits per
-Repo-Scan gefunden, aber noch nicht auf tatsächliche Notwendigkeit einer
-Extra-Ausnahme geprüft, da sie bislang alle Intra-Tier sind und daher
-noch unter der groben Policy laufen). Vor diesem Batch denselben
-Scan-Schritt wiederholen, dann genauso schrittweise/batchweise vorgehen.
+**Batch 4 (13.08.2026): alle 19 Plattform-Namespaces — letzter Batch.**
+Damit sind **alle 36 App-Namespaces verfeinert**, Schritt 2 ist komplett.
+`coredns-custom`/`traefik-config` haben keine eigenen Pods (deployen nach
+`kube-system`, siehe docs/49) — Policy dort ist ein wirkungsloses No-Op,
+der Vollständigkeit halber trotzdem gesetzt.
+
+Gefundene Platform-zu-Platform-Abhängigkeiten (alle bislang durch
+Intra-Tier stillschweigend erlaubt, jetzt durch je eine gezielte
+`argocd_network_policy_extra_ingress`-Ausnahme ersetzt):
+
+| Ziel | Erlaubt zusätzlich aus | Grund |
+|---|---|---|
+| `authentik` | `semaphore`, `minio`, `gotify` | ExternalName-Services bzw. OIDC-Discovery, siehe jeweiliges `values.yaml`/`templates/authentik-svc.yaml` |
+| `gotify` | `gotify-bridge` | `gotify-bridge/values.yaml` |
+| `gotify-bridge` | `monitoring` | vmalertmanager-Webhook |
+| `ntfy-bridge` | `monitoring` | vmalertmanager-Webhook |
+| `ntfy` | (+ `ntfy-bridge`, zusätzlich zu `carplay-api`/`alamos-apager` aus Batch 3) | `ntfy-bridge/values.yaml` |
+| `minio` | `argo-workflows` | Artifact-Storage-Endpoint in `argo-workflows/values.yaml` |
+| `monitoring` | (+ `argo-workflows`, zusätzlich zu `carplay-api`/`n8n` aus Batch 3) | Alertmanager-URL in `maintenance-workflowtemplate.yaml` |
+
+Alle per `grep -rln "\.<ns>\.svc\|<ns>\.svc\.cluster" argocd/apps/`
+gefunden, kein Fall wurde durch Logs/Beobachtung entdeckt — nach dem
+Cloudflared-Incident bewusst vollständig statisch durchsucht statt
+abgewartet.
 
 ---
 
@@ -399,5 +420,8 @@ Scan-Schritt wiederholen, dann genauso schrittweise/batchweise vorgehen.
   Iteration, siehe [Design](#warum-ingress-only-kein-egress). Falls später
   gewünscht (z. B. um n8n explizit am Erreichen interner Postgres-Ports zu
   hindern statt nur andersrum), eigene, separate Folge-Iteration.
-- **Schritt 2** läuft schrittweise, siehe oben — aktuell erst zwei von 36
-  Namespaces verfeinert.
+- **Schritt 2 ist abgeschlossen** (alle 36 Namespaces verfeinert, siehe
+  oben) — bleibt aber laufende Pflege: eine künftige neue App mit einem
+  echten Cross-Namespace-ClusterIP-Aufruf braucht denselben
+  `argocd_network_policy_extra_ingress`-Mechanismus, sonst bricht sie beim
+  ersten `make argocd`-Lauf lautlos, wie beim Cloudflared-Incident.

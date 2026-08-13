@@ -88,6 +88,32 @@ argocd_network_policy_refined_namespaces:
   - wiki-docs-sync
   - xibosignage
   - zammad
+  # Batch 4 (13.08.2026): alle 19 Plattform-Namespaces, letzter Batch —
+  # damit sind alle 36 App-Namespaces verfeinert. Selbe Prüfung wie bei
+  # Batch 3 (`grep -rln "\.<ns>\.svc\|<ns>\.svc\.cluster" argocd/apps/`),
+  # diesmal mit mehreren echten Platform-zu-Platform-Abhängigkeiten
+  # (siehe extra_ingress unten) — coredns-custom/traefik-config haben
+  # keine eigenen Pods (deployen nach kube-system), Policy dort ist ein
+  # wirkungsloses No-Op, aber der Vollständigkeit halber trotzdem gesetzt.
+  - authentik
+  - sealed-secrets
+  - kubeseal-webgui
+  - monitoring
+  - logging
+  - gotify
+  - gotify-bridge
+  - ntfy
+  - ntfy-bridge
+  - cloudflared
+  - pihole
+  - coredns-custom
+  - nas-storage
+  - immich-storage
+  - minio
+  - argo-workflows
+  - semaphore
+  - headlamp
+  - traefik-config
 
 # Gezielte Zusatz-Ausnahmen, wenn ein anderer Namespace legitim per
 # ClusterIP direkt reinruft (nicht über Traefik) — unabhängig davon, ob
@@ -116,6 +142,7 @@ argocd_network_policy_extra_ingress:
   ntfy:
     - carplay-api
     - alamos-apager
+    - ntfy-bridge   # Batch 4: ntfy-bridge/values.yaml
   # monitoring (platform, noch grobe Policy): carplay-api fragt
   # VictoriaMetrics direkt per ClusterIP ab (Cross-Tier, aktiv genutzt).
   # n8n hat einen Workflow mit demselben Zugriffsmuster
@@ -125,9 +152,29 @@ argocd_network_policy_extra_ingress:
   monitoring:
     - carplay-api
     - n8n
+    # Batch 4: argo-workflows meldet Alerts an vmalertmanager
+    # (maintenance-workflowtemplate.yaml), platform-intern, aber ab jetzt
+    # verfeinert nicht mehr automatisch durch Intra-Tier gedeckt.
+    - argo-workflows
   # uptime-kuma (workload, Batch 3, jetzt verfeinert): carplay-api fragt
   # den Status per ClusterIP direkt ab, selbe Tier, aber verfeinert heißt
   # "nur eigener Namespace" — ohne diese Ausnahme bricht das jetzt, wo es
   # unter Schritt 1 (Intra-Tier) noch durchgelassen wurde.
   uptime-kuma:
     - carplay-api
+  # Batch 4 (13.08.2026), alle Platform-zu-Platform-ClusterIP-Aufrufe aus
+  # dem Repo-Scan — dieselbe Logik wie oben, nur diesmal Intra-Tier statt
+  # Cross-Tier (macht unter der groben Policy keinen Unterschied, war
+  # bisher durchgelassen; verfeinert braucht jeder einzelne eine Ausnahme):
+  authentik:
+    - semaphore   # semaphore/templates/authentik-svc.yaml (ExternalName)
+    - minio       # minio OIDC-Discovery-URL in minio/values.yaml
+    - gotify      # gotify/templates/authentik-svc.yaml (ExternalName)
+  gotify:
+    - gotify-bridge   # gotify-bridge/values.yaml
+  gotify-bridge:
+    - monitoring   # vmalertmanager-Webhook in monitoring/values.yaml
+  ntfy-bridge:
+    - monitoring   # vmalertmanager-Webhook in monitoring/values.yaml
+  minio:
+    - argo-workflows   # Artifact-Storage-Endpoint in argo-workflows/values.yaml
