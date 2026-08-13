@@ -12,6 +12,30 @@
     group: root
     mode: '0755'
 
+# ---- Audit-Log (Security-Härtung Phase 4, docs/53) ----------
+# Policy-Datei muss existieren, BEVOR k3s mit dem entsprechenden
+# --audit-policy-file-Flag neu startet, sonst verweigert der apiserver den
+# Start. Reines Datei-Templating hier ist ungefährlich (kein Restart-
+# Trigger) — der eigentliche Aktivierungsschritt ist der manuelle Restart
+# in docs/53.
+- name: Template kube-apiserver audit policy
+  ansible.builtin.template:
+    src: audit-policy.yaml.j2
+    dest: /etc/rancher/k3s/audit-policy.yaml
+    owner: root
+    group: root
+    mode: '0644'
+  when: k3s_audit_log_enabled | bool
+
+- name: Create /var/log/k3s directory for audit log output
+  ansible.builtin.file:
+    path: /var/log/k3s
+    state: directory
+    owner: root
+    group: root
+    mode: '0750'
+  when: k3s_audit_log_enabled | bool
+
 - name: Template k3s server configuration
   ansible.builtin.template:
     src: k3s-config.yaml.j2
