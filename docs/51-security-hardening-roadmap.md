@@ -24,23 +24,26 @@ absichtlich so gewählt, dass jede Phase auf der vorherigen aufbaut.
 
 ### Phase 5 — Internes TLS für `*.homeserver`
 
-**Status (13.08.2026): Zertifikat generiert (eigene openssl-CA statt
-Nutzer-Metadaten von mkcert, gültig bis 11.11.2028 — Repo ist öffentlich,
-siehe docs/54), Cluster-Manifeste committed, Rollout auf dem Cluster +
-Geräte-Verteilung stehen noch aus.** Vollständige Detail-Doku, Design-
-Entscheidungen und Anleitung pro Geräte-Typ (Linux/Windows/macOS/iOS/
-Android): [docs/54-internal-tls.md](54-internal-tls.md).
+**Status (13.08.2026): Cluster-seitig live und verifiziert.** Eigene
+openssl-CA (statt mkcert direkt — Nutzer-Metadaten, Repo ist öffentlich),
+Zertifikat mit expliziter SAN-Liste statt Wildcard (`*.homeserver`
+scheitert strukturell an einer OpenSSL-Sicherheitsregel gegen
+Single-Label-Suffix-Wildcards — siehe docs/54 für die Details, per
+`openssl s_client -verify_hostname` gegen mehrere echte Hosts bestätigt).
+Vollständige Detail-Doku, Design-Entscheidungen und Anleitung pro
+Geräte-Typ (Linux/Windows/macOS/iOS/Android):
+[docs/54-internal-tls.md](54-internal-tls.md).
 
 **Ziel:** Aktuell laufen alle `*.homeserver`-Adressen über Klartext-`http://`
 (Traefik hat keine TLS-Zertifikate für das interne LAN).
 
 **Ansatz:**
-1. Eigene kleine CA — `mkcert`-generiertes Root-Zertifikat (Begründung
-   gegen `step-ca` in docs/54). **[Erledigt]**
-2. Wildcard-Zertifikat `*.homeserver`, als Traefik-Default-TLS-Cert
-   (`TLSStore`) hinterlegt. **[Vorbereitet, Cluster-Rollout ausstehend]**
+1. Eigene kleine CA (openssl statt mkcert). **[Erledigt]**
+2. Zertifikat (SAN-Liste statt Wildcard, siehe docs/54), als
+   Traefik-Default-TLS-Cert (`TLSStore`) hinterlegt. **[Erledigt, verifiziert]**
 3. Root-CA-Zertifikat auf allen Client-Geräten im Trust-Store installieren
-   — das ist der aufwendigste Teil (pro Gerät manuell). **[Offen]**
+   — das ist der aufwendigste Teil (pro Gerät manuell). **[Teilweise —
+   Haupt-Dev-Rechner erledigt, weitere Geräte offen]**
 4. `http://` → `https://` in Docs/README nachziehen, sobald verifiziert. **[Offen]**
 
 **Risiko:** gering für den Cluster selbst, Aufwand liegt beim Verteilen des
