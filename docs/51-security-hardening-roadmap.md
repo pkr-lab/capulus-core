@@ -22,10 +22,16 @@ absichtlich so gewählt, dass jede Phase auf der vorherigen aufbaut.
 
 ### Phase 3 — Cluster-NetworkPolicies
 
-**Status (13.08.2026): Schritt 1 implementiert, Rollout auf dem Cluster
-steht noch aus.** Vollständige Detail-Doku, inkl. Design-Entscheidungen,
-Vorfunden (fehlende `security-tier`-Labels, verwaiste Namespaces) und
-Schritt-für-Schritt-Rollout mit Backup/Pilot/Validierung/Rollback:
+**Status (13.08.2026): Schritt 1 live und verifiziert, Schritt 2 (Verfeinerung
+pro Namespace) noch offen.** Rollout durchgeführt: Backup, Bereinigung
+verwaister Namespaces, `security-tier`-Labels neu gesetzt, Pilot auf
+`example-whoami`/`tinyteller`, danach voller Rollout auf alle 36
+App-Namespaces. Validiert: alle Apps weiterhin `Synced`, 35/36 `Healthy`
+(`monitoring` weiterhin `Progressing` — vorbestehendes 256KB-ConfigMap-
+Problem, nicht durch die Policies verursacht), HTTP-Stichproben über
+Traefik in mehreren Namespaces beider Tiers erfolgreich. Vollständige
+Detail-Doku, Design-Entscheidungen, Vorfunde (fehlende `security-tier`-
+Labels, verwaiste Namespaces) und das komplette Rollout-Protokoll:
 [docs/52-network-policies.md](52-network-policies.md).
 
 **Ziel:** Aktuell kann jeder Pod jeden Service im Cluster erreichen (keine
@@ -35,28 +41,29 @@ HTTP-Requests macht) hat uneingeschränkten Zugriff auf Postgres/Redis
 anderer Namespaces.
 
 **Ansatz:**
-1. **[Umgesetzt, Rollout ausstehend]** Grobe Default-Deny-Policy je
+1. **[Erledigt, 13.08.2026]** Grobe Default-Deny-Policy je
    `security-tier`-Label — Cross-Tier-Traffic blockiert, Intra-Tier
    erlaubt, plus feste Ausnahmen für `kube-system` (Traefik) und
    `monitoring` (VictoriaMetrics-Scraping). Bewusst nur Ingress, kein
    Egress (Begründung in docs/52) — dadurch entfällt der klassische
    DNS-Allow-Stolperstein strukturell, DNS bleibt als Egress-Vorgang
    unangetastet.
-2. Danach schrittweise pro Namespace verfeinern (nicht alle 34 auf einmal),
-   startend mit unkritischen Apps (`example-whoami`, `tinyteller`) zur
-   Musterverifikation, dann Apps mit eigener DB, zuletzt Plattform-Namespaces.
-3. Nach jeder Policy-Änderung: ArgoCD-Sync-Status + Funktionstest der
-   betroffenen App, bevor der nächste Namespace drankommt.
+2. **[Offen]** Danach schrittweise pro Namespace verfeinern (nicht alle 36
+   auf einmal), startend mit unkritischen Apps (`example-whoami`,
+   `tinyteller`) zur Musterverifikation, dann Apps mit eigener DB, zuletzt
+   Plattform-Namespaces.
+3. **[Offen]** Nach jeder Policy-Änderung: ArgoCD-Sync-Status +
+   Funktionstest der betroffenen App, bevor der nächste Namespace
+   drankommt.
 
 **Risiko:** mittel — eine falsch geschnittene Policy kann eine App
 lahmlegen. Deshalb schrittweise, nicht als Big Bang, siehe Pilot-Schritt
 in docs/52.
 
-**Voraussetzung, die als erfüllt angenommen wurde, es aber nicht war:** die
-`security-tier`-Labels aus Phase 2 fehlten beim Check am 13.08. komplett
-auf allen Namespaces (vermutlich durch den ApplicationSet-Incident
-verloren, siehe docs/52) — werden durch einen erneuten `make argocd`-Lauf
-neu gesetzt, bevor die Policies live gehen.
+**Nachgezogen:** die `security-tier`-Labels aus Phase 2 fehlten beim Check
+am 13.08. komplett auf allen Namespaces (vermutlich durch den
+ApplicationSet-Incident verloren, siehe docs/52) — durch einen erneuten
+`make argocd`-Lauf vor dem Policy-Rollout neu gesetzt und verifiziert.
 
 ### Phase 4 — k3s Secrets-Encryption-at-Rest + Audit-Log
 
