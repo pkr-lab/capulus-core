@@ -6,6 +6,11 @@ Detail-Doku zu Phase 5 aus [docs/51-security-hardening-roadmap.md](51-security-h
 committed, Rollout auf dem Cluster steht noch aus.** Danach folgt der
 aufwendigere Teil: das CA-Zertifikat auf jedem Client-Gerät installieren.
 
+> **Kein Wildcard-Zertifikat, trotz des Seitentitels** — siehe
+> [Design-Entscheidungen](#kein-wildcard-explizite-san-liste) unten. Der
+> Titel/Dateiname bezieht sich auf die `*.homeserver`-**Zone**, nicht auf
+> ein tatsächliches `*.homeserver`-Wildcard-Zertifikat.
+
 ---
 
 ## Ziel
