@@ -5,9 +5,14 @@ grobe Default-Deny-NetworkPolicy je `security-tier`, damit ein
 kompromittierter Pod (z. B. n8n) nicht mehr uneingeschränkt auf
 Postgres/Redis/Services in fremden Namespaces zugreifen kann.
 
-**Status (13.08.2026): Schritt 1 live, Schritt 2 läuft (5 von 36
-Namespaces verfeinert).** `argocd_apply_network_policies: true` ist
-dauerhafter Default in
+**Status (13.08.2026): Fertig.** Schritt 1 + Schritt 2 komplett live, alle
+36 App-Namespaces auf die strikte Policy verfeinert (nur eigener Namespace
++ kube-system + monitoring + cloudflared + gezielte Extra-Ausnahmen, keine
+pauschale Tier-Erlaubnis mehr). Verifiziert: ArgoCD weiterhin 35/36
+`Healthy` (`monitoring` unverändert `Progressing`, vorbestehend),
+HTTP-Stichproben lokal (`*.homeserver`) **und** extern über den
+Cloudflare-Tunnel (`*.pke-lab.de`) erfolgreich, `cloudflared`-Logs sauber.
+`argocd_apply_network_policies: true` ist dauerhafter Default in
 [ansible/roles/argocd/defaults/main.yml](../ansible/roles/argocd/defaults/main.yml).
 
 ---
@@ -362,12 +367,45 @@ Namespace wieder aus `argocd_network_policy_refined_namespaces` entfernen
 und `make argocd` erneut laufen lassen — die Policy fällt zurück auf die
 grobe Tier-Regel.
 
-**Nächste Kandidaten für die Liste** (nach erfolgreicher Validierung der
-beiden Piloten, einer nach dem anderen, nicht alle auf einmal): Apps mit
-eigener DB im selben Namespace (z. B. `wikijs`, `mealie`, `n8n` — deren
-DB/Redis läuft im selben Namespace, die eigene-Namespace-Regel deckt das
-weiterhin ab), danach Plattform-Namespaces zuletzt (dort am ehesten
-unerwartete Cross-Namespace-Abhängigkeiten, z. B. Authentik-Outposts).
+**Batch 3 (13.08.2026):** alle restlichen 12 Workload-Namespaces
+(`alamos-apager`, `carplay-api`, `github-release-watcher`, `immich`,
+`mediamtx`, `nextcloud`, `paperless-ngx`, `uptime-kuma`, `vaultwarden`,
+`wiki-docs-sync`, `xibosignage`, `zammad`) in einem Rutsch — nicht
+schrittweise einzeln, weil vorher per systematischem Repo-Scan
+(`grep -rln "\.<ns>\.svc\|<ns>\.svc\.cluster" argocd/apps/`, für jeden
+Namespace einzeln) bereits geprüft war, dass keine eingehenden
+Cross-Namespace-Aufrufe existieren außer den ohnehin generell erlaubten
+(`cloudflared`) und einem einzigen Fall: `carplay-api` fragt `uptime-kuma`
+per ClusterIP ab (workload→workload, war unter der groben Policy schon
+durch Intra-Tier gedeckt, braucht jetzt eine explizite
+`argocd_network_policy_extra_ingress`-Ausnahme). Damit sind **alle 17
+Workload-Namespaces verfeinert** — übrig bleiben nur noch die 19
+Plattform-Namespaces als letzter Batch.
+
+**Batch 4 (13.08.2026): alle 19 Plattform-Namespaces — letzter Batch.**
+Damit sind **alle 36 App-Namespaces verfeinert**, Schritt 2 ist komplett.
+`coredns-custom`/`traefik-config` haben keine eigenen Pods (deployen nach
+`kube-system`, siehe docs/49) — Policy dort ist ein wirkungsloses No-Op,
+der Vollständigkeit halber trotzdem gesetzt.
+
+Gefundene Platform-zu-Platform-Abhängigkeiten (alle bislang durch
+Intra-Tier stillschweigend erlaubt, jetzt durch je eine gezielte
+`argocd_network_policy_extra_ingress`-Ausnahme ersetzt):
+
+| Ziel | Erlaubt zusätzlich aus | Grund |
+|---|---|---|
+| `authentik` | `semaphore`, `minio`, `gotify` | ExternalName-Services bzw. OIDC-Discovery, siehe jeweiliges `values.yaml`/`templates/authentik-svc.yaml` |
+| `gotify` | `gotify-bridge` | `gotify-bridge/values.yaml` |
+| `gotify-bridge` | `monitoring` | vmalertmanager-Webhook |
+| `ntfy-bridge` | `monitoring` | vmalertmanager-Webhook |
+| `ntfy` | (+ `ntfy-bridge`, zusätzlich zu `carplay-api`/`alamos-apager` aus Batch 3) | `ntfy-bridge/values.yaml` |
+| `minio` | `argo-workflows` | Artifact-Storage-Endpoint in `argo-workflows/values.yaml` |
+| `monitoring` | (+ `argo-workflows`, zusätzlich zu `carplay-api`/`n8n` aus Batch 3) | Alertmanager-URL in `maintenance-workflowtemplate.yaml` |
+
+Alle per `grep -rln "\.<ns>\.svc\|<ns>\.svc\.cluster" argocd/apps/`
+gefunden, kein Fall wurde durch Logs/Beobachtung entdeckt — nach dem
+Cloudflared-Incident bewusst vollständig statisch durchsucht statt
+abgewartet.
 
 ---
 
@@ -382,5 +420,8 @@ unerwartete Cross-Namespace-Abhängigkeiten, z. B. Authentik-Outposts).
   Iteration, siehe [Design](#warum-ingress-only-kein-egress). Falls später
   gewünscht (z. B. um n8n explizit am Erreichen interner Postgres-Ports zu
   hindern statt nur andersrum), eigene, separate Folge-Iteration.
-- **Schritt 2** läuft schrittweise, siehe oben — aktuell erst zwei von 36
-  Namespaces verfeinert.
+- **Schritt 2 ist abgeschlossen** (alle 36 Namespaces verfeinert, siehe
+  oben) — bleibt aber laufende Pflege: eine künftige neue App mit einem
+  echten Cross-Namespace-ClusterIP-Aufruf braucht denselben
+  `argocd_network_policy_extra_ingress`-Mechanismus, sonst bricht sie beim
+  ersten `make argocd`-Lauf lautlos, wie beim Cloudflared-Incident.
