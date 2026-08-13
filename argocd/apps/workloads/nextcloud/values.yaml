@@ -55,9 +55,12 @@ nextcloud:
   # "nas"-StorageClass sei mit no_root_squash exportiert und root-Schreib-
   # zugriff funktioniere daher. Das NAS erzwingt inzwischen all_squash (kein
   # no_root_squash mehr verfügbar) — auch root-Requests werden gesquasht.
-  # Dieser Pod (html/data-PVCs, bewusst weiter auf "nas") crasht deshalb
-  # aktuell ebenfalls (chown schlägt fehl). Bewusst nicht Teil der aktuellen
-  # DB-Migration (siehe Auftrag), aber zur Kenntnisnahme dokumentiert.
+  # Damals crashte dieser Pod (html/data-PVCs, bewusst weiter auf "nas")
+  # deshalb beim chown im Entrypoint. Update (Stand 2026-08-13, nach dem
+  # ApplicationSet-Incident, siehe docs/50-incident-2026-08-12.md): Pod
+  # läuft seither stabil ohne Restarts — vermutlich durch den Incident-
+  # Restore selbst behoben (Ownership auf der PVC passt jetzt zufällig).
+  # Falls der Crash wiederkehrt, ist die Ursache oben weiterhin gültig.
   podSecurityContext: {}
   securityContext:
     allowPrivilegeEscalation: false
