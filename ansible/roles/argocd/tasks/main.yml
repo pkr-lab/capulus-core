@@ -242,6 +242,30 @@
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
 
+# ---- Phase 3 Security-Härtung: tier-default-ingress NetworkPolicies ------
+# Off by default (argocd_apply_network_policies), see defaults/main.yml and
+# docs/52-network-policies.md — deliberately not part of the unconditional
+# bootstrap path, this is a cluster-wide behavioural change that needs a
+# backup + staged pilot rollout, not something a routine `make argocd` run
+# should silently (re-)apply.
+- name: Template tier-default-ingress NetworkPolicies
+  ansible.builtin.template:
+    src: bootstrap-networkpolicies.yaml.j2
+    dest: /tmp/argocd-bootstrap-networkpolicies.yaml
+    owner: root
+    group: root
+    mode: '0644'
+  when: argocd_apply_network_policies | bool
+
+- name: Apply tier-default-ingress NetworkPolicies
+  ansible.builtin.command: >
+    kubectl apply -f /tmp/argocd-bootstrap-networkpolicies.yaml
+  register: argocd_netpol_apply
+  changed_when: "'created' in argocd_netpol_apply.stdout or 'configured' in argocd_netpol_apply.stdout"
+  when: argocd_apply_network_policies | bool
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
 # ---- Clean up temp files -----------------------------------
 - name: Remove temporary Helm values file
   ansible.builtin.file:

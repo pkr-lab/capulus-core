@@ -45,3 +45,11 @@ argocd_workloads_apps:
   - wikijs
   - xibosignage
   - zammad
+
+# Phase 3 der Security-Härtung (docs/51-security-hardening-roadmap.md,
+# docs/52-network-policies.md). Default false, damit ein normaler
+# `make argocd`-Lauf nicht ungefragt cluster-weite NetworkPolicies
+# ausrollt — bewusst manuell auf true gesetzt (z. B. `-e
+# argocd_apply_network_policies=true`), erst nach Backup und nach
+# vorherigem Pilotlauf auf einzelnen Namespaces, siehe docs/52.
+argocd_apply_network_policies: false
