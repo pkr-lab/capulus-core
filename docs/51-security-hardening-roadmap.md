@@ -24,17 +24,24 @@ absichtlich so gewählt, dass jede Phase auf der vorherigen aufbaut.
 
 ### Phase 5 — Internes TLS für `*.homeserver`
 
+**Status (13.08.2026): Zertifikat generiert (eigene openssl-CA statt
+Nutzer-Metadaten von mkcert, gültig bis 11.11.2028 — Repo ist öffentlich,
+siehe docs/54), Cluster-Manifeste committed, Rollout auf dem Cluster +
+Geräte-Verteilung stehen noch aus.** Vollständige Detail-Doku, Design-
+Entscheidungen und Anleitung pro Geräte-Typ (Linux/Windows/macOS/iOS/
+Android): [docs/54-internal-tls.md](54-internal-tls.md).
+
 **Ziel:** Aktuell laufen alle `*.homeserver`-Adressen über Klartext-`http://`
 (Traefik hat keine TLS-Zertifikate für das interne LAN).
 
 **Ansatz:**
-1. Eigene kleine CA (z. B. `step-ca`, oder einmalig `mkcert`-generiertes
-   Root-Zertifikat).
+1. Eigene kleine CA — `mkcert`-generiertes Root-Zertifikat (Begründung
+   gegen `step-ca` in docs/54). **[Erledigt]**
 2. Wildcard-Zertifikat `*.homeserver`, als Traefik-Default-TLS-Cert
-   (`TLSStore`) hinterlegt.
+   (`TLSStore`) hinterlegt. **[Vorbereitet, Cluster-Rollout ausstehend]**
 3. Root-CA-Zertifikat auf allen Client-Geräten im Trust-Store installieren
-   — das ist der aufwendigste Teil (pro Gerät manuell).
-4. `http://` → `https://` in Docs/README nachziehen, sobald verifiziert.
+   — das ist der aufwendigste Teil (pro Gerät manuell). **[Offen]**
+4. `http://` → `https://` in Docs/README nachziehen, sobald verifiziert. **[Offen]**
 
 **Risiko:** gering für den Cluster selbst, Aufwand liegt beim Verteilen des
 CA-Zertifikats auf alle Geräte.
