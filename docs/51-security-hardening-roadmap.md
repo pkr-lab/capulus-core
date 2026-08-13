@@ -16,40 +16,32 @@ absichtlich so gewählt, dass jede Phase auf der vorherigen aufbaut.
 | 2 | ArgoCD AppProject-Trennung Platform/Workloads + Namespace-Tier-Label | [docs/49-argocd-projects.md](49-argocd-projects.md) — **inkl. eines Incidents beim Rollout**, siehe [docs/50-incident-2026-08-12.md](50-incident-2026-08-12.md) |
 | 9 | Renovate (automatische Update-PRs) + semantic-release (GitHub Release bei jedem Merge auf `main`) | [docs/47-renovate.md](47-renovate.md), [docs/48-release-automation.md](48-release-automation.md) |
 | 3 | Cluster-NetworkPolicies — grobe Tier-Policy + vollständige Verfeinerung auf alle 36 App-Namespaces (nur noch eigener Namespace + kube-system + monitoring + cloudflared + gezielte Ausnahmen) | [docs/52-network-policies.md](52-network-policies.md) — **inkl. eines Beinahe-Incidents (Cloudflare-Tunnel-Ausfall während des Rollouts)** |
+| 4 | k3s Secrets-Encryption-at-Rest (AES-CBC, per Byte-Dump verifiziert) + Audit-Log (Metadata-Level, 14 Tage Retention) | [docs/53-secrets-encryption-audit-log.md](53-secrets-encryption-audit-log.md) |
 
 ---
 
 ## Offen
 
-### Phase 4 — k3s Secrets-Encryption-at-Rest + Audit-Log
-
-**Ziel:** Sealed Secrets schützt nur Git — im k3s-Datastore selbst liegen
-entschlüsselte Secrets aktuell im Klartext.
-
-**Ansatz:**
-1. `--secrets-encryption` in `ansible/roles/k3s/` ergänzen.
-2. **Vorher: Backup des k3s-Datastores** (`/var/lib/rancher/k3s/server/db/`).
-3. Bestehende Secrets neu verschlüsseln: `k3s secrets-encrypt prepare` →
-   Server-Neustart → `rotate` → `reencrypt`.
-4. Audit-Log aktivieren (`--kube-apiserver-arg=audit-log-path=...`),
-   Log-Rotation beachten (lokale SSD, Retention begrenzt halten).
-
-**Risiko:** mittel-hoch — betrifft den Datastore aller Secrets im Cluster.
-Nur mit vorherigem Backup und außerhalb der Kernnutzungszeit fahren.
-
 ### Phase 5 — Internes TLS für `*.homeserver`
+
+**Status (13.08.2026): Zertifikat generiert (eigene openssl-CA statt
+Nutzer-Metadaten von mkcert, gültig bis 11.11.2028 — Repo ist öffentlich,
+siehe docs/54), Cluster-Manifeste committed, Rollout auf dem Cluster +
+Geräte-Verteilung stehen noch aus.** Vollständige Detail-Doku, Design-
+Entscheidungen und Anleitung pro Geräte-Typ (Linux/Windows/macOS/iOS/
+Android): [docs/54-internal-tls.md](54-internal-tls.md).
 
 **Ziel:** Aktuell laufen alle `*.homeserver`-Adressen über Klartext-`http://`
 (Traefik hat keine TLS-Zertifikate für das interne LAN).
 
 **Ansatz:**
-1. Eigene kleine CA (z. B. `step-ca`, oder einmalig `mkcert`-generiertes
-   Root-Zertifikat).
+1. Eigene kleine CA — `mkcert`-generiertes Root-Zertifikat (Begründung
+   gegen `step-ca` in docs/54). **[Erledigt]**
 2. Wildcard-Zertifikat `*.homeserver`, als Traefik-Default-TLS-Cert
-   (`TLSStore`) hinterlegt.
+   (`TLSStore`) hinterlegt. **[Vorbereitet, Cluster-Rollout ausstehend]**
 3. Root-CA-Zertifikat auf allen Client-Geräten im Trust-Store installieren
-   — das ist der aufwendigste Teil (pro Gerät manuell).
-4. `http://` → `https://` in Docs/README nachziehen, sobald verifiziert.
+   — das ist der aufwendigste Teil (pro Gerät manuell). **[Offen]**
+4. `http://` → `https://` in Docs/README nachziehen, sobald verifiziert. **[Offen]**
 
 **Risiko:** gering für den Cluster selbst, Aufwand liegt beim Verteilen des
 CA-Zertifikats auf alle Geräte.
