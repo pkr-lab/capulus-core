@@ -72,17 +72,39 @@ argocd_network_policy_refined_namespaces:
   - mealie
   - n8n
 
-# Gezielte Zusatz-Ausnahmen für verfeinerte Namespaces, wenn ein anderer
-# Namespace legitim per ClusterIP direkt reinruft (nicht über Traefik) —
-# z. B. ein CronJob in einem eigenen Namespace, der eine App-API direkt
-# anspricht. Nur für Namespaces relevant, die auch in
-# argocd_network_policy_refined_namespaces stehen (die grobe Tier-Policy
-# lässt Intra-Tier-Verkehr ohnehin durch, braucht also keine Ausnahme).
+# Gezielte Zusatz-Ausnahmen, wenn ein anderer Namespace legitim per
+# ClusterIP direkt reinruft (nicht über Traefik) — unabhängig davon, ob
+# das Ziel schon in argocd_network_policy_refined_namespaces steht: bei
+# einer groben Tier-Policy braucht es das nur für CROSS-TIER-Aufrufe (die
+# blockiert die Tier-Regel ja gerade), bei einer verfeinerten Policy für
+# JEDEN fremden Namespace, auch innerhalb desselben Tiers.
+#
+# Gefunden per `grep -rn "svc.cluster.local" argocd/apps/` (13.08.2026,
+# nach dem Cloudflared-Beinahe-Incident aus Vorsicht komplett durchsucht,
+# siehe docs/52) — das sind alle im Repo sichtbaren Cross-Namespace-
+# ClusterIP-Aufrufe, die nicht schon durch security-tier (Intra-Tier) oder
+# die generellen kube-system/monitoring/cloudflared-Ausnahmen abgedeckt
+# waren:
 argocd_network_policy_extra_ingress:
   # wiki-docs-sync (eigener CronJob-Namespace) ruft wikijs per ClusterIP
-  # direkt an (http://wikijs.wikijs.svc.cluster.local, siehe
-  # argocd/apps/workloads/wiki-docs-sync/values.yaml), nicht über Traefik.
-  # Ohne diese Ausnahme würde der */15min-Sync mit der verfeinerten
-  # wikijs-Policy fehlschlagen (docs/52).
+  # direkt an, nicht über Traefik. wikijs ist verfeinert (Schritt 2).
   wikijs:
     - wiki-docs-sync
+  # ntfy (platform, noch grobe Policy): carplay-api und alamos-apager
+  # (beide workload) senden Push-Benachrichtigungen per ClusterIP direkt
+  # an ntfy — Cross-Tier, von der groben Policy sonst blockiert. Nur
+  # bedarfsgesteuert (bei einem echten Alarm/einer echten Anfrage), daher
+  # nicht in den bisherigen Logs sichtbar — proaktiv gefixt statt
+  # abgewartet, ob es im Ernstfall lautlos fehlschlägt.
+  ntfy:
+    - carplay-api
+    - alamos-apager
+  # monitoring (platform, noch grobe Policy): carplay-api fragt
+  # VictoriaMetrics direkt per ClusterIP ab (Cross-Tier, aktiv genutzt).
+  # n8n hat einen Workflow mit demselben Zugriffsmuster
+  # (workflows/banana-pi-down-to-zammad.json) — aktuell "active": false,
+  # aber die Ausnahme schadet nicht und erspart eine Überraschung, falls
+  # der Workflow mal aktiviert wird.
+  monitoring:
+    - carplay-api
+    - n8n
