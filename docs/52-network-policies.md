@@ -362,12 +362,29 @@ Namespace wieder aus `argocd_network_policy_refined_namespaces` entfernen
 und `make argocd` erneut laufen lassen — die Policy fällt zurück auf die
 grobe Tier-Regel.
 
-**Nächste Kandidaten für die Liste** (nach erfolgreicher Validierung der
-beiden Piloten, einer nach dem anderen, nicht alle auf einmal): Apps mit
-eigener DB im selben Namespace (z. B. `wikijs`, `mealie`, `n8n` — deren
-DB/Redis läuft im selben Namespace, die eigene-Namespace-Regel deckt das
-weiterhin ab), danach Plattform-Namespaces zuletzt (dort am ehesten
-unerwartete Cross-Namespace-Abhängigkeiten, z. B. Authentik-Outposts).
+**Batch 3 (13.08.2026):** alle restlichen 12 Workload-Namespaces
+(`alamos-apager`, `carplay-api`, `github-release-watcher`, `immich`,
+`mediamtx`, `nextcloud`, `paperless-ngx`, `uptime-kuma`, `vaultwarden`,
+`wiki-docs-sync`, `xibosignage`, `zammad`) in einem Rutsch — nicht
+schrittweise einzeln, weil vorher per systematischem Repo-Scan
+(`grep -rln "\.<ns>\.svc\|<ns>\.svc\.cluster" argocd/apps/`, für jeden
+Namespace einzeln) bereits geprüft war, dass keine eingehenden
+Cross-Namespace-Aufrufe existieren außer den ohnehin generell erlaubten
+(`cloudflared`) und einem einzigen Fall: `carplay-api` fragt `uptime-kuma`
+per ClusterIP ab (workload→workload, war unter der groben Policy schon
+durch Intra-Tier gedeckt, braucht jetzt eine explizite
+`argocd_network_policy_extra_ingress`-Ausnahme). Damit sind **alle 17
+Workload-Namespaces verfeinert** — übrig bleiben nur noch die 19
+Plattform-Namespaces als letzter Batch.
+
+**Letzter Batch (offen): Plattform-Namespaces.** Hier ist am ehesten mit
+unerwarteten Cross-Namespace-Abhängigkeiten zu rechnen (Authentik-
+Outposts, Semaphore→Authentik, Minio→Authentik-OIDC, ArgoWorkflows→Minio/
+Monitoring, Monitoring→Gotify-Bridge/Ntfy-Bridge — alle bereits per
+Repo-Scan gefunden, aber noch nicht auf tatsächliche Notwendigkeit einer
+Extra-Ausnahme geprüft, da sie bislang alle Intra-Tier sind und daher
+noch unter der groben Policy laufen). Vor diesem Batch denselben
+Scan-Schritt wiederholen, dann genauso schrittweise/batchweise vorgehen.
 
 ---
 

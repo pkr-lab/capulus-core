@@ -71,6 +71,23 @@ argocd_network_policy_refined_namespaces:
   - wikijs
   - mealie
   - n8n
+  # Batch 3 (13.08.2026): alle restlichen Workload-Apps. Geprüft per
+  # `grep -rln "\.<ns>\.svc\|<ns>\.svc\.cluster" argocd/apps/` — keine
+  # eingehenden Cross-Namespace-Aufrufe außer den bereits generell
+  # abgedeckten (cloudflared) und carplay-api -> uptime-kuma (siehe
+  # extra_ingress unten).
+  - alamos-apager
+  - carplay-api
+  - github-release-watcher
+  - immich
+  - mediamtx
+  - nextcloud
+  - paperless-ngx
+  - uptime-kuma
+  - vaultwarden
+  - wiki-docs-sync
+  - xibosignage
+  - zammad
 
 # Gezielte Zusatz-Ausnahmen, wenn ein anderer Namespace legitim per
 # ClusterIP direkt reinruft (nicht über Traefik) — unabhängig davon, ob
@@ -108,3 +125,9 @@ argocd_network_policy_extra_ingress:
   monitoring:
     - carplay-api
     - n8n
+  # uptime-kuma (workload, Batch 3, jetzt verfeinert): carplay-api fragt
+  # den Status per ClusterIP direkt ab, selbe Tier, aber verfeinert heißt
+  # "nur eigener Namespace" — ohne diese Ausnahme bricht das jetzt, wo es
+  # unter Schritt 1 (Intra-Tier) noch durchgelassen wurde.
+  uptime-kuma:
+    - carplay-api
