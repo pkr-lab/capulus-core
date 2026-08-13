@@ -1,33 +1,32 @@
 # Phase 3 der Security-Härtung (docs/51-security-hardening-roadmap.md,
-# Detail-Doku docs/52-network-policies.md): grobe Default-Deny-NetworkPolicy
-# je security-tier. Eine Policy pro App-Namespace (aus argocd_platform_apps /
-# argocd_workloads_apps, ansible/roles/argocd/defaults/main.yml — dieselbe
-# Liste wie bei den AppProjects/Namespace-Labels), angewendet NACH dem
-# Labeling-Task, weil die Policies auf dem `security-tier`-Label matchen.
+# Detail-Doku docs/52-network-policies.md): NetworkPolicies je App-Namespace.
+# Eine Policy pro App (aus argocd_platform_apps / argocd_workloads_apps,
+# ansible/roles/argocd/defaults/main.yml — dieselbe Liste wie bei den
+# AppProjects/Namespace-Labels), angewendet NACH dem Labeling-Task, weil
+# die Policies auf dem `security-tier`-Label matchen.
 #
-# Bewusst nur `policyTypes: [Ingress]`, keine Egress-Regeln:
+# Zwei Varianten, gesteuert über argocd_network_policy_refined_namespaces:
+# - Standard (Schritt 1, "grob"): Ingress erlaubt aus demselben
+#   security-tier + kube-system + monitoring. Cross-Tier blockiert,
+#   Intra-Tier weiterhin uneingeschränkt.
+# - Verfeinert (Schritt 2, "fein", nur für Namespaces in
+#   argocd_network_policy_refined_namespaces): Ingress erlaubt nur aus dem
+#   eigenen Namespace + kube-system + monitoring. Auch Intra-Tier-Traffic
+#   von ANDEREN Namespaces ist jetzt blockiert — nur noch die eigenen Pods,
+#   Traefik und der Metrics-Scraper kommen rein.
+#
+# Bewusst nur `policyTypes: [Ingress]`, keine Egress-Regeln, in beiden
+# Varianten:
 # - Ziel dieser Phase ist, laterale Bewegung zu blockieren (ein
 #   kompromittierter Pod in Namespace A soll Postgres/Redis in einem
-#   fremden-Tier-Namespace B nicht erreichen können). Das lässt sich
-#   vollständig über B's Ingress-Regel erzwingen — A's ausgehende
-#   Verbindung wird an B's Grenze abgewiesen, ganz ohne A's Egress
-#   einzuschränken.
+#   fremden Namespace B nicht erreichen können). Das lässt sich vollständig
+#   über B's Ingress-Regel erzwingen — A's ausgehende Verbindung wird an
+#   B's Grenze abgewiesen, ganz ohne A's Egress einzuschränken.
 # - Egress-Policies hätten ein deutlich höheres Risiko, etwas kaputt zu
 #   machen (DNS zu kube-system, Internet-Zugriff für n8n/cloudflared/
 #   Renovate, OIDC-Callbacks), für keinen zusätzlichen Sicherheitsgewinn in
-#   diesem groben ersten Schritt — deshalb bewusst nicht Teil dieser
-#   Iteration, siehe docs/52-network-policies.md.
-#
-# Jede Policy erlaubt Ingress aus genau drei Quellen:
-# 1. Namespaces mit demselben `security-tier`-Wert (deckt auch den eigenen
-#    Namespace ab, da der ebenfalls dieses Label trägt — Intra-App- und
-#    Intra-Tier-Traffic bleibt also uneingeschränkt).
-# 2. `kube-system` — Traefik (Ingress-Controller) läuft dort und muss jeden
-#    App-Pod erreichen können, sonst bricht der komplette externe Zugriff
-#    über *.homeserver.
-# 3. `monitoring` — VictoriaMetrics' vmagent scraped Metriken aus jedem
-#    Namespace (Pull, d.h. Egress von monitoring aus — muss auf der
-#    Ziel-Namespace-Seite als Ingress erlaubt sein).
+#   diesem Schritt — deshalb bewusst nicht Teil dieser Iteration, siehe
+#   docs/52-network-policies.md.
 #
 # Namespaces außerhalb der beiden Listen (kube-system selbst, argocd,
 # cert-manager, metallb-system, …) bekommen bewusst KEINE Policy — das
@@ -44,10 +43,15 @@ spec:
   policyTypes:
     - Ingress
   ingress:
+{% if app in argocd_network_policy_refined_namespaces %}
+    - from:
+        - podSelector: {}
+{% else %}
     - from:
         - namespaceSelector:
             matchLabels:
               security-tier: platform
+{% endif %}
     - from:
         - namespaceSelector:
             matchLabels:
@@ -69,10 +73,15 @@ spec:
   policyTypes:
     - Ingress
   ingress:
+{% if app in argocd_network_policy_refined_namespaces %}
+    - from:
+        - podSelector: {}
+{% else %}
     - from:
         - namespaceSelector:
             matchLabels:
               security-tier: workload
+{% endif %}
     - from:
         - namespaceSelector:
             matchLabels:
