@@ -109,14 +109,6 @@ Authentik-Login-Fehlschläge).
 
 **Risiko:** gering, additiv zum bestehenden Monitoring.
 
-### Phase 8 — mTLS (optional, niedrige Priorität)
-
-Der in [docs/14-cert-login.md](14-cert-login.md) skizzierte, nie
-fertiggestellte Plan für verpflichtende Client-Zertifikate vor allen
-`*.homeserver`-Diensten. Baut auf Phase 5 (eigene CA) auf, macht also erst
-danach Sinn. Nur umsetzen, falls die zusätzliche Zugriffsschicht
-tatsächlich gewünscht ist — kein Sicherheits-Minimum, eher ein Nice-to-have.
-
 ---
 
 ## Reihenfolge-Empfehlung
