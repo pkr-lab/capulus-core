@@ -32,6 +32,11 @@ spec:
     - server: https://kubernetes.default.svc
       namespace: {{ app }}
 {% endfor %}
+    # traefik-config and coredns-custom deploy into kube-system rather than
+    # their own app-named namespace (HelmChartConfig/ConfigMap must live
+    # where Traefik/CoreDNS actually read them from).
+    - server: https://kubernetes.default.svc
+      namespace: kube-system
   clusterResourceWhitelist:
     - group: "*"
       kind: "*"
