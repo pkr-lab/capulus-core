@@ -28,7 +28,7 @@ OBS / ffmpeg / Kamera ───────────────────�
                                                                     │
                                               ┌─────────────────────┴─────────────────────┐
                                               ▼                                           ▼
-                                http://stream.homeserver                    https://stream.pke-lab.de
+                                https://stream.homeserver                    https://stream.pke-lab.de
                                   HTTP-Basic-Auth (mediamtx)              (Cloudflare Tunnel, HTTP-Basic-Auth)
 ```
 
@@ -226,7 +226,7 @@ ffmpeg -re -i input.mp4 -c copy \
 
 **Playback intern:**
 
-Browser → `http://stream.homeserver/test` → mediamtx fragt per
+Browser → `https://stream.homeserver/test` → mediamtx fragt per
 HTTP-Basic-Auth-Dialog nach den Zugangsdaten aus Schritt 2.2, danach der
 eingebaute HLS-Player.
 

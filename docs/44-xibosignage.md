@@ -35,7 +35,7 @@ als Slideshow.
                      │  Xibo CMS (k3s, Namespace xibosignage)   │
                      │  cms-web ── MySQL ── XMR ── Memcached    │
                      │             └── QuickChart               │
-                     │  http://xibo.homeserver                  │
+                     │  https://xibo.homeserver                  │
                      │  PVC "library"/"state" (StorageClass nas) │
                      └─────────────────────────────────────────┘
                         (zentrale Medien-/Asset-Verwaltung,
@@ -115,7 +115,7 @@ Den Output in `argocd/apps/workloads/xibosignage/values.yaml` unter
 
 ### Erster Start
 
-Nach dem Sync ist Xibo unter **http://xibo.homeserver** erreichbar. Das
+Nach dem Sync ist Xibo unter **https://xibo.homeserver** erreichbar. Das
 CMS-Image führt beim allerersten Start automatisch DB-Migrationen +
 Installation durch — das kann einige Minuten dauern
 (`kubectl -n xibosignage logs deploy/xibosignage-cms -f`).
@@ -194,7 +194,7 @@ sofort im Pod verfügbar, keine weitere Konfiguration nötig.
 Eine fertige Workflow-Definition liegt unter
 `argocd/apps/workloads/n8n/workflows/xibosignage-inbox-to-display.json`:
 
-1. n8n öffnen (http://n8n.homeserver) → **Workflows** → **Import from File**.
+1. n8n öffnen (https://n8n.homeserver) → **Workflows** → **Import from File**.
 2. `argocd/apps/workloads/n8n/workflows/xibosignage-inbox-to-display.json` auswählen.
 3. Workflow öffnen, Knoten-Parameter prüfen (Node-Schemas können sich
    zwischen n8n-Versionen leicht unterscheiden — insbesondere beim
