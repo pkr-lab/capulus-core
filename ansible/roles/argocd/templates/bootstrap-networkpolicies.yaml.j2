@@ -1,0 +1,84 @@
+# Phase 3 der Security-Härtung (docs/51-security-hardening-roadmap.md,
+# Detail-Doku docs/52-network-policies.md): grobe Default-Deny-NetworkPolicy
+# je security-tier. Eine Policy pro App-Namespace (aus argocd_platform_apps /
+# argocd_workloads_apps, ansible/roles/argocd/defaults/main.yml — dieselbe
+# Liste wie bei den AppProjects/Namespace-Labels), angewendet NACH dem
+# Labeling-Task, weil die Policies auf dem `security-tier`-Label matchen.
+#
+# Bewusst nur `policyTypes: [Ingress]`, keine Egress-Regeln:
+# - Ziel dieser Phase ist, laterale Bewegung zu blockieren (ein
+#   kompromittierter Pod in Namespace A soll Postgres/Redis in einem
+#   fremden-Tier-Namespace B nicht erreichen können). Das lässt sich
+#   vollständig über B's Ingress-Regel erzwingen — A's ausgehende
+#   Verbindung wird an B's Grenze abgewiesen, ganz ohne A's Egress
+#   einzuschränken.
+# - Egress-Policies hätten ein deutlich höheres Risiko, etwas kaputt zu
+#   machen (DNS zu kube-system, Internet-Zugriff für n8n/cloudflared/
+#   Renovate, OIDC-Callbacks), für keinen zusätzlichen Sicherheitsgewinn in
+#   diesem groben ersten Schritt — deshalb bewusst nicht Teil dieser
+#   Iteration, siehe docs/52-network-policies.md.
+#
+# Jede Policy erlaubt Ingress aus genau drei Quellen:
+# 1. Namespaces mit demselben `security-tier`-Wert (deckt auch den eigenen
+#    Namespace ab, da der ebenfalls dieses Label trägt — Intra-App- und
+#    Intra-Tier-Traffic bleibt also uneingeschränkt).
+# 2. `kube-system` — Traefik (Ingress-Controller) läuft dort und muss jeden
+#    App-Pod erreichen können, sonst bricht der komplette externe Zugriff
+#    über *.homeserver.
+# 3. `monitoring` — VictoriaMetrics' vmagent scraped Metriken aus jedem
+#    Namespace (Pull, d.h. Egress von monitoring aus — muss auf der
+#    Ziel-Namespace-Seite als Ingress erlaubt sein).
+#
+# Namespaces außerhalb der beiden Listen (kube-system selbst, argocd,
+# cert-manager, metallb-system, …) bekommen bewusst KEINE Policy — das
+# betrifft nur die App-Namespaces, nicht die Cluster-Infrastruktur.
+{% for app in argocd_platform_apps %}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: tier-default-ingress
+  namespace: {{ app }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              security-tier: platform
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+{% endfor %}
+{% for app in argocd_workloads_apps %}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: tier-default-ingress
+  namespace: {{ app }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              security-tier: workload
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+{% endfor %}
