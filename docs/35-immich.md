@@ -152,7 +152,7 @@ danach ist der Cache persistent und Neustarts sind schnell.
 
 ## Schritt 4 — Erstlogin und Handy-App
 
-1. `http://immich.homeserver` öffnen → erster Aufruf legt den
+1. `https://immich.homeserver` öffnen → erster Aufruf legt den
    Admin-Account an (kein separates Admin-Passwort in `values.yaml` nötig
    — Immich fragt das im Browser ab)
 2. **Handy-App** (iOS/Android, "Immich"): Server-URL

@@ -199,7 +199,7 @@ kubectl -n argocd create secret generic argocd-secret \
 
 ### 5.1 — Provider anlegen
 
-- Redirect URI: `http://headlamp.homeserver/oidc-callback`
+- Redirect URI: `https://headlamp.homeserver/oidc-callback`
 
 ### 5.2 — Headlamp-Values
 
@@ -219,14 +219,14 @@ headlamp:
 
 ## Schritt 6 — OIDC-Integration: MinIO
 
-Im MinIO-Helm-Chart oder in der MinIO-Konsole (**http://minio.homeserver**):
+Im MinIO-Helm-Chart oder in der MinIO-Konsole (**https://minio.homeserver**):
 
 **Konfiguration → Identity → OpenID:**
 - Config URL: `http://authentik.homeserver/application/o/minio/.well-known/openid-configuration`
 - Client ID: `<CLIENT_ID>`
 - Client Secret: `<CLIENT_SECRET>`
 - Claim Name: `groups`
-- Redirect URI: `http://minio.homeserver/oauth_callback`
+- Redirect URI: `https://minio.homeserver/oauth_callback`
 
 ---
 
@@ -240,7 +240,7 @@ In der Authentik Admin-UI für jeden Dienst:
 
 1. **Providers → Erstellen → Proxy Provider**
 2. Modus: `Forward auth (single application)`
-3. External Host: z.B. `http://gotify.homeserver`
+3. External Host: z.B. `https://gotify.homeserver`
 4. **Application anlegen** und Provider zuweisen.
 
 ### 7.2 — Traefik-Middleware deployen
@@ -300,7 +300,7 @@ argo-workflows:
       clientSecret:
         name: argo-workflows-sso
         key: clientSecret
-      redirectUrl: "http://argo-workflows.homeserver/oauth2/callback"
+      redirectUrl: "https://argo-workflows.homeserver/oauth2/callback"
       scopes:
         - openid
         - profile
