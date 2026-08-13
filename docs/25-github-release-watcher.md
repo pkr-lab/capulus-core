@@ -104,7 +104,7 @@ github:
       notifyZammad: false      # nur in der App-Update-Liste sichtbar, kein Ticket
 
 zammad:
-  url: "http://zammad.homeserver"
+  url: "https://zammad.homeserver"
   group: "Users"                       # Zammad-Gruppe für das Ticket
   requesterEmail: "<empfaenger>@example.com"  # Ticket-Anfrager (customer)
 
@@ -124,7 +124,7 @@ eingetragenen Repo-Eintrag dokumentieren.
 > automatisch an, sondern schlägt mit `HTTP 422 No lookup value found for
 > 'customer'` fehl. Vorhandene User (inkl. exaktem Login/E-Mail-Feld) prüfen:
 > `GET /api/v1/groups` bzw. `GET /api/v1/users` mit dem Zammad-Token
-> (`curl -s -H "Authorization: Token token=$TOKEN" http://zammad.homeserver/api/v1/users`).
+> (`curl -s -H "Authorization: Token token=$TOKEN" https://zammad.homeserver/api/v1/users`).
 > Existiert noch kein passender User, in **Admin → Users → New** einen
 > Customer-Account mit dieser Adresse anlegen. Diese Adresse bestimmt nur
 > den Ticket-"Anfrager", **nicht** direkt den E-Mail-Empfänger der

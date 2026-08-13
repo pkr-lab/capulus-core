@@ -292,7 +292,7 @@ to be recreated.
 
 - [ ] **Step 2: Verify key in Semaphore UI**
 
-Open `http://semaphore.homeserver` → log in as `admin`.
+Open `https://semaphore.homeserver` → log in as `admin`.
 
 For **each project** (`home-server`, `ugreen-paperless`):
 1. Go to **Key Store** — verify `vault-password` entry exists with type `Login with password`

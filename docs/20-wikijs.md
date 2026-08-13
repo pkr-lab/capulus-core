@@ -114,7 +114,7 @@ ist **kein** manueller DNS-Eintrag nötig.
 
 ## Schritt 3 — Ersten Admin-Account anlegen
 
-1. Browser öffnen: `http://wiki.homeserver`
+1. Browser öffnen: `https://wiki.homeserver`
 2. Setup-Wizard durchlaufen:
    - **Site-Titel** vergeben
    - **Admin-Account**: E-Mail + Passwort festlegen
@@ -180,7 +180,7 @@ kann — ein einziges Wiki, klar getrennte Sichtbarkeiten.
    - **Name:** `wikijs`
    - **Authorization flow:** `default-provider-authorization-implicit-consent`
    - **Client type:** `Confidential`
-   - **Redirect URIs:** `http://wiki.homeserver/login/<strategy-id>/callback`
+   - **Redirect URIs:** `https://wiki.homeserver/login/<strategy-id>/callback`
      (die `<strategy-id>` zeigt Wiki.js erst nach dem Anlegen der Strategie
      in Schritt 5.3 an — Redirect URI danach in Authentik nachtragen)
 3. **Fertigstellen** — Client ID und Client Secret notieren
@@ -189,7 +189,7 @@ kann — ein einziges Wiki, klar getrennte Sichtbarkeiten.
 
 **Applications → Applications → Erstellen**:
 - Name: `Wiki.js`, Slug: `wikijs`, Provider: `wikijs`
-- Launch URL: `http://wiki.homeserver`
+- Launch URL: `https://wiki.homeserver`
 
 ### 5.3 — Login-Strategie in Wiki.js konfigurieren
 

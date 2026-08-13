@@ -43,8 +43,12 @@ Geräte-Typ (Linux/Windows/macOS/iOS/Android):
    Traefik-Default-TLS-Cert (`TLSStore`) hinterlegt. **[Erledigt, verifiziert]**
 3. Root-CA-Zertifikat auf allen Client-Geräten im Trust-Store installieren
    — das ist der aufwendigste Teil (pro Gerät manuell). **[Teilweise —
-   Haupt-Dev-Rechner erledigt, weitere Geräte offen]**
-4. `http://` → `https://` in Docs/README nachziehen, sobald verifiziert. **[Offen]**
+   Haupt-Dev-Rechner erledigt, weitere Geräte offen, bewusst nicht
+   blockierend für Schritt 4]**
+4. `http://` → `https://` in Docs/README nachziehen, sobald verifiziert.
+   **[Erledigt]** — `authentik.homeserver` bewusst ausgenommen, siehe
+   Fußnote in README.md (reserviert für das separate mTLS-Vorhaben in
+   docs/14-cert-login.md).
 
 **Risiko:** gering für den Cluster selbst, Aufwand liegt beim Verteilen des
 CA-Zertifikats auf alle Geräte.
