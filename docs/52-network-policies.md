@@ -246,6 +246,28 @@ Apps mit eigener DB/eigenem State, komplett im selben Namespace (Postgres
 bei wikijs, In-Pod-SQLite bei mealie/n8n), keine Cross-Namespace-
 Abhängigkeit für den Normalbetrieb.
 
+> **Beinahe-Incident während des Batch-2-Rollouts:** `wiki-docs-sync`
+> läuft als CronJob (`*/15 * * * *`) in seinem **eigenen** Namespace und
+> ruft `wikijs` per ClusterIP direkt an
+> (`http://wikijs.wikijs.svc.cluster.local`, siehe
+> `argocd/apps/workloads/wiki-docs-sync/values.yaml`) — nicht über
+> Traefik. Das wurde beim ersten `wikijs`-Refinement übersehen (nur die
+> Pods **innerhalb** von `wikijs` wurden auf Selbstständigkeit geprüft,
+> nicht wer **von außen** reinruft). Der nächste Cron-Lauf nach dem
+> Rollout wäre damit fehlgeschlagen. Gefixt, bevor er lief: neuer
+> Mechanismus `argocd_network_policy_extra_ingress` (Template + defaults,
+> siehe [ansible/roles/argocd/defaults/main.yml](../ansible/roles/argocd/defaults/main.yml))
+> für gezielte Zusatz-Ausnahmen bei verfeinerten Namespaces — `wikijs`
+> erlaubt jetzt explizit zusätzlich Ingress aus `wiki-docs-sync`.
+>
+> **Lektion für die restlichen Batches:** vor jeder Verfeinerung nicht nur
+> prüfen, wer im Ziel-Namespace selbst läuft, sondern per
+> `grep -rn "svc.cluster.local\|\.{{ '{{' }} .Release.Namespace" argocd/apps/`
+> (oder gezielt nach dem Namespace-Namen) nach **eingehenden**
+> Cross-Namespace-Referenzen aus anderen App-Ordnern suchen — CronJobs in
+> fremden Namespaces sind der unauffälligste Fall, weil sie nicht wie ein
+> Ingress/Traefik-Pfad sofort auffallen.
+
 > **Gefundene Lücke, nicht Teil dieses Batches:** Ein n8n-Workflow
 > (`argocd/apps/workloads/n8n/workflows/banana-pi-down-to-zammad.json`)
 > fragt VictoriaMetrics direkt per HTTP ab
