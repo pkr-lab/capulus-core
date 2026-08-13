@@ -12,3 +12,28 @@ node-name: "{{ hostname }}"
 # der aus dem Pod-Netz nicht erreichbar ist. CoreDNS bekommt damit keine
 # Upstream-DNS-Server und kann externe Namen (github.com etc.) nicht auflösen.
 resolv-conf: /run/systemd/resolve/resolv.conf
+{% if k3s_secrets_encryption_enabled | bool %}
+# Security-Härtung Phase 4 (docs/51, docs/53-secrets-encryption-audit-log.md).
+# Verschlüsselt Secrets im k3s-Datastore (state.db) selbst — Sealed Secrets
+# schützt nur den Git-Zustand, ohne dieses Flag liegen entschlüsselte
+# Secrets im Klartext auf der Platte.
+# ACHTUNG: Diese Zeile allein aktiviert noch nichts — k3s liest config.yaml
+# nur beim Start. Erst nach einem manuellen, bewussten
+# `sudo systemctl restart k3s` (siehe docs/53, inkl. vorherigem Backup und
+# dem anschließenden `rotate-keys`-Schritt) wirkt sich das aus.
+secrets-encryption: true
+{% endif %}
+{% if k3s_audit_log_enabled | bool %}
+# Security-Härtung Phase 4: Audit-Log für den kube-apiserver. Policy-Datei
+# unter /etc/rancher/k3s/audit-policy.yaml (separat von diesem Task
+# templated, siehe ansible/roles/k3s/tasks/main.yml). Retention bewusst
+# begrenzt (14 Tage / 5 Backups / 100 MB je Datei) — ausreichend für
+# Nachvollziehbarkeit nach einem Incident, ohne die lokale SSD unbegrenzt
+# wachsen zu lassen.
+kube-apiserver-arg:
+  - "audit-policy-file=/etc/rancher/k3s/audit-policy.yaml"
+  - "audit-log-path=/var/log/k3s/audit.log"
+  - "audit-log-maxage={{ k3s_audit_log_max_age_days }}"
+  - "audit-log-maxbackup={{ k3s_audit_log_max_backups }}"
+  - "audit-log-maxsize={{ k3s_audit_log_max_size_mb }}"
+{% endif %}
