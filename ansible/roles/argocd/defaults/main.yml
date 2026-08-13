@@ -71,3 +71,18 @@ argocd_network_policy_refined_namespaces:
   - wikijs
   - mealie
   - n8n
+
+# Gezielte Zusatz-Ausnahmen für verfeinerte Namespaces, wenn ein anderer
+# Namespace legitim per ClusterIP direkt reinruft (nicht über Traefik) —
+# z. B. ein CronJob in einem eigenen Namespace, der eine App-API direkt
+# anspricht. Nur für Namespaces relevant, die auch in
+# argocd_network_policy_refined_namespaces stehen (die grobe Tier-Policy
+# lässt Intra-Tier-Verkehr ohnehin durch, braucht also keine Ausnahme).
+argocd_network_policy_extra_ingress:
+  # wiki-docs-sync (eigener CronJob-Namespace) ruft wikijs per ClusterIP
+  # direkt an (http://wikijs.wikijs.svc.cluster.local, siehe
+  # argocd/apps/workloads/wiki-docs-sync/values.yaml), nicht über Traefik.
+  # Ohne diese Ausnahme würde der */15min-Sync mit der verfeinerten
+  # wikijs-Policy fehlschlagen (docs/52).
+  wikijs:
+    - wiki-docs-sync
