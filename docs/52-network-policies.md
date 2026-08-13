@@ -5,6 +5,17 @@ grobe Default-Deny-NetworkPolicy je `security-tier`, damit ein
 kompromittierter Pod (z. B. n8n) nicht mehr uneingeschränkt auf
 Postgres/Redis/Services in fremden Namespaces zugreifen kann.
 
+**Status: Schritt 1 (grobe Tier-Policy) live seit 13.08.2026.** Rollout
+komplett durchgelaufen (Backup, Namespace-Bereinigung, Relabeling, Pilot,
+voller Rollout), validiert: alle 36 App-Namespaces tragen
+`tier-default-ingress`, ArgoCD zeigt weiterhin 35/36 `Healthy` (`monitoring`
+unverändert `Progressing`, siehe [Bekannte Lücken](#bekannte-lücken--nachfolgearbeit)),
+HTTP-Stichproben über Traefik (`wiki`, `n8n`, `vaultwarden`, `authentik`,
+`nextcloud`, `example-whoami`, `tinyteller`) erfolgreich. `argocd_apply_network_policies: true`
+ist jetzt der dauerhafte Default in
+[ansible/roles/argocd/defaults/main.yml](../ansible/roles/argocd/defaults/main.yml).
+Schritt 2 (Verfeinerung pro Namespace) ist noch nicht begonnen.
+
 ---
 
 ## Vorfund beim Start dieser Phase
@@ -204,6 +215,61 @@ kubectl get networkpolicy -A -o json | \
 
 ---
 
+## Schritt 2 — Verfeinerung pro Namespace
+
+Ersetzt für einzelne, explizit freigegebene Namespaces die grobe
+Tier-Regel (Ingress aus jedem Namespace desselben Tiers erlaubt) durch
+eine strikte Regel (Ingress nur aus dem **eigenen** Namespace + weiterhin
+`kube-system` + `monitoring`). Das schließt die eigentliche Lücke, die
+Schritt 1 noch offen lässt: zwei Apps im selben Tier (z. B. zwei
+Workload-Apps) konnten sich unter Schritt 1 immer noch gegenseitig
+erreichen.
+
+Gesteuert über eine einzige Liste,
+[`argocd_network_policy_refined_namespaces`](../ansible/roles/argocd/defaults/main.yml) —
+ein Namespace-Name in dieser Liste bekommt die strikte Variante, alle
+anderen bleiben auf der groben Tier-Regel aus Schritt 1. So lässt sich
+Namespace für Namespace migrieren, ohne die anderen 34 anzufassen —
+`kubectl apply` ist idempotent, ein Re-Run des `argocd`-Roles ändert nur
+die Policy-Objekte, deren Inhalt sich tatsächlich geändert hat.
+
+**Reihenfolge** (aus docs/51): unkritische Apps zuerst, dann Apps mit
+eigener DB, zuletzt Plattform-Namespaces. Aktueller Stand: `example-whoami`,
+`tinyteller` in der Liste (13.08.2026) — beide zustandslose Demo-Apps ohne
+Abhängigkeiten zu anderen Namespaces, ideal zur Musterverifikation.
+
+**Rollout für die beiden Piloten:**
+
+```bash
+# 1. Backup (wie bei jeder Phase/jedem Schritt) — Vortag bereits gemacht,
+#    trotzdem ein frischer Snapshot vor der nächsten Cluster-Änderung:
+ssh ubuntu@192.168.178.94 "sudo cp /var/lib/rancher/k3s/server/db/state.db /var/lib/rancher/k3s/server/db/state.db.pre-phase3-step2-\$(date +%Y%m%d)"
+
+# 2. Anwenden (argocd_apply_network_policies ist schon dauerhaft true,
+#    kein -e mehr nötig — Neu-Rendern reicht):
+make argocd
+
+# 3. Validieren
+kubectl get networkpolicy -n example-whoami -n tinyteller -o yaml | grep -A3 "ingress:"
+curl -sk -o /dev/null -w "whoami: %{http_code}\n" https://whoami.homeserver/
+curl -sk -o /dev/null -w "tinyteller: %{http_code}\n" https://tinyteller.homeserver/
+kubectl get applications -n argocd example-whoami tinyteller -o custom-columns='NAME:.metadata.name,SYNC:.status.sync.status,HEALTH:.status.health.status'
+```
+
+**Rollback** (nur für diese beiden, falls etwas bricht): den jeweiligen
+Namespace wieder aus `argocd_network_policy_refined_namespaces` entfernen
+und `make argocd` erneut laufen lassen — die Policy fällt zurück auf die
+grobe Tier-Regel.
+
+**Nächste Kandidaten für die Liste** (nach erfolgreicher Validierung der
+beiden Piloten, einer nach dem anderen, nicht alle auf einmal): Apps mit
+eigener DB im selben Namespace (z. B. `wikijs`, `mealie`, `n8n` — deren
+DB/Redis läuft im selben Namespace, die eigene-Namespace-Regel deckt das
+weiterhin ab), danach Plattform-Namespaces zuletzt (dort am ehesten
+unerwartete Cross-Namespace-Abhängigkeiten, z. B. Authentik-Outposts).
+
+---
+
 ## Bekannte Lücken / Nachfolgearbeit
 
 - **cert-manager, metallb-system** noch nicht unter GitOps — separates
@@ -215,6 +281,5 @@ kubectl get networkpolicy -A -o json | \
   Iteration, siehe [Design](#warum-ingress-only-kein-egress). Falls später
   gewünscht (z. B. um n8n explizit am Erreichen interner Postgres-Ports zu
   hindern statt nur andersrum), eigene, separate Folge-Iteration.
-- **Schritt 2 aus docs/51** (feinere Policies pro Namespace statt nur
-  pro Tier) ist noch nicht begonnen — diese Doku deckt nur den groben
-  Tier-Schnitt ab.
+- **Schritt 2** läuft schrittweise, siehe oben — aktuell erst zwei von 36
+  Namespaces verfeinert.
