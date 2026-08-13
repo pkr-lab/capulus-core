@@ -47,9 +47,9 @@ argocd_workloads_apps:
   - zammad
 
 # Phase 3 der Security-Härtung (docs/51-security-hardening-roadmap.md,
-# docs/52-network-policies.md). Default false, damit ein normaler
+# docs/52-network-policies.md). War default false, damit ein normaler
 # `make argocd`-Lauf nicht ungefragt cluster-weite NetworkPolicies
-# ausrollt — bewusst manuell auf true gesetzt (z. B. `-e
-# argocd_apply_network_policies=true`), erst nach Backup und nach
-# vorherigem Pilotlauf auf einzelnen Namespaces, siehe docs/52.
-argocd_apply_network_policies: false
+# ausrollt — nach Backup, Pilotlauf auf example-whoami/tinyteller und
+# vollständig verifiziertem Rollout (13.08.2026, siehe docs/52) auf true
+# gesetzt, damit künftige `make argocd`-Läufe den Zustand halten.
+argocd_apply_network_policies: true
