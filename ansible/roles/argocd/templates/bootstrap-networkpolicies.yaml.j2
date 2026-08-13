@@ -11,9 +11,10 @@
 #   Intra-Tier weiterhin uneingeschränkt.
 # - Verfeinert (Schritt 2, "fein", nur für Namespaces in
 #   argocd_network_policy_refined_namespaces): Ingress erlaubt nur aus dem
-#   eigenen Namespace + kube-system + monitoring. Auch Intra-Tier-Traffic
-#   von ANDEREN Namespaces ist jetzt blockiert — nur noch die eigenen Pods,
-#   Traefik und der Metrics-Scraper kommen rein.
+#   eigenen Namespace + kube-system + monitoring, PLUS optionale gezielte
+#   Zusatz-Namespaces aus argocd_network_policy_extra_ingress (z. B. ein
+#   CronJob in einem fremden Namespace, der diese App per ClusterIP
+#   anspricht — siehe docs/52, wiki-docs-sync -> wikijs).
 #
 # Bewusst nur `policyTypes: [Ingress]`, keine Egress-Regeln, in beiden
 # Varianten:
@@ -46,6 +47,12 @@ spec:
 {% if app in argocd_network_policy_refined_namespaces %}
     - from:
         - podSelector: {}
+{% for extra_ns in argocd_network_policy_extra_ingress.get(app, []) %}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ extra_ns }}
+{% endfor %}
 {% else %}
     - from:
         - namespaceSelector:
@@ -76,6 +83,12 @@ spec:
 {% if app in argocd_network_policy_refined_namespaces %}
     - from:
         - podSelector: {}
+{% for extra_ns in argocd_network_policy_extra_ingress.get(app, []) %}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ extra_ns }}
+{% endfor %}
 {% else %}
     - from:
         - namespaceSelector:
