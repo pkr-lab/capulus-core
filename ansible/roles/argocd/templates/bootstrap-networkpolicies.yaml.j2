@@ -5,15 +5,25 @@
 # AppProjects/Namespace-Labels), angewendet NACH dem Labeling-Task, weil
 # die Policies auf dem `security-tier`-Label matchen.
 #
-# Zwei Varianten, gesteuert über argocd_network_policy_refined_namespaces:
+# Zwei Varianten, gesteuert über argocd_network_policy_refined_namespaces —
+# beide erlauben IMMER zusätzlich kube-system + monitoring + cloudflared:
 # - Standard (Schritt 1, "grob"): Ingress erlaubt aus demselben
-#   security-tier + kube-system + monitoring. Cross-Tier blockiert,
-#   Intra-Tier weiterhin uneingeschränkt.
+#   security-tier. Cross-Tier blockiert, Intra-Tier weiterhin
+#   uneingeschränkt.
 # - Verfeinert (Schritt 2, "fein", nur für Namespaces in
 #   argocd_network_policy_refined_namespaces): Ingress erlaubt nur aus dem
-#   eigenen Namespace + kube-system + monitoring. Auch Intra-Tier-Traffic
-#   von ANDEREN Namespaces ist jetzt blockiert — nur noch die eigenen Pods,
-#   Traefik und der Metrics-Scraper kommen rein.
+#   eigenen Namespace, PLUS optionale gezielte Zusatz-Namespaces aus
+#   argocd_network_policy_extra_ingress (z. B. ein CronJob in einem
+#   fremden Namespace, der diese App per ClusterIP anspricht — siehe
+#   docs/52, wiki-docs-sync -> wikijs).
+#
+# `cloudflared` ist eine generelle Ausnahme genau wie `kube-system`, weil
+# es faktisch ein zweiter Ingress-Controller ist: der Cloudflare-Tunnel-
+# Pod ruft die Origin-Services in argocd/apps/platform/cloudflared/values.yaml
+# per ClusterIP direkt an (nicht über Traefik). Ohne diese Ausnahme bricht
+# der komplette externe *.pke-lab.de-Zugriff für jeden Namespace, den
+# cloudflared anspricht — genau das ist beim ersten groben Rollout
+# passiert (Incident, siehe docs/52), bis diese Zeile ergänzt wurde.
 #
 # Bewusst nur `policyTypes: [Ingress]`, keine Egress-Regeln, in beiden
 # Varianten:
@@ -52,6 +62,12 @@ spec:
             matchLabels:
               security-tier: platform
 {% endif %}
+{% for extra_ns in argocd_network_policy_extra_ingress.get(app, []) %}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ extra_ns }}
+{% endfor %}
     - from:
         - namespaceSelector:
             matchLabels:
@@ -60,6 +76,10 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cloudflared
 {% endfor %}
 {% for app in argocd_workloads_apps %}
 ---
@@ -82,6 +102,12 @@ spec:
             matchLabels:
               security-tier: workload
 {% endif %}
+{% for extra_ns in argocd_network_policy_extra_ingress.get(app, []) %}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ extra_ns }}
+{% endfor %}
     - from:
         - namespaceSelector:
             matchLabels:
@@ -90,4 +116,8 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cloudflared
 {% endfor %}
