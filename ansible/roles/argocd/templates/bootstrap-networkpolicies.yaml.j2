@@ -56,18 +56,18 @@ spec:
 {% if app in argocd_network_policy_refined_namespaces %}
     - from:
         - podSelector: {}
-{% for extra_ns in argocd_network_policy_extra_ingress.get(app, []) %}
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: {{ extra_ns }}
-{% endfor %}
 {% else %}
     - from:
         - namespaceSelector:
             matchLabels:
               security-tier: platform
 {% endif %}
+{% for extra_ns in argocd_network_policy_extra_ingress.get(app, []) %}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ extra_ns }}
+{% endfor %}
     - from:
         - namespaceSelector:
             matchLabels:
@@ -96,18 +96,18 @@ spec:
 {% if app in argocd_network_policy_refined_namespaces %}
     - from:
         - podSelector: {}
-{% for extra_ns in argocd_network_policy_extra_ingress.get(app, []) %}
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: {{ extra_ns }}
-{% endfor %}
 {% else %}
     - from:
         - namespaceSelector:
             matchLabels:
               security-tier: workload
 {% endif %}
+{% for extra_ns in argocd_network_policy_extra_ingress.get(app, []) %}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ extra_ns }}
+{% endfor %}
     - from:
         - namespaceSelector:
             matchLabels:
