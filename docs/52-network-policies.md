@@ -5,16 +5,59 @@ grobe Default-Deny-NetworkPolicy je `security-tier`, damit ein
 kompromittierter Pod (z. B. n8n) nicht mehr uneingeschränkt auf
 Postgres/Redis/Services in fremden Namespaces zugreifen kann.
 
-**Status: Schritt 1 (grobe Tier-Policy) live seit 13.08.2026.** Rollout
-komplett durchgelaufen (Backup, Namespace-Bereinigung, Relabeling, Pilot,
-voller Rollout), validiert: alle 36 App-Namespaces tragen
-`tier-default-ingress`, ArgoCD zeigt weiterhin 35/36 `Healthy` (`monitoring`
-unverändert `Progressing`, siehe [Bekannte Lücken](#bekannte-lücken--nachfolgearbeit)),
-HTTP-Stichproben über Traefik (`wiki`, `n8n`, `vaultwarden`, `authentik`,
-`nextcloud`, `example-whoami`, `tinyteller`) erfolgreich. `argocd_apply_network_policies: true`
-ist jetzt der dauerhafte Default in
+**Status (13.08.2026): Schritt 1 live, Schritt 2 läuft (5 von 36
+Namespaces verfeinert).** `argocd_apply_network_policies: true` ist
+dauerhafter Default in
 [ansible/roles/argocd/defaults/main.yml](../ansible/roles/argocd/defaults/main.yml).
-Schritt 2 (Verfeinerung pro Namespace) ist noch nicht begonnen.
+
+---
+
+## Incident während des Rollouts: Cloudflare-Tunnel-Ausfall
+
+**Was passiert ist:** Die grobe Tier-Policy aus Schritt 1 erlaubt Ingress
+nur aus demselben `security-tier` (+ `kube-system` + `monitoring`).
+Übersehen: der `cloudflared`-Pod (Namespace `cloudflared`, Tier
+`platform`) ruft die Origin-Services für den öffentlichen Tunnel
+(`*.pke-lab.de`) per ClusterIP **direkt** an — u. a. `wikijs`, `mealie`,
+`vaultwarden`, `nextcloud`, `immich`, `paperless-ngx`, `zammad`
+(`argocd/apps/platform/cloudflared/values.yaml`). Das ist Cross-Tier
+(platform → workload) und wurde durch die grobe Policy sofort blockiert —
+**ab dem Schritt-1-Rollout war der komplette externe Zugriff über den
+Cloudflare-Tunnel für diese Apps down**, ohne dass es bei den lokalen
+`*.homeserver`-Stichproben auffiel (die laufen über Traefik/`kube-system`,
+nicht über `cloudflared`).
+
+**Wie es gefunden wurde:** kein Nutzerreport, sondern ein systematischer
+Nachscan (`grep -rn "svc.cluster.local" argocd/apps/`) direkt nach dem
+`wiki-docs-sync`-Beinahe-Incident (siehe unten) — aus Vorsicht, um zu
+prüfen, ob es noch mehr übersehene Cross-Namespace-Aufrufe gibt. Bestätigt
+per `kubectl -n cloudflared logs`: laufende `connection refused`-Fehler
+für echte externe Requests (`ip=198.41.192.167` = Cloudflare-Edge).
+
+**Fix:** `cloudflared` als **generelle** Ingress-Ausnahme in jede
+Namespace-Policy aufgenommen — genau wie `kube-system`/`monitoring`, weil
+es faktisch ein zweiter Ingress-Controller ist. Betrifft beide Varianten
+(grob und verfeinert), siehe Template. Verifiziert: letzter Fehler in den
+cloudflared-Logs um 17:05:12 Uhr, danach keine weiteren mehr.
+
+**Lektion:** Nach jedem Cross-Tier-Policy-Rollout nicht nur
+`*.homeserver` (lokal, über Traefik) testen, sondern auch mindestens
+einen externen Pfad über den Cloudflare-Tunnel (`*.pke-lab.de`) — beide
+Ingress-Pfade sind unabhängig und ein Ausfall im einen ist im anderen
+unsichtbar.
+
+---
+
+## Beinahe-Incident: wiki-docs-sync -> wikijs
+
+Beim Verfeinern von `wikijs` (Schritt 2, Batch 2) übersehen: `wiki-docs-sync`
+läuft als CronJob in einem **eigenen** Namespace und ruft `wikijs` per
+ClusterIP direkt an (nicht über Traefik) — siehe
+[Schritt 2](#schritt-2--verfeinerung-pro-namespace) unten für Details.
+Rechtzeitig gefunden und gefixt, bevor der nächste `*/15min`-Lauf
+scheiterte (manueller Testlauf danach: `Complete`, Sync erfolgreich).
+Direkter Auslöser für den systematischen Cloudflared-Scan oben und für
+den generalisierten `argocd_network_policy_extra_ingress`-Mechanismus.
 
 ---
 
@@ -65,16 +108,15 @@ genannte "klassische Fehler: fehlender DNS-Allow" hier strukturell nicht
 auftreten kann: DNS-Auflösung ist ein Egress-Vorgang (Pod fragt CoreDNS),
 und Egress bleibt vollständig unangetastet.
 
-### Die drei erlaubten Ingress-Quellen je Namespace
+### Die erlaubten Ingress-Quellen je Namespace
 
 Jede Policy (`tier-default-ingress`, eine pro App-Namespace) erlaubt
 Ingress auf **alle Pods, alle Ports** aus:
 
-1. **Namespaces mit demselben `security-tier`-Wert** — deckt auch den
-   eigenen Namespace ab (der trägt ja ebenfalls sein eigenes Tier-Label),
-   Intra-App- (z. B. App → eigene Postgres) und Intra-Tier-Traffic bleibt
-   also komplett uneingeschränkt. Cross-Tier-Traffic (Workload →
-   Platform-Namespace, Platform → Workload-Namespace) wird geblockt.
+1. **Namespaces mit demselben `security-tier`-Wert** (grobe Variante) bzw.
+   **nur der eigene Namespace** (verfeinerte Variante, Schritt 2) — deckt
+   Intra-App-Traffic ab (z. B. App → eigene Postgres). Cross-Tier-Traffic
+   wird geblockt (grob), bzw. jeder fremde Namespace (verfeinert).
 2. **`kube-system`** — Traefik (Ingress-Controller) läuft dort und muss
    jeden App-Pod erreichen können, sonst bricht der komplette externe
    Zugriff über `*.homeserver`.
@@ -82,11 +124,20 @@ Ingress auf **alle Pods, alle Ports** aus:
    jedem Namespace per Pull (Egress von `monitoring` aus) — muss auf der
    Ziel-Namespace-Seite als Ingress erlaubt sein, sonst verschwinden
    Metriken für alle Apps.
+4. **`cloudflared`** — faktisch ein zweiter Ingress-Controller für den
+   öffentlichen `*.pke-lab.de`-Zugriff, ruft Origin-Services ebenfalls per
+   ClusterIP direkt an. **Nachträglich ergänzt** nach einem Incident
+   während des Rollouts (siehe [Incident-Abschnitt](#incident-während-des-rollouts-cloudflare-tunnel-ausfall)
+   oben) — ursprünglich übersehen, weil es beim lokalen `*.homeserver`-Test
+   nicht auffällt.
+5. **Gezielte Zusatz-Namespaces aus `argocd_network_policy_extra_ingress`**
+   — für einzelne, im Repo gefundene legitime Cross-Namespace-Aufrufe
+   (CronJobs, Workflows), die nicht unter 1–4 fallen.
 
 Matching läuft über `kubernetes.io/metadata.name` (von Kubernetes seit
-1.21 automatisch auf jedem Namespace gesetzt) für `kube-system`/
-`monitoring`, und über das manuell gesetzte `security-tier`-Label für die
-Tier-Regel.
+1.21 automatisch auf jedem Namespace gesetzt) für alle Namespace-genauen
+Ausnahmen (2–5), und über das manuell gesetzte `security-tier`-Label nur
+für die grobe Tier-Regel (1).
 
 ### Ausgeschlossene Namespaces
 
@@ -201,6 +252,10 @@ unterschiedlichen Tiers im Browser aufrufen (mind. eine Platform-App wie
 Authentik/Grafana, mind. zwei Workload-Apps). Grafana-Dashboard auf
 lückenlose Metriken prüfen (ein plötzliches Metrik-Loch bei einer
 bestimmten App = deren `monitoring`-Ingress-Regel greift nicht).
+**Zusätzlich, seit dem Cloudflared-Incident (siehe oben) Pflicht:**
+mindestens einen `*.pke-lab.de`-Pfad extern über den Cloudflare-Tunnel
+testen, nicht nur `*.homeserver` lokal über Traefik — beide Ingress-Pfade
+sind unabhängig.
 
 **8. Rollback (voller Rollout)** falls nötig:
 
@@ -234,9 +289,55 @@ Namespace für Namespace migrieren, ohne die anderen 34 anzufassen —
 die Policy-Objekte, deren Inhalt sich tatsächlich geändert hat.
 
 **Reihenfolge** (aus docs/51): unkritische Apps zuerst, dann Apps mit
-eigener DB, zuletzt Plattform-Namespaces. Aktueller Stand: `example-whoami`,
-`tinyteller` in der Liste (13.08.2026) — beide zustandslose Demo-Apps ohne
-Abhängigkeiten zu anderen Namespaces, ideal zur Musterverifikation.
+eigener DB, zuletzt Plattform-Namespaces.
+
+**Batch 1 (13.08.2026, verifiziert):** `example-whoami`, `tinyteller` —
+beide zustandslose Demo-Apps ohne Abhängigkeiten zu anderen Namespaces,
+ideal zur Musterverifikation. HTTP-Check nach Rollout: beide `200`,
+`podSelector: {}` in der Policy bestätigt, ArgoCD weiterhin `Healthy`.
+
+**Batch 2 (13.08.2026, Rollout aussehend):** `wikijs`, `mealie`, `n8n` —
+Apps mit eigener DB/eigenem State, komplett im selben Namespace (Postgres
+bei wikijs, In-Pod-SQLite bei mealie/n8n), keine Cross-Namespace-
+Abhängigkeit für den Normalbetrieb.
+
+> **Beinahe-Incident während des Batch-2-Rollouts:** `wiki-docs-sync`
+> läuft als CronJob (`*/15 * * * *`) in seinem **eigenen** Namespace und
+> ruft `wikijs` per ClusterIP direkt an
+> (`http://wikijs.wikijs.svc.cluster.local`, siehe
+> `argocd/apps/workloads/wiki-docs-sync/values.yaml`) — nicht über
+> Traefik. Das wurde beim ersten `wikijs`-Refinement übersehen (nur die
+> Pods **innerhalb** von `wikijs` wurden auf Selbstständigkeit geprüft,
+> nicht wer **von außen** reinruft). Der nächste Cron-Lauf nach dem
+> Rollout wäre damit fehlgeschlagen. Gefixt, bevor er lief: neuer
+> Mechanismus `argocd_network_policy_extra_ingress` (Template + defaults,
+> siehe [ansible/roles/argocd/defaults/main.yml](../ansible/roles/argocd/defaults/main.yml))
+> für gezielte Zusatz-Ausnahmen bei verfeinerten Namespaces — `wikijs`
+> erlaubt jetzt explizit zusätzlich Ingress aus `wiki-docs-sync`.
+>
+> **Lektion für die restlichen Batches:** vor jeder Verfeinerung nicht nur
+> prüfen, wer im Ziel-Namespace selbst läuft, sondern per
+> `grep -rn "svc.cluster.local\|\.{{ '{{' }} .Release.Namespace" argocd/apps/`
+> (oder gezielt nach dem Namespace-Namen) nach **eingehenden**
+> Cross-Namespace-Referenzen aus anderen App-Ordnern suchen — CronJobs in
+> fremden Namespaces sind der unauffälligste Fall, weil sie nicht wie ein
+> Ingress/Traefik-Pfad sofort auffallen.
+
+> **Proaktiv mitgefixt (derselbe Nachscan wie beim Cloudflared-Incident):**
+> Der systematische `grep -rn "svc.cluster.local" argocd/apps/` nach dem
+> `wiki-docs-sync`-Fund brachte drei weitere Cross-Tier-Aufrufe zutage, die
+> von der groben Policy auf `ntfy`/`monitoring` blockiert würden:
+> `carplay-api` → `ntfy` und → `monitoring` (Push-Benachrichtigungen bzw.
+> VictoriaMetrics-Abfrage, beide aktiv genutzt, aber nur bedarfsgesteuert —
+> daher in den bisherigen Logs nicht als Fehler sichtbar), `alamos-apager`
+> → `ntfy` (Alarm-Benachrichtigung), und der bereits erwähnte n8n-Workflow
+> → `monitoring` (aktuell `"active": false`). Statt abzuwarten, ob eines
+> davon im Ernstfall lautlos fehlschlägt (genau das Muster, das beim
+> Cloudflare-Tunnel schon passiert war), alle vier direkt über
+> `argocd_network_policy_extra_ingress` freigegeben — der Mechanismus
+> wurde dafür generalisiert: Zusatz-Ausnahmen wirken jetzt auch bei noch
+> nicht verfeinerten (groben) Ziel-Namespaces, nicht nur bei bereits
+> verfeinerten.
 
 **Rollout für die beiden Piloten:**
 
