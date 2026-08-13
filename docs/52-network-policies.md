@@ -5,6 +5,17 @@ grobe Default-Deny-NetworkPolicy je `security-tier`, damit ein
 kompromittierter Pod (z. B. n8n) nicht mehr uneingeschränkt auf
 Postgres/Redis/Services in fremden Namespaces zugreifen kann.
 
+**Status: Schritt 1 (grobe Tier-Policy) live seit 13.08.2026.** Rollout
+komplett durchgelaufen (Backup, Namespace-Bereinigung, Relabeling, Pilot,
+voller Rollout), validiert: alle 36 App-Namespaces tragen
+`tier-default-ingress`, ArgoCD zeigt weiterhin 35/36 `Healthy` (`monitoring`
+unverändert `Progressing`, siehe [Bekannte Lücken](#bekannte-lücken--nachfolgearbeit)),
+HTTP-Stichproben über Traefik (`wiki`, `n8n`, `vaultwarden`, `authentik`,
+`nextcloud`, `example-whoami`, `tinyteller`) erfolgreich. `argocd_apply_network_policies: true`
+ist jetzt der dauerhafte Default in
+[ansible/roles/argocd/defaults/main.yml](../ansible/roles/argocd/defaults/main.yml).
+Schritt 2 (Verfeinerung pro Namespace) ist noch nicht begonnen.
+
 ---
 
 ## Vorfund beim Start dieser Phase
