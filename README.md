@@ -318,7 +318,7 @@ Ein schlanker VictoriaMetrics-+-Grafana-Stack lebt unter `argocd/apps/platform/m
 Grafana öffnen unter **http://grafana.homeserver** — Admin-Passwort abfragen:
 
 ```bash
-kubectl -n monitoring get secret monitoring-grafana \
+kubectl -n monitoring get secret grafana-admin \
   -o jsonpath='{.data.admin-password}' | base64 -d; echo
 ```
 
