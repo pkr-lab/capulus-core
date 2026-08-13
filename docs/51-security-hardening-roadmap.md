@@ -22,6 +22,12 @@ absichtlich so gewählt, dass jede Phase auf der vorherigen aufbaut.
 
 ### Phase 3 — Cluster-NetworkPolicies
 
+**Status (13.08.2026): Schritt 1 implementiert, Rollout auf dem Cluster
+steht noch aus.** Vollständige Detail-Doku, inkl. Design-Entscheidungen,
+Vorfunden (fehlende `security-tier`-Labels, verwaiste Namespaces) und
+Schritt-für-Schritt-Rollout mit Backup/Pilot/Validierung/Rollback:
+[docs/52-network-policies.md](52-network-policies.md).
+
 **Ziel:** Aktuell kann jeder Pod jeden Service im Cluster erreichen (keine
 einzige `NetworkPolicy` im Cluster außer in vendorten Helm-Subcharts). Ein
 kompromittierter Container (z. B. n8n, das per Design beliebige
@@ -29,11 +35,13 @@ HTTP-Requests macht) hat uneingeschränkten Zugriff auf Postgres/Redis
 anderer Namespaces.
 
 **Ansatz:**
-1. Grobe Default-Deny-Policy je `security-tier`-Label (aus Phase 2:
-   `security-tier=platform` / `security-tier=workload` auf jedem
-   Namespace) — Cross-Tier-Traffic blockiert, Intra-Tier erlaubt, plus feste
-   Ausnahmen für DNS (CoreDNS) und Monitoring-Scraping (VictoriaMetrics
-   braucht Zugriff auf alle Namespaces für Metriken).
+1. **[Umgesetzt, Rollout ausstehend]** Grobe Default-Deny-Policy je
+   `security-tier`-Label — Cross-Tier-Traffic blockiert, Intra-Tier
+   erlaubt, plus feste Ausnahmen für `kube-system` (Traefik) und
+   `monitoring` (VictoriaMetrics-Scraping). Bewusst nur Ingress, kein
+   Egress (Begründung in docs/52) — dadurch entfällt der klassische
+   DNS-Allow-Stolperstein strukturell, DNS bleibt als Egress-Vorgang
+   unangetastet.
 2. Danach schrittweise pro Namespace verfeinern (nicht alle 34 auf einmal),
    startend mit unkritischen Apps (`example-whoami`, `tinyteller`) zur
    Musterverifikation, dann Apps mit eigener DB, zuletzt Plattform-Namespaces.
@@ -41,11 +49,14 @@ anderer Namespaces.
    betroffenen App, bevor der nächste Namespace drankommt.
 
 **Risiko:** mittel — eine falsch geschnittene Policy kann eine App
-lahmlegen (klassischer Fehler: fehlender DNS-Allow). Deshalb schrittweise,
-nicht als Big Bang.
+lahmlegen. Deshalb schrittweise, nicht als Big Bang, siehe Pilot-Schritt
+in docs/52.
 
-**Voraussetzung, die schon erfüllt ist:** die `security-tier`-Labels aus
-Phase 2 sind bereits auf allen Namespaces gesetzt.
+**Voraussetzung, die als erfüllt angenommen wurde, es aber nicht war:** die
+`security-tier`-Labels aus Phase 2 fehlten beim Check am 13.08. komplett
+auf allen Namespaces (vermutlich durch den ApplicationSet-Incident
+verloren, siehe docs/52) — werden durch einen erneuten `make argocd`-Lauf
+neu gesetzt, bevor die Policies live gehen.
 
 ### Phase 4 — k3s Secrets-Encryption-at-Rest + Audit-Log
 
