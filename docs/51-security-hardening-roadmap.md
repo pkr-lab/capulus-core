@@ -69,14 +69,24 @@ manuell, kein Ansible (bewusste bestehende Design-Entscheidung, siehe
 
 ### Phase 7 — Secrets-Rotation & Security-Alerting
 
+**Status (13.08.2026): Punkt 1 umgesetzt (auf Nutzerwunsch vor Phase 6
+vorgezogen), verifiziert bis auf den finalen n8n-Import.** Statt einer
+reinen Doku-Checkliste: ein n8n-Workflow, der einmal jährlich automatisch
+ein Zammad-Ticket eröffnet. Vollständige Doku, Rotations-Checkliste je
+Secret und Import-Anleitung: [docs/55-secrets-rotation.md](55-secrets-rotation.md).
+
 **Ziel:** Keine dokumentierte Rotationskadenz für Ansible-Vault-Passwort,
 restic-Passwort, ArgoCD-Admin-PW, Sealed-Secrets-Key. Kein Alerting auf
 sicherheitsrelevante Events (UFW-Denies, CrowdSec-Bans, gehäufte
 Authentik-Login-Fehlschläge).
 
 **Ansatz:**
-1. Kurze Rotations-Checkliste als Doku, mit empfohlenem Turnus je Secret.
-2. CrowdSec-Ban-Events (aus Phase 1) über den bestehenden
+1. **[Erledigt]** Rotations-Checkliste mit empfohlenem Turnus je Secret
+   (docs/55) — plus aktive jährliche Erinnerung statt nur passiver Doku:
+   n8n-Workflow (`yearly-secrets-rotation-reminder.json`, nativer
+   Zammad-Node) eröffnet automatisch ein Ticket in `Support::Administration`.
+   Muss noch manuell in n8n importiert + aktiviert werden (siehe docs/55).
+2. **[Offen]** CrowdSec-Ban-Events (aus Phase 1) über den bestehenden
    Gotify/ntfy-Bridge-Mechanismus ausliefern — keine neue Infrastruktur
    nötig, nur eine weitere Alert-Quelle an den bestehenden Stack anhängen.
 
