@@ -16,26 +16,11 @@ absichtlich so gewählt, dass jede Phase auf der vorherigen aufbaut.
 | 2 | ArgoCD AppProject-Trennung Platform/Workloads + Namespace-Tier-Label | [docs/49-argocd-projects.md](49-argocd-projects.md) — **inkl. eines Incidents beim Rollout**, siehe [docs/50-incident-2026-08-12.md](50-incident-2026-08-12.md) |
 | 9 | Renovate (automatische Update-PRs) + semantic-release (GitHub Release bei jedem Merge auf `main`) | [docs/47-renovate.md](47-renovate.md), [docs/48-release-automation.md](48-release-automation.md) |
 | 3 | Cluster-NetworkPolicies — grobe Tier-Policy + vollständige Verfeinerung auf alle 36 App-Namespaces (nur noch eigener Namespace + kube-system + monitoring + cloudflared + gezielte Ausnahmen) | [docs/52-network-policies.md](52-network-policies.md) — **inkl. eines Beinahe-Incidents (Cloudflare-Tunnel-Ausfall während des Rollouts)** |
+| 4 | k3s Secrets-Encryption-at-Rest (AES-CBC, per Byte-Dump verifiziert) + Audit-Log (Metadata-Level, 14 Tage Retention) | [docs/53-secrets-encryption-audit-log.md](53-secrets-encryption-audit-log.md) |
 
 ---
 
 ## Offen
-
-### Phase 4 — k3s Secrets-Encryption-at-Rest + Audit-Log
-
-**Ziel:** Sealed Secrets schützt nur Git — im k3s-Datastore selbst liegen
-entschlüsselte Secrets aktuell im Klartext.
-
-**Ansatz:**
-1. `--secrets-encryption` in `ansible/roles/k3s/` ergänzen.
-2. **Vorher: Backup des k3s-Datastores** (`/var/lib/rancher/k3s/server/db/`).
-3. Bestehende Secrets neu verschlüsseln: `k3s secrets-encrypt prepare` →
-   Server-Neustart → `rotate` → `reencrypt`.
-4. Audit-Log aktivieren (`--kube-apiserver-arg=audit-log-path=...`),
-   Log-Rotation beachten (lokale SSD, Retention begrenzt halten).
-
-**Risiko:** mittel-hoch — betrifft den Datastore aller Secrets im Cluster.
-Nur mit vorherigem Backup und außerhalb der Kernnutzungszeit fahren.
 
 ### Phase 5 — Internes TLS für `*.homeserver`
 
