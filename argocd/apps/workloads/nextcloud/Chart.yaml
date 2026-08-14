@@ -9,7 +9,7 @@ description: |
 
   Web-Interface:
     http://nextcloud.prod.homeserver
-    https://nextcloud.prod.pke-lab.de (Cloudflare Tunnel)
+    https://nextcloud-prod.pke-lab.de (Cloudflare Tunnel)
 
   Komponenten:
     - Nextcloud 34 (nextcloud:34.0.2-apache)

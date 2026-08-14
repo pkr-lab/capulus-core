@@ -11,14 +11,26 @@ spec:
         - alert: worker-1Down
           expr: |
             (
-              up{job=~".*node-exporter.*", instance=~"192\\.168\\.178\\.96.*"} == 0
-            ) or (
-              kube_node_status_condition{
-                node="worker-1",
-                condition="Ready",
-                status="true"
-              } == 0
+              (
+                up{job=~".*node-exporter.*", instance=~"192\\.168\\.178\\.96.*"} == 0
+              ) or (
+                kube_node_status_condition{
+                  node="worker-1",
+                  condition="Ready",
+                  status="true"
+                } == 0
+              )
             )
+            # worker-1 wird vom cluster-power-manager NUR bei hoher
+            # Homeserver-Last per WoL geweckt und sonst bewusst
+            # heruntergefahren (cordon vor Shutdown, uncordon nach
+            # erfolgreichem Wake, siehe ansible/roles/cluster_power_manager).
+            # Ohne diesen Ausschluss würde dieser Alert die meiste Zeit
+            # (Standardzustand: Worker schläft) fälschlich als "critical"
+            # feuern. kube_node_spec_unschedulable==1 ist genau das Signal
+            # für "absichtlich außer Betrieb" (Cordon), egal ob durch den
+            # Power-Manager oder manuelle Wartung.
+            unless kube_node_spec_unschedulable{node="worker-1"} == 1
           for: 1m
           labels:
             severity: critical
