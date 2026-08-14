@@ -79,8 +79,8 @@ publishService:
       port: 8554
       nodePort: 31554
 
-# Ingress für Browser-Playback — sowohl intern (stream.homeserver) als auch
-# extern über den Cloudflare Tunnel (stream.pke-lab.de, siehe
+# Ingress für Browser-Playback — sowohl intern (stream.prod.homeserver) als auch
+# extern über den Cloudflare Tunnel (stream.prod.pke-lab.de, siehe
 # argocd/apps/platform/cloudflared/values.yaml). Absicherung läuft komplett über
 # mediamtx' eigene interne Auth (siehe `auth` unten) — der Browser bekommt
 # beim Öffnen einen normalen HTTP-Basic-Auth-Dialog von mediamtx selbst,
@@ -90,11 +90,11 @@ ingress:
   className: traefik
   annotations: {}
   hosts:
-    - host: stream.homeserver
+    - host: stream.prod.homeserver
       paths:
         - path: /
           pathType: Prefix
-    - host: stream.pke-lab.de
+    - host: stream.prod.pke-lab.de
       paths:
         - path: /
           pathType: Prefix

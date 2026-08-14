@@ -64,7 +64,7 @@ cluster_power_manager_state_dir: /var/lib/cluster-power-manager
 cluster_power_manager_kubeconfig: /etc/rancher/k3s/k3s.yaml
 
 # ---- ntfy-Benachrichtigungen -------------------------------------------
-cluster_power_manager_ntfy_host: "ntfy.homeserver"
+cluster_power_manager_ntfy_host: "ntfy.tech.homeserver"
 cluster_power_manager_ntfy_ip: "{{ network_static_ip }}"
 cluster_power_manager_ntfy_topic: "Home-Lab-System"
 

@@ -38,7 +38,7 @@ ingress:
   className: traefik
   annotations: {}
   hosts:
-    - host: mealie.homeserver
+    - host: mealie.prod.homeserver
       paths:
         - path: /
           pathType: Prefix
@@ -54,7 +54,7 @@ persistence:
 env:
   TZ: Europe/Berlin
   ALLOW_SIGNUP: "false"
-  BASE_URL: "https://mealie.pke-lab.de"
+  BASE_URL: "https://mealie.prod.pke-lab.de"
   # Maximale Anzahl Workers — für Home Lab reicht 1
   MAX_WORKERS: "1"
   WEB_CONCURRENCY: "1"

@@ -15,7 +15,7 @@ kubeseal-webgui:
   # URL the browser uses to reach the API backend.
   # Must match the Ingress hostname so the UI works correctly.
   api:
-    url: "http://kubeseal-webgui.homeserver"
+    url: "http://kubeseal-webgui.tech.homeserver"
 
   # Connection to the Sealed Secrets controller.
   # autoFetchCert lets the app retrieve the public key automatically on startup
@@ -29,7 +29,7 @@ kubeseal-webgui:
     enabled: true
     ingressClassName: traefik
     annotations: {}
-    hostname: "kubeseal-webgui.homeserver"
+    hostname: "kubeseal-webgui.tech.homeserver"
     tls:
       enabled: false
       secretName: ""

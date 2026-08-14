@@ -59,7 +59,7 @@ server:
     className: traefik
     annotations: {}
     hosts:
-      - host: immich.homeserver
+      - host: immich.prod.homeserver
         paths:
           - path: /
             pathType: Prefix

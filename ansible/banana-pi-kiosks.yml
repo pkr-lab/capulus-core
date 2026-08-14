@@ -35,7 +35,7 @@
 #      Homeserver beworbene Route (192.168.178.0/24) im Tailscale-Adminpanel
 #      genehmigt (siehe docs/08-semaphore.md, Abschnitt "Zugriff über
 #      Tailscale", und docs/45-vereinsheim-alarmmonitor.md) — sonst loest
-#      der Pi weder alamos-apager.homeserver auf, noch erreicht er es.
+#      der Pi weder alamos-apager.prod.homeserver auf, noch erreicht er es.
 #
 # Aufruf:
 #   make banana-pi-kiosks

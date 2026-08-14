@@ -3,7 +3,7 @@ import Foundation
 /// URLSessionDelegate for carplay-api's connection.
 ///
 /// The original spec asked for TLS client-certificate pinning here. As
-/// deployed today, `carplay-api.homeserver` is plain HTTP like every other
+/// deployed today, `carplay-api.prod.homeserver` is plain HTTP like every other
 /// *.homeserver service in this cluster (see Constants.swift) — there is no
 /// TLS handshake to pin a certificate against, so implementing pinning here
 /// would just be a check that never runs. Real client-certificate mTLS
