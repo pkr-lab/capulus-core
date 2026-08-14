@@ -341,7 +341,7 @@ Secret einmal rotiert werden muss.
 1. **Applications → Providers → Erstellen → OAuth2/OpenID Provider**
    - Name: `Headlamp`
    - Client type: `Confidential`
-   - Redirect URI: `http://headlamp.homeserver/oidc-callback`
+   - Redirect URI: `https://headlamp.homeserver/oidc-callback`
    - Scopes: `openid`, `email`, `profile`, `groups`
 2. Notiere `Client ID` und `Client Secret`.
 3. **Applications → Erstellen:** Name `Headlamp`, Provider `Headlamp`
@@ -374,7 +374,7 @@ Einziger Dienst aus dieser Liste, der noch nicht umgestellt ist —
 
 1. **Providers → OAuth2/OpenID Provider:**
    - Name: `Argo Workflows`
-   - Redirect URI: `http://argo-workflows.homeserver/oauth2/callback`
+   - Redirect URI: `https://argo-workflows.homeserver/oauth2/callback`
    - Scopes: `openid`, `email`, `profile`, `groups`
 2. **Applications → Erstellen:** Name `Argo Workflows`.
 
@@ -406,7 +406,7 @@ einmal rotiert werden muss.
 
 1. **Providers → OAuth2/OpenID Provider:**
    - Name: `MinIO`
-   - Redirect URI: `http://minio.homeserver/oauth_callback`
+   - Redirect URI: `https://minio.homeserver/oauth_callback`
    - Scopes: `openid`, `email`, `profile`, `groups`
 2. **Applications → Erstellen:** Name `MinIO`.
 
@@ -437,7 +437,7 @@ Middleware-Annotation in `argocd/apps/platform/gotify/values.yaml`.
 1. **Providers → Erstellen → Proxy Provider**
    - Name: `Gotify`
    - Mode: `Forward auth (single application)`
-   - External Host: `http://gotify.homeserver`
+   - External Host: `https://gotify.homeserver`
 2. **Applications → Erstellen:** Name `Gotify`, Provider `Gotify`.
 
 ---
@@ -452,7 +452,7 @@ Middleware-Annotation in `argocd/apps/platform/semaphore/values.yaml`.
 1. **Providers → Erstellen → Proxy Provider**
    - Name: `Semaphore`
    - Mode: `Forward auth (single application)`
-   - External Host: `http://semaphore.homeserver`
+   - External Host: `https://semaphore.homeserver`
 2. **Applications → Erstellen:** Name `Semaphore`, Provider `Semaphore`.
 
 ---
@@ -519,14 +519,14 @@ ssh ubuntu@192.168.178.94 \
 curl --cert ~/homelab-certs/client.crt \
      --key  ~/homelab-certs/client.key \
      --cacert ~/homelab-certs/ca.crt \
-     https://authentik.homeserver/if/flow/default-authentication-flow/
+     http://authentik.homeserver/if/flow/default-authentication-flow/
 
 # 3. Zugriff OHNE Zertifikat wird abgelehnt (muss 400 zurückgeben)
 curl --cacert ~/homelab-certs/ca.crt \
-     https://authentik.homeserver/  # erwartet: 400 Bad Request
+     http://authentik.homeserver/  # erwartet: 400 Bad Request
 
 # 4. Browser: Grafana öffnen → Browser fragt nach Zertifikat → Grafana-Login (lokal)
-open http://grafana.homeserver
+open https://grafana.homeserver
 ```
 
 ---

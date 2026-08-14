@@ -191,7 +191,7 @@ Den ausgegebenen Ciphertext in
 `argocd/apps/platform/cloudflared/values.yaml` unter
 `tunnel.encryptedCredentialsJson` eintragen.
 
-> Alternativ per Web-UI: <http://kubeseal-webgui.tech.homeserver>, Namespace
+> Alternativ per Web-UI: <https://kubeseal-webgui.tech.homeserver>, Namespace
 > `cloudflared`, Secret-Name `cloudflared-credentials`, Key
 > `credentials.json`, Value = Inhalt der `.json`-Datei.
 
@@ -260,25 +260,27 @@ tunnel:
   credentialsSecretName: cloudflared-credentials
   encryptedCredentialsJson: "AgB...=="   # aus Schritt 3
 
+  # Zeigt NICHT mehr direkt auf einzelne App-Services, sondern auf Traefik —
+  # eine Wildcard-Regel pro Tier deckt alle aktuellen und künftigen Apps
+  # dieses Tiers ab. Details/Begründung: docs/56-domain-tiers.md.
   ingress:
     rules:
-      - hostname: wiki.deine-domain.de
-        service: http://wikijs-wikijs.wikijs.svc.cluster.local:80
-      - hostname: ntfy.deine-domain.de
-        service: http://ntfy.ntfy.svc.cluster.local:80
-      - hostname: support.deine-domain.de
-        service: http://zammad-zammad-nginx.zammad.svc.cluster.local:80
+      - hostname: "*.tech.deine-domain.de"
+        service: http://traefik.kube-system.svc.cluster.local:80
+      - hostname: "*.prod.deine-domain.de"
+        service: http://traefik.kube-system.svc.cluster.local:80
     defaultService: "http_status:404"
 ```
 
-Den internen Service-Namen je Dienst mit `kubectl -n <namespace> get svc`
-prüfen — bei Sub-Charts (z. B. Zammad, Wiki.js) heißt der Service oft
-`<release>-<chart>-<komponente>`, nicht einfach der App-Name.
-
-> Mit der Wildcard-DNS-Route aus Schritt 4 ist das ab jetzt der **einzige**
-> Schritt, um einen weiteren Dienst freizugeben — einfach eine weitere
-> `hostname:`/`service:`-Zeile ergänzen, committen, pushen. Kein erneutes
-> `cloudflared tunnel route dns` nötig.
+> Mit der Wildcard-DNS-Route aus Schritt 4 **und** den beiden
+> Wildcard-Ingress-Regeln oben ist diese Datei ab jetzt fertig — ein neuer
+> Dienst braucht hier **keine** weitere Zeile mehr. Freigeben passiert
+> stattdessen direkt in der `values.yaml` des jeweiligen Dienstes: dort
+> in `ingress.hosts` einen zusätzlichen Eintrag mit dem externen Hostnamen
+> (`<app>.<tier>.deine-domain.de`) neben dem internen
+> `<app>.<tier>.homeserver`-Host ergänzen — Traefik matcht dann automatisch
+> anhand des Host-Headers, ganz ohne Umweg über diese Datei. Siehe
+> [docs/23 → Neuen Dienst freigeben](23-cloudflare-deploy.md#neuen-dienst-freigeben).
 
 Danach committen und pushen (siehe
 [docs/23-cloudflare-deploy.md](23-cloudflare-deploy.md) für den vollen

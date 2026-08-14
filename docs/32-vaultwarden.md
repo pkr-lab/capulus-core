@@ -52,7 +52,7 @@ nächsten Schritt versiegeln.
 
 ### 1.2 SealedSecret-Ciphertext erzeugen
 
-Über die Web-UI unter <http://kubeseal-webgui.homeserver>:
+Über die Web-UI unter <https://kubeseal-webgui.homeserver>:
 
 1. Öffnen und ausfüllen:
    - **Namespace**: `vaultwarden`
@@ -123,7 +123,7 @@ der ArgoCD-UI bei der `vaultwarden`-App klicken).
 ```bash
 SRV='ssh -i ~/.ssh/id_ed25519 ubuntu@homeserver'
 $SRV 'sudo kubectl -n vaultwarden get pods,svc,ingress,pvc,sealedsecret,secret'
-curl -sS http://vault.homeserver/alive
+curl -sS https://vault.homeserver/alive
 ```
 
 Erwartet:
@@ -134,7 +134,7 @@ Erwartet:
 
 ## 2. Ersten Account anlegen
 
-1. **http://vault.homeserver** öffnen → *Create Account*.
+1. **https://vault.homeserver** öffnen → *Create Account*.
 2. Master-Passwort setzen (idealerweise einen langen Passphrase-Satz, den
    man sich merken kann — das ist der einzige Schlüssel zum ganzen Tresor).
 3. Einloggen, im Web-Vault unter *Account Settings → Security → Two-step
@@ -157,7 +157,7 @@ Alle offiziellen Bitwarden-Clients unterstützen einen "Self-hosted"-Server:
 - **Desktop-App / CLI**: gleiches Prinzip (`bw config server
   https://vault.pke-lab.de` für die CLI)
 
-Intern im LAN funktioniert auch `http://vault.homeserver` als Server-URL,
+Intern im LAN funktioniert auch `https://vault.homeserver` als Server-URL,
 aber nur die `pke-lab.de`-Domain ist von unterwegs erreichbar.
 
 ---
@@ -165,7 +165,7 @@ aber nur die `pke-lab.de`-Domain ist von unterwegs erreichbar.
 ## 4. Admin-Oberfläche
 
 Unter `https://vault.pke-lab.de/admin` (oder intern
-`http://vault.homeserver/admin`) mit dem Klartext-Passwort aus Schritt 1.1
+`https://vault.homeserver/admin`) mit dem Klartext-Passwort aus Schritt 1.1
 einloggen. Dort lassen sich u. a. Nutzer verwalten, Diagnosen einsehen und
 SMTP für E-Mail-Versand (Passwort-Reset, Einladungen) konfigurieren, falls
 später gewünscht.
