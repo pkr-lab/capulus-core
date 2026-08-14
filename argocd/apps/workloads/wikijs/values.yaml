@@ -54,7 +54,7 @@ wikijs:
     annotations:
       traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
     hosts:
-      - host: wiki.homeserver
+      - host: wiki.prod.homeserver
         paths:
           - path: /
             pathType: Prefix

@@ -39,7 +39,7 @@ zammad:
     annotations:
       traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
     hosts:
-      - host: zammad.homeserver
+      - host: zammad.tech.homeserver
         paths:
           - path: /
             pathType: Prefix

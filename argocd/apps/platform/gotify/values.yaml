@@ -44,17 +44,17 @@ ingress:
   annotations:
     traefik.ingress.kubernetes.io/router.middlewares: "authentik-authentik-forwardauth@kubernetescrd"
   hosts:
-    - host: gotify.homeserver
+    - host: gotify.tech.homeserver
       paths:
         - path: /
           pathType: Prefix
   tls: []
 
 # Zweiter Ingress ohne ForwardAuth für native App-Zugriff (z.B. iGotify iOS).
-# gotify-api.homeserver wird vom *.homeserver-Wildcard automatisch aufgelöst.
+# gotify-api.tech.homeserver wird vom *.homeserver-Wildcard automatisch aufgelöst.
 ingressApi:
   enabled: true
-  host: gotify-api.homeserver
+  host: gotify-api.tech.homeserver
 
 persistence:
   enabled: true

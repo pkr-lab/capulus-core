@@ -7,7 +7,7 @@
 # Hintergrund: dnsmasq auf dem Host (192.168.178.94:53) löst *.homeserver
 # für LAN und Tailscale auf. Cluster-Pods nutzen CoreDNS (10.43.0.10) und
 # kennen diese Domain nicht — Anfragen wie OIDC-Discovery an
-# authentik.homeserver scheitern deshalb mit "no such host".
+# authentik.tech.homeserver scheitern deshalb mit "no such host".
 # Dieser Block leitet alle *.homeserver-Anfragen an dnsmasq weiter.
 apiVersion: v1
 kind: ConfigMap
