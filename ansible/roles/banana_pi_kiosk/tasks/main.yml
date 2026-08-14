@@ -110,6 +110,13 @@
   when: banana_pi_kiosk_enabled | bool
 
 # ---- Kiosk-Supervisor (Normalbetrieb + lokaler Server-Fallback) --------
+# notify noetig: das Skript laeuft als lang lebender Prozess (X-Session-
+# Client, exec'd aus .xinitrc) mit BASE_URL etc. bereits als Bash-Variable
+# im Prozessspeicher -- ein neu auf die Platte geschriebenes Template
+# aendert daran ohne Neustart nichts (Skript liest sich nicht selbst neu
+# ein). Gleicher Neustart-Weg wie beim taeglichen Session-Neustart (siehe
+# templates/banana-pi-daily-reboot.service.j2): NUR die tty1-Session
+# durchstarten, kein Kernel-Reboot (auf diesem Board unzuverlaessig).
 - name: Kiosk-Supervisor-Skript deployen
   ansible.builtin.template:
     src: banana-pi-kiosk-supervisor.sh.j2
@@ -118,6 +125,7 @@
     group: root
     mode: "0755"
   when: banana_pi_kiosk_enabled | bool
+  notify: Reload getty@tty1
 
 # ---- Heartbeat (zentraler ntfy-Ausfall-Alarm in alamos-apager) ---------
 - name: Heartbeat-Skript deployen
