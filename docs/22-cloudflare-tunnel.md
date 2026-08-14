@@ -262,12 +262,15 @@ tunnel:
 
   # Zeigt NICHT mehr direkt auf einzelne App-Services, sondern auf Traefik —
   # eine Wildcard-Regel pro Tier deckt alle aktuellen und künftigen Apps
-  # dieses Tiers ab. Details/Begründung: docs/56-domain-tiers.md.
+  # dieses Tiers ab. BINDESTRICH vor dem Tier (nicht Punkt) — sonst deckt
+  # Cloudflares kostenloses Zertifikat den Hostnamen nicht ab (nur eine
+  # Label-Ebene). Details/Begründung: docs/56-domain-tiers.md → "Warum
+  # Punkt intern, Bindestrich extern".
   ingress:
     rules:
-      - hostname: "*.tech.deine-domain.de"
+      - hostname: "*-tech.deine-domain.de"
         service: http://traefik.kube-system.svc.cluster.local:80
-      - hostname: "*.prod.deine-domain.de"
+      - hostname: "*-prod.deine-domain.de"
         service: http://traefik.kube-system.svc.cluster.local:80
     defaultService: "http_status:404"
 ```
@@ -277,7 +280,7 @@ tunnel:
 > Dienst braucht hier **keine** weitere Zeile mehr. Freigeben passiert
 > stattdessen direkt in der `values.yaml` des jeweiligen Dienstes: dort
 > in `ingress.hosts` einen zusätzlichen Eintrag mit dem externen Hostnamen
-> (`<app>.<tier>.deine-domain.de`) neben dem internen
+> (`<app>-<tier>.deine-domain.de` — Bindestrich!) neben dem internen
 > `<app>.<tier>.homeserver`-Host ergänzen — Traefik matcht dann automatisch
 > anhand des Host-Headers, ganz ohne Umweg über diese Datei. Siehe
 > [docs/23 → Neuen Dienst freigeben](23-cloudflare-deploy.md#neuen-dienst-freigeben).
@@ -322,14 +325,14 @@ eigene E-Mail-Adresse als zusätzliche Absicherung.
 
 ### Konkret: Access-Policy für Grafana anlegen
 
-Grafana (`grafana.tech.pke-lab.de`) hat keinen Authentik-Login mehr (siehe
+Grafana (`grafana-tech.pke-lab.de`) hat keinen Authentik-Login mehr (siehe
 [docs/13-sso-authentik.md](13-sso-authentik.md)) und ist über den Tunnel
 öffentlich erreichbar — ohne Access-Policy schützt nur noch das lokale
 Grafana-Passwort die Cluster-/Infra-Metriken. Empfohlenes Setup:
 
 1. [Zero Trust Dashboard](https://one.dash.cloudflare.com) → **Access →
    Applications → Add an application → Self-hosted**.
-2. **Application domain:** `grafana.tech.pke-lab.de` (kompletter Hostname, kein
+2. **Application domain:** `grafana-tech.pke-lab.de` (kompletter Hostname, kein
    Pfad-Suffix nötig — die Policy greift dann für die ganze App).
 3. **Session Duration:** z. B. `24h` — danach muss die Cloudflare-Login-Seite
    erneut durchlaufen werden, auch wenn die Grafana-Session selbst länger
@@ -351,8 +354,8 @@ Grafana-Passwort die Cluster-/Infra-Metriken. Empfohlenes Setup:
 ```bash
 # Ohne gültige Access-Session sollte Cloudflare die Login-Seite zeigen,
 # nicht direkt Grafana:
-curl -sI https://grafana.tech.pke-lab.de | head -1
-# Im Browser: Inkognito-Fenster öffnen → grafana.tech.pke-lab.de →
+curl -sI https://grafana-tech.pke-lab.de | head -1
+# Im Browser: Inkognito-Fenster öffnen → grafana-tech.pke-lab.de →
 # es muss zuerst die Cloudflare-Access-Seite kommen, nicht der
 # Grafana-Login.
 ```
