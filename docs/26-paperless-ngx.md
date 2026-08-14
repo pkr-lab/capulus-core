@@ -33,7 +33,7 @@ kubectl -n paperless-ngx exec -it deploy/paperless-ngx -- \
   python3 manage.py createsuperuser
 ```
 
-Danach ist die Web-UI unter **http://paperless.homeserver** erreichbar.
+Danach ist die Web-UI unter **https://paperless.homeserver** erreichbar.
 
 ---
 
@@ -72,7 +72,7 @@ kubectl -n paperless-ngx cp /lokale/datei.pdf \
 
 ### Web-Upload
 
-Direkt über die Web-UI unter **http://paperless.homeserver/upload**.
+Direkt über die Web-UI unter **https://paperless.homeserver/upload**.
 
 ### E-Mail-Import (optional)
 
@@ -83,7 +83,7 @@ in der Admin-UI unter *Mail* → *E-Mail-Konten*.
 
 ## n8n-Integration
 
-Mit n8n (http://n8n.homeserver) lassen sich Paperless-Ereignisse
+Mit n8n (https://n8n.homeserver) lassen sich Paperless-Ereignisse
 weiterverarbeiten, z. B.:
 
 ```
@@ -92,7 +92,7 @@ Neues Dokument in Paperless (Webhook)
   → ntfy-Push "📄 Neue Rechnung erkannt: {Titel}"
 ```
 
-Paperless bietet eine REST-API unter `http://paperless.homeserver/api/`.
+Paperless bietet eine REST-API unter `https://paperless.homeserver/api/`.
 
 ---
 
@@ -119,5 +119,5 @@ kubectl -n paperless-ngx cp \
 | `persistence.media.size` | Speicher für Originaldokumente | `50Gi` |
 | `persistence.data.size` | Datenbank + Thumbnails + Caches | `20Gi` |
 | `env.PAPERLESS_OCR_LANGUAGE` | Tesseract-Sprachcodes | `deu+eng` |
-| `env.PAPERLESS_URL` | Öffentliche URL für Links | `http://paperless.homeserver` |
+| `env.PAPERLESS_URL` | Öffentliche URL für Links | `https://paperless.homeserver` |
 | `resources.limits.memory` | RAM-Limit (OCR ist speicherhungrig) | `2Gi` |

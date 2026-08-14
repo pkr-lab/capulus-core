@@ -10,7 +10,7 @@ nie wieder eine YAML-Datei an, um eine neue Aktion auszulösen.
 
 ## Was du am Ende hast
 
-- **`http://semaphore.homeserver`** im LAN und im Tailnet — dnsmasq
+- **`https://semaphore.homeserver`** im LAN und im Tailnet — dnsmasq
   hört auf der LAN-IP **und** auf `tailscale0`, also kommt jeder
   Tailscale-Client an die `*.homeserver`-Namen ran.
   ([Wichtiger Hintergrund zur DNS-Topologie und warum der Home-Server
@@ -130,7 +130,7 @@ Ausgabe am Ende:
 ==================================================
 Semaphore UI bootstrap material ready
 ==================================================
-URL:        http://semaphore.homeserver
+URL:        https://semaphore.homeserver
 Username:   admin
 Password:   stored in /etc/semaphore-secrets/admin_password
 SSH pubkey: /etc/semaphore-secrets/id_ed25519.pub
@@ -168,7 +168,7 @@ nichts mehr klicken außer ▶ **Run**.
 
 ### Workflow
 
-1. Browser auf `http://semaphore.homeserver`.
+1. Browser auf `https://semaphore.homeserver`.
 2. Login mit `admin` + Passwort aus `/etc/semaphore-secrets/admin_password`:
    ```bash
    ssh ubuntu@homeserver "sudo cat /etc/semaphore-secrets/admin_password"

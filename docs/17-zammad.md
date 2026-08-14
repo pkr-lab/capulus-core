@@ -141,11 +141,11 @@ Typische Pod-Reihenfolge beim ersten Start:
 
 ## Schritt 4 — Ersten Admin-Account anlegen
 
-Nach dem erfolgreichen Start ist Zammad unter http://zammad.homeserver erreichbar.
+Nach dem erfolgreichen Start ist Zammad unter https://zammad.homeserver erreichbar.
 
-1. Browser öffnen: `http://zammad.homeserver`
+1. Browser öffnen: `https://zammad.homeserver`
 2. Setup-Wizard durchlaufen:
-   - **System-URL** eintragen: `http://zammad.homeserver`
+   - **System-URL** eintragen: `https://zammad.homeserver`
    - **Admin-E-Mail** und Passwort festlegen
    - E-Mail-Kanal konfigurieren (optional, kann später gemacht werden)
 3. Login mit den im Wizard erstellten Zugangsdaten
@@ -216,8 +216,8 @@ sein soll (siehe Schritt 6).
 In Authentik (`http://authentik.homeserver`):
 1. **Applications → Providers → Create** → SAML Provider
 2. **Name:** `Zammad`
-3. **ACS URL:** `http://zammad.homeserver/auth/saml/callback`
-4. **Issuer:** `http://zammad.homeserver`
+3. **ACS URL:** `https://zammad.homeserver/auth/saml/callback`
+4. **Issuer:** `https://zammad.homeserver`
 5. **Service Provider Binding:** `Post`
 6. **Applications → Create**: neue Application anlegen, den eben erstellten
    Provider zuweisen, und über **Policy/Group/User Bindings** festlegen,

@@ -14,7 +14,7 @@ in Gotify-Push-Nachrichten; das App-Token dafür liegt als Kubernetes-Secret
 im `gotify-bridge`-Namespace (siehe Kommentar in
 `argocd/apps/platform/gotify-bridge/values.yaml`). Jede andere App im Cluster kann
 genauso einen eigenen Application-Token in der Gotify-Web-UI anlegen und
-direkt gegen `http://gotify.homeserver/message` pushen.
+direkt gegen `https://gotify.homeserver/message` pushen.
 
 ---
 
@@ -36,7 +36,7 @@ Klartext bei einer Rotation nicht verloren geht.
 
 Der Cluster-Controller (bereits über `argocd/apps/platform/sealed-secrets/` deployt)
 akzeptiert nur Ciphertext, der mit seinem Public Key erzeugt wurde. Der
-einfachste Weg ist die Web-UI unter <http://kubeseal-webgui.homeserver>:
+einfachste Weg ist die Web-UI unter <https://kubeseal-webgui.homeserver>:
 
 1. Öffnen und ausfüllen:
    - **Namespace**: `gotify`
@@ -91,7 +91,7 @@ der ArgoCD-UI bei der `gotify`-App klicken, um sie sofort anzuwenden).
 
 ```bash
 $SRV 'sudo kubectl -n gotify get pods,svc,ingress,pvc,sealedsecret,secret'
-curl -sS http://gotify.homeserver/health
+curl -sS https://gotify.homeserver/health
 ```
 
 Erwartet:
@@ -99,7 +99,7 @@ Erwartet:
   (vom Controller aus dem SealedSecret entschlüsselt).
 - `/health` liefert `{"health":"green",...}`.
 
-Bei `http://gotify.homeserver` mit `admin` + dem Passwort aus 1.1 einloggen.
+Bei `https://gotify.homeserver` mit `admin` + dem Passwort aus 1.1 einloggen.
 
 ---
 
@@ -115,7 +115,7 @@ Bei `http://gotify.homeserver` mit `admin` + dem Passwort aus 1.1 einloggen.
 3. Manueller Push-Test (Token-Sanity-Check):
 
 ```bash
-curl -fsS -X POST "http://gotify.homeserver/message" \
+curl -fsS -X POST "https://gotify.homeserver/message" \
   -H "X-Gotify-Key: DEIN_APP_TOKEN" \
   -F "title=test" -F "message=hello" -F "priority=5"
 ```
