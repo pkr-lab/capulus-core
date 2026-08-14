@@ -2,14 +2,25 @@
 
 Detail-Doku zu Phase 5 aus [docs/51-security-hardening-roadmap.md](51-security-hardening-roadmap.md).
 
-**Status (13.08.2026): Zertifikat generiert, Cluster-seitige Manifeste
-committed, Rollout auf dem Cluster steht noch aus.** Danach folgt der
-aufwendigere Teil: das CA-Zertifikat auf jedem Client-Gerät installieren.
+**Status (13.08.2026): Cluster-seitig live und verifiziert.** TLSStore +
+Zertifikat (SAN-Liste, kein Wildcard — siehe unten) sind ausgerollt,
+`openssl s_client -verify_hostname` und `curl` bestätigen erfolgreiche
+Verifikation gegen mehrere echte Hosts (`whoami`, `wiki`, `vault`,
+`grafana`, `n8n`, `mealie`, `nextcloud`, `semaphore`, `minio`), ArgoCD
+weiterhin 35/36 `Healthy`. **Offen bleibt nur noch Schritt 3 der Roadmap:**
+das CA-Zertifikat auf allen weiteren Client-Geräten installieren (auf dem
+Haupt-Dev-Rechner bereits erledigt) — siehe
+[Client-Geräte](#client-geräte-vertrauensspeicher) unten. Schritt 4
+(`http://` → `https://` in Docs/README) folgt danach.
 
 > **Kein Wildcard-Zertifikat, trotz des Seitentitels** — siehe
 > [Design-Entscheidungen](#kein-wildcard-explizite-san-liste) unten. Der
 > Titel/Dateiname bezieht sich auf die `*.homeserver`-**Zone**, nicht auf
-> ein tatsächliches `*.homeserver`-Wildcard-Zertifikat.
+> ein tatsächliches `*.homeserver`-Wildcard-Zertifikat. Das war der
+> ursprüngliche Plan, bis der erste echte HTTPS-Test zeigte, dass er
+> strukturell nicht funktioniert (Details unten) — Lektion: ein
+> `kubectl get secret`-Check allein hätte das nie aufgedeckt, erst der
+> echte Verify-Test gegen den Hostnamen.
 
 ---
 
@@ -59,18 +70,38 @@ die richtigen Trust-Store-Pfade für System/Firefox/Chrome auf verschiedenen
 Betriebssystemen — das lohnt sich, selbst wenn die Zertifikate selbst per
 `openssl` erzeugt werden.
 
+### Kein Wildcard — explizite SAN-Liste
+
+**Ursprünglich als `*.homeserver`-Wildcard geplant — funktioniert
+strukturell nicht.** Erst beim echten HTTPS-Test gemerkt (curl:
+`subjectAltName does not match hostname`; `openssl s_client
+-verify_hostname`: Fehler 62 "hostname mismatch"):
+`X509_check_host` (OpenSSL, von curl/den meisten TLS-Stacks genutzt)
+lehnt Wildcards unter einem Suffix mit nur **einem** DNS-Label ab — exakt
+dieselbe Schutzregel, die ein `*.com`-Zertifikat verhindert.
+`.homeserver` hat nur ein Label, `*.homeserver` fällt strukturell in
+dieselbe Kategorie, unabhängig von der ausstellenden CA. `mkcert` hatte
+das beim allerersten Testlauf explizit als "second-level wildcard"
+angemahnt — fälschlich als Multi-Label-Suffix-Sonderfall (`*.co.uk`)
+abgetan, bis der echte HTTPS-Test das Gegenteil bewies.
+
+**Fix:** Ein Zertifikat mit einer **expliziten SAN-Liste aller
+tatsächlichen `*.homeserver`-Hostnamen** statt eines Wildcards — für
+exakte Namen gilt keine Wildcard-Matching-Regel, das funktioniert
+uneingeschränkt. Liste wird direkt aus dem Cluster gezogen
+(`kubectl get ingress -A`, siehe [Zertifikat erneuern](#zertifikat-erneuern)),
+nicht von Hand gepflegt. Nachteil gegenüber einem echten Wildcard: ein
+neuer `*.homeserver`-Host braucht eine Zertifikats-Erneuerung (kein
+großer Zusatzaufwand, da eh alle paar Jahre nötig, siehe unten) — dafür
+funktioniert es überhaupt.
+
 ### Zertifikat
 
-- **Subject Alternative Names:** `*.homeserver` und `homeserver` (Apex,
-  falls je etwas direkt unter der nackten Domain läuft).
+- **Subject Alternative Names:** alle 28 aktuellen `*.homeserver`-Hosts
+  (aus `kubectl get ingress -A`) plus der nackte Apex `homeserver`.
 - **Gültigkeit:** Leaf bis **11.11.2028** (~2,25 Jahre), CA bis 2036 (10
   Jahre) — lang genug, um Rotation selten zu machen, siehe
   [Erneuerung](#zertifikat-erneuern) unten.
-- `mkcert` warnte beim ersten Testlauf vor "second-level wildcards" —
-  betrifft Multi-Label-Suffixe wie `*.co.uk`, nicht unseren Fall
-  (`homeserver` ist ein einzelnes Label, `*.homeserver` ist ein normales
-  First-Level-Wildcard). Per echtem HTTPS-Test unten verifiziert, dass es
-  funktioniert.
 
 ### Ablage im Cluster: TLSStore statt pro-App-Ingress
 
@@ -190,9 +221,9 @@ Browser-Zugriff auf `*.homeserver`).
 
 ## Zertifikat erneuern
 
-Vor dem 11.11.2028 (oder früher, falls z. B. ein neuer `*.homeserver`-Host
-zusätzliche SANs bräuchte — aktuell nicht der Fall, das Wildcard deckt
-alles ab). **Nur das Leaf-Zertifikat wechselt**, die CA bleibt bis 2036
+Vor dem 11.11.2028, oder früher, falls ein **neuer** `*.homeserver`-Host
+hinzukommt (kein Wildcard, siehe oben — jeder neue Hostname braucht einen
+SAN-Eintrag). **Nur das Leaf-Zertifikat wechselt**, die CA bleibt bis 2036
 gültig — kein erneuter Trust-Store-Rollout auf den Client-Geräten nötig.
 
 CA-Private-Key muss verfügbar sein (aus dem Passwort-Manager zurückspielen
@@ -203,36 +234,48 @@ Rechner — `rootCA.pem` liegt bereits versioniert unter
 ```bash
 CAROOT=$(mkcert -CAROOT)
 
-openssl genrsa -out wildcard-homeserver.key 2048
+# SAN-Liste live aus dem Cluster ziehen, nicht von Hand pflegen:
+HOSTS="homeserver $(kubectl get ingress -A -o jsonpath='{range .items[*]}{range .spec.rules[*]}{.host}{"\n"}{end}{end}' | grep '\.homeserver$' | sort -u | tr '\n' ' ')"
+SAN=$(for h in $HOSTS; do echo -n "DNS:$h,"; done | sed 's/,$//')
 
-openssl req -new -key wildcard-homeserver.key -out wildcard.csr \
-  -subj "/O=Homeserver Internal CA/CN=*.homeserver"
+openssl genrsa -out cert.key 2048
 
-cat > leaf-ext.cnf <<'EOF'
+openssl req -new -key cert.key -out cert.csr \
+  -subj "/O=Homeserver Internal CA/CN=homeserver"
+
+cat > leaf-ext.cnf <<EOF
 basicConstraints=CA:FALSE
 keyUsage=digitalSignature,keyEncipherment
 extendedKeyUsage=serverAuth,clientAuth
-subjectAltName=DNS:*.homeserver,DNS:homeserver
+subjectAltName=$SAN
 subjectKeyIdentifier=hash
 authorityKeyIdentifier=keyid,issuer
 EOF
 
-openssl x509 -req -in wildcard.csr \
+openssl x509 -req -in cert.csr \
   -CA "$CAROOT/rootCA.pem" -CAkey "$CAROOT/rootCA-key.pem" -CAcreateserial \
-  -out wildcard-homeserver.crt -days 821 -sha256 -extfile leaf-ext.cnf
+  -out cert.crt -days 821 -sha256 -extfile leaf-ext.cnf
+
+# Kontrolle vor dem Versiegeln — SAN-Liste vollständig?
+openssl x509 -in cert.crt -noout -text | grep -A2 "Subject Alternative Name"
 
 kubectl create secret tls homeserver-wildcard-tls \
-  --cert=wildcard-homeserver.crt --key=wildcard-homeserver.key \
+  --cert=cert.crt --key=cert.key \
   --namespace=kube-system --dry-run=client -o yaml \
   | kubeseal --format yaml --controller-namespace sealed-secrets \
       --controller-name sealed-secrets-controller \
   > argocd/apps/platform/traefik-config/sealedsecret-wildcard-tls.yaml
 
 # Private Key danach nicht liegen lassen:
-shred -u wildcard-homeserver.key wildcard.csr leaf-ext.cnf
+shred -u cert.key cert.csr leaf-ext.cnf
 ```
 
-Committen + pushen.
+Committen + pushen. **Danach zwingend mit einem echten `openssl s_client
+-verify_hostname`- oder curl-Test gegen mindestens zwei verschiedene
+Hostnamen verifizieren** (nicht nur `kubectl get secret` — das prüft nur,
+dass irgendein Zertifikat da ist, nicht, dass die SAN-Liste zum
+tatsächlichen Host passt. Genau dieser übersprungene Schritt hat beim
+ersten Rollout das Wildcard-Problem erst spät auffallen lassen).
 
 ---
 

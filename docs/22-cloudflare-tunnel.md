@@ -191,7 +191,7 @@ Den ausgegebenen Ciphertext in
 `argocd/apps/platform/cloudflared/values.yaml` unter
 `tunnel.encryptedCredentialsJson` eintragen.
 
-> Alternativ per Web-UI: <http://kubeseal-webgui.homeserver>, Namespace
+> Alternativ per Web-UI: <https://kubeseal-webgui.homeserver>, Namespace
 > `cloudflared`, Secret-Name `cloudflared-credentials`, Key
 > `credentials.json`, Value = Inhalt der `.json`-Datei.
 

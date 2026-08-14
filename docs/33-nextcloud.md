@@ -108,7 +108,7 @@ gegen `/status.php`).
 
 ## Schritt 3 — Erstlogin
 
-1. `http://nextcloud.homeserver` öffnen
+1. `https://nextcloud.homeserver` öffnen
 2. Mit `admin` / dem in Schritt 1.2 generierten Passwort einloggen
 3. Empfohlen: unter **Einstellungen → Verwaltung → Grundeinstellungen**
    prüfen, dass Redis als "Verteilter Cache" + "Transactional File Locking"
@@ -125,7 +125,7 @@ internen `nextcloud.nextcloud.svc.cluster.local:80`-Service). Für
 Mobile-/Desktop-Sync-Clients außerhalb von LAN/Tailscale:
 
 - **Desktop-Client / Mobile-App**: Server-URL `https://nextcloud.pke-lab.de`
-- Intern (LAN/Tailscale) funktioniert weiterhin `http://nextcloud.homeserver`
+- Intern (LAN/Tailscale) funktioniert weiterhin `https://nextcloud.homeserver`
 
 `NEXTCLOUD_TRUSTED_DOMAINS` in `values.yaml` enthält bereits beide
 Hostnamen (`nextcloud.homeserver nextcloud.pke-lab.de`) — ohne diesen
