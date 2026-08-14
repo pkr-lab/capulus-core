@@ -9,14 +9,14 @@
 # clicks.
 
 # Base URL Ansible uses to call the Semaphore REST API. Uses the
-# `semaphore-api.homeserver` ingress (no Authentik ForwardAuth middleware)
-# rather than `semaphore.homeserver` — this role authenticates with
+# `semaphore-api.tech.homeserver` ingress (no Authentik ForwardAuth middleware)
+# rather than `semaphore.tech.homeserver` — this role authenticates with
 # Semaphore's own session cookie, not an Authentik session, so a request
 # through the ForwardAuth-protected host would be redirected (302) to the
 # Authentik login flow instead of reaching Semaphore's API.
 # Override to e.g. `http://semaphore.semaphore.svc.cluster.local:3000`
 # if the dnsmasq path is not yet up when the role runs.
-semaphore_api_base: "http://semaphore-api.homeserver"
+semaphore_api_base: "http://semaphore-api.tech.homeserver"
 
 # Kubernetes namespace where Semaphore runs (must match semaphore_secrets role).
 semaphore_namespace: semaphore

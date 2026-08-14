@@ -49,7 +49,7 @@
           - "======================================"
           - "ArgoCD UI:    https://{{ ansible_default_ipv4.address }}:30443"
           - "ArgoCD/TS:    https://{{ hostname }}:30443"
-          - "Semaphore UI: http://semaphore.homeserver"
+          - "Semaphore UI: http://semaphore.tech.homeserver"
           - "kubectl:      kubectl get nodes"
           - "======================================"
 

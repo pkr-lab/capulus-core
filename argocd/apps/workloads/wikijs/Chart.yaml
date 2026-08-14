@@ -9,7 +9,7 @@ description: |
   PostgreSQL, der Wiki.js-Pod selbst ist zustandslos.
 
   Web-Interface:
-    http://wiki.homeserver
+    http://wiki.prod.homeserver
 
   Komponenten:
     - Wiki.js 2.x (ghcr.io/requarks/wiki)

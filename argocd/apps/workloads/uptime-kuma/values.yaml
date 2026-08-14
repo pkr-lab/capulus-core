@@ -45,7 +45,7 @@ ingress:
   className: traefik
   annotations: {}
   hosts:
-    - host: uptime-kuma.homeserver
+    - host: uptime-kuma.prod.homeserver
       paths:
         - path: /
           pathType: Prefix

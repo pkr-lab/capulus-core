@@ -77,7 +77,7 @@ nextcloud:
     className: traefik
     annotations: {}
     hosts:
-      - host: nextcloud.homeserver
+      - host: nextcloud.prod.homeserver
         paths:
           - path: /
             pathType: Prefix
@@ -86,7 +86,7 @@ nextcloud:
   # Trusted Domains: intern (*.homeserver, Traefik) + extern (Cloudflare
   # Tunnel, siehe argocd/apps/platform/cloudflared/values.yaml). Ohne beide Einträge
   # weist Nextcloud Requests mit "Access through untrusted domain" ab.
-  trustedDomains: "nextcloud.homeserver nextcloud.pke-lab.de"
+  trustedDomains: "nextcloud.prod.homeserver nextcloud.prod.pke-lab.de"
 
   persistence:
     html:
