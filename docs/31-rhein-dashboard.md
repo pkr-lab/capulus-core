@@ -3,7 +3,7 @@
 Das Grafana-Dashboard **"Rhein Andernach — Pegel & Warnungen"** zeigt
 Echtzeitdaten aus vier öffentlichen, kostenlosen Datenquellen.
 
-Grafana URL: **http://grafana.homeserver** → Dashboard: *Rhein Andernach*
+Grafana URL: **https://grafana.homeserver** → Dashboard: *Rhein Andernach*
 
 ---
 

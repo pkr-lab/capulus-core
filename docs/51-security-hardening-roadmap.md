@@ -24,24 +24,31 @@ absichtlich so gewählt, dass jede Phase auf der vorherigen aufbaut.
 
 ### Phase 5 — Internes TLS für `*.homeserver`
 
-**Status (13.08.2026): Zertifikat generiert (eigene openssl-CA statt
-Nutzer-Metadaten von mkcert, gültig bis 11.11.2028 — Repo ist öffentlich,
-siehe docs/54), Cluster-Manifeste committed, Rollout auf dem Cluster +
-Geräte-Verteilung stehen noch aus.** Vollständige Detail-Doku, Design-
-Entscheidungen und Anleitung pro Geräte-Typ (Linux/Windows/macOS/iOS/
-Android): [docs/54-internal-tls.md](54-internal-tls.md).
+**Status (13.08.2026): Cluster-seitig live und verifiziert.** Eigene
+openssl-CA (statt mkcert direkt — Nutzer-Metadaten, Repo ist öffentlich),
+Zertifikat mit expliziter SAN-Liste statt Wildcard (`*.homeserver`
+scheitert strukturell an einer OpenSSL-Sicherheitsregel gegen
+Single-Label-Suffix-Wildcards — siehe docs/54 für die Details, per
+`openssl s_client -verify_hostname` gegen mehrere echte Hosts bestätigt).
+Vollständige Detail-Doku, Design-Entscheidungen und Anleitung pro
+Geräte-Typ (Linux/Windows/macOS/iOS/Android):
+[docs/54-internal-tls.md](54-internal-tls.md).
 
 **Ziel:** Aktuell laufen alle `*.homeserver`-Adressen über Klartext-`http://`
 (Traefik hat keine TLS-Zertifikate für das interne LAN).
 
 **Ansatz:**
-1. Eigene kleine CA — `mkcert`-generiertes Root-Zertifikat (Begründung
-   gegen `step-ca` in docs/54). **[Erledigt]**
-2. Wildcard-Zertifikat `*.homeserver`, als Traefik-Default-TLS-Cert
-   (`TLSStore`) hinterlegt. **[Vorbereitet, Cluster-Rollout ausstehend]**
+1. Eigene kleine CA (openssl statt mkcert). **[Erledigt]**
+2. Zertifikat (SAN-Liste statt Wildcard, siehe docs/54), als
+   Traefik-Default-TLS-Cert (`TLSStore`) hinterlegt. **[Erledigt, verifiziert]**
 3. Root-CA-Zertifikat auf allen Client-Geräten im Trust-Store installieren
-   — das ist der aufwendigste Teil (pro Gerät manuell). **[Offen]**
-4. `http://` → `https://` in Docs/README nachziehen, sobald verifiziert. **[Offen]**
+   — das ist der aufwendigste Teil (pro Gerät manuell). **[Teilweise —
+   Haupt-Dev-Rechner erledigt, weitere Geräte offen, bewusst nicht
+   blockierend für Schritt 4]**
+4. `http://` → `https://` in Docs/README nachziehen, sobald verifiziert.
+   **[Erledigt]** — `authentik.homeserver` bewusst ausgenommen, siehe
+   Fußnote in README.md (reserviert für das separate mTLS-Vorhaben in
+   docs/14-cert-login.md).
 
 **Risiko:** gering für den Cluster selbst, Aufwand liegt beim Verteilen des
 CA-Zertifikats auf alle Geräte.
@@ -62,14 +69,24 @@ manuell, kein Ansible (bewusste bestehende Design-Entscheidung, siehe
 
 ### Phase 7 — Secrets-Rotation & Security-Alerting
 
+**Status (13.08.2026): Punkt 1 umgesetzt (auf Nutzerwunsch vor Phase 6
+vorgezogen), verifiziert bis auf den finalen n8n-Import.** Statt einer
+reinen Doku-Checkliste: ein n8n-Workflow, der einmal jährlich automatisch
+ein Zammad-Ticket eröffnet. Vollständige Doku, Rotations-Checkliste je
+Secret und Import-Anleitung: [docs/55-secrets-rotation.md](55-secrets-rotation.md).
+
 **Ziel:** Keine dokumentierte Rotationskadenz für Ansible-Vault-Passwort,
 restic-Passwort, ArgoCD-Admin-PW, Sealed-Secrets-Key. Kein Alerting auf
 sicherheitsrelevante Events (UFW-Denies, CrowdSec-Bans, gehäufte
 Authentik-Login-Fehlschläge).
 
 **Ansatz:**
-1. Kurze Rotations-Checkliste als Doku, mit empfohlenem Turnus je Secret.
-2. CrowdSec-Ban-Events (aus Phase 1) über den bestehenden
+1. **[Erledigt]** Rotations-Checkliste mit empfohlenem Turnus je Secret
+   (docs/55) — plus aktive jährliche Erinnerung statt nur passiver Doku:
+   n8n-Workflow (`yearly-secrets-rotation-reminder.json`, nativer
+   Zammad-Node) eröffnet automatisch ein Ticket in `Support::Administration`.
+   Muss noch manuell in n8n importiert + aktiviert werden (siehe docs/55).
+2. **[Offen]** CrowdSec-Ban-Events (aus Phase 1) über den bestehenden
    Gotify/ntfy-Bridge-Mechanismus ausliefern — keine neue Infrastruktur
    nötig, nur eine weitere Alert-Quelle an den bestehenden Stack anhängen.
 

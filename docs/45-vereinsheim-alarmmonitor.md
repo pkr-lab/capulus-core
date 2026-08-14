@@ -200,7 +200,7 @@ Stattdessen **pusht der Pi seine Metriken selbst**:
 ```
 node_exporter (Port 9100, nur localhost)
   → vmagent (ansible/roles/vmagent, scraped lokal)
-  → remote_write über http://vm-write.homeserver/api/v1/write
+  → remote_write über https://vm-write.homeserver/api/v1/write
     (argocd/apps/platform/monitoring/templates/ingress-vm-write.yaml,
      nur /api/v1/write freigegeben, nicht die volle VM-API)
   → VictoriaMetrics im Cluster
@@ -239,7 +239,7 @@ absent_over_time(up{...}[10m]) für vereinsheim-alarmmonitor
   → VMRule "BananaPiAlarmmonitorDown" (vmrule-banana-pi.yaml, severity=critical)
   → Alertmanager, zusätzliche Route NUR für diesen Alertnamen
     (argocd/apps/platform/monitoring/values.yaml)
-  → n8n-Webhook http://n8n.homeserver/webhook/banana-pi-down
+  → n8n-Webhook https://n8n.homeserver/webhook/banana-pi-down
   → Workflow "Banana-Pi-Down -> Zammad-Ticket"
     (argocd/apps/workloads/n8n/workflows/banana-pi-down-to-zammad.json):
       1. letzte bekannte CPU/RAM/Temperatur-Werte aus VictoriaMetrics holen
@@ -305,7 +305,7 @@ gleichermaßen, nicht nur diesen.
 | `make banana-pi-kiosks` erreicht den Pi nicht mehr | Phase 1 vs. Phase 2? `ansible_host` in `ansible/inventory/hosts.yml` noch auf der alten LAN-IP, obwohl der Pi schon umgezogen ist? |
 | Kiosk zeigt weder Redirect noch Fallback (Chromium-Fehlerseite) | `nslookup alamos-apager.homeserver` auf dem Pi — löst das auf? Tailscale Split-DNS eingerichtet (siehe oben)? |
 | DNS löst auf, aber Verbindung timeout | Subnetz-Route `192.168.178.0/24` im Tailscale-Adminpanel genehmigt? `tailscale_accept_routes: true` beim Pi angekommen (`tailscale status` auf dem Pi prüfen)? |
-| Pi taucht nicht in Grafana auf | `systemctl status vmagent` auf dem Pi, `journalctl -u vmagent` — Fehler beim remote_write? `curl -I http://vm-write.homeserver/api/v1/write` vom Pi aus erreichbar? |
+| Pi taucht nicht in Grafana auf | `systemctl status vmagent` auf dem Pi, `journalctl -u vmagent` — Fehler beim remote_write? `curl -I https://vm-write.homeserver/api/v1/write` vom Pi aus erreichbar? |
 | Kiosk startet nicht / schwarzer Bildschirm | `systemctl status getty@tty1` auf dem Pi, Autologin aktiv? Läuft `startx`? |
 | Fallback schaltet nicht um | `journalctl -t banana-pi-kiosk` auf dem Pi (Supervisor loggt Moduswechsel) |
 | Fallback zeigt AMweb-Login statt Alarmmonitor | Chromium-Session abgelaufen — einmaligen manuellen Login wiederholen (siehe oben) |

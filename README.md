@@ -315,7 +315,7 @@ Ein schlanker VictoriaMetrics-+-Grafana-Stack lebt unter `argocd/apps/platform/m
 
 </details>
 
-Grafana öffnen unter **http://grafana.homeserver** — Admin-Passwort abfragen:
+Grafana öffnen unter **https://grafana.homeserver** — Admin-Passwort abfragen:
 
 ```bash
 kubectl -n monitoring get secret grafana-admin \
@@ -352,29 +352,35 @@ git push
 
 | Service | URL |
 |---|---|
-| Grafana | http://grafana.homeserver |
+| Grafana | https://grafana.homeserver |
 | ArgoCD | https://\<server-ip\>:30443 |
-| Headlamp | http://headlamp.homeserver |
-| Semaphore | http://semaphore.homeserver |
-| Authentik | http://authentik.homeserver |
-| Gotify | http://gotify.homeserver |
-| ntfy | http://ntfy.homeserver |
-| Pi-hole | http://pihole.homeserver |
-| Argo Workflows | http://argo-workflows.homeserver |
-| MinIO Console | http://minio.homeserver |
-| kubeseal-webgui | http://kubeseal-webgui.homeserver |
-| Alarmmonitor (alamos-apager) | http://alamos-apager.homeserver |
-| MediaMTX (Live-Stream-Playback) | http://stream.homeserver |
-| Paperless-ngx | http://paperless.homeserver |
-| Mealie | http://mealie.homeserver |
-| n8n | http://n8n.homeserver |
-| Uptime Kuma | http://uptime-kuma.homeserver |
-| Vaultwarden | http://vault.homeserver |
-| Nextcloud | http://nextcloud.homeserver |
-| Immich | http://immich.homeserver |
-| Wiki.js | http://wiki.homeserver |
-| Zammad | http://zammad.homeserver |
-| Xibo CMS (xibosignage) | http://xibo.homeserver |
+| Headlamp | https://headlamp.homeserver |
+| Semaphore | https://semaphore.homeserver |
+| Authentik | http://authentik.homeserver ¹ |
+| Gotify | https://gotify.homeserver |
+| ntfy | https://ntfy.homeserver |
+| Pi-hole | https://pihole.homeserver |
+| Argo Workflows | https://argo-workflows.homeserver |
+| MinIO Console | https://minio.homeserver |
+| kubeseal-webgui | https://kubeseal-webgui.homeserver |
+| Alarmmonitor (alamos-apager) | https://alamos-apager.homeserver |
+| MediaMTX (Live-Stream-Playback) | https://stream.homeserver |
+| Paperless-ngx | https://paperless.homeserver |
+| Mealie | https://mealie.homeserver |
+| n8n | https://n8n.homeserver |
+| Uptime Kuma | https://uptime-kuma.homeserver |
+| Vaultwarden | https://vault.homeserver |
+| Nextcloud | https://nextcloud.homeserver |
+| Immich | https://immich.homeserver |
+| Wiki.js | https://wiki.homeserver |
+| Zammad | https://zammad.homeserver |
+| Xibo CMS (xibosignage) | https://xibo.homeserver |
+
+> ¹ Authentik bleibt bewusst auf `http://` — sein Ingress ist reserviert für
+> das separate mTLS-Client-Zertifikat-Vorhaben in
+> [docs/14-cert-login.md](docs/14-cert-login.md) (eigene CA, eigener
+> Umstieg auf `websecure`), nicht Teil der internen TLS-Einführung aus
+> [docs/54-internal-tls.md](docs/54-internal-tls.md).
 
 > Zusätzlich zu den internen `*.homeserver`-URLs können ausgewählte Dienste
 > über Cloudflare Tunnel öffentlich unter einer eigenen Domain erreichbar
