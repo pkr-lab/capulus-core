@@ -46,7 +46,7 @@ zammad:
       # Externer Host — bewusst "support", nicht "zammad" (so lautet der
       # öffentliche Hostname in cloudflared). Per Cloudflare-Tunnel-Wildcard
       # an Traefik weitergereicht, siehe docs/56-domain-tiers.md.
-      - host: support.tech.pke-lab.de
+      - host: support-tech.pke-lab.de
         paths:
           - path: /
             pathType: Prefix

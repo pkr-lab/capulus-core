@@ -65,7 +65,7 @@ server:
             pathType: Prefix
       # Externer Host — per Cloudflare-Tunnel-Wildcard (cloudflared) an
       # Traefik weitergereicht, siehe docs/56-domain-tiers.md.
-      - host: immich.prod.pke-lab.de
+      - host: immich-prod.pke-lab.de
         paths:
           - path: /
             pathType: Prefix

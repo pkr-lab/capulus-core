@@ -12,7 +12,7 @@ description: |
 
   Web-Interface:
     http://immich.prod.homeserver
-    https://immich.prod.pke-lab.de (Cloudflare Tunnel — nötig für Handy-
+    https://immich-prod.pke-lab.de (Cloudflare Tunnel — nötig für Handy-
     Auto-Backup außerhalb von LAN/Tailscale)
 
   Komponenten:
