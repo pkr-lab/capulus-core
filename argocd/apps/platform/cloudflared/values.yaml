@@ -82,26 +82,38 @@ tunnel:
   # *.homeserver bereits tut (siehe docs/56-domain-tiers.md). Eine App wird
   # dadurch NICHT automatisch extern erreichbar — dafür braucht sie
   # zusätzlich zu ihrem *.homeserver-Host einen passenden
-  # *.pke-lab.de-Host in der eigenen ingress.hosts-Liste. Ohne den
+  # *-tier.pke-lab.de-Host in der eigenen ingress.hosts-Liste. Ohne den
   # zusätzlichen Host findet Traefik keinen passenden Router und liefert
   # 404 — dieselbe "nur was explizit eingetragen ist" Garantie wie vorher
   # über cloudflareds defaultService, nur eine Ebene tiefer.
   #
+  # BINDESTRICH statt Punkt vor dem Tier (grafana-tech.pke-lab.de, nicht
+  # grafana.tech.pke-lab.de): Cloudflares kostenloses Universal-SSL-Zertifikat
+  # deckt für diese Zone nur "pke-lab.de" + "*.pke-lab.de" ab — also genau
+  # EINE Label-Ebene. Ein zweites Label vor der Domain (".tech.pke-lab.de")
+  # fällt aus diesem Wildcard-Zertifikat raus, TLS-Handshake schlägt an der
+  # Cloudflare-Edge fehl, bevor die Anfrage überhaupt beim Tunnel ankommt
+  # (empirisch bestätigt: curl liefert "SSL routines:ST_CONNECT:sslv3 alert
+  # handshake failure"). Mit Bindestrich bleibt der externe Hostname eine
+  # einzige Label-Ebene und ist vom bestehenden Zertifikat abgedeckt. Intern
+  # (*.homeserver) bleibt der Punkt, da dort die eigene CA greift, die nicht
+  # an Cloudflares Zertifikatsgrenzen gebunden ist.
+  #
   # Noch gegen den echten Cluster zu verifizieren (siehe
   # docs/22-cloudflare-tunnel.md → Troubleshooting): cloudflared muss dafür
   # standardmäßig den ORIGINAL angefragten Hostnamen (z. B.
-  # "grafana.tech.pke-lab.de") als HTTP-Host-Header an den Origin
+  # "grafana-tech.pke-lab.de") als HTTP-Host-Header an den Origin
   # weiterreichen, nicht den Hostnamen aus "service:" — das ist Cloudflares
   # dokumentiertes Default-Verhalten für originRequest.httpHostHeader,
   # sollte aber nach dem Rollout per curl bestätigt werden. Falls nicht:
   # httpHostHeader hier pro Regel explizit setzen.
   ingress:
     rules:
-      - hostname: "*.tech.pke-lab.de"
+      - hostname: "*-tech.pke-lab.de"
         service: http://traefik.kube-system.svc.cluster.local:80
-      - hostname: "*.prod.pke-lab.de"
+      - hostname: "*-prod.pke-lab.de"
         service: http://traefik.kube-system.svc.cluster.local:80
-      - hostname: "*.dev.pke-lab.de"
+      - hostname: "*-dev.pke-lab.de"
         service: http://traefik.kube-system.svc.cluster.local:80
     defaultService: "http_status:404"
 
