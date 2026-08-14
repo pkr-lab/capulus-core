@@ -21,7 +21,7 @@ k3s-Cluster.
 ## Übersicht & Architektur
 
 ```
-Pi (Chromium --kiosk) ──▶ http://alamos-apager.homeserver/start?station=X
+Pi (Chromium --kiosk) ──▶ https://alamos-apager.homeserver/start?station=X
                               │  (Traefik Ingress, *.homeserver Wildcard-DNS)
                               ▼
                      alamos-apager Pod (k3s, Namespace alamos-apager)
