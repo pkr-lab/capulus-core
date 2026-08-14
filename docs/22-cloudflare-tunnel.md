@@ -191,7 +191,7 @@ Den ausgegebenen Ciphertext in
 `argocd/apps/platform/cloudflared/values.yaml` unter
 `tunnel.encryptedCredentialsJson` eintragen.
 
-> Alternativ per Web-UI: <http://kubeseal-webgui.homeserver>, Namespace
+> Alternativ per Web-UI: <http://kubeseal-webgui.tech.homeserver>, Namespace
 > `cloudflared`, Secret-Name `cloudflared-credentials`, Key
 > `credentials.json`, Value = Inhalt der `.json`-Datei.
 
@@ -320,14 +320,14 @@ eigene E-Mail-Adresse als zusätzliche Absicherung.
 
 ### Konkret: Access-Policy für Grafana anlegen
 
-Grafana (`grafana.pke-lab.de`) hat keinen Authentik-Login mehr (siehe
+Grafana (`grafana.tech.pke-lab.de`) hat keinen Authentik-Login mehr (siehe
 [docs/13-sso-authentik.md](13-sso-authentik.md)) und ist über den Tunnel
 öffentlich erreichbar — ohne Access-Policy schützt nur noch das lokale
 Grafana-Passwort die Cluster-/Infra-Metriken. Empfohlenes Setup:
 
 1. [Zero Trust Dashboard](https://one.dash.cloudflare.com) → **Access →
    Applications → Add an application → Self-hosted**.
-2. **Application domain:** `grafana.pke-lab.de` (kompletter Hostname, kein
+2. **Application domain:** `grafana.tech.pke-lab.de` (kompletter Hostname, kein
    Pfad-Suffix nötig — die Policy greift dann für die ganze App).
 3. **Session Duration:** z. B. `24h` — danach muss die Cloudflare-Login-Seite
    erneut durchlaufen werden, auch wenn die Grafana-Session selbst länger
@@ -349,8 +349,8 @@ Grafana-Passwort die Cluster-/Infra-Metriken. Empfohlenes Setup:
 ```bash
 # Ohne gültige Access-Session sollte Cloudflare die Login-Seite zeigen,
 # nicht direkt Grafana:
-curl -sI https://grafana.pke-lab.de | head -1
-# Im Browser: Inkognito-Fenster öffnen → grafana.pke-lab.de →
+curl -sI https://grafana.tech.pke-lab.de | head -1
+# Im Browser: Inkognito-Fenster öffnen → grafana.tech.pke-lab.de →
 # es muss zuerst die Cloudflare-Access-Seite kommen, nicht der
 # Grafana-Login.
 ```

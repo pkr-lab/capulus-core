@@ -139,7 +139,7 @@ Verhalten:
 Für einzelne, langlebige Hostnamen — wenn du es ganz statisch willst:
 
 ```
-192.168.178.94  semaphore.homeserver argocd.homeserver headlamp.homeserver
+192.168.178.94  semaphore.tech.homeserver argocd.homeserver headlamp.tech.homeserver
 ```
 
 Vorteil: funktioniert auch wenn der dnsmasq down ist (das ist halt

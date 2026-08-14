@@ -85,8 +85,6 @@ tunnel:
         service: http://zammad-nginx.zammad.svc.cluster.local:8080
       - hostname: grafana.tech.pke-lab.de
         service: http://monitoring-grafana.monitoring.svc.cluster.local:80
-      - hostname: authentik.tech.pke-lab.de
-        service: http://authentik-server.authentik.svc.cluster.local:80
       # Zeigt wie die anderen Hostnamen direkt auf den Backend-Service —
       # die Zuschauer-Autorisierung übernimmt mediamtx selbst per
       # HTTP-Basic-Auth (kein ForwardAuth-Umweg über Traefik mehr nötig).
@@ -94,8 +92,6 @@ tunnel:
       # docs/24-mediamtx.md.
       - hostname: stream.prod.pke-lab.de
         service: http://mediamtx.mediamtx.svc.cluster.local:8888
-      - hostname: paperless.pke-lab.de
-        service: http://paperless-ngx.paperless-ngx.svc.cluster.local:80
       - hostname: mealie.prod.pke-lab.de
         service: http://mealie.mealie.svc.cluster.local:80
       - hostname: vault.tech.pke-lab.de
