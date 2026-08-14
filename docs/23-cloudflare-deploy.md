@@ -112,52 +112,45 @@ falls Option B aus docs/22 aktiv ist).
 
 ## Neuen Dienst freigeben
 
-Kompletter Ablauf, um z. B. Grafana zusätzlich freizugeben. Mit der
-empfohlenen Wildcard-DNS-Route aus
+`argocd/apps/platform/cloudflared/values.yaml` selbst bleibt dabei
+**unangetastet** — sie enthält nur noch zwei bis drei Wildcard-Regeln (eine
+pro Tier: `*.tech.pke-lab.de`, `*.prod.pke-lab.de`, ggf. `*.dev.pke-lab.de`),
+die pauschal an Traefik weiterreichen. Freigeben passiert stattdessen direkt
+in der `values.yaml` des jeweiligen Dienstes, analog zum internen
+`*.homeserver`-Host. Kompletter Ablauf am Beispiel Grafana:
+
+Mit der empfohlenen Wildcard-DNS-Route aus
 [docs/22, Schritt 4](22-cloudflare-tunnel.md#schritt-4--dns-routing-wildcard-statt-einzel-records)
-ist dafür **kein DNS-Schritt** mehr nötig — `grafana.deine-domain.de`
-löst durch den bestehenden `*`-Record bereits zum Tunnel auf, es fehlt nur
-noch die Ingress-Regel:
+ist dafür **kein DNS-Schritt** mehr nötig — `grafana.tech.deine-domain.de`
+löst durch den bestehenden `*`-Record bereits zum Tunnel auf.
 
-```bash
-# 1. Internen Service-Namen und Port prüfen
-ssh ubuntu@192.168.178.94 'sudo kubectl -n monitoring get svc'
-
-# 2. Ingress-Regel in values.yaml ergänzen
+```yaml
+# argocd/apps/platform/monitoring/values.yaml (Beispiel Grafana, Tier "tech")
+grafana:
+  ingress:
+    hosts:
+      - grafana.tech.homeserver
+      - grafana.tech.deine-domain.de          # neu — macht Grafana extern erreichbar
 ```
 
 > **Nur falls du dich in docs/22 für die Alternative mit expliziten
-> Einzel-Records entschieden hast:** vor Schritt 2 zusätzlich
-> `cloudflared tunnel route dns homeserver grafana.deine-domain.de`
+> Einzel-Records entschieden hast:** zusätzlich
+> `cloudflared tunnel route dns homeserver grafana.tech.deine-domain.de`
 > ausführen.
 
-```yaml
-# argocd/apps/platform/cloudflared/values.yaml
-tunnel:
-  ingress:
-    rules:
-      - hostname: wiki.deine-domain.de
-        service: http://wikijs-wikijs.wikijs.svc.cluster.local:80
-      - hostname: ntfy.deine-domain.de
-        service: http://ntfy.ntfy.svc.cluster.local:80
-      - hostname: grafana.deine-domain.de          # neu
-        service: http://monitoring-grafana.monitoring.svc.cluster.local:80
-```
-
 ```bash
-git add argocd/apps/platform/cloudflared/values.yaml
-git commit -m "feat(cloudflared): expose grafana externally"
+git add argocd/apps/platform/monitoring/values.yaml
+git commit -m "feat(monitoring): expose grafana externally"
 git push
 ```
 
-ArgoCD synct die geänderte ConfigMap, der `cloudflared`-Pod liest die
-neue `config.yaml` beim nächsten Neustart automatisch ein (Helm-Chart
-setzt dafür intern einen Checksum-Annotation-Rollout aus — kein manueller
-Restart nötig). Falls du sofort testen willst:
+ArgoCD synct die App, Traefik übernimmt die neue Ingress-Regel automatisch
+(kein Neustart von `cloudflared` nötig — der bekommt von alldem gar nichts
+mit, seine Wildcard-Regel matchte den Hostnamen ja schon vorher, nur ohne
+dass Traefik dahinter eine passende Route hatte). Testen:
 
 ```bash
-ssh ubuntu@192.168.178.94 \
-  'sudo kubectl -n cloudflared rollout restart deployment/cloudflared'
+curl -I https://grafana.tech.deine-domain.de
 ```
 
 > Denk an [Cloudflare Access](22-cloudflare-tunnel.md#zusätzliche-absicherung-cloudflare-access),
@@ -167,14 +160,15 @@ ssh ubuntu@192.168.178.94 \
 
 ## Dienst wieder entfernen
 
-Mit der Wildcard-DNS-Route reicht das Entfernen der Ingress-Regel — der
-Hostname bleibt zwar über den `*`-Record technisch auflösbar, liefert aber
-mangels passender Regel nur noch `defaultService: http_status:404`:
+Einfach den externen Host wieder aus `ingress.hosts` der App entfernen —
+Traefik findet danach keine passende Route mehr, `cloudflareds`
+Wildcard-Regel matcht zwar weiterhin, liefert aber (über Traefiks eigenen
+404) denselben Effekt wie vorher `defaultService: http_status:404`:
 
 ```bash
-# Eintrag aus tunnel.ingress.rules in values.yaml löschen, dann
-git add argocd/apps/platform/cloudflared/values.yaml
-git commit -m "feat(cloudflared): remove grafana from external access"
+# grafana.tech.deine-domain.de aus ingress.hosts in monitoring/values.yaml löschen, dann
+git add argocd/apps/platform/monitoring/values.yaml
+git commit -m "feat(monitoring): remove grafana from external access"
 git push
 ```
 

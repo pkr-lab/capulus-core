@@ -315,7 +315,7 @@ Ein schlanker VictoriaMetrics-+-Grafana-Stack lebt unter `argocd/apps/platform/m
 
 </details>
 
-Grafana öffnen unter **http://grafana.homeserver** — Admin-Passwort abfragen:
+Grafana öffnen unter **https://grafana.homeserver** — Admin-Passwort abfragen:
 
 ```bash
 kubectl -n monitoring get secret grafana-admin \
@@ -352,33 +352,39 @@ git push
 
 Jeder Hostname trägt ein Tier-Label (`tech` = Infrastruktur/Admin, `prod` =
 Apps mit echtem Nutzerkreis) — Details und Begründung:
-**[docs/55-domain-tiers.md](docs/55-domain-tiers.md)**.
+**[docs/56-domain-tiers.md](docs/56-domain-tiers.md)**.
 
 | Service | Tier | URL |
 |---|---|---|
-| Grafana | tech | http://grafana.tech.homeserver |
+| Grafana | tech | https://grafana.tech.homeserver |
 | ArgoCD | – | https://\<server-ip\>:30443 |
-| Headlamp | tech | http://headlamp.tech.homeserver |
-| Semaphore | tech | http://semaphore.tech.homeserver |
-| Authentik | tech | http://authentik.tech.homeserver |
-| Gotify | tech | http://gotify.tech.homeserver |
-| ntfy | tech | http://ntfy.tech.homeserver |
-| Pi-hole | tech | http://pihole.tech.homeserver |
-| Argo Workflows | tech | http://argo-workflows.tech.homeserver |
-| MinIO Console | tech | http://minio.tech.homeserver |
-| kubeseal-webgui | tech | http://kubeseal-webgui.tech.homeserver |
-| Vaultwarden | tech (Ausnahme) | http://vault.tech.homeserver |
-| Zammad | tech (Ausnahme) | http://zammad.tech.homeserver |
-| Alarmmonitor (alamos-apager) | prod | http://alamos-apager.prod.homeserver |
-| MediaMTX (Live-Stream-Playback) | prod | http://stream.prod.homeserver |
-| Paperless-ngx | prod | http://paperless.prod.homeserver |
-| Mealie | prod | http://mealie.prod.homeserver |
-| n8n | prod | http://n8n.prod.homeserver |
-| Uptime Kuma | prod | http://uptime-kuma.prod.homeserver |
-| Nextcloud | prod | http://nextcloud.prod.homeserver |
-| Immich | prod | http://immich.prod.homeserver |
-| Wiki.js | prod | http://wiki.prod.homeserver |
-| Xibo CMS (xibosignage) | prod | http://xibo.prod.homeserver |
+| Headlamp | tech | https://headlamp.tech.homeserver |
+| Semaphore | tech | https://semaphore.tech.homeserver |
+| Authentik | tech | http://authentik.tech.homeserver ¹ |
+| Gotify | tech | https://gotify.tech.homeserver |
+| ntfy | tech | https://ntfy.tech.homeserver |
+| Pi-hole | tech | https://pihole.tech.homeserver |
+| Argo Workflows | tech | https://argo-workflows.tech.homeserver |
+| MinIO Console | tech | https://minio.tech.homeserver |
+| kubeseal-webgui | tech | https://kubeseal-webgui.tech.homeserver |
+| Vaultwarden | tech (Ausnahme) | https://vault.tech.homeserver |
+| Zammad | tech (Ausnahme) | https://zammad.tech.homeserver |
+| Alarmmonitor (alamos-apager) | prod | https://alamos-apager.prod.homeserver |
+| MediaMTX (Live-Stream-Playback) | prod | https://stream.prod.homeserver |
+| Paperless-ngx | prod | https://paperless.prod.homeserver |
+| Mealie | prod | https://mealie.prod.homeserver |
+| n8n | prod | https://n8n.prod.homeserver |
+| Uptime Kuma | prod | https://uptime-kuma.prod.homeserver |
+| Nextcloud | prod | https://nextcloud.prod.homeserver |
+| Immich | prod | https://immich.prod.homeserver |
+| Wiki.js | prod | https://wiki.prod.homeserver |
+| Xibo CMS (xibosignage) | prod | https://xibo.prod.homeserver |
+
+> ¹ Authentik bleibt bewusst auf `http://` — sein Ingress ist reserviert für
+> das separate mTLS-Client-Zertifikat-Vorhaben in
+> [docs/14-cert-login.md](docs/14-cert-login.md) (eigene CA, eigener
+> Umstieg auf `websecure`), nicht Teil der internen TLS-Einführung aus
+> [docs/54-internal-tls.md](docs/54-internal-tls.md).
 
 > Zusätzlich zu den internen `*.homeserver`-URLs können ausgewählte Dienste
 > über Cloudflare Tunnel öffentlich unter einer eigenen Domain erreichbar
@@ -475,7 +481,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [Renovate](docs/47-renovate.md) | Automatische Update-PRs für Helm-Chart-Versionen und Image-Tags |
 | [Release-Automatisierung](docs/48-release-automation.md) | GitHub Release + Changelog bei jedem Merge auf `main` via semantic-release |
 | [ArgoCD-Projects](docs/49-argocd-projects.md) | Platform/Workloads-AppProject-Trennung, Ordnerstruktur, neue App hinzufügen |
-| [Domain-Tiers](docs/55-domain-tiers.md) | dev/tech/prod-URL-Konvention (`app.tier.homeserver`), Ausnahmen, Cross-App-Referenzen |
+| [Domain-Tiers](docs/56-domain-tiers.md) | dev/tech/prod-URL-Konvention (`app.tier.homeserver`), Ausnahmen, Cross-App-Referenzen |
 
 ---
 

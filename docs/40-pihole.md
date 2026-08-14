@@ -35,7 +35,7 @@ ausschließlich über den SealedSecret unten).
 ### 1.2 SealedSecret-Ciphertext erzeugen
 
 Wie bei Gotify — entweder über die Web-UI unter
-<http://kubeseal-webgui.homeserver>:
+<https://kubeseal-webgui.homeserver>:
 
 - **Namespace**: `pihole`
 - **Secret-Name**: `pihole-webpassword`
@@ -109,7 +109,7 @@ Erwartet:
 - Bekannte Werbe-/Tracking-Domains lösen zu `0.0.0.0` (bzw. `NXDOMAIN`,
   abhängig von der Blocking-Mode-Einstellung) auf, alles andere normal.
 
-Web-UI unter `http://pihole.homeserver/admin` mit dem Passwort aus 1.1
+Web-UI unter `https://pihole.homeserver/admin` mit dem Passwort aus 1.1
 öffnen.
 
 ---
@@ -207,14 +207,14 @@ nslookup doubleclick.net 192.168.178.94   # sollte 0.0.0.0 / NXDOMAIN liefern
 nslookup github.com 192.168.178.94        # sollte normal auflösen
 ```
 
-Oder einfacher: in der Pi-hole-Web-UI (`http://pihole.homeserver/admin`)
+Oder einfacher: in der Pi-hole-Web-UI (`https://pihole.homeserver/admin`)
 unter **Query Log** prüfen, ob Anfragen von der IP des Geräts auftauchen.
 
 ---
 
 ## 3. Blocklisten & Ausnahmen pflegen
 
-Alles Weitere läuft über die Pi-hole-Web-UI (`http://pihole.homeserver`):
+Alles Weitere läuft über die Pi-hole-Web-UI (`https://pihole.homeserver`):
 
 - **Group Management → Adlists**: zusätzliche Blocklisten eintragen (URL zu
   einer Listendatei, **keine** einzelne Domain — dafür siehe Denylist unten),

@@ -130,7 +130,7 @@ funktioniert hätte), wurde angepasst:
      > ~/homelab-certs/sealed-secrets.pem
    ```
 
-   Alternative ohne CLI/SSH-Zugriff: **http://kubeseal-webgui.homeserver**
+   Alternative ohne CLI/SSH-Zugriff: **https://kubeseal-webgui.homeserver**
    verschlüsselt einzelne Werte über eine Weboberfläche (Namespace
    `carplay-api`, Secret-Name `carplay-api-token`, Key `token`) — liefert
    denselben Base64-Blob wie unten, ohne Schritt 1.
@@ -204,7 +204,7 @@ funktioniert hätte), wurde angepasst:
 
 ## Uptime-Kuma Status-Page anlegen
 
-1. **http://uptime-kuma.homeserver** → *Status-Pages* → *New Status Page*.
+1. **https://uptime-kuma.homeserver** → *Status-Pages* → *New Status Page*.
 2. Slug vergeben (Default in `values.yaml`: `homeserver`) — muss exakt mit
    `config.uptimeKuma.slug` übereinstimmen.
 3. Alle Monitore hinzufügen, die im Dashboard erscheinen sollen (siehe

@@ -22,7 +22,7 @@ uptime-kuma.homeserver  →  Traefik  →  uptime-kuma (Port 3001)
 
 ## Erster Start
 
-Nach dem Deploy unter **http://uptime-kuma.homeserver** den Admin-Account
+Nach dem Deploy unter **https://uptime-kuma.homeserver** den Admin-Account
 anlegen (erscheint beim ersten Besuch automatisch).
 
 ---
@@ -40,14 +40,14 @@ anlegen (erscheint beim ersten Besuch automatisch).
 
 | Monitor | URL | Typ |
 |---|---|---|
-| Grafana | http://grafana.homeserver | HTTP |
+| Grafana | https://grafana.homeserver | HTTP |
 | ArgoCD | https://`<server-ip>`:30443 | HTTPS (selbstsigniert) |
 | Authentik | http://authentik.homeserver | HTTP |
-| ntfy | http://ntfy.homeserver | HTTP |
-| Semaphore | http://semaphore.homeserver | HTTP |
-| Paperless | http://paperless.homeserver | HTTP |
-| Mealie | http://mealie.homeserver | HTTP |
-| n8n | http://n8n.homeserver | HTTP |
+| ntfy | https://ntfy.homeserver | HTTP |
+| Semaphore | https://semaphore.homeserver | HTTP |
+| Paperless | https://paperless.homeserver | HTTP |
+| Mealie | https://mealie.homeserver | HTTP |
+| n8n | https://n8n.homeserver | HTTP |
 | worker-0 (Ping) | 192.168.178.95 | Ping |
 
 ---
@@ -57,7 +57,7 @@ anlegen (erscheint beim ersten Besuch automatisch).
 ### ntfy
 
 1. Uptime Kuma: *Einstellungen* → *Benachrichtigung* → *ntfy*
-2. Server: `http://ntfy.homeserver`
+2. Server: `https://ntfy.homeserver`
 3. Topic: z. B. `homelab-uptime`
 4. Priorität: `urgent` für Ausfälle
 
@@ -65,7 +65,7 @@ anlegen (erscheint beim ersten Besuch automatisch).
 
 1. In Gotify eine neue App anlegen, Token kopieren
 2. Uptime Kuma: Benachrichtigung → *Gotify*
-3. URL: `http://gotify.homeserver`, Token eintragen
+3. URL: `https://gotify.homeserver`, Token eintragen
 
 ---
 
