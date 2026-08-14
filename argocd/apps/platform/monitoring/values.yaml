@@ -206,7 +206,7 @@ victoria-metrics-k8s-stack:
         enabled: true
 
   # ---- Grafana --------------------------------------------
-  # Exposed at http://grafana.homeserver via Traefik. Admin password is
+  # Exposed at http://grafana.tech.homeserver via Traefik. Admin password is
   # auto-generated and stored in the `monitoring-grafana` Secret. Retrieve
   # with:
   #   kubectl -n monitoring get secret monitoring-grafana \
@@ -279,7 +279,7 @@ victoria-metrics-k8s-stack:
       path: /
       pathType: Prefix
       hosts:
-        - grafana.homeserver
+        - grafana.tech.homeserver
       tls: []
 
     # Grafana itself is scraped by VMAgent.
@@ -288,8 +288,8 @@ victoria-metrics-k8s-stack:
 
     grafana.ini:
       server:
-        domain: grafana.pke-lab.de
-        root_url: "https://grafana.pke-lab.de"
+        domain: grafana.tech.pke-lab.de
+        root_url: "https://grafana.tech.pke-lab.de"
 
   # ---- prometheus-node-exporter ----------------------------
   # DaemonSet: one pod per node (homeserver, worker-0, worker-1), exposes

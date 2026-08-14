@@ -59,7 +59,7 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        # carplay-api.homeserver (and every other *.homeserver service) is
+        # carplay-api.prod.homeserver (and every other *.homeserver service) is
         # plain HTTP behind Traefik — see Constants.swift for why.
         NSAppTransportSecurity:
           NSExceptionDomains:

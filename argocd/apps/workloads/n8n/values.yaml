@@ -43,7 +43,7 @@ ingress:
   className: traefik
   annotations: {}
   hosts:
-    - host: n8n.homeserver
+    - host: n8n.prod.homeserver
       paths:
         - path: /
           pathType: Prefix
@@ -59,12 +59,12 @@ persistence:
 env:
   # n8n.pke-lab.de wurde aus dem Cloudflare Tunnel entfernt (Security-Gründen,
   # siehe argocd/apps/platform/cloudflared/values.yaml) — n8n ist jetzt nur noch intern
-  # über n8n.homeserver (Traefik-Ingress ohne TLS) erreichbar. host/protocol
+  # über n8n.prod.homeserver (Traefik-Ingress ohne TLS) erreichbar. host/protocol
   # spiegeln das wider.
-  N8N_HOST: "n8n.homeserver"
+  N8N_HOST: "n8n.prod.homeserver"
   N8N_PORT: "5678"
   N8N_PROTOCOL: "http"
-  WEBHOOK_URL: "http://n8n.homeserver/"
+  WEBHOOK_URL: "http://n8n.prod.homeserver/"
   # N8N_SECURE_COOKIE ist ein von N8N_PROTOCOL unabhängiger Schalter und
   # defaultet auf true — muss explizit auf false, sonst setzt n8n weiterhin
   # ein Secure-Cookie, das der Browser über die Klartext-HTTP-Verbindung

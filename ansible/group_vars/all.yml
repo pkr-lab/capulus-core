@@ -342,7 +342,7 @@ scanner_smb_password: !vault |
 # 2) App-Token aus dem Gotify-Web-UI (Applications → Create → "Scanner"):
 #    ansible-vault encrypt_string 'AppTokenXXX' --name 'scanner_gotify_token'
 scanner_gotify_enabled: true
-scanner_gotify_url: "http://gotify.homeserver"
+scanner_gotify_url: "http://gotify.tech.homeserver"
 scanner_gotify_token: !vault |
           $ANSIBLE_VAULT;1.1;AES256
           62323337393866356461663234313232393032613734613861366534356533393963386330323936

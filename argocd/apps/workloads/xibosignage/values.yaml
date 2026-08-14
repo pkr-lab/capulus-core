@@ -131,7 +131,7 @@ cms:
     className: traefik
     annotations: {}
     hosts:
-      - host: xibo.homeserver
+      - host: xibo.prod.homeserver
         paths:
           - path: /
             pathType: Prefix
@@ -140,7 +140,7 @@ cms:
   # Siehe https://github.com/xibosignage/xibo-docker/blob/master/config.env.template
   # für alle verfügbaren Variablen (SMTP, Upload-Limits, ...).
   env:
-    CMS_SERVER_NAME: "xibo.homeserver"
+    CMS_SERVER_NAME: "xibo.prod.homeserver"
     CMS_USE_MEMCACHED: "true"
     # Xibo führt periodische Wartungs-Tasks (Layout-Status, Thumbnails,
     # Stats-Aggregation, Player-Actions) über einen eingebauten Cron im

@@ -12,7 +12,7 @@ enum Constants {
     /// Reachable only while Tailscale is up (see
     /// TailscaleConnectivity.swift). Override at runtime via Settings if
     /// your ingress host differs (see README "Configuration").
-    static let apiBaseURL = URL(string: "http://carplay-api.homeserver")!
+    static let apiBaseURL = URL(string: "http://carplay-api.prod.homeserver")!
 
     static let refreshInterval: TimeInterval = 30
 
@@ -72,14 +72,14 @@ enum Constants {
     /// argocd/apps/*/values.yaml Ingress-Definitionen.
     enum SelfHostedServices {
         static let all: [SelfHostedService] = [
-            SelfHostedService(name: "Nextcloud", systemImage: "icloud.fill", host: "nextcloud.homeserver"),
-            SelfHostedService(name: "Immich", systemImage: "photo.on.rectangle.angled", host: "immich.homeserver"),
-            SelfHostedService(name: "Vaultwarden", systemImage: "lock.fill", host: "vault.homeserver"),
-            SelfHostedService(name: "Paperless-ngx", systemImage: "doc.text.magnifyingglass", host: "paperless.homeserver"),
-            SelfHostedService(name: "Mealie", systemImage: "fork.knife", host: "mealie.homeserver"),
-            SelfHostedService(name: "n8n", systemImage: "arrow.triangle.branch", host: "n8n.homeserver"),
-            SelfHostedService(name: "Wiki.js", systemImage: "book.closed.fill", host: "wiki.homeserver"),
-            SelfHostedService(name: "Zammad", systemImage: "questionmark.bubble.fill", host: "zammad.homeserver"),
+            SelfHostedService(name: "Nextcloud", systemImage: "icloud.fill", host: "nextcloud.prod.homeserver"),
+            SelfHostedService(name: "Immich", systemImage: "photo.on.rectangle.angled", host: "immich.prod.homeserver"),
+            SelfHostedService(name: "Vaultwarden", systemImage: "lock.fill", host: "vault.tech.homeserver"),
+            SelfHostedService(name: "Paperless-ngx", systemImage: "doc.text.magnifyingglass", host: "paperless.prod.homeserver"),
+            SelfHostedService(name: "Mealie", systemImage: "fork.knife", host: "mealie.prod.homeserver"),
+            SelfHostedService(name: "n8n", systemImage: "arrow.triangle.branch", host: "n8n.prod.homeserver"),
+            SelfHostedService(name: "Wiki.js", systemImage: "book.closed.fill", host: "wiki.prod.homeserver"),
+            SelfHostedService(name: "Zammad", systemImage: "questionmark.bubble.fill", host: "zammad.tech.homeserver"),
         ]
     }
 

@@ -19,6 +19,6 @@ thermal_watchdog_poll_seconds: 10
 # die statische Server-IP aufgelöst, damit die Meldung auch dann
 # rausgeht, wenn auf diesem Host kein *.homeserver-DNS eingerichtet ist
 # (siehe docs/09-dns-architecture.md).
-thermal_watchdog_ntfy_host: "ntfy.homeserver"
+thermal_watchdog_ntfy_host: "ntfy.tech.homeserver"
 thermal_watchdog_ntfy_ip: "{{ network_static_ip }}"
 thermal_watchdog_ntfy_topic: "Home-Lab-System"
