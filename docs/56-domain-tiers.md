@@ -1,15 +1,19 @@
 # Domain-Tiers — dev / tech / prod
 
-Seit diesem Schnitt trägt jeder Hostname (intern `*.homeserver` **und**
-extern `*.pke-lab.de`) ein zusätzliches Label zwischen App-Name und
-Domain: `<app>.<tier>.homeserver` bzw. `<app>.<tier>.pke-lab.de`. Vorher
-lief alles flach unter `<app>.homeserver` — ohne erkennbar, ob dahinter
-Infrastruktur oder eine Familien-/Vereins-App steckt.
+Seit diesem Schnitt trägt jeder Hostname ein zusätzliches Tier-Label
+zwischen App-Name und Domain. Intern per Punkt, extern per Bindestrich —
+unterschiedliches Trennzeichen, siehe [Warum Punkt intern, Bindestrich
+extern](#warum-punkt-intern-bindestrich-extern) unten:
 
 ```
 vorher:   grafana.homeserver          zammad.homeserver
-nachher:  grafana.tech.homeserver     zammad.tech.homeserver
+nachher:  grafana.tech.homeserver     zammad.tech.homeserver     (intern)
+          grafana-tech.pke-lab.de     support-tech.pke-lab.de    (extern)
 ```
+
+Vorher lief alles flach unter `<app>.homeserver` bzw. `<app>.pke-lab.de` —
+ohne erkennbar, ob dahinter Infrastruktur oder eine Familien-/Vereins-App
+steckt.
 
 Diese Seite beschreibt **nur** die URL-Konvention (Namensgebung). Die
 komplett getrennte AppProject/Namespace-Trennung (`platform` vs.
@@ -50,16 +54,17 @@ LAN/Tailnet:  Client → Traefik (Host-Header "app.tech.homeserver"
                                  bzw. "app.prod.homeserver")
                      → passender Service
 
-Internet:     Client → app.tech.pke-lab.de / app.prod.pke-lab.de
+Internet:     Client → app-tech.pke-lab.de / app-prod.pke-lab.de
                      → Cloudflare Edge → cloudflared
-                     → Traefik (Wildcard-Regel *.tech.pke-lab.de bzw.
-                                 *.prod.pke-lab.de)
-                     → Host-Header "app.tech.pke-lab.de" → passender Service
+                     → Traefik (Wildcard-Regel *-tech.pke-lab.de bzw.
+                                 *-prod.pke-lab.de)
+                     → Host-Header "app-tech.pke-lab.de" → passender Service
 ```
 
 Beide Pfade tragen dasselbe Tier-Label — z. B. ist Grafana intern
-`grafana.tech.homeserver` und extern `grafana.tech.pke-lab.de`, dieselbe
-App, derselbe Tier, nur andere Domain. Betroffene Stellen pro App:
+`grafana.tech.homeserver` und extern `grafana-tech.pke-lab.de`, dieselbe
+App, derselbe Tier, nur andere Domain (und anderes Trennzeichen vor dem
+Tier, s. u.). Betroffene Stellen pro App:
 
 - `argocd/apps/<platform|workloads>/<app>/values.yaml` →
   `ingress.hosts[].host` (**beide** Hosts, LAN und — falls die App extern
@@ -82,53 +87,80 @@ aufgelöst, ganz ohne Anpassung an dnsmasq/CoreDNS.
 
 `argocd/apps/platform/cloudflared/values.yaml` enthält **nicht** mehr eine
 Ingress-Regel pro extern freigegebener App, sondern nur noch zwei bis drei
-Wildcard-Regeln (eine pro Tier: `*.tech.pke-lab.de`, `*.prod.pke-lab.de`,
-optional `*.dev.pke-lab.de`) — alle drei zeigen auf
+Wildcard-Regeln (eine pro Tier: `*-tech.pke-lab.de`, `*-prod.pke-lab.de`,
+optional `*-dev.pke-lab.de`) — alle drei zeigen auf
 `http://traefik.kube-system.svc.cluster.local:80`, also auf Traefik selbst,
 genau wie der interne LAN-Pfad das für `*.homeserver` bereits tut.
 
 **Eine Wildcard-Regel macht dadurch keine App automatisch extern
 erreichbar.** Traefik matcht Ingress-Ressourcen weiterhin exakt nach
 Host-Header — eine App wird nur dann erreichbar, wenn sie zusätzlich zu
-ihrem `*.homeserver`-Host auch einen `*.pke-lab.de`-Host in ihrer eigenen
+ihrem `*.homeserver`-Host auch einen `*-pke-lab.de`-Host in ihrer eigenen
 `ingress.hosts`-Liste trägt. Fehlt der, matcht Traefik keinen Router und
 liefert 404 — dieselbe "nur was explizit eingetragen ist"-Garantie wie
 vorher über cloudflareds `defaultService`, nur eine Ebene tiefer verlagert.
 
-Aktuell tragen genau diese Apps zusätzlich einen `*.pke-lab.de`-Host (Stand
+Aktuell tragen genau diese Apps zusätzlich einen `*-pke-lab.de`-Host (Stand
 dieser Migration):
 
 | App | Extern | Tier |
 |---|---|---|
-| Wiki.js | `wiki.prod.pke-lab.de` | prod |
-| ntfy | `ntfy.tech.pke-lab.de` | tech |
-| Zammad | `support.tech.pke-lab.de` (abweichendes Label!) | tech |
-| Grafana | `grafana.tech.pke-lab.de` | tech |
-| MediaMTX | `stream.prod.pke-lab.de` | prod |
-| Mealie | `mealie.prod.pke-lab.de` | prod |
-| Vaultwarden | `vault.tech.pke-lab.de` | tech |
-| Nextcloud | `nextcloud.prod.pke-lab.de` | prod |
-| Immich | `immich.prod.pke-lab.de` | prod |
+| Wiki.js | `wiki-prod.pke-lab.de` | prod |
+| ntfy | `ntfy-tech.pke-lab.de` | tech |
+| Zammad | `support-tech.pke-lab.de` (abweichendes Label!) | tech |
+| Grafana | `grafana-tech.pke-lab.de` | tech |
+| MediaMTX | `stream-prod.pke-lab.de` | prod |
+| Mealie | `mealie-prod.pke-lab.de` | prod |
+| Vaultwarden | `vault-tech.pke-lab.de` | tech |
+| Nextcloud | `nextcloud-prod.pke-lab.de` | prod |
+| Immich | `immich-prod.pke-lab.de` | prod |
 
 Alle anderen Apps (Authentik, Semaphore, Pi-hole, MinIO, Gotify, Headlamp,
 Paperless-ngx, n8n, ...) bleiben ausschließlich LAN/Tailscale-erreichbar —
 auch wenn ihr Hostname theoretisch unter eine der Wildcard-Regeln fallen
 würde, weil ihnen schlicht der zweite Ingress-Host fehlt.
 
-Eine App extern freigeben/entfernen heißt also: den `*.pke-lab.de`-Host in
+Eine App extern freigeben/entfernen heißt also: den `*-pke-lab.de`-Host in
 der `ingress.hosts`-Liste der **App selbst** ergänzen/löschen — nicht mehr
 in `cloudflared/values.yaml`. Details/Ablauf:
 [docs/23-cloudflare-deploy.md → Neuen Dienst freigeben](23-cloudflare-deploy.md#neuen-dienst-freigeben).
 
 > **Noch gegen den echten Cluster zu verifizieren:** Traefiks
 > Host-Header-Routing setzt voraus, dass `cloudflared` den ORIGINAL
-> angefragten Hostnamen (z. B. `grafana.tech.pke-lab.de`) unverändert als
+> angefragten Hostnamen (z. B. `grafana-tech.pke-lab.de`) unverändert als
 > HTTP-Host-Header an Traefik weiterreicht, statt den Hostnamen aus
 > `service:` (`traefik.kube-system.svc.cluster.local`) einzusetzen. Das ist
 > Cloudflares dokumentiertes Default-Verhalten für
 > `originRequest.httpHostHeader`, sollte nach dem Rollout aber per
-> `curl -I https://<app>.<tier>.pke-lab.de` bestätigt werden — falls nicht,
+> `curl -I https://<app>-<tier>.pke-lab.de` bestätigt werden — falls nicht,
 > `httpHostHeader` pro Regel in `cloudflared/values.yaml` explizit setzen.
+
+### Warum Punkt intern, Bindestrich extern
+
+Ursprünglich war extern genau wie intern ein Punkt geplant
+(`grafana.tech.pke-lab.de`) — das scheiterte live an Cloudflares
+kostenlosem "Universal SSL"-Zertifikat: das deckt für eine Zone nur
+`pke-lab.de` + `*.pke-lab.de` ab, also genau **eine** Label-Ebene. Ein
+zweites Label vor der Domain fällt aus diesem Wildcard-Zertifikat raus —
+der TLS-Handshake schlägt schon an der Cloudflare-Edge fehl, bevor die
+Anfrage überhaupt beim Tunnel ankommt (empirisch bestätigt:
+`curl https://grafana.tech.pke-lab.de` lieferte `SSL routines:ST_CONNECT:
+sslv3 alert handshake failure`, DNS löste dabei ganz normal auf — das
+Problem lag rein am fehlenden Zertifikat, nicht an DNS oder Traefik).
+
+Mit Bindestrich (`grafana-tech.pke-lab.de`) bleibt der externe Hostname
+eine einzige Label-Ebene und ist vom bestehenden kostenlosen Zertifikat
+abgedeckt — keine Cloudflare-Plan-Änderung nötig. Intern bleibt der Punkt
+(`grafana.tech.homeserver`), weil dort die eigene, selbst erzeugte CA
+greift (siehe [docs/54-internal-tls.md](54-internal-tls.md)), die nicht an
+Cloudflares Zertifikatsgrenzen gebunden ist und beliebig viele
+Label-Ebenen in ihrer SAN-Liste tragen kann.
+
+Alternative, falls später gewünscht: Cloudflares "Total TLS"/Advanced
+Certificate Manager (SSL/TLS → Edge Certificates im Dashboard prüfen)
+kann echte Mehrebenen-Wildcards ausstellen — dann ließe sich extern auf
+den Punkt zurückwechseln. Bewusst nicht automatisch vorausgesetzt, da
+plan-/kostenabhängig.
 
 ---
 
@@ -206,8 +238,10 @@ als Fallback, oder Browser-Zertifikatswarnung bewusst akzeptieren.
    erst flach anlegen und später umbenennen.
 3. Soll die App zusätzlich extern erreichbar sein: **in der `values.yaml`
    der App selbst** einen zweiten `ingress.hosts`-Eintrag mit demselben
-   Tier ergänzen (`<app>.tech.pke-lab.de` / `<app>.prod.pke-lab.de`) —
-   `cloudflared/values.yaml` bleibt dabei unangetastet, siehe
+   Tier ergänzen — **mit Bindestrich, nicht Punkt**:
+   `<app>-tech.pke-lab.de` / `<app>-prod.pke-lab.de` (siehe
+   [Warum Punkt intern, Bindestrich extern](#warum-punkt-intern-bindestrich-extern)
+   oben). `cloudflared/values.yaml` bleibt dabei unangetastet, siehe
    [Externe Erreichbarkeit](#externe-erreichbarkeit-wildcard-routing-über-traefik)
    oben.
 4. Referenziert eine andere, bereits bestehende App diesen neuen Host
