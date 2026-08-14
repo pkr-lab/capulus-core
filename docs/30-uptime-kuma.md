@@ -69,6 +69,40 @@ anlegen (erscheint beim ersten Besuch automatisch).
 
 ---
 
+## Öffentliche Status-Page
+
+`argocd/apps/workloads/uptime-kuma/values.yaml` legt zusätzlich zum
+internen Host einen externen Ingress-Host an (`status-prod.pke-lab.de` —
+bewusst ohne "uptime-kuma" im Namen, damit die eingesetzte Software nicht
+schon aus der URL erkennbar ist), erreichbar über die bestehende
+`*.pke-lab.de`-Wildcard-Route von cloudflared — kein Änderung an
+cloudflared nötig, siehe [docs/23](23-cloudflare-deploy.md#neuen-dienst-freigeben).
+
+Die eigentliche Status-Page ist ein manueller Einmal-Schritt in der
+Kuma-UI (nicht Teil von Git/Helm):
+
+1. **Settings → Status Pages → New Status Page**
+2. Nur die Monitore hinzufügen, die öffentlich sichtbar sein sollen (keine
+   internen IPs/Ports, keine Klarnamen sensibler interner Dienste)
+3. Slug vergeben, z. B. `homelab` → Page liegt dann unter
+   `https://status-prod.pke-lab.de/status/homelab`
+4. Die "Updates"-Seite auf edv-kretzer.de fragt ausschließlich die
+   Status-Page-JSON-API (`/api/status-page/<slug>` +
+   `/api/status-page/heartbeat/<slug>`) per Hintergrund-Request ab und
+   rendert die Daten im eigenen Design nach — es gibt dort **weder einen
+   Link noch ein iframe**, das direkt auf `status-prod.pke-lab.de` zeigt.
+   Nutzer sehen nur die Zusammenfassung, nicht den echten Hostnamen.
+
+> Das Haupt-Dashboard (`/dashboard`) bleibt hinter dem normalen
+> Admin-Login — nur die Status-Page-Route ist laut Kuma-Design
+> unauthentifiziert öffentlich erreichbar. Der generische Hostname ist ein
+> zusätzlicher Baustein, kein Ersatz für den Login-Schutz: Wer die
+> Netzwerk-Requests der Website mitliest, sieht die tatsächliche URL —
+> das lässt sich bei einem clientseitigen Fetch grundsätzlich nicht
+> verstecken, nur der beiläufige Ein-Klick-Zugriff wird verhindert.
+
+---
+
 ## Konfiguration (values.yaml)
 
 | Key | Bedeutung | Default |
