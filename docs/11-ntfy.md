@@ -24,7 +24,7 @@ ntfy ist ein einfacher, selbst gehosteter Pub/Sub-Notification-Dienst. Im Gegens
 Alertmanager / beliebiger curl-Sender
         │
         ▼
-ntfy-Server (http://ntfy.homeserver)
+ntfy-Server (https://ntfy.homeserver)
         │
         ├── Android-App (direkt via WebSocket)
         │
@@ -52,14 +52,14 @@ argocd/apps/platform/ntfy/
     └── serviceaccount.yaml
 ```
 
-URL nach dem Deployment: **http://ntfy.homeserver**
+URL nach dem Deployment: **https://ntfy.homeserver**
 
 ---
 
 ## iOS einrichten
 
 1. **ntfy-App** aus dem [App Store](https://apps.apple.com/app/ntfy/id1625396347) installieren
-2. App öffnen → **+** → Server-URL eintragen: `http://ntfy.homeserver`
+2. App öffnen → **+** → Server-URL eintragen: `https://ntfy.homeserver`
 3. Topic abonnieren, z.B. `homeserver` oder `alerts`
 4. Benachrichtigungen in den iOS-Einstellungen für ntfy erlauben
 
@@ -71,7 +71,7 @@ URL nach dem Deployment: **http://ntfy.homeserver**
 
 ### Einfachste Form
 ```bash
-curl -d "Hallo Welt" http://ntfy.homeserver/homeserver
+curl -d "Hallo Welt" https://ntfy.homeserver/homeserver
 ```
 
 ### Mit Titel und Priorität
@@ -81,7 +81,7 @@ curl \
   -H "Priority: high" \
   -H "Tags: warning" \
   -d "Festplatte > 90% voll" \
-  http://ntfy.homeserver/homeserver
+  https://ntfy.homeserver/homeserver
 ```
 
 ### Prioritäten
@@ -139,7 +139,7 @@ kubectl -n ntfy exec -it deploy/ntfy -- ntfy access publisher homeserver rw
 Nachrichten dann mit Basic Auth senden:
 
 ```bash
-curl -u publisher:PASSWORT -d "Test" http://ntfy.homeserver/homeserver
+curl -u publisher:PASSWORT -d "Test" https://ntfy.homeserver/homeserver
 ```
 
 ---
@@ -150,7 +150,7 @@ Wenn Nachrichten über ntfy.sh-Relay nicht im Klartext weitergeleitet werden sol
 
 ```bash
 # Lokal verschlüsseln (ntfy CLI)
-ntfy publish --password "geheim" http://ntfy.homeserver/homeserver "Meine Nachricht"
+ntfy publish --password "geheim" https://ntfy.homeserver/homeserver "Meine Nachricht"
 ```
 
 In der iOS-App: Topic-Einstellungen → Passwort eintragen.

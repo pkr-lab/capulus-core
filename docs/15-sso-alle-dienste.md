@@ -81,7 +81,7 @@ ssh ubuntu@192.168.178.94 \
    - **Name:** `headlamp`
    - **Authorization flow:** `default-provider-authorization-implicit-consent`
    - **Client type:** `Confidential`
-   - **Redirect URIs:** `http://headlamp.homeserver/oidc-callback`
+   - **Redirect URIs:** `https://headlamp.homeserver/oidc-callback`
    - Alles andere: Standard lassen
 4. **Fertigstellen** — Client ID und Client Secret **sofort notieren!**
 
@@ -92,7 +92,7 @@ ssh ubuntu@192.168.178.94 \
    - **Name:** `Headlamp`
    - **Slug:** `headlamp`
    - **Provider:** `headlamp` (gerade angelegt)
-   - **Launch URL:** `http://headlamp.homeserver`
+   - **Launch URL:** `https://headlamp.homeserver`
 3. Speichern.
 
 ### 2.3 — Secrets versiegeln
@@ -148,7 +148,7 @@ Außerdem OIDC aktivieren:
    - **Name:** `argo-workflows`
    - **Authorization flow:** `default-provider-authorization-implicit-consent`
    - **Client type:** `Confidential`
-   - **Redirect URIs:** `http://argo-workflows.homeserver/oauth2/callback`
+   - **Redirect URIs:** `https://argo-workflows.homeserver/oauth2/callback`
    - Alles andere: Standard lassen
 4. **Fertigstellen** — Client ID und Client Secret **sofort notieren!**
 
@@ -159,7 +159,7 @@ Außerdem OIDC aktivieren:
    - **Name:** `Argo Workflows`
    - **Slug:** `argo-workflows`
    - **Provider:** `argo-workflows`
-   - **Launch URL:** `http://argo-workflows.homeserver`
+   - **Launch URL:** `https://argo-workflows.homeserver`
 3. Speichern.
 
 ### 3.3 — Secrets versiegeln
@@ -224,7 +224,7 @@ argo-workflows:
    - **Name:** `minio`
    - **Authorization flow:** `default-provider-authorization-implicit-consent`
    - **Client type:** `Confidential`
-   - **Redirect URIs:** `http://minio.homeserver/oauth_callback`
+   - **Redirect URIs:** `https://minio.homeserver/oauth_callback`
    - Alles andere: Standard lassen
 4. **Fertigstellen** — Client ID und Client Secret **sofort notieren!**
 
@@ -235,7 +235,7 @@ argo-workflows:
    - **Name:** `MinIO`
    - **Slug:** `minio`
    - **Provider:** `minio`
-   - **Launch URL:** `http://minio.homeserver`
+   - **Launch URL:** `https://minio.homeserver`
 3. Speichern.
 
 ### 4.3 — Secrets versiegeln
@@ -312,21 +312,21 @@ ssh ubuntu@192.168.178.94 \
 
 ### Headlamp
 
-1. Browser → `http://headlamp.homeserver`
+1. Browser → `https://headlamp.homeserver`
 2. → Weiterleitung zu Authentik Login
 3. Login mit `pke` / Passwort
 4. → Zurück zu Headlamp, eingeloggt
 
 ### Argo Workflows
 
-1. Browser → `http://argo-workflows.homeserver`
+1. Browser → `https://argo-workflows.homeserver`
 2. Button **Login** → Weiterleitung zu Authentik
 3. Login mit `pke` / Passwort
 4. → Zurück, Workflows-UI sichtbar
 
 ### MinIO
 
-1. Browser → `http://minio.homeserver`
+1. Browser → `https://minio.homeserver`
 2. Button **Login with SSO** → Weiterleitung zu Authentik
 3. Login mit `pke` / Passwort
 4. → MinIO Console
