@@ -20,7 +20,7 @@ mealie.homeserver  →  Traefik  →  mealie (Port 9000)
 
 ## Erster Start
 
-Nach dem Deploy läuft Mealie direkt unter **http://mealie.homeserver**.
+Nach dem Deploy läuft Mealie direkt unter **https://mealie.homeserver**.
 
 Standard-Credentials beim ersten Login:
 
@@ -46,5 +46,5 @@ Standard-Credentials beim ersten Login:
 | Key | Bedeutung | Default |
 |---|---|---|
 | `env.ALLOW_SIGNUP` | Neue Nutzer erlauben | `false` |
-| `env.BASE_URL` | URL für interne Links | `http://mealie.homeserver` |
+| `env.BASE_URL` | URL für interne Links | `https://mealie.homeserver` |
 | `persistence.size` | Datenspeicher inkl. Bilder | `5Gi` |
