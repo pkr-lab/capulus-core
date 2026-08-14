@@ -24,8 +24,8 @@ ArgoCD          =  CD   (argocd/apps/* in den Cluster deployen)
 
 | Dienst         | URL                               | Hinweise                    |
 |----------------|------------------------------------|------------------------------|
-| Argo Workflows | http://argo-workflows.homeserver  | UI + API (Server-Auth-Mode) |
-| MinIO-Konsole  | http://minio.homeserver           | Objekt-Browser              |
+| Argo Workflows | https://argo-workflows.homeserver  | UI + API (Server-Auth-Mode) |
+| MinIO-Konsole  | https://minio.homeserver           | Objekt-Browser              |
 
 ---
 
@@ -102,7 +102,7 @@ $SSH 'sudo kubectl -n minio get pods'
 $SSH 'sudo kubectl -n argo-workflows get pods'
 ```
 
-`http://argo-workflows.homeserver` öffnen — die Workflows-UI sollte laden
+`https://argo-workflows.homeserver` öffnen — die Workflows-UI sollte laden
 und die WorkflowTemplates `git-ci` und `kaniko-build-push` auflisten.
 
 ---
