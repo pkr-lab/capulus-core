@@ -49,6 +49,19 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
+    # Öffentlich erreichbar über die bestehende *.pke-lab.de-Wildcard-Route
+    # von cloudflared (kein Änderung an cloudflared nötig, siehe
+    # docs/23-cloudflare-deploy.md → "Neuen Dienst freigeben"). Bewusst
+    # "status" statt "uptime-kuma" im Hostnamen, damit die eingesetzte
+    # Software nicht schon aus der URL erkennbar ist. Nur die öffentliche
+    # Status-Page-API (/api/status-page/...) wird von der "Updates"-Seite
+    # auf edv-kretzer.de per Hintergrund-Request abgefragt (keine direkte
+    # Verlinkung, kein iframe) — das restliche Dashboard bleibt hinter dem
+    # Admin-Login.
+    - host: status-prod.pke-lab.de
+      paths:
+        - path: /
+          pathType: Prefix
   tls: []
 
 persistence:
