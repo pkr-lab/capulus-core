@@ -350,31 +350,35 @@ git push
 
 ## Service-URLs
 
-| Service | URL |
-|---|---|
-| Grafana | https://grafana.homeserver |
-| ArgoCD | https://\<server-ip\>:30443 |
-| Headlamp | https://headlamp.homeserver |
-| Semaphore | https://semaphore.homeserver |
-| Authentik | http://authentik.homeserver ¹ |
-| Gotify | https://gotify.homeserver |
-| ntfy | https://ntfy.homeserver |
-| Pi-hole | https://pihole.homeserver |
-| Argo Workflows | https://argo-workflows.homeserver |
-| MinIO Console | https://minio.homeserver |
-| kubeseal-webgui | https://kubeseal-webgui.homeserver |
-| Alarmmonitor (alamos-apager) | https://alamos-apager.homeserver |
-| MediaMTX (Live-Stream-Playback) | https://stream.homeserver |
-| Paperless-ngx | https://paperless.homeserver |
-| Mealie | https://mealie.homeserver |
-| n8n | https://n8n.homeserver |
-| Uptime Kuma | https://uptime-kuma.homeserver |
-| Vaultwarden | https://vault.homeserver |
-| Nextcloud | https://nextcloud.homeserver |
-| Immich | https://immich.homeserver |
-| Wiki.js | https://wiki.homeserver |
-| Zammad | https://zammad.homeserver |
-| Xibo CMS (xibosignage) | https://xibo.homeserver |
+Jeder Hostname trägt ein Tier-Label (`tech` = Infrastruktur/Admin, `prod` =
+Apps mit echtem Nutzerkreis) — Details und Begründung:
+**[docs/56-domain-tiers.md](docs/56-domain-tiers.md)**.
+
+| Service | Tier | URL |
+|---|---|---|
+| Grafana | tech | https://grafana.tech.homeserver |
+| ArgoCD | – | https://\<server-ip\>:30443 |
+| Headlamp | tech | https://headlamp.tech.homeserver |
+| Semaphore | tech | https://semaphore.tech.homeserver |
+| Authentik | tech | http://authentik.tech.homeserver ¹ |
+| Gotify | tech | https://gotify.tech.homeserver |
+| ntfy | tech | https://ntfy.tech.homeserver |
+| Pi-hole | tech | https://pihole.tech.homeserver |
+| Argo Workflows | tech | https://argo-workflows.tech.homeserver |
+| MinIO Console | tech | https://minio.tech.homeserver |
+| kubeseal-webgui | tech | https://kubeseal-webgui.tech.homeserver |
+| Vaultwarden | tech (Ausnahme) | https://vault.tech.homeserver |
+| Zammad | tech (Ausnahme) | https://zammad.tech.homeserver |
+| Alarmmonitor (alamos-apager) | prod | https://alamos-apager.prod.homeserver |
+| MediaMTX (Live-Stream-Playback) | prod | https://stream.prod.homeserver |
+| Paperless-ngx | prod | https://paperless.prod.homeserver |
+| Mealie | prod | https://mealie.prod.homeserver |
+| n8n | prod | https://n8n.prod.homeserver |
+| Uptime Kuma | prod | https://uptime-kuma.prod.homeserver |
+| Nextcloud | prod | https://nextcloud.prod.homeserver |
+| Immich | prod | https://immich.prod.homeserver |
+| Wiki.js | prod | https://wiki.prod.homeserver |
+| Xibo CMS (xibosignage) | prod | https://xibo.prod.homeserver |
 
 > ¹ Authentik bleibt bewusst auf `http://` — sein Ingress ist reserviert für
 > das separate mTLS-Client-Zertifikat-Vorhaben in
@@ -384,14 +388,14 @@ git push
 
 > Zusätzlich zu den internen `*.homeserver`-URLs können ausgewählte Dienste
 > über Cloudflare Tunnel öffentlich unter einer eigenen Domain erreichbar
-> gemacht werden (z. B. `https://wiki.deine-domain.de`) — ohne VPN, ohne
+> gemacht werden (z. B. `https://wiki.prod.deine-domain.de`) — ohne VPN, ohne
 > offene Ports. Setup: **[docs/22-cloudflare-tunnel.md](docs/22-cloudflare-tunnel.md)**.
 > Nextcloud, Immich und Vaultwarden sind zusätzlich unter
-> `https://nextcloud.pke-lab.de`, `https://immich.pke-lab.de` bzw.
-> `https://vault.pke-lab.de` per Cloudflare Tunnel erreichbar (Details je
+> `https://nextcloud.prod.pke-lab.de`, `https://immich.prod.pke-lab.de` bzw.
+> `https://vault.tech.pke-lab.de` per Cloudflare Tunnel erreichbar (Details je
 > Dienst in den verlinkten Docs unten) — bei Immich nötig für
 > Handy-Auto-Backup unterwegs.
-> Der Live-Stream ist zusätzlich unter `https://stream.pke-lab.de` erreichbar,
+> Der Live-Stream ist zusätzlich unter `https://stream.prod.pke-lab.de` erreichbar,
 > abgesichert per mediamtx-eigenem HTTP-Basic-Login — kein externer
 > Identity-Provider, kein Cloudflare-Zero-Trust-Konto nötig. Details:
 > **[docs/24-mediamtx.md](docs/24-mediamtx.md)**.
@@ -477,6 +481,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [Renovate](docs/47-renovate.md) | Automatische Update-PRs für Helm-Chart-Versionen und Image-Tags |
 | [Release-Automatisierung](docs/48-release-automation.md) | GitHub Release + Changelog bei jedem Merge auf `main` via semantic-release |
 | [ArgoCD-Projects](docs/49-argocd-projects.md) | Platform/Workloads-AppProject-Trennung, Ordnerstruktur, neue App hinzufügen |
+| [Domain-Tiers](docs/56-domain-tiers.md) | dev/tech/prod-URL-Konvention (`app.tier.homeserver`), Ausnahmen, Cross-App-Referenzen |
 
 ---
 

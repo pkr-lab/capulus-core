@@ -278,8 +278,11 @@ victoria-metrics-k8s-stack:
       labels: {}
       path: /
       pathType: Prefix
+      # Zweiter Host: extern, per Cloudflare-Tunnel-Wildcard (cloudflared)
+      # an Traefik weitergereicht, siehe docs/56-domain-tiers.md.
       hosts:
         - grafana.tech.homeserver
+        - grafana.tech.pke-lab.de
       tls: []
 
     # Grafana itself is scraped by VMAgent.
