@@ -444,7 +444,7 @@ data:
           "targets": [
             {
               "datasource": {"type": "prometheus", "uid": "${datasource}"},
-              "expr": "time() - alamos_apager_last_start_timestamp_seconds{station=\"1002011_Fahrzeughalle\"}",
+              "expr": "time() - max by (station) (alamos_apager_last_start_timestamp_seconds{station=\"1002011_Fahrzeughalle\"})",
               "legendFormat": "Letzte AMweb-Anfrage vor",
               "refId": "A"
             }
@@ -482,7 +482,7 @@ data:
           "targets": [
             {
               "datasource": {"type": "prometheus", "uid": "${datasource}"},
-              "expr": "time() - alamos_apager_last_heartbeat_timestamp_seconds{station=\"1002011_Fahrzeughalle\"}",
+              "expr": "time() - max by (station) (alamos_apager_last_heartbeat_timestamp_seconds{station=\"1002011_Fahrzeughalle\"})",
               "legendFormat": "Letzter Heartbeat vor",
               "refId": "A"
             }
@@ -515,7 +515,7 @@ data:
           "targets": [
             {
               "datasource": {"type": "prometheus", "uid": "${datasource}"},
-              "expr": "alamos_apager_station_down{station=\"1002011_Fahrzeughalle\"}",
+              "expr": "max by (station) (alamos_apager_station_down{station=\"1002011_Fahrzeughalle\"})",
               "legendFormat": "Standort-Status",
               "refId": "A"
             }
