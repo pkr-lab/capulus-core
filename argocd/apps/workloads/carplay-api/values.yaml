@@ -40,7 +40,7 @@ ingress:
   enabled: true
   className: traefik
   annotations: {}
-  host: carplay-api.homeserver
+  host: carplay-api.prod.homeserver
 
 serviceAccount:
   create: true
@@ -214,7 +214,7 @@ config:
 # CreateContainerConfigError hängen (bewusst — ein Dashboard, das
 # Systemzustand + Alerts zeigt, sollte nicht ungeschützt starten).
 # Erzeugen (kubeseal-Zertifikat siehe docs/43-carplay-api.md
-# "Ersteinrichtung" Schritt 1, oder direkt via kubeseal-webgui.homeserver):
+# "Ersteinrichtung" Schritt 1, oder direkt via kubeseal-webgui.tech.homeserver):
 #   openssl rand -hex 32
 #   echo -n "<token>" | kubeseal --raw \
 #     --namespace carplay-api --name carplay-api-token \

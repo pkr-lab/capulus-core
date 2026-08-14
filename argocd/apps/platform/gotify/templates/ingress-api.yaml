@@ -1,7 +1,7 @@
 {{- if .Values.ingressApi.enabled }}
 # Direkter Ingress ohne Authentik-ForwardAuth für native App-Clients (iGotify iOS).
 # Gotify-eigene Token-Auth schützt den Zugriff.
-# URL für iGotify: http://gotify-api.homeserver
+# URL für iGotify: http://gotify-api.tech.homeserver
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

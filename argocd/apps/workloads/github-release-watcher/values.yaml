@@ -120,7 +120,7 @@ github:
 carplayApiServiceAccountName: "carplay-api"
 
 zammad:
-  url: "http://zammad.homeserver"
+  url: "http://zammad.tech.homeserver"
   # Zammad-Gruppe, in der das Ticket angelegt wird. Agenten dieser Gruppe
   # erhalten eine E-Mail, sofern ihre Profil-Benachrichtigungen für
   # "Neues Ticket" aktiviert sind (Zammad-Standardverhalten).

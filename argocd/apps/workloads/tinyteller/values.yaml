@@ -65,14 +65,14 @@ ingress:
   # CORS_ORIGIN unten anpassen und ggf. auf zwei Hosts (Frontend/API)
   # umstellen.
   hosts:
-    - host: tinyteller.homeserver
+    - host: tinyteller.prod.homeserver
       paths:
         - path: /
           pathType: Prefix
   tls: []
 
 env:
-  corsOrigin: "https://tinyteller.homeserver"
+  corsOrigin: "https://tinyteller.prod.homeserver"
 
 nodeSelector: {}
 tolerations: []

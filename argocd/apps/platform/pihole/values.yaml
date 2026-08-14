@@ -61,7 +61,7 @@ ingress:
   className: traefik
   annotations: {}
   hosts:
-    - host: pihole.tech.homeserver/admin/
+    - host: pihole.tech.homeserver
       paths:
         - path: /
           pathType: Prefix

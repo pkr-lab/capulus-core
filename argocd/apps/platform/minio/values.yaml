@@ -41,14 +41,14 @@ minio:
       policy: none
       purge: false
 
-  # MinIO web console at http://minio.homeserver (LAN + Tailnet via dnsmasq
+  # MinIO web console at http://minio.tech.homeserver (LAN + Tailnet via dnsmasq
   # wildcard). The S3 API stays cluster-internal (minio.minio.svc:9000).
   consoleIngress:
     enabled: true
     ingressClassName: traefik
     path: /
     hosts:
-      - minio.homeserver
+      - minio.tech.homeserver
 
   # S3 API ingress not needed — Argo reaches MinIO over the cluster Service.
   ingress:
@@ -66,7 +66,7 @@ minio:
     configUrl: "http://authentik-server.authentik.svc.cluster.local/application/o/minio/.well-known/openid-configuration"
     clientId: "2zupJjcziprtxsy10nx4hIZSBsZDQ9JUMlGPRVTk"
     clientSecret: "x8P2W8L89wRhpUIYRlwSmZiES5pPD9GxfXTkjvUYRSs5h9t90hsxH0dHrh9aJSeiBuaR6cFZFO8oMrv26mSy2r87ZApkOm4MshvJhjw3PIXohdwxJMIy2OxjlzobNC3o"
-    redirectUri: "http://minio.homeserver/oauth_callback"
+    redirectUri: "http://minio.tech.homeserver/oauth_callback"
     claimName: "groups"
     displayName: "Authentik"
 

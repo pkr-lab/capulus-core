@@ -23,7 +23,7 @@ tailscale_advertise_routes: ""
 # ABWEICHEND von xibo_displays (dort false, da die Displays ohnehin volles
 # LAN haben): dieser Pi hat KEIN eigenes LAN mehr und muss daher die vom
 # Home-Server beworbene Route (192.168.178.0/24) uebernehmen, um
-# alamos-apager.homeserver & Co. ueberhaupt zu erreichen. Setzt voraus, dass
+# alamos-apager.prod.homeserver & Co. ueberhaupt zu erreichen. Setzt voraus, dass
 # diese Route im Tailscale-Adminpanel (https://login.tailscale.com/admin/machines)
 # fuer den Home-Server genehmigt ist.
 tailscale_accept_routes: true
@@ -48,4 +48,4 @@ tailscale_auth_key: !vault |
 # ueber denselben Weg (Traefik auf dem Home-Server, per Tailscale Split-DNS
 # + Route erreichbar), den der Kiosk-Browser ohnehin schon braucht. Siehe
 # ansible/roles/vmagent und argocd/apps/platform/monitoring/templates/ingress-vm-write.yaml.
-vmagent_remote_write_url: "http://vm-write.homeserver/api/v1/write"
+vmagent_remote_write_url: "http://vm-write.tech.homeserver/api/v1/write"
