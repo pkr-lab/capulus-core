@@ -9,60 +9,74 @@ Live-Abfrage aus dem Cluster (`kubectl get svc -A` / `kubectl get ingress -A`).
 
 ```
 LAN:      Client → 192.168.178.200 (Traefik LoadBalancer, MetalLB) :80/443
-                      → Host-Header "xyz.homeserver" → passender Service
+                      → Host-Header "xyz.tier.homeserver" → passender Service
 
-Internet: Client → xyz.pke-lab.de → Cloudflare Edge
+Internet: Client → xyz.tier.pke-lab.de → Cloudflare Edge
                       → cloudflared (outbound-only, kein offener Router-Port)
-                      → passender Service direkt (an Traefik vorbei)
+                      → Traefik (Wildcard-Regel *.tier.pke-lab.de)
+                      → Host-Header "xyz.tier.pke-lab.de" → passender Service
 ```
+
+`tier` ist `tech` (Infrastruktur/Admin) oder `prod` (echter Nutzerkreis) —
+Details und die vollständige Zuordnung: [docs/56-domain-tiers.md](56-domain-tiers.md).
 
 Wichtig: **cloudflared braucht keinen Port-Forward am Router.** Der Tunnel
 baut die Verbindung von innen nach außen auf (siehe
-[docs/22-cloudflare-tunnel.md](22-cloudflare-tunnel.md)). Welche Hostnamen
-extern erreichbar sind, steht ausschließlich in
-`argocd/apps/platform/cloudflared/values.yaml` (`ingress.rules`) — nicht jede App mit
-LAN-Ingress ist automatisch auch extern erreichbar.
+[docs/22-cloudflare-tunnel.md](22-cloudflare-tunnel.md)). `cloudflared`
+selbst kennt nur zwei bis drei Wildcard-Regeln (eine pro Tier) und leitet
+alles an Traefik weiter — welche Hostnamen davon tatsächlich extern
+erreichbar sind, entscheidet ausschließlich, welche Apps zusätzlich zu
+ihrem `*.homeserver`-Host auch einen `*.pke-lab.de`-Host in der eigenen
+`ingress.hosts`-Liste tragen (siehe [docs/56-domain-tiers.md](56-domain-tiers.md)).
+Nicht jede App mit LAN-Ingress ist automatisch auch extern erreichbar.
 
 Node-IP von `homeserver`: `192.168.178.94`. Traefik-LoadBalancer-IP (MetalLB):
 `192.168.178.200`.
 
 ---
 
-## Web-Apps (Traefik-Ingress, LAN via `*.homeserver`)
+## Web-Apps (Traefik-Ingress, LAN via `*.tier.homeserver`)
 
-| App | Namespace | Interner Service:Port | LAN (`*.homeserver`) | Extern (`*.pke-lab.de`) |
-|---|---|---|---|---|
-| Immich | immich | immich-server:80 | immich.homeserver | immich.pke-lab.de |
-| Nextcloud | nextcloud | nextcloud:80 | nextcloud.homeserver | nextcloud.pke-lab.de |
-| Paperless-ngx | paperless-ngx | paperless-ngx:80 | paperless.homeserver | paperless.pke-lab.de |
-| Vaultwarden | vaultwarden | vaultwarden:80 | vault.homeserver | vault.pke-lab.de |
-| Mealie | mealie | mealie:80 | mealie.homeserver | mealie.pke-lab.de |
-| n8n | n8n | n8n:80 | n8n.homeserver | – (aus Cloudflare Tunnel entfernt, Security) |
-| Wiki.js | wikijs | wikijs:80 | wiki.homeserver | wiki.pke-lab.de |
-| Zammad | zammad | zammad-nginx:8080 | zammad.homeserver | support.pke-lab.de |
-| ntfy | ntfy | ntfy:80 | ntfy.homeserver | ntfy.pke-lab.de |
-| Grafana | monitoring | monitoring-grafana:80 | grafana.homeserver | grafana.pke-lab.de |
-| Authentik | authentik | authentik-server:80 | authentik.homeserver | authentik.pke-lab.de |
-| MediaMTX (Playback) | mediamtx | mediamtx:8888 (HLS) | stream.homeserver | stream.pke-lab.de |
-| Gotify | gotify | gotify:80 | gotify.homeserver, gotify-api.homeserver | — (nur LAN/Tailnet) |
-| Uptime Kuma | uptime-kuma | uptime-kuma:80 | uptime-kuma.homeserver | — |
-| Semaphore | semaphore | semaphore:3000 | semaphore.homeserver, semaphore-api.homeserver | — |
-| Pi-hole (Web-UI) | pihole | pihole:80 | pihole.homeserver | — |
-| Alamos-Apager | alamos-apager | alamos-apager:8080 | alamos-apager.homeserver | — |
-| Xibo CMS | xibosignage | xibosignage-cms:80 | xibo.homeserver | — |
-| Homeserver-Dashboard-API | carplay-api | carplay-api:80 | carplay-api.homeserver | — |
-| Tinyteller | tinyteller | tinyteller-frontend:80 | tinyteller.homeserver | — |
-| Argo Workflows | argo-workflows | argo-workflows-server:2746 | argo-workflows.homeserver | — |
-| Headlamp | headlamp | headlamp:80 | headlamp.homeserver | — |
-| MinIO Console | minio | minio-console:9001 | minio.homeserver | — |
-| kubeseal-webgui | kubeseal-webgui | kubeseal-webgui:8080 | kubeseal-webgui.homeserver | — |
-| example-whoami | example-whoami | example-whoami:80 | whoami.homeserver | — |
+| App | Tier | Namespace | Interner Service:Port | LAN (`*.tier.homeserver`) | Extern (`*.tier.pke-lab.de`) |
+|---|---|---|---|---|---|
+| Immich | prod | immich | immich-server:80 | immich.prod.homeserver | immich.prod.pke-lab.de |
+| Nextcloud | prod | nextcloud | nextcloud:80 | nextcloud.prod.homeserver | nextcloud.prod.pke-lab.de |
+| Paperless-ngx | prod | paperless-ngx | paperless-ngx:80 | paperless.prod.homeserver | — (nur LAN/Tailnet) |
+| Vaultwarden | tech (Ausnahme) | vaultwarden | vaultwarden:80 | vault.tech.homeserver | vault.tech.pke-lab.de |
+| Mealie | prod | mealie | mealie:80 | mealie.prod.homeserver | mealie.prod.pke-lab.de |
+| n8n | prod | n8n | n8n:80 | n8n.prod.homeserver | – (aus Cloudflare Tunnel entfernt, Security) |
+| Wiki.js | prod | wikijs | wikijs:80 | wiki.prod.homeserver | wiki.prod.pke-lab.de |
+| Zammad | tech (Ausnahme) | zammad | zammad-nginx:8080 | zammad.tech.homeserver | support.tech.pke-lab.de |
+| ntfy | tech | ntfy | ntfy:80 | ntfy.tech.homeserver | ntfy.tech.pke-lab.de |
+| Grafana | tech | monitoring | monitoring-grafana:80 | grafana.tech.homeserver | grafana.tech.pke-lab.de |
+| Authentik | tech | authentik | authentik-server:80 | authentik.tech.homeserver | — (nur LAN/Tailnet) |
+| MediaMTX (Playback) | prod | mediamtx | mediamtx:8888 (HLS) | stream.prod.homeserver | stream.prod.pke-lab.de |
+| Gotify | tech | gotify | gotify:80 | gotify.tech.homeserver, gotify-api.tech.homeserver | — (nur LAN/Tailnet) |
+| Uptime Kuma | prod | uptime-kuma | uptime-kuma:80 | uptime-kuma.prod.homeserver | — |
+| Semaphore | tech | semaphore | semaphore:3000 | semaphore.tech.homeserver, semaphore-api.tech.homeserver | — |
+| Pi-hole (Web-UI) | tech | pihole | pihole:80 | pihole.tech.homeserver | — |
+| Alamos-Apager | prod | alamos-apager | alamos-apager:8080 | alamos-apager.prod.homeserver | — |
+| Xibo CMS | prod | xibosignage | xibosignage-cms:80 | xibo.prod.homeserver | — |
+| Homeserver-Dashboard-API | prod | carplay-api | carplay-api:80 | carplay-api.prod.homeserver | — |
+| Tinyteller | prod | tinyteller | tinyteller-frontend:80 | tinyteller.prod.homeserver | — |
+| Argo Workflows | tech | argo-workflows | argo-workflows-server:2746 | argo-workflows.tech.homeserver | — |
+| Headlamp | tech | headlamp | headlamp:80 | headlamp.tech.homeserver | — |
+| MinIO Console | tech | minio | minio-console:9001 | minio.tech.homeserver | — |
+| kubeseal-webgui | tech | kubeseal-webgui | kubeseal-webgui:8080 | kubeseal-webgui.tech.homeserver | — |
+| example-whoami | prod | example-whoami | example-whoami:80 | whoami.prod.homeserver | — |
 
-Alle `*.homeserver`-Hosts laufen über Traefik auf `192.168.178.200:80` (bzw.
-`:443` mit TLS, sofern konfiguriert) — kein individueller Port pro App nötig,
-Traefik routet per Host-Header. Alle `*.pke-lab.de`-Hosts laufen über den
-Cloudflare Tunnel direkt auf den jeweiligen Service (an Traefik vorbei), siehe
-`argocd/apps/platform/cloudflared/values.yaml`.
+Nur die 9 Apps mit einem Eintrag in der Extern-Spalte tragen tatsächlich
+einen zusätzlichen `*.pke-lab.de`-Host in ihrer eigenen `ingress.hosts`-Liste
+— alle anderen (auch alle mit „—“) sind ausschließlich über LAN/Tailscale
+erreichbar, egal was `cloudflared`s Wildcard-Regeln theoretisch matchen
+würden (siehe [docs/56-domain-tiers.md](56-domain-tiers.md)).
+
+Alle `*.homeserver`- **und** alle `*.pke-lab.de`-Hosts laufen über Traefik
+auf `192.168.178.200:80`/`:443` — kein individueller Port pro App nötig,
+Traefik routet in beiden Fällen per Host-Header. `cloudflared` selbst
+terminiert keinen Traffic mehr an einem App-Service direkt, sondern reicht
+alles unverändert an Traefik weiter (`argocd/apps/platform/cloudflared/values.yaml`
+→ `ingress.rules`, zwei bis drei Wildcard-Regeln statt einer Regel pro App).
 
 ---
 
@@ -125,8 +139,9 @@ Tunnel-Client, baut die Verbindung ausschließlich nach außen auf.
 
 | Ich will ändern... | Datei |
 |---|---|
-| LAN-Hostname (`*.homeserver`) einer App | `argocd/apps/<platform\|workloads>/<app>/values.yaml` → `ingress.hosts[].host` |
-| Externe Erreichbarkeit (`*.pke-lab.de`) hinzufügen/entfernen | `argocd/apps/platform/cloudflared/values.yaml` → `ingress.rules` |
+| LAN-Hostname (`*.tier.homeserver`) einer App | `argocd/apps/<platform\|workloads>/<app>/values.yaml` → `ingress.hosts[].host` |
+| Externe Erreichbarkeit (`*.tier.pke-lab.de`) für eine App hinzufügen/entfernen | `argocd/apps/<platform\|workloads>/<app>/values.yaml` → zusätzlichen (bzw. entfernten) Eintrag in `ingress.hosts` — **nicht** mehr in `cloudflared/values.yaml`, die Wildcard-Regeln dort decken bereits jedes Tier ab |
+| Neues Tier extern erreichbar machen (aktuell nur `tech`/`prod`/`dev`) | `argocd/apps/platform/cloudflared/values.yaml` → `ingress.rules` um eine weitere `*.<tier>.pke-lab.de`-Regel ergänzen |
 | Internen Service-Port einer App | `argocd/apps/<platform\|workloads>/<app>/values.yaml` → `service.port`/`targetPort` (Chart-abhängig) |
 | NodePort (Pi-hole DNS, MediaMTX Publish) | `argocd/apps/<platform\|workloads>/<app>/values.yaml` → `service.nodePort`/`publishService.ports.*.nodePort` — danach ggf. UFW-Regel auf neuen Port anpassen |
 | ArgoCD-Zugriffsport | ArgoCD-Bootstrap (`ansible/roles/argocd/`) bzw. Helm-Values des ArgoCD-Charts selbst (nicht Teil der App-Wrapper-Charts) |

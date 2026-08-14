@@ -45,6 +45,12 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
+    # Externer Host — per Cloudflare-Tunnel-Wildcard (cloudflared) an
+    # Traefik weitergereicht, siehe docs/56-domain-tiers.md.
+    - host: ntfy.tech.pke-lab.de
+      paths:
+        - path: /
+          pathType: Prefix
   tls: []
 
 persistence:
