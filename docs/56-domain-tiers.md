@@ -56,8 +56,8 @@ LAN/Tailnet:  Client → Traefik (Host-Header "app.tech.homeserver"
 
 Internet:     Client → app-tech.pke-lab.de / app-prod.pke-lab.de
                      → Cloudflare Edge → cloudflared
-                     → Traefik (Wildcard-Regel *-tech.pke-lab.de bzw.
-                                 *-prod.pke-lab.de)
+                     → Traefik (EINE Wildcard-Regel *.pke-lab.de für die
+                                 ganze Zone, s. u.)
                      → Host-Header "app-tech.pke-lab.de" → passender Service
 ```
 
@@ -86,11 +86,25 @@ aufgelöst, ganz ohne Anpassung an dnsmasq/CoreDNS.
 ## Externe Erreichbarkeit: Wildcard-Routing über Traefik
 
 `argocd/apps/platform/cloudflared/values.yaml` enthält **nicht** mehr eine
-Ingress-Regel pro extern freigegebener App, sondern nur noch zwei bis drei
-Wildcard-Regeln (eine pro Tier: `*-tech.pke-lab.de`, `*-prod.pke-lab.de`,
-optional `*-dev.pke-lab.de`) — alle drei zeigen auf
-`http://traefik.kube-system.svc.cluster.local:80`, also auf Traefik selbst,
-genau wie der interne LAN-Pfad das für `*.homeserver` bereits tut.
+Ingress-Regel pro extern freigegebener App, sondern nur noch **eine
+einzige** Wildcard-Regel für die ganze Zone (`*.pke-lab.de`), die auf
+`http://traefik.kube-system.svc.cluster.local:80` zeigt, also auf Traefik
+selbst, genau wie der interne LAN-Pfad das für `*.homeserver` bereits tut.
+
+**Nicht** eine Regel pro Tier (`*-tech.pke-lab.de`, `*-prod.pke-lab.de`,
+...) — das war der erste Versuch, funktioniert bei cloudflared aber nicht:
+laut `cloudflared tunnel ingress rule --help` erkennt cloudflared `*`
+ausschließlich als **komplettes** DNS-Label (`*.example.com`), kein Muster
+mit Stern + Literal *innerhalb* desselben Labels
+(`*-tech.example.com`) — leer bestätigt per
+`cloudflared tunnel ingress rule` im laufenden Pod, das fiel auf
+`defaultService`/404 zurück statt zu matchen. Da `grafana-tech` selbst
+aber schon ein einziges vollständiges Label ist (Bindestrich ist
+innerhalb eines Labels erlaubt), deckt ein simples `*.pke-lab.de` alle
+Tiers gleichzeitig ab — die Tier-Trennung ist auf cloudflared-Ebene gar
+nicht nötig, sie ist reine Namenskonvention für Menschen. Welche App
+tatsächlich erreichbar ist, entscheidet ausschließlich Traefik anhand des
+exakten Host-Headers (siehe unten).
 
 **Eine Wildcard-Regel macht dadurch keine App automatisch extern
 erreichbar.** Traefik matcht Ingress-Ressourcen weiterhin exakt nach
@@ -117,8 +131,8 @@ dieser Migration):
 
 Alle anderen Apps (Authentik, Semaphore, Pi-hole, MinIO, Gotify, Headlamp,
 Paperless-ngx, n8n, ...) bleiben ausschließlich LAN/Tailscale-erreichbar —
-auch wenn ihr Hostname theoretisch unter eine der Wildcard-Regeln fallen
-würde, weil ihnen schlicht der zweite Ingress-Host fehlt.
+auch wenn ihr Hostname theoretisch unter die Wildcard-Regel fallen würde,
+weil ihnen schlicht der zweite Ingress-Host fehlt.
 
 Eine App extern freigeben/entfernen heißt also: den `*-pke-lab.de`-Host in
 der `ingress.hosts`-Liste der **App selbst** ergänzen/löschen — nicht mehr
