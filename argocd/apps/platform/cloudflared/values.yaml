@@ -77,32 +77,32 @@ tunnel:
 
   ingress:
     rules:
-      - hostname: wiki.pke-lab.de
+      - hostname: wiki.prod.pke-lab.de
         service: http://wikijs.wikijs.svc.cluster.local:80
-      - hostname: ntfy.pke-lab.de
+      - hostname: ntfy.tech.pke-lab.de
         service: http://ntfy.ntfy.svc.cluster.local:80
-      - hostname: support.pke-lab.de
+      - hostname: support.tech.pke-lab.de
         service: http://zammad-nginx.zammad.svc.cluster.local:8080
-      - hostname: grafana.pke-lab.de
+      - hostname: grafana.tech.pke-lab.de
         service: http://monitoring-grafana.monitoring.svc.cluster.local:80
-      - hostname: authentik.pke-lab.de
+      - hostname: authentik.tech.pke-lab.de
         service: http://authentik-server.authentik.svc.cluster.local:80
       # Zeigt wie die anderen Hostnamen direkt auf den Backend-Service —
       # die Zuschauer-Autorisierung übernimmt mediamtx selbst per
       # HTTP-Basic-Auth (kein ForwardAuth-Umweg über Traefik mehr nötig).
       # RTMP/RTSP-Publish läuft bewusst NICHT über den Tunnel, siehe
       # docs/24-mediamtx.md.
-      - hostname: stream.pke-lab.de
+      - hostname: stream.prod.pke-lab.de
         service: http://mediamtx.mediamtx.svc.cluster.local:8888
       - hostname: paperless.pke-lab.de
         service: http://paperless-ngx.paperless-ngx.svc.cluster.local:80
-      - hostname: mealie.pke-lab.de
+      - hostname: mealie.prod.pke-lab.de
         service: http://mealie.mealie.svc.cluster.local:80
-      - hostname: vault.pke-lab.de
+      - hostname: vault.tech.pke-lab.de
         service: http://vaultwarden.vaultwarden.svc.cluster.local:80
-      - hostname: nextcloud.pke-lab.de
+      - hostname: nextcloud.prod.pke-lab.de
         service: http://nextcloud.nextcloud.svc.cluster.local:80
-      - hostname: immich.pke-lab.de
+      - hostname: immich.prod.pke-lab.de
         service: http://immich-server.immich.svc.cluster.local:80
     defaultService: "http_status:404"
 
