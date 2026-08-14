@@ -8,7 +8,7 @@ banana_pi_kiosk_enabled: true
 # Normalbetrieb: der Pi zeigt "{{ banana_pi_kiosk_base_url }}/start?station=
 # {{ banana_pi_kiosk_station }}", der Cluster loest serverseitig zur echten
 # ALAMOS-AMweb-URL auf (siehe docs/19-alamos-apager.md).
-banana_pi_kiosk_base_url: "http://alamos-apager.homeserver"
+banana_pi_kiosk_base_url: "http://alamos-apager.prod.homeserver"
 
 # Stationsname dieses Pi. MUSS pro Host gesetzt werden (siehe
 # ansible/inventory/hosts.yml, Gruppe banana_pis) und muss zu einem Key im

@@ -30,4 +30,4 @@ vmagent_scrape_interval: "30s"
 # exponiert — siehe argocd/apps/platform/monitoring/templates/ingress-vm-write.yaml).
 # MUSS pro Host/Gruppe gesetzt werden (siehe ansible/group_vars/banana_pis.yml)
 # — kein Default, damit ein fehlender Wert laut auffaellt.
-# vmagent_remote_write_url: "http://vm-write.homeserver/api/v1/write"
+# vmagent_remote_write_url: "http://vm-write.tech.homeserver/api/v1/write"

@@ -33,7 +33,7 @@ ingress:
   enabled: true
   className: traefik
   annotations: {}
-  host: alamos-apager.homeserver
+  host: alamos-apager.prod.homeserver
 
 serviceAccount:
   create: true

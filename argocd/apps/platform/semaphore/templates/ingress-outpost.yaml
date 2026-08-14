@@ -1,5 +1,5 @@
 {{- if .Values.ingress.enabled }}
-# Separater Ingress für den Authentik-Outpost-Pfad auf semaphore.homeserver.
+# Separater Ingress für den Authentik-Outpost-Pfad auf semaphore.tech.homeserver.
 # /outpost.goauthentik.io/ muss zum Authentik-Server zeigen (nicht zu Semaphore),
 # damit der ForwardAuth-Login-Flow nach dem Login korrekt zurückleiten kann.
 # Kein ForwardAuth-Middleware hier — Authentik bedient diesen Pfad selbst.

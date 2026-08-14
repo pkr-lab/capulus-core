@@ -15,7 +15,7 @@ description: |
   dient als zentrale Medien-/Asset-Verwaltung.
 
   Web-Interface:
-    http://xibo.homeserver
+    http://xibo.prod.homeserver
 
   Komponenten:
     - Xibo CMS 4.5 (ghcr.io/xibosignage/xibo-cms)

@@ -1,5 +1,5 @@
 {{- if .Values.ingress.enabled }}
-# Separater Ingress für den Authentik-Outpost-Pfad auf gotify.homeserver.
+# Separater Ingress für den Authentik-Outpost-Pfad auf gotify.tech.homeserver.
 # /outpost.goauthentik.io/ muss zum Authentik-Server zeigen (nicht zu Gotify),
 # damit der ForwardAuth-Login-Flow nach dem Login korrekt zurückleiten kann.
 # Kein ForwardAuth-Middleware hier — Authentik bedient diesen Pfad selbst.

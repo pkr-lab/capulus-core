@@ -17,7 +17,7 @@ check any `argocd/apps/*/values.yaml`, `ingress.tls` is empty everywhere.
 Client-cert mTLS (`docs/14-cert-login.md` in capulus-core) is a real,
 partially-built plan, but it's not merged and today only targets a handful
 of admin UIs (Authentik, Grafana), not this API. `Constants.swift` points at
-`http://carplay-api.homeserver` to match that live reality, with an
+`http://carplay-api.prod.homeserver` to match that live reality, with an
 `NSAppTransportSecurity` exception for the `homeserver` domain generated
 into `Info.plist` from `project.yml` (see "Structure" below — this is *not*
 a hand-edited plist file). `MTLSDelegate.swift` documents exactly what to
@@ -108,7 +108,7 @@ tunnel as the homeserver.
 
 | Setting | Where | Default |
 |---|---|---|
-| API base URL | `Utilities/Constants.swift` → `apiBaseURL` | `http://carplay-api.homeserver` |
+| API base URL | `Utilities/Constants.swift` → `apiBaseURL` | `http://carplay-api.prod.homeserver` |
 | Refresh interval | `Constants.swift` → `refreshInterval` | 30s |
 | Bearer token | Settings screen (gear icon) → iOS Keychain | none until set |
 

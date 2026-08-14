@@ -23,7 +23,7 @@ resource_watchdog_ram_sustain_seconds: 300
 # ntfy-Ziel für die Shutdown-Meldung. Wird per `curl --resolve` direkt auf
 # die statische Server-IP aufgelöst (siehe thermal_watchdog-Rolle für die
 # Begründung).
-resource_watchdog_ntfy_host: "ntfy.homeserver"
+resource_watchdog_ntfy_host: "ntfy.tech.homeserver"
 resource_watchdog_ntfy_ip: "{{ network_static_ip }}"
 resource_watchdog_ntfy_topic: "Home-Lab-System"
 

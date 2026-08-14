@@ -107,7 +107,7 @@ authentik:
         # traefik.ingress.kubernetes.io/router.tls.options: authentik-authentik-mtls@kubernetescrd
         # traefik.ingress.kubernetes.io/router.middlewares: authentik-authentik-passtls@kubernetescrd
       hosts:
-        - authentik.homeserver
+        - authentik.tech.homeserver
       paths:
         - "/"
       pathType: Prefix
@@ -115,7 +115,7 @@ authentik:
       tls: []
       # tls:
       #   - hosts:
-      #       - authentik.homeserver
+      #       - authentik.tech.homeserver
       #     secretName: authentik-tls
 
     # serviceMonitor.enabled bleibt false: erzeugt eine ServiceMonitor-CRD
