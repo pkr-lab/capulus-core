@@ -48,7 +48,7 @@ ingress:
           pathType: Prefix
     # Externer Host — per Cloudflare-Tunnel-Wildcard (cloudflared) an
     # Traefik weitergereicht, siehe docs/56-domain-tiers.md.
-    - host: vault.tech.pke-lab.de
+    - host: vault-tech.pke-lab.de
       paths:
         - path: /
           pathType: Prefix
@@ -74,7 +74,7 @@ env:
   # Öffentliche Basis-URL — wird von Vaultwarden für Links (E-Mails, Icons,
   # U2F/WebAuthn-Origin-Check) genutzt. Muss zur extern erreichbaren Domain
   # passen (siehe argocd/apps/platform/cloudflared/values.yaml).
-  DOMAIN: "https://vault.tech.pke-lab.de"
+  DOMAIN: "https://vault-tech.pke-lab.de"
   # Seit Vaultwarden 1.30 läuft der Websocket-Server auf demselben Port wie
   # die HTTP-API — kein separater Port/Service nötig.
   WEBSOCKET_ENABLED: "true"

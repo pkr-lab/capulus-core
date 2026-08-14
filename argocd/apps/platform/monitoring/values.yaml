@@ -282,7 +282,7 @@ victoria-metrics-k8s-stack:
       # an Traefik weitergereicht, siehe docs/56-domain-tiers.md.
       hosts:
         - grafana.tech.homeserver
-        - grafana.tech.pke-lab.de
+        - grafana-tech.pke-lab.de
       tls: []
 
     # Grafana itself is scraped by VMAgent.
@@ -291,14 +291,32 @@ victoria-metrics-k8s-stack:
 
     grafana.ini:
       server:
-        domain: grafana.tech.pke-lab.de
-        root_url: "https://grafana.tech.pke-lab.de"
+        domain: grafana-tech.pke-lab.de
+        root_url: "https://grafana-tech.pke-lab.de"
 
   # ---- prometheus-node-exporter ----------------------------
   # DaemonSet: one pod per node (homeserver, worker-0, worker-1), exposes
   # host CPU/RAM/disk/network/load. Mounts /proc and /sys read-only.
   prometheus-node-exporter:
     enabled: true
+    # worker-0/worker-1 werden vom cluster-power-manager nur bei Bedarf
+    # geweckt und sind sonst absichtlich ausgeschaltet (ansible/roles/
+    # cluster_power_manager) -> für k8s dauerhaft "unreachable". Jedes
+    # DaemonSet toleriert node.kubernetes.io/unreachable/not-ready OHNE
+    # tolerationSeconds (Kubernetes-Default, nicht hier konfigurierbar) —
+    # der alte Pod auf einem schlafenden Worker bleibt beim Chart-Update
+    # daher dauerhaft "Terminating" hängen. Beim Default
+    # maxUnavailable: 1 blockiert genau dieser eine feststeckende Pod
+    # JEDEN weiteren Rollout, auch auf gesunden Nodes (homeserver) — der
+    # Helm-Release/die ArgoCD-App bleibt dadurch dauerhaft "Progressing"
+    # statt "Healthy" (siehe docs/50-incident-2026-08-12.md, Abschnitt
+    # "Grafana zeigte nach Recovery nur noch UGREEN-NAS-Werte"). Fix:
+    # genug Unavailable-Budget, dass beide Worker gleichzeitig "stuck"
+    # sein können, ohne den Rollout auf homeserver zu blockieren.
+    updateStrategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxUnavailable: 2
     resources:
       requests:
         cpu: 20m
