@@ -83,7 +83,7 @@ nextcloud:
             pathType: Prefix
       # Externer Host — per Cloudflare-Tunnel-Wildcard (cloudflared) an
       # Traefik weitergereicht, siehe docs/56-domain-tiers.md.
-      - host: nextcloud.prod.pke-lab.de
+      - host: nextcloud-prod.pke-lab.de
         paths:
           - path: /
             pathType: Prefix
@@ -92,7 +92,7 @@ nextcloud:
   # Trusted Domains: intern (*.homeserver, Traefik) + extern (Cloudflare
   # Tunnel, siehe argocd/apps/platform/cloudflared/values.yaml). Ohne beide Einträge
   # weist Nextcloud Requests mit "Access through untrusted domain" ab.
-  trustedDomains: "nextcloud.prod.homeserver nextcloud.prod.pke-lab.de"
+  trustedDomains: "nextcloud.prod.homeserver nextcloud-prod.pke-lab.de"
 
   persistence:
     html:
