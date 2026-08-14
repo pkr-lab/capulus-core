@@ -113,15 +113,17 @@ falls Option B aus docs/22 aktiv ist).
 ## Neuen Dienst freigeben
 
 `argocd/apps/platform/cloudflared/values.yaml` selbst bleibt dabei
-**unangetastet** — sie enthält nur noch zwei bis drei Wildcard-Regeln (eine
-pro Tier: `*.tech.pke-lab.de`, `*.prod.pke-lab.de`, ggf. `*.dev.pke-lab.de`),
-die pauschal an Traefik weiterreichen. Freigeben passiert stattdessen direkt
-in der `values.yaml` des jeweiligen Dienstes, analog zum internen
-`*.homeserver`-Host. Kompletter Ablauf am Beispiel Grafana:
+**unangetastet** — sie enthält nur noch **eine einzige** Wildcard-Regel
+(`*.deine-domain.de`), die pauschal an Traefik weiterreicht, unabhängig
+vom Tier (siehe [docs/56-domain-tiers.md](56-domain-tiers.md), warum eine
+Regel pro Tier bei cloudflared technisch nicht funktioniert). Freigeben
+passiert stattdessen direkt in der `values.yaml` des jeweiligen Dienstes,
+analog zum internen `*.homeserver`-Host — **mit Bindestrich statt Punkt**
+vor dem Tier. Kompletter Ablauf am Beispiel Grafana:
 
 Mit der empfohlenen Wildcard-DNS-Route aus
 [docs/22, Schritt 4](22-cloudflare-tunnel.md#schritt-4--dns-routing-wildcard-statt-einzel-records)
-ist dafür **kein DNS-Schritt** mehr nötig — `grafana.tech.deine-domain.de`
+ist dafür **kein DNS-Schritt** mehr nötig — `grafana-tech.deine-domain.de`
 löst durch den bestehenden `*`-Record bereits zum Tunnel auf.
 
 ```yaml
@@ -130,12 +132,12 @@ grafana:
   ingress:
     hosts:
       - grafana.tech.homeserver
-      - grafana.tech.deine-domain.de          # neu — macht Grafana extern erreichbar
+      - grafana-tech.deine-domain.de          # neu — macht Grafana extern erreichbar
 ```
 
 > **Nur falls du dich in docs/22 für die Alternative mit expliziten
 > Einzel-Records entschieden hast:** zusätzlich
-> `cloudflared tunnel route dns homeserver grafana.tech.deine-domain.de`
+> `cloudflared tunnel route dns homeserver grafana-tech.deine-domain.de`
 > ausführen.
 
 ```bash
@@ -150,7 +152,7 @@ mit, seine Wildcard-Regel matchte den Hostnamen ja schon vorher, nur ohne
 dass Traefik dahinter eine passende Route hatte). Testen:
 
 ```bash
-curl -I https://grafana.tech.deine-domain.de
+curl -I https://grafana-tech.deine-domain.de
 ```
 
 > Denk an [Cloudflare Access](22-cloudflare-tunnel.md#zusätzliche-absicherung-cloudflare-access),
@@ -166,7 +168,7 @@ Wildcard-Regel matcht zwar weiterhin, liefert aber (über Traefiks eigenen
 404) denselben Effekt wie vorher `defaultService: http_status:404`:
 
 ```bash
-# grafana.tech.deine-domain.de aus ingress.hosts in monitoring/values.yaml löschen, dann
+# grafana-tech.deine-domain.de aus ingress.hosts in monitoring/values.yaml löschen, dann
 git add argocd/apps/platform/monitoring/values.yaml
 git commit -m "feat(monitoring): remove grafana from external access"
 git push
