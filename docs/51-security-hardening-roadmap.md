@@ -24,15 +24,15 @@ absichtlich so gewählt, dass jede Phase auf der vorherigen aufbaut.
 
 ### Phase 5 — Internes TLS für `*.homeserver`
 
-**Status (13.08.2026): Cluster-seitig live und verifiziert.** Eigene
-openssl-CA (statt mkcert direkt — Nutzer-Metadaten, Repo ist öffentlich),
-Zertifikat mit expliziter SAN-Liste statt Wildcard (`*.homeserver`
-scheitert strukturell an einer OpenSSL-Sicherheitsregel gegen
-Single-Label-Suffix-Wildcards — siehe docs/54 für die Details, per
-`openssl s_client -verify_hostname` gegen mehrere echte Hosts bestätigt).
-Vollständige Detail-Doku, Design-Entscheidungen und Anleitung pro
-Geräte-Typ (Linux/Windows/macOS/iOS/Android):
-[docs/54-internal-tls.md](54-internal-tls.md).
+**Status (16.08.2026): auf cert-manager umgestellt.** Der ursprüngliche
+manuelle openssl/mkcert-Ablauf ist abgelöst durch cert-manager, das
+Zertifikate automatisch aus derselben Homeserver-Root-CA signiert und vor
+Ablauf selbstständig erneuert — Auslöser war ein stillschweigend
+veraltetes Zertifikat nach der Domain-Tier-Migration
+([docs/56-domain-tiers.md](56-domain-tiers.md)), das sich ohne laufenden
+Signier-Dienst nicht per Commit reparieren ließ. Vollständige Detail-Doku,
+Design-Entscheidungen und Anleitung pro Geräte-Typ
+(Linux/Windows/macOS/iOS/Android): [docs/54-internal-tls.md](54-internal-tls.md).
 
 **Ziel:** Aktuell laufen alle `*.homeserver`-Adressen über Klartext-`http://`
 (Traefik hat keine TLS-Zertifikate für das interne LAN).
@@ -40,11 +40,14 @@ Geräte-Typ (Linux/Windows/macOS/iOS/Android):
 **Ansatz:**
 1. Eigene kleine CA (openssl statt mkcert). **[Erledigt]**
 2. Zertifikat (SAN-Liste statt Wildcard, siehe docs/54), als
-   Traefik-Default-TLS-Cert (`TLSStore`) hinterlegt. **[Erledigt, verifiziert]**
+   Traefik-Default-TLS-Cert (`TLSStore`) hinterlegt, jetzt automatisch von
+   cert-manager ausgestellt/erneuert statt manuell signiert. **[Erledigt,
+   Umstellung auf cert-manager siehe docs/54]**
 3. Root-CA-Zertifikat auf allen Client-Geräten im Trust-Store installieren
-   — das ist der aufwendigste Teil (pro Gerät manuell). **[Teilweise —
-   Haupt-Dev-Rechner erledigt, weitere Geräte offen, bewusst nicht
-   blockierend für Schritt 4]**
+   — das ist der aufwendigste Teil (pro Gerät manuell), unverändert durch
+   die cert-manager-Umstellung, da dieselbe CA weiterverwendet wird.
+   **[Teilweise — Haupt-Dev-Rechner erledigt, weitere Geräte offen, bewusst
+   nicht blockierend für Schritt 4]**
 4. `http://` → `https://` in Docs/README nachziehen, sobald verifiziert.
    **[Erledigt]** — `authentik.homeserver` bewusst ausgenommen, siehe
    Fußnote in README.md (reserviert für das separate mTLS-Vorhaben in

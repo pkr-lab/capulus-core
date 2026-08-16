@@ -1,0 +1,52 @@
+# Values passed through to the cert-manager sub-chart.
+# All keys live under `cert-manager:` because that is the dependency name
+# (gleiches Muster wie argocd/apps/platform/sealed-secrets/values.yaml).
+cert-manager:
+  # CRDs als Teil des Helm-Release (statt separatem `kubectl apply -f`
+  # crds.yaml vor dem Chart-Install) — ArgoCD wendet dann alles in einem
+  # Sync an, kein manueller Vorab-Schritt nötig.
+  crds:
+    enabled: true
+    # CRDs (und damit alle bestehenden Certificate/Issuer-Objekte) bleiben
+    # erhalten, falls die App je aus ArgoCD entfernt wird — ein versehentliches
+    # Prune/Delete soll nicht sämtliche Zertifikatsdefinitionen mitreißen.
+    keep: true
+
+  replicaCount: 1
+
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 20m
+      memory: 64Mi
+
+  webhook:
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 10m
+        memory: 32Mi
+
+  cainjector:
+    resources:
+      limits:
+        cpu: 150m
+        memory: 192Mi
+      requests:
+        cpu: 10m
+        memory: 32Mi
+
+  # Prüft nach jedem Install/Upgrade per Test-Zertifikat, dass der Webhook
+  # erreichbar ist — nützlich in der Erstinbetriebnahme, aber der dafür
+  # gestartete Job hängt bei jedem ArgoCD-Sync ein zusätzliches
+  # Kubernetes-Job-Objekt an, das manuell aufgeräumt werden müsste
+  # (ArgoCD prunt abgeschlossene Jobs nicht automatisch nach). Deaktiviert,
+  # da die eigentliche Verifikation ohnehin über den echten
+  # `homeserver-wildcard-tls`-Certificate-Status läuft (siehe
+  # docs/54-internal-tls.md).
+  startupapicheck:
+    enabled: false
