@@ -37,6 +37,13 @@ spec:
     # where Traefik/CoreDNS actually read them from).
     - server: https://kubernetes.default.svc
       namespace: kube-system
+    # cert-manager (docs/54-internal-tls.md): eigener Namespace wie jede
+    # andere App, aber bewusst NICHT in argocd_platform_apps — das ist
+    # Cluster-Infrastruktur wie kube-system/argocd, kein App-Tier-Namespace,
+    # und soll deshalb kein tier-default-ingress NetworkPolicy/security-tier-
+    # Label bekommen (siehe bootstrap-networkpolicies.yaml.j2).
+    - server: https://kubernetes.default.svc
+      namespace: cert-manager
   clusterResourceWhitelist:
     - group: "*"
       kind: "*"
