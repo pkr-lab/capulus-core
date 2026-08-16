@@ -123,7 +123,7 @@ der ArgoCD-UI bei der `vaultwarden`-App klicken).
 ```bash
 SRV='ssh -i ~/.ssh/id_ed25519 ubuntu@homeserver'
 $SRV 'sudo kubectl -n vaultwarden get pods,svc,ingress,pvc,sealedsecret,secret'
-curl -sS https://vault.homeserver/alive
+curl -sS https://vault.tech.homeserver/alive
 ```
 
 Erwartet:
@@ -215,7 +215,58 @@ bei einer laufenden, offenen DB) auf das NAS — Details:
 
 ---
 
-## 8. Troubleshooting
+## 8. Restore nach Redeploy / Disaster Recovery
+
+Vaultwarden kennt keinen "User per API/Ansible anlegen"-Mechanismus, der
+einen bestehenden Tresor mitbringt — Passwörter, Attachments und das
+eigene 2FA/TOTP des Accounts (`info@edv-kretzer.de`) liegen alle
+verschlüsselt in `db.sqlite3` + `rsa_key.pem`. Der Account ist deshalb
+nach einem Redeploy (z. B. verlorene `local-path`-PVC nach einem
+Node-Wechsel) automatisch wieder vollständig da, sobald diese Dateien aus
+dem NAS-Backup (siehe [Abschnitt 7](#7-warum-kein-nas-storage-für-die-haupt-pvc)
+und [docs/36-nas-backup.md](36-nas-backup.md)) zurückkopiert sind — ein
+separater Schritt, um den Nutzer "neu anzulegen", ist nicht nötig.
+
+Dafür gibt es die Ansible-Rolle `vaultwarden_restore`
+(`ansible/roles/vaultwarden_restore/`, Playbook
+`ansible/vaultwarden-restore.yml`):
+
+```bash
+make vaultwarden-restore FORCE_RESTORE=true
+```
+
+Ablauf (alles automatisiert, läuft gegen den `homeserver`-Host, der
+`kubectl` bereits lokal hat):
+
+1. `vaultwarden`-Deployment auf 0 Replicas skalieren (keine parallel
+   schreibende Instanz während des Restores).
+2. Ein einmaliger `Job` (Manifest wird von Ansible gerendert und direkt per
+   `kubectl apply -f -` angewendet — bewusst **nicht** Teil des Helm-Charts,
+   damit ArgoCD ihn nicht als Dauerzustand verwaltet/prunt) mountet die
+   `vaultwarden-data`-PVC (rw) und die `vaultwarden-backup`-PVC (ro) und
+   spiegelt Letztere zurück auf Erstere.
+3. Deployment wieder auf 1 Replica skalieren, `rollout status` abwarten,
+   `/alive` prüfen.
+
+**Sicherheitsgurt:** Ohne `FORCE_RESTORE=true` (Default `false`) bricht die
+Rolle sofort mit einer Fehlermeldung ab. Das Playbook ist bewusst **nicht**
+Teil von `site.yml`/`make install` — ein automatischer Lauf bei jedem
+normalen Deploy könnte sonst live Tresordaten mit einem älteren Backup-Stand
+überschreiben. `make vaultwarden-restore` also nur gezielt nach einem
+echten Redeploy oder Datenverlust ausführen, nie routinemäßig.
+
+**Wichtig:** Das setzt voraus, dass die `vaultwarden-backup`-PVC auf der
+NAS noch existiert und der letzte nächtliche `backup-cronjob.yaml`-Lauf
+erfolgreich war (`kubectl -n vaultwarden get jobs`). Ist auch dieser Stand
+verloren (z. B. NAS-Totalausfall), bleibt nur der manuelle
+restic-Restore von der externen USB-Platte, siehe
+[docs/36-nas-backup.md → Wiederherstellung](36-nas-backup.md#wiederherstellung)
+— das NAS selbst bleibt bewusst außerhalb von Ansible verwaltet, dieser
+Pfad wird nicht automatisiert.
+
+---
+
+## 9. Troubleshooting
 
 | Symptom | Hinweis |
 |---|---|

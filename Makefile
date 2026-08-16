@@ -172,6 +172,13 @@ render-bootstrap: ## Regenerate argocd/bootstrap/root-applicationset.yaml from t
 vault-edit: ## Edit the vault-encrypted vars file.
 	ansible-vault edit $(ANSIBLE_DIR)/group_vars/all.yml
 
+.PHONY: vaultwarden-restore
+VAULTWARDEN_RESTORE_PLAYBOOK := $(ANSIBLE_DIR)/vaultwarden-restore.yml
+FORCE_RESTORE ?= false
+
+vaultwarden-restore: ## Vaultwarden-Daten aus der NAS-Backup-PVC wiederherstellen (ueberschreibt Live-Daten!). Erst mit FORCE_RESTORE=true bestaetigen.
+	ansible-playbook -i $(INVENTORY) $(VAULTWARDEN_RESTORE_PLAYBOOK) -e force_restore=$(FORCE_RESTORE) $(VAULT_OPTS)
+
 .PHONY: clean
 clean: ## Remove cached collections and temp artifacts.
 	rm -rf ~/.ansible/collections/ansible_collections/{ansible,community,kubernetes}
