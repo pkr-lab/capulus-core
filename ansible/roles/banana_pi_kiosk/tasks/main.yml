@@ -46,6 +46,7 @@
       - x11-xserver-utils
       - curl
       - scrot
+      - libnss3-tools
     state: present
     update_cache: true
     cache_valid_time: 3600
@@ -69,6 +70,50 @@
     mode: "0644"
   when: banana_pi_kiosk_enabled | bool
   notify: Homeserver-CA-Vertrauensspeicher aktualisieren
+
+# ---- Homeserver-Root-CA zusaetzlich in die NSS-Datenbank importieren -----
+# Chromium vertraut auf Linux NICHT (nur) dem System-Trust-Store
+# (update-ca-certificates) -- es liest Zertifikate aus der NSS-Datenbank
+# des jeweiligen Users (~/.pki/nssdb), siehe docs/54-internal-tls.md,
+# Abschnitt "Client-Geraete" ("Fuer Firefox/Chrome zusaetzlich (NSS-
+# Datenbank)"). Genau dieser Schritt fehlte hier bisher -- Symptom:
+# Chromium zeigt trotz erfolgreichem update-ca-certificates weiterhin
+# NET::ERR_CERT_AUTHORITY_INVALID.
+- name: NSS-Datenbank-Verzeichnis des Kiosk-Users anlegen
+  ansible.builtin.file:
+    path: "/home/{{ banana_pi_kiosk_user }}/.pki/nssdb"
+    state: directory
+    owner: "{{ banana_pi_kiosk_user }}"
+    group: "{{ banana_pi_kiosk_user }}"
+    mode: "0700"
+  when: banana_pi_kiosk_enabled | bool
+
+- name: Pruefen ob Homeserver-Root-CA bereits in NSS-Datenbank des Kiosk-Users vertraut ist
+  become: true
+  become_user: "{{ banana_pi_kiosk_user }}"
+  ansible.builtin.command: >-
+    certutil -d sql:/home/{{ banana_pi_kiosk_user }}/.pki/nssdb
+    -L -n homeserver-root-ca
+  register: banana_pi_kiosk_nssdb_ca_check
+  changed_when: false
+  failed_when: false
+  when: banana_pi_kiosk_enabled | bool
+
+- name: Homeserver-Root-CA in NSS-Datenbank des Kiosk-Users importieren
+  become: true
+  become_user: "{{ banana_pi_kiosk_user }}"
+  # -i braucht einen Pfad auf dem Remote-Host (anders als bei copy/template
+  # wird der Pfad hier nicht vom Control-Node uebertragen) -- deshalb der
+  # bereits per "Homeserver-Root-CA-Zertifikat deployen" oben auf den Pi
+  # kopierte Pfad, nicht playbook_dir (das zeigt auf den Control-Node).
+  ansible.builtin.command: >-
+    certutil -d sql:/home/{{ banana_pi_kiosk_user }}/.pki/nssdb
+    -A -t "C,," -n homeserver-root-ca
+    -i /usr/local/share/ca-certificates/homeserver-root-ca.crt
+  when:
+    - banana_pi_kiosk_enabled | bool
+    - banana_pi_kiosk_nssdb_ca_check.rc != 0
+  notify: Reload getty@tty1
 
 # ---- Vorinstallierten Display-Manager deaktivieren -----------------------
 # Das Armbian-Image bringt lightdm mit, das beim Boot eine eigene X-Session
