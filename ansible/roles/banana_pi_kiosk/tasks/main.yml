@@ -45,6 +45,7 @@
       - unclutter
       - x11-xserver-utils
       - curl
+      - scrot
     state: present
     update_cache: true
     cache_valid_time: 3600
@@ -145,6 +146,20 @@
     mode: "0755"
   when: banana_pi_kiosk_enabled | bool
   notify: Reload getty@tty1
+
+# ---- On-Demand-Screenshot (manuelle Sichtpruefung, kein Automatismus) ---
+# Bewusst kein Timer/Dienst (kein x11vnc, kein Cron) -- nur ein Skript, das
+# bei Bedarf per SSH ausgefuehrt wird, siehe
+# docs/45-vereinsheim-alarmmonitor.md, "Sichtpruefung ohne physischen
+# Zugriff". Vermeidet einen staendig offenen/laufenden Zugriffspfad.
+- name: Screenshot-Skript deployen
+  ansible.builtin.template:
+    src: banana-pi-screenshot.sh.j2
+    dest: /usr/local/bin/banana-pi-screenshot.sh
+    owner: root
+    group: root
+    mode: "0755"
+  when: banana_pi_kiosk_enabled | bool
 
 # ---- Heartbeat (zentraler ntfy-Ausfall-Alarm in alamos-apager) ---------
 - name: Heartbeat-Skript deployen

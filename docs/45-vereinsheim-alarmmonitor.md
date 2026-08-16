@@ -298,6 +298,23 @@ gleichermaßen, nicht nur diesen.
    Post-Import-Schritt.
 4. Workflow in n8n aktivieren (`active: true` in der UI).
 
+## Sichtprüfung ohne physischen Zugriff
+
+Für dieses Gerät ist bewusst **kein** dauerhafter Remote-Zugriff (VNC o. Ä.)
+eingerichtet — anders als bei den Hardware-Checks über `journalctl`/`ps`
+lässt sich die *visuelle* Korrektheit der Anzeige damit nicht automatisiert
+prüfen. Stattdessen ein On-Demand-Screenshot-Skript
+(`ansible/roles/banana_pi_kiosk/templates/banana-pi-screenshot.sh.j2`), das
+nur bei Bedarf per SSH läuft — kein Timer, kein dauerhaft offener Port:
+
+```bash
+ssh pela@vereinsheim-alarmmonitor banana-pi-screenshot.sh
+scp pela@vereinsheim-alarmmonitor:/home/pela/kiosk-screenshot.png .
+```
+
+Nutzt `scrot` gegen `DISPLAY=:0` (die X-Session des Kiosk-Users) und
+überschreibt bei jedem Aufruf dieselbe Datei.
+
 ## Fehlerbehebung
 
 | Symptom | Check |
