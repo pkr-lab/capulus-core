@@ -1,0 +1,75 @@
+---
+# Stellt db.sqlite3, rsa_key.pem, Attachments und Sends aus der
+# vaultwarden-backup-PVC (vom naechtlichen backup-cronjob.yaml auf der NAS
+# gefuellt, siehe docs/32-vaultwarden.md + docs/36-nas-backup.md) auf die
+# vaultwarden-data-PVC zurueck. Der Account info@edv-kretzer.de inkl. aller
+# Passwoerter und des eigenen 2FA/TOTP ist danach automatisch wieder da,
+# weil das alles Teil derselben SQLite-Datei ist -- ein separater
+# "User anlegen"-Schritt ist nicht noetig.
+- name: Restore ohne force_restore=true ablehnen
+  ansible.builtin.fail:
+    msg: >-
+      Sicherheitsabbruch: dieser Lauf wuerde die aktuellen Daten im
+      {{ vaultwarden_release }}-data PVC mit dem NAS-Backup ueberschreiben.
+      Nur ausfuehren, wenn das wirklich gewollt ist (frischer Redeploy oder
+      Disaster Recovery), dann erneut mit -e force_restore=true starten.
+  when: not force_restore
+
+- name: Vaultwarden-Deployment auf 0 Replicas skalieren
+  ansible.builtin.command: >
+    kubectl -n {{ vaultwarden_namespace }} scale deployment/{{ vaultwarden_release }} --replicas=0
+  changed_when: true
+
+- name: Warten bis der Vaultwarden-Pod terminiert ist
+  ansible.builtin.command: >
+    kubectl -n {{ vaultwarden_namespace }} wait --for=delete pod
+    -l app.kubernetes.io/name=vaultwarden,app.kubernetes.io/instance={{ vaultwarden_release }}
+    --timeout=60s
+  changed_when: false
+  failed_when: false
+
+- name: Eventuellen Restore-Job aus einem vorherigen Lauf entfernen
+  ansible.builtin.command: >
+    kubectl -n {{ vaultwarden_namespace }} delete job vaultwarden-restore --ignore-not-found
+  changed_when: false
+
+- name: Restore-Job-Manifest rendern
+  ansible.builtin.template:
+    src: restore-job.yaml.j2
+    dest: /tmp/vaultwarden-restore-job.yaml
+    mode: "0600"
+
+- name: Restore-Job anwenden
+  ansible.builtin.command: kubectl apply -f /tmp/vaultwarden-restore-job.yaml
+  changed_when: true
+
+- name: Warten bis der Restore-Job abgeschlossen ist
+  ansible.builtin.command: >
+    kubectl -n {{ vaultwarden_namespace }} wait --for=condition=complete
+    job/vaultwarden-restore --timeout=180s
+  changed_when: false
+
+- name: Gerendertes Job-Manifest wieder entfernen
+  ansible.builtin.file:
+    path: /tmp/vaultwarden-restore-job.yaml
+    state: absent
+
+- name: Vaultwarden-Deployment wieder auf 1 Replica skalieren
+  ansible.builtin.command: >
+    kubectl -n {{ vaultwarden_namespace }} scale deployment/{{ vaultwarden_release }} --replicas=1
+  changed_when: true
+
+- name: Warten bis Vaultwarden wieder Ready ist
+  ansible.builtin.command: >
+    kubectl -n {{ vaultwarden_namespace }} rollout status deployment/{{ vaultwarden_release }} --timeout=120s
+  changed_when: false
+
+- name: Erreichbarkeit nach dem Restore pruefen (/alive)
+  ansible.builtin.uri:
+    url: "https://vault.tech.homeserver/alive"
+    validate_certs: false
+    status_code: 200
+  register: vaultwarden_alive_check
+  until: vaultwarden_alive_check.status == 200
+  retries: 5
+  delay: 5

@@ -1,0 +1,9 @@
+---
+vaultwarden_namespace: vaultwarden
+vaultwarden_release: vaultwarden
+vaultwarden_restore_image: "alpine:3.20"
+
+# Sicherheitsgurt: ohne -e force_restore=true bricht die Rolle sofort ab,
+# statt versehentlich einen lebenden Tresor mit dem NAS-Backup zu
+# ueberschreiben.
+force_restore: false
