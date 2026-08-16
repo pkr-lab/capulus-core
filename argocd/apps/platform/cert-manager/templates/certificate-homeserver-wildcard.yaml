@@ -1,0 +1,65 @@
+# Ersetzt sowohl den manuellen "SAN-Liste live aus dem Cluster ziehen +
+# openssl signieren + kubeseal"-Ablauf als auch das committete
+# SealedSecret aus docs/54-internal-tls.md — cert-manager erstellt das
+# `homeserver-wildcard-tls`-Secret jetzt selbst (namespace kube-system,
+# exakt der Name, den argocd/apps/platform/traefik-config/tlsstore.yaml
+# als Traefik-Default-Zertifikat referenziert) und erneuert es automatisch
+# vor Ablauf (duration/renewBefore unten) — kein Kalender-Reminder für den
+# 11.11.2028 mehr nötig.
+#
+# KEIN echtes `*.homeserver`-Wildcard (wie in docs/54 erklärt, strukturell
+# unmöglich — Single-Label-TLD, RFC-6125/X509_check_host-Regel, unabhängig
+# vom Tool). Explizite `dnsNames`-Liste bleibt deshalb bestehen, jetzt aber
+# tier-behaftet (`<app>.tech.homeserver`/`<app>.prod.homeserver`, siehe
+# docs/56-domain-tiers.md) — der alte SealedSecret trug noch die
+# UNTIERTE Liste von vor der Domain-Tier-Migration, was seither zu einem
+# Zertifikats-Hostname-Mismatch auf jedem tier-behafteten Host führte
+# (das eigentliche "der aktuelle Weg funktioniert nicht"). Ein neuer Host
+# braucht weiterhin einen Eintrag hier + Commit — das ist inhärent zur
+# fehlenden Wildcard-Fähigkeit, nicht spezifisch für cert-manager.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: homeserver-wildcard-tls
+  namespace: kube-system
+spec:
+  secretName: homeserver-wildcard-tls
+  issuerRef:
+    name: homeserver-ca-issuer
+    kind: ClusterIssuer
+  commonName: homeserver
+  duration: 2160h # 90 Tage
+  renewBefore: 720h # 30 Tage vor Ablauf automatisch erneuern
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  dnsNames:
+    - homeserver
+    - alamos-apager.prod.homeserver
+    - argo-workflows.tech.homeserver
+    - authentik.tech.homeserver
+    - carplay-api.prod.homeserver
+    - gotify-api.tech.homeserver
+    - gotify.tech.homeserver
+    - grafana.tech.homeserver
+    - headlamp.tech.homeserver
+    - immich.prod.homeserver
+    - kubeseal-webgui.tech.homeserver
+    - mealie.prod.homeserver
+    - minio.tech.homeserver
+    - n8n.prod.homeserver
+    - nextcloud.prod.homeserver
+    - ntfy.tech.homeserver
+    - paperless.prod.homeserver
+    - pihole.tech.homeserver
+    - semaphore-api.tech.homeserver
+    - semaphore.tech.homeserver
+    - stream.prod.homeserver
+    - tinyteller.prod.homeserver
+    - uptime-kuma.prod.homeserver
+    - vault.tech.homeserver
+    - vm-write.tech.homeserver
+    - whoami.prod.homeserver
+    - wiki.prod.homeserver
+    - xibo.prod.homeserver
+    - zammad.tech.homeserver
