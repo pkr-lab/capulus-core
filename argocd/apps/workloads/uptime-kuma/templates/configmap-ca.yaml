@@ -1,0 +1,20 @@
+# Kopie von docs/assets/homeserver-root-ca.pem — Helms .Files kann nur
+# innerhalb des Chart-Verzeichnisses lesen, kein Verweis auf den Repo-Pfad
+# moeglich (gleiche Einschraenkung wie bei den Ansible-Rollen, dort per
+# playbook_dir umgangen, hier nicht verfuegbar). Bei einer CA-Rotation
+# (docs/54-internal-tls.md, "CA laeuft aus / CA-Key kompromittiert") muss
+# diese Kopie mit aktualisiert werden.
+#
+# Noetig, weil der Uptime-Kuma-Container (Node.js) HTTPS-Monitor-Checks
+# gegen *.homeserver sonst mit UNABLE_TO_VERIFY_LEAF_SIGNATURE ablehnt —
+# Node vertraut nur seinem eingebauten Root-Store, nicht der internen CA.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "uptime-kuma.fullname" . }}-ca
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "uptime-kuma.labels" . | nindent 4 }}
+data:
+  homeserver-root-ca.pem: |
+{{ .Files.Get "files/homeserver-root-ca.pem" | indent 4 }}

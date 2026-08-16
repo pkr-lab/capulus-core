@@ -62,6 +62,9 @@ spec:
           volumeMounts:
             - name: data
               mountPath: {{ .Values.persistence.mountPath }}
+            - name: homeserver-ca
+              mountPath: /etc/ssl/homeserver-ca
+              readOnly: true
       volumes:
         - name: data
           {{- if .Values.persistence.enabled }}
@@ -70,6 +73,9 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
+        - name: homeserver-ca
+          configMap:
+            name: {{ include "uptime-kuma.fullname" . }}-ca
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
