@@ -33,6 +33,9 @@ power_agent_token_path: /etc/power-agent/token
 # Kernel-Backlight-Device je ändert (z.B. nach einem BIOS-/Kernel-Update).
 power_agent_backlight_path: /sys/class/backlight/intel_backlight/brightness
 power_agent_backlight_max_path: /sys/class/backlight/intel_backlight/max_brightness
+# bl_power is the backlight rail's own on/off switch (0=on, 4=powered down) —
+# needed because raw brightness alone doesn't reach black on this panel.
+power_agent_bl_power_path: /sys/class/backlight/intel_backlight/bl_power
 
 power_agent_poweroff_bin: /usr/sbin/poweroff
 
