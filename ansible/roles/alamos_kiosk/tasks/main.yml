@@ -32,6 +32,23 @@
     cache_valid_time: 3600
   when: alamos_kiosk_enabled | bool
 
+# ---- Homeserver-Root-CA vertrauen (https://*.homeserver, siehe docs/54-internal-tls.md) --
+# Gleiches Vorgehen wie ansible/roles/banana_pi_kiosk (dort ausfuehrlich
+# begruendet) -- dieser Pi ist ebenfalls Ansible-verwaltet, daher hier
+# automatisiert statt manuell nachgezogen. Quelle bleibt EINZIG das
+# committete docs/assets/homeserver-root-ca.pem, keine Kopie im
+# Rollen-files/-Verzeichnis, damit eine kuenftige CA-Rotation nicht
+# zusaetzlich hier nachgepflegt werden muss.
+- name: Homeserver-Root-CA-Zertifikat deployen
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../docs/assets/homeserver-root-ca.pem"
+    dest: /usr/local/share/ca-certificates/homeserver-root-ca.crt
+    owner: root
+    group: root
+    mode: "0644"
+  when: alamos_kiosk_enabled | bool
+  notify: Homeserver-CA-Vertrauensspeicher aktualisieren
+
 - name: Kiosk-Start-Skript deployen
   ansible.builtin.template:
     src: alamos-kiosk-start.sh.j2

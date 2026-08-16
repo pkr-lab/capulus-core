@@ -8,7 +8,7 @@ alamos_kiosk_enabled: true
 # kennt nur diese URL + seinen eigenen Stationsnamen, nie die echte
 # ALAMOS-AMweb-URL (die bleibt als Secret im Cluster, siehe
 # docs/20-alamos-apager.md).
-alamos_kiosk_base_url: "http://alamos-apager.prod.homeserver"
+alamos_kiosk_base_url: "https://alamos-apager.prod.homeserver"
 
 # Stationsname dieses Pi. MUSS pro Host gesetzt werden (siehe
 # ansible/inventory/hosts.yml) und muss zu einem Key im SealedSecret

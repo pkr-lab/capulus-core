@@ -206,7 +206,7 @@ victoria-metrics-k8s-stack:
         enabled: true
 
   # ---- Grafana --------------------------------------------
-  # Exposed at http://grafana.tech.homeserver via Traefik. Admin password is
+  # Exposed at https://grafana.tech.homeserver via Traefik. Admin password is
   # auto-generated and stored in the `monitoring-grafana` Secret. Retrieve
   # with:
   #   kubectl -n monitoring get secret monitoring-grafana \
