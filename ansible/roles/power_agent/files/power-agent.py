@@ -27,6 +27,7 @@ TOKEN = os.environ["TOKEN"]
 PORT = int(os.environ.get("PORT", "9101"))
 BACKLIGHT_PATH = os.environ["BACKLIGHT_PATH"]
 BACKLIGHT_MAX_PATH = os.environ["BACKLIGHT_MAX_PATH"]
+BL_POWER_PATH = os.environ["BL_POWER_PATH"]
 SSH_USER = os.environ["SSH_USER"]
 SSH_KEY = os.environ["SSH_KEY"]
 KUBECONFIG_PATH = os.environ["KUBECONFIG_PATH"]
@@ -49,6 +50,13 @@ def log(msg):
 
 
 def read_brightness_percent():
+    # bl_power is the backlight rail's own on/off switch, separate from the
+    # brightness level — on this panel, a raw brightness of 0/1 out of
+    # max_brightness is still clearly visible, so a blanked screen only
+    # shows up here, not in the brightness ratio below.
+    with open(BL_POWER_PATH) as f:
+        if int(f.read().strip()) != 0:
+            return 0
     with open(BACKLIGHT_PATH) as f:
         current = int(f.read().strip())
     with open(BACKLIGHT_MAX_PATH) as f:
@@ -64,6 +72,11 @@ def write_brightness_percent(percent):
     raw = round(maximum * percent / 100)
     with open(BACKLIGHT_PATH, "w") as f:
         f.write(str(raw))
+    # 0% needs bl_power=4 (FB_BLANK_POWERDOWN) to actually blank the panel —
+    # brightness alone bottoms out well above black on this hardware. Any
+    # other value re-enables the rail (bl_power=0) in case it was left off.
+    with open(BL_POWER_PATH, "w") as f:
+        f.write("4" if percent == 0 else "0")
     return round(100 * raw / maximum) if maximum > 0 else 0
 
 
