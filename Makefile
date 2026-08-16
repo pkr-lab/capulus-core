@@ -124,7 +124,7 @@ xibo-kiosks: ## xibosignage-Displays einrichten (Raspberry Pi 3B+, Bilder-Slides
 xibo-kiosks-check: ## Dry-run des xibosignage-Displays-Playbooks (keine Änderungen).
 	ansible-playbook -i $(INVENTORY) $(XIBO_PLAYBOOK) --check --diff $(VAULT_OPTS)
 
-.PHONY: banana-pi-kiosks banana-pi-kiosks-check
+.PHONY: banana-pi-kiosks banana-pi-kiosks-check banana-pi-kiosks-restart-session
 BANANA_PI_PLAYBOOK := $(ANSIBLE_DIR)/banana-pi-kiosks.yml
 
 banana-pi-kiosks: ## Banana-Pi-Alarmmonitore einrichten (Armbian, ALAMOS AMweb + Server-Fallback).
@@ -132,6 +132,19 @@ banana-pi-kiosks: ## Banana-Pi-Alarmmonitore einrichten (Armbian, ALAMOS AMweb +
 
 banana-pi-kiosks-check: ## Dry-run des Banana-Pi-Alarmmonitor-Playbooks (keine Änderungen).
 	ansible-playbook -i $(INVENTORY) $(BANANA_PI_PLAYBOOK) --check --diff $(VAULT_OPTS)
+
+# Der "Kiosk-Supervisor-Skript deployen"-Task (ansible/roles/banana_pi_kiosk/
+# tasks/main.yml) loest den "Reload getty@tty1"-Handler nur bei Ansible
+# "changed" aus -- liegt das Skript auf der Platte bereits korrekt (z. B.
+# weil ein frueherer Lauf es schon geschrieben hat, bevor dieser notify
+# existierte), meldet der Task "ok" und der laengst laufende Prozess bleibt
+# mit veralteten Werten (z. B. BASE_URL) im Speicher haengen, da er sich
+# nicht selbst neu einliest. Dieses Target erzwingt den Neustart der
+# tty1-Session unabhaengig von einem Playbook-Diff. Braucht kein
+# Vault-Passwort, da der Ad-hoc-Befehl keine vault-verschluesselten
+# Variablen referenziert.
+banana-pi-kiosks-restart-session: ## tty1-Session auf den Banana-Pi-Alarmmonitoren erzwungen neu starten (laedt bereits deployte Skripte/Configs neu ein, ohne dass ein Playbook-Diff noetig ist).
+	ansible -i $(INVENTORY) banana_pis -m ansible.builtin.systemd -a "name=getty@tty1.service state=restarted" --become
 
 .PHONY: lint
 lint: ## Lint YAML, Ansible, and ALL Helm charts.
