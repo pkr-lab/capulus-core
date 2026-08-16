@@ -170,6 +170,15 @@ Monate hinweg vollläuft.
 
 ## Wiederherstellung
 
+> **Vaultwarden-Redeploy:** Für den häufigsten Fall — die
+> `vaultwarden-data`-PVC ist weg, die NAS-seitige `vaultwarden-backup`-PVC
+> (gefüllt vom nächtlichen `backup-cronjob.yaml`) aber noch da — gibt es
+> einen automatisierten Ansible-Weg, der nicht über restic/USB geht:
+> [docs/32-vaultwarden.md → Restore nach Redeploy / Disaster
+> Recovery](32-vaultwarden.md#8-restore-nach-redeploy--disaster-recovery)
+> (`make vaultwarden-restore FORCE_RESTORE=true`). Der restic-Restore hier
+> unten bleibt der Fallback, falls auch der NAS-Stand selbst verloren ist.
+
 **Einzelne Datei/Ordner** (z. B. ein aus Nextcloud gelöschtes Dokument):
 
 ```bash

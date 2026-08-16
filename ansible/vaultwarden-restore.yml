@@ -1,0 +1,17 @@
+---
+# Manuell getriggerter Restore der Vaultwarden-Daten (db.sqlite3, rsa_key.pem,
+# Attachments, Sends) aus der NAS-Backup-PVC. Bewusst NICHT Teil von site.yml
+# -- ein automatischer Lauf bei jedem normalen Deploy koennte live Tresordaten
+# ueberschreiben. Siehe docs/32-vaultwarden.md, Abschnitt "Restore nach
+# Redeploy / Disaster Recovery".
+#
+# Aufruf: make vaultwarden-restore FORCE_RESTORE=true
+- name: Vaultwarden aus NAS-Backup-PVC wiederherstellen
+  hosts: homeservers
+  become: true
+  gather_facts: false
+  vars:
+    force_restore: false
+  roles:
+    - role: vaultwarden_restore
+      tags: [vaultwarden-restore]

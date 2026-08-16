@@ -1,0 +1,43 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vaultwarden-restore
+  namespace: {{ vaultwarden_namespace }}
+  labels:
+    app.kubernetes.io/name: vaultwarden
+    app.kubernetes.io/component: restore
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vaultwarden
+        app.kubernetes.io/component: restore
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: restore
+          image: "{{ vaultwarden_restore_image }}"
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              apk add --no-cache rsync >/dev/null
+              echo "==> Restore vom NAS-Backup-PVC nach vaultwarden-data"
+              rsync -a --no-owner --no-group --delete /backup/ /data/
+              echo "==> fertig: $(date -Iseconds)"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: backup
+              mountPath: /backup
+              readOnly: true
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ vaultwarden_release }}-data
+        - name: backup
+          persistentVolumeClaim:
+            claimName: {{ vaultwarden_release }}-backup
