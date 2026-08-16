@@ -8,7 +8,7 @@ description: |
   siehe docs/16-nas-storage.md).
 
   Web-Interface:
-    http://nextcloud.prod.homeserver
+    https://nextcloud.prod.homeserver
     https://nextcloud-prod.pke-lab.de (Cloudflare Tunnel)
 
   Komponenten:

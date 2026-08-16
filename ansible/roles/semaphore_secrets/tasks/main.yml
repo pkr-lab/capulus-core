@@ -175,7 +175,7 @@
       - "=================================================="
       - "Semaphore UI bootstrap material ready"
       - "=================================================="
-      - "URL:           http://semaphore.tech.homeserver  (LAN + Tailnet)"
+      - "URL:           https://semaphore.tech.homeserver  (LAN + Tailnet)"
       - "URL fallback:  http://{{ ansible_default_ipv4.address }} via Traefik Host header"
       - "Username:      {{ semaphore_admin_username }}"
       - "Password:      stored in {{ semaphore_state_dir }}/admin_password"
