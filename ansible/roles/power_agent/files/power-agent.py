@@ -61,14 +61,10 @@ def read_brightness_percent():
 def write_brightness_percent(percent):
     with open(BACKLIGHT_MAX_PATH) as f:
         maximum = int(f.read().strip())
-    # Floor at 1 raw unit: on some panels a raw brightness of 0 doesn't
-    # just dim the screen, it cuts the backlight entirely, which would turn
-    # a 0% slider position into an unrecoverable-without-physical-access
-    # blank screen.
-    raw = max(1, round(maximum * percent / 100))
+    raw = round(maximum * percent / 100)
     with open(BACKLIGHT_PATH, "w") as f:
         f.write(str(raw))
-    return round(100 * raw / maximum)
+    return round(100 * raw / maximum) if maximum > 0 else 0
 
 
 def woke_at_path(name):
