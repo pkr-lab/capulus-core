@@ -220,23 +220,26 @@ URL-Konvention unabhängig.
 
 ---
 
-## Offener Punkt: internes TLS-Wildcard-Zertifikat
+## Gelöst: internes TLS-Wildcard-Zertifikat (war Hostname-Mismatch)
 
-Der `https://`-Rollout aus [docs/54-internal-tls.md](54-internal-tls.md) ist
-bereits vollzogen (README/Docs zeigen `https://` für alle Dienste außer
-Authentik) — aber das zugrundeliegende Zertifikat
-(`argocd/apps/platform/traefik-config/sealedsecret-wildcard-tls.yaml`) trägt
-noch die feste SAN-Liste der *alten*, untierten Hostnamen
-(`<app>.homeserver`). Durch diese Migration heißen die Hosts jetzt
-`<app>.tech.homeserver`/`<app>.prod.homeserver` — ein Browser/`curl`, der
-`https://grafana.tech.homeserver` aufruft, bekommt deshalb aktuell einen
-Zertifikats-Hostname-Mismatch, bis das Zertifikat mit der neuen,
-tier-behafteten SAN-Liste neu erzeugt und resealed wird. Verfahren dafür
-steht in
-[docs/54-internal-tls.md → "Zertifikat erneuern"](54-internal-tls.md#zertifikat-erneuern).
-Das kann nicht automatisiert per Commit erledigt werden, weil der
-CA-Private-Key bewusst außerhalb des Repos liegt — bis dahin: `http://`
-als Fallback, oder Browser-Zertifikatswarnung bewusst akzeptieren.
+Der `https://`-Rollout aus [docs/54-internal-tls.md](54-internal-tls.md)
+war bereits vollzogen, bevor diese Migration hier lief — das damals
+committete Zertifikat trug danach aber noch die feste SAN-Liste der
+*alten*, untierten Hostnamen (`<app>.homeserver`), während die Hosts
+durch diese Migration jetzt `<app>.tech.homeserver`/
+`<app>.prod.homeserver` heißen. Ein Browser/`curl`, der
+`https://grafana.tech.homeserver` aufrief, bekam dadurch einen
+Zertifikats-Hostname-Mismatch — und weil der CA-Private-Key bewusst
+außerhalb des Repos lag, ließ sich das nicht per Commit reparieren.
+
+Das war genau der Auslöser für die Umstellung auf cert-manager (siehe
+[docs/54-internal-tls.md](54-internal-tls.md)): Die
+`Certificate`-Ressource trägt jetzt die aktuelle, tier-behaftete
+SAN-Liste, cert-manager signiert automatisch aus derselben CA (kein
+Hostname-Mismatch mehr) und erneuert selbstständig vor Ablauf. Ein
+künftiger neuer Host braucht weiterhin einen `dnsNames`-Eintrag + Commit
+(siehe docs/54), aber keinen manuellen CA-Key-abhängigen Signier-Schritt
+mehr.
 
 ---
 
