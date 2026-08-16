@@ -7,7 +7,7 @@ description: |
   Elasticsearch ist deaktiviert; Zammad nutzt die eingebaute PostgreSQL-Volltextsuche.
 
   Web-Interface:
-    http://zammad.tech.homeserver
+    https://zammad.tech.homeserver
 
   Sub-Charts (im Zammad-Chart enthalten):
     - PostgreSQL 16.x (Bitnami)
