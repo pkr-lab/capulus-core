@@ -190,11 +190,14 @@ Ansible/Automatisierung möglich (unterschiedliche OS-Mechanismen, teils
 kein Remote-Zugriff auf private Geräte):
 
 **Ausnahme Banana-Pi-Alarmmonitore:** anders als die privaten Geräte unten
-sind diese bereits Ansible-verwaltet (`ansible/roles/banana_pi_kiosk`), das
-System-Trust-Store-Update (`update-ca-certificates`) läuft dort deshalb
-automatisch bei jedem Rollout — Quelle ist direkt das committete
-`docs/assets/homeserver-root-ca.pem`, keine separate Kopie. Nichts manuell
-zu tun, solange `make banana-pi-kiosks` regelmäßig läuft.
+sind diese bereits Ansible-verwaltet (`ansible/roles/banana_pi_kiosk`),
+sowohl das System-Trust-Store-Update (`update-ca-certificates`) als auch
+der NSS-Datenbank-Import für den Kiosk-User (`~/.pki/nssdb`, siehe
+"Linux" unten — Chromium braucht **beides**, der System-Trust-Store allein
+reicht nicht) laufen dort deshalb automatisch bei jedem Rollout — Quelle
+ist direkt das committete `docs/assets/homeserver-root-ca.pem`, keine
+separate Kopie. Nichts manuell zu tun, solange `make banana-pi-kiosks`
+regelmäßig läuft.
 
 **Linux:**
 
