@@ -45,29 +45,28 @@ weiter — die Erfassung passiert komplett in `pacman-server` selbst, andere
 Apps im Cluster sind davon nicht betroffen (bewusste Entscheidung: nur
 `pacman`, nicht zentral am Ingress, siehe Commit-Historie).
 
-## GeoIP: lokale MaxMind-DB statt Live-API
+## GeoIP: lokale DB-IP-Lite-DB statt Live-API
 
 Bewusste Wahl gegen eine externe Lookup-API (z. B. ip-api.com): Mit einer
-lokalen GeoLite2-City-DB verlässt keine Besucher-IP das Cluster für die
-Standortauflösung. Details zum Aktivieren stehen im
-[Chart-README](../argocd/apps/workloads/pacman/README.md#geoip-anreicherung-aktivieren-optional);
-kurz zusammengefasst:
+lokalen City-DB verlässt keine Besucher-IP das Cluster für die
+Standortauflösung. Ebenso bewusste Wahl gegen MaxMind GeoLite2 (das einen
+Account + License-Key verlangt): [DB-IP City Lite](https://db-ip.com/db/lite.php)
+(CC BY 4.0) ist komplett kostenlos und braucht **keinen** Account/Key —
+direkter monatlicher Download ohne Auth, verifiziert per `curl` gegen die
+echte DB-IP-URL beim Erstellen dieses Setups (siehe Commit-Historie).
+Gleiches MMDB-Format wie MaxMind, `oschwald/geoip2-golang` in `main.go`
+liest beide unverändert.
 
-1. Kostenlosen Account + License-Key unter
-   <https://www.maxmind.com/en/geolite2/signup> anlegen.
-2. Beide Werte mit `kubeseal` versiegeln (Namespace `pacman`, Secret
-   `pacman-maxmind`, Keys `account-id`/`license-key`).
-3. `values.yaml`: `geoip.encryptedAccountId`/`encryptedLicenseKey` setzen,
-   `geoip.enabled: true`.
+Aktivieren: [Chart-README](../argocd/apps/workloads/pacman/README.md#geoip-anreicherung-aktivieren-optional)
+— kurz: `geoip.enabled: true` in `values.yaml`, committen, pushen.
 
-Danach lädt ein `initContainer` (`geoipupdate`, offizielles MaxMind-Image)
-bei **jedem Pod-Start** die aktuelle GeoLite2-City-DB neu in ein
-gemeinsames `emptyDir` — kein CronJob, keine PVC, bewusst einfach gehalten
-für diesen Schulungs-Anwendungsfall mit einer einzigen Replica. Schlägt
-der Download fehl (fehlender/ungültiger Key), läuft der Pod trotzdem an:
-`pacman-server` erkennt die fehlende `.mmdb`-Datei beim Start und loggt
-dann nur die rohe IP ohne Standort (siehe `openGeoIP()` in `main.go`) —
-kein CrashLoop.
+Ein `initContainer` (`curlimages/curl`) lädt bei **jedem Pod-Start** die
+aktuelle DB-IP-City-Lite-DB neu in ein gemeinsames `emptyDir` — kein
+CronJob, keine PVC, bewusst einfach gehalten für diesen
+Schulungs-Anwendungsfall. Schlägt der Download fehl, läuft der Pod
+trotzdem an: `pacman-server` erkennt die fehlende `.mmdb`-Datei beim Start
+und loggt dann nur die rohe IP ohne Standort (siehe `openGeoIP()` in
+`main.go`) — kein CrashLoop.
 
 ## Grafana-Dashboard
 
@@ -96,8 +95,10 @@ entpacken die JSON-Logzeile per LogsQL `| unpack_json`/Feld-Zugriff.
 
 - Nur `pacman` ist erfasst, nicht der restliche Cluster-Traffic — bewusste
   Entscheidung, um den Eingriff auf eine isolierte Demo-App zu begrenzen.
-- GeoIP-Auflösung ist so genau wie MaxMinds kostenlose GeoLite2-City-DB
-  (Stadt-Ebene ist eine Schätzung, keine exakte Ortung).
+- GeoIP-Auflösung ist so genau wie DB-IPs kostenlose City-Lite-DB (reduzierte
+  Genauigkeit gegenüber der kommerziellen DB-IP-Datenbank; Stadt-Ebene ist
+  eine Schätzung, keine exakte Ortung).
 - IPv6-Besucher werden korrekt geloggt (`net.ParseIP` in `main.go`
-  unterstützt beide Familien), MaxMinds GeoLite2-City deckt ebenfalls
-  IPv6-Ranges ab.
+  unterstützt beide Familien) und lokal gegen die IPv6-Ranges der DB-IP-DB
+  aufgelöst — beim Erstellen dieses Setups gegen `2001:4860:4860::8888`
+  verifiziert (siehe Commit-Historie).
