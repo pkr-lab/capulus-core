@@ -1,0 +1,141 @@
+{{/*
+Grafana-Sidecar durchsucht per searchNamespace: ALL alle Namespaces nach
+grafana_dashboard: "1" (siehe argocd/apps/platform/monitoring/values.yaml),
+das Dashboard muss also nicht im monitoring-Namespace liegen.
+
+ACHTUNG: Die LogsQL-Queries unten sind gegen keine echte VictoriaLogs-
+Instanz getestet (kein Cluster-Zugriff beim Erstellen) — nach dem ersten
+Sync in Grafana öffnen und Feldnamen (insb. das Stream-Label für den
+Namespace) im Query-Editor verifizieren/anpassen. Details/Kontext:
+docs/57-pacman-visitor-tracking.md.
+*/}}
+{{- if .Values.geoip.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-pacman-visitors
+  namespace: {{ .Release.Namespace }}
+  labels:
+    grafana_dashboard: "1"
+data:
+  pacman-visitors.json: |
+    {
+      "annotations": {"list": []},
+      "description": "pacman — Besucher-IPs (inkl. IPv6) und GeoIP-Standort aus den Zugriffslogs. Schulungszweck, siehe docs/57-pacman-visitor-tracking.md.",
+      "editable": true,
+      "graphTooltip": 1,
+      "links": [],
+      "panels": [
+        {
+          "datasource": {"type": "victoriametrics-logs-datasource", "uid": "${datasource}"},
+          "fieldConfig": {"defaults": {"unit": "short"}},
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "id": 1,
+          "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+          "targets": [
+            {
+              "datasource": {"type": "victoriametrics-logs-datasource", "uid": "${datasource}"},
+              "expr": "{namespace=\"pacman\"} msg:\"http_access\" | stats count() requests",
+              "refId": "A"
+            }
+          ],
+          "title": "Requests (Zeitraum)",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "victoriametrics-logs-datasource", "uid": "${datasource}"},
+          "fieldConfig": {"defaults": {"unit": "short"}},
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+          "id": 2,
+          "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+          "targets": [
+            {
+              "datasource": {"type": "victoriametrics-logs-datasource", "uid": "${datasource}"},
+              "expr": "{namespace=\"pacman\"} msg:\"http_access\" | stats count_uniq(remote_ip) unique_ips",
+              "refId": "A"
+            }
+          ],
+          "title": "Eindeutige Besucher-IPs (Zeitraum)",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "victoriametrics-logs-datasource", "uid": "${datasource}"},
+          "description": "Nur Zeilen mit aufgelöstem GeoIP-Standort (geo_lat/geo_lon gesetzt) — erfordert geoip.enabled: true und eine geladene GeoLite2-DB, sonst bleibt die Karte leer.",
+          "gridPos": {"h": 12, "w": 24, "x": 0, "y": 4},
+          "id": 3,
+          "options": {
+            "basemap": {"config": {}, "name": "Basemap", "type": "osm-standard"},
+            "controls": {"mouseWheelZoom": true, "showAttribution": true, "showDebug": false, "showMeasure": false, "showScale": false, "showZoom": true},
+            "layers": [
+              {
+                "config": {
+                  "showLegend": true,
+                  "style": {
+                    "color": {"fixed": "semi-dark-orange"},
+                    "opacity": 0.8,
+                    "rotation": {"fixed": 0, "max": 360, "min": -360, "mode": "mod"},
+                    "size": {"fixed": 6, "max": 15, "min": 2},
+                    "symbol": {"fixed": "img/icons/marker/circle.svg", "mode": "fixed"},
+                    "textConfig": {"fontSize": 12, "offsetX": 0, "offsetY": 0, "textAlign": "center", "textBaseline": "middle"}
+                  }
+                },
+                "location": {"latitude": "geo_lat", "longitude": "geo_lon", "mode": "coords"},
+                "name": "Besucher",
+                "tooltip": true,
+                "type": "markers"
+              }
+            ],
+            "view": {"allLayers": true, "id": "zero", "lat": 20, "lon": 0, "zoom": 1.5}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "victoriametrics-logs-datasource", "uid": "${datasource}"},
+              "expr": "{namespace=\"pacman\"} msg:\"http_access\" AND geo_lat:* | fields geo_lat, geo_lon, geo_city, geo_country_name, remote_ip, user_agent",
+              "refId": "A"
+            }
+          ],
+          "title": "Besucher-Standorte (GeoIP)",
+          "type": "geomap"
+        },
+        {
+          "datasource": {"type": "victoriametrics-logs-datasource", "uid": "${datasource}"},
+          "gridPos": {"h": 10, "w": 24, "x": 0, "y": 16},
+          "id": 4,
+          "options": {
+            "cellHeight": "sm",
+            "showHeader": true,
+            "sortBy": [{"desc": true, "displayName": "Time"}]
+          },
+          "targets": [
+            {
+              "datasource": {"type": "victoriametrics-logs-datasource", "uid": "${datasource}"},
+              "expr": "{namespace=\"pacman\"} msg:\"http_access\" | fields _time, remote_ip, geo_country_name, geo_city, path, status, user_agent",
+              "refId": "A"
+            }
+          ],
+          "title": "Letzte Zugriffe",
+          "type": "table"
+        }
+      ],
+      "refresh": "30s",
+      "schemaVersion": 39,
+      "tags": ["pacman", "schulung", "geoip"],
+      "templating": {
+        "list": [
+          {
+            "current": {},
+            "hide": 0,
+            "label": "Datasource",
+            "name": "datasource",
+            "query": "victoriametrics-logs-datasource",
+            "refresh": 1,
+            "type": "datasource"
+          }
+        ]
+      },
+      "time": {"from": "now-24h", "to": "now"},
+      "timezone": "browser",
+      "title": "pacman — Besucher (IP/GeoIP)",
+      "uid": "pacman-visitors"
+    }
+{{- end }}
