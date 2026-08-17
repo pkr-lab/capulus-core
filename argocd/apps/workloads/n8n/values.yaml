@@ -2,14 +2,14 @@
 replicaCount: 1
 
 image:
-  # Custom image with n8n-nodes-imap baked in, see ./image/Dockerfile.
-  # Built and imported locally (k3s ctr images import) — no registry push,
-  # so pullPolicy must stay IfNotPresent (Never would also work, but
-  # IfNotPresent avoids ImagePullBackOff if the tag is ever missing after a
-  # node reboot and someone forgets to re-import).
-  repository: n8n-custom
+  # Custom image with n8n-nodes-imap baked in, see ./image/Dockerfile. Über
+  # kaniko-build-push gebaut und gepusht (siehe argocd/apps/workloads/pacman/README.md
+  # fürs allgemeine Vorgehen) — vorher lokal per "k3s ctr images import" auf
+  # homeserver eingespielt (kein Registry-Push), das erzwang den
+  # nodeSelector unten. Mit Registry-Image entfällt die Node-Bindung.
+  repository: ghcr.io/pkr-lab/n8n-custom
   pullPolicy: IfNotPresent
-  tag: "2.33.7-imap"
+  tag: "2.35.3-imap"
 
 nameOverride: ""
 fullnameOverride: ""
@@ -92,12 +92,7 @@ resources:
 
 affinity: {}
 
-# Custom Image (siehe image.repository oben) wird lokal gebaut und nur auf
-# dem homeserver-Node per "k3s ctr images import" eingespielt, kein
-# Registry-Push — ohne Pinning koennte der Pod auf einen Worker-Node
-# geschedult werden, wo das Image fehlt (ImagePullBackOff).
-nodeSelector:
-  kubernetes.io/hostname: homeserver
+nodeSelector: {}
 tolerations: []
 
 # ============================================================

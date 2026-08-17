@@ -10,7 +10,7 @@ Ersatz). Die Deployment-Konfiguration liegt unter `argocd/apps/workloads/nextclo
 
 | Komponente  | Technologie                          | Namespace   |
 |-------------|---------------------------------------|-------------|
-| Nextcloud   | PHP/Apache (`nextcloud:34.0.2-apache`) | `nextcloud` |
+| Nextcloud   | PHP/Apache (`nextcloud:34.0.3-apache`) | `nextcloud` |
 | Datenbank   | PostgreSQL 16 (eigenes Deployment)     | `nextcloud` |
 | Cache/Locks | Redis 7 (eigenes Deployment)           | `nextcloud` |
 | Ingress     | Traefik                                | `nextcloud` |

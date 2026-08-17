@@ -45,7 +45,7 @@ nextcloud:
     repository: nextcloud
     pullPolicy: IfNotPresent
     # Pinned für Reproduzierbarkeit. Releases: https://github.com/nextcloud/docker/releases
-    tag: "34.0.2-apache"
+    tag: "34.0.3-apache"
 
   # Offizielles Apache-Image läuft als root (kein USER im Dockerfile,
   # Apache-Master-Prozess braucht Port 80 + der Entrypoint chownt beim

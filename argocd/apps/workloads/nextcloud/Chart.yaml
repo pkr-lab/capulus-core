@@ -12,12 +12,12 @@ description: |
     https://nextcloud-prod.pke-lab.de (Cloudflare Tunnel)
 
   Komponenten:
-    - Nextcloud 34 (nextcloud:34.0.2-apache)
+    - Nextcloud 34 (nextcloud:34.0.3-apache)
     - PostgreSQL 16 (offizielles postgres-Image, eigenes Deployment)
     - Redis 7 (Datei-Locking + Caching, eigenes Deployment)
 type: application
 version: 0.1.0
-appVersion: "34.0.2"
+appVersion: "34.0.3"
 keywords:
   - nextcloud
   - files
