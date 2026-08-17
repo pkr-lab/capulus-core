@@ -3,11 +3,14 @@ Grafana-Sidecar durchsucht per searchNamespace: ALL alle Namespaces nach
 grafana_dashboard: "1" (siehe argocd/apps/platform/monitoring/values.yaml),
 das Dashboard muss also nicht im monitoring-Namespace liegen.
 
-ACHTUNG: Die LogsQL-Queries unten sind gegen keine echte VictoriaLogs-
-Instanz getestet (kein Cluster-Zugriff beim Erstellen) — nach dem ersten
-Sync in Grafana öffnen und Feldnamen (insb. das Stream-Label für den
-Namespace) im Query-Editor verifizieren/anpassen. Details/Kontext:
-docs/57-pacman-visitor-tracking.md.
+Verifiziert gegen die echte VictoriaLogs-Instanz (17.08.2026, per direkter
+LogsQL-Query über `kubectl port-forward svc/logging-victoria-logs-single-server
+9428:9428` + `/select/logsql/query`): der ursprünglich angenommene
+Stream-Label-Name `namespace` existiert nicht, das victoria-logs-collector-
+Setup labelt tatsächlich mit `kubernetes.pod_namespace`. Ebenso heißt das
+Nachrichtenfeld `_msg` (VictoriaLogs-Standardfeld), nicht `msg` — die
+ursprüngliche `msg:"http_access"`-Syntax matchte daher nie etwas, obwohl
+sie kein Query-Fehler war. Details/Kontext: docs/57-pacman-visitor-tracking.md.
 */}}
 {{- if .Values.geoip.enabled }}
 apiVersion: v1
@@ -35,7 +38,7 @@ data:
           "targets": [
             {
               "datasource": {"type": "victoriametrics-logs-datasource", "uid": "${datasource}"},
-              "expr": "{namespace=\"pacman\"} msg:\"http_access\" | stats count() requests",
+              "expr": "{kubernetes.pod_namespace=\"pacman\"} _msg:\"http_access\" | stats count() requests",
               "refId": "A"
             }
           ],
@@ -51,7 +54,7 @@ data:
           "targets": [
             {
               "datasource": {"type": "victoriametrics-logs-datasource", "uid": "${datasource}"},
-              "expr": "{namespace=\"pacman\"} msg:\"http_access\" | stats count_uniq(remote_ip) unique_ips",
+              "expr": "{kubernetes.pod_namespace=\"pacman\"} _msg:\"http_access\" | stats count_uniq(remote_ip) unique_ips",
               "refId": "A"
             }
           ],
@@ -90,7 +93,7 @@ data:
           "targets": [
             {
               "datasource": {"type": "victoriametrics-logs-datasource", "uid": "${datasource}"},
-              "expr": "{namespace=\"pacman\"} msg:\"http_access\" AND geo_lat:* | fields geo_lat, geo_lon, geo_city, geo_country_name, remote_ip, user_agent",
+              "expr": "{kubernetes.pod_namespace=\"pacman\"} _msg:\"http_access\" AND geo_lat:* | fields geo_lat, geo_lon, geo_city, geo_country_name, remote_ip, user_agent",
               "refId": "A"
             }
           ],
@@ -109,7 +112,7 @@ data:
           "targets": [
             {
               "datasource": {"type": "victoriametrics-logs-datasource", "uid": "${datasource}"},
-              "expr": "{namespace=\"pacman\"} msg:\"http_access\" | fields _time, remote_ip, geo_country_name, geo_city, path, status, user_agent",
+              "expr": "{kubernetes.pod_namespace=\"pacman\"} _msg:\"http_access\" | fields _time, remote_ip, geo_country_name, geo_city, path, status, user_agent, accept_language, sec_ch_ua_platform, dnt, sec_gpc",
               "refId": "A"
             }
           ],

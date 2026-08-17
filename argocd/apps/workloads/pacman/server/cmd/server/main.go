@@ -127,6 +127,29 @@ func withAccessLog(logger *slog.Logger, geo *geoip2.Reader, next http.Handler) h
 			"duration_ms", time.Since(start).Milliseconds(),
 			"user_agent", r.Header.Get("User-Agent"),
 			"referer", r.Header.Get("Referer"),
+			// Everything below is still passive request-header capture —
+			// no client-side fingerprinting JS was added to the page. This
+			// is deliberately the fuller picture of what a plain webserver
+			// already sees on every request, without the visitor doing
+			// anything beyond loading the page: browser/OS via Client
+			// Hints, content negotiation, fetch context, and the privacy
+			// opt-out signals themselves (DNT/GPC) — including a header
+			// that says "don't track me" in the log is itself part of the
+			// demo's point. See docs/57-pacman-visitor-tracking.md.
+			"accept_language", r.Header.Get("Accept-Language"),
+			"accept_encoding", r.Header.Get("Accept-Encoding"),
+			"sec_ch_ua", r.Header.Get("Sec-Ch-Ua"),
+			"sec_ch_ua_platform", r.Header.Get("Sec-Ch-Ua-Platform"),
+			"sec_ch_ua_mobile", r.Header.Get("Sec-Ch-Ua-Mobile"),
+			"sec_fetch_site", r.Header.Get("Sec-Fetch-Site"),
+			"sec_fetch_mode", r.Header.Get("Sec-Fetch-Mode"),
+			"sec_fetch_dest", r.Header.Get("Sec-Fetch-Dest"),
+			"dnt", r.Header.Get("DNT"),
+			"sec_gpc", r.Header.Get("Sec-GPC"),
+			// Cloudflare's own edge-derived country — independent
+			// cross-check against the local DB-IP GeoIP lookup below,
+			// resolved at the edge rather than from the local MMDB.
+			"cf_ipcountry", r.Header.Get("CF-IPCountry"),
 		}
 
 		if geo != nil {
