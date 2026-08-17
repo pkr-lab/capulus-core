@@ -1,6 +1,6 @@
 module github.com/pkr-lab/capulus-core/pacman
 
-go 1.26.5
+go 1.23
 
 require github.com/oschwald/geoip2-golang v1.13.0
 

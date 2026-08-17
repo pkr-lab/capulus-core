@@ -1,10 +1,24 @@
-# Static site, no build step — just nginx serving pre-vendored assets.
-# nginx-unprivileged runs as a non-root user by default and listens on
-# 8080, so no extra USER/securityContext wiring is needed here (matches
-# the runAsNonRoot posture used elsewhere in this repo, e.g. carplay-api).
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+# Multi-stage build: compile a static Go binary, ship it on a distroless
+# base with no shell, package manager, or libc — nothing an attacker could
+# use if the container were ever compromised, and nothing to patch either.
+# Mirrors argocd/apps/workloads/carplay-api/Dockerfile.
+FROM golang:1.23-alpine AS builder
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY src/ /usr/share/nginx/html/
+WORKDIR /build
+
+COPY server/go.mod server/go.sum ./
+RUN go mod download
+
+COPY server/ ./
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /pacman-server ./cmd/server
+
+FROM gcr.io/distroless/static-debian12:nonroot
+
+COPY --from=builder /pacman-server /pacman-server
+COPY src/ /usr/share/pacman/html/
+
+USER nonroot:nonroot
 
 EXPOSE 8080
+
+ENTRYPOINT ["/pacman-server"]
