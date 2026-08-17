@@ -101,14 +101,15 @@ zuerst, dann `nextcloud-*` (App-Pod) — führt beim ersten Start die
 Installation durch, das kann 1–2 Minuten dauern (siehe `readinessProbe`
 gegen `/status.php`).
 
-**DNS:** `nextcloud.homeserver` ist dank Wildcard-DNS sofort erreichbar
-(siehe [docs/09-dns-architecture.md](09-dns-architecture.md)).
+**DNS:** `nextcloud.prod.homeserver` ist dank Wildcard-DNS sofort erreichbar
+(siehe [docs/09-dns-architecture.md](09-dns-architecture.md) und
+[docs/56-domain-tiers.md](56-domain-tiers.md) zum `prod`-Tier-Präfix).
 
 ---
 
 ## Schritt 3 — Erstlogin
 
-1. `https://nextcloud.homeserver` öffnen
+1. `https://nextcloud.prod.homeserver` öffnen
 2. Mit `admin` / dem in Schritt 1.2 generierten Passwort einloggen
 3. Empfohlen: unter **Einstellungen → Verwaltung → Grundeinstellungen**
    prüfen, dass Redis als "Verteilter Cache" + "Transactional File Locking"
@@ -119,17 +120,22 @@ gegen `/status.php`).
 
 ## Externe Erreichbarkeit (Cloudflare Tunnel)
 
-`nextcloud.pke-lab.de` ist bereits in
+`nextcloud-prod.pke-lab.de` ist bereits in
 `argocd/apps/platform/cloudflared/values.yaml` eingetragen (zeigt auf den
 internen `nextcloud.nextcloud.svc.cluster.local:80`-Service). Für
 Mobile-/Desktop-Sync-Clients außerhalb von LAN/Tailscale:
 
-- **Desktop-Client / Mobile-App**: Server-URL `https://nextcloud.pke-lab.de`
-- Intern (LAN/Tailscale) funktioniert weiterhin `https://nextcloud.homeserver`
+- **Desktop-Client / Mobile-App**: Server-URL `https://nextcloud-prod.pke-lab.de`
+- Intern (LAN/Tailscale) funktioniert weiterhin `https://nextcloud.prod.homeserver`
 
-`NEXTCLOUD_TRUSTED_DOMAINS` in `values.yaml` enthält bereits beide
-Hostnamen (`nextcloud.homeserver nextcloud.pke-lab.de`) — ohne diesen
+`trustedDomains` in `values.yaml` enthält bereits beide Hostnamen
+(`nextcloud.prod.homeserver nextcloud-prod.pke-lab.de`) — ohne diesen
 Eintrag weist Nextcloud Requests mit "Access through untrusted domain" ab.
+**Achtung:** Das greift nur bei der Erstinstallation (siehe
+Troubleshooting-Abschnitt unten) — ändert sich der Hostname später (z. B.
+bei einer Domain-Tier-Migration wie in docs/56 beschrieben), muss
+`trusted_domains` in der bereits bestehenden `config.php` separat
+nachgezogen werden.
 
 ---
 
@@ -154,12 +160,70 @@ Standard-Apps) — bei 100Gi-`data`-PVC auf NFS kann das je nach
 NAS-Auslastung 1–2 Minuten dauern. `kubectl logs -n nextcloud
 deploy/nextcloud -f` zeigt den Fortschritt.
 
-### "Access through untrusted domain"
+### "Access through untrusted domain" / CrashLoopBackOff mit "Trusted domain error" (HTTP 400 auf `/status.php`)
 
-`NEXTCLOUD_TRUSTED_DOMAINS` in `values.yaml` prüfen — muss exakt den
-Hostnamen enthalten, über den zugegriffen wird (Groß-/Kleinschreibung
-und Port spielen keine Rolle, der Domainname selbst muss aber exakt
-passen).
+Zwei unterschiedliche Ursachen möglich:
+
+1. **Frischinstallation:** `trustedDomains` in `values.yaml` prüfen — muss
+   exakt den Hostnamen enthalten, über den zugegriffen wird
+   (Groß-/Kleinschreibung und Port spielen keine Rolle, der Domainname
+   selbst muss aber exakt passen).
+2. **Bestehende Installation, `values.yaml` ist bereits korrekt, Pod
+   crasht trotzdem:** `NEXTCLOUD_TRUSTED_DOMAINS`/`trustedDomains` wirkt
+   nur bei der Erstinstallation — bei einem bereits vorhandenen
+   `config.php` (z. B. nach einer Domain-Umbenennung wie der
+   Tier-Migration in docs/56) bleibt der alte Eintrag stehen, jeder
+   Health-Check schlägt dann dauerhaft mit `{"error": "Trusted domain
+   error.", "code": 15}` fehl → `CrashLoopBackOff`. Prüfen:
+   ```bash
+   kubectl exec -n nextcloud deploy/nextcloud -- \
+     grep -A5 trusted_domains /var/www/html/config/config.php
+   ```
+   Normalerweise würde man das mit `occ config:system:set trusted_domains
+   N --value=...` reparieren — hier verweigert `occ` das aber meist mit
+   `Console has to be executed with the user that owns the file
+   config/config.php`, weil `config.php` auf der NFS-`nas`-PVC durch das
+   `all_squash` der UGREEN-NAS (siehe unten) einer anderen UID gehört als
+   `www-data`. Statt manuell mit `kubectl exec` am Pod zu hantieren
+   (schwer nachvollziehbar, nicht reproduzierbar), liegt dafür ein
+   git-getrackter, einmaliger Reparatur-`Job` bereit:
+   `templates/nextcloud-fix-trusted-domains-job.yaml` — startet explizit
+   mit `runAsUser: 1000` (passend zur tatsächlichen `config.php`-Owner-UID)
+   und setzt `trusted_domains` aus `values.yaml` neu. Läuft automatisch
+   beim nächsten ArgoCD-Sync, danach mit `kubectl -n nextcloud delete job
+   nextcloud-fix-trusted-domains` wieder entfernen (Jobs sind immutable).
+
+### Root-Squash / all_squash der UGREEN-NAS
+
+Die UGREEN-NAS bietet keine `no_root_squash`-Option für NFS-Exports —
+stattdessen ist `all_squash` aktiv, d. h. **jeder** Client-Request
+(auch von `root` im Container) wird serverseitig auf eine feste anonyme
+UID/GID abgebildet. Auswirkungen:
+
+- Dateien auf `nas`-PVCs können am Ende einer beliebigen, vom eigentlich
+  erwarteten Container-User (z. B. `www-data`) abweichenden UID gehören —
+  je nachdem, welcher Prozess sie zuerst angelegt hat.
+- `chown`/`chmod` auf eine *andere* Ziel-UID schlägt in der Regel fehl,
+  da die anonyme Identität serverseitig keine Owner-Änderungsrechte hat —
+  betrifft z. B. den offiziellen Nextcloud-Entrypoint, der beim ersten
+  Start versucht, `html`/`data` auf `www-data` zu chownen (siehe
+  Kommentar zu `podSecurityContext`/`securityContext` in `values.yaml`).
+- Plain reads/writes auf bereits existierende Dateien funktionieren i. d. R.
+  weiterhin, solange konsistent dieselbe (anonyme) Identität zugreift.
+- PostgreSQL liegt deshalb bewusst nicht auf `nas`, sondern auf
+  `local-path` (siehe `values.yaml`, `postgresql.persistence`) — reiner
+  DB-State profitiert nicht von NAS-Kapazität und ist UID-sensibel.
+
+**Andere Lösung statt `no_root_squash`:** Für `html`/`data` bleibt NFS
+vorerst die pragmatischste Option (100Gi Nutzdaten lassen sich nicht ohne
+Weiteres auf lokalen Storage verschieben) — Workarounds wie der
+Repair-`Job` oben (fester `runAsUser`) umgehen das UID-Problem gezielt pro
+Anwendungsfall, statt eine NAS-Funktion vorauszusetzen, die es auf diesem
+Gerät nicht gibt. Eine grundsätzlichere Alternative (Nextcloud-Primärspeicher
+auf S3/MinIO statt Dateisystem, siehe `argocd/apps/platform/minio/`) würde
+das UID/GID-Modell komplett umgehen, ist aber eine größere
+Architekturentscheidung mit eigener Datenmigration — bewusst nicht Teil
+dieses Fixes.
 
 ### SealedSecret wird nicht entschlüsselt
 

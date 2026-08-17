@@ -1,0 +1,62 @@
+# One-time Repair-Job, kein Teil des laufenden Reconcile-Loops.
+#
+# Hintergrund: config.php auf der "html"-PVC (NFS/"nas") gehört UID 1000,
+# nicht www-data (33) — Folge des all_squash der UGREEN-NAS (siehe
+# docs/33-nextcloud.md, docs/16-nas-storage.md und den Kommentar bei
+# postgresql.persistence in values.yaml, wo dasselbe Problem bereits dazu
+# geführt hat, dass Postgres auf "local-path" statt "nas" liegt). Nextclouds
+# `occ` verweigert den Dienst, wenn die aufrufende UID nicht exakt dem
+# Datei-Owner entspricht ("Console has to be executed with the user that
+# owns the file config/config.php") — `su -p www-data` (wie im offiziellen
+# Entrypoint für Hook-Skripte) schlägt daher fehl. Dieser Job umgeht das,
+# indem er direkt mit `runAsUser: 1000` startet (kernelseitiges setuid,
+# braucht anders als `su` keinen /etc/passwd-Eintrag).
+#
+# Zweck: trusted_domains in config.php war seit der Domain-Tier-Migration
+# (docs/56-domain-tiers.md: nextcloud.homeserver → nextcloud.prod.homeserver
+# usw.) nicht mehr aktuell — NEXTCLOUD_TRUSTED_DOMAINS greift nur bei der
+# Erstinstallation, nicht bei bestehendem config.php. Ergebnis: jeder
+# Readiness/Liveness-Check schlug mit "Trusted domain error" (HTTP 400)
+# fehl → CrashLoopBackOff.
+#
+# Jobs sind immutable — nach Anwenden bei Bedarf mit
+# `kubectl -n nextcloud delete job nextcloud-fix-trusted-domains` wieder
+# entfernen, bevor ein erneuter Sync/Re-Apply nötig wird.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nextcloud-fix-trusted-domains
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "nextcloud.labels" . | nindent 4 }}
+    app.kubernetes.io/component: trusted-domains-fix
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        {{- include "nextcloud.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: trusted-domains-fix
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsUser: 1000
+      containers:
+        - name: occ
+          image: "{{ .Values.nextcloud.image.repository }}:{{ .Values.nextcloud.image.tag | default .Chart.AppVersion }}"
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              {{- range $i, $domain := splitList " " $.Values.nextcloud.trustedDomains }}
+              php occ config:system:set trusted_domains {{ add $i 1 }} --value={{ $domain | quote }}
+              {{- end }}
+              echo "trusted_domains repaired"
+          volumeMounts:
+            - name: html
+              mountPath: /var/www/html
+      volumes:
+        - name: html
+          persistentVolumeClaim:
+            claimName: {{ include "nextcloud.fullname" . }}-html
