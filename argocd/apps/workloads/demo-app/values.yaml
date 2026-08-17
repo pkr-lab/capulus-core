@@ -1,0 +1,40 @@
+fullnameOverride: "demo-app"
+
+replicaCount: 1
+
+image:
+  repository: hashicorp/http-echo
+  tag: "0.2.3"
+  pullPolicy: IfNotPresent
+
+message: "Hello from GitOps - Version 1"
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 5678
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations: {}
+  hosts:
+    - host: demo.prod.homeserver
+      paths:
+        - path: /
+          pathType: Prefix
+    # Externer Host — per Cloudflare-Tunnel-Wildcard (cloudflared) an
+    # Traefik weitergereicht, siehe docs/56-domain-tiers.md.
+    - host: demo-prod.pke-lab.de
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 64Mi
+  requests:
+    cpu: 25m
+    memory: 32Mi

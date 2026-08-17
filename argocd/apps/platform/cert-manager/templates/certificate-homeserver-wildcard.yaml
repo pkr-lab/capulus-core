@@ -39,6 +39,7 @@ spec:
     - argo-workflows.tech.homeserver
     - authentik.tech.homeserver
     - carplay-api.prod.homeserver
+    - demo.prod.homeserver
     - gotify-api.tech.homeserver
     - gotify.tech.homeserver
     - grafana.tech.homeserver
