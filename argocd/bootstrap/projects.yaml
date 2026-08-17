@@ -118,6 +118,8 @@ spec:
     - server: https://kubernetes.default.svc
       namespace: nextcloud
     - server: https://kubernetes.default.svc
+      namespace: pacman
+    - server: https://kubernetes.default.svc
       namespace: paperless-ngx
     - server: https://kubernetes.default.svc
       namespace: tinyteller

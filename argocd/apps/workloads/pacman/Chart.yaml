@@ -1,0 +1,6 @@
+apiVersion: v2
+name: pacman
+description: Pacman Canvas — statisches HTML5-Spiel (CC0), self-hosted für den öffentlichen Zugriff über pke-lab.de.
+type: application
+version: 0.1.0
+appVersion: "1.0.6"

@@ -1,0 +1,23 @@
+﻿{
+  "manifest_version": 2,
+  "name": "Pacman Canvas",
+  "version": "1.0.6",
+
+  "short_name": "Pacman Canvas",
+  "description": "An old classic, rewritten in HTML5",
+
+  "author": "Platzh1rsch",
+
+  "icons": {
+    "128": "img/icon-128.png"
+  },
+
+  "offline_enabled": true,
+
+  "app": {
+    "urls": ["https://pacman-prod.pke-lab.de/"],
+    "launch": {
+      "web_url": "https://pacman-prod.pke-lab.de"
+    }
+  }
+}
