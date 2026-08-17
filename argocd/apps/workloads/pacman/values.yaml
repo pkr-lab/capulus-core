@@ -66,10 +66,11 @@ resources:
 # Webserver über Besucher herausfinden kann — IP inkl. IPv6, Standort).
 # Quelle: DB-IP City Lite (db-ip.com, CC BY 4.0) — kostenlos, kein Account/
 # License-Key nötig, monatlicher Direct-Download, siehe README.md. Default
-# aus: pacman-server läuft auch ohne DB klaglos weiter (loggt dann nur die
-# rohe IP), siehe server/cmd/server/main.go.
+# an, da das der eigentliche Zweck der App ist (siehe docs/57). Schlägt
+# der DB-Download trotzdem mal fehl, läuft pacman-server weiter (loggt
+# dann nur die rohe IP), siehe server/cmd/server/main.go.
 geoip:
-  enabled: false
+  enabled: true
   updaterImage:
     repository: curlimages/curl
     tag: "8.11.0"

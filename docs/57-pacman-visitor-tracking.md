@@ -57,8 +57,9 @@ echte DB-IP-URL beim Erstellen dieses Setups (siehe Commit-Historie).
 Gleiches MMDB-Format wie MaxMind, `oschwald/geoip2-golang` in `main.go`
 liest beide unverändert.
 
-Aktivieren: [Chart-README](../argocd/apps/workloads/pacman/README.md#geoip-anreicherung-aktivieren-optional)
-— kurz: `geoip.enabled: true` in `values.yaml`, committen, pushen.
+Standardmäßig aktiv (`geoip.enabled: true`), da das der eigentliche Zweck
+dieser App ist — bei Bedarf abschaltbar, siehe
+[Chart-README](../argocd/apps/workloads/pacman/README.md#geoip-anreicherung).
 
 Ein `initContainer` (`curlimages/curl`) lädt bei **jedem Pod-Start** die
 aktuelle DB-IP-City-Lite-DB neu in ein gemeinsames `emptyDir` — kein
