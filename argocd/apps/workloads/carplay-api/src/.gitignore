@@ -1,0 +1,5 @@
+# See argocd/apps/workloads/pacman/server/.gitignore for why: a locally
+# compiled Go binary landing inside a Helm chart directory breaks ArgoCD's
+# Helm templating (5MB per-file chart limit).
+/carplay-api
+/server
