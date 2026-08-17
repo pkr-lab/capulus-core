@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: demo-app
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/pkr-lab/capulus-core.git
+    targetRevision: main
+    path: argocd/apps/workloads/demo-app
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+
+  syncPolicy:
+    # automated:
+    #   selfHeal: true      # setzt Drift automatisch zurueck
+    #   prune: true
+    syncOptions:
+      - CreateNamespace=true
