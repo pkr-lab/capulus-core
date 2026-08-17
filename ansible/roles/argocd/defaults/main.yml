@@ -30,6 +30,7 @@ argocd_platform_apps:
 argocd_workloads_apps:
   - alamos-apager
   - carplay-api
+  - demo-app
   - example-whoami
   - github-release-watcher
   - immich
