@@ -54,6 +54,15 @@ argo submit -n argo-workflows --from workflowtemplate/kaniko-build-push \
 Danach `image.repository`/`image.tag` in `values.yaml` auf das gepushte
 Image setzen.
 
+**Tags sind mutable, `pullPolicy: IfNotPresent` cached lokal:** Wird ein
+bereits verwendeter Tag (z. B. `v1`) neu gebaut und gepusht, ohne den Tag
+zu ändern, pullt ein Node mit lokal gecachtem Image den neuen Inhalt
+**nicht** automatisch nach — der Pod läuft dann weiter mit dem alten,
+möglicherweise fehlerhaften Bild-Inhalt. Für Fixes daher immer einen
+**neuen** Tag vergeben (`v2`, `v3`, …) statt einen bestehenden Tag
+wiederzuverwenden; das erzwingt sowohl den Neu-Pull als auch macht in
+`values.yaml`/`git log` sichtbar, welcher Chart-Stand welches Image nutzt.
+
 **GHCR-Package-Sichtbarkeit:** frisch gepushte GHCR-Packages sind
 standardmäßig **privat** — der Pod scheitert dann mit
 `ImagePullBackOff`/"trying and failing to pull image", obwohl der Build
@@ -83,26 +92,38 @@ docker run --rm --read-only --user 65532:65532 -p 8080:8080 pacman-local
 dortige Wildcard-Regel), Traefik matcht den Host direkt aus dieser
 `ingress.hosts`-Liste.
 
-## GeoIP-Anreicherung aktivieren (optional)
+## GeoIP-Anreicherung
 
-Standardmäßig aus (`geoip.enabled: false`) — `pacman-server` loggt dann nur
-die rohe Client-IP, ohne Standort. Quelle ist [DB-IP City Lite](https://db-ip.com/db/lite.php)
-(CC BY 4.0) — **komplett kostenlos, kein Account, kein License-Key, kein
-Sealed-Secret nötig**, bewusst gewählt statt MaxMind GeoLite2 (das einen
-Account + License-Key verlangt). Zum Aktivieren reicht:
+Standardmäßig an (`geoip.enabled: true`) — das ist der eigentliche Zweck
+dieser App (Schulungs-Demo, siehe docs/57). Bei Bedarf abschaltbar:
 
 ```yaml
 geoip:
-  enabled: true
+  enabled: false
 ```
 
-committen, pushen. Nach dem nächsten Sync lädt ein initContainer
-(`curlimages/curl`) die aktuelle DB-IP-City-Lite-DB (monatlicher
-Direct-Download, kein Auth) bei jedem Pod-Start neu in ein gemeinsames
-`emptyDir`. Schlägt der Download fehl, läuft der Pod trotzdem an —
-`pacman-server` erkennt die fehlende `.mmdb`-Datei und loggt dann nur die
-rohe IP (siehe `openGeoIP()` in `server/cmd/server/main.go`), kein
+`pacman-server` loggt dann nur die rohe Client-IP, ohne Standort. Quelle
+ist [DB-IP City Lite](https://db-ip.com/db/lite.php) (CC BY 4.0) —
+**komplett kostenlos, kein Account, kein License-Key, kein Sealed-Secret
+nötig**, bewusst gewählt statt MaxMind GeoLite2 (das einen Account +
+License-Key verlangt).
+
+Ein initContainer (`curlimages/curl`) lädt die aktuelle DB-IP-City-Lite-DB
+(monatlicher Direct-Download, kein Auth) bei jedem Pod-Start neu in ein
+gemeinsames `emptyDir`. Schlägt der Download fehl, läuft der Pod trotzdem
+an — `pacman-server` erkennt die fehlende `.mmdb`-Datei und loggt dann nur
+die rohe IP (siehe `openGeoIP()` in `server/cmd/server/main.go`), kein
 CrashLoop. Details/Datenschutz-Kontext: docs/57.
+
+**`curlimages/curl` braucht eine explizite numerische UID/GID:** Das Image
+setzt `USER curl_user` (symbolisch, UID 100 / GID 101), nicht numerisch —
+gleiches Problem wie ursprünglich beim `pacman-server`-Image (siehe
+Dockerfile-Kommentar). Zusammen mit `runAsNonRoot: true` verweigert der
+kubelet den Container sonst mit `CreateContainerConfigError: container has
+runAsNonRoot and image has non-numeric user`. Deshalb pinnt der
+`geoip-update`-initContainer in `templates/deployment.yaml` explizit
+`runAsUser: 100` / `runAsGroup: 101` (gegen das `curlimages/curl:8.11.0`-
+Image-Config verifiziert).
 
 **Attribution (CC BY 4.0):** IP-Geolocation-Daten von
 [DB-IP](https://db-ip.com).
