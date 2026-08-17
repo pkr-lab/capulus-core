@@ -22,10 +22,10 @@ ArgoCD          =  CD   (argocd/apps/* in den Cluster deployen)
 - **Image-Builds:** Kaniko baut und pusht nach GHCR (`ghcr.io/pke/...`)
   mittels eines versiegelten Docker-Config-Secrets. Keine In-Cluster-Registry.
 
-| Dienst         | URL                               | Hinweise                    |
-|----------------|------------------------------------|------------------------------|
-| Argo Workflows | https://argo-workflows.homeserver  | UI + API (Server-Auth-Mode) |
-| MinIO-Konsole  | https://minio.homeserver           | Objekt-Browser              |
+| Dienst         | URL                                    | Hinweise                    |
+|----------------|-----------------------------------------|------------------------------|
+| Argo Workflows | http://argo-workflows.tech.homeserver  | UI + API (Server-Auth-Mode) |
+| MinIO-Konsole  | http://minio.tech.homeserver           | Objekt-Browser              |
 
 ---
 
@@ -102,16 +102,33 @@ $SSH 'sudo kubectl -n minio get pods'
 $SSH 'sudo kubectl -n argo-workflows get pods'
 ```
 
-`https://argo-workflows.homeserver` öffnen — die Workflows-UI sollte laden
-und die WorkflowTemplates `git-ci` und `kaniko-build-push` auflisten.
+`http://argo-workflows.tech.homeserver` öffnen — die Workflows-UI sollte
+laden und die WorkflowTemplates `git-ci` und `kaniko-build-push` auflisten.
 
 ---
 
 ## 3. Pipelines ausführen
 
 Die `argo`-CLI spricht mit dem Server; sie auf dem Host oder einer beliebigen
-Tailnet-Maschine mit `ARGO_SERVER=argo-workflows.homeserver:80` und
-`ARGO_HTTP1=true` ausführen, oder einfach über die UI submitten.
+Tailnet-Maschine mit folgenden Env-Vars ausführen (oder einfach über die UI
+submitten):
+
+```bash
+export ARGO_SERVER=argo-workflows.tech.homeserver:80
+export ARGO_HTTP1=true
+# server.secure: false in values.yaml → Server spricht nur Klartext-HTTP.
+# Ohne dieses Flag versucht die CLI trotzdem TLS und scheitert am
+# TLS-Handshake (Traefik antwortet mit dem *internen* Wildcard-Zertifikat,
+# das den Bare-Hostnamen nicht abdeckt).
+export ARGO_SECURE=false
+# k3s-Kubeconfigs (auch /home/ubuntu/.kube/config) authentifizieren per
+# Client-TLS-Zertifikat, nicht per Bearer-Token — kubectl kommt damit klar,
+# die CLI braucht für die Anfrage an den Argo-Server aber explizit einen
+# echten Token. Die im Chart bereits angelegte Workflow-ServiceAccount
+# (`argo-workflow`, values.yaml → workflow.serviceAccount.name) dafür
+# verwenden:
+export ARGO_TOKEN="Bearer $(kubectl -n argo-workflows create token argo-workflow)"
+```
 
 ### 3.1 Test-/Lint-Job (`git-ci`)
 
