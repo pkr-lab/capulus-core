@@ -32,7 +32,7 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok\n"))
 	})
-	mux.Handle("/", withAccessLog(logger, geo, http.FileServer(http.Dir(staticDir))))
+	mux.Handle("/", withAccessLog(logger, geo, serveStatic(staticDir)))
 
 	logger.Info("pacman server starting", "addr", listenAddr, "static_dir", staticDir, "geoip_enabled", geo != nil)
 	if err := http.ListenAndServe(listenAddr, mux); err != nil {
@@ -53,6 +53,25 @@ func openGeoIP(logger *slog.Logger, dbPath string) *geoip2.Reader {
 	}
 	logger.Info("geoip: database loaded", "path", dbPath)
 	return reader
+}
+
+// serveStatic wraps http.FileServer to serve index.htm for "/" — the
+// vendored pacman-canvas source (see ../../../src/) ships an "index.htm",
+// not "index.html", which Go's http.FileServer only recognizes as an
+// implicit directory index under the ".html" name. Without this, "/"
+// falls through to FileServer's directory-listing behavior instead of the
+// game itself. Left as a server-side rewrite rather than renaming the
+// vendored file so future re-vendoring from upstream doesn't need to
+// repeat that change.
+func serveStatic(dir string) http.Handler {
+	fileServer := http.FileServer(http.Dir(dir))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			http.ServeFile(w, r, dir+"/index.htm")
+			return
+		}
+		fileServer.ServeHTTP(w, r)
+	})
 }
 
 func getenv(key, fallback string) string {
