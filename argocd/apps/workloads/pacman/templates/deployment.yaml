@@ -18,35 +18,23 @@ spec:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       {{- if .Values.geoip.enabled }}
       initContainers:
-        # Refreshes the GeoLite2-City DB into the shared emptyDir on every
-        # pod start. Deliberately non-blocking (|| true): with a still-empty
-        # or invalid MaxMind license key this must NOT crash-loop the pod —
-        # pacman-server already degrades gracefully to IP-only logging when
-        # no DB is present, see server/cmd/server/main.go.
+        # Downloads the DB-IP City Lite database (free, no account/license
+        # key needed, CC BY 4.0 — attribution in README.md) into the shared
+        # emptyDir on every pod start. Deliberately non-blocking (|| echo):
+        # a failed download must NOT crash-loop the pod — pacman-server
+        # already degrades gracefully to IP-only logging when no DB is
+        # present, see server/cmd/server/main.go.
         - name: geoip-update
           image: "{{ .Values.geoip.updaterImage.repository }}:{{ .Values.geoip.updaterImage.tag }}"
           command:
             - sh
             - -c
-            - "geoipupdate || echo 'geoipupdate failed (missing/invalid MaxMind license key?) - continuing without GeoIP DB' >&2"
-          env:
-            - name: GEOIPUPDATE_EDITION_IDS
-              value: "GeoLite2-City"
-            - name: GEOIPUPDATE_DB_DIR
-              value: /geoip
-            - name: GEOIPUPDATE_ACCOUNT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.geoip.secretName }}
-                  key: {{ .Values.geoip.accountIdKey }}
-            - name: GEOIPUPDATE_LICENSE_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.geoip.secretName }}
-                  key: {{ .Values.geoip.licenseKeyKey }}
+            - >-
+              curl -fsSL "https://download.db-ip.com/free/dbip-city-lite-$(date +%Y-%m).mmdb.gz"
+              | gunzip -c > /geoip/city.mmdb
+              || echo 'DB-IP download failed - continuing without GeoIP DB' >&2
           securityContext:
             runAsNonRoot: true
-            runAsUser: 1000
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
@@ -65,7 +53,7 @@ spec:
           {{- if .Values.geoip.enabled }}
           env:
             - name: GEOIP_DB_PATH
-              value: /geoip/GeoLite2-City.mmdb
+              value: /geoip/city.mmdb
           {{- end }}
           ports:
             - name: http

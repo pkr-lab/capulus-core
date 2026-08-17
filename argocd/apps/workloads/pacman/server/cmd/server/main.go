@@ -1,6 +1,6 @@
 // pacman-server serves the vendored Pacman Canvas static assets and logs
-// one structured JSON line per request (client IP, user agent, and — if a
-// GeoLite2 database is mounted — the resolved location) for a security
+// one structured JSON line per request (client IP, user agent, and — if an
+// MMDB geo database is mounted — the resolved location) for a security
 // training that demonstrates what a web server can learn about a visitor.
 package main
 
@@ -18,7 +18,7 @@ import (
 func main() {
 	staticDir := getenv("STATIC_DIR", "/usr/share/pacman/html")
 	listenAddr := getenv("LISTEN_ADDR", ":8080")
-	dbPath := getenv("GEOIP_DB_PATH", "/geoip/GeoLite2-City.mmdb")
+	dbPath := getenv("GEOIP_DB_PATH", "/geoip/city.mmdb")
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
