@@ -5,7 +5,9 @@ metadata:
   labels:
     {{- include "pacman.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "pacman.selectorLabels" . | nindent 6 }}

@@ -26,7 +26,7 @@ Besucher (IPv4/IPv6)
   → Traefik (Ingress, Host-Header-Routing)
   → pacman-server (Go, siehe server/cmd/server/main.go)
       - liest CF-Connecting-IP (Fallback: X-Forwarded-For, dann TCP-Peer)
-      - optional: GeoIP-Lookup gegen lokale MaxMind-GeoLite2-City-DB
+      - optional: GeoIP-Lookup gegen lokale DB-IP-City-Lite-DB
       - loggt eine JSON-Zeile pro Request nach stdout
   → victoria-logs-collector (DaemonSet, liest Container-stdout)
   → VictoriaLogs (argocd/apps/platform/logging/)

@@ -38,17 +38,34 @@ das kümmert sich nur um Releases). Images werden manuell über das
 `argocd/apps/platform/argo-workflows/` installiert ist:
 
 ```bash
-argo submit --from workflowtemplate/kaniko-build-push \
+export ARGO_SERVER=argo-workflows.tech.homeserver:80
+export ARGO_HTTP1=true
+export ARGO_SECURE=false
+export ARGO_TOKEN="Bearer $(kubectl -n argo-workflows create token argo-workflow)"
+
+argo submit -n argo-workflows --from workflowtemplate/kaniko-build-push \
   -p repo=https://github.com/pkr-lab/capulus-core.git \
   -p revision=main \
   -p context=argocd/apps/workloads/pacman \
   -p dockerfile=Dockerfile \
-  -p image=ghcr.io/<dein-gh-username>/pacman:v1
+  -p image=ghcr.io/pkr-lab/pacman:v1
 ```
 
 Danach `image.repository`/`image.tag` in `values.yaml` auf das gepushte
-Image setzen (und ggf. einen `imagePullSecrets`-Eintrag, falls das
-GHCR-Package privat ist).
+Image setzen.
+
+**GHCR-Package-Sichtbarkeit:** frisch gepushte GHCR-Packages sind
+standardmäßig **privat** — der Pod scheitert dann mit
+`ImagePullBackOff`/"trying and failing to pull image", obwohl der Build
+selbst fehlerfrei durchlief. Da dieses Spiel ohnehin öffentlich unter
+`pacman-prod.pke-lab.de` erreichbar sein soll, ist der einfachste Fix, das
+Package öffentlich zu stellen: GitHub → `pkr-lab` → Packages → `pacman` →
+Package settings → Change visibility → Public. Danach ggf.
+`kubectl -n pacman rollout restart deployment/pacman`, um den nächsten
+Pull sofort statt erst beim Backoff-Retry auszulösen. (Alternative, falls
+das Image privat bleiben soll: `imagePullSecrets`-Eintrag + Secret wie bei
+`carplay-api` — dort aktuell nicht als Chart-Wert vorgesehen, müsste
+ergänzt werden.)
 
 Lokal bauen/testen (z. B. um den Server vorab zu prüfen):
 
@@ -69,31 +86,26 @@ dortige Wildcard-Regel), Traefik matcht den Host direkt aus dieser
 ## GeoIP-Anreicherung aktivieren (optional)
 
 Standardmäßig aus (`geoip.enabled: false`) — `pacman-server` loggt dann nur
-die rohe Client-IP, ohne Standort. Zum Aktivieren:
+die rohe Client-IP, ohne Standort. Quelle ist [DB-IP City Lite](https://db-ip.com/db/lite.php)
+(CC BY 4.0) — **komplett kostenlos, kein Account, kein License-Key, kein
+Sealed-Secret nötig**, bewusst gewählt statt MaxMind GeoLite2 (das einen
+Account + License-Key verlangt). Zum Aktivieren reicht:
 
-1. Kostenlosen MaxMind-Account + GeoLite2-License-Key anlegen:
-   <https://www.maxmind.com/en/geolite2/signup>
-2. Account-ID und License-Key gegen den Sealed-Secrets-Controller des
-   Clusters versiegeln (von einer Maschine mit Cluster-Zugriff, z. B. per
-   SSH auf dem Homeserver):
+```yaml
+geoip:
+  enabled: true
+```
 
-   ```bash
-   seal() {  # seal <namespace> <secret-name> <key> <value-on-stdin>
-     kubeseal --raw --namespace "$1" --name "$2" --secret-key "$3" \
-       --controller-name sealed-secrets-controller \
-       --controller-namespace sealed-secrets \
-       --from-file=/dev/stdin
-   }
-   printf '<deine-account-id>'   | seal pacman pacman-maxmind account-id
-   printf '<dein-license-key>'   | seal pacman pacman-maxmind license-key
-   ```
+committen, pushen. Nach dem nächsten Sync lädt ein initContainer
+(`curlimages/curl`) die aktuelle DB-IP-City-Lite-DB (monatlicher
+Direct-Download, kein Auth) bei jedem Pod-Start neu in ein gemeinsames
+`emptyDir`. Schlägt der Download fehl, läuft der Pod trotzdem an —
+`pacman-server` erkennt die fehlende `.mmdb`-Datei und loggt dann nur die
+rohe IP (siehe `openGeoIP()` in `server/cmd/server/main.go`), kein
+CrashLoop. Details/Datenschutz-Kontext: docs/57.
 
-3. Die beiden Ausgaben in `values.yaml` eintragen
-   (`geoip.encryptedAccountId` / `geoip.encryptedLicenseKey`) und
-   `geoip.enabled: true` setzen, committen, pushen.
-4. Nach dem nächsten Sync lädt ein initContainer (`geoipupdate`) die
-   GeoLite2-City-DB bei jedem Pod-Start neu in ein gemeinsames `emptyDir` —
-   siehe docs/57 für Details zum Refresh-Verhalten und Datenschutz-Kontext.
+**Attribution (CC BY 4.0):** IP-Geolocation-Daten von
+[DB-IP](https://db-ip.com).
 
 ## Bekannte Einschränkung
 
@@ -114,8 +126,17 @@ davon unberührt komplett clientseitig.
   keinerlei Schreibzugriff (kein `/tmp`-Mount nötig, anders als bei nginx).
 - Keine externen Netzwerkaufrufe des Spiels selbst zur Laufzeit (kein
   Tracking, keine Ads, keine Highscore-API) — nur der optionale
-  `geoipupdate`-initContainer spricht (einmal pro Pod-Start) mit der
-  MaxMind-API, um die lokale GeoLite2-DB zu aktualisieren.
+  initContainer lädt (einmal pro Pod-Start) die DB-IP-Lite-DB per
+  Direct-Download, ohne Auth/Account.
 - Die Zugriffslogs (inkl. IP/GeoIP bei aktivierter Anreicherung) landen im
   zentralen Logging-Stack (`argocd/apps/platform/logging/`,
   VictoriaLogs) — Aufbewahrung/Zweckbindung siehe docs/57.
+
+## Autoscaling
+
+`autoscaling.enabled: true` per Default (min 1 / max 3 Replicas, CPU-Ziel
+70 %) — reines CPU-Autoscaling, da `pacman-server` zustandslos ist und kein
+RAM-lastiges Verhalten hat. Kein `ReadWriteOnce`-Storage im Spiel, also
+auch keine Notwendigkeit für erzwungene Node-Co-Location per
+`podAffinity` (anders als z. B. immich/nextcloud). Details/Konventionen:
+[docs/39-hpa-autoscaling.md](../../../docs/39-hpa-autoscaling.md).
