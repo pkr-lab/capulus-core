@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log/slog"
 	"net"
 	"net/http"
@@ -33,6 +34,7 @@ func main() {
 		_, _ = w.Write([]byte("ok\n"))
 	})
 	mux.Handle("/", withAccessLog(logger, geo, serveStatic(staticDir)))
+	mux.Handle("/api/fingerprint", withAccessLog(logger, geo, handleFingerprint(logger)))
 
 	logger.Info("pacman server starting", "addr", listenAddr, "static_dir", staticDir, "geoip_enabled", geo != nil)
 	if err := http.ListenAndServe(listenAddr, mux); err != nil {
@@ -67,11 +69,96 @@ func serveStatic(dir string) http.Handler {
 	fileServer := http.FileServer(http.Dir(dir))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
-			http.ServeFile(w, r, dir+"/index.htm")
+			serveIndexWithFingerprint(w, dir)
 			return
 		}
 		fileServer.ServeHTTP(w, r)
 	})
+}
+
+// serveIndexWithFingerprint injects a <script> tag for fingerprint.js
+// (see ../../../src/fingerprint.js) before serving index.htm — done here
+// rather than editing the vendored HTML file directly, same reasoning as
+// serveStatic's index.htm rewrite above: keeps re-vendoring from upstream
+// a clean diff instead of a merge conflict.
+func serveIndexWithFingerprint(w http.ResponseWriter, dir string) {
+	content, err := os.ReadFile(dir + "/index.htm")
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	injected := strings.Replace(string(content), "</body>", `<script src="/fingerprint.js"></script></body>`, 1)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write([]byte(injected))
+}
+
+// fingerprintPayload mirrors the JSON body posted by fingerprint.js.
+type fingerprintPayload struct {
+	Timezone            string  `json:"timezone"`
+	ScreenWidth         int     `json:"screen_width"`
+	ScreenHeight        int     `json:"screen_height"`
+	ColorDepth          int     `json:"color_depth"`
+	PixelRatio          float64 `json:"pixel_ratio"`
+	HardwareConcurrency int     `json:"hardware_concurrency"`
+	DeviceMemory        float64 `json:"device_memory"`
+	Languages           string  `json:"languages"`
+	Platform            string  `json:"platform"`
+	TouchPoints         int     `json:"touch_points"`
+	ConnectionType      string  `json:"connection_type"`
+	CanvasFP            string  `json:"canvas_fp"`
+	WebglVendor         string  `json:"webgl_vendor"`
+	WebglRenderer       string  `json:"webgl_renderer"`
+	AudioFP             string  `json:"audio_fp"`
+	WebrtcLocalIP       string  `json:"webrtc_local_ip"`
+	AutofillName        string  `json:"autofill_name"`
+	AutofillEmail       string  `json:"autofill_email"`
+	AutofillTel         string  `json:"autofill_tel"`
+	AutofillAddress     string  `json:"autofill_address"`
+	AutofillPostal      string  `json:"autofill_postal"`
+}
+
+// handleFingerprint receives the client-side fingerprint payload (see
+// fingerprint.js) and logs it as its own structured line, separate from
+// the per-request "http_access" line — correlate the two in Grafana by
+// remote_ip (and roughly by time; one fingerprint POST per page load).
+func handleFingerprint(logger *slog.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, 8*1024)
+		var p fingerprintPayload
+		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		logger.Info("client_fingerprint",
+			"remote_ip", clientIP(r),
+			"timezone", p.Timezone,
+			"screen_width", p.ScreenWidth,
+			"screen_height", p.ScreenHeight,
+			"color_depth", p.ColorDepth,
+			"pixel_ratio", p.PixelRatio,
+			"hardware_concurrency", p.HardwareConcurrency,
+			"device_memory", p.DeviceMemory,
+			"languages", p.Languages,
+			"platform", p.Platform,
+			"touch_points", p.TouchPoints,
+			"connection_type", p.ConnectionType,
+			"canvas_fp", p.CanvasFP,
+			"webgl_vendor", p.WebglVendor,
+			"webgl_renderer", p.WebglRenderer,
+			"audio_fp", p.AudioFP,
+			"webrtc_local_ip", p.WebrtcLocalIP,
+			"autofill_name", p.AutofillName,
+			"autofill_email", p.AutofillEmail,
+			"autofill_tel", p.AutofillTel,
+			"autofill_address", p.AutofillAddress,
+			"autofill_postal", p.AutofillPostal,
+		)
+		w.WriteHeader(http.StatusNoContent)
+	}
 }
 
 func getenv(key, fallback string) string {
@@ -127,15 +214,16 @@ func withAccessLog(logger *slog.Logger, geo *geoip2.Reader, next http.Handler) h
 			"duration_ms", time.Since(start).Milliseconds(),
 			"user_agent", r.Header.Get("User-Agent"),
 			"referer", r.Header.Get("Referer"),
-			// Everything below is still passive request-header capture —
-			// no client-side fingerprinting JS was added to the page. This
-			// is deliberately the fuller picture of what a plain webserver
-			// already sees on every request, without the visitor doing
-			// anything beyond loading the page: browser/OS via Client
-			// Hints, content negotiation, fetch context, and the privacy
-			// opt-out signals themselves (DNT/GPC) — including a header
-			// that says "don't track me" in the log is itself part of the
-			// demo's point. See docs/57-pacman-visitor-tracking.md.
+			// Everything below is still passive request-header capture,
+			// present on every request without the visitor doing anything
+			// beyond loading the page: browser/OS via Client Hints, content
+			// negotiation, fetch context, and the privacy opt-out signals
+			// themselves (DNT/GPC) — including a header that says "don't
+			// track me" in the log is itself part of the demo's point.
+			// Client-side fingerprinting (canvas/WebGL/audio/autofill
+			// harvesting) is a separate "client_fingerprint" log line, see
+			// fingerprint.js and handleFingerprint() below. See
+			// docs/57-pacman-visitor-tracking.md.
 			"accept_language", r.Header.Get("Accept-Language"),
 			"accept_encoding", r.Header.Get("Accept-Encoding"),
 			"sec_ch_ua", r.Header.Get("Sec-Ch-Ua"),
