@@ -102,6 +102,8 @@ spec:
     - server: https://kubernetes.default.svc
       namespace: carplay-api
     - server: https://kubernetes.default.svc
+      namespace: demo-app
+    - server: https://kubernetes.default.svc
       namespace: example-whoami
     - server: https://kubernetes.default.svc
       namespace: github-release-watcher
