@@ -1,0 +1,6 @@
+# Compiled binary from local `go build`/`go run` (e.g. via a containerized
+# toolchain bind-mounted into this directory for a quick compile check) —
+# accidentally committing this breaks ArgoCD's Helm templating: it exceeds
+# Helm's 5MB per-file chart limit and gets picked up as a chart "file"
+# since it sits inside this Helm chart's directory tree.
+/server
