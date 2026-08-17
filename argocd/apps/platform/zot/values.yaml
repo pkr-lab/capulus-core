@@ -1,0 +1,103 @@
+---
+# Values passed through to the "zot" sub-chart (project-zot/helm-charts).
+# Alles unter `zot:` wird vom Dependency-Chart konsumiert.
+zot:
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/project-zot/zot
+    pullPolicy: IfNotPresent
+    tag: "v2.1.18"
+
+  # Registry-Daten müssen Restarts überleben — ohne persistence:true rendert
+  # der Sub-Chart ein Deployment mit emptyDir (siehe templates/deployment.yaml
+  # dort: "{{ if not .Values.persistence }}"), das wäre bei jedem Neustart leer.
+  persistence: true
+  pvc:
+    create: true
+    accessModes: ["ReadWriteOnce"]
+    storage: 30Gi
+    storageClassName: nas
+
+  service:
+    type: ClusterIP
+    port: 5000
+
+  ingress:
+    enabled: true
+    className: traefik
+    hosts:
+      - host: zot.tech.homeserver
+        paths:
+          - path: /
+    # Bewusst nur LAN/Tailscale — ein Registry braucht anders als pacman
+    # keine öffentliche Erreichbarkeit über pke-lab.de; kaniko (in-cluster)
+    # nutzt ohnehin den ClusterIP-Service direkt, kein Ingress nötig dafür.
+
+  # Auth über htpasswd (siehe templates/htpasswd-sealedsecret.yaml dieses
+  # Wrapper-Charts) statt der eingebauten secretFiles/mountSecret-Option des
+  # Sub-Charts — die würde den (wenn auch bcrypt-gehashten) htpasswd-Inhalt
+  # direkt in dieses values.yaml und damit ins Git-Repo schreiben. Über
+  # externalSecrets wird stattdessen ein bereits existierendes, per
+  # SealedSecret verwaltetes Secret gemountet (Konvention wie bei minio/
+  # nextcloud: keine Credentials im Klartext im Repo).
+  mountSecret: false
+  externalSecrets:
+    - secretName: zot-htpasswd
+      mountPath: /secret
+
+  mountConfig: true
+  configFiles:
+    config.json: |-
+      {
+        "storage": { "rootDirectory": "/var/lib/registry" },
+        "http": {
+          "address": "0.0.0.0",
+          "port": "5000",
+          "auth": { "htpasswd": { "path": "/secret/htpasswd" } },
+          "accessControl": {
+            "repositories": {
+              "**": { "policies": [], "defaultPolicy": [] }
+            },
+            "adminPolicy": {
+              "users": ["kaniko"],
+              "actions": ["read", "create", "update", "delete"]
+            }
+          }
+        },
+        "log": { "level": "info" }
+      }
+
+  # /livez, /readyz, /startupz sind in Zot bewusst NICHT hinter der
+  # Auth-Middleware registriert (siehe pkg/api/routes.go, "health endpoints
+  # get added first" — vor dem authHandler-Subrouter) — kein authHeader für
+  # die Probes nötig, und damit auch kein Klartext-Passwort in dieser Datei.
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+    fsGroup: 65532
+    seccompProfile:
+      type: RuntimeDefault
+
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# --- Consumed by this chart's own templates/ (NOT the zot sub-chart) ---
+# SealedSecret mit dem htpasswd-Eintrag für den "kaniko"-User (Push/Pull/
+# Delete auf alle Repos, siehe adminPolicy oben). Neu versiegeln:
+# siehe Kommentar in templates/htpasswd-sealedsecret.yaml.
+htpasswdSecret:
+  encryptedHtpasswd: "AgB3GN/i7a7zsGs8piO2MIcmS/xNlzNvgZzUtGeaBnNhox2J0yGRLUiXUbVZtv7CmOhrgZr0XPYeI4WehT81y4zul/V4uJZgPCyErF0VfxGabSHwVIVmIpHwFUpwTZLB9ouV66ujzBIK8LX0SY4vFtqOvphH9NzUi66CWRfeqaTIyIVqbpaJ3YlcJMvU6wEds2o4k1iGJ4ZmsDGWv7Y6yxjBOany5z3EjS6xf6ilJLbc1YcwPvI0JIjvmcYNH5ELiumULJhclP5kQOcu5u5SR9wz86QyzgsHRMPPyiVyxcnPbpfDvbPBSiFUfXjKcQwUYSbkiCkjQkre5mglhD8MhNxDkvl27SXwYnZbn/4xOZrMYVot+xdox0CjikpWlKt90qyXCjsN6XJ2237I782Y8j0JU4i6WdY2zDfSg1PKaLcxZPg2AEHb67pzO01M4G14P5012rldtH0m9CL5i74aQmdsKs+8Ox9RPf1X1yPeWNGcExDjZJE8AP0uJm/gaaMUqxIWDR1YG+2R92WXK0yUBlHcoUshxf8hFs6IaNZVTMQokijCHcE+tjVDzNsDEFlO3WpHccz+gU5tLPNk3Hk+WlchcWifNFvEkMgv0tO1BWZzV8KiagZj6ByiLjgF61JrfNgk4xhLlaschsFFXZjQbJLrdlfrvcJWSYx0L1+GQkymHHulFjhqElnOQ/mAIbaCF9J3p24lxLFU2LuWMBgvMU1+tJSZ+HlAGyDbsuchIV80oXurMJHYrJDbxLdfTKCKGnZZUrygWsdXPszwP1lfw09pPxbg"
