@@ -17,7 +17,12 @@ FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=builder /pacman-server /pacman-server
 COPY src/ /usr/share/pacman/html/
 
-USER nonroot:nonroot
+# The :nonroot base image already defaults to numeric UID 65532 — no need
+# to (re-)declare USER. Doing so with the symbolic name "nonroot" bakes a
+# non-numeric user into the image's OCI config, which the kubelet's
+# runAsNonRoot check refuses outright (it can't verify a symbolic name is
+# non-root without running the container): "container has runAsNonRoot and
+# image has non-numeric user (nonroot)".
 
 EXPOSE 8080
 
