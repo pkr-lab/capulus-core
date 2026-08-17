@@ -13,8 +13,8 @@ wieder her.
 
 ## 1. Ins Repo einbinden
 
-Lege den Ordner `demo-app/` in dein Git-Repo und passe in
-`argocd-application.yaml` **`repoURL`** und **`path`** an. Dann:
+Lege den Ordner `demo-app/` unter `argocd/apps/workloads/` in dein Git-Repo
+und passe in `argocd-application.yaml` **`repoURL`** und **`path`** an. Dann:
 
 ```bash
 kubectl apply -f argocd-application.yaml -n argocd
@@ -33,11 +33,18 @@ Du siehst den Soll-Text aus `values.yaml`: `Hello from GitOps - Version 1`
 
 ## 3. Der Live-Eingriff (der "Hack")
 
-Ein Befehl überschreibt den kompletten Inhalt und erzwingt einen Rollout:
+Ein Befehl überschreibt den kompletten Inhalt und erzwingt einen Rollout.
+Das Deployment läuft im Namespace `default` auf dem Homeserver
+(`192.168.178.94`) — lokal per `kubectl` erreichbar, sofern dein Kontext
+auf den Cluster zeigt, sonst per SSH direkt auf dem Server ausführen:
 
 ```bash
-kubectl set env deployment/demo-app \
+# lokal, falls kubeconfig bereits auf den Cluster zeigt
+kubectl set env deployment/demo-app -n default \
   MESSAGE="Beispiel: hier stand eben noch etwas anderes"
+
+# alternativ direkt auf dem Homeserver via SSH
+ssh ubuntu@192.168.178.94 'kubectl set env deployment/demo-app -n default MESSAGE="Beispiel: hier stand eben noch etwas anderes"'
 ```
 
 - Kubernetes ändert das Pod-Template → **neue Pods werden ausgerollt**.
