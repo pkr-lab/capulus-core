@@ -38,6 +38,7 @@ argocd_workloads_apps:
   - mediamtx
   - n8n
   - nextcloud
+  - pacman
   - paperless-ngx
   - tinyteller
   - uptime-kuma
