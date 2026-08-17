@@ -37,6 +37,15 @@ spec:
               || echo 'DB-IP download failed - continuing without GeoIP DB' >&2
           securityContext:
             runAsNonRoot: true
+            # curlimages/curl bakes a symbolic image USER ("curl_user", not
+            # a numeric UID) — same class of problem as the pacman-server
+            # image originally had (see Dockerfile comment). The kubelet's
+            # runAsNonRoot check can't verify a symbolic name is non-root,
+            # so it refuses the container outright unless we pin a numeric
+            # UID/GID here explicitly (curl_user:curl_group = 100:101,
+            # verified against the curlimages/curl:8.11.0 image config).
+            runAsUser: 100
+            runAsGroup: 101
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
