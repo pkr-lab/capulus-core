@@ -1,6 +1,17 @@
 fullnameOverride: "pacman"
 
+# Only used while autoscaling.enabled is false — the HPA takes over
+# replica count once autoscaling is enabled (see below).
 replicaCount: 1
+
+# CPU-only: stateless static/Go server, no memory-bound workload. No
+# ReadWriteOnce storage involved, so no podAffinity co-location concern
+# either (see docs/39-hpa-autoscaling.md).
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
 
 image:
   # Über kaniko-build-push gebaut und gepusht, siehe README.md dieses
