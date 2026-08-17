@@ -50,3 +50,21 @@ resources:
   limits:
     cpu: 100m
     memory: 64Mi
+
+# GeoIP-Anreicherung der Zugriffslogs (Schulungszweck: zeigt, was ein
+# Webserver über Besucher herausfinden kann — IP inkl. IPv6, Standort).
+# Default aus: kein MaxMind-Account/License-Key vorhanden. pacman-server
+# läuft auch ohne DB klaglos weiter (loggt dann nur die rohe IP), siehe
+# server/cmd/server/main.go. Aktivierungsschritte: README.md.
+geoip:
+  enabled: false
+  secretName: pacman-maxmind
+  accountIdKey: account-id
+  licenseKeyKey: license-key
+  # Platzhalter — mit kubeseal gegen den Cluster versiegeln und hier
+  # einsetzen, siehe README.md. Erst danach enabled: true setzen.
+  encryptedAccountId: "REPLACE_ME_SEALED_ACCOUNT_ID"
+  encryptedLicenseKey: "REPLACE_ME_SEALED_LICENSE_KEY"
+  updaterImage:
+    repository: ghcr.io/maxmind/geoipupdate
+    tag: "latest"
