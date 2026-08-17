@@ -1,10 +1,18 @@
 # pacman
 
-Statisches HTML5-Pacman-Spiel, self-hosted für den öffentlichen Zugriff.
-Vendored von [platzhersh/pacman-canvas](https://github.com/platzhersh/pacman-canvas)
-(CC0-1.0) unter `src/` — Google Analytics/AdSense sowie die
+HTML5-Pacman-Spiel, self-hosted für den öffentlichen Zugriff. Ausgeliefert
+über einen kleinen Go-Server (`server/`), der die statischen Assets
+serviert **und** pro Request eine strukturierte JSON-Zugriffszeile loggt
+(Client-IP inkl. IPv6, User-Agent, optional GeoIP-Standort) — für die
+Schulung, die zeigt, was ein Webserver über einen Besucher herausfindet.
+Details/Setup der GeoIP-Anreicherung: [docs/57-pacman-visitor-tracking.md](../../../docs/57-pacman-visitor-tracking.md).
+
+Das Spiel selbst (`src/`) ist vendored von
+[platzhersh/pacman-canvas](https://github.com/platzhersh/pacman-canvas)
+(CC0-1.0) — Google Analytics/AdSense sowie die
 AppsFuel/Google-Site-Verification-Artefakte des Originals wurden vor dem
-Vendoring entfernt, es lädt zur Laufzeit nichts von Dritten nach.
+Vendoring entfernt, das Spiel selbst lädt zur Laufzeit nichts von Dritten
+nach (siehe [Bekannte Einschränkung](#bekannte-einschränkung) unten).
 
 ## Ins Repo einbinden
 
@@ -13,6 +21,14 @@ Kein manuelles `kubectl apply` nötig: Sobald der Ordner `pacman/` unter
 Workloads-ApplicationSet das neue Verzeichnis automatisch (innerhalb von
 ca. 3 Minuten) und legt die Application **pacman** an — Namespace ist
 dabei immer der Ordnername, hier also **`pacman`**.
+
+Damit `pacman` als eigenes AppProject-Ziel erlaubt ist, muss der Namespace
+zusätzlich in `argocd_workloads_apps` (`ansible/roles/argocd/defaults/main.yml`)
+stehen und `make render-bootstrap` gelaufen sein (für dieses Chart bereits
+erledigt) — **und** `make argocd` einmal gegen den Cluster gelaufen sein,
+damit die AppProject-Änderung tatsächlich angewendet wird (die
+ApplicationSet-Erkennung neuer Ordner ist automatisch, das AppProject
+selbst aktualisiert sich nicht von allein aus Git).
 
 ## Image bauen
 
@@ -34,6 +50,13 @@ Danach `image.repository`/`image.tag` in `values.yaml` auf das gepushte
 Image setzen (und ggf. einen `imagePullSecrets`-Eintrag, falls das
 GHCR-Package privat ist).
 
+Lokal bauen/testen (z. B. um den Server vorab zu prüfen):
+
+```bash
+docker build -t pacman-local .
+docker run --rm --read-only --user 65532:65532 -p 8080:8080 pacman-local
+```
+
 ## Extern erreichbar
 
 `values.yaml` trägt bereits einen zweiten Ingress-Host
@@ -43,22 +66,56 @@ GHCR-Package privat ist).
 dortige Wildcard-Regel), Traefik matcht den Host direkt aus dieser
 `ingress.hosts`-Liste.
 
+## GeoIP-Anreicherung aktivieren (optional)
+
+Standardmäßig aus (`geoip.enabled: false`) — `pacman-server` loggt dann nur
+die rohe Client-IP, ohne Standort. Zum Aktivieren:
+
+1. Kostenlosen MaxMind-Account + GeoLite2-License-Key anlegen:
+   <https://www.maxmind.com/en/geolite2/signup>
+2. Account-ID und License-Key gegen den Sealed-Secrets-Controller des
+   Clusters versiegeln (von einer Maschine mit Cluster-Zugriff, z. B. per
+   SSH auf dem Homeserver):
+
+   ```bash
+   seal() {  # seal <namespace> <secret-name> <key> <value-on-stdin>
+     kubeseal --raw --namespace "$1" --name "$2" --secret-key "$3" \
+       --controller-name sealed-secrets-controller \
+       --controller-namespace sealed-secrets \
+       --from-file=/dev/stdin
+   }
+   printf '<deine-account-id>'   | seal pacman pacman-maxmind account-id
+   printf '<dein-license-key>'   | seal pacman pacman-maxmind license-key
+   ```
+
+3. Die beiden Ausgaben in `values.yaml` eintragen
+   (`geoip.encryptedAccountId` / `geoip.encryptedLicenseKey`) und
+   `geoip.enabled: true` setzen, committen, pushen.
+4. Nach dem nächsten Sync lädt ein initContainer (`geoipupdate`) die
+   GeoLite2-City-DB bei jedem Pod-Start neu in ein gemeinsames `emptyDir` —
+   siehe docs/57 für Details zum Refresh-Verhalten und Datenschutz-Kontext.
+
 ## Bekannte Einschränkung
 
 Das Original nutzt `data/db-handler.php` (PHP) für eine globale
 Highscore-Liste. Diese PHP-Datei ist bewusst **nicht** mit ausgeliefert
-(nginx-only-Image, kein PHP) — die Requests dorthin schlagen clientseitig
+(reiner Go-Server, kein PHP) — die Requests dorthin schlagen clientseitig
 fehl (jQuery-`error`-Callback, kein Absturz), das "Highscore"-Menü bleibt
 also leer. Das eigentliche Spiel (Bewegung, lokaler Score, Sound) läuft
 davon unberührt komplett clientseitig.
 
 ## Sicherheits-Notizen
 
-- Statischer Content, kein Server-Code außer nginx selbst — kleine
-  Angriffsfläche.
-- `nginxinc/nginx-unprivileged` läuft bereits als Non-Root, hört auf
-  Port 8080 — passt zu `runAsNonRoot`/`readOnlyRootFilesystem` in
-  `values.yaml` (nginx braucht dafür Schreibzugriff auf `/tmp` und
-  `/var/cache/nginx`, beide als `emptyDir` gemountet).
-- Keine externen Netzwerkaufrufe zur Laufzeit (kein Tracking, keine Ads,
-  keine Highscore-API) — reines statisches Asset-Bundle.
+- `server/` ist ein minimaler, abhängigkeitsarmer Go-Server (nur
+  `oschwald/geoip2-golang` für den optionalen GeoIP-Lookup) auf
+  `gcr.io/distroless/static-debian12:nonroot` — kein Shell, kein
+  Package-Manager, statisch gelinkt, läuft bereits als Non-Root. Passt zu
+  `runAsNonRoot`/`readOnlyRootFilesystem` in `values.yaml`, braucht dafür
+  keinerlei Schreibzugriff (kein `/tmp`-Mount nötig, anders als bei nginx).
+- Keine externen Netzwerkaufrufe des Spiels selbst zur Laufzeit (kein
+  Tracking, keine Ads, keine Highscore-API) — nur der optionale
+  `geoipupdate`-initContainer spricht (einmal pro Pod-Start) mit der
+  MaxMind-API, um die lokale GeoLite2-DB zu aktualisieren.
+- Die Zugriffslogs (inkl. IP/GeoIP bei aktivierter Anreicherung) landen im
+  zentralen Logging-Stack (`argocd/apps/platform/logging/`,
+  VictoriaLogs) — Aufbewahrung/Zweckbindung siehe docs/57.
