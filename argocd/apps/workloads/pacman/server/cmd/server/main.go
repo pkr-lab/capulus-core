@@ -168,6 +168,70 @@ func getenv(key, fallback string) string {
 	return fallback
 }
 
+// parseUserAgent pulls a browser name/version and OS name out of a raw
+// User-Agent string, in browser/OS split for the Grafana table (see
+// docs/57-pacman-visitor-tracking.md). Deliberately simple ordered
+// substring matching, not a full UA-parser library — order matters
+// because most UA strings claim to be several browsers at once (e.g.
+// Edge and Opera both include "Chrome/" and "Safari/" tokens for
+// compatibility, so their own markers must be checked first).
+func parseUserAgent(ua string) (browser, browserVersion, osName string) {
+	browser, browserVersion = "unknown", ""
+	switch {
+	case strings.Contains(ua, "Edg/"):
+		browser, browserVersion = "Edge", versionAfter(ua, "Edg/")
+	case strings.Contains(ua, "OPR/"):
+		browser, browserVersion = "Opera", versionAfter(ua, "OPR/")
+	case strings.Contains(ua, "Firefox/"):
+		browser, browserVersion = "Firefox", versionAfter(ua, "Firefox/")
+	case strings.Contains(ua, "Chrome/"):
+		browser, browserVersion = "Chrome", versionAfter(ua, "Chrome/")
+	case strings.Contains(ua, "Version/") && strings.Contains(ua, "Safari/"):
+		browser, browserVersion = "Safari", versionAfter(ua, "Version/")
+	case strings.Contains(ua, "MSIE ") || strings.Contains(ua, "Trident/"):
+		browser = "Internet Explorer"
+	}
+
+	switch {
+	case strings.Contains(ua, "Windows"):
+		osName = "Windows"
+	// iPhone/iPad UAs contain "like Mac OS X" as a compatibility string
+	// (e.g. "... CPU iPhone OS 17_0 like Mac OS X ..."), so iOS must be
+	// checked before the plain "Mac OS X" case below or every iPhone
+	// would be misreported as macOS.
+	case strings.Contains(ua, "iPhone") || strings.Contains(ua, "iPad"):
+		osName = "iOS"
+	case strings.Contains(ua, "Mac OS X"):
+		osName = "macOS"
+	// Same reasoning as the browser switch above: Android UAs also
+	// contain "Linux" (e.g. "... (Linux; Android 10; ...) ..."), so
+	// Android must be checked first.
+	case strings.Contains(ua, "Android"):
+		osName = "Android"
+	case strings.Contains(ua, "Linux"):
+		osName = "Linux"
+	default:
+		osName = "unknown"
+	}
+	return browser, browserVersion, osName
+}
+
+// versionAfter returns the token right after marker, up to the next
+// space or ';', e.g. versionAfter("... Chrome/120.0.0.0 Safari/...",
+// "Chrome/") == "120.0.0.0".
+func versionAfter(ua, marker string) string {
+	idx := strings.Index(ua, marker)
+	if idx == -1 {
+		return ""
+	}
+	rest := ua[idx+len(marker):]
+	end := strings.IndexAny(rest, " ;)")
+	if end == -1 {
+		return rest
+	}
+	return rest[:end]
+}
+
 // clientIP extracts the real visitor IP (v4 or v6). Cloudflare sets
 // CF-Connecting-IP at its edge — a single authoritative value — before the
 // request ever reaches the cluster, unlike X-Forwarded-For which can carry
@@ -205,6 +269,8 @@ func withAccessLog(logger *slog.Logger, geo *geoip2.Reader, next http.Handler) h
 		next.ServeHTTP(rec, r)
 
 		ip := clientIP(r)
+		ua := r.Header.Get("User-Agent")
+		browser, browserVersion, osName := parseUserAgent(ua)
 		fields := []any{
 			"remote_ip", ip,
 			"x_forwarded_for", r.Header.Get("X-Forwarded-For"),
@@ -212,7 +278,16 @@ func withAccessLog(logger *slog.Logger, geo *geoip2.Reader, next http.Handler) h
 			"path", r.URL.Path,
 			"status", rec.status,
 			"duration_ms", time.Since(start).Milliseconds(),
-			"user_agent", r.Header.Get("User-Agent"),
+			"user_agent", ua,
+			// Parsed out of user_agent server-side so Grafana can show
+			// them as their own table columns instead of everyone having
+			// to read the single raw User-Agent string — see
+			// parseUserAgent() below. Good-enough-for-a-classroom-demo
+			// coverage of the mainstream browsers/OSes, not a full UA
+			// parser library.
+			"ua_browser", browser,
+			"ua_browser_version", browserVersion,
+			"ua_os", osName,
 			"referer", r.Header.Get("Referer"),
 			// Everything below is still passive request-header capture,
 			// present on every request without the visitor doing anything

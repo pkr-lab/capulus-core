@@ -158,7 +158,7 @@ data:
           "targets": [
             {
               "datasource": {"type": "victoriametrics-logs-datasource", "uid": "${datasource}"},
-              "expr": "{kubernetes.pod_namespace=\"pacman\"} _msg:\"http_access\" | fields _time, remote_ip, geo_country_name, geo_city, path, status, user_agent, accept_language, sec_ch_ua_platform, dnt, sec_gpc",
+              "expr": "{kubernetes.pod_namespace=\"pacman\"} _msg:\"http_access\" | fields _time, remote_ip, geo_country_name, geo_city, path, status, ua_browser, ua_browser_version, ua_os, accept_language, dnt, sec_gpc",
               "refId": "A"
             }
           ],
