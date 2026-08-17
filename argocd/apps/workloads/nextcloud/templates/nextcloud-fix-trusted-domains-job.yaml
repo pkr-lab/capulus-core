@@ -19,9 +19,14 @@
 # Readiness/Liveness-Check schlug mit "Trusted domain error" (HTTP 400)
 # fehl → CrashLoopBackOff.
 #
-# Jobs sind immutable — nach Anwenden bei Bedarf mit
-# `kubectl -n nextcloud delete job nextcloud-fix-trusted-domains` wieder
-# entfernen, bevor ein erneuter Sync/Re-Apply nötig wird.
+# Argo-Sync-Hook statt normale Ressource: Jobs sind immutable, ein
+# zweiter Sync-Versuch gegen dieselbe, bereits existierende Job-Ressource
+# schlägt sonst mit "field is immutable" fehl und blockiert JEDEN weiteren
+# Sync der ganzen App dauerhaft (genau das ist beim ersten Rollout
+# passiert). PostSync + BeforeHookCreation lässt ArgoCD die alte
+# Job-Ressource vor jedem neuen Sync erst löschen, HookSucceeded räumt sie
+# nach Erfolg automatisch auf — kein manuelles `kubectl delete job` mehr
+# nötig.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -30,6 +35,9 @@ metadata:
   labels:
     {{- include "nextcloud.labels" . | nindent 4 }}
     app.kubernetes.io/component: trusted-domains-fix
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
 spec:
   backoffLimit: 2
   template:
@@ -56,7 +64,12 @@ spec:
           volumeMounts:
             - name: html
               mountPath: /var/www/html
+            - name: data
+              mountPath: /var/www/html/data
       volumes:
         - name: html
           persistentVolumeClaim:
             claimName: {{ include "nextcloud.fullname" . }}-html
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "nextcloud.fullname" . }}-data
