@@ -163,34 +163,7 @@ data:
             }
           ],
           "title": "Letzte Zugriffe",
-          "type": "table",
-          "transformations": [
-            {
-              "id": "filterFieldsByName",
-              "options": {
-                "include": {"pattern": "^(_time|remote_ip|geo_country_name|geo_city|path|status|ua_browser|ua_browser_version|ua_os|accept_language|dnt|sec_gpc)$"}
-              }
-            },
-            {
-              "id": "organize",
-              "options": {
-                "renameByName": {
-                  "_time": "Zeit",
-                  "remote_ip": "IP",
-                  "geo_country_name": "Land",
-                  "geo_city": "Stadt",
-                  "path": "Pfad",
-                  "status": "Status",
-                  "ua_browser": "Browser",
-                  "ua_browser_version": "Version",
-                  "ua_os": "OS",
-                  "accept_language": "Sprache",
-                  "dnt": "DNT",
-                  "sec_gpc": "GPC"
-                }
-              }
-            }
-          ]
+          "type": "table"
         },
         {
           "datasource": {"type": "victoriametrics-logs-datasource", "uid": "${datasource}"},
@@ -210,50 +183,11 @@ data:
             }
           ],
           "title": "Geräte-Fingerprint (ohne Zutun des Besuchers erfasst)",
-          "type": "table",
-          "transformations": [
-            {
-              "id": "filterFieldsByName",
-              "options": {
-                "include": {"pattern": "^(_time|remote_ip|timezone|screen_width|screen_height|pixel_ratio|hardware_concurrency|device_memory|platform|languages|connection_type|canvas_fp|webgl_renderer|audio_fp|webrtc_local_ip)$"}
-              }
-            },
-            {
-              "id": "organize",
-              "options": {
-                "renameByName": {
-                  "_time": "Zeit",
-                  "remote_ip": "IP",
-                  "timezone": "Zeitzone",
-                  "screen_width": "Breite",
-                  "screen_height": "Höhe",
-                  "pixel_ratio": "Pixel-Ratio",
-                  "hardware_concurrency": "CPU-Kerne",
-                  "device_memory": "RAM (GB)",
-                  "platform": "Plattform",
-                  "languages": "Sprachen",
-                  "connection_type": "Verbindung",
-                  "canvas_fp": "Canvas-Hash",
-                  "webgl_renderer": "GPU",
-                  "audio_fp": "Audio-Hash",
-                  "webrtc_local_ip": "Lokale IP (WebRTC)"
-                }
-              }
-            }
-          ]
+          "type": "table"
         },
         {
           "datasource": {"type": "victoriametrics-logs-datasource", "uid": "${datasource}"},
-          "description": "Nur Zeilen, bei denen mindestens ein Autofill-Köderfeld tatsächlich vom Browser befüllt wurde — echte Personendaten aus dem gespeicherten Autofill-Profil des Besuchers, ohne dass er etwas eingegeben oder ein sichtbares Formular gesehen hat. Der zentrale Beweis für die Schulung.",
-          "fieldConfig": {
-            "defaults": {"custom": {"cellOptions": {"type": "color-background"}}},
-            "overrides": [
-              {
-                "matcher": {"id": "byRegexp", "options": "autofill_.*"},
-                "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]
-              }
-            ]
-          },
+          "description": "Nur Zeilen, bei denen mindestens ein Autofill-Köderfeld tatsächlich vom Browser befüllt wurde — echte Personendaten aus dem gespeicherten Autofill-Profil des Besuchers, ohne dass er etwas eingegeben oder ein sichtbares Formular gesehen hat. Der zentrale Beweis für die Schulung. Bleibt leer, solange kein Besucher mit gespeicherten Autofill-Daten vorbeikam — das ist der Normalfall, kein Fehler.",
           "gridPos": {"h": 8, "w": 24, "x": 0, "y": 36},
           "id": 8,
           "options": {
@@ -269,29 +203,7 @@ data:
             }
           ],
           "title": "⚠ Abgegriffene Personendaten (Autofill-Harvesting)",
-          "type": "table",
-          "transformations": [
-            {
-              "id": "filterFieldsByName",
-              "options": {
-                "include": {"pattern": "^(_time|remote_ip|autofill_name|autofill_email|autofill_tel|autofill_address|autofill_postal)$"}
-              }
-            },
-            {
-              "id": "organize",
-              "options": {
-                "renameByName": {
-                  "_time": "Zeit",
-                  "remote_ip": "IP",
-                  "autofill_name": "Name",
-                  "autofill_email": "E-Mail",
-                  "autofill_tel": "Telefon",
-                  "autofill_address": "Adresse",
-                  "autofill_postal": "PLZ"
-                }
-              }
-            }
-          ]
+          "type": "table"
         }
       ],
       "refresh": "30s",
