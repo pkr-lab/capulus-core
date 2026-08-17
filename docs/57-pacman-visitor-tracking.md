@@ -79,18 +79,18 @@ und loggt dann nur die rohe IP ohne Standort (siehe `openGeoIP()` in
 - **Besucher-Standorte** — Geomap-Panel, Marker aus `geo_lat`/`geo_lon`.
 - **Letzte Zugriffe** — Tabelle mit Zeit, IP, Land/Stadt, Pfad, Status, User-Agent.
 
-Alle Panels filtern auf `{namespace="pacman"} msg:"http_access"` und
-entpacken die JSON-Logzeile per LogsQL `| unpack_json`/Feld-Zugriff.
+Alle Panels filtern auf `{kubernetes.pod_namespace="pacman"} _msg:"http_access"`
+und entpacken die JSON-Logzeile per LogsQL `| unpack_json`/Feld-Zugriff.
 
-> **Nicht gegen eine echte VictoriaLogs-Instanz getestet** — beim Erstellen
-> bestand kein Cluster-Zugriff von der Entwicklungsumgebung aus. Nach dem
-> ersten Sync in Grafana öffnen und insbesondere das Stream-Label für den
-> Namespace (`namespace="pacman"` — je nach `victoria-logs-collector`-
-> Konfiguration könnte das Feld anders heißen, z. B. `kubernetes_namespace`)
-> im Query-Editor gegen echte Daten verifizieren. Bei Bedarf per Grafana
-> Explore (`VictoriaLogs`-Datasource, `{namespace="pacman"}` bzw. direkt
-> `_stream`-Suche) die tatsächlichen Feldnamen nachschlagen und die
-> `expr`-Werte im Dashboard-ConfigMap anpassen.
+> **Verifiziert gegen die echte VictoriaLogs-Instanz** (17.08.2026, per
+> `kubectl port-forward svc/logging-victoria-logs-single-server 9428:9428`
+> + direkte `/select/logsql/query`-Aufrufe). Die ursprüngliche Annahme
+> (`namespace="pacman"`, `msg:"http_access"`) war falsch — das
+> `victoria-logs-collector`-Setup labelt den Namespace tatsächlich als
+> `kubernetes.pod_namespace`, das Nachrichtenfeld heißt `_msg`
+> (VictoriaLogs-Standardfeld), nicht `msg`. Beide waren dadurch bis zum Fix
+> stille No-Ops — kein Query-Fehler, aber auch keine Treffer, das
+> Dashboard blieb leer.
 
 ## Bekannte Grenzen
 
