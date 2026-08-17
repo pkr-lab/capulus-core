@@ -67,4 +67,4 @@ geoip:
   encryptedLicenseKey: "REPLACE_ME_SEALED_LICENSE_KEY"
   updaterImage:
     repository: ghcr.io/maxmind/geoipupdate
-    tag: "latest"
+    tag: "v8.0.0"
