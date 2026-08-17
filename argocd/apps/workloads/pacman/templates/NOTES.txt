@@ -1,0 +1,10 @@
+pacman wurde ausgerollt.
+
+App ansehen (lokal):
+  kubectl port-forward svc/{{ include "pacman.fullname" . }} 8080:{{ .Values.service.port }}
+  Browser: http://localhost:8080
+
+Extern erreichbar unter:
+{{- range .Values.ingress.hosts }}
+  http://{{ .host }}
+{{- end }}
