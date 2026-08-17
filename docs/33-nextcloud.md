@@ -10,7 +10,7 @@ Ersatz). Die Deployment-Konfiguration liegt unter `argocd/apps/workloads/nextclo
 
 | Komponente  | Technologie                          | Namespace   |
 |-------------|---------------------------------------|-------------|
-| Nextcloud   | PHP/Apache (`nextcloud:34.0.3-apache`) | `nextcloud` |
+| Nextcloud   | PHP/Apache (`nextcloud:34.0.2-apache`) | `nextcloud` |
 | Datenbank   | PostgreSQL 16 (eigenes Deployment)     | `nextcloud` |
 | Cache/Locks | Redis 7 (eigenes Deployment)           | `nextcloud` |
 | Ingress     | Traefik                                | `nextcloud` |
@@ -189,9 +189,57 @@ Zwei unterschiedliche Ursachen möglich:
    git-getrackter, einmaliger Reparatur-`Job` bereit:
    `templates/nextcloud-fix-trusted-domains-job.yaml` — startet explizit
    mit `runAsUser: 1000` (passend zur tatsächlichen `config.php`-Owner-UID)
-   und setzt `trusted_domains` aus `values.yaml` neu. Läuft automatisch
-   beim nächsten ArgoCD-Sync, danach mit `kubectl -n nextcloud delete job
-   nextcloud-fix-trusted-domains` wieder entfernen (Jobs sind immutable).
+   und setzt `trusted_domains` aus `values.yaml` neu. Als ArgoCD-Sync-Hook
+   (`PostSync` + `BeforeHookCreation,HookSucceeded`) definiert — läuft bei
+   jedem Sync frisch und räumt sich danach selbst auf, kein manuelles
+   `kubectl delete job` nötig (**wichtig:** ohne diese Hook-Annotationen
+   scheitert jeder zweite Sync-Versuch an genau dieser bereits
+   existierenden Job-Ressource mit "field is immutable" und blockiert den
+   gesamten weiteren Sync der App — so beim ersten Rollout dieses Jobs
+   passiert). Mountet **beide** PVCs (`html` **und** `data`) — `occ`
+   verweigert sonst mit "Environment not properly prepared" / "Your data
+   directory is invalid", weil es die `.ncdata`-Markerdatei im
+   Datenverzeichnis erwartet.
+
+### CrashLoopBackOff mit tausenden `rsync: chown ... Operation not permitted`-Zeilen nach einem Image-Tag-Wechsel
+
+**Nicht** an einzelnen Dateien herumprüfen — das ist eine strukturelle
+Folge von `all_squash` (siehe unten) beim **Versions-Upgrade**, kein
+Rand-/Einzelfall:
+
+Nextclouds offizieller Entrypoint vergleicht bei jedem Start die in
+`version.php` auf der PVC hinterlegte Version mit der Image-Version. Weicht
+das Image (per `image.tag` in `values.yaml`) davon ab, läuft der volle
+Upgrade-Sync: `rsync` kopiert den kompletten App-Code neu und versucht
+dabei — weil der Container als root läuft — **jede einzelne** Datei per
+`--chown www-data:www-data` umzueignen. Unter `all_squash` schlägt das
+für jede Datei fehl, `rsync` beendet sich mit Exit 23, der Container
+crasht, `version.php` bleibt auf dem alten Stand stehen → beim nächsten
+Start exakt derselbe Upgrade-Versuch, endlos. Empirisch ausgelöst durch
+einen Tag-Bump 34.0.2 → 34.0.3 am 17.08.2026 (siehe Commit-Historie) —
+vorher lief der Pod stabil, weil Image- und PVC-Version übereinstimmten
+und der Upgrade-Pfad dadurch gar nicht erst anlief.
+
+**Nicht-Root ist hier keine Lösung**, auch wenn der Entrypoint dann eine
+chown-freie rsync-Variante (`-rlD`) wählen würde: Das offizielle Image ist
+nicht für beliebige Nicht-Root-UIDs gebaut, u. a. ist
+`/usr/local/etc/php/conf.d/` nur für `root` beschreibbar (dort landet z. B.
+die Redis-Session-Config) — ein Testpod mit `runAsUser: 1000` scheiterte
+bereits vor dem eigentlichen App-Sync an `Permission denied` beim
+Schreiben dieser Datei.
+
+**Fix/Vermeidung:** `image.tag` **nicht** ungeprüft hochziehen, solange
+`html`/`data` auf der `nas`-StorageClass liegen — vor jedem Versions-Wechsel
+die tatsächlich installierte Version gegen die PVC prüfen, solange der Pod
+noch läuft (bevor ein Tag-Wechsel ihn crashen lässt):
+
+```bash
+kubectl exec -n nextcloud deploy/nextcloud -- cat /var/www/html/version.php
+```
+
+Ein tatsächliches Upgrade auf dieser NAS ist damit aktuell **nicht sicher
+automatisierbar** — siehe "Andere Lösung" unten (S3/MinIO als
+Primärspeicher würde das Problem grundsätzlich lösen).
 
 ### Root-Squash / all_squash der UGREEN-NAS
 

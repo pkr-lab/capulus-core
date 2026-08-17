@@ -44,23 +44,47 @@ nextcloud:
   image:
     repository: nextcloud
     pullPolicy: IfNotPresent
-    # Pinned für Reproduzierbarkeit. Releases: https://github.com/nextcloud/docker/releases
-    tag: "34.0.3-apache"
+    # ACHTUNG — NICHT ungeprüft hochziehen, siehe Kommentar unten:
+    # tatsächlich auf der PVC installierte Version ist 34.0.2.1
+    # (verifiziert per `require version.php; implode(".", $OC_Version)`
+    # gegen die echte "html"-PVC, 2026-08-17). Ein Tag-Wechsel auf eine
+    # andere Version löst beim nächsten Pod-Start Nextclouds Upgrade-Pfad
+    # aus — und der ist auf dieser NAS aktuell fatal, s.u.
+    tag: "34.0.2-apache"
 
   # Offizielles Apache-Image läuft als root (kein USER im Dockerfile,
-  # Apache-Master-Prozess braucht Port 80 + der Entrypoint chownt beim
-  # ersten Start) — analog zu Vaultwarden kann hier kein runAsNonRoot
-  # gesetzt werden.
-  # ACHTUNG (Stand 2026-07-26): Der Kommentar hier lautete früher, die
-  # "nas"-StorageClass sei mit no_root_squash exportiert und root-Schreib-
-  # zugriff funktioniere daher. Das NAS erzwingt inzwischen all_squash (kein
-  # no_root_squash mehr verfügbar) — auch root-Requests werden gesquasht.
-  # Damals crashte dieser Pod (html/data-PVCs, bewusst weiter auf "nas")
-  # deshalb beim chown im Entrypoint. Update (Stand 2026-08-13, nach dem
-  # ApplicationSet-Incident, siehe docs/50-incident-2026-08-12.md): Pod
-  # läuft seither stabil ohne Restarts — vermutlich durch den Incident-
-  # Restore selbst behoben (Ownership auf der PVC passt jetzt zufällig).
-  # Falls der Crash wiederkehrt, ist die Ursache oben weiterhin gültig.
+  # Apache-Master-Prozess braucht Port 80). Analog zu Vaultwarden kein
+  # runAsNonRoot.
+  #
+  # ACHTUNG (Stand 2026-07-26, überholt): Der Kommentar hier lautete
+  # früher, die "nas"-StorageClass sei mit no_root_squash exportiert und
+  # root-Schreibzugriff funktioniere daher — das NAS erzwingt inzwischen
+  # all_squash (kein no_root_squash mehr verfügbar), auch root-Requests
+  # werden gesquasht.
+  #
+  # WICHTIG (Stand 2026-08-17): all_squash macht insbesondere **Image-
+  # Versions-Upgrades auf dieser NAS aktuell unmöglich**, nicht nur
+  # einzelne Dateizugriffe. Ursache: der offizielle Entrypoint wählt seine
+  # rsync-Optionen für den App-Code-Sync anhand von `id -u`: als root
+  # `-rlDog --chown www-data:www-data` (versucht Owner/Group auf JEDER
+  # einzelnen der tausenden App-Dateien zu setzen, sobald `version.php`
+  # auf der PVC von der Image-Version abweicht). Jeder einzelne chown
+  # schlägt unter all_squash mit "Operation not permitted" fehl, rsync
+  # beendet sich mit Exit 23, der Container crasht — bei jedem Neustart
+  # erneut, endlos (empirisch reproduziert: ein Tag-Bump auf 34.0.3 löste
+  # genau das aus, siehe Commit-Historie).
+  #
+  # Als Nicht-Root (`id -u` != 0) wählt der Entrypoint zwar automatisch
+  # die chown-freie rsync-Variante (`-rlD`) — das wurde geprüft und
+  # verworfen: das Image ist nicht für beliebige Nicht-Root-UIDs gebaut
+  # (z. B. ist /usr/local/etc/php/conf.d/ nur für root beschreibbar, dort
+  # schreibt der Entrypoint u. a. die Redis-Session-Config hinein —
+  # "Permission denied" schon vor dem eigentlichen App-Sync, verifiziert
+  # per Testpod). Root beibehalten ist daher aktuell die einzig praktikable
+  # Option — mit der Konsequenz, dass Versions-Upgrades manuell/vorsichtig
+  # gehandhabt werden müssen (Tag NICHT einfach hochziehen), bis eine
+  # grundsätzlichere Lösung (z. B. Primärspeicher auf S3/MinIO umstellen,
+  # siehe docs/33-nextcloud.md) ansteht.
   podSecurityContext: {}
   securityContext:
     allowPrivilegeEscalation: false
