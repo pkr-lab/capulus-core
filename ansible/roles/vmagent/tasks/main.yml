@@ -56,6 +56,15 @@
     force: false
   when: vmagent_enabled | bool
 
+- name: Installationsverzeichnis fuer vmagent anlegen
+  ansible.builtin.file:
+    path: "{{ vmagent_install_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: vmagent_enabled | bool
+
 - name: vmagent-Binary entpacken
   ansible.builtin.unarchive:
     src: "/usr/local/src/vmutils-linux-{{ vmagent_arch }}-v{{ vmagent_version }}.tar.gz"
