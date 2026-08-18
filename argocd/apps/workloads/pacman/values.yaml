@@ -17,7 +17,7 @@ image:
   # Über kaniko-build-push gebaut und gepusht, siehe README.md dieses
   # Charts. Nach dem ersten Push hier Repository/Tag setzen.
   repository: ghcr.io/pkr-lab/pacman
-  tag: "v6"
+  tag: "v7"
   pullPolicy: IfNotPresent
 
 service:
@@ -90,4 +90,4 @@ geoip:
 # enabled: true zusätzlich eine "training mode ENABLED"-Warnzeile als
 # Erinnerung (siehe main.go).
 trainingMode:
-  enabled: false
+  enabled: true
