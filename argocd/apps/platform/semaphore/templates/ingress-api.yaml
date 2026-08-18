@@ -1,7 +1,6 @@
 {{- if .Values.ingressApi.enabled }}
-# Direkter Ingress ohne Authentik-ForwardAuth für den Ansible-Bootstrap
-# (semaphore_bootstrap-Rolle) und sonstige API-Clients.
-# Semaphores eigene Session-Auth schützt den Zugriff.
+# Direkter Ingress für den Ansible-Bootstrap (semaphore_bootstrap-Rolle)
+# und sonstige API-Clients. Semaphores eigene Session-Auth schützt den Zugriff.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
