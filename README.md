@@ -253,7 +253,6 @@ capulus-core/
     │   └── projects.yaml             # AppProjects "platform" und "workloads"
     └── apps/                         # Ein Ordner pro ArgoCD-Application, je Tier
         ├── platform/                 # AppProject "platform" — Schicht 3, siehe docs/49-argocd-projects.md
-        │   ├── authentik/            # Authentik Single-Sign-On
         │   ├── sealed-secrets/       # SealedSecrets-Controller
         │   ├── kubeseal-webgui/      # Sealed-Secrets-Verschlüsselungs-UI
         │   ├── monitoring/           # VictoriaMetrics + Grafana
@@ -359,7 +358,6 @@ Apps mit echtem Nutzerkreis) — Details und Begründung:
 | ArgoCD | – | https://\<server-ip\>:30443 |
 | Headlamp | tech | https://headlamp.tech.homeserver |
 | Semaphore | tech | https://semaphore.tech.homeserver |
-| Authentik | tech | http://authentik.tech.homeserver ¹ |
 | Gotify | tech | https://gotify.tech.homeserver |
 | ntfy | tech | https://ntfy.tech.homeserver |
 | Pi-hole | tech | https://pihole.tech.homeserver |
@@ -378,12 +376,6 @@ Apps mit echtem Nutzerkreis) — Details und Begründung:
 | Immich | prod | https://immich.prod.homeserver |
 | Wiki.js | prod | https://wiki.prod.homeserver |
 | Xibo CMS (xibosignage) | prod | https://xibo.prod.homeserver |
-
-> ¹ Authentik bleibt bewusst auf `http://` — sein Ingress ist reserviert für
-> das separate mTLS-Client-Zertifikat-Vorhaben in
-> [docs/14-cert-login.md](docs/14-cert-login.md) (eigene CA, eigener
-> Umstieg auf `websecure`), nicht Teil der internen TLS-Einführung aus
-> [docs/54-internal-tls.md](docs/54-internal-tls.md).
 
 > Zusätzlich zu den internen `*.homeserver`-URLs können ausgewählte Dienste
 > über Cloudflare Tunnel öffentlich unter einer eigenen Domain erreichbar
@@ -454,10 +446,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [DNS-Architektur](docs/09-dns-architecture.md) | Warum der Home-Server NICHT dein LAN-DNS ist |
 | [Gotify-Push](docs/10-gotify.md) | Self-hosted Push-Notifications aus dem Stack |
 | [Argo Workflows](docs/12-argo-workflows.md) | Private CI/CD-Pipeline mit MinIO-Artifact-Store |
-| [SSO via Authentik](docs/13-sso-authentik.md) | Authentik als zentraler Identity Provider |
 | [ntfy iOS-Push](docs/11-ntfy.md) | Self-hosted ntfy mit iOS APNs-Relay |
-| [Zertifikats-Auth](docs/14-cert-login.md) | Traefik mTLS Client-Zertifikate |
-| [SSO alle Dienste](docs/15-sso-alle-dienste.md) | Headlamp, Argo Workflows, MinIO via OIDC |
 | [Alarmmonitor-Kiosks](docs/19-alamos-apager.md) | Raspberry-Pi-Kiosks für ALAMOS AMweb, zentral verwaltet |
 | [Cloudflare Tunnel — Setup](docs/22-cloudflare-tunnel.md) | Externe Erreichbarkeit ohne VPN: Konzept, Tunnel-Einrichtung, Absicherung |
 | [Cloudflare Tunnel — Deploy](docs/23-cloudflare-deploy.md) | Rollout, neuen Dienst freigeben, Rotation, Troubleshooting |

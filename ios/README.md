@@ -14,9 +14,10 @@ app with no special Apple entitlement request needed for any of it.
 
 Every `*.homeserver` service in this cluster is plain HTTP behind Traefik —
 check any `argocd/apps/*/values.yaml`, `ingress.tls` is empty everywhere.
-Client-cert mTLS (`docs/14-cert-login.md` in capulus-core) is a real,
-partially-built plan, but it's not merged and today only targets a handful
-of admin UIs (Authentik, Grafana), not this API. `Constants.swift` points at
+Client-cert mTLS was a real, partially-built plan for a handful of admin
+UIs, but it was never merged and the app it was built around (Authentik)
+has since been removed from the cluster entirely — there is currently no
+mTLS migration path targeting this API. `Constants.swift` points at
 `https://carplay-api.homeserver` to match that live reality, with an
 `NSAppTransportSecurity` exception for the `homeserver` domain generated
 into `Info.plist` from `project.yml` (see "Structure" below — this is *not*
