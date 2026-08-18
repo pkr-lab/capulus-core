@@ -73,10 +73,20 @@ cluster_power_manager_ntfy_topic: "Home-Lab-System"
 # mac_address kommt aus host_vars/<host>/vars.yml
 # (wake_on_lan_mac_address) — dort mit `ip link show` auf dem jeweiligen
 # Worker ermitteln und CHANGE-Platzhalter ersetzen.
+#
+# hostvars.get(...) statt hostvars['...']: läuft dieses Playbook (site.yml)
+# über ein Inventory, das worker-0/worker-1 gar nicht kennt -- z.B. das
+# minimale Semaphore-Inventory des "home-server"-Projekts, siehe
+# group_vars/all.yml -- bricht hostvars['worker-0'] hart mit "Task failed:
+# hostvars['worker-0']" ab und reißt den kompletten Playbook-Lauf mit sich
+# (siehe docs/59-nightly-worker-update.md, Abschnitt Fehlerbehebung).
+# hostvars.get() liefert stattdessen einfach {} und damit unten leere
+# Defaults -- die Warnung weiter unten greift dann korrekt, statt den Lauf
+# abzubrechen.
 cluster_power_manager_workers:
   - name: worker-0
-    ansible_host: "{{ hostvars['worker-0'].ansible_host }}"
-    mac_address: "{{ hostvars['worker-0'].wake_on_lan_mac_address | default('') }}"
+    ansible_host: "{{ hostvars.get('worker-0', {}).ansible_host | default('') }}"
+    mac_address: "{{ hostvars.get('worker-0', {}).wake_on_lan_mac_address | default('') }}"
   - name: worker-1
-    ansible_host: "{{ hostvars['worker-1'].ansible_host }}"
-    mac_address: "{{ hostvars['worker-1'].wake_on_lan_mac_address | default('') }}"
+    ansible_host: "{{ hostvars.get('worker-1', {}).ansible_host | default('') }}"
+    mac_address: "{{ hostvars.get('worker-1', {}).wake_on_lan_mac_address | default('') }}"
