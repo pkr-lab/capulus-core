@@ -165,6 +165,13 @@
     INSTALL_K3S_VERSION: "{{ k3s_version }}"
     INSTALL_K3S_CHANNEL: "{{ k3s_channel | default('stable') }}"
   register: k3s_agent_install_result
+  # get-k3s.sh's own "systemctl enable --now" occasionally hits a dropped
+  # D-Bus connection ("D-Bus connection terminated while waiting for jobs")
+  # when dbus-daemon is busy with concurrent apt/snapd/PackageKit activity.
+  # The script is idempotent, so retry rather than failing the whole play.
+  retries: 3
+  delay: 10
+  until: k3s_agent_install_result.rc == 0
   changed_when:
     - k3s_agent_install_result.rc == 0
     - "'Skipping' not in (k3s_agent_install_result.stdout | default(''))"
