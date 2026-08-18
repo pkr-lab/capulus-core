@@ -29,8 +29,6 @@ spec:
     - "https://github.com/pkr-lab/capulus-core.git"
   destinations:
     - server: https://kubernetes.default.svc
-      namespace: authentik
-    - server: https://kubernetes.default.svc
       namespace: sealed-secrets
     - server: https://kubernetes.default.svc
       namespace: kubeseal-webgui

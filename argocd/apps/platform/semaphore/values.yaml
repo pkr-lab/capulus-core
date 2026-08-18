@@ -39,8 +39,7 @@ service:
 ingress:
   enabled: true
   className: traefik
-  annotations:
-    traefik.ingress.kubernetes.io/router.middlewares: "authentik-authentik-forwardauth@kubernetescrd"
+  annotations: {}
   hosts:
     - host: semaphore.tech.homeserver
       paths:
@@ -48,10 +47,10 @@ ingress:
           pathType: Prefix
   tls: []
 
-# Zweiter Ingress ohne ForwardAuth — die semaphore_bootstrap-Ansible-Rolle
-# spricht Semaphores eigene REST-API an (kein Authentik-Session-Cookie
-# vorhanden) und braucht direkten Zugriff. semaphore-api.tech.homeserver wird
-# vom *.homeserver-Wildcard automatisch aufgelöst.
+# Zweiter Ingress — die semaphore_bootstrap-Ansible-Rolle spricht Semaphores
+# eigene REST-API an (kein Browser-Session-Cookie vorhanden) und braucht
+# direkten Zugriff. semaphore-api.tech.homeserver wird vom
+# *.homeserver-Wildcard automatisch aufgelöst.
 ingressApi:
   enabled: true
   host: semaphore-api.tech.homeserver
