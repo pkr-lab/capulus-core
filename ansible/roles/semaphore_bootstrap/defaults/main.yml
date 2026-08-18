@@ -117,9 +117,11 @@ semaphore_projects:
         inventory: worker_0_only
         environment: default-env
         vault_key: vault-password
-        description: "k3s-Agent, thermal_watchdog, resource_watchdog auf worker-0."
-    schedules:
-      - name: "Daily 06:00"
-        template: "Deploy worker-0"
-        cron: "0 6 * * *"
-        active: true
+        description: "apt-Update, k3s-Agent, thermal_watchdog, resource_watchdog auf worker-0."
+    # Bewusst KEIN Schedule hier: worker-0 ist meist per cluster_power_manager
+    # heruntergefahren, ein blinder täglicher Cron-Trigger würde nur an
+    # "Permission denied"/Timeout scheitern. Stattdessen weckt
+    # nightly_worker_wake (läuft auf homeserver, 01:00 Uhr) worker-0 per
+    # Wake-on-LAN und triggert dieses Template gezielt über die
+    # Semaphore-API, sobald der Node Ready ist — siehe
+    # docs/59-nightly-worker-update.md.

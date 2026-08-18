@@ -216,6 +216,7 @@ capulus-core/
 │   ├── 47-renovate.md                # Automatische Update-PRs für Helm-Charts/Images
 │   ├── 48-release-automation.md      # GitHub Release bei jedem Merge auf main
 │   ├── 49-argocd-projects.md         # Platform/Workloads-AppProject-Trennung
+│   ├── 59-nightly-worker-update.md   # Nachts 01:00 Uhr: Worker per WoL wecken, apt-Update, wieder abschalten
 │   └── assets/banner.svg
 ├── renovate.json                     # Renovate-Konfiguration (siehe docs/47-renovate.md)
 ├── .releaserc.json                   # semantic-release-Konfiguration (siehe docs/48-release-automation.md)
@@ -243,6 +244,8 @@ capulus-core/
 │       ├── cluster_power_manager/    # Homeserver: weckt/schaltet Worker per WoL je nach Last
 │       ├── cluster_power_manager_target/  # Worker: autorisiert Shutdown-Key (nur poweroff)
 │       ├── power_agent/              # Homeserver: HTTP-API für manuelle Helligkeit/Wake/Shutdown aus der iOS-App
+│       ├── nightly_worker_wake/      # Homeserver: 01:00-Uhr-Timer weckt Worker, triggert Semaphore-Update, fährt wieder herunter
+│       ├── worker_apt_update/        # Worker: apt update/dist-upgrade (fehlt sonst, da keine common-Rolle)
 │       ├── cups_print_server/        # Homeserver: USB-Drucker per IPP/AirPrint freigeben
 │       ├── thermal_watchdog/         # Selbst-Abschaltung bei Übertemperatur (alle Knoten + Kiosks)
 │       ├── resource_watchdog/        # Selbst-Abschaltung bei Dauerlast (alle Knoten + Kiosks)
@@ -482,6 +485,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [Release-Automatisierung](docs/48-release-automation.md) | GitHub Release + Changelog bei jedem Merge auf `main` via semantic-release |
 | [ArgoCD-Projects](docs/49-argocd-projects.md) | Platform/Workloads-AppProject-Trennung, Ordnerstruktur, neue App hinzufügen |
 | [Domain-Tiers](docs/56-domain-tiers.md) | dev/tech/prod-URL-Konvention (`app.tier.homeserver`), Ausnahmen, Cross-App-Referenzen |
+| [Nightly Worker Update](docs/59-nightly-worker-update.md) | worker-0/worker-1 nachts um 01:00 Uhr per Wake-on-LAN wecken, apt-Update fahren (max. 20 Min.), wieder herunterfahren |
 
 ---
 
