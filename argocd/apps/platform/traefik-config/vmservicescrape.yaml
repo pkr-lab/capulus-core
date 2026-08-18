@@ -1,8 +1,6 @@
 # Scraped die in helmchartconfig.yaml aktivierten Traefik-Metriken für
-# VictoriaMetrics — analog zu argocd/apps/platform/authentik/templates/
-# vmservicescrape.yaml (dort dieselbe Begründung: kein prometheus-operator
-# in diesem Cluster, nur die VictoriaMetrics-CRDs, daher VMServiceScrape
-# statt ServiceMonitor).
+# VictoriaMetrics — kein prometheus-operator in diesem Cluster, nur die
+# VictoriaMetrics-CRDs, daher VMServiceScrape statt ServiceMonitor.
 #
 # Selector nur auf app.kubernetes.io/name: traefik (nicht zusätzlich auf
 # app.kubernetes.io/instance), weil k3s' Addon-Charts den Instance-Label-
