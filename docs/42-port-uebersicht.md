@@ -53,7 +53,6 @@ Node-IP von `homeserver`: `192.168.178.94`. Traefik-LoadBalancer-IP (MetalLB):
 | Zammad | tech (Ausnahme) | zammad | zammad-nginx:8080 | zammad.tech.homeserver | support-tech.pke-lab.de |
 | ntfy | tech | ntfy | ntfy:80 | ntfy.tech.homeserver | ntfy-tech.pke-lab.de |
 | Grafana | tech | monitoring | monitoring-grafana:80 | grafana.tech.homeserver | grafana-tech.pke-lab.de |
-| Authentik | tech | authentik | authentik-server:80 | authentik.tech.homeserver | — (nur LAN/Tailnet) |
 | MediaMTX (Playback) | prod | mediamtx | mediamtx:8888 (HLS) | stream.prod.homeserver | stream-prod.pke-lab.de |
 | Gotify | tech | gotify | gotify:80 | gotify.tech.homeserver, gotify-api.tech.homeserver | — (nur LAN/Tailnet) |
 | Uptime Kuma | prod | uptime-kuma | uptime-kuma:80 | uptime-kuma.prod.homeserver | — |
@@ -121,7 +120,6 @@ angesprochen (Datenbanken, Caches, interne Bridges, Batch-Jobs):
 | Zammad Memcached | zammad | 11211 |
 | Zammad Websocket | zammad | 6042 |
 | Wiki.js Postgres | wikijs | 5432 |
-| Authentik Postgres | authentik | 5432 |
 | MinIO S3-API | minio | 9000 |
 | Sealed Secrets Controller | sealed-secrets | 8080 |
 | VictoriaMetrics (vmsingle/vmagent/vmalert/vmalertmanager) | monitoring | 8428/8429/8080/9093 |

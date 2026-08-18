@@ -121,8 +121,6 @@ sie haben schlicht kein PVC (Wiki.js speichert alles in PostgreSQL).
 | immich | `machine-learning` | 1–2 | CPU 75% / RAM 80% | podAffinity (RWO-Model-Cache); niedrigeres Max, da jede Inferenz-Instanz bis zu 4 Kerne/4Gi allein beansprucht |
 | [nextcloud](33-nextcloud.md) | App-Tier | 1–2 | CPU 75% / RAM 80% | podAffinity (RWO `html`/`data`); sicher dank Redis-Locking |
 | [wikijs](20-wikijs.md) | App-Tier | 1–3 | CPU 75% / RAM 80% | kein PVC, kein Affinity-Trick nötig |
-| [authentik](13-sso-authentik.md) | `server` | 1–3 | CPU 75% / RAM 80% | natives HPA-Template des Upstream-Charts, nur Values-Flag |
-| authentik | `worker` | 1–2 | CPU 75% / RAM 80% | Background-/Celery-Tasks, kein Leader-Election-Singleton |
 | [cloudflared](23-cloudflare-deploy.md) | — | 2–4 | CPU 70% | Minimum bleibt 2 (zwei unabhängige Edge-Verbindungen) |
 | example-whoami | — | 1–3 | CPU 70% | Test-App |
 | gotify-bridge, ntfy-bridge | — | 1–3 | CPU 75% | stateless Webhook-Übersetzer |
@@ -159,8 +157,8 @@ dieselbe DB-Datei zerschießen:
 - minio (Standalone-Mode ignoriert `replicas` laut Chart-Kommentar —
   echte HA bräuchte "distributed mode", nicht HPA)
 - alle internen `postgresql`/`redis`-Deployments (immich, nextcloud,
-  wikijs, authentik (StatefulSet), zammad) — Single-Writer-Datenbanken,
-  teils zusätzlich per `nodeAffinity` auf `local-path`-Storage gepinnt
+  wikijs, zammad) — Single-Writer-Datenbanken, teils zusätzlich per
+  `nodeAffinity` auf `local-path`-Storage gepinnt
 
 **Vom Upstream-Chart selbst als nicht skalierbar markiert:**
 
@@ -188,8 +186,8 @@ dieselbe DB-Datei zerschießen:
 Chart-Abhängigkeiten (`Chart.lock`/`charts/*.tgz`) — ArgoCD hat die beim
 Sync live vom Upstream-Repo/OCI-Registry gezogen. Beim Validieren der
 HPA-Änderungen (`helm dependency build`) wurden diese Artefakte erzeugt
-und committet, analog zum bereits bestehenden Vorgehen bei `authentik`,
-`headlamp` und `monitoring`. Funktional ändert sich dadurch nichts (die
+und committet, analog zum bereits bestehenden Vorgehen bei `headlamp`
+und `monitoring`. Funktional ändert sich dadurch nichts (die
 gepinnte Version in `Chart.yaml` war schon vorher exakt fixiert) — nur
 künftige Versions-Bumps in `Chart.yaml` brauchen danach zusätzlich
 `helm dependency update`, sonst schlägt der Sync wegen einer
