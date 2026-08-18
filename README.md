@@ -391,14 +391,17 @@ Apps mit echtem Nutzerkreis) — Details und Begründung:
 
 > Zusätzlich zu den internen `*.homeserver`-URLs können ausgewählte Dienste
 > über Cloudflare Tunnel öffentlich unter einer eigenen Domain erreichbar
-> gemacht werden (z. B. `https://wiki.prod.deine-domain.de`) — ohne VPN, ohne
-> offene Ports. Setup: **[docs/22-cloudflare-tunnel.md](docs/22-cloudflare-tunnel.md)**.
+> gemacht werden (z. B. `https://wiki-prod.deine-domain.de` — Bindestrich
+> statt Punkt vor dem Tier, siehe
+> [docs/56-domain-tiers.md](docs/56-domain-tiers.md#warum-punkt-intern-bindestrich-extern))
+> — ohne VPN, ohne offene Ports. Setup:
+> **[docs/22-cloudflare-tunnel.md](docs/22-cloudflare-tunnel.md)**.
 > Nextcloud, Immich und Vaultwarden sind zusätzlich unter
-> `https://nextcloud.prod.pke-lab.de`, `https://immich.prod.pke-lab.de` bzw.
-> `https://vault.tech.pke-lab.de` per Cloudflare Tunnel erreichbar (Details je
+> `https://nextcloud-prod.pke-lab.de`, `https://immich-prod.pke-lab.de` bzw.
+> `https://vault-tech.pke-lab.de` per Cloudflare Tunnel erreichbar (Details je
 > Dienst in den verlinkten Docs unten) — bei Immich nötig für
 > Handy-Auto-Backup unterwegs.
-> Der Live-Stream ist zusätzlich unter `https://stream.prod.pke-lab.de` erreichbar,
+> Der Live-Stream ist zusätzlich unter `https://stream-prod.pke-lab.de` erreichbar,
 > abgesichert per mediamtx-eigenem HTTP-Basic-Login — kein externer
 > Identity-Provider, kein Cloudflare-Zero-Trust-Konto nötig. Details:
 > **[docs/24-mediamtx.md](docs/24-mediamtx.md)**.

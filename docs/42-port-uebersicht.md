@@ -11,14 +11,18 @@ Live-Abfrage aus dem Cluster (`kubectl get svc -A` / `kubectl get ingress -A`).
 LAN:      Client → 192.168.178.200 (Traefik LoadBalancer, MetalLB) :80/443
                       → Host-Header "xyz.tier.homeserver" → passender Service
 
-Internet: Client → xyz.tier.pke-lab.de → Cloudflare Edge
+Internet: Client → xyz-tier.pke-lab.de → Cloudflare Edge
                       → cloudflared (outbound-only, kein offener Router-Port)
-                      → Traefik (Wildcard-Regel *.tier.pke-lab.de)
-                      → Host-Header "xyz.tier.pke-lab.de" → passender Service
+                      → Traefik (Wildcard-Regel *-tier.pke-lab.de)
+                      → Host-Header "xyz-tier.pke-lab.de" → passender Service
 ```
 
 `tier` ist `tech` (Infrastruktur/Admin) oder `prod` (echter Nutzerkreis) —
 Details und die vollständige Zuordnung: [docs/56-domain-tiers.md](56-domain-tiers.md).
+Intern per Punkt (`xyz.tier.homeserver`), extern per Bindestrich
+(`xyz-tier.pke-lab.de`) — Grund: Cloudflares kostenloses Zertifikat deckt
+nur eine Label-Ebene ab, siehe
+[docs/56 → Warum Punkt intern, Bindestrich extern](56-domain-tiers.md#warum-punkt-intern-bindestrich-extern).
 
 Wichtig: **cloudflared braucht keinen Port-Forward am Router.** Der Tunnel
 baut die Verbindung von innen nach außen auf (siehe
@@ -26,7 +30,7 @@ baut die Verbindung von innen nach außen auf (siehe
 selbst kennt nur zwei bis drei Wildcard-Regeln (eine pro Tier) und leitet
 alles an Traefik weiter — welche Hostnamen davon tatsächlich extern
 erreichbar sind, entscheidet ausschließlich, welche Apps zusätzlich zu
-ihrem `*.homeserver`-Host auch einen `*.pke-lab.de`-Host in der eigenen
+ihrem `*.homeserver`-Host auch einen `*-pke-lab.de`-Host in der eigenen
 `ingress.hosts`-Liste tragen (siehe [docs/56-domain-tiers.md](56-domain-tiers.md)).
 Nicht jede App mit LAN-Ingress ist automatisch auch extern erreichbar.
 
@@ -37,20 +41,20 @@ Node-IP von `homeserver`: `192.168.178.94`. Traefik-LoadBalancer-IP (MetalLB):
 
 ## Web-Apps (Traefik-Ingress, LAN via `*.tier.homeserver`)
 
-| App | Tier | Namespace | Interner Service:Port | LAN (`*.tier.homeserver`) | Extern (`*.tier.pke-lab.de`) |
+| App | Tier | Namespace | Interner Service:Port | LAN (`*.tier.homeserver`) | Extern (`*-tier.pke-lab.de`) |
 |---|---|---|---|---|---|
-| Immich | prod | immich | immich-server:80 | immich.prod.homeserver | immich.prod.pke-lab.de |
-| Nextcloud | prod | nextcloud | nextcloud:80 | nextcloud.prod.homeserver | nextcloud.prod.pke-lab.de |
+| Immich | prod | immich | immich-server:80 | immich.prod.homeserver | immich-prod.pke-lab.de |
+| Nextcloud | prod | nextcloud | nextcloud:80 | nextcloud.prod.homeserver | nextcloud-prod.pke-lab.de |
 | Paperless-ngx | prod | paperless-ngx | paperless-ngx:80 | paperless.prod.homeserver | — (nur LAN/Tailnet) |
-| Vaultwarden | tech (Ausnahme) | vaultwarden | vaultwarden:80 | vault.tech.homeserver | vault.tech.pke-lab.de |
-| Mealie | prod | mealie | mealie:80 | mealie.prod.homeserver | mealie.prod.pke-lab.de |
+| Vaultwarden | tech (Ausnahme) | vaultwarden | vaultwarden:80 | vault.tech.homeserver | vault-tech.pke-lab.de |
+| Mealie | prod | mealie | mealie:80 | mealie.prod.homeserver | mealie-prod.pke-lab.de |
 | n8n | prod | n8n | n8n:80 | n8n.prod.homeserver | – (aus Cloudflare Tunnel entfernt, Security) |
-| Wiki.js | prod | wikijs | wikijs:80 | wiki.prod.homeserver | wiki.prod.pke-lab.de |
-| Zammad | tech (Ausnahme) | zammad | zammad-nginx:8080 | zammad.tech.homeserver | support.tech.pke-lab.de |
-| ntfy | tech | ntfy | ntfy:80 | ntfy.tech.homeserver | ntfy.tech.pke-lab.de |
-| Grafana | tech | monitoring | monitoring-grafana:80 | grafana.tech.homeserver | grafana.tech.pke-lab.de |
+| Wiki.js | prod | wikijs | wikijs:80 | wiki.prod.homeserver | wiki-prod.pke-lab.de |
+| Zammad | tech (Ausnahme) | zammad | zammad-nginx:8080 | zammad.tech.homeserver | support-tech.pke-lab.de |
+| ntfy | tech | ntfy | ntfy:80 | ntfy.tech.homeserver | ntfy-tech.pke-lab.de |
+| Grafana | tech | monitoring | monitoring-grafana:80 | grafana.tech.homeserver | grafana-tech.pke-lab.de |
 | Authentik | tech | authentik | authentik-server:80 | authentik.tech.homeserver | — (nur LAN/Tailnet) |
-| MediaMTX (Playback) | prod | mediamtx | mediamtx:8888 (HLS) | stream.prod.homeserver | stream.prod.pke-lab.de |
+| MediaMTX (Playback) | prod | mediamtx | mediamtx:8888 (HLS) | stream.prod.homeserver | stream-prod.pke-lab.de |
 | Gotify | tech | gotify | gotify:80 | gotify.tech.homeserver, gotify-api.tech.homeserver | — (nur LAN/Tailnet) |
 | Uptime Kuma | prod | uptime-kuma | uptime-kuma:80 | uptime-kuma.prod.homeserver | — |
 | Semaphore | tech | semaphore | semaphore:3000 | semaphore.tech.homeserver, semaphore-api.tech.homeserver | — |
@@ -66,7 +70,7 @@ Node-IP von `homeserver`: `192.168.178.94`. Traefik-LoadBalancer-IP (MetalLB):
 | example-whoami | prod | example-whoami | example-whoami:80 | whoami.prod.homeserver | — |
 
 Nur die 9 Apps mit einem Eintrag in der Extern-Spalte tragen tatsächlich
-einen zusätzlichen `*.pke-lab.de`-Host in ihrer eigenen `ingress.hosts`-Liste
+einen zusätzlichen `*-pke-lab.de`-Host in ihrer eigenen `ingress.hosts`-Liste
 — alle anderen (auch alle mit „—“) sind ausschließlich über LAN/Tailscale
 erreichbar, egal was `cloudflared`s Wildcard-Regeln theoretisch matchen
 würden (siehe [docs/56-domain-tiers.md](56-domain-tiers.md)).
@@ -140,8 +144,8 @@ Tunnel-Client, baut die Verbindung ausschließlich nach außen auf.
 | Ich will ändern... | Datei |
 |---|---|
 | LAN-Hostname (`*.tier.homeserver`) einer App | `argocd/apps/<platform\|workloads>/<app>/values.yaml` → `ingress.hosts[].host` |
-| Externe Erreichbarkeit (`*.tier.pke-lab.de`) für eine App hinzufügen/entfernen | `argocd/apps/<platform\|workloads>/<app>/values.yaml` → zusätzlichen (bzw. entfernten) Eintrag in `ingress.hosts` — **nicht** mehr in `cloudflared/values.yaml`, die Wildcard-Regeln dort decken bereits jedes Tier ab |
-| Neues Tier extern erreichbar machen (aktuell nur `tech`/`prod`/`dev`) | `argocd/apps/platform/cloudflared/values.yaml` → `ingress.rules` um eine weitere `*.<tier>.pke-lab.de`-Regel ergänzen |
+| Externe Erreichbarkeit (`*-tier.pke-lab.de`) für eine App hinzufügen/entfernen | `argocd/apps/<platform\|workloads>/<app>/values.yaml` → zusätzlichen (bzw. entfernten) Eintrag in `ingress.hosts` — **nicht** mehr in `cloudflared/values.yaml`, die Wildcard-Regeln dort decken bereits jedes Tier ab |
+| Neues Tier extern erreichbar machen (aktuell nur `tech`/`prod`/`dev`) | `argocd/apps/platform/cloudflared/values.yaml` → `ingress.rules` um eine weitere `*-<tier>.pke-lab.de`-Regel ergänzen |
 | Internen Service-Port einer App | `argocd/apps/<platform\|workloads>/<app>/values.yaml` → `service.port`/`targetPort` (Chart-abhängig) |
 | NodePort (Pi-hole DNS, MediaMTX Publish) | `argocd/apps/<platform\|workloads>/<app>/values.yaml` → `service.nodePort`/`publishService.ports.*.nodePort` — danach ggf. UFW-Regel auf neuen Port anpassen |
 | ArgoCD-Zugriffsport | ArgoCD-Bootstrap (`ansible/roles/argocd/`) bzw. Helm-Values des ArgoCD-Charts selbst (nicht Teil der App-Wrapper-Charts) |
