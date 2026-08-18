@@ -96,6 +96,43 @@ input[type="text"]:hover, input[type="text"]:focus, input[type="password"]:hover
 	margin-top: 2em;
 }
 
+/* Nickname prompt overlay - shown on page load until a name is set, see
+   nickname.js. */
+#nickname-overlay {
+	position: fixed;
+	top: 0; left: 0; right: 0; bottom: 0;
+	background: rgba(0,0,0,0.94);
+	z-index: 1000;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	padding: 1em;
+	box-sizing: border-box;
+}
+#nickname-box {
+	max-width: 400px;
+	width: 100%;
+	text-align: center;
+}
+#nickname-title {
+	color: #ffcc00;
+	text-transform: uppercase;
+	font-size: 150%;
+	margin-bottom: 0.5em;
+}
+#nickname-box input[type="text"] {
+	width: 70%;
+	max-width: 260px;
+	display: block;
+	margin: 1em auto;
+	text-align: center;
+}
+#nickname-preview {
+	margin-top: 1em;
+	color: #ffcc00;
+	min-height: 1.4em;
+}
+
 .canvas { position:absolute; padding-top: 20px;}
 .main {width: 100%; max-width: 660px; margin: 10px auto; position: static; left: auto;}
 .content { width: 100%; max-width: 540px; text-align: left; margin: 0;}

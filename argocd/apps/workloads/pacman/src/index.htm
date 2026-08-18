@@ -52,6 +52,26 @@
 
 <body>
 
+<!-- Nickname Prompt: shown on page load until a player name is set (see
+     nickname.js). A real, single visible field with autocomplete="name" -
+     genuine browser autofill support, not the invisible bait form used by
+     fingerprint.js's harvestAutofill(). The typed name never leaves the
+     browser: a pseudonymous "<NAME>-<HEX>" tag is derived from it
+     client-side and that tag is the only thing ever sent to
+     /api/leaderboard (see pacman-canvas.js and
+     server/cmd/server/leaderboard.go). -->
+<div id="nickname-overlay">
+	<div id="nickname-box">
+		<div id="nickname-title">Pacman</div>
+		<p>Wie sollen wir dich auf der Bestenliste nennen?</p>
+		<form id="nickname-form" autocomplete="on">
+			<input type="text" id="nickname-input" name="name" autocomplete="name" placeholder="Dein Name" maxlength="20" required>
+			<button type="submit" class="button" id="nickname-submit">Los geht's</button>
+		</form>
+		<p id="nickname-preview"></p>
+	</div>
+</div>
+
 <div class="container">
 <div class="main">
 
@@ -138,6 +158,7 @@
 		<p>Current Version: <span class="app-version">1.0.6 (2022-08-14)</span></p>
 		<img src="img/platzh1rsch-logo.png">
 		<p>Pacman Canvas is Open Source, written by <a href="http://platzh1rsch.ch">platzh1rsch</a>. You can get the code on <a target="_blank" href="https://github.com/platzhersh/pacman-canvas" target="_blank">github</a>.</p>
+		<p><span class="button" id="change-nickname">Namen ändern</span></p>
 	</div>
 </div>
 
@@ -234,6 +255,7 @@
 </div>
 </div>
 
+	<script src="nickname.js" type="text/javascript"></script>
 	<script src="pacman-canvas.js" type="text/javascript"></script>
 
 

@@ -92,6 +92,25 @@ und entpacken die JSON-Logzeile per LogsQL `| unpack_json`/Feld-Zugriff.
 > stille No-Ops — kein Query-Fehler, aber auch keine Treffer, das
 > Dashboard blieb leer.
 
+## Training Mode: Autofill-Ernte über das Nickname-Feld
+
+Zusätzlich zu `fingerprint.js`'s eigenem Ecken-Widget (oben beschrieben,
+läuft unconditional) gibt es einen zweiten, expliziten Schalter
+`trainingMode.enabled` (Chart-Value, Env `TRAINING_MODE`) — koppelt das
+Namensfeld der Bestenliste (`src/nickname.js`, siehe
+[Chart-README](../argocd/apps/workloads/pacman/README.md#bestenliste-nickname--leaderboard))
+an dieselbe versteckte E-Mail/Tel/Adresse/PLZ-Ernte. Anders als das
+Ecken-Widget ist dieser Weg **standardmäßig aus** und muss bewusst über
+ein Chart-Release aktiviert werden.
+
+**Wichtig für den Schuleinsatz:** Der Schalter wirkt serverseitig pro Host,
+nicht pro Person — solange `trainingMode.enabled: true` auf einem
+öffentlich erreichbaren Host (`pacman-prod.pke-lab.de`) steht, betrifft er
+jeden Besucher dieser URL in dem Zeitraum, nicht nur die informierte
+Klasse. Details, Risiko-Abwägung und Betriebsempfehlung (nur für das
+Zeitfenster der Stunde aktivieren) stehen im Chart-README unter "Training
+Mode".
+
 ## Bekannte Grenzen
 
 - Nur `pacman` ist erfasst, nicht der restliche Cluster-Traffic — bewusste

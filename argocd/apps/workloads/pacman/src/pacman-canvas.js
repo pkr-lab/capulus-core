@@ -39,54 +39,37 @@ function geronimo() {
 	var mapConfig = "data/map.json";
 
 
-	/* AJAX stuff */
+	/* AJAX stuff - talks to pacman-server's /api/leaderboard (Go, see
+	   server/cmd/server/leaderboard.go), which replaced the vendored
+	   game's original data/db-handler.php (PHP, never served by this
+	   Go-only setup). Only the pseudonymous nickname from nickname.js is
+	   ever sent, never a real name. */
 	var getHighscore = () => {
 		setTimeout(ajax_get, 30);
 	}
 	var ajax_get = () => {
-		var date = new Date().getTime();
-		$.ajax({
-			datatype: "json",
-			type: "GET",
-			url: "data/db-handler.php",
-			data: {
-				timestamp: date,
-				action: "get"
-			},
-			success: function (msg) {
-				$("#highscore-list").text("");
-				for (var i = 0; i < msg.length; i++) {
-					$("#highscore-list").append("<li>" + msg[i]['name'] + "<span id='score'>" + msg[i]['score'] + "</span></li>");
+		fetch('/api/leaderboard')
+			.then(function (res) { return res.json(); })
+			.then(function (list) {
+				$('#highscore-list').text('');
+				for (var i = 0; i < list.length; i++) {
+					$('#highscore-list').append('<li>' + list[i].nickname + '<span id="score">' + list[i].score + '</span></li>');
 				}
-			}
-		});
+			})
+			.catch(function (err) { console.log(err); });
 	}
-	var ajax_add = (n, s, l) => {
-
-		$.ajax({
-			type: 'POST',
-			url: 'data/db-handler.php',
-			data: {
-				action: 'add',
-				name: n,
-				score: s,
-				level: l
-			},
-			dataType: 'json',
-			success: function (data) {
-				console.log('Highscore added: ' + data);
-				$('#highscore-form').html('<span class="button" id="show-highscore">View Highscore List</span>');
-			},
-			error: function (errorThrown) {
-				console.log(errorThrown);
-			}
+	var ajax_add = (nickname, score, level) => {
+		fetch('/api/leaderboard', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ nickname: nickname, score: score, level: level })
+		}).then(function (res) {
+			if (!res.ok) throw new Error('submit failed: ' + res.status);
+			$('#form-validator').html('Gespeichert! <span class="button" id="show-highscore">Bestenliste ansehen</span>');
+		}).catch(function (err) {
+			console.log(err);
+			$('#form-validator').html('Speichern fehlgeschlagen.');
 		});
-	}
-
-	function addHighscore() {
-		var name = $("input[type=text]").val();
-		$("#highscore-form").html("Saving highscore...");
-		ajax_add(name, game.score.score, game.level);
 	}
 
 	function buildWall(context, gridX, gridY, width, height) {
@@ -388,16 +371,27 @@ function geronimo() {
 
 		}
 
+		// Nickname was already collected on page load (see nickname.js /
+		// #nickname-overlay), so game-over just shows it and submits
+		// straight away - no more retyping a name here.
 		this.showHighscoreForm = function () {
 			var scoreIsValid = this.validateScoreWithLevel();
+			var nickname = window.PacmanNickname ? window.PacmanNickname.get() : null;
 
-			var inputHTML = scoreIsValid ? `<div id='highscore-form'>
-					<span id='form-validator'></span>
-					<input type='text' id='playerName'/>
-					<span class='button' id='score-submit'>save</span>
-				</div>` : `<div id='invalid-score'>Your score looks fake, the highscore list is only for honest players ;)</div>`;
-			this.pauseAndShowMessage("Game over", "Total Score: " + this.score.score + (HIGHSCORE_ENABLED ? inputHTML : ''));
-			$('#playerName').focus();
+			if (!scoreIsValid) {
+				this.pauseAndShowMessage("Game over", "Total Score: " + this.score.score +
+					(HIGHSCORE_ENABLED ? "<div id='invalid-score'>Your score looks fake, the highscore list is only for honest players ;)</div>" : ''));
+				return;
+			}
+
+			if (!HIGHSCORE_ENABLED || !nickname) {
+				this.pauseAndShowMessage("Game over", "Total Score: " + this.score.score);
+				return;
+			}
+
+			this.pauseAndShowMessage("Game over", "Total Score: " + this.score.score +
+				"<div id='highscore-form'>Dein Spitzname: <strong>" + nickname + "</strong><br/><span id='form-validator'>Speichere...</span></div>");
+			ajax_add(nickname, this.score.score, this.level);
 		}
 
 		/* game controls */
@@ -1373,17 +1367,6 @@ function geronimo() {
 			if (!(game.gameOver === true)) game.pauseResume();
 		});
 
-		// highscore form submit event listener
-		$('body').on('click', '#score-submit', function () {
-			console.log("submit highscore pressed");
-			if ($('#playerName').val() === "" || $('#playerName').val() === undefined) {
-				$('#form-validator').html("Please enter a name<br/>");
-			} else {
-				$('#form-validator').html("");
-				addHighscore();
-			}
-		});
-
 		$('body').on('click', '#show-highscore', function () {
 			game.showContent('highscore-content');
 			getHighscore();
@@ -1446,6 +1429,9 @@ function geronimo() {
 		});
 		$(document).on('click', '.button#info', function (event) {
 			game.showContent('info-content');
+		});
+		$(document).on('click', '#change-nickname', function (event) {
+			if (window.PacmanNickname) window.PacmanNickname.reset();
 		});
 		// back button
 		$(document).on('click', '.button#back', function (event) {
@@ -1619,7 +1605,7 @@ function geronimo() {
 				pacman.directionWatcher.set(right);
 				break;
 			case 78: // N pressed
-				if (!$('#playerName').is(':focus')) {
+				if (!$('#nickname-input').is(':focus')) {
 					game.pause = 1;
 					game.newGame();
 				}
@@ -1629,7 +1615,7 @@ function geronimo() {
 				break;
 			case 8: // Backspace pressed -> show Game Content
 			case 27: // ESC pressed -> show Game Content
-				if (!$('#playerName').is(':focus')) {
+				if (!$('#nickname-input').is(':focus')) {
 					evt.preventDefault();
 					game.showContent('game-content');
 				}

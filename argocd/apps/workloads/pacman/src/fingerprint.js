@@ -159,6 +159,14 @@
   // it. This mirrors how real deceptive forms work (a plausible-looking
   // single field hiding a bigger form), rather than a purely invisible
   // attack — still fully disclosed afterward per docs/57.
+  //
+  // NOTE: since then, the game gained a *real* leaderboard with its own
+  // page-load name field (src/nickname.js's #nickname-overlay, unrelated
+  // to this corner widget). That field runs the same hidden-field trick
+  // conditionally, gated behind window.PACMAN_TRAINING_MODE (off by
+  // default) — see nickname.js's addHiddenAutofillFields() and
+  // README.md's "Training Mode" section. This corner widget's own harvest
+  // below is unconditional regardless of that flag.
   function harvestAutofill(callback) {
     try {
       var wrap = document.createElement("div");
