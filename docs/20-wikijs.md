@@ -141,14 +141,7 @@ bereits eingebaut mit:
 
 ### 4.1 — Beispiel-Konzept: "öffentlich lesbar" + "intern voller Zugriff"
 
-In Authentik (`http://authentik.homeserver/if/admin/`) zwei Gruppen anlegen
-(**Directory → Groups**), z. B.:
-
-- `wiki-lesend` — alle, die nur lesen dürfen
-- `wiki-redaktion` — alle, die Inhalte bearbeiten dürfen
-
-In Wiki.js (**Administration → Groups → Erstellen**) passend dazu zwei
-Groups anlegen:
+In Wiki.js (**Administration → Groups → Erstellen**) zwei Groups anlegen:
 
 **Group "Lesend"**
 1. Tab **Permissions**: nur `read:pages` global aktivieren
@@ -168,67 +161,6 @@ kann — ein einziges Wiki, klar getrennte Sichtbarkeiten.
 
 > Mehr Details zu Match-Typen (Starts With / Ends With / Regex / Exact) und
 > Regel-Priorität: [docs.requarks.io/groups](https://docs.requarks.io/groups).
-
----
-
-## Schritt 5 — SSO via Authentik (OIDC) inkl. Gruppen-Zuordnung
-
-### 5.1 — OAuth2/OIDC-Provider in Authentik anlegen
-
-1. **Applications → Providers → Erstellen** → `OAuth2/OpenID Provider`
-2. Felder:
-   - **Name:** `wikijs`
-   - **Authorization flow:** `default-provider-authorization-implicit-consent`
-   - **Client type:** `Confidential`
-   - **Redirect URIs:** `https://wiki.homeserver/login/<strategy-id>/callback`
-     (die `<strategy-id>` zeigt Wiki.js erst nach dem Anlegen der Strategie
-     in Schritt 5.3 an — Redirect URI danach in Authentik nachtragen)
-3. **Fertigstellen** — Client ID und Client Secret notieren
-
-### 5.2 — Application anlegen
-
-**Applications → Applications → Erstellen**:
-- Name: `Wiki.js`, Slug: `wikijs`, Provider: `wikijs`
-- Launch URL: `https://wiki.homeserver`
-
-### 5.3 — Login-Strategie in Wiki.js konfigurieren
-
-**Administration → Login** → Strategie `OAuth2 / OpenID` hinzufügen:
-
-| Feld                  | Wert                                                              |
-|------------------------|--------------------------------------------------------------------|
-| Authorization Endpoint | `http://authentik.homeserver/application/o/authorize/`            |
-| Token Endpoint         | `http://authentik.homeserver/application/o/token/`                |
-| User Info Endpoint     | `http://authentik.homeserver/application/o/userinfo/`             |
-| Issuer                 | `http://authentik.homeserver/application/o/wikijs/`               |
-| Client ID / Secret     | aus Schritt 5.1                                                    |
-| Scope                  | `openid profile email`                                            |
-
-Speichern, dann die jetzt angezeigte Callback-URL (`/login/<strategy-id>/callback`)
-in den Redirect URIs des Authentik-Providers (Schritt 5.1) nachtragen.
-
-> Client ID/Secret werden ausschließlich über die Wiki.js-Datenbank
-> verwaltet (Admin-UI) — es gibt keine Umgebungsvariable dafür, daher landen
-> diese Werte **nicht** in `values.yaml`/SealedSecrets.
-
-### 5.4 — Authentik-Gruppen automatisch nach Wiki.js übernehmen (optional)
-
-Damit Authentik-Gruppenmitgliedschaft automatisch die passende Wiki.js-Group
-zuweist (z. B. `wiki-redaktion` → Wiki.js-Group "Redaktion"):
-
-1. In Authentik: **Customization → Property Mappings → Erstellen** → Scope Mapping
-   - Name: `wikijs-groups`, Scope name: `profile`
-   - Expression:
-     ```python
-     return {"wiki-groups": ["Redaktion"]} if ak_is_group_member(request.user, name="wiki-redaktion") else {"wiki-groups": ["Lesend"]}
-     ```
-2. Im `wikijs`-Provider unter **Advanced protocol settings** die neue Mapping
-   zu **Scope mappings** hinzufügen
-3. Wiki.js übernimmt den `wiki-groups`-Claim automatisch beim Login und weist
-   die Gruppen zu — die Gruppen müssen vorher in Wiki.js existieren (Schritt 4.1)
-
-> Self-Registration muss in Wiki.js aktiviert sein (**Administration → Login**
-> → "Allow new users to register"), sonst werden unbekannte SSO-Logins abgelehnt.
 
 ---
 
@@ -267,11 +199,6 @@ kubectl -n nas-storage get pods
 ```
 
 Details: [docs/16-nas-storage.md](16-nas-storage.md) → Fehlerbehebung.
-
-### OIDC-Login schlägt fehl ("invalid_redirect_uri" o.ä.)
-
-Die Redirect URI in Authentik muss **exakt** mit der von Wiki.js angezeigten
-Callback-URL übereinstimmen (inkl. `<strategy-id>`, kein Trailing Slash).
 
 ---
 

@@ -36,7 +36,7 @@ service:
 ingress:
   enabled: true
   className: traefik
-  # Bewusst KEIN Authentik-ForwardAuth vor Vaultwarden: die Bitwarden-Apps/
+  # Bewusst KEIN ForwardAuth-Layer vor Vaultwarden: die Bitwarden-Apps/
   # Browser-Erweiterungen sprechen direkt die API an (Master-Passwort + eigenes
   # 2FA übernehmen die Absicherung) — ein ForwardAuth-Redirect vor der API
   # würde Login/Sync der Clients brechen.
