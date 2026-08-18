@@ -41,8 +41,7 @@ service:
 ingress:
   enabled: true
   className: traefik
-  annotations:
-    traefik.ingress.kubernetes.io/router.middlewares: "authentik-authentik-forwardauth@kubernetescrd"
+  annotations: {}
   hosts:
     - host: gotify.tech.homeserver
       paths:
