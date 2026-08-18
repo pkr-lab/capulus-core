@@ -80,9 +80,17 @@ semaphore_projects:
       - name: homeservers
         type: static
         ssh_key: semaphore-ssh-key
+        # worker-0/worker-1 hier NICHT als Play-Ziel, nur damit
+        # hostvars['worker-0']/['worker-1'] existieren -- siehe
+        # group_vars/all.yml (effektive Konfiguration) für die volle
+        # Begründung.
         content: |
           [homeservers]
           homeserver ansible_host=192.168.178.94
+
+          [k3s_agents]
+          worker-0 ansible_host=192.168.178.95
+          worker-1 ansible_host=192.168.178.96
     templates:
       - name: "Deploy Home Server"
         playbook: ansible/site.yml

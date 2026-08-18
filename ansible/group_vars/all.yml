@@ -136,9 +136,21 @@ semaphore_projects:
       - name: homeservers
         type: static
         ssh_key: semaphore-ssh-key
+        # worker-0/worker-1 hier NICHT als Play-Ziel (site.yml läuft nur
+        # gegen [homeservers]), sondern NUR damit hostvars['worker-0']/
+        # ['worker-1'] existieren -- cluster_power_manager_workers
+        # (ansible/roles/cluster_power_manager/defaults/main.yml) liest
+        # deren ansible_host/wake_on_lan_mac_address per hostvars.get(...).
+        # Ohne diese Zeilen bricht cluster_power_manager sonst nicht mehr
+        # hart ab (dank hostvars.get()-Fix), liefert aber leere MAC-
+        # Adressen -- siehe docs/59-nightly-worker-update.md.
         content: |
           [homeservers]
           homeserver ansible_host=192.168.178.94
+
+          [k3s_agents]
+          worker-0 ansible_host=192.168.178.95
+          worker-1 ansible_host=192.168.178.96
     templates:
       - name: "Deploy Home Server"
         playbook: ansible/site.yml
