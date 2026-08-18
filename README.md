@@ -71,12 +71,11 @@ make install
 <tr><td>Kubernetes-UI</td><td><strong>Headlamp</strong></td><td>Browser-Dashboard für den Cluster</td></tr>
 <tr><td>Secrets</td><td><strong>Sealed Secrets + kubeseal-webgui</strong></td><td>Verschlüsselte Secrets in Git, nur im Cluster entschlüsselbar</td></tr>
 <tr><td>Notifications</td><td><strong>Gotify</strong> + <strong>ntfy</strong></td><td>Self-hosted Push — Gotify (Android), ntfy (iOS + Android)</td></tr>
-<tr><td>Live-Streaming</td><td><strong>MediaMTX</strong></td><td>RTMP/RTSP-Ingest → HLS-Playback; Publish per Authentik-JWT, Zuschauer per Authentik-Login + TOTP</td></tr>
+<tr><td>Live-Streaming</td><td><strong>MediaMTX</strong></td><td>RTMP/RTSP-Ingest → HLS-Playback; Publish/Zuschauer per interner mediamtx-Auth (Nutzername/Passwort)</td></tr>
 <tr><td>Remote-Access</td><td><strong>Tailscale</strong></td><td>WireGuard-Mesh-VPN — keine Portfreigaben, keine öffentliche IP</td></tr>
 <tr><td>Externe Erreichbarkeit</td><td><strong>Cloudflare Tunnel</strong></td><td>Ausgewählte Dienste öffentlich erreichbar, ohne VPN und ohne offene Ports</td></tr>
 <tr><td>CI/CD intern</td><td><strong>Argo Workflows + MinIO</strong></td><td>Private CI/CD-Pipeline + S3-Artifact-Store im Cluster</td></tr>
 <tr><td>Ingress</td><td><strong>Traefik v2</strong> (k3s bundled)</td><td>HTTP/HTTPS-Routing in den Cluster</td></tr>
-<tr><td>SSO</td><td><strong>Authentik</strong></td><td>Zentraler Identity Provider für alle Dienste via OIDC</td></tr>
 <tr><td>Provisioning</td><td><strong>Ansible</strong> (≥ 2.14)</td><td>Vollständig idempotent, Role-per-Concern, Vault für Secrets</td></tr>
 </tbody>
 </table>
@@ -185,9 +184,6 @@ capulus-core/
 │   ├── 10-gotify.md                  # Push-Notifications via Gotify
 │   ├── 11-ntfy.md                    # iOS Push-Notifications via ntfy
 │   ├── 12-argo-workflows.md          # Private CI/CD mit Argo Workflows + MinIO
-│   ├── 13-sso-authentik.md           # Single-Sign-On via Authentik
-│   ├── 14-cert-login.md              # Zertifikats-Authentifizierung via Traefik mTLS
-│   ├── 15-sso-alle-dienste.md        # SSO-Konfiguration für alle Dienste
 │   ├── 16-nas-storage.md             # NAS-StorageClass (NFS, UGREEN NAS)
 │   ├── 17-zammad.md                  # Zammad Helpdesk/Ticket-System
 │   ├── 19-alamos-apager.md           # Alarmmonitor-Kiosk-Verwaltung (ALAMOS AMweb)
