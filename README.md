@@ -71,12 +71,11 @@ make install
 <tr><td>Kubernetes-UI</td><td><strong>Headlamp</strong></td><td>Browser-Dashboard für den Cluster</td></tr>
 <tr><td>Secrets</td><td><strong>Sealed Secrets + kubeseal-webgui</strong></td><td>Verschlüsselte Secrets in Git, nur im Cluster entschlüsselbar</td></tr>
 <tr><td>Notifications</td><td><strong>Gotify</strong> + <strong>ntfy</strong></td><td>Self-hosted Push — Gotify (Android), ntfy (iOS + Android)</td></tr>
-<tr><td>Live-Streaming</td><td><strong>MediaMTX</strong></td><td>RTMP/RTSP-Ingest → HLS-Playback; Publish per Authentik-JWT, Zuschauer per Authentik-Login + TOTP</td></tr>
+<tr><td>Live-Streaming</td><td><strong>MediaMTX</strong></td><td>RTMP/RTSP-Ingest → HLS-Playback; Publish/Zuschauer per interner mediamtx-Auth (Nutzername/Passwort)</td></tr>
 <tr><td>Remote-Access</td><td><strong>Tailscale</strong></td><td>WireGuard-Mesh-VPN — keine Portfreigaben, keine öffentliche IP</td></tr>
 <tr><td>Externe Erreichbarkeit</td><td><strong>Cloudflare Tunnel</strong></td><td>Ausgewählte Dienste öffentlich erreichbar, ohne VPN und ohne offene Ports</td></tr>
 <tr><td>CI/CD intern</td><td><strong>Argo Workflows + MinIO</strong></td><td>Private CI/CD-Pipeline + S3-Artifact-Store im Cluster</td></tr>
 <tr><td>Ingress</td><td><strong>Traefik v2</strong> (k3s bundled)</td><td>HTTP/HTTPS-Routing in den Cluster</td></tr>
-<tr><td>SSO</td><td><strong>Authentik</strong></td><td>Zentraler Identity Provider für alle Dienste via OIDC</td></tr>
 <tr><td>Provisioning</td><td><strong>Ansible</strong> (≥ 2.14)</td><td>Vollständig idempotent, Role-per-Concern, Vault für Secrets</td></tr>
 </tbody>
 </table>
@@ -185,9 +184,6 @@ capulus-core/
 │   ├── 10-gotify.md                  # Push-Notifications via Gotify
 │   ├── 11-ntfy.md                    # iOS Push-Notifications via ntfy
 │   ├── 12-argo-workflows.md          # Private CI/CD mit Argo Workflows + MinIO
-│   ├── 13-sso-authentik.md           # Single-Sign-On via Authentik
-│   ├── 14-cert-login.md              # Zertifikats-Authentifizierung via Traefik mTLS
-│   ├── 15-sso-alle-dienste.md        # SSO-Konfiguration für alle Dienste
 │   ├── 16-nas-storage.md             # NAS-StorageClass (NFS, UGREEN NAS)
 │   ├── 17-zammad.md                  # Zammad Helpdesk/Ticket-System
 │   ├── 19-alamos-apager.md           # Alarmmonitor-Kiosk-Verwaltung (ALAMOS AMweb)
@@ -257,7 +253,6 @@ capulus-core/
     │   └── projects.yaml             # AppProjects "platform" und "workloads"
     └── apps/                         # Ein Ordner pro ArgoCD-Application, je Tier
         ├── platform/                 # AppProject "platform" — Schicht 3, siehe docs/49-argocd-projects.md
-        │   ├── authentik/            # Authentik Single-Sign-On
         │   ├── sealed-secrets/       # SealedSecrets-Controller
         │   ├── kubeseal-webgui/      # Sealed-Secrets-Verschlüsselungs-UI
         │   ├── monitoring/           # VictoriaMetrics + Grafana
@@ -363,7 +358,6 @@ Apps mit echtem Nutzerkreis) — Details und Begründung:
 | ArgoCD | – | https://\<server-ip\>:30443 |
 | Headlamp | tech | https://headlamp.tech.homeserver |
 | Semaphore | tech | https://semaphore.tech.homeserver |
-| Authentik | tech | http://authentik.tech.homeserver ¹ |
 | Gotify | tech | https://gotify.tech.homeserver |
 | ntfy | tech | https://ntfy.tech.homeserver |
 | Pi-hole | tech | https://pihole.tech.homeserver |
@@ -382,12 +376,6 @@ Apps mit echtem Nutzerkreis) — Details und Begründung:
 | Immich | prod | https://immich.prod.homeserver |
 | Wiki.js | prod | https://wiki.prod.homeserver |
 | Xibo CMS (xibosignage) | prod | https://xibo.prod.homeserver |
-
-> ¹ Authentik bleibt bewusst auf `http://` — sein Ingress ist reserviert für
-> das separate mTLS-Client-Zertifikat-Vorhaben in
-> [docs/14-cert-login.md](docs/14-cert-login.md) (eigene CA, eigener
-> Umstieg auf `websecure`), nicht Teil der internen TLS-Einführung aus
-> [docs/54-internal-tls.md](docs/54-internal-tls.md).
 
 > Zusätzlich zu den internen `*.homeserver`-URLs können ausgewählte Dienste
 > über Cloudflare Tunnel öffentlich unter einer eigenen Domain erreichbar
@@ -458,10 +446,7 @@ Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
 | [DNS-Architektur](docs/09-dns-architecture.md) | Warum der Home-Server NICHT dein LAN-DNS ist |
 | [Gotify-Push](docs/10-gotify.md) | Self-hosted Push-Notifications aus dem Stack |
 | [Argo Workflows](docs/12-argo-workflows.md) | Private CI/CD-Pipeline mit MinIO-Artifact-Store |
-| [SSO via Authentik](docs/13-sso-authentik.md) | Authentik als zentraler Identity Provider |
 | [ntfy iOS-Push](docs/11-ntfy.md) | Self-hosted ntfy mit iOS APNs-Relay |
-| [Zertifikats-Auth](docs/14-cert-login.md) | Traefik mTLS Client-Zertifikate |
-| [SSO alle Dienste](docs/15-sso-alle-dienste.md) | Headlamp, Argo Workflows, MinIO via OIDC |
 | [Alarmmonitor-Kiosks](docs/19-alamos-apager.md) | Raspberry-Pi-Kiosks für ALAMOS AMweb, zentral verwaltet |
 | [Cloudflare Tunnel — Setup](docs/22-cloudflare-tunnel.md) | Externe Erreichbarkeit ohne VPN: Konzept, Tunnel-Einrichtung, Absicherung |
 | [Cloudflare Tunnel — Deploy](docs/23-cloudflare-deploy.md) | Rollout, neuen Dienst freigeben, Rotation, Troubleshooting |

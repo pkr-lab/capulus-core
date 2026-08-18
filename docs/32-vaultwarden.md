@@ -21,11 +21,10 @@ vault.pke-lab.de         →  Cloudflare Tunnel → vaultwarden (Port 80)
 - **Websockets:** laufen seit Vaultwarden 1.30 auf demselben Port wie die
   HTTP-API (`WEBSOCKET_ENABLED=true`) → Live-Sync zwischen Clients ohne
   zusätzlichen Service/Port
-- **Kein Authentik-ForwardAuth vor der App:** Die Bitwarden-Clients
+- **Kein ForwardAuth-Layer vor der App:** Die Bitwarden-Clients
   sprechen die API direkt an (Master-Passwort + eigenes 2FA übernehmen die
   Absicherung). Ein ForwardAuth-Redirect würde den Login/Sync der Apps
-  brechen — anders als bei reinen Web-UIs (z. B. Gotify), die kein eigenes
-  Client-Protokoll haben.
+  brechen — anders als bei reinen Web-UIs ohne eigenes Client-Protokoll.
 - **Extern erreichbar** über den bestehenden Cloudflare Tunnel
   (`argocd/apps/platform/cloudflared/values.yaml`), damit Handy-App und
   Browser-Erweiterung auch unterwegs syncen können.
