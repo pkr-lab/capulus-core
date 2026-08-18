@@ -7,18 +7,23 @@
 # worker-1 uebernimmt zusaetzliche Rechenlast im k3s-Cluster.
 #
 # Reihenfolge:
-#   1. k3s_agent — tritt dem k3s-Cluster als Worker-Node bei
+#   1. worker_apt_update — apt update/dist-upgrade (worker-1 bekommt sonst
+#      nie ein OS-Update, da es keine common-Rolle nutzt). Laeuft
+#      normalerweise nachts um 01:00 ueber nightly_worker_wake auf
+#      homeserver, das dieses Playbook per Semaphore-API triggert, siehe
+#      docs/59-nightly-worker-update.md.
+#   2. k3s_agent — tritt dem k3s-Cluster als Worker-Node bei
 #      (benoetigt laufenden k3s-Server auf homeserver/.94)
-#   2. thermal_watchdog / resource_watchdog — automatischer Shutdown bei
+#   3. thermal_watchdog / resource_watchdog — automatischer Shutdown bei
 #      Uebertemperatur bzw. anhaltend hoher CPU/RAM-Last
-#   3. wake_on_lan — WoL-Empfangsbereitschaft, damit cluster_power_manager
+#   4. wake_on_lan — WoL-Empfangsbereitschaft, damit cluster_power_manager
 #      (laeuft auf homeserver, siehe ansible/site.yml) diesen Node aus dem
 #      ausgeschalteten Zustand aufwecken kann
-#   4. cluster_power_manager_target — autorisiert den auf homeserver
+#   5. cluster_power_manager_target — autorisiert den auf homeserver
 #      erzeugten Shutdown-Key hier, beschraenkt auf "poweroff" (setzt
 #      voraus, dass site.yml bereits gegen homeserver gelaufen ist, sonst
 #      existiert der Public Key dort noch nicht)
-#   5. Uncordon — stellt sicher dass worker-1 schedulable bleibt
+#   6. Uncordon — stellt sicher dass worker-1 schedulable bleibt
 #      (kubectl drain/cordon durch Maintenance-Schritte rueckgaengig machen)
 # ============================================================
 #
@@ -32,6 +37,8 @@
   hosts: worker-1
   become: true
   roles:
+    - role: worker_apt_update
+      tags: [apt-update, updates]
     - role: k3s_agent
       tags: [k3s-agent, kubernetes]
     - role: thermal_watchdog
