@@ -42,7 +42,6 @@ anlegen (erscheint beim ersten Besuch automatisch).
 |---|---|---|
 | Grafana | https://grafana.homeserver | HTTP |
 | ArgoCD | https://`<server-ip>`:30443 | HTTPS (selbstsigniert) |
-| Authentik | http://authentik.homeserver | HTTP |
 | ntfy | https://ntfy.homeserver | HTTP |
 | Semaphore | https://semaphore.homeserver | HTTP |
 | Paperless | https://paperless.homeserver | HTTP |

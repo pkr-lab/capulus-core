@@ -254,7 +254,7 @@ kubectl get networkpolicy -A
 
 Alle Apps weiterhin `Synced`/`Healthy`? Stichprobenhaft 3–4 Apps aus
 unterschiedlichen Tiers im Browser aufrufen (mind. eine Platform-App wie
-Authentik/Grafana, mind. zwei Workload-Apps). Grafana-Dashboard auf
+Grafana/Semaphore, mind. zwei Workload-Apps). Grafana-Dashboard auf
 lückenlose Metriken prüfen (ein plötzliches Metrik-Loch bei einer
 bestimmten App = deren `monitoring`-Ingress-Regel greift nicht).
 **Zusätzlich, seit dem Cloudflared-Incident (siehe oben) Pflicht:**
@@ -394,7 +394,6 @@ Intra-Tier stillschweigend erlaubt, jetzt durch je eine gezielte
 
 | Ziel | Erlaubt zusätzlich aus | Grund |
 |---|---|---|
-| `authentik` | `semaphore`, `minio`, `gotify` | ExternalName-Services bzw. OIDC-Discovery, siehe jeweiliges `values.yaml`/`templates/authentik-svc.yaml` |
 | `gotify` | `gotify-bridge` | `gotify-bridge/values.yaml` |
 | `gotify-bridge` | `monitoring` | vmalertmanager-Webhook |
 | `ntfy-bridge` | `monitoring` | vmalertmanager-Webhook |
