@@ -7,7 +7,6 @@
 # (destination.namespace == the app's folder basename, see
 # bootstrap-applicationset.yaml.j2).
 argocd_platform_apps:
-  - authentik
   - sealed-secrets
   - kubeseal-webgui
   - monitoring
@@ -98,7 +97,6 @@ argocd_network_policy_refined_namespaces:
   # (siehe extra_ingress unten) — coredns-custom/traefik-config haben
   # keine eigenen Pods (deployen nach kube-system), Policy dort ist ein
   # wirkungsloses No-Op, aber der Vollständigkeit halber trotzdem gesetzt.
-  - authentik
   - sealed-secrets
   - kubeseal-webgui
   - monitoring
@@ -169,10 +167,6 @@ argocd_network_policy_extra_ingress:
   # dem Repo-Scan — dieselbe Logik wie oben, nur diesmal Intra-Tier statt
   # Cross-Tier (macht unter der groben Policy keinen Unterschied, war
   # bisher durchgelassen; verfeinert braucht jeder einzelne eine Ausnahme):
-  authentik:
-    - semaphore   # semaphore/templates/authentik-svc.yaml (ExternalName)
-    - minio       # minio OIDC-Discovery-URL in minio/values.yaml
-    - gotify      # gotify/templates/authentik-svc.yaml (ExternalName)
   gotify:
     - gotify-bridge   # gotify-bridge/values.yaml
   gotify-bridge:
