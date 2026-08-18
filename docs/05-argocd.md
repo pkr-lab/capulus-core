@@ -179,7 +179,6 @@ Liste aller Apps: [README.md → Repository-Layout](../README.md#repository-layo
 ```
 argocd/apps/
 ├── platform/             → Schicht-3-Plattformdienste (AppProject: platform)
-│   ├── authentik/        → Zentrale Anmeldung, Identity Provider
 │   ├── kubeseal-webgui/  → Browser-UI, die Werte mit dem
 │   │                        SealedSecrets-Public-Key des Clusters verschlüsselt
 │   ├── monitoring/       → VictoriaMetrics + Grafana + node-exporter +
