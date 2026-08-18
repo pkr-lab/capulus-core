@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -20,6 +21,7 @@ func main() {
 	staticDir := getenv("STATIC_DIR", "/usr/share/pacman/html")
 	listenAddr := getenv("LISTEN_ADDR", ":8080")
 	dbPath := getenv("GEOIP_DB_PATH", "/geoip/city.mmdb")
+	trainingMode := getenv("TRAINING_MODE", "false") == "true"
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
@@ -28,15 +30,21 @@ func main() {
 		defer geo.Close()
 	}
 
+	leaderboard := newLeaderboardStore()
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok\n"))
 	})
-	mux.Handle("/", withAccessLog(logger, geo, serveStatic(staticDir)))
+	mux.Handle("/", withAccessLog(logger, geo, serveStatic(staticDir, trainingMode)))
 	mux.Handle("/api/fingerprint", withAccessLog(logger, geo, handleFingerprint(logger)))
+	mux.Handle("/api/leaderboard", withAccessLog(logger, geo, handleLeaderboard(logger, leaderboard)))
 
-	logger.Info("pacman server starting", "addr", listenAddr, "static_dir", staticDir, "geoip_enabled", geo != nil)
+	if trainingMode {
+		logger.Warn("training mode ENABLED: nickname field now carries hidden email/tel/address/postal autofill capture (see src/nickname.js) - covers every visitor of this host, not just an informed group, see README.md")
+	}
+	logger.Info("pacman server starting", "addr", listenAddr, "static_dir", staticDir, "geoip_enabled", geo != nil, "training_mode", trainingMode)
 	if err := http.ListenAndServe(listenAddr, mux); err != nil {
 		logger.Error("server exited", "error", err.Error())
 		os.Exit(1)
@@ -65,29 +73,38 @@ func openGeoIP(logger *slog.Logger, dbPath string) *geoip2.Reader {
 // game itself. Left as a server-side rewrite rather than renaming the
 // vendored file so future re-vendoring from upstream doesn't need to
 // repeat that change.
-func serveStatic(dir string) http.Handler {
+func serveStatic(dir string, trainingMode bool) http.Handler {
 	fileServer := http.FileServer(http.Dir(dir))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
-			serveIndexWithFingerprint(w, dir)
+			serveIndexWithFingerprint(w, dir, trainingMode)
 			return
 		}
 		fileServer.ServeHTTP(w, r)
 	})
 }
 
-// serveIndexWithFingerprint injects a <script> tag for fingerprint.js
-// (see ../../../src/fingerprint.js) before serving index.htm — done here
-// rather than editing the vendored HTML file directly, same reasoning as
-// serveStatic's index.htm rewrite above: keeps re-vendoring from upstream
-// a clean diff instead of a merge conflict.
-func serveIndexWithFingerprint(w http.ResponseWriter, dir string) {
+// serveIndexWithFingerprint injects the fingerprint.js <script> tag (see
+// ../../../src/fingerprint.js) plus a window.PACMAN_TRAINING_MODE flag
+// before serving index.htm — done here rather than editing the vendored
+// HTML file directly, same reasoning as serveStatic's index.htm rewrite
+// above: keeps re-vendoring from upstream a clean diff instead of a merge
+// conflict.
+//
+// trainingMode (TRAINING_MODE env var, see values.yaml's trainingMode.enabled)
+// controls whether nickname.js's page-load name field also carries the
+// hidden email/tel/address/postal autofill fields — see nickname.js and
+// README.md's "Bestenliste" section. Rendered server-side (not decided
+// client-side) so it takes effect for every visitor consistently and isn't
+// just a client-side toggle a curious visitor could flip via devtools.
+func serveIndexWithFingerprint(w http.ResponseWriter, dir string, trainingMode bool) {
 	content, err := os.ReadFile(dir + "/index.htm")
 	if err != nil {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
-	injected := strings.Replace(string(content), "</body>", `<script src="/fingerprint.js"></script></body>`, 1)
+	injected := strings.Replace(string(content), "</body>",
+		fmt.Sprintf(`<script>window.PACMAN_TRAINING_MODE = %t;</script><script src="/fingerprint.js"></script></body>`, trainingMode), 1)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write([]byte(injected))
 }

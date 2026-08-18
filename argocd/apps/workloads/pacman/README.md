@@ -128,14 +128,80 @@ Image-Config verifiziert).
 **Attribution (CC BY 4.0):** IP-Geolocation-Daten von
 [DB-IP](https://db-ip.com).
 
-## Bekannte Einschränkung
+## Bestenliste (Nickname + Leaderboard)
 
 Das Original nutzt `data/db-handler.php` (PHP) für eine globale
-Highscore-Liste. Diese PHP-Datei ist bewusst **nicht** mit ausgeliefert
-(reiner Go-Server, kein PHP) — die Requests dorthin schlagen clientseitig
-fehl (jQuery-`error`-Callback, kein Absturz), das "Highscore"-Menü bleibt
-also leer. Das eigentliche Spiel (Bewegung, lokaler Score, Sound) läuft
-davon unberührt komplett clientseitig.
+Highscore-Liste. Diese PHP-Datei wurde entfernt (reiner Go-Server, kein
+PHP) und durch einen eigenen `/api/leaderboard`-Endpoint in
+`server/cmd/server/leaderboard.go` ersetzt:
+
+- **Beim Laden der Seite** fragt ein Overlay (`#nickname-overlay`, siehe
+  `src/nickname.js`) einmalig nach einem Namen — ein echtes, sichtbares
+  Feld mit `autocomplete="name"`.
+- Der eingegebene Name **verlässt den Browser nie** (Ausnahme: siehe
+  "Training Mode" unten). Clientseitig wird daraus per FNV-1a-Hash ein
+  pseudonymer Spitzname im Format `NAME-HEX4` erzeugt (z. B. `MAX-9F3A`)
+  und in `localStorage` gemerkt — nur dieser Spitzname wird an
+  `/api/leaderboard` geschickt.
+- **Game Over** zeigt den Spitznamen an und schickt Score + Level direkt
+  an `POST /api/leaderboard`. Der Go-Server validiert Score/Level gegen
+  dieselbe Plausibilitätsgrenze wie `validateScoreWithLevel()` im Client
+  (`maxPointsPerLevel` in `leaderboard.go`) und verwirft offensichtlich
+  gefälschte Scores.
+- Das Menü **Highscore** liest die Top 10 per `GET /api/leaderboard`.
+- Über **Info → "Namen ändern"** lässt sich der Spitzname jederzeit neu
+  vergeben.
+
+**Bekannte Einschränkung:** Die Bestenliste liegt nur **im Speicher** des
+jeweiligen Pods (kein PVC gemountet, `readOnlyRootFilesystem: true`).
+Bei `autoscaling.enabled: true` (1–3 Replicas, siehe unten) laufen
+mehrere Pods ohne gemeinsamen State und ohne Session-Affinity im
+`ClusterIP`-Service — ein Score kann also auf einem anderen Pod landen
+als eine spätere Abfrage der Liste sieht, und ein Pod-Neustart/Scale-down
+verwirft die bisherigen Einträge. Für dieses Trainings-/Demo-Spiel
+bewusst in Kauf genommen statt zusätzlicher Storage-Infrastruktur.
+
+### Training Mode (`trainingMode.enabled`)
+
+Standardmäßig **aus**. Wenn aktiviert (`TRAINING_MODE=true`, gesetzt über
+`trainingMode.enabled: true` in `values.yaml`), koppelt der Server das
+Namensfeld im Nickname-Overlay serverseitig (`window.PACMAN_TRAINING_MODE`,
+gerendert in `main.go`'s `serveIndexWithFingerprint()`) an dieselbe
+versteckte Autofill-Ernte, die `fingerprint.js`'s `harvestAutofill()`
+bereits für ihr eigenes Ecken-Widget nutzt (siehe
+[docs/57](../../../docs/57-pacman-visitor-tracking.md)): unsichtbare
+E-Mail-/Tel-/Adresse-/PLZ-Felder im **selben** `<form>` wie das sichtbare
+Namensfeld, siehe `addHiddenAutofillFields()` in `src/nickname.js`. Nimmt
+der Browser eine gespeicherte Autofill-Vorschlag für "Name" an, füllt er
+typischerweise alle Felder im selben Formular mit — die verdeckten Werte
+gehen an `/api/fingerprint` (serverseitiges Log, `client_fingerprint`-Zeile,
+siehe docs/57), nie an `/api/leaderboard`. Der Spitzname/die öffentliche
+Bestenliste bleiben davon unberührt.
+
+**Für den Unterrichtseinsatz gedacht:** Schüler geben ihren echten Namen
+ein, im Anschluss werden die geloggten Daten (inkl. evtl. mitgelaufener
+E-Mail/Tel/Adresse) live im Grafana-Dashboard gezeigt und danach gelöscht
+— siehe docs/57 für Aufbewahrung/Löschung (VictoriaLogs-Retention, aktuell
+14 Tage, oder manuell vorher).
+
+**Kein UI-Hinweis/Banner** — bewusst so gewünscht, da die Teilnehmenden
+vorab informiert sind und freiwillig mitmachen. Das gilt aber nur für den
+tatsächlichen Unterrichtsraum, nicht für den Hostnamen:
+
+> **Dieser Host ist öffentlich erreichbar (siehe `ingress.hosts` oben,
+> `pacman-prod.pke-lab.de`, kein Auth/IP-Allowlist).**
+> `trainingMode.enabled: true` wirkt serverseitig für **jeden** Request auf
+> `/` — nicht nur für die eigene Klasse, sondern für jeden Besucher der URL
+> in diesem Zeitraum (Suchmaschinen-Crawler, alte Links/Lesezeichen,
+> zufällige Besucher eingeschlossen). Es gibt keinen technischen
+> Unterschied zwischen "eigene Klasse" und "Rest des Internets" — nur der
+> Zeitpunkt, zu dem der Wert `true` ist, entscheidet, wer betroffen ist.
+> Empfehlung: nur für das tatsächliche Zeitfenster der Stunde aktivieren
+> (neues Chart-Release), danach zurück auf `false` (wieder ein Release).
+> Der Serverstart loggt bei `enabled: true` zusätzlich eine
+> `"training mode ENABLED"`-Warnzeile als Erinnerung (siehe `main.go`).
+> `fingerprint.js`'s eigenes Ecken-Widget läuft davon unabhängig bereits
+> heute unconditional — siehe docs/57.
 
 ## Sicherheits-Notizen
 
