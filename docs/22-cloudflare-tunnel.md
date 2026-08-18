@@ -89,7 +89,7 @@ Zugriff braucht.
   ```
 
 - `kubeseal` CLI lokal installiert (bereits Voraussetzung für
-  [docs/13-sso-authentik.md](13-sso-authentik.md) / [docs/17-zammad.md](17-zammad.md)).
+  [docs/17-zammad.md](17-zammad.md)).
 - `kubectl` mit dem Cluster verbunden (für den DNS-Routing-Schritt reicht
   aber die Cloudflare-Anmeldung, `kubectl` wird nur für kubeseal gebraucht).
 
@@ -175,8 +175,8 @@ Tunnel — **niemals im Klartext committen**.
 
 ## Schritt 3 — Credentials versiegeln
 
-Analog zum bestehenden SealedSecrets-Workflow
-([docs/13-sso-authentik.md](13-sso-authentik.md#schritt-1--secrets-versiegeln)):
+Analog zum bestehenden SealedSecrets-Workflow, z. B.
+[docs/17-zammad.md](17-zammad.md#schritt-1--secrets-generieren-und-versiegeln):
 
 ```bash
 kubeseal --raw \
@@ -294,12 +294,12 @@ Rollout- und Verifikations-Ablauf).
 Ein Cloudflare Tunnel macht einen Dienst öffentlich erreichbar — er
 ersetzt aber keine Authentifizierung. Zwei Optionen, oft kombiniert:
 
-**Option A — Dienst hat bereits Authentik davor** (z. B. via OIDC oder
-Traefik-ForwardAuth, siehe [docs/13-sso-authentik.md](13-sso-authentik.md)):
-Cloudflare Tunnel liefert nur den Transport, Authentik bleibt die
-Zugriffskontrolle. Für interne Admin-artige Dienste reicht das **nicht**
-als alleiniger Schutz für eine öffentliche Freigabe (siehe nächster
-Abschnitt, welche Dienste besser gar nicht exponiert werden).
+**Option A — Dienst hat bereits einen eigenen Login davor** (z. B.
+App-eigene Auth wie bei Zammad/Vaultwarden): Cloudflare Tunnel liefert nur
+den Transport, der App-eigene Login bleibt die Zugriffskontrolle. Für
+interne Admin-artige Dienste reicht das **nicht** als alleiniger Schutz
+für eine öffentliche Freigabe (siehe nächster Abschnitt, welche Dienste
+besser gar nicht exponiert werden).
 
 **Option B — Cloudflare Access davorschalten** (Zero Trust, im Free-Plan
 für bis zu 50 Nutzer kostenlos):
@@ -317,16 +317,15 @@ für bis zu 50 Nutzer kostenlos):
 Für Dienste mit echten externen Nutzern (z. B. Zammad-Ticket-Erstellung
 durch DLRG-Mitglieder ohne Cluster-Zugriff) ist Option B die richtige
 Wahl. Für Dienste, die nur du selbst von unterwegs brauchst (z. B.
-Grafana, das seit dem Entfernen des Authentik-Logins nur noch den
-eigenen lokalen Grafana-Login hat), reicht eine Access-Policy auf deine
-eigene E-Mail-Adresse als zusätzliche Absicherung.
+Grafana, das nur den eigenen lokalen Grafana-Login hat), reicht eine
+Access-Policy auf deine eigene E-Mail-Adresse als zusätzliche Absicherung.
 
 ### Konkret: Access-Policy für Grafana anlegen
 
-Grafana (`grafana-tech.pke-lab.de`) hat keinen Authentik-Login mehr (siehe
-[docs/13-sso-authentik.md](13-sso-authentik.md)) und ist über den Tunnel
-öffentlich erreichbar — ohne Access-Policy schützt nur noch das lokale
-Grafana-Passwort die Cluster-/Infra-Metriken. Empfohlenes Setup:
+Grafana (`grafana-tech.pke-lab.de`) hat nur den lokalen Grafana-Login und
+ist über den Tunnel öffentlich erreichbar — ohne Access-Policy schützt nur
+noch das lokale Grafana-Passwort die Cluster-/Infra-Metriken. Empfohlenes
+Setup:
 
 1. [Zero Trust Dashboard](https://one.dash.cloudflare.com) → **Access →
    Applications → Add an application → Self-hosted**.
@@ -400,11 +399,9 @@ mit Cloudflare Access oder Authentik davor.
   Cloudflare erreichbar. Alles andere bleibt ausschließlich unter
   `*.homeserver` (LAN/Tailnet).
 - **Secrets bleiben verschlüsselt in Git**, wie bei jedem anderen Dienst
-  in diesem Repo (SealedSecrets, siehe
-  [docs/13-sso-authentik.md](13-sso-authentik.md)).
-- **Least Privilege beim Access:** wo möglich Cloudflare Access oder
-  Authentik vorschalten, statt einen Dienst komplett offen ins Internet
-  zu hängen.
+  in diesem Repo (SealedSecrets).
+- **Least Privilege beim Access:** wo möglich Cloudflare Access vorschalten,
+  statt einen Dienst komplett offen ins Internet zu hängen.
 
 ---
 

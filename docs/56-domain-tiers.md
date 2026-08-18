@@ -29,7 +29,7 @@ DNS-Naming).
 
 | Tier | Bedeutung | Beispiele |
 |---|---|---|
-| **tech** | Infrastruktur/Admin-Dienste — alles unter `argocd/apps/platform/`, auf dem andere Apps aufbauen (Auth, DNS, Monitoring, Secrets-Tooling, ...) | `authentik.tech.homeserver`, `grafana.tech.homeserver`, `semaphore.tech.homeserver` |
+| **tech** | Infrastruktur/Admin-Dienste — alles unter `argocd/apps/platform/`, auf dem andere Apps aufbauen (DNS, Monitoring, Secrets-Tooling, ...) | `grafana.tech.homeserver`, `semaphore.tech.homeserver`, `minio.tech.homeserver` |
 | **prod** | Apps mit echtem Nutzerkreis (Familie, Vereinsmitglieder) — alles unter `argocd/apps/workloads/`, mit zwei Ausnahmen (s. u.) | `nextcloud.prod.homeserver`, `mealie.prod.homeserver`, `immich.prod.homeserver` |
 | **dev** | Reserviert für künftige Test-/Staging-Deployments. Aktuell läuft keine App unter diesem Tier — die Konvention steht, sobald der erste Bedarf da ist (z. B. eine App vor dem Produktiv-Rollout separat testen) | — (noch keine) |
 
@@ -129,7 +129,7 @@ dieser Migration):
 | Nextcloud | `nextcloud-prod.pke-lab.de` | prod |
 | Immich | `immich-prod.pke-lab.de` | prod |
 
-Alle anderen Apps (Authentik, Semaphore, Pi-hole, MinIO, Gotify, Headlamp,
+Alle anderen Apps (Semaphore, Pi-hole, MinIO, Gotify, Headlamp,
 Paperless-ngx, n8n, ...) bleiben ausschließlich LAN/Tailscale-erreichbar —
 auch wenn ihr Hostname theoretisch unter die Wildcard-Regel fallen würde,
 weil ihnen schlicht der zweite Ingress-Host fehlt.
@@ -262,7 +262,7 @@ mehr.
    [Externe Erreichbarkeit](#externe-erreichbarkeit-wildcard-routing-über-traefik)
    oben.
 4. Referenziert eine andere, bereits bestehende App diesen neuen Host
-   (oder umgekehrt) — z. B. ein OIDC-Redirect zu Authentik, ein
-   Webhook-Ziel, ein Ansible-Default — auf den korrekten Tier des
+   (oder umgekehrt) — z. B. ein Webhook-Ziel, ein Ansible-Default —
+   auf den korrekten Tier des
    jeweiligen **Ziels** achten (siehe
    [Cross-App-Referenzen](#cross-app-referenzen) oben).
