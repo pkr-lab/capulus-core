@@ -184,9 +184,12 @@ E-Mail/Tel/Adresse) live im Grafana-Dashboard gezeigt und danach gelöscht
 — siehe docs/57 für Aufbewahrung/Löschung (VictoriaLogs-Retention, aktuell
 14 Tage, oder manuell vorher).
 
-**Kein UI-Hinweis/Banner** — bewusst so gewünscht, da die Teilnehmenden
-vorab informiert sind und freiwillig mitmachen. Das gilt aber nur für den
-tatsächlichen Unterrichtsraum, nicht für den Hostnamen:
+**Kein UI-Hinweis/Banner** — bewusst so gewünscht: das Namensfeld im
+Nickname-Overlay selbst ist bereits das erste und einzige, was beim Laden
+der Seite erscheint (blockiert "Click to Play" bis zur Eingabe, siehe
+oben), ohne zusätzlichen separaten Hinweis-Screen davor. Das gilt für die
+eigene Klasse als informierte, freiwillig teilnehmende Gruppe — nicht für
+den Hostnamen:
 
 > **Dieser Host ist öffentlich erreichbar (siehe `ingress.hosts` oben,
 > `pacman-prod.pke-lab.de`, kein Auth/IP-Allowlist).**
