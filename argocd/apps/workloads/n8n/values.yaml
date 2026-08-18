@@ -73,7 +73,7 @@ env:
   TZ: Europe/Berlin
   # SQLite als Datenbank (keine externe DB nötig im Home Lab)
   DB_TYPE: sqlite
-  # Basis-Auth kann hier oder über Authentik (ForwardAuth) aktiviert werden
+  # Basis-Auth wird hier aktiviert (kein zentraler Identity-Provider im Cluster)
   N8N_BASIC_AUTH_ACTIVE: "true"
   # n8n blockt Execute Command / Local File Trigger standardmäßig (OS-/
   # Dateisystem-Zugriff, Sicherheitsrisiko bei Multi-Tenant-Instanzen) —
