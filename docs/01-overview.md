@@ -55,7 +55,6 @@ flowchart TB
 
     subgraph L3["SCHICHT 3 — PLATTFORMDIENSTE (argocd/apps/platform/)"]
         direction LR
-        S1["authentik<br/>zentrale Anmeldung"]
         S2["sealed-secrets<br/>kubeseal-webgui"]
         S3["monitoring<br/>VictoriaMetrics + Grafana"]
         S4["gotify · ntfy<br/>+ Alert-Brücken"]
