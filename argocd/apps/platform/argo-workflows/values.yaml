@@ -29,35 +29,10 @@ argo-workflows:
         memory: 512Mi
 
   server:
-    # SSO-Modus via Authentik OIDC.
-    # Anleitung: docs/15-sso-alle-dienste.md → Schritt 3
-    # TODO: Zurück auf [sso] setzen sobald alle drei SealedSecrets neu versiegelt sind:
-    #   - argo-workflows-sso (clientId, clientSecret) → Authentik OIDC-App
-    #   - argo-artifacts-s3 (accesskey, secretkey) → MinIO Root-Credentials
-    #   - ghcr-push (.dockerconfigjson) → GHCR-Token
-    # Zum Aktivieren: authModes auf [sso] setzen, sso.enabled: true
-    # (erst nach dem Eintragen der Secrets in ssoSecret unten)
     authModes:
       - server
     # Serve plain HTTP — TLS is terminated/none behind Traefik on the LAN.
     secure: false
-    sso:
-      enabled: false
-      issuer: "http://authentik.tech.homeserver/application/o/argo-workflows/"
-      clientId:
-        name: argo-workflows-sso
-        key: clientId
-      clientSecret:
-        name: argo-workflows-sso
-        key: clientSecret
-      redirectUrl: "http://argo-workflows.tech.homeserver/oauth2/callback"
-      scopes:
-        - openid
-        - profile
-        - email
-        - groups
-      rbac:
-        enabled: true
     resources:
       requests:
         cpu: 25m
@@ -97,18 +72,6 @@ argo-workflows:
 #     --name argo-artifacts-s3 --controller-name sealed-secrets-controller \
 #     --controller-namespace sealed-secrets --from-file=/dev/stdin
 # See docs/12-argo-workflows.md for the full workflow (incl. the GHCR token).
-
-# SSO — OIDC-Credentials für Authentik.
-# Anleitung: docs/15-sso-alle-dienste.md → Schritt 3.3
-# 1. kubeseal-Befehle aus der Anleitung ausführen
-# 2. Ausgabe hier eintragen
-# 3. enabled auf true setzen
-# 4. Gleichzeitig oben authModes: [sso] und sso.enabled: true setzen
-ssoSecret:
-  enabled: true
-  name: argo-workflows-sso
-  encryptedClientId: "AgAokCrBK4T0zdr5PfSteI4FcmEqYT8fRUQucALSZNVMiwcfLtFRRt/4M2GqLFC2on6isXuC3jvwKm24IeJniAy8u+wOmvZTGpBb6y5+KS6KkPFssLuUIx2NeiZrppYTKnilNjpV9cdNqr+CMu2gLHGXocekEZiyKEnZtOjpGXTF+8j9R0ZY564MFlLqJVZObgZVQ3usnr6zUJfLVD8rukF6J7zprRQ7GSsRNlRF9ccAvYrzfXxxBFikmgygvyKSRs+yPXD9+mFnhYlTxGbiXITFVvuvti5saPgogC3gyX8M0NDW2vWaeHVaoBIX4ULuXq/MZtZ6z9h7hyY0+L9KZDzpkmL6ut8WhNMRQkfPDbH2C5wdKHSU36O639OuHLEG9TDnfV1xKDAhhFh/tv5q+KPsHwgMee20jiug3zZnWGyaXEKFM7PoobeUb2nd/UzFeGWWZ13lpd97iSk4frbGWtam/THowaVNTRFHUCweqOWq4PU+ozjb0gKwHaVZvQRgn8pmEaLgwQ2MA1Q6EeZPDTQxAiPdHd9ZZekemZqWjt2KUsMhWue1zTwI9u/2jZ+Tp2EJ97223uRvB6zNbFYdyIFUty6wrvi9qyg/cmElBXO9oDtlNJy61Ws9grhYW70X7Ywovosc5eao8zq7UKOnUzg3A7hiZPbpXJKZ/htnENELfjFBQCtaWT2wouglsFpxTgqDeVBOAf7Fu2HAIH18qRMYN7OhiapEJs6JsXx2dqx+2bILwg7O3KJm"
-  encryptedClientSecret: "AgCEVr0mWV/oFvuWD4WvwK4r+aGpLDy2OzkCNfyBXEPCd33phcqvilshpbC/LcYGIymgUyLWKoNQmGGcZKL1rq1t9PfCRezHOsb4iBo29qek1GbKNZPjKh9PBb39Cb5Q3MYQnnI0E9EUMVzNAGQji2HkQ0aNAj1zQYRkQZ0R0kQVpgCIqozl7xCqO6GA/8xuyvwnfSxmJzT93F5rCs546jeEnFrkmb3YKaDOKIwQVs3VFohisK1M5V1QuPrsXR5uprUEO8uHdoR6u+rSHlaKAWBUJ8cPuWuXuI9pQf7mnXs6H4MYs+S4IJMsSF8dGZanzYlOtAQWJ5La0klRK5mwzxJj34cczydLZJNj7hBLpyJDzHFJjIM8Szf/CaH5nd+Wpu2CHkm9h+bUJejSdKIW/oED5WM0TqLxWYQtGlyoM7EpNZKvWQKYcE+3gAk7fE4hHcCsgNrs0OtxxSnPH1JTLgJ8DxDTWnMes9jOqEyzZ8PVCUar7F+K3Lk0lXtovvIy3MCvzraG9GGcDPU2GBt7fmGV04TX4PaNEna3Om0wM1TZ5f9VhzlrwZVpsIEDBFfAnr+64PmmgbVqoDZPDyH6KLUlaOkzioObHF4mctWPlgMFBiCyWepBeyqP3BFa+Lj0tZ9SJxFchXmVHr6u4e7Rn0JjxVgY3GL51BFBf+EkrJAkxpGROe7sHyaHODoR6q3xkrddz+HCNq5/5I1iHe2PDeJVfRhGHS6aSREed7dwFBp+mvGUmDts0Qrs7TxT33FB45flwvttDHMWOILDCkmVlOhW9Hhs1Dh9ep2//K/8eLY8AKYZCyVAI3FZaPGOSMlkBuuuvDhHtyVt4S2CRH5XBb/R/2XYbXesL0NOjq+sP0/4jg=="
 
 # S3 access for the artifact repository — must match the MinIO root creds.
 artifactSecret:
