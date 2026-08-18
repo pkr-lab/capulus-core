@@ -1,0 +1,72 @@
+---
+# ============================================================
+# nightly_worker_wake role — 01:00-Uhr Wake/Update/Shutdown-Zyklus für
+# worker-0/worker-1.
+# ============================================================
+# Läuft auf homeserver, NACH cluster_power_manager (nutzt dessen
+# poweroff-Key/State-Dir weiter) und nach semaphore_secrets (nutzt dessen
+# Admin-Passwort-Datei) -- siehe ansible/site.yml für die Reihenfolge.
+# ============================================================
+
+- name: Config-Verzeichnis anlegen
+  ansible.builtin.file:
+    path: /etc/nightly-worker-wake
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  when: nightly_worker_wake_enabled | bool
+
+- name: nightly-worker-wake.sh deployen
+  ansible.builtin.copy:
+    src: nightly-worker-wake.sh
+    dest: /usr/local/bin/nightly-worker-wake.sh
+    owner: root
+    group: root
+    mode: "0755"
+  when: nightly_worker_wake_enabled | bool
+
+- name: Konfiguration templaten
+  ansible.builtin.template:
+    src: config.env.j2
+    dest: /etc/nightly-worker-wake/config.env
+    owner: root
+    group: root
+    mode: "0600"
+  when: nightly_worker_wake_enabled | bool
+
+- name: systemd-Service (oneshot) deployen
+  ansible.builtin.template:
+    src: nightly-worker-wake.service.j2
+    dest: /etc/systemd/system/nightly-worker-wake.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: nightly_worker_wake_enabled | bool
+  notify: Reload systemd for nightly worker wake
+
+- name: systemd-Timer deployen
+  ansible.builtin.template:
+    src: nightly-worker-wake.timer.j2
+    dest: /etc/systemd/system/nightly-worker-wake.timer
+    owner: root
+    group: root
+    mode: "0644"
+  when: nightly_worker_wake_enabled | bool
+  notify: Reload systemd for nightly worker wake
+
+- name: nightly-worker-wake.timer aktivieren und starten
+  ansible.builtin.systemd:
+    name: nightly-worker-wake.timer
+    daemon_reload: true
+    enabled: true
+    state: started
+  when: nightly_worker_wake_enabled | bool
+
+- name: nightly-worker-wake.timer deaktivieren, falls nightly_worker_wake_enabled false
+  ansible.builtin.systemd:
+    name: nightly-worker-wake.timer
+    enabled: false
+    state: stopped
+  when: not (nightly_worker_wake_enabled | bool)
+  failed_when: false

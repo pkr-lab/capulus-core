@@ -1,0 +1,99 @@
+{
+  "name": "Nightly-Worker-Update -> Zammad-Ticket",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nightly-worker-update",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "d1d1d1d1-0001-4000-8000-000000000001",
+      "name": "Nightly Worker Update Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ],
+      "webhookId": "nightly-worker-update"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Baut Titel + Ticket-Body aus dem JSON-Bericht, den nightly-worker-wake.sh\n// (ansible/roles/nightly_worker_wake) am Ende jedes 01:00-Uhr-Laufs schickt.\n// Erwartetes Payload-Format siehe docs/59-nightly-worker-update.md.\nconst payload = $input.item.json.body || $input.item.json;\n\nfunction fmtDuration(sec) {\n  if (sec === undefined || sec === null) return 'unbekannt';\n  const m = Math.floor(sec / 60);\n  const s = sec % 60;\n  return `${m}m ${s}s`;\n}\n\nconst STATUS_TEXT = {\n  pending: 'nie gestartet (unerwarteter Skriptabbruch davor)',\n  not_ready: 'nicht aufgewacht',\n  no_template: 'kein Semaphore-Projekt/Template gefunden',\n  success: 'Update erfolgreich',\n  error: 'Update-Task mit Fehler beendet',\n  stopped: 'Update abgebrochen (Zeitbudget erreicht)',\n};\n\nconst workers = payload.workers || [];\nlet anyProblem = false;\n\nconst workerBlocks = workers.map((w) => {\n  const lines = [`### ${w.name}`];\n  const statusText = STATUS_TEXT[w.status] || w.status;\n  const ok = w.status === 'success';\n  if (!ok) anyProblem = true;\n\n  lines.push(`- Status: ${statusText}`);\n  if (w.reason) lines.push(`- Grund: ${w.reason}`);\n  if (w.status === 'success' || w.status === 'error' || w.status === 'stopped') {\n    lines.push(`- Pakete geändert: ${w.changed ? 'ja' : 'nein'}`);\n  }\n  if (w.play_recap) lines.push(`- Ansible-Zusammenfassung: \\`${w.play_recap}\\``);\n  if (w.rebooted) {\n    lines.push('- Automatisch neu gestartet (Kernel-/libc-Update, reboot-required war gesetzt).');\n  }\n  return lines.join('\\n');\n}).join('\\n\\n');\n\nconst overallOk = payload.note ? false : !anyProblem;\nconst title = overallOk\n  ? 'Nightly Worker Update: OK'\n  : 'Nightly Worker Update: Fehler/Hinweis';\nconst dryRunPrefix = payload.dry_run ? '[DRY RUN] ' : '';\n\nconst bodyText = [\n  `${dryRunPrefix}Nächtlicher Update-Lauf (worker-0/worker-1) ${overallOk ? 'erfolgreich' : 'mit Problemen'} abgeschlossen.`,\n  '',\n  `Gestartet: ${payload.started_at || 'unbekannt'}`,\n  `Beendet: ${payload.finished_at || 'unbekannt'}`,\n  `Dauer: ${fmtDuration(payload.elapsed_seconds)}`,\n  payload.note ? `\\nHinweis: ${payload.note}` : null,\n  '',\n  workerBlocks || '(keine Worker konfiguriert)',\n  '',\n  'Details: docs/59-nightly-worker-update.md im capulus-core-Repo, oder `journalctl -u nightly-worker-wake` auf dem Homeserver.',\n].filter((l) => l !== null).join('\\n');\n\nreturn [{ json: { title: `${dryRunPrefix}${title}`, body: bodyText } }];"
+      },
+      "id": "d1d1d1d1-0002-4000-8000-000000000002",
+      "name": "Bericht formatieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "ticket",
+        "operation": "create",
+        "title": "={{ $json.title }}",
+        "group": "Support::Administration",
+        "customer": "info@edv-kretzer.de",
+        "article": {
+          "articleDetails": {
+            "subject": "={{ $json.title }}",
+            "body": "={{ $json.body }}",
+            "sender": "System",
+            "type": "note",
+            "visibility": "internal"
+          }
+        },
+        "additionalFields": {}
+      },
+      "id": "d1d1d1d1-0003-4000-8000-000000000003",
+      "name": "Zammad-Ticket erstellen",
+      "type": "n8n-nodes-base.zammad",
+      "typeVersion": 1,
+      "position": [
+        780,
+        300
+      ],
+      "credentials": {
+        "zammadTokenAuthApi": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "Zammad Token Auth (Rotation-Reminder)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Nightly Worker Update Webhook": {
+      "main": [
+        [
+          {
+            "node": "Bericht formatieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bericht formatieren": {
+      "main": [
+        [
+          {
+            "node": "Zammad-Ticket erstellen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Webhook-Ziel für nightly-worker-wake.sh (ansible/roles/nightly_worker_wake, läuft nachts um 01:00 Uhr auf dem Homeserver): weckt worker-0/worker-1 per Wake-on-LAN, laesst per Semaphore-API apt update/dist-upgrade laufen und schickt am Ende IMMER einen JSON-Bericht hierher (Erfolg, Teilerfolg oder Fehler) -- unabhängig von der ntfy-Push-Meldung, die derselbe Lauf zusätzlich verschickt. Der Code-Node baut daraus Titel + lesbaren Bericht (Status je Worker, geänderte Pakete, Ansible-PLAY-RECAP, Reboot-Bedarf), der Zammad-Node (Ticket->Create) legt ein Ticket in der Gruppe 'Support::Administration' an -- ein Ticket pro Nachtlauf, auch wenn nichts zu tun war. Nutzt bewusst den nativen n8n-nodes-base.zammad-Node statt eines rohen HTTP-Request-Node, analog zu yearly-secrets-rotation-reminder.json. NACH DEM IMPORT: Node 'Zammad-Ticket erstellen' -> bestehende Credential 'Zammad Token Auth (Rotation-Reminder)' zuweisen (oder neu anlegen: Base URL https://zammad.homeserver, Access Token mit Berechtigung ticket.agent), danach Workflow AKTIVIEREN (Import allein reicht nicht) und die Webhook-URL http://n8n.prod.homeserver/webhook/nightly-worker-update mit nightly_worker_wake_n8n_webhook_url (ansible/roles/nightly_worker_wake/defaults/main.yml) abgleichen. Details: docs/59-nightly-worker-update.md."
+  }
+}
