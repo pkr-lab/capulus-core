@@ -1,0 +1,13 @@
+# Managed by Ansible (nightly_worker_wake role) — do not edit manually.
+[Unit]
+Description=Nightly worker wake/update/shutdown cycle -- täglich 01:00 Uhr
+
+[Timer]
+OnCalendar={{ nightly_worker_wake_oncalendar }}
+# Kein Nachholen eines verpassten Laufs beim nächsten Boot -- ein
+# nachträglicher Wake mitten am Tag wäre unerwünscht.
+Persistent=false
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

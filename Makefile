@@ -30,7 +30,7 @@ check: ## Dry-run the full playbook (no changes applied).
 install: deps ## Provision the home server end-to-end.
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) $(VAULT_OPTS)
 
-.PHONY: common crowdsec dnsmasq tailscale k3s k3s-agent argocd semaphore semaphore-targets semaphore-bootstrap semaphore-bootstrap-local worker-0 worker-0-check worker-1 worker-1-check cluster-power-manager power-agent cups-print-server
+.PHONY: common crowdsec dnsmasq tailscale k3s k3s-agent argocd semaphore semaphore-targets semaphore-bootstrap semaphore-bootstrap-local worker-0 worker-0-check worker-1 worker-1-check cluster-power-manager power-agent cups-print-server nightly-worker-wake worker-apt-update
 common: ## Run only the `common` role (base OS, firewall, packages).
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags common $(VAULT_OPTS)
 
@@ -87,6 +87,13 @@ power-agent: ## Re-deploy only the power_agent role on homeserver (brightness + 
 
 cups-print-server: ## Re-deploy only the cups_print_server role on homeserver (USB-Drucker per IPP/AirPrint).
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags cups-print-server $(VAULT_OPTS)
+
+nightly-worker-wake: ## Re-deploy only the nightly_worker_wake role on homeserver (01:00 Uhr WoL+Update+Poweroff-Zyklus).
+	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags nightly-worker-wake $(VAULT_OPTS)
+
+worker-apt-update: ## Manuelles apt-Update auf worker-0 + worker-1 (läuft normalerweise nachts automatisch über nightly-worker-wake).
+	ansible-playbook -i $(INVENTORY) $(HS2_PLAYBOOK) --tags apt-update $(VAULT_OPTS)
+	ansible-playbook -i $(INVENTORY) $(HS3_PLAYBOOK) --tags apt-update $(VAULT_OPTS)
 
 .PHONY: windows windows-check windows-users windows-software windows-settings
 WIN_PLAYBOOK := $(ANSIBLE_DIR)/windows.yml

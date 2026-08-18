@@ -1,0 +1,19 @@
+---
+# Kill-switch: auf false setzen, um das apt-Update auf diesem Worker zu
+# überspringen, ohne die Rolle aus dem Playbook zu entfernen.
+worker_apt_update_enabled: true
+
+# k3s-Node-Name für kubectl cordon/drain vor einem nötigen Reboot -- muss
+# zu k3s_agent_hostname (ansible/roles/k3s_agent) passen, damit derselbe
+# Node gemeint ist.
+worker_apt_update_k3s_node_name: "{{ k3s_agent_hostname }}"
+
+# kubeconfig, mit dem der delegierte kubectl-Aufruf auf homeserver läuft
+# (siehe cluster_power_manager_kubeconfig für denselben Pfad).
+worker_apt_update_kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+# Wie lange ansible.builtin.reboot insgesamt auf den Neustart + erneute
+# Erreichbarkeit wartet, bzw. wie lange nach dem Wiederverbinden noch
+# gewartet wird, bis k3s-Agent/Netzwerk sich gesetzt haben.
+worker_apt_update_reboot_timeout_seconds: 300
+worker_apt_update_post_reboot_delay_seconds: 15
