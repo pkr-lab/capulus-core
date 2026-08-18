@@ -1,0 +1,79 @@
+---
+# ============================================================
+# worker_apt_update role — hält worker-0/worker-1 aktuell.
+# ============================================================
+# Anders als der Homeserver (siehe ansible/roles/common) sind die Worker
+# reine k3s-Compute-Nodes OHNE die volle common-Rolle — diese Rolle deckt
+# nur das apt-Update ab, das ihnen sonst fehlt. Wird normalerweise NICHT
+# manuell/periodisch auf dem Worker selbst getriggert, sondern nachts um
+# 01:00 über nightly_worker_wake (läuft auf homeserver): dieses weckt den
+# Worker per Wake-on-LAN, lässt Semaphore das "Deploy worker-*"-Template
+# (das diese Rolle enthält) laufen, und fährt den Worker danach wieder
+# herunter — siehe docs/59-nightly-worker-update.md.
+# ============================================================
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  when: worker_apt_update_enabled | bool
+
+- name: Upgrade all packages to latest (dist-upgrade)
+  ansible.builtin.apt:
+    upgrade: dist
+    autoremove: true
+    autoclean: true
+  when: worker_apt_update_enabled | bool
+
+- name: Check whether a reboot is required
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: worker_apt_update_reboot_flag
+  when: worker_apt_update_enabled | bool
+
+# Automatischer Reboot bei Kernel-/libc-Updates: läuft innerhalb desselben
+# Semaphore-Tasks, den nightly_worker_wake (homeserver) sowieso schon bis
+# zu nightly_worker_wake_max_runtime_seconds abwartet -- kein separater
+# Schritt/Zeitbudget im Orchestrator-Skript nötig. Cordon+Drain VOR dem
+# Reboot, damit eventuell laufende Pods sauber evakuiert werden statt beim
+# harten Neustart abzureißen; Uncordon danach übernimmt die bestehende
+# "Uncordon nach Provisioning"-Play am Ende von worker-0.yml/worker-1.yml
+# ohnehin schon (läuft immer, egal ob rebootet wurde).
+- name: Reboot-erforderlich -- Node vor dem Neustart cordon/drain (auf homeserver)
+  delegate_to: homeserver
+  environment:
+    KUBECONFIG: "{{ worker_apt_update_kubeconfig }}"
+  when:
+    - worker_apt_update_enabled | bool
+    - worker_apt_update_reboot_flag.stat.exists
+  block:
+    - name: kubectl cordon {{ worker_apt_update_k3s_node_name }}
+      ansible.builtin.command:
+        cmd: kubectl cordon {{ worker_apt_update_k3s_node_name }}
+      changed_when: true
+      failed_when: false
+
+    - name: kubectl drain {{ worker_apt_update_k3s_node_name }}
+      ansible.builtin.command:
+        cmd: >-
+          kubectl drain {{ worker_apt_update_k3s_node_name }}
+          --ignore-daemonsets --delete-emptydir-data --timeout=120s
+      changed_when: true
+      failed_when: false
+
+- name: Reboot-erforderlich -- {{ inventory_hostname }} jetzt automatisch neu starten
+  ansible.builtin.reboot:
+    reboot_timeout: "{{ worker_apt_update_reboot_timeout_seconds }}"
+    post_reboot_delay: "{{ worker_apt_update_post_reboot_delay_seconds }}"
+  when:
+    - worker_apt_update_enabled | bool
+    - worker_apt_update_reboot_flag.stat.exists
+
+- name: Reboot-erforderlich -- Abschluss melden (für den nightly_worker_wake-Bericht)
+  ansible.builtin.debug:
+    msg: >-
+      {{ inventory_hostname }} wurde automatisch neu gestartet
+      (reboot-required war gesetzt) und ist wieder erreichbar.
+  when:
+    - worker_apt_update_enabled | bool
+    - worker_apt_update_reboot_flag.stat.exists

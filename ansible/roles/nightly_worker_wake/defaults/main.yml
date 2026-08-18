@@ -1,0 +1,92 @@
+---
+# ============================================================
+# nightly_worker_wake — Defaults
+# ============================================================
+# Weckt ALLE Worker (worker-0, worker-1) jede Nacht um 01:00 Uhr per
+# Wake-on-LAN, lässt Semaphore das jeweilige "Deploy worker-*"-Template
+# laufen (enthält jetzt auch worker_apt_update, siehe worker-0.yml/
+# worker-1.yml) und fährt die Worker danach wieder herunter — spätestens
+# nach nightly_worker_wake_max_runtime_seconds, damit kein Worker
+# versehentlich die ganze Nacht durchläuft. Läuft NUR auf homeserver.
+#
+# Pausiert cluster_power_manager (docs/37-cluster-power-manager.md) für
+# die Dauer des Fensters, damit dessen lastbasierter Watchdog nicht
+# mitten in einem apt-Upgrade gegenläufig einen Worker herunterfährt —
+# beide teilen sich denselben poweroff-Key und dieselbe
+# woke_at-Buchführung in STATE_DIR.
+# ============================================================
+
+# Kill-switch: auf false setzen, um den nächtlichen Update-Zyklus
+# abzuschalten, ohne die Rolle aus dem Playbook zu entfernen.
+nightly_worker_wake_enabled: true
+
+# systemd-Timer-Ausdruck (siehe systemd.time(7)) — 01:00 Uhr, Zeitzone aus
+# der globalen `timezone`-Variable (group_vars/all.yml).
+nightly_worker_wake_oncalendar: "*-*-* 01:00:00 {{ timezone }}"
+
+# Hartes Zeitbudget ab dem ersten Wake (Sekunden): laufende Updates
+# werden spätestens jetzt per Semaphore-Task-Stop abgebrochen und ALLE
+# geweckten Worker heruntergefahren. 25 Minuten passen zu einem
+# typischen "apt update && dist-upgrade" (üblich: 10-15 Minuten) PLUS
+# einem eventuell nötigen automatischen Reboot (worker_apt_update,
+# meist 30-90s, mit Puffer für einen langsameren Boot z.B. nach
+# Kernel-Update) -- 5 Minuten mehr als reines Update, ohne den Worker im
+# Normalfall unnötig lang laufen zu lassen.
+nightly_worker_wake_max_runtime_seconds: 1500
+
+# Wie lange nach dem WoL-Magic-Packet auf kubectl-Ready gewartet wird,
+# bevor das Update für diesen Worker übersprungen wird.
+nightly_worker_wake_ready_timeout_seconds: 180
+
+# Wie lange nach einem Stop-Request auf das (saubere) Beenden des
+# Semaphore-Tasks gewartet wird, bevor trotzdem heruntergefahren wird.
+nightly_worker_wake_stop_grace_seconds: 30
+
+# Poll-Intervall beim Warten auf den Semaphore-Task.
+nightly_worker_wake_poll_seconds: 15
+
+# ---- SSH/Kubeconfig/State — wiederverwendet von cluster_power_manager,
+# damit derselbe (auf "poweroff" beschränkte) SSH-Key und dieselbe
+# woke_at-Buchführung gilt und sich beide Automatismen nicht
+# widersprechen. Diese Rolle erzeugt KEINEN eigenen SSH-Key — sie nutzt
+# ausschließlich Semaphore (volle SSH-Rechte, für die Updates) und den
+# bestehenden cluster_power_manager-Key (nur poweroff, für den Shutdown).
+nightly_worker_wake_ssh_user: "{{ cluster_power_manager_ssh_user }}"
+nightly_worker_wake_ssh_key_path: "{{ cluster_power_manager_ssh_key_path }}"
+nightly_worker_wake_kubeconfig: "{{ cluster_power_manager_kubeconfig }}"
+nightly_worker_wake_state_dir: "{{ cluster_power_manager_state_dir }}"
+
+# ---- Semaphore-API — MUSS zu ansible/roles/semaphore_bootstrap/defaults
+# passen (dort wird das Projekt/Template angelegt, hier nur ausgelöst).
+# Bewusst hier dupliziert statt cross-role referenziert: semaphore_bootstrap
+# läuft in site.yml in einem eigenen, späteren Play (siehe ansible/site.yml)
+# und seine Rollen-Defaults sind im Play dieser Rolle nicht sichtbar.
+nightly_worker_wake_semaphore_api_base: "http://semaphore-api.tech.homeserver"
+nightly_worker_wake_semaphore_admin_username: "admin"
+nightly_worker_wake_semaphore_admin_password_path: "/etc/semaphore-secrets/admin_password"
+
+# ---- ntfy-Benachrichtigungen — wiederverwendet von cluster_power_manager.
+# Schnelle Push-Meldung bei Start/Ende/Fehlern -- der VOLLSTÄNDIGE Bericht
+# (was wurde geupdated, wo gab es Fehler) geht zusätzlich als Zammad-Ticket
+# über den n8n-Webhook unten raus.
+nightly_worker_wake_ntfy_host: "{{ cluster_power_manager_ntfy_host }}"
+nightly_worker_wake_ntfy_ip: "{{ cluster_power_manager_ntfy_ip }}"
+nightly_worker_wake_ntfy_topic: "{{ cluster_power_manager_ntfy_topic }}"
+
+# ---- n8n-Webhook für den Zammad-Bericht -------------------------------
+# Wird nach JEDEM Lauf aufgerufen (Erfolg, Teilerfolg oder Fehler) mit
+# einem JSON-Bericht (pro Worker: Status, geänderte Pakete, Ansible-
+# PLAY-RECAP, Reboot-Bedarf). Der Workflow
+# argocd/apps/workloads/n8n/workflows/nightly-worker-update-to-zammad.json
+# baut daraus ein Zammad-Ticket -- siehe docs/59-nightly-worker-update.md.
+# Muss zum Webhook-Pfad im importierten Workflow passen (Node "Nightly
+# Worker Update Webhook", Pfad "nightly-worker-update"). Nicht erreichbar
+# ⇒ nur eine Journal-Warnung, der Zyklus selbst bricht deswegen nicht ab.
+nightly_worker_wake_n8n_webhook_url: "http://n8n.prod.homeserver/webhook/nightly-worker-update"
+
+# ---- Worker — identische Liste wie cluster_power_manager_workers
+# (ansible/roles/cluster_power_manager/defaults/main.yml), hier nicht neu
+# gepflegt, um Drift bei MAC-Adressen zu vermeiden. Für jeden Eintrag
+# `name` muss in Semaphore ein Projekt `name` mit einem Template
+# "Deploy <name>" existieren (semaphore_bootstrap-Konvention).
+nightly_worker_wake_workers: "{{ cluster_power_manager_workers }}"
