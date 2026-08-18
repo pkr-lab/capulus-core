@@ -11,7 +11,6 @@ Repo: `pkr-lab/capulus-core` · 3-Node-k3s-Cluster · 36 GitOps-Apps · Stand Au
 
 | Kürzel | Bedeutung |
 |---|---|
-| **A** | Anmeldung über Authentik (SSO per OIDC oder Traefik-ForwardAuth) |
 | **S** | braucht ein Sealed Secret aus Git |
 | **N** | Daten auf dem NAS, StorageClass `nas` (`/volume1`, NFS) |
 | **I** | Daten auf dem NAS, StorageClass `immich-nas` (`/volume2`, NFS) |
@@ -55,7 +54,6 @@ flowchart TB
 
     subgraph L3["SCHICHT 3 — PLATTFORMDIENSTE (argocd/apps/platform/)"]
         direction LR
-        S1["authentik<br/>zentrale Anmeldung"]
         S2["sealed-secrets<br/>kubeseal-webgui"]
         S3["monitoring<br/>VictoriaMetrics + Grafana"]
         S4["gotify · ntfy<br/>+ Alert-Brücken"]
@@ -178,7 +176,6 @@ sequenceDiagram
 ```mermaid
 flowchart TB
     SS["sealed-secrets<br/>muss zuerst laufen"]
-    AK["authentik<br/>+ eigenes PostgreSQL/Redis"]
     NASSC["StorageClass nas"]
     IMSC["StorageClass immich-nas"]
     LP["StorageClass local-path"]
@@ -188,7 +185,6 @@ flowchart TB
     NT["ntfy"]
     TR["Traefik"]
 
-    SS --> AK
     SS --> MON["monitoring"]
     SS --> MIN
     SS --> AW["argo-workflows"]
@@ -202,15 +198,6 @@ flowchart TB
     SS --> PH["pihole"]
     SS --> ALA["alamos-apager"]
 
-    AK -->|"OIDC"| HL["headlamp"]
-    AK -->|"OIDC"| AW
-    AK -->|"OIDC"| MIN
-    AK -->|"OIDC"| MON
-    AK -->|"ForwardAuth"| SEM["semaphore"]
-    AK -->|"ForwardAuth"| GO
-    AK -->|"ForwardAuth"| VW
-    AK -->|"ForwardAuth"| N8N["n8n"]
-
     NASSC --> NC
     NASSC --> PL
     NASSC --> WIKI
@@ -222,7 +209,6 @@ flowchart TB
     NASSC --> XIBO["xibosignage"]
     IMSC --> IMMICH
     LP --> MON
-    LP --> AK
     LP --> GO
     LP --> NT
     LP --> PH
@@ -238,7 +224,7 @@ flowchart TB
     WIKI --> WDS["wiki-docs-sync<br/>CronJob alle 15 Min."]
     ZAM --> GRW["github-release-watcher<br/>CronJob alle 2 h"]
     TR --> ALLE["alle *.homeserver-Adressen"]
-    CF --> OEFF["wiki · ntfy · support · grafana · authentik<br/>stream · paperless · n8n · mealie<br/>vault · nextcloud .pke-lab.de"]
+    CF --> OEFF["wiki · ntfy · support · grafana<br/>stream · paperless · n8n · mealie<br/>vault · nextcloud .pke-lab.de"]
 ```
 
 ---
@@ -255,22 +241,21 @@ tatsächliche Git-Ordnerstruktur (`argocd/apps/platform/…` bzw.
 
 | App | Aufgabe | Kürzel |
 |---|---|---|
-| `authentik` | zentrale Anmeldung, Identity Provider | A · L · S · D |
 | `sealed-secrets` | entschlüsselt SealedSecrets im Cluster | — |
 | `kubeseal-webgui` | Weboberfläche zum Verschlüsseln von Secrets | — |
-| `monitoring` | VictoriaMetrics, vmagent, vmalert, Alertmanager, Grafana | A · L · S · C |
+| `monitoring` | VictoriaMetrics, vmagent, vmalert, Alertmanager, Grafana | L · S · C |
 | `logging` | Log-Aggregation (VictoriaLogs) | L · S |
-| `gotify` / `gotify-bridge` | Push an Android, Brücke von Alertmanager | A · L · S |
+| `gotify` / `gotify-bridge` | Push an Android, Brücke von Alertmanager | L · S |
 | `ntfy` / `ntfy-bridge` | Push an iOS + Android, Brücke von Alertmanager | L · C |
 | `cloudflared` | Cloudflare Tunnel, ausgehende Verbindung nach außen | S |
 | `pihole` | Werbe- und Trackerfilter im DNS, NodePort 30053 | L · S |
 | `coredns-custom` | zusätzliche DNS-Zonen im Cluster | — |
 | `nas-storage` | NFS-Provisioner → StorageClass `nas` | — |
 | `immich-storage` | NFS-Provisioner → StorageClass `immich-nas` | — |
-| `minio` | S3-Speicher für Build-Artefakte | A · N · S |
-| `argo-workflows` | interne CI/CD-Pipelines, braucht MinIO | A · S |
-| `semaphore` | Weboberfläche, die Ansible-Playbooks startet | A · L |
-| `headlamp` | Kubernetes-Dashboard im Browser | A · S |
+| `minio` | S3-Speicher für Build-Artefakte | N · S |
+| `argo-workflows` | interne CI/CD-Pipelines, braucht MinIO | S |
+| `semaphore` | Weboberfläche, die Ansible-Playbooks startet | L |
+| `headlamp` | Kubernetes-Dashboard im Browser | S |
 | `traefik-config` | Traefik-Zusatzkonfiguration (HelmChartConfig, Metrics-Scrape) | — |
 
 ### Schicht 4 — Anwendungen (`argocd/apps/workloads/…`, AppProject `workloads`)
@@ -282,9 +267,9 @@ tatsächliche Git-Ordnerstruktur (`argocd/apps/platform/…` bzw.
 | `paperless-ngx` | papierlose Dokumentenverwaltung | N · S · D · C | `paperless.homeserver` |
 | `wikijs` | Wiki, auch öffentlich | N · S · D · C | `wiki.homeserver` |
 | `zammad` | Ticketsystem / Helpdesk | N · L · S · D · C | `zammad.homeserver` |
-| `vaultwarden` | Passwort-Manager (Bitwarden-kompatibel) | A · N · L · S · C | `vault.homeserver` |
+| `vaultwarden` | Passwort-Manager (Bitwarden-kompatibel) | N · L · S · C | `vault.homeserver` |
 | `mealie` | Rezepte und Essensplanung | N · C | `mealie.homeserver` |
-| `n8n` | Automatisierungen ohne Code | A · N · C | `n8n.homeserver` |
+| `n8n` | Automatisierungen ohne Code | N · C | `n8n.homeserver` |
 | `uptime-kuma` | Erreichbarkeits-Überwachung | L | `uptime-kuma.homeserver` |
 | `mediamtx` | Live-Video: RTSP / RTMP / WebRTC / HLS | C | `stream.homeserver` |
 | `tinyteller` | kleine Diktier- und Story-App | — | `tinyteller.homeserver` |
@@ -391,13 +376,11 @@ flowchart LR
 **Speicher**
 - UGREEN NAS (RAID1) → NFS `/volume1` → `nas-storage` → StorageClass `nas` → Nextcloud, Paperless, Wiki.js, Zammad, Mealie, n8n, MinIO, Vaultwarden
 - UGREEN NAS → `/volume2` → `immich-storage` → `immich-nas` → Immich, bewusst getrennt vom übrigen Cluster-Speicher
-- Steht das NAS, starten diese Apps nicht mehr. Apps auf `local-path` (Grafana, Gotify, ntfy, Pi-hole, Uptime Kuma, Authentik, Semaphore) laufen weiter.
+- Steht das NAS, starten diese Apps nicht mehr. Apps auf `local-path` (Grafana, Gotify, ntfy, Pi-hole, Uptime Kuma, Semaphore) laufen weiter.
 - Sicherung: NAS → restic → WD Elements 8 TB. Ohne diese Platte existiert keine Kopie der Nutzdaten. Das restic-Passwort ist der einzige Schlüssel — ohne es ist auch das Backup wertlos.
 
 **Anmeldung und Geheimnisse**
-- Authentik (mit eigenem PostgreSQL/Redis) → OIDC bzw. Traefik-ForwardAuth → Headlamp, Argo Workflows, MinIO, Semaphore, Gotify, Vaultwarden, n8n
-- Grafana meldet sich bewusst nicht über Authentik an, sondern über den eingebauten Grafana-Login — läuft auch bei Authentik-Ausfall weiter.
-- Fällt Authentik aus, kann sich an diesen Oberflächen niemand mehr anmelden; die Dienste selbst laufen weiter.
+- Kein zentraler Identity-Provider im Cluster — jede App bringt ihren eigenen Login mit (Grafana lokal, Semaphore/Gotify aktuell ohne zusätzlichen Layer, Vaultwarden/n8n mit eigener Auth).
 - `sealed-secrets` muss vor allen Apps laufen, die ein SealedSecret mitbringen — sonst bleiben deren Pods ohne Zugangsdaten.
 - Ansible Vault schützt die Host-Geheimnisse (Tailscale-Key, sudo-Passwörter, SMB-Passwort); Sealed Secrets schützt die Cluster-Geheimnisse. Zwei getrennte Mechanismen, beide im Git-Repo.
 
@@ -445,7 +428,7 @@ SCHICHT 4  Nextcloud  Immich  Paperless  Wiki.js  Zammad  Vaultwarden  Mealie
            n8n  Uptime-Kuma  MediaMTX  TinyTeller  alamos-apager  xibosignage  + 2 CronJobs
                                    |  braucht
                                    v
-SCHICHT 3  authentik(SSO)  sealed-secrets  monitoring  gotify/ntfy  cloudflared
+SCHICHT 3  sealed-secrets  monitoring  gotify/ntfy  cloudflared
            pihole  nas-storage  immich-storage  minio  argo-workflows  semaphore  headlamp
                                    |  läuft in
                                    v

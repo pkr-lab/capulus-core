@@ -24,7 +24,7 @@ PostgreSQL benötigt Persistenz. PostgreSQL läuft mit `storageClassName: nas`
 mehr nötig, damit liegen alle Wiki-Daten auf dem NAS statt auf der
 Homeserver-System-SSD.
 
-> **Warum kein Bitnami-PostgreSQL-Subchart wie bei Zammad/Authentik?**
+> **Warum kein Bitnami-PostgreSQL-Subchart wie bei Zammad?**
 > Bitnami hat im August 2025 sein kostenloses Chart-Katalog-Angebot stark
 > eingeschränkt (Legacy-Images ohne weitere Updates, neue Versionen nur noch
 > per Subscription). Für eine einzelne, kleine Wiki-Datenbank reicht ein
@@ -44,7 +44,6 @@ Homeserver-System-SSD.
   PostgreSQL-PVC auf `Pending`
 - `kubeseal` CLI ist lokal installiert
 - `kubectl` ist mit dem Cluster verbunden
-- (Optional, für SSO) Authentik läuft bereits (siehe [docs/13-sso-authentik.md](13-sso-authentik.md))
 
 ---
 
@@ -232,8 +231,6 @@ kein HPA). Details für alle Apps: [39-hpa-autoscaling.md](39-hpa-autoscaling.md
 - [Wiki.js — Groups & Permissions](https://docs.requarks.io/groups)
 - [Wiki.js Docker-Installation](https://docs.requarks.io/install/docker)
 - [Wiki.js GitHub Repository](https://github.com/requarks/wiki)
-- [Authentik — Wiki.js Integration](https://integrations.goauthentik.io/documentation/wiki-js/)
-- [Authentik SSO Übersicht](13-sso-authentik.md)
 - [NAS-Storage (UGREEN NAS)](16-nas-storage.md)
 - [DNS-Architektur (Wildcard `*.homeserver`)](09-dns-architecture.md)
 - [ArgoCD Setup](05-argocd.md)
