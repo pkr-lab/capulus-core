@@ -37,6 +37,8 @@
       tags: [cluster-power-manager, power-management]
     - role: power_agent
       tags: [power-agent, power-management]
+    - role: nightly_worker_wake
+      tags: [nightly-worker-wake, power-management]
     - role: cups_print_server
       tags: [cups-print-server, printer]
 
