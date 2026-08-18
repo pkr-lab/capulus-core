@@ -72,3 +72,22 @@ geoip:
   updaterImage:
     repository: curlimages/curl
     tag: "8.11.0"
+
+# Schulungs-Erweiterung (siehe README.md "Bestenliste"): koppelt das
+# Namensfeld im Nickname-Overlay (src/nickname.js) an dieselbe versteckte
+# Autofill-Ernte (E-Mail/Tel/Adresse/PLZ), die fingerprint.js's
+# harvestAutofill() bereits für die eigene Ecke nutzt (siehe
+# docs/57-pacman-visitor-tracking.md). Standardmäßig AUS.
+#
+# ACHTUNG: Dieser Host ist über ingress.hosts (s. o.) öffentlich ohne
+# Auth/IP-Allowlist erreichbar (pacman-prod.pke-lab.de). enabled: true
+# wirkt serverseitig für JEDEN Request auf "/" — nicht nur für eine
+# informierte, freiwillig teilnehmende Gruppe, sondern für jeden, der die
+# URL in diesem Zeitraum aufruft (Suchmaschinen-Crawler, alte Links,
+# zufällige Besucher eingeschlossen). Nur für die Dauer der jeweiligen
+# Unterrichtsstunde aktivieren und danach wieder auf false zurücksetzen
+# (neues Chart-Release, s. README.md) — der Serverstart loggt bei
+# enabled: true zusätzlich eine "training mode ENABLED"-Warnzeile als
+# Erinnerung (siehe main.go).
+trainingMode:
+  enabled: false

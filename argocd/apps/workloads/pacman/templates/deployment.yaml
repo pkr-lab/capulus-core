@@ -61,11 +61,13 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          {{- if .Values.geoip.enabled }}
           env:
+            - name: TRAINING_MODE
+              value: {{ .Values.trainingMode.enabled | quote }}
+            {{- if .Values.geoip.enabled }}
             - name: GEOIP_DB_PATH
               value: /geoip/city.mmdb
-          {{- end }}
+            {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.service.targetPort }}
