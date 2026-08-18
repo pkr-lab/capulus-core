@@ -13,14 +13,14 @@ zu laufen.
 Vorher liefen alle 36 Apps im ArgoCD-`default`-Project — das erlaubt
 uneingeschränkt jede Kombination aus Quell-Repo, Ziel-Namespace und
 Ressourcentyp. Ein Tippfehler oder ein kompromittierter Commit hätte z. B.
-eine Workload-App (Mealie, n8n, …) theoretisch in den `authentik`- oder
+eine Workload-App (Mealie, n8n, …) theoretisch in den `monitoring`- oder
 `pihole`-Namespace deployen können. Die Trennung in zwei Projects grenzt das
 ein: Apps aus `argocd/apps/workloads/*` dürfen nur in Workload-Namespaces
 deployen, Apps aus `argocd/apps/platform/*` nur in Platform-Namespaces.
 
 Wichtig: **Jede App behält ihren eigenen Kubernetes-Namespace wie bisher**
 (`destination.namespace` ist weiterhin nur der App-Ordnername, z. B.
-`vaultwarden` oder `authentik`) — es gibt keinen gemeinsamen gequetschten
+`vaultwarden` oder `semaphore`) — es gibt keinen gemeinsamen gequetschten
 Namespace pro Tier. Die Tier-Trennung wirkt ausschließlich auf ArgoCD-Ebene
 (welches Project, welche erlaubten `destinations`) und als zusätzliches
 Namespace-Label (`security-tier=platform`/`security-tier=workload`), das
@@ -41,7 +41,7 @@ Die Zuordnung folgt exakt der bereits bestehenden Schicht-3/Schicht-4-Tabelle
 in [docs/01-overview.md](01-overview.md#5-app-matrix-schicht-3-und-4) — hier
 nur als flache Liste:
 
-**Platform:** `authentik`, `sealed-secrets`, `kubeseal-webgui`, `monitoring`,
+**Platform:** `sealed-secrets`, `kubeseal-webgui`, `monitoring`,
 `logging`, `gotify`, `gotify-bridge`, `ntfy`, `ntfy-bridge`, `cloudflared`,
 `pihole`, `coredns-custom`, `nas-storage`, `immich-storage`, `minio`,
 `argo-workflows`, `semaphore`, `headlamp`, `traefik-config`

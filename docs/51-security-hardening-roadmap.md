@@ -49,9 +49,7 @@ Design-Entscheidungen und Anleitung pro Geräte-Typ
    **[Teilweise — Haupt-Dev-Rechner erledigt, weitere Geräte offen, bewusst
    nicht blockierend für Schritt 4]**
 4. `http://` → `https://` in Docs/README nachziehen, sobald verifiziert.
-   **[Erledigt]** — `authentik.homeserver` bewusst ausgenommen, siehe
-   Fußnote in README.md (reserviert für das separate mTLS-Vorhaben in
-   docs/14-cert-login.md).
+   **[Erledigt]**
 
 **Risiko:** gering für den Cluster selbst, Aufwand liegt beim Verteilen des
 CA-Zertifikats auf alle Geräte.
@@ -81,7 +79,7 @@ Secret und Import-Anleitung: [docs/55-secrets-rotation.md](55-secrets-rotation.m
 **Ziel:** Keine dokumentierte Rotationskadenz für Ansible-Vault-Passwort,
 restic-Passwort, ArgoCD-Admin-PW, Sealed-Secrets-Key. Kein Alerting auf
 sicherheitsrelevante Events (UFW-Denies, CrowdSec-Bans, gehäufte
-Authentik-Login-Fehlschläge).
+Login-Fehlschläge auf den geschützten Diensten).
 
 **Ansatz:**
 1. **[Erledigt]** Rotations-Checkliste mit empfohlenem Turnus je Secret
