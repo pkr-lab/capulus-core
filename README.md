@@ -203,7 +203,6 @@ capulus-core/
 │   │   └── d0060-secrets-rotation.md               # Secrets-Rotation-Checkliste (Phase 7)
 │   ├── f-cicd-automatisierung/       # CI/CD & Automatisierung
 │   │   ├── f0000-argo-workflows.md          # Private CI/CD mit Argo Workflows + MinIO
-│   │   ├── f0010-zot-registry.md            # Self-hosted OCI-Registry
 │   │   ├── f0020-renovate.md                # Automatische Update-PRs für Helm-Charts/Images
 │   │   ├── f0030-release-automation.md      # GitHub Release bei jedem Merge auf main
 │   │   └── f0040-github-release-watcher.md  # GitHub-Release → Zammad-E-Mail-Benachrichtigung
@@ -513,7 +512,6 @@ und Konventionen für neue Docs: **[docs/TEMPLATE.md](docs/TEMPLATE.md)**.
 | Dokument | Inhalt |
 |---|---|
 | [Argo Workflows](docs/f-cicd-automatisierung/f0000-argo-workflows.md) | Private CI/CD-Pipeline mit MinIO-Artifact-Store |
-| [Zot Registry](docs/f-cicd-automatisierung/f0010-zot-registry.md) | Self-hosted OCI-Registry für interne Images |
 | [Renovate](docs/f-cicd-automatisierung/f0020-renovate.md) | Automatische Update-PRs für Helm-Chart-Versionen und Image-Tags |
 | [Release-Automatisierung](docs/f-cicd-automatisierung/f0030-release-automation.md) | GitHub Release + Changelog bei jedem Merge auf `main` via semantic-release |
 | [GitHub Release Watcher](docs/f-cicd-automatisierung/f0040-github-release-watcher.md) | Neue GitHub-Releases erkennen und per Zammad-Ticket eine E-Mail-Benachrichtigung auslösen |
