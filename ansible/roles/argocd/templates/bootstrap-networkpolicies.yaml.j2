@@ -41,7 +41,14 @@
 # Namespaces außerhalb der beiden Listen (kube-system selbst, argocd,
 # cert-manager, metallb-system, …) bekommen bewusst KEINE Policy — das
 # betrifft nur die App-Namespaces, nicht die Cluster-Infrastruktur.
+#
+# Apps in argocd_network_policy_excluded_apps bringen ihre eigene,
+# vollstaendige NetworkPolicy mit (siehe dortiger Kommentar in
+# defaults/main.yml) und werden hier komplett uebersprungen — die
+# tier-default-Policy wuerde per Ingress-Union zusaetzliche Quellen
+# erlauben und eine bewusst engere Policy wieder aufweichen.
 {% for app in argocd_platform_apps %}
+{% if app not in argocd_network_policy_excluded_apps %}
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -80,8 +87,10 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: cloudflared
+{% endif %}
 {% endfor %}
 {% for app in argocd_workloads_apps %}
+{% if app not in argocd_network_policy_excluded_apps %}
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -120,4 +129,5 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: cloudflared
+{% endif %}
 {% endfor %}
