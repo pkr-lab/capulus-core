@@ -74,6 +74,17 @@ spec:
           name: zammad-nginx
           jsonPointers:
             - /spec/replicas
+        # ollama Deployment: laeuft mit replicas: 0 im Ruhezustand und wird
+        # ausschliesslich vom taeglichen n8n-Workflow "Zammad Externer
+        # KI-Lauf" per Kubernetes-API auf 1 hoch- und danach wieder auf 0
+        # heruntergeskaliert (siehe docs/3-apps-workloads/300xx-ollama.md).
+        # Ohne dieses Ignore wuerde selfHeal den Pod waehrend eines
+        # laufenden KI-Laufs sofort wieder auf den Git-Wert 0 zuruecksetzen.
+        - group: apps
+          kind: Deployment
+          name: ollama
+          jsonPointers:
+            - /spec/replicas
         # zammad-redis StatefulSet: Chart-Default setzt
         # updateStrategy.rollingUpdate.maxUnavailable: 1 (Redis-Subchart-
         # values.yaml), Cluster-Feature-Gate MaxUnavailableStatefulSet fehlt
@@ -167,6 +178,17 @@ spec:
         - group: apps
           kind: Deployment
           name: zammad-nginx
+          jsonPointers:
+            - /spec/replicas
+        # ollama Deployment: laeuft mit replicas: 0 im Ruhezustand und wird
+        # ausschliesslich vom taeglichen n8n-Workflow "Zammad Externer
+        # KI-Lauf" per Kubernetes-API auf 1 hoch- und danach wieder auf 0
+        # heruntergeskaliert (siehe docs/3-apps-workloads/300xx-ollama.md).
+        # Ohne dieses Ignore wuerde selfHeal den Pod waehrend eines
+        # laufenden KI-Laufs sofort wieder auf den Git-Wert 0 zuruecksetzen.
+        - group: apps
+          kind: Deployment
+          name: ollama
           jsonPointers:
             - /spec/replicas
         # zammad-redis StatefulSet: Chart-Default setzt
