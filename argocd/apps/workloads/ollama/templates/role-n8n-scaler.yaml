@@ -1,0 +1,34 @@
+# Erlaubt der n8n-ServiceAccount (anderer Namespace), NUR die
+# Scale-Subresource dieses einen Deployments zu lesen/patchen -- damit der
+# taegliche n8n-Workflow "Zammad Externer KI-Lauf" Ollama gezielt
+# hoch-/herunterskalieren kann, ohne sonstigen Cluster-Zugriff zu bekommen.
+# Siehe docs/3-apps-workloads/300xx-ollama.md.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "ollama.fullname" . }}-n8n-scaler
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ollama.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale"]
+    resourceNames:
+      - {{ include "ollama.fullname" . }}
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "ollama.fullname" . }}-n8n-scaler
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ollama.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "ollama.fullname" . }}-n8n-scaler
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.n8nServiceAccountName }}
+    namespace: {{ .Values.n8nNamespace }}
