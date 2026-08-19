@@ -9,7 +9,7 @@
 # nach nightly_worker_wake_max_runtime_seconds, damit kein Worker
 # versehentlich die ganze Nacht durchläuft. Läuft NUR auf homeserver.
 #
-# Pausiert cluster_power_manager (docs/37-cluster-power-manager.md) für
+# Pausiert cluster_power_manager (docs/2-betrieb-hardware/20020-cluster-power-manager.md) für
 # die Dauer des Fensters, damit dessen lastbasierter Watchdog nicht
 # mitten in einem apt-Upgrade gegenläufig einen Worker herunterfährt —
 # beide teilen sich denselben poweroff-Key und dieselbe
@@ -78,7 +78,7 @@ nightly_worker_wake_ntfy_topic: "{{ cluster_power_manager_ntfy_topic }}"
 # einem JSON-Bericht (pro Worker: Status, geänderte Pakete, Ansible-
 # PLAY-RECAP, Reboot-Bedarf). Der Workflow
 # argocd/apps/workloads/n8n/workflows/nightly-worker-update-to-zammad.json
-# baut daraus ein Zammad-Ticket -- siehe docs/59-nightly-worker-update.md.
+# baut daraus ein Zammad-Ticket -- siehe docs/2-betrieb-hardware/20030-nightly-worker-update.md.
 # Muss zum Webhook-Pfad im importierten Workflow passen (Node "Nightly
 # Worker Update Webhook", Pfad "nightly-worker-update"). Nicht erreichbar
 # ⇒ nur eine Journal-Warnung, der Zyklus selbst bricht deswegen nicht ab.

@@ -1,7 +1,7 @@
 # Vereinsheim-Alarmmonitor (Banana Pi M2 Ultra)
 
 Zweiter Alarmmonitor-Standort, aber auf anderer Hardware/OS als die
-Raspberry-Pi-Flotte aus [docs/19-alamos-apager.md](19-alamos-apager.md):
+Raspberry-Pi-Flotte aus [docs/3-apps-workloads/30010-alamos-apager.md](30010-alamos-apager.md):
 ein Banana Pi M2 Ultra mit Armbian statt Raspberry Pi OS, **und** — anders
 als alle anderen Pis in diesem Repo — nach der Ersteinrichtung nur noch per
 **Tailscale** am Netz, ohne direkten LAN-Zugriff zum Homeserver-Netz. Dieses
@@ -49,7 +49,7 @@ sich sauber per Ansible/apt installieren lässt.
 ## Netzwerk: Tailscale-only
 
 Anders als die xibosignage-Pis (die volles LAN haben und Tailscale nur zur
-bequemen Fernwartung nutzen, siehe [docs/44-xibosignage.md](44-xibosignage.md))
+bequemen Fernwartung nutzen, siehe [docs/3-apps-workloads/300e0-xibosignage.md](300e0-xibosignage.md))
 hat dieser Standort **kein LAN-Zugriff zum Homeserver-Netz**. Das betrifft
 drei unabhängige Dinge, die alle einzeln gelöst werden mussten:
 
@@ -74,8 +74,8 @@ zum Gerät ist. Deshalb zwei Phasen:
 **2. DNS-Auflösung von `*.homeserver` (für den Kiosk selbst).** Gelöst über
 **Tailscale Split-DNS**, ein dokumentiertes, bereits unterstütztes
 Verfahren in diesem Repo (siehe
-[docs/08-semaphore.md, "Zugriff über Tailscale"](08-semaphore.md#zugriff-über-tailscale-einmaliger-admin-schritt)
-und [docs/09-dns-architecture.md](09-dns-architecture.md)): dnsmasq auf dem
+[docs/b-kubernetes-gitops/b0030-semaphore.md, "Zugriff über Tailscale"](../b-kubernetes-gitops/b0030-semaphore.md#zugriff-über-tailscale-einmaliger-admin-schritt)
+und [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md)): dnsmasq auf dem
 Homeserver lauscht bereits auf `tailscale0`. Einmaliger Admin-Schritt:
 Tailscale-Adminkonsole → DNS → Nameservers → Custom Nameserver mit der
 Tailscale-IP des Homeservers, **restricted to search domain `homeserver`**
@@ -141,7 +141,7 @@ Vor dem ersten Lauf nötig:
 
 1. **Standort-URL im Cluster hinterlegen** — Key `vereinsheim-alarmmonitor`
    zum SealedSecret `alamos-apager-stations` hinzufügen (siehe
-   [docs/19-alamos-apager.md, "Neuen Standort hinzufügen"](19-alamos-apager.md#neuen-standort-hinzufügen)).
+   [docs/3-apps-workloads/30010-alamos-apager.md, "Neuen Standort hinzufügen"](30010-alamos-apager.md#neuen-standort-hinzufügen)).
 2. **Dieselbe URL lokal verschlüsseln** (Fallback, siehe unten):
    ```bash
    ansible-vault encrypt_string 'https://amweb.alamos.cloud/...echte-url...' \
@@ -156,14 +156,14 @@ Vor dem ersten Lauf nötig:
    [Netzwerk: Tailscale-only](#netzwerk-tailscale-only).
 5. **Einmaliger manueller AMweb-Login direkt am Gerät** (Passwort +
    Verschlüsselungspasswort) — identisches Vorgehen wie bei den Raspberry
-   Pis, siehe [docs/19-alamos-apager.md, Pi-Provisionierung](19-alamos-apager.md#pi-provisionierung-ansible).
+   Pis, siehe [docs/3-apps-workloads/30010-alamos-apager.md, Pi-Provisionierung](30010-alamos-apager.md#pi-provisionierung-ansible).
    Da Normal- und Fallback-Pfad dieselbe AMweb-Domain im selben
    Chromium-Profil verwenden, deckt dieser eine Login beide Pfade ab.
 
 ## Server-Fallback
 
 Bewusster Bruch mit der sonst geltenden Regel "die echte AMweb-URL
-verlässt nie den Cluster" ([docs/19-alamos-apager.md](19-alamos-apager.md))
+verlässt nie den Cluster" ([docs/3-apps-workloads/30010-alamos-apager.md](30010-alamos-apager.md))
 — nur für dieses Gerät, auf ausdrücklichen Wunsch.
 
 `ansible/roles/banana_pi_kiosk/templates/banana-pi-kiosk-supervisor.sh.j2`
@@ -221,7 +221,7 @@ Kein Dashboard-Change nötig — "Home Server Auslastung"
 
 **Nur für diesen Standort** — die Raspberry-Pi-Alarmmonitore erzeugen
 weiterhin bewusst **kein** Ticket pro Ausfall (nur ntfy, siehe
-[docs/19-alamos-apager.md](19-alamos-apager.md)); das bleibt unverändert.
+[docs/3-apps-workloads/30010-alamos-apager.md](30010-alamos-apager.md)); das bleibt unverändert.
 
 **Wichtig, wegen Push statt Pull:** Die VMRule nutzt `absent_over_time`
 statt `up == 0` — ein `up`-Sample mit Wert 0 setzt eine laufende
@@ -248,7 +248,7 @@ absent_over_time(up{...}[10m]) für vereinsheim-alarmmonitor
       2. Zeitstempel der letzten erfolgreichen /start-Anfrage holen (=
          wann hat der Kiosk zuletzt die echte AMweb-URL angefragt) —
          kommt NICHT vom Pi, sondern von alamos-apager selbst
-         (`/metrics`, siehe docs/19-alamos-apager.md), das immer im
+         (`/metrics`, siehe docs/3-apps-workloads/30010-alamos-apager.md), das immer im
          Cluster läuft und daher unabhängig vom Tailscale-Status des Pi
          abfragbar ist
       3. Zammad-Ticket erstellen (POST /api/v1/tickets, gleiches Muster
@@ -262,7 +262,7 @@ anderen) unverändert bestehen — die n8n-Route kommt rein additiv dazu
 (`continue: true`, siehe Kommentar in `values.yaml`).
 
 **Woher "letzte AMweb-Anfrage" kommt:** `alamos-apager` (die geteilte
-Cluster-Komponente aus [docs/19-alamos-apager.md](19-alamos-apager.md))
+Cluster-Komponente aus [docs/3-apps-workloads/30010-alamos-apager.md](30010-alamos-apager.md))
 merkt sich jetzt zusätzlich zum Heartbeat auch den Zeitstempel jeder
 erfolgreichen `/start`-Anfrage (also wann der Kiosk-Browser zuletzt
 tatsächlich die echte AMweb-URL angefragt hat) und exportiert das über
@@ -279,16 +279,16 @@ gleichermaßen, nicht nur diesen.
    nicht vorhanden), Mitglied der Ticket-Gruppe (Default im Workflow:
    `Support::Administration` — angenommen als Untergruppe "Administration"
    von "Support", `::` ist der von der Zammad-API erwartete Trenner für
-   Untergruppen, siehe docs/25-github-release-watcher.md; falls es
+   Untergruppen, siehe docs/f-cicd-automatisierung/f0040-github-release-watcher.md; falls es
    stattdessen eine einzelne Gruppe mit dem wörtlichen Namen
    "Support / Administration" ist, im Code-Node "Ticket-Payload bauen"
    entsprechend anpassen) machen und unter **Profil → Benachrichtigungen**
    die Mail-Benachrichtigung
    für "Neues Ticket" aktivieren (Zammad-Standard: aktiviert). Gleiches
-   Prinzip wie [docs/25-github-release-watcher.md, Schritt 4](25-github-release-watcher.md#schritt-4--agenten-benachrichtigung-in-zammad-prüfen).
+   Prinzip wie [docs/f-cicd-automatisierung/f0040-github-release-watcher.md, Schritt 4](../f-cicd-automatisierung/f0040-github-release-watcher.md#schritt-4--agenten-benachrichtigung-in-zammad-prüfen).
 2. **Zammad-API-Token erzeugen:** Profil → Token Access → Neuer Token,
    Berechtigung `ticket.agent` (siehe
-   [docs/25-github-release-watcher.md, Schritt 1](25-github-release-watcher.md#schritt-1--zammad-api-token-erzeugen)
+   [docs/f-cicd-automatisierung/f0040-github-release-watcher.md, Schritt 1](../f-cicd-automatisierung/f0040-github-release-watcher.md#schritt-1--zammad-api-token-erzeugen)
    für die genauen Klicks).
 3. **n8n:** Workflow `banana-pi-down-to-zammad.json` importieren, dann im
    Node "Zammad-Ticket erstellen" eine Header-Auth-Credential anlegen/
@@ -332,13 +332,13 @@ Nutzt `scrot` gegen `DISPLAY=:0` (die X-Session des Kiosk-Users) und
 
 ## Relevante Links
 
-- [docs/19-alamos-apager.md](19-alamos-apager.md) — Basis-Architektur (Raspberry-Pi-Flotte)
-- [docs/08-semaphore.md](08-semaphore.md) — Tailscale Split-DNS-Setup
-- [docs/09-dns-architecture.md](09-dns-architecture.md) — `*.homeserver`-Auflösung
-- [docs/06-tailscale.md](06-tailscale.md) — Tailscale-Grundlagen
-- [docs/17-zammad.md](17-zammad.md) — Zammad-Setup
-- [docs/25-github-release-watcher.md](25-github-release-watcher.md) — Zammad-API-Ticket-Muster
-- [docs/29-n8n.md](29-n8n.md) — n8n-Setup
-- [docs/16-nas-storage.md](16-nas-storage.md) — VMStaticScrape-Muster (ugreen-nas, Pull-Vergleichsfall)
+- [docs/3-apps-workloads/30010-alamos-apager.md](30010-alamos-apager.md) — Basis-Architektur (Raspberry-Pi-Flotte)
+- [docs/b-kubernetes-gitops/b0030-semaphore.md](../b-kubernetes-gitops/b0030-semaphore.md) — Tailscale Split-DNS-Setup
+- [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md) — `*.homeserver`-Auflösung
+- [docs/c-netzwerk-dns/c0010-tailscale.md](../c-netzwerk-dns/c0010-tailscale.md) — Tailscale-Grundlagen
+- [docs/3-apps-workloads/30000-zammad.md](30000-zammad.md) — Zammad-Setup
+- [docs/f-cicd-automatisierung/f0040-github-release-watcher.md](../f-cicd-automatisierung/f0040-github-release-watcher.md) — Zammad-API-Ticket-Muster
+- [docs/3-apps-workloads/30070-n8n.md](30070-n8n.md) — n8n-Setup
+- [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md) — VMStaticScrape-Muster (ugreen-nas, Pull-Vergleichsfall)
 - [Armbian — Banana Pi M2 Ultra](https://armbian.com/boards/bananapim2ultra)
 - [VictoriaMetrics vmagent](https://docs.victoriametrics.com/victoriametrics/vmagent/)

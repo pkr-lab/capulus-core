@@ -186,7 +186,7 @@ Vault-Passwort eingeben, wenn abgefragt.
 6. **semaphore_secrets** (~30 s) — Rendert das Bootstrap-Secret, das der in-Cluster-Semaphore-Pod liest.
 7. **thermal_watchdog** / **resource_watchdog** (~30 s) — Selbst-Abschaltung bei Übertemperatur bzw. Dauerlast.
 8. **cluster_power_manager** / **power_agent** (~30 s) — Wake-on-LAN-Steuerung der Worker je nach Last, HTTP-API für Helligkeit/Wake/Shutdown aus der iOS-App.
-9. **cups_print_server** (~1 min) — Richtet CUPS + Treiber für die per USB angeschlossenen Drucker ein (siehe [docs/38-printer.md](38-printer.md)).
+9. **cups_print_server** (~1 min) — Richtet CUPS + Treiber für die per USB angeschlossenen Drucker ein (siehe [docs/2-betrieb-hardware/20040-printer.md](../2-betrieb-hardware/20040-printer.md)).
 
 Im Anschluss an die host-zentrischen Rollen laufen zwei zusätzliche Plays:
 
@@ -384,7 +384,7 @@ Das Playbook führt in dieser Reihenfolge aus:
 
 1. **k3s_agent** — Deaktiviert Swap, lädt Kernel-Module, konfiguriert sysctl,
    installiert `nfs-common` (Voraussetzung für die `nas`-StorageClass, siehe
-   [docs/16-nas-storage.md](16-nas-storage.md)), liest den Join-Token vom
+   [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md)), liest den Join-Token vom
    Control-Plane-Server, installiert k3s im Agent-Mode und wartet bis der
    Node `Ready` ist.
 2. **thermal_watchdog**, **resource_watchdog** — automatischer Shutdown bei
@@ -417,7 +417,7 @@ worker-0   Ready    <none>                 2m    v1.29.3+k3s1    192.168.178.95
 **Weiterer Worker (worker-1):** folgt demselben Muster über
 `make worker-1` (Playbook `ansible/worker-1.yml`) — inhaltlich identisch zu
 `worker-0.yml`, beide sind reine k3s-Compute-Nodes. Details siehe
-[docs/04-k3s.md](04-k3s.md).
+[docs/b-kubernetes-gitops/b0000-k3s.md](../b-kubernetes-gitops/b0000-k3s.md).
 
 ---
 

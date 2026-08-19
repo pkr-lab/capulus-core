@@ -1,4 +1,4 @@
-# 35 — Immich
+# Immich
 
 [Immich](https://immich.app) ist ein selbst gehostetes Foto-/Video-Backup
 (Google-Photos-Ersatz) mit automatischem Handy-Upload, Gesichtserkennung
@@ -55,7 +55,7 @@ volllaufen lässt.
 `nfs-subdir-external-provisioner` (eigener `PROVISIONER_NAME`, eigene
 RBAC-Ressourcen, eigener Namespace `immich-storage`) — technisch identisch
 zum bestehenden `nas-storage`-Setup aus
-[docs/16-nas-storage.md](16-nas-storage.md), nur auf einen anderen Export
+[docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md), nur auf einen anderen Export
 gerichtet.
 
 ---
@@ -75,7 +75,7 @@ gerichtet.
 ## Schritt 1 — NFS-Export für Immich einrichten (UGOS, manuell)
 
 Analog zu
-[docs/16-nas-storage.md → NFS-Export in UGOS einrichten](16-nas-storage.md#nfs-export-in-ugos-einrichten-manuell-kein-ansible-playbook),
+[docs/2-betrieb-hardware/20000-nas-storage.md → NFS-Export in UGOS einrichten](../2-betrieb-hardware/20000-nas-storage.md#nfs-export-in-ugos-einrichten-manuell-kein-ansible-playbook),
 diesmal auf `volume2`:
 
 1. Auf `volume2` eine neue Freigabe `immich-storage` anlegen.
@@ -258,7 +258,7 @@ kubectl -n immich-storage logs deploy/immich-nfs-subdir-external-provisioner
 
 Meist: NFS-Export `/volume2/immich-storage` ist vom Node aus nicht
 erreichbar, oder der `immich-storage`-Provisioner-Pod läuft nicht. Details
-analog zu [docs/16-nas-storage.md → Fehlerbehebung](16-nas-storage.md#fehlerbehebung).
+analog zu [docs/2-betrieb-hardware/20000-nas-storage.md → Fehlerbehebung](../2-betrieb-hardware/20000-nas-storage.md#fehlerbehebung).
 
 ### Gesichtserkennung/Suche liefert keine Ergebnisse
 
@@ -303,7 +303,7 @@ das für sich allein schon mehr RAM braucht als `resources.limits`
 erlaubt (dafür ggf. das Limit selbst erhöhen). Da `library`- und
 `model-cache`-PVC `ReadWriteOnce` sind, erzwingt eine `podAffinity` im
 jeweiligen Deployment, dass alle Replicas auf demselben Node laufen.
-Details und Schwellenwerte für alle Apps: [39-hpa-autoscaling.md](39-hpa-autoscaling.md).
+Details und Schwellenwerte für alle Apps: [../b-kubernetes-gitops/b0040-hpa-autoscaling.md](../b-kubernetes-gitops/b0040-hpa-autoscaling.md).
 
 ---
 
@@ -311,6 +311,6 @@ Details und Schwellenwerte für alle Apps: [39-hpa-autoscaling.md](39-hpa-autosc
 
 - [Immich-Dokumentation](https://immich.app/docs)
 - [Immich GitHub-Repository](https://github.com/immich-app/immich)
-- [NAS-Storage (UGREEN NAS)](16-nas-storage.md)
-- [Cloudflare Tunnel — Deploy](23-cloudflare-deploy.md)
-- [NAS-Backup auf externe USB-Platte](36-nas-backup.md)
+- [NAS-Storage (UGREEN NAS)](../2-betrieb-hardware/20000-nas-storage.md)
+- [Cloudflare Tunnel — Deploy](../e-externe-erreichbarkeit/e0010-cloudflare-deploy.md)
+- [NAS-Backup auf externe USB-Platte](../2-betrieb-hardware/20010-nas-backup.md)

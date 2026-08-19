@@ -20,7 +20,7 @@ Die Deployment-Konfiguration liegt unter `argocd/apps/workloads/zammad/`.
 | Auto-Updates      | Renovate (patch + minor)          | —           |
 
 PostgreSQL und Redis laufen mit `storageClassName: nas` (siehe
-[docs/16-nas-storage.md](16-nas-storage.md)) — keine NodeAffinity mehr
+[docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md)) — keine NodeAffinity mehr
 nötig, die PVCs sind von jedem Node aus erreichbar. Da Zammad Attachments
 standardmäßig in der Datenbank speichert (`storageVolume.enabled: false`),
 kann die PostgreSQL-PVC mit der Zeit groß werden — auf dem NAS statt der
@@ -35,7 +35,7 @@ Homeserver-SSD ist das unkritisch.
 - **`nas-storage`-App ist deployt** (`argocd/apps/platform/nas-storage/`) und die
   StorageClass `nas` existiert: `kubectl get storageclass nas`
 - **NAS ist online und der NFS-Export erreichbar** (siehe
-  [docs/16-nas-storage.md](16-nas-storage.md)) — sonst bleiben die
+  [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md)) — sonst bleiben die
   PostgreSQL- und Redis-PVCs auf `Pending`
 - `kubeseal` CLI ist lokal installiert
 - `kubectl` ist mit dem Cluster verbunden
@@ -135,7 +135,7 @@ Typische Pod-Reihenfolge beim ersten Start:
 
 > Falls `zammad-postgresql-0` / `zammad-redis-*` dauerhaft `Pending` bleiben:
 > das NAS ist offline oder die `nas`-StorageClass fehlt — siehe
-> [docs/16-nas-storage.md](16-nas-storage.md) → Fehlerbehebung.
+> [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md) → Fehlerbehebung.
 
 ---
 
@@ -263,7 +263,7 @@ kubectl describe pvc -n zammad data-zammad-postgresql-0
 kubectl -n nas-storage get pods
 ```
 
-Details: [docs/16-nas-storage.md](16-nas-storage.md) → Fehlerbehebung.
+Details: [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md) → Fehlerbehebung.
 
 ### ArgoCD zeigt OutOfSync
 
@@ -289,7 +289,7 @@ argocd app sync zammad --force
 
 PostgreSQL- und Redis-Storage liegen bewusst auf dem UGREEN NAS statt auf
 der Homeserver-System-SSD — siehe
-[docs/16-nas-storage.md](16-nas-storage.md). Die 50Gi für PostgreSQL sind
+[docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md). Die 50Gi für PostgreSQL sind
 ein Startwert; da Attachments in der DB liegen, ggf. nach Bedarf erhöhen
 (`zammad.postgresql.primary.persistence.size`).
 
@@ -305,7 +305,7 @@ kein natives Autoscaling). `scheduler` und `websocket` bekommen
 doppelte Ausführung würde bei `scheduler` Jobs duplizieren, bei
 `websocket` vermutlich Echtzeit-Events nur an einen Teil der
 verbundenen Browser-Clients ausliefern. PostgreSQL/Redis bleiben
-ebenfalls unangetastet. Details für alle Apps: [39-hpa-autoscaling.md](39-hpa-autoscaling.md).
+ebenfalls unangetastet. Details für alle Apps: [../b-kubernetes-gitops/b0040-hpa-autoscaling.md](../b-kubernetes-gitops/b0040-hpa-autoscaling.md).
 
 ---
 
@@ -314,4 +314,4 @@ ebenfalls unangetastet. Details für alle Apps: [39-hpa-autoscaling.md](39-hpa-a
 - [Zammad Helm Chart Repository](https://github.com/zammad/zammad-helm)
 - [Zammad Helm Chart values.yaml](https://github.com/zammad/zammad-helm/blob/main/zammad/values.yaml)
 - [Zammad Admin-Dokumentation](https://admin-docs.zammad.org)
-- [ArgoCD Setup](05-argocd.md)
+- [ArgoCD Setup](../b-kubernetes-gitops/b0010-argocd.md)

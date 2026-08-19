@@ -1,6 +1,6 @@
-# 52 — Cluster-NetworkPolicies (Security-Härtung Phase 3)
+# Cluster-NetworkPolicies (Security-Härtung Phase 3)
 
-Detail-Doku zu Phase 3 aus [docs/51-security-hardening-roadmap.md](51-security-hardening-roadmap.md):
+Detail-Doku zu Phase 3 aus [docs/d-sicherheit/d0010-security-hardening-roadmap.md](d0010-security-hardening-roadmap.md):
 grobe Default-Deny-NetworkPolicy je `security-tier`, damit ein
 kompromittierter Pod (z. B. n8n) nicht mehr uneingeschränkt auf
 Postgres/Redis/Services in fremden Namespaces zugreifen kann.
@@ -13,7 +13,7 @@ pauschale Tier-Erlaubnis mehr). Verifiziert: ArgoCD weiterhin 35/36
 HTTP-Stichproben lokal (`*.homeserver`) **und** extern über den
 Cloudflare-Tunnel (`*.pke-lab.de`) erfolgreich, `cloudflared`-Logs sauber.
 `argocd_apply_network_policies: true` ist dauerhafter Default in
-[ansible/roles/argocd/defaults/main.yml](../ansible/roles/argocd/defaults/main.yml).
+[ansible/roles/argocd/defaults/main.yml](../../ansible/roles/argocd/defaults/main.yml).
 
 ---
 
@@ -68,13 +68,13 @@ den generalisierten `argocd_network_policy_extra_ingress`-Mechanismus.
 
 ## Vorfund beim Start dieser Phase
 
-Bevor die Policies gebaut wurden, zwei Abweichungen vom in docs/51
+Bevor die Policies gebaut wurden, zwei Abweichungen vom in docs/d-sicherheit/d0010-security-hardening-roadmap.md
 angenommenen Zustand aufgefallen (Stand 13.08.2026):
 
 1. **Die `security-tier`-Labels aus Phase 2 fehlten komplett** auf allen
    Namespaces (`kubectl get ns -L security-tier` zeigte nichts) — vermutlich
    durch den ApplicationSet-Incident verloren gegangen
-   ([docs/50](50-incident-2026-08-12.md)): Namespaces wurden neu angelegt,
+   ([docs/d-sicherheit/d0000-incident-2026-08-12.md](d0000-incident-2026-08-12.md)): Namespaces wurden neu angelegt,
    das Label wird aber nur vom Ansible-`argocd`-Role-Lauf gesetzt, nicht von
    ArgoCD selbst nachgezogen. Ein erneuter `make argocd`-Lauf setzt sie
    wieder (idempotenter Task, bereits vorhanden).
@@ -108,7 +108,7 @@ Egress-Policies zusätzlich einzuführen hätte ein deutlich höheres Risiko
 (DNS zu `kube-system`, Internet-Zugriff für n8n/cloudflared/Renovate,
 OIDC-Callbacks, NAS/NFS ist Host-Level und unbetroffen) für **keinen**
 zusätzlichen Sicherheitsgewinn in diesem groben ersten Schritt — deshalb
-bewusst nicht Teil dieser Iteration. Das ist auch, warum der in docs/51
+bewusst nicht Teil dieser Iteration. Das ist auch, warum der in docs/d-sicherheit/d0010-security-hardening-roadmap.md
 genannte "klassische Fehler: fehlender DNS-Allow" hier strukturell nicht
 auftreten kann: DNS-Auflösung ist ein Egress-Vorgang (Pod fragt CoreDNS),
 und Egress bleibt vollständig unangetastet.
@@ -147,7 +147,7 @@ für die grobe Tier-Regel (1).
 ### Ausgeschlossene Namespaces
 
 Nur Namespaces aus `argocd_platform_apps`/`argocd_workloads_apps`
-([ansible/roles/argocd/defaults/main.yml](../ansible/roles/argocd/defaults/main.yml))
+([ansible/roles/argocd/defaults/main.yml](../../ansible/roles/argocd/defaults/main.yml))
 bekommen eine Policy. Bewusst **keine** Policy für: `kube-system`,
 `argocd`, `cert-manager`, `metallb-system` — das sind Cluster-Grundlagen,
 keine "Apps" im Tier-Sinn, und ein zu aggressiv geschnittener Ingress-Deny
@@ -175,7 +175,7 @@ ssh ubuntu@192.168.178.94 "sudo cp /var/lib/rancher/k3s/server/db/state.db /var/
 ```
 
 Zusätzlich prüfen, dass der letzte nächtliche NAS/PVC-restic-Backup
-([docs/36](36-nas-backup.md)) erfolgreich war (UGOS Task Scheduler → letzter
+([docs/2-betrieb-hardware/20010-nas-backup.md](../2-betrieb-hardware/20010-nas-backup.md)) erfolgreich war (UGOS Task Scheduler → letzter
 Lauf).
 
 **2. Leftover-Namespaces löschen** (siehe [Vorfund](#vorfund-beim-start-dieser-phase)
@@ -195,7 +195,7 @@ kubectl get ns -L security-tier   # Kontrolle: alle 36 App-Namespaces müssen je
 ```
 
 **4. Pilot auf zwei unkritischen Namespaces**, statt direkt alle 36 auf
-einmal (Empfehlung aus docs/51, hier einen Schritt früher angewendet als
+einmal (Empfehlung aus docs/d-sicherheit/d0010-security-hardening-roadmap.md, hier einen Schritt früher angewendet als
 dort für Phase-3-Schritt-2 vorgesehen, aus Vorsicht):
 
 ```bash
@@ -239,7 +239,7 @@ ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --tags argocd \
 ```
 
 Danach `argocd_apply_network_policies: true` auch dauerhaft in
-[ansible/roles/argocd/defaults/main.yml](../ansible/roles/argocd/defaults/main.yml)
+[ansible/roles/argocd/defaults/main.yml](../../ansible/roles/argocd/defaults/main.yml)
 setzen (committen), sonst rollt der nächste normale `make argocd`-Lauf die
 Policies beim Re-Templaten wieder auf `false` zurück — genauer: er wendet
 sie schlicht nicht mehr erneut an (bereits angewendete Policies bleiben im
@@ -286,14 +286,14 @@ Workload-Apps) konnten sich unter Schritt 1 immer noch gegenseitig
 erreichen.
 
 Gesteuert über eine einzige Liste,
-[`argocd_network_policy_refined_namespaces`](../ansible/roles/argocd/defaults/main.yml) —
+[`argocd_network_policy_refined_namespaces`](../../ansible/roles/argocd/defaults/main.yml) —
 ein Namespace-Name in dieser Liste bekommt die strikte Variante, alle
 anderen bleiben auf der groben Tier-Regel aus Schritt 1. So lässt sich
 Namespace für Namespace migrieren, ohne die anderen 34 anzufassen —
 `kubectl apply` ist idempotent, ein Re-Run des `argocd`-Roles ändert nur
 die Policy-Objekte, deren Inhalt sich tatsächlich geändert hat.
 
-**Reihenfolge** (aus docs/51): unkritische Apps zuerst, dann Apps mit
+**Reihenfolge** (aus docs/d-sicherheit/d0010-security-hardening-roadmap.md): unkritische Apps zuerst, dann Apps mit
 eigener DB, zuletzt Plattform-Namespaces.
 
 **Batch 1 (13.08.2026, verifiziert):** `example-whoami`, `tinyteller` —
@@ -316,7 +316,7 @@ Abhängigkeit für den Normalbetrieb.
 > nicht wer **von außen** reinruft). Der nächste Cron-Lauf nach dem
 > Rollout wäre damit fehlgeschlagen. Gefixt, bevor er lief: neuer
 > Mechanismus `argocd_network_policy_extra_ingress` (Template + defaults,
-> siehe [ansible/roles/argocd/defaults/main.yml](../ansible/roles/argocd/defaults/main.yml))
+> siehe [ansible/roles/argocd/defaults/main.yml](../../ansible/roles/argocd/defaults/main.yml))
 > für gezielte Zusatz-Ausnahmen bei verfeinerten Namespaces — `wikijs`
 > erlaubt jetzt explizit zusätzlich Ingress aus `wiki-docs-sync`.
 >
@@ -385,7 +385,7 @@ Plattform-Namespaces als letzter Batch.
 **Batch 4 (13.08.2026): alle 19 Plattform-Namespaces — letzter Batch.**
 Damit sind **alle 36 App-Namespaces verfeinert**, Schritt 2 ist komplett.
 `coredns-custom`/`traefik-config` haben keine eigenen Pods (deployen nach
-`kube-system`, siehe docs/49) — Policy dort ist ein wirkungsloses No-Op,
+`kube-system`, siehe docs/b-kubernetes-gitops/b0020-argocd-projects.md) — Policy dort ist ein wirkungsloses No-Op,
 der Vollständigkeit halber trotzdem gesetzt.
 
 Gefundene Platform-zu-Platform-Abhängigkeiten (alle bislang durch

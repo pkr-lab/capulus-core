@@ -1,14 +1,14 @@
-# 36 — NAS-Backup auf externe USB-Platte
+# NAS-Backup auf externe USB-Platte
 
-Löst den in [docs/16-nas-storage.md → Backups auf externer NAS-Platte](16-nas-storage.md#backups-auf-externer-nas-platte)
+Löst den in [docs/2-betrieb-hardware/20000-nas-storage.md → Backups auf externer NAS-Platte](20000-nas-storage.md#backups-auf-externer-nas-platte)
 angekündigten Punkt ein: eine externe USB-Festplatte, direkt am UGREEN NAS
 angeschlossen, sichert regelmäßig **beide** Storage-Pools (`volume1` und
 `volume2`) — also sowohl den generischen Cluster-Storage
 (`k8s-storage`, StorageClass `nas`) als auch den dedizierten
 Immich-Storage (`immich-storage`, StorageClass `immich-nas`, siehe
-[docs/35-immich.md](35-immich.md)).
+[docs/3-apps-workloads/300c0-immich.md](../3-apps-workloads/300c0-immich.md)).
 
-Wie bei der NFS-Einrichtung in docs/16 gibt es dafür bewusst **kein**
+Wie bei der NFS-Einrichtung in docs/2-betrieb-hardware/20000-nas-storage.md gibt es dafür bewusst **kein**
 Ansible-Playbook — UGOS ist eine eigene Firmware ohne SSH-Ansible-Support
 für diese Art Task, die Einrichtung läuft über UGOS Task Scheduler +
 Docker (Container Manager), analog zu den bereits dokumentierten
@@ -58,7 +58,7 @@ node_exporter/smartctl_exporter-Containern.
    unten — bei täglichen Backups mit restic-Dedup meist 20–40 % Aufschlag,
    nicht ein Vielfaches, da nur geänderte Blöcke zusätzlich Platz kosten).
 3. Docker (Container Manager) auf dem NAS aktiv — bereits Voraussetzung
-   für die Exporter in [docs/16-nas-storage.md → Monitoring](16-nas-storage.md#monitoring-grafana-home-server-auslastung).
+   für die Exporter in [docs/2-betrieb-hardware/20000-nas-storage.md → Monitoring](20000-nas-storage.md#monitoring-grafana-home-server-auslastung).
 
 ---
 
@@ -174,8 +174,8 @@ Monate hinweg vollläuft.
 > `vaultwarden-data`-PVC ist weg, die NAS-seitige `vaultwarden-backup`-PVC
 > (gefüllt vom nächtlichen `backup-cronjob.yaml`) aber noch da — gibt es
 > einen automatisierten Ansible-Weg, der nicht über restic/USB geht:
-> [docs/32-vaultwarden.md → Restore nach Redeploy / Disaster
-> Recovery](32-vaultwarden.md#8-restore-nach-redeploy--disaster-recovery)
+> [docs/3-apps-workloads/300a0-vaultwarden.md → Restore nach Redeploy / Disaster
+> Recovery](../3-apps-workloads/300a0-vaultwarden.md#8-restore-nach-redeploy--disaster-recovery)
 > (`make vaultwarden-restore FORCE_RESTORE=true`). Der restic-Restore hier
 > unten bleibt der Fallback, falls auch der NAS-Stand selbst verloren ist.
 
@@ -264,6 +264,6 @@ schlägt der nächste geplante Task fehl, weil der Mount-Pfad fehlt.
 ## Relevante Links
 
 - [restic-Dokumentation](https://restic.readthedocs.io)
-- [NAS-Storage (UGREEN NAS)](16-nas-storage.md)
-- [Immich](35-immich.md)
-- [Vaultwarden](32-vaultwarden.md)
+- [NAS-Storage (UGREEN NAS)](20000-nas-storage.md)
+- [Immich](../3-apps-workloads/300c0-immich.md)
+- [Vaultwarden](../3-apps-workloads/300a0-vaultwarden.md)

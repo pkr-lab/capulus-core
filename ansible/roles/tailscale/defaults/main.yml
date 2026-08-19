@@ -21,7 +21,7 @@ tailscale_repo_os: "{{ 'debian' if ansible_distribution == 'Debian' else 'ubuntu
 tailscale_accept_routes: false
 
 # Subnetz, das dieser Host im Tailnet advertised (Subnet-Routing, siehe
-# docs/06-tailscale.md). Default = das globale LAN (nur sinnvoll für den
+# docs/c-netzwerk-dns/c0010-tailscale.md). Default = das globale LAN (nur sinnvoll für den
 # Home-Server als Subnet-Router). Für Geräte, die NUR selbst im Tailnet
 # erreichbar sein sollen, ohne fremden Traffic weiterzuleiten (z.B. die
 # xibosignage-Raspberry-Pis, siehe ansible/xibo-kiosks.yml), auf "" setzen —

@@ -24,7 +24,7 @@ Wichtig: **Jede App behält ihren eigenen Kubernetes-Namespace wie bisher**
 Namespace pro Tier. Die Tier-Trennung wirkt ausschließlich auf ArgoCD-Ebene
 (welches Project, welche erlaubten `destinations`) und als zusätzliches
 Namespace-Label (`security-tier=platform`/`security-tier=workload`), das
-[docs/46-crowdsec.md](46-crowdsec.md)-artige oder künftige NetworkPolicy-Regeln
+[docs/d-sicherheit/d0020-crowdsec.md](../d-sicherheit/d0020-crowdsec.md)-artige oder künftige NetworkPolicy-Regeln
 grob nach Tier gruppieren kann, ohne die bestehende Pod-Isolation pro App zu
 verringern.
 
@@ -38,7 +38,7 @@ verringern.
 | **Workloads** (Schicht 4) | `argocd/apps/workloads/<app>/` | `workloads` | Apps mit echtem Nutzerkreis (Familie, Vereinsmitglieder, Kunden) |
 
 Die Zuordnung folgt exakt der bereits bestehenden Schicht-3/Schicht-4-Tabelle
-in [docs/01-overview.md](01-overview.md#5-app-matrix-schicht-3-und-4) — hier
+in [docs/a-betriebssystem/a0010-overview.md](../a-betriebssystem/a0010-overview.md#5-app-matrix-schicht-3-und-4) — hier
 nur als flache Liste:
 
 **Platform:** `sealed-secrets`, `kubeseal-webgui`, `monitoring`,
@@ -52,7 +52,7 @@ nur als flache Liste:
 `wiki-docs-sync`, `wikijs`, `xibosignage`, `zammad`
 
 Quelle der Wahrheit für diese Liste:
-[`ansible/roles/argocd/defaults/main.yml`](../ansible/roles/argocd/defaults/main.yml)
+[`ansible/roles/argocd/defaults/main.yml`](../../ansible/roles/argocd/defaults/main.yml)
 (`argocd_platform_apps` / `argocd_workloads_apps`) — von dort generiert die
 AppProject-Vorlage die `destinations`-Liste, und dieselbe Liste labelt auch
 die Namespaces.
@@ -90,11 +90,11 @@ unterscheiden sich.
 >    Templating-Features auskommen.
 
 Quelle:
-[`ansible/roles/argocd/templates/bootstrap-applicationset.yaml.j2`](../ansible/roles/argocd/templates/bootstrap-applicationset.yaml.j2)
+[`ansible/roles/argocd/templates/bootstrap-applicationset.yaml.j2`](../../ansible/roles/argocd/templates/bootstrap-applicationset.yaml.j2)
 
 ### AppProjects
 
-[`ansible/roles/argocd/templates/bootstrap-appprojects.yaml.j2`](../ansible/roles/argocd/templates/bootstrap-appprojects.yaml.j2)
+[`ansible/roles/argocd/templates/bootstrap-appprojects.yaml.j2`](../../ansible/roles/argocd/templates/bootstrap-appprojects.yaml.j2)
 definiert beide `AppProject`-Ressourcen:
 
 - `sourceRepos`: nur dieses Repo — verhindert, dass eine Application (egal
@@ -125,7 +125,7 @@ Security-Härtung) — aktuell hat das Label selbst noch keine Wirkung.
 
 ## Eine neue App hinzufügen
 
-Wie bisher (siehe [docs/05-argocd.md](05-argocd.md)), nur mit einem
+Wie bisher (siehe [docs/b-kubernetes-gitops/b0010-argocd.md](b0010-argocd.md)), nur mit einem
 zusätzlichen Entscheidungsschritt:
 
 1. Gehört die neue App zu **Platform** (Infrastruktur, Admin-Charakter) oder

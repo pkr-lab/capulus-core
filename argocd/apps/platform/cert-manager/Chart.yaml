@@ -3,11 +3,11 @@ apiVersion: v2
 name: cert-manager
 description: |
   cert-manager deployed via ArgoCD — automatisiert Ausstellung + Erneuerung
-  des internen `*.homeserver`-TLS-Zertifikats (siehe docs/54-internal-tls.md).
+  des internen `*.homeserver`-TLS-Zertifikats (siehe docs/d-sicherheit/d0040-internal-tls.md).
   Ersetzt den vormals manuellen openssl/mkcert-Workflow: statt Leaf-
   Zertifikate von Hand zu signieren und per kubeseal zu versiegeln, erzeugt
   ein CA-`ClusterIssuer` (signiert mit der bestehenden Homeserver-Root-CA,
-  einmalig manuell als Secret importiert — siehe docs/54) automatisch ein
+  einmalig manuell als Secret importiert — siehe docs/d-sicherheit/d0040-internal-tls.md) automatisch ein
   `Certificate` mit der aktuellen SAN-Liste und erneuert es selbstständig
   vor Ablauf.
 type: application

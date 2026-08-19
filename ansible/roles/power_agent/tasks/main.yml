@@ -103,5 +103,5 @@
       Token-Rotation war: Wert auslesen und in
       argocd/apps/workloads/carplay-api/values.yaml unter secrets.powerAgentToken neu
       versiegeln (kubeseal) — sonst bekommt die App dauerhaft 502 auf
-      Helligkeit/Wake/Shutdown. Siehe docs/43-carplay-api.md "power-agent".
+      Helligkeit/Wake/Shutdown. Siehe docs/3-apps-workloads/300d0-carplay-api.md "power-agent".
   when: power_agent_enabled | bool

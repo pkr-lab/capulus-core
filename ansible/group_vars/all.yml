@@ -30,10 +30,10 @@ k3s_server_ip: "{{ ansible_default_ipv4.address }}"
 k3s_pod_cidr: "10.42.0.0/16"
 k3s_service_cidr: "10.43.0.0/16"
 
-# Security-Härtung Phase 4 (docs/51-security-hardening-roadmap.md,
-# docs/53-secrets-encryption-audit-log.md). Beide Flags schreiben nur die
+# Security-Härtung Phase 4 (docs/d-sicherheit/d0010-security-hardening-roadmap.md,
+# docs/d-sicherheit/d0050-secrets-encryption-audit-log.md). Beide Flags schreiben nur die
 # Config — nichts davon wirkt sich aus, bevor nicht ein bewusster,
-# manueller `sudo systemctl restart k3s` läuft (siehe docs/53 für die
+# manueller `sudo systemctl restart k3s` läuft (siehe docs/d-sicherheit/d0050-secrets-encryption-audit-log.md für die
 # vollständige Backup-→-Restart-→-Verify-Sequenz, inkl. des
 # `k3s secrets-encrypt rotate-keys`-Schritts, der nach dem ersten Restart
 # nötig ist, um bereits bestehende Secrets nachträglich zu verschlüsseln).
@@ -143,7 +143,7 @@ semaphore_projects:
         # deren ansible_host/wake_on_lan_mac_address per hostvars.get(...).
         # Ohne diese Zeilen bricht cluster_power_manager sonst nicht mehr
         # hart ab (dank hostvars.get()-Fix), liefert aber leere MAC-
-        # Adressen -- siehe docs/59-nightly-worker-update.md.
+        # Adressen -- siehe docs/2-betrieb-hardware/20030-nightly-worker-update.md.
         content: |
           [homeservers]
           homeserver ansible_host=192.168.178.94
@@ -195,7 +195,7 @@ semaphore_projects:
     # nightly_worker_wake (läuft auf homeserver, 01:00 Uhr) worker-0 per
     # Wake-on-LAN und triggert dieses Template gezielt über die
     # Semaphore-API, sobald der Node Ready ist — siehe
-    # docs/59-nightly-worker-update.md.
+    # docs/2-betrieb-hardware/20030-nightly-worker-update.md.
 
   - name: worker-1
     description: "Deploy k3s-Agent + Watchdogs auf worker-1 (192.168.178.96)."
@@ -228,12 +228,12 @@ semaphore_projects:
     # nightly_worker_wake (läuft auf homeserver, 01:00 Uhr) worker-1 per
     # Wake-on-LAN und triggert dieses Template gezielt über die
     # Semaphore-API, sobald der Node Ready ist — siehe
-    # docs/59-nightly-worker-update.md.
+    # docs/2-betrieb-hardware/20030-nightly-worker-update.md.
 
   - name: alarm-kiosks
     description: >-
       Alarmmonitor-Kiosks (Raspberry Pi, ALAMOS AMweb) einrichten — siehe
-      docs/20-alamos-apager.md.
+      docs/3-apps-workloads/30010-alamos-apager.md.
     repository:
       name: home-server-git
       url: "{{ argocd_repo_url }}"
@@ -258,12 +258,12 @@ semaphore_projects:
         description: "Chromium-Kiosk + Heartbeat-Timer auf den Alarmmonitor-Pis."
     # Bewusst kein Schedule: anders als bei home-server/worker-0 soll ein
     # Re-Run hier nur manuell per Knopfdruck laufen, nicht automatisch nachts
-    # — siehe docs/20-alamos-apager.md.
+    # — siehe docs/3-apps-workloads/30010-alamos-apager.md.
 
   - name: xibo-displays
     description: >-
       xibosignage-Displays (Raspberry Pi 3 B+, Bilder-Slideshow + Tailscale)
-      einrichten — siehe docs/44-xibosignage.md.
+      einrichten — siehe docs/3-apps-workloads/300e0-xibosignage.md.
     repository:
       name: home-server-git
       url: "{{ argocd_repo_url }}"
@@ -291,7 +291,7 @@ semaphore_projects:
   - name: banana-pi-kiosks
     description: >-
       Banana-Pi-Alarmmonitore (Armbian, ALAMOS AMweb + lokaler
-      Server-Fallback) einrichten — siehe docs/45-vereinsheim-alarmmonitor.md.
+      Server-Fallback) einrichten — siehe docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md.
       ACHTUNG: funktioniert per Semaphore NUR solange der Pi noch am LAN
       haengt (Phase 1) — Semaphore laeuft selbst als Pod im Cluster und hat
       wie jeder Pod keinen Netzwerkpfad zu Tailscale-Peers. Nach dem Umzug
@@ -311,7 +311,7 @@ semaphore_projects:
         content: |
           [banana_pis]
           # ansible_host gilt nur fuer Phase 1 (Pi noch am LAN) — siehe
-          # docs/45-vereinsheim-alarmmonitor.md.
+          # docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md.
           vereinsheim-alarmmonitor ansible_host=100.123.214.4 ansible_user=pela banana_pi_kiosk_user=pela banana_pi_kiosk_station=1002011_Fahrzeughalle
     templates:
       - name: "Deploy Banana-Pi Alarmmonitore"
@@ -327,13 +327,12 @@ semaphore_projects:
 # Fujitsu USB-Scanner direkt am Home-Server; scanbd hört auf den
 # Hardware-Button und schreibt Scans als PDF in den SMB-Share von
 # worker-0, von wo Paperless-NGX sie automatisch einliest.
-# Vollständige Migrations-Checkliste: docs/10-scanner.md.
 #
 # USB-IDs auf dem Host ermitteln (`lsusb | grep -i fujitsu`):
 scanner_usb_vendor_id: "04c5"
 scanner_usb_product_id: "132b"
 #
-# Das SMB-Passwort MUSS vault-encrypted sein. Hinweis in docs/10-scanner.md.
+# Das SMB-Passwort MUSS vault-encrypted sein.
 #   ansible-vault encrypt_string 'DEIN_SMB_PASSWORT' \
 #     --name 'scanner_smb_password'
 scanner_consume_mount_type: "cifs"
@@ -349,7 +348,7 @@ scanner_smb_password: !vault |
 
 # ---- Gotify push notifications ----------------------------
 # Cluster-App: argocd/apps/platform/gotify (Helm-Chart). Workflow + kubeseal-Schritte
-# stehen in docs/10-gotify.md.
+# stehen in docs/1-benachrichtigungen/10000-gotify.md.
 #
 # 1) Admin-Passwort für das initiale Login (SealedSecret im Cluster):
 #    ansible-vault encrypt_string 'DEIN_ADMIN_PW' --name 'gotify_admin_password'
@@ -370,7 +369,7 @@ scanner_gotify_token: !vault |
 # ---- Drucker (CUPS) ----------------------------------------
 # Samsung Xpress M2026 per USB direkt am Homeserver; cups_print_server
 # gibt ihn per IPP/AirPrint im LAN + Tailnet frei. Device-URI und PPD
-# erst nach dem ersten Rollen-Lauf bekannt — siehe docs/38-printer.md.
+# erst nach dem ersten Rollen-Lauf bekannt — siehe docs/2-betrieb-hardware/20040-printer.md.
 #
 # Device-URI ermittelt per `lpinfo -v` auf dem Homeserver — meldet sich
 # als generische "M2020 Series" (viele günstige Samsung-SPL2-Modelle
@@ -380,7 +379,7 @@ cups_print_server_device_uri: "usb://Samsung/M2020%20Series?serial=08HVB8GM1B087
 # Weder printer-driver-splix noch hplip unterstützen die M2020-Serie
 # (spricht ein neueres "QPDL"-Protokoll) — daher der inoffizielle,
 # quellcode-geprüfte QPDL-Treiber-Build (Details + Review-Notizen:
-# docs/38-printer.md).
+# docs/2-betrieb-hardware/20040-printer.md).
 cups_print_server_build_qpdl_driver: true
 # Passende PPD nach dem Build (bestätigt per lpinfo -m auf homeserver):
 cups_print_server_ppd: "samsung/m2020.ppd"
@@ -393,7 +392,7 @@ cups_print_server_ppd: "samsung/m2020.ppd"
 # printer-driver-splix (bereits installiert) regulär abdeckt — kein
 # QPDL-Build nötig. ppd erst nach dem ersten Rollen-Lauf einmalig per
 # lpinfo -m auf dem Homeserver ermitteln (Debug-Ausgabe der Rolle zeigt
-# passende Treffer) und hier eintragen. Siehe docs/38-printer.md.
+# passende Treffer) und hier eintragen. Siehe docs/2-betrieb-hardware/20040-printer.md.
 cups_print_server_extra_queues:
   - name: "Samsung_ML-1630"
     device_uri: "socket://192.168.178.57:9100"

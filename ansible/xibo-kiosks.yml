@@ -7,7 +7,7 @@
 # ohne Portfreigabe), NFS-Mount des "xibosignage-display"-Ordners + lokaler
 # Chromium-Kiosk (ansible/roles/xibo_kiosk), plus Thermal-/Resource-Watchdog
 # (unbeaufsichtigte Geräte, gleiches Bundling wie bei den ALAMOS-Kiosks,
-# siehe ansible/alarm-kiosks.yml). Details: docs/44-xibosignage.md.
+# siehe ansible/alarm-kiosks.yml). Details: docs/3-apps-workloads/300e0-xibosignage.md.
 #
 # Voraussetzungen:
 #   1. Raspberry Pi OS (Desktop) mit Autologin fuer den Kiosk-User

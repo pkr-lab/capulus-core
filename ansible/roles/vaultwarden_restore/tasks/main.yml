@@ -1,7 +1,7 @@
 ---
 # Stellt db.sqlite3, rsa_key.pem, Attachments und Sends aus der
 # vaultwarden-backup-PVC (vom naechtlichen backup-cronjob.yaml auf der NAS
-# gefuellt, siehe docs/32-vaultwarden.md + docs/36-nas-backup.md) auf die
+# gefuellt, siehe docs/3-apps-workloads/300a0-vaultwarden.md + docs/2-betrieb-hardware/20010-nas-backup.md) auf die
 # vaultwarden-data-PVC zurueck. Der Account info@edv-kretzer.de inkl. aller
 # Passwoerter und des eigenen 2FA/TOTP ist danach automatisch wieder da,
 # weil das alles Teil derselben SQLite-Datei ist -- ein separater

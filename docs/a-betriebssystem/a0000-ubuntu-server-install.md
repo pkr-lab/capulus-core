@@ -212,4 +212,4 @@ sudo reboot
 - [ ] `ansible/group_vars/all.yml` ist ausgefüllt (`argocd_repo_url`, `local_subnet`, `timezone`)
 - [ ] Tailscale Auth-Key mit Ansible-Vault verschlüsselt
 
-Wenn alles abgehakt ist, weiter mit dem **[Installationsleitfaden](03-installation.md)**.
+Wenn alles abgehakt ist, weiter mit dem **[Installationsleitfaden](a0030-installation.md)**.

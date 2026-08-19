@@ -18,20 +18,20 @@ Internet: Client → xyz-tier.pke-lab.de → Cloudflare Edge
 ```
 
 `tier` ist `tech` (Infrastruktur/Admin) oder `prod` (echter Nutzerkreis) —
-Details und die vollständige Zuordnung: [docs/56-domain-tiers.md](56-domain-tiers.md).
+Details und die vollständige Zuordnung: [docs/c-netzwerk-dns/c0040-domain-tiers.md](c0040-domain-tiers.md).
 Intern per Punkt (`xyz.tier.homeserver`), extern per Bindestrich
 (`xyz-tier.pke-lab.de`) — Grund: Cloudflares kostenloses Zertifikat deckt
 nur eine Label-Ebene ab, siehe
-[docs/56 → Warum Punkt intern, Bindestrich extern](56-domain-tiers.md#warum-punkt-intern-bindestrich-extern).
+[docs/c-netzwerk-dns/c0040-domain-tiers.md → Warum Punkt intern, Bindestrich extern](c0040-domain-tiers.md#warum-punkt-intern-bindestrich-extern).
 
 Wichtig: **cloudflared braucht keinen Port-Forward am Router.** Der Tunnel
 baut die Verbindung von innen nach außen auf (siehe
-[docs/22-cloudflare-tunnel.md](22-cloudflare-tunnel.md)). `cloudflared`
+[docs/e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md](../e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md)). `cloudflared`
 selbst kennt nur zwei bis drei Wildcard-Regeln (eine pro Tier) und leitet
 alles an Traefik weiter — welche Hostnamen davon tatsächlich extern
 erreichbar sind, entscheidet ausschließlich, welche Apps zusätzlich zu
 ihrem `*.homeserver`-Host auch einen `*-pke-lab.de`-Host in der eigenen
-`ingress.hosts`-Liste tragen (siehe [docs/56-domain-tiers.md](56-domain-tiers.md)).
+`ingress.hosts`-Liste tragen (siehe [docs/c-netzwerk-dns/c0040-domain-tiers.md](c0040-domain-tiers.md)).
 Nicht jede App mit LAN-Ingress ist automatisch auch extern erreichbar.
 
 Node-IP von `homeserver`: `192.168.178.94`. Traefik-LoadBalancer-IP (MetalLB):
@@ -72,7 +72,7 @@ Nur die 9 Apps mit einem Eintrag in der Extern-Spalte tragen tatsächlich
 einen zusätzlichen `*-pke-lab.de`-Host in ihrer eigenen `ingress.hosts`-Liste
 — alle anderen (auch alle mit „—“) sind ausschließlich über LAN/Tailscale
 erreichbar, egal was `cloudflared`s Wildcard-Regeln theoretisch matchen
-würden (siehe [docs/56-domain-tiers.md](56-domain-tiers.md)).
+würden (siehe [docs/c-netzwerk-dns/c0040-domain-tiers.md](c0040-domain-tiers.md)).
 
 Alle `*.homeserver`- **und** alle `*.pke-lab.de`-Hosts laufen über Traefik
 auf `192.168.178.200:80`/`:443` — kein individueller Port pro App nötig,
@@ -87,13 +87,13 @@ alles unverändert an Traefik weiter (`argocd/apps/platform/cloudflared/values.y
 
 | Was | Port(s) | Erreichbar über | Bemerkung |
 |---|---|---|---|
-| Pi-hole DNS | 53/UDP+TCP | NodePort `homeserver:30053` | Nur LAN/Tailnet, siehe [docs/09-dns-architecture.md](09-dns-architecture.md) |
-| MediaMTX Publish (RTMP) | 1935 | NodePort `homeserver:31935` | Für OBS/ffmpeg-Encoder, bewusst NICHT über Cloudflare (siehe [docs/24-mediamtx.md](24-mediamtx.md)) |
+| Pi-hole DNS | 53/UDP+TCP | NodePort `homeserver:30053` | Nur LAN/Tailnet, siehe [docs/c-netzwerk-dns/c0000-dns-architecture.md](c0000-dns-architecture.md) |
+| MediaMTX Publish (RTMP) | 1935 | NodePort `homeserver:31935` | Für OBS/ffmpeg-Encoder, bewusst NICHT über Cloudflare (siehe [docs/3-apps-workloads/30040-mediamtx.md](../3-apps-workloads/30040-mediamtx.md)) |
 | MediaMTX Publish (RTSP) | 8554 | NodePort `homeserver:31554` | s.o., nur LAN/Tailnet |
 | MediaMTX WebRTC | 8889 | Nur ClusterIP intern | Kein eigener Ingress-Host, wird intern vom HLS-Player-Frontend genutzt |
 | MediaMTX API | 9997 | Nur ClusterIP intern | Kein externer Zugriff |
 | ArgoCD | 443 | NodePort `homeserver:30443` (HTTPS) | Kein Ingress-Host, direkter NodePort-Zugriff. HTTP-NodePort (30080) bewusst nicht in UFW freigegeben |
-| Tailscale (SSH/Admin) | — | Tailnet-IP des Nodes | Siehe [docs/06-tailscale.md](06-tailscale.md) |
+| Tailscale (SSH/Admin) | — | Tailnet-IP des Nodes | Siehe [docs/c-netzwerk-dns/c0010-tailscale.md](c0010-tailscale.md) |
 
 NodePorts sind laut bestehenden UFW-Regeln bereits auf LAN/Tailnet beschränkt
 (siehe README.md#networking--security) — keine zusätzliche Firewall-Änderung

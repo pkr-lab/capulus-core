@@ -2,7 +2,7 @@
 # innerhalb des Chart-Verzeichnisses lesen, kein Verweis auf den Repo-Pfad
 # moeglich (gleiche Einschraenkung wie bei den Ansible-Rollen, dort per
 # playbook_dir umgangen, hier nicht verfuegbar). Bei einer CA-Rotation
-# (docs/54-internal-tls.md, "CA laeuft aus / CA-Key kompromittiert") muss
+# (docs/d-sicherheit/d0040-internal-tls.md, "CA laeuft aus / CA-Key kompromittiert") muss
 # diese Kopie mit aktualisiert werden.
 #
 # Noetig, weil der Uptime-Kuma-Container (Node.js) HTTPS-Monitor-Checks

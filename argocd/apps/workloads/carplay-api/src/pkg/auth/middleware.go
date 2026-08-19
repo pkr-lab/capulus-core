@@ -2,7 +2,7 @@
 // instead of the mTLS the original spec asked for: this cluster's Traefik
 // ingress doesn't terminate client-certificate TLS, so "mTLS" here would
 // have been a checkbox with nothing behind it. The real boundary is
-// network-level (Tailscale-only ingress, see docs/43-carplay-api.md) plus a
+// network-level (Tailscale-only ingress, see docs/3-apps-workloads/300d0-carplay-api.md) plus a
 // Bearer token checked at the application layer.
 package auth
 

@@ -1,6 +1,6 @@
-# 53 — k3s Secrets-Encryption-at-Rest + Audit-Log (Security-Härtung Phase 4)
+# k3s Secrets-Encryption-at-Rest + Audit-Log (Security-Härtung Phase 4)
 
-Detail-Doku zu Phase 4 aus [docs/51-security-hardening-roadmap.md](51-security-hardening-roadmap.md).
+Detail-Doku zu Phase 4 aus [docs/d-sicherheit/d0010-security-hardening-roadmap.md](d0010-security-hardening-roadmap.md).
 
 **Status (13.08.2026): Fertig, live und verifiziert.** Rollout
 durchgeführt: Config ausgerollt, Datastore-Backup (`tar` bei gestopptem
@@ -53,7 +53,7 @@ angelegt/geändert/gelöscht hat.
 Cluster läuft `v1.36.3+k3s1` (deutlich über der `v1.28`-Schwelle, ab der
 k3s den modernen `rotate-keys`-Befehl anbietet). Der alte
 `prepare` → `rotate` → `reencrypt`-Dreischritt (so ursprünglich in
-docs/51 skizziert) ist für diese Version **deprecated** — hier bewusst
+docs/d-sicherheit/d0010-security-hardening-roadmap.md skizziert) ist für diese Version **deprecated** — hier bewusst
 durch den modernen Weg ersetzt:
 
 ```
@@ -88,7 +88,7 @@ API-Server, unabhängig davon, wie viele Flags sich gleichzeitig ändern.
 Ein gemeinsamer Restart statt zwei getrennter reduziert die Anzahl der
 Downtime-Fenster. Über zwei unabhängige Ansible-Variablen
 (`k3s_secrets_encryption_enabled`, `k3s_audit_log_enabled` in
-[ansible/group_vars/all.yml](../ansible/group_vars/all.yml)) lässt sich
+[ansible/group_vars/all.yml](../../ansible/group_vars/all.yml)) lässt sich
 bei Bedarf trotzdem einzeln togglen und getrennt ausrollen.
 
 ### Audit-Policy: Metadata-Level, kein Full-Request-Response-Dump
@@ -98,7 +98,7 @@ Polling von Grafana/vmagent/ArgoCD) komplett ausgeschlossen. Für
 Secrets/ConfigMaps bewusst **Metadata**-Level statt `RequestResponse` —
 sonst würde das Audit-Log genau die Klartext-Werte mitschreiben, vor
 denen die Secrets-Encryption gerade schützen soll. Volle Regel-Liste:
-[ansible/roles/k3s/templates/audit-policy.yaml.j2](../ansible/roles/k3s/templates/audit-policy.yaml.j2).
+[ansible/roles/k3s/templates/audit-policy.yaml.j2](../../ansible/roles/k3s/templates/audit-policy.yaml.j2).
 
 Retention bewusst begrenzt (14 Tage / 5 Backups / 100 MB je Datei) —
 Homelab-Cluster mit reichlich freiem Plattenplatz (769 Gi frei, Stand
@@ -259,7 +259,7 @@ nicht wieder dieselbe Config schreibt.
   (Server einzeln nacheinander neu starten, Hash-Abgleich zwischen
   Servern) entfallen hier komplett.
 - **Encryption-Key-Rotation danach:** Für künftige Rotationen (z. B.
-  turnusmäßig, siehe Phase 7 in docs/51) reicht danach ein einzelnes
+  turnusmäßig, siehe Phase 7 in docs/d-sicherheit/d0010-security-hardening-roadmap.md) reicht danach ein einzelnes
   `sudo k3s secrets-encrypt rotate-keys` + Restart, kein erneutes
   Ersteinrichtungs-Prozedere.
 - **`sqlite3`-Paket** wird nur für den optionalen Verifikations-Schritt 7

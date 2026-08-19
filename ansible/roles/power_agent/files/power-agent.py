@@ -8,7 +8,7 @@
 # the laptop's screen backlight over sysfs, send Wake-on-LAN magic packets,
 # and SSH-poweroff worker-0/worker-1 using the same forced-command key
 # cluster_power_manager already generates and worker-0/worker-1 already
-# authorize for "sudo poweroff" — see docs/37-cluster-power-manager.md.
+# authorize for "sudo poweroff" — see docs/2-betrieb-hardware/20020-cluster-power-manager.md.
 #
 # Manual wake/poweroff here stamp/clear the same STATE_DIR/<name>.woke_at
 # files cluster-power-manager.service reads for its own MIN_UPTIME_SECONDS

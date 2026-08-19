@@ -1,6 +1,6 @@
-# 54 — Internes TLS für `*.homeserver` (Security-Härtung Phase 5)
+# Internes TLS für `*.homeserver` (Security-Härtung Phase 5)
 
-Detail-Doku zu Phase 5 aus [docs/51-security-hardening-roadmap.md](51-security-hardening-roadmap.md).
+Detail-Doku zu Phase 5 aus [docs/d-sicherheit/d0010-security-hardening-roadmap.md](d0010-security-hardening-roadmap.md).
 
 **Status (16.08.2026): Umstellung auf cert-manager.** Der ursprüngliche
 Ansatz (manuell per `openssl` signierte Leaf-Zertifikate, als SealedSecret
@@ -10,13 +10,13 @@ Zertifikate automatisch aus derselben Homeserver-Root-CA signiert und vor
 Ablauf selbstständig erneuert.
 
 **Konkreter Auslöser der Umstellung:** Die Domain-Tier-Migration
-([docs/56-domain-tiers.md](56-domain-tiers.md), `<app>.homeserver` →
+([docs/c-netzwerk-dns/c0040-domain-tiers.md](../c-netzwerk-dns/c0040-domain-tiers.md), `<app>.homeserver` →
 `<app>.tech.homeserver`/`<app>.prod.homeserver`) hat die SAN-Liste des
 damals committeten Zertifikats stillschweigend veralten lassen — das
 Zertifikat trug noch die alten, untierten Hostnamen. Jeder neue
 tier-behaftete Host bekam seither einen Zertifikats-Hostname-Mismatch, und
 weil der CA-Private-Key bewusst nie im Repo lag, ließ sich das nicht per
-Commit reparieren (siehe docs/56, Abschnitt "Offener Punkt", jetzt
+Commit reparieren (siehe docs/c-netzwerk-dns/c0040-domain-tiers.md, Abschnitt "Offener Punkt", jetzt
 aufgelöst). Das war der praktische Bruchpunkt, der die Automatisierung
 nötig gemacht hat.
 
@@ -59,7 +59,7 @@ signiert ein `ClusterIssuer` vom Typ `CA` mit der **bestehenden**
 Homeserver-Root-CA (`rootCA.pem`/`rootCA-key.pem`, bisher nur lokal für
 den manuellen `openssl x509 -req -CA ...`-Schritt genutzt) — exakt
 dieselbe CA bleibt gültig, das bereits auf allen Geräten installierte
-[docs/assets/homeserver-root-ca.pem](assets/homeserver-root-ca.pem)
+[docs/assets/homeserver-root-ca.pem](../assets/homeserver-root-ca.pem)
 musste **nicht** ersetzt werden.
 
 ### CA-Private-Key: einmaliger manueller Import, kein SealedSecret
@@ -83,7 +83,7 @@ TLS-Stacks genutzt), das Wildcards unter einem Suffix mit nur **einem**
 DNS-Label ablehnt — dieselbe Schutzregel, die ein `*.com`-Zertifikat
 verhindert. Das ist eine Eigenschaft von `.homeserver` als Zone, keine
 Tool-Einschränkung — auch cert-manager kann daran nichts ändern. Die
-[`Certificate`-Ressource](../argocd/apps/platform/cert-manager/templates/certificate-homeserver-wildcard.yaml)
+[`Certificate`-Ressource](../../argocd/apps/platform/cert-manager/templates/certificate-homeserver-wildcard.yaml)
 trägt deshalb weiterhin eine explizite, jetzt tier-behaftete `dnsNames`-
 Liste. Ein neuer `*.homeserver`-Host braucht weiterhin einen Eintrag dort
 + Commit — was sich geändert hat, ist nur, dass danach niemand mehr
@@ -95,7 +95,7 @@ Zertifikat automatisch, sobald der geänderte Manifest gesynct ist.
 - **Subject Alternative Names:** alle aktuellen `*.homeserver`-Hosts
   (tier-behaftet, `<app>.tech.homeserver`/`<app>.prod.homeserver`) plus
   der nackte Apex `homeserver` — siehe
-  [certificate-homeserver-wildcard.yaml](../argocd/apps/platform/cert-manager/templates/certificate-homeserver-wildcard.yaml).
+  [certificate-homeserver-wildcard.yaml](../../argocd/apps/platform/cert-manager/templates/certificate-homeserver-wildcard.yaml).
 - **Gültigkeit:** 90 Tage (`duration: 2160h`), automatische Erneuerung 30
   Tage vor Ablauf (`renewBefore: 720h`) — bewusst kurz, weil das jetzt
   nichts mehr kostet (keine ACME-Rate-Limits wie bei einer öffentlichen
@@ -105,7 +105,7 @@ Zertifikat automatisch, sobald der geänderte Manifest gesynct ist.
 ### Ablage im Cluster: TLSStore statt pro-App-Ingress
 
 Unverändert: ein einziges `TLSStore`-Objekt namens `default`
-([argocd/apps/platform/traefik-config/tlsstore.yaml](../argocd/apps/platform/traefik-config/tlsstore.yaml))
+([argocd/apps/platform/traefik-config/tlsstore.yaml](../../argocd/apps/platform/traefik-config/tlsstore.yaml))
 verweist auf das von cert-manager verwaltete Secret — `default` ist dabei
 kein Freitext, sondern der von Traefik selbst reservierte Name, der
 automatisch für jeden Router greift, der nicht explizit ein anderes
@@ -115,16 +115,16 @@ TLSStore referenziert.
 
 `cert-manager` läuft in einem eigenen Namespace, ist aber bewusst **nicht**
 Teil von `argocd_platform_apps`
-([ansible/roles/argocd/defaults/main.yml](../ansible/roles/argocd/defaults/main.yml))
+([ansible/roles/argocd/defaults/main.yml](../../ansible/roles/argocd/defaults/main.yml))
 — genau wie `kube-system` und `argocd` selbst ist das Cluster-
 Infrastruktur, kein App mit eigenem Nutzerkreis/Tier. Die Namespace-
 Berechtigung steht deshalb als zusätzlicher, fest kodierter Eintrag in der
 `platform`-AppProject-Destination-Liste
-([ansible/roles/argocd/templates/bootstrap-appprojects.yaml.j2](../ansible/roles/argocd/templates/bootstrap-appprojects.yaml.j2)),
+([ansible/roles/argocd/templates/bootstrap-appprojects.yaml.j2](../../ansible/roles/argocd/templates/bootstrap-appprojects.yaml.j2)),
 analog zum bestehenden `kube-system`-Eintrag — sonst bekäme der
 Namespace ein `tier-default-ingress`-NetworkPolicy und ein
 `security-tier`-Label, die für Cluster-Infrastruktur nicht sinnvoll sind
-(siehe [docs/52-network-policies.md](52-network-policies.md)).
+(siehe [docs/d-sicherheit/d0030-network-policies.md](d0030-network-policies.md)).
 
 ---
 
@@ -248,7 +248,7 @@ Browser-Zugriff auf `*.homeserver`).
 ## Neuen Host hinzufügen / Zertifikat erneuern
 
 **Neuer Host:** Eintrag in `dnsNames` in
-[certificate-homeserver-wildcard.yaml](../argocd/apps/platform/cert-manager/templates/certificate-homeserver-wildcard.yaml)
+[certificate-homeserver-wildcard.yaml](../../argocd/apps/platform/cert-manager/templates/certificate-homeserver-wildcard.yaml)
 ergänzen, committen, pushen — cert-manager erstellt automatisch ein neues
 Zertifikat mit der erweiterten SAN-Liste, kein `openssl`/`kubeseal` mehr
 nötig.
@@ -259,7 +259,7 @@ nötig.
 **CA läuft aus (alle 10 Jahre) oder CA-Key kompromittiert:** einziger
 noch verbliebener manueller Fall — neue Root-CA per `openssl` erzeugen
 (gleiches Verfahren wie beim ursprünglichen Rollout), `rootCA.pem` in
-[docs/assets/homeserver-root-ca.pem](assets/homeserver-root-ca.pem)
+[docs/assets/homeserver-root-ca.pem](../assets/homeserver-root-ca.pem)
 ersetzen + committen, `homeserver-ca-keypair`-Secret im Cluster mit dem
 neuen Keypair überschreiben (Schritt 2 aus [Rollout](#rollout) erneut),
 und — anders als bei einer normalen Zertifikats-Erneuerung — **auf jedem

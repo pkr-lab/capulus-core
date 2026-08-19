@@ -1,7 +1,7 @@
 ---
 # ============================================================
 # carplay-api — Backend für die iOS-App Homeserver Dashboard.
-# Setup-/Betriebsanleitung: docs/43-carplay-api.md
+# Setup-/Betriebsanleitung: docs/3-apps-workloads/300d0-carplay-api.md
 # ============================================================
 
 replicaCount: 1
@@ -104,11 +104,11 @@ config:
 
   # Netzwerk-Grenze für /api/*. Deaktiviert per Default, damit der erste
   # Deploy nicht sofort alle aussperrt, falls trustedProxies oben noch nicht
-  # stimmt — siehe docs/43-carplay-api.md, Abschnitt "Absicherung", bevor
+  # stimmt — siehe docs/3-apps-workloads/300d0-carplay-api.md, Abschnitt "Absicherung", bevor
   # das hier scharf geschaltet wird.
   ipAllowlist:
     enabled: false
-    # Tailscale-CGNAT-Bereich (docs/06-tailscale.md) + LAN-Subnetz.
+    # Tailscale-CGNAT-Bereich (docs/c-netzwerk-dns/c0010-tailscale.md) + LAN-Subnetz.
     cidrs: "100.64.0.0/10,192.168.178.0/24"
 
   victoriaMetrics:
@@ -120,7 +120,7 @@ config:
   # mit `curl vmsingle.../api/v1/targets` prüfen, falls ein Host nie als
   # "online" erscheint. Ein Host, der (noch) nicht gescraped wird oder
   # gerade aus ist, liefert einfach online:false statt eines Fehlers, siehe
-  # docs/43-carplay-api.md.
+  # docs/3-apps-workloads/300d0-carplay-api.md.
   hosts:
     - id: homeserver
       name: "Homeserver"
@@ -205,7 +205,7 @@ config:
   uptimeKuma:
     url: "http://uptime-kuma.uptime-kuma.svc.cluster.local"
     # Muss in der Uptime-Kuma-UI als Status-Page angelegt sein, mit allen
-    # anzuzeigenden Monitoren hinzugefügt — siehe docs/43-carplay-api.md.
+    # anzuzeigenden Monitoren hinzugefügt — siehe docs/3-apps-workloads/300d0-carplay-api.md.
     slug: "homeserver"
 
 # CARPLAY_API_TOKEN — das Bearer-Token, das die iOS-App im Authorization-
@@ -213,7 +213,7 @@ config:
 # ersten Sync versiegelt sein, sonst bleibt der Pod in
 # CreateContainerConfigError hängen (bewusst — ein Dashboard, das
 # Systemzustand + Alerts zeigt, sollte nicht ungeschützt starten).
-# Erzeugen (kubeseal-Zertifikat siehe docs/43-carplay-api.md
+# Erzeugen (kubeseal-Zertifikat siehe docs/3-apps-workloads/300d0-carplay-api.md
 # "Ersteinrichtung" Schritt 1, oder direkt via kubeseal-webgui.tech.homeserver):
 #   openssl rand -hex 32
 #   echo -n "<token>" | kubeseal --raw \
@@ -252,7 +252,7 @@ secrets:
   # Homeserver-Shutdown abfragt (siehe ios/README.md). Bewusst kein
   # Live-Check gegen ArgoCD (kein RBAC/Netzwerkpfad von diesem Pod aus
   # nötig) — stattdessen manuell auf denselben Wert wie das aktuelle
-  # ArgoCD-Admin-Passwort setzen (docs/05-argocd.md) und bei jeder
+  # ArgoCD-Admin-Passwort setzen (docs/b-kubernetes-gitops/b0010-argocd.md) und bei jeder
   # Passwort-Rotation hier mit erneuern:
   #   echo -n "<argocd-admin-passwort>" | kubeseal --raw \
   #     --namespace carplay-api --name carplay-api-shutdown-code \

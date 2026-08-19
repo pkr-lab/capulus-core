@@ -1,4 +1,4 @@
-# 38 — Drucker: CUPS im Heimnetz freigeben
+# Drucker: CUPS im Heimnetz freigeben
 
 Zwei Drucker laufen über denselben `cupsd` auf dem Homeserver
 (192.168.178.94), verwaltet von der Ansible-Rolle `cups_print_server`:
@@ -14,7 +14,7 @@ Warteschlangen per **IPP** (Windows/Linux/macOS) und
 **AirPrint/IPP-Everywhere via Avahi/mDNS** (iOS, Android, macOS) im
 gesamten Heimnetz frei — inklusive Tailnet, dank der bereits bestehenden
 Tailscale-Subnet-Route auf `local_subnet` (siehe
-[06-tailscale.md](06-tailscale.md#subnet-routing)).
+[../c-netzwerk-dns/c0010-tailscale.md](../c-netzwerk-dns/c0010-tailscale.md#subnet-routing)).
 
 ---
 
@@ -45,7 +45,7 @@ Tailscale-Subnet-Route auf `local_subnet` (siehe
 jeglichen Traffic aus `local_subnet` und dem Tailscale-Netz
 (`100.64.0.0/10`) — Port 631 (IPP/CUPS-Web-UI) und mDNS (UDP 5353) sind
 darüber schon abgedeckt, siehe
-[ansible/roles/common/tasks/main.yml](../ansible/roles/common/tasks/main.yml).
+[ansible/roles/common/tasks/main.yml](../../ansible/roles/common/tasks/main.yml).
 
 **Warum `cupsctl` statt `cupsd.conf` templaten?** `cupsctl` ändert die
 laufende Konfiguration live über die vom `cups`-Paket gepflegte Datei,
@@ -59,7 +59,7 @@ den aktuellen Stand vorher per `cupsctl` ohne Argumente aus).
 
 | Rolle | Läuft auf | Zweck |
 |---|---|---|
-| [`cups_print_server`](../ansible/roles/cups_print_server) | homeserver | Installiert CUPS + Treiber, aktiviert Sharing, legt die Warteschlange an |
+| [`cups_print_server`](../../ansible/roles/cups_print_server) | homeserver | Installiert CUPS + Treiber, aktiviert Sharing, legt die Warteschlange an |
 
 ---
 
@@ -285,7 +285,7 @@ stattdessen `lpoptions -p Samsung_M2026 | grep shared` bzw. erneut
 **Drucken funktioniert im LAN, aber nicht über Tailscale unterwegs:**
 Subnet-Route (`local_subnet`) im
 [Tailscale-Admin-Panel](https://login.tailscale.com/admin/machines)
-approved? Siehe [06-tailscale.md](06-tailscale.md#subnet-routing).
+approved? Siehe [../c-netzwerk-dns/c0010-tailscale.md](../c-netzwerk-dns/c0010-tailscale.md#subnet-routing).
 
 ---
 
@@ -318,7 +318,7 @@ bedeuten — der ML-1630W braucht keinen USB-Passthrough, nur eine
 zusätzliche Warteschlange mit `socket://`-Device-URI. Die Rolle
 `cups_print_server` wurde daher um eine generische, vom M2026-Codepfad
 unabhängige Liste `cups_print_server_extra_queues` erweitert (siehe
-[ansible/roles/cups_print_server/tasks/main.yml](../ansible/roles/cups_print_server/tasks/main.yml)) —
+[ansible/roles/cups_print_server/tasks/main.yml](../../ansible/roles/cups_print_server/tasks/main.yml)) —
 QPDL-Build und PageSize-Patch bleiben ausschließlich dem M2026 vorbehalten
 und werden vom ML-1630W-Setup nicht berührt.
 
@@ -353,7 +353,7 @@ M2026-Abschnitt oben (Warteschlangenname `Samsung_ML-1630` statt
 
 ## Relevante Links
 
-- [Tailscale-Referenz (Subnet-Routing)](06-tailscale.md)
-- [ansible/roles/cups_print_server](../ansible/roles/cups_print_server)
+- [Tailscale-Referenz (Subnet-Routing)](../c-netzwerk-dns/c0010-tailscale.md)
+- [ansible/roles/cups_print_server](../../ansible/roles/cups_print_server)
 - [OpenPrinting/splix (offizielles Upstream-Repo)](https://github.com/OpenPrinting/splix)
 - [gitlab.com/ScumCoder/splix, Branch `patches` (QPDL-Treiber-Quelle)](https://gitlab.com/ScumCoder/splix/-/tree/patches)

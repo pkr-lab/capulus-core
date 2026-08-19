@@ -1,7 +1,7 @@
 # StorageClass "immich-nas": dedizierter NFS-Export für Immich auf dem
 # UGREEN NAS (192.168.178.97/volume2/immich-storage) — bewusst getrennt
 # von der generischen "nas"-StorageClass (/volume1/k8s-storage), siehe
-# docs/16-nas-storage.md und docs/35-immich.md.
+# docs/2-betrieb-hardware/20000-nas-storage.md und docs/3-apps-workloads/300c0-immich.md.
 #
 # Verwendung in PVCs:
 #   storageClassName: immich-nas

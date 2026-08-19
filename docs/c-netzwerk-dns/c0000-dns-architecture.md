@@ -102,7 +102,7 @@ Probleme gleichzeitig:
   laufen ganz normal über die Fritz!Box.
 
 **Setup**: einmaliger Admin-Console-Schritt, beschrieben in
-[docs/08-semaphore.md → Zugriff über Tailscale](08-semaphore.md#zugriff-über-tailscale-einmaliger-admin-schritt).
+[docs/b-kubernetes-gitops/b0030-semaphore.md → Zugriff über Tailscale](../b-kubernetes-gitops/b0030-semaphore.md#zugriff-über-tailscale-einmaliger-admin-schritt).
 
 **Verfügbarkeit**: macOS, Windows, Linux, iOS, Android — überall wo
 Tailscale läuft, was praktisch jedes moderne Gerät ist.

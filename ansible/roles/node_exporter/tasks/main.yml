@@ -7,7 +7,7 @@
 # dem victoria-metrics-k8s-stack Chart — diese Rolle ist nur fuer Hosts
 # ausserhalb des k3s-Clusters noetig (gleiches Prinzip wie die manuell auf
 # ugreen-nas laufenden node-exporter/smartctl-exporter Docker-Container,
-# siehe docs/16-nas-storage.md).
+# siehe docs/2-betrieb-hardware/20000-nas-storage.md).
 # ============================================================
 
 - name: prometheus-node-exporter installieren

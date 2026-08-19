@@ -231,7 +231,7 @@ flowchart TB
 
 ## 5. App-Matrix (Schicht 3 und 4)
 
-Seit [docs/49-argocd-projects.md](49-argocd-projects.md) ist diese
+Seit [docs/b-kubernetes-gitops/b0020-argocd-projects.md](../b-kubernetes-gitops/b0020-argocd-projects.md) ist diese
 Schicht-3/Schicht-4-Trennung nicht mehr nur konzeptionell, sondern auch die
 tatsächliche Git-Ordnerstruktur (`argocd/apps/platform/…` bzw.
 `argocd/apps/workloads/…`) und das zugewiesene ArgoCD-AppProject
@@ -295,7 +295,7 @@ tatsächliche Git-Ordnerstruktur (`argocd/apps/platform/…` bzw.
 | Samsung ML-1630W | Drucker | `192.168.178.57:9100` | hängt per USB an einer Fritz!Box, spricht SPL2 → `printer-driver-splix` genügt; zweite Warteschlange in CUPS |
 | Fritz!Box | Router | `192.168.178.1` | LAN und Internet, DNS-Ziel von Pi-hole, keine Portfreigabe nach außen |
 | Raspberry Pis | Alarmmonitor-Kiosks | frei | Chromium im Vollbild gegen `alamos-apager`, per Ansible verwaltet, mit Lebenszeichen-Meldung |
-| Raspberry Pi 3 B+ | xibosignage-Bilder-Slideshow | frei | Chromium im Vollbild gegen einen NFS-gemounteten Bilder-Ordner, kein offizieller Xibo-Player (siehe [`44-xibosignage.md`](44-xibosignage.md)) |
+| Raspberry Pi 3 B+ | xibosignage-Bilder-Slideshow | frei | Chromium im Vollbild gegen einen NFS-gemounteten Bilder-Ordner, kein offizieller Xibo-Player (siehe [`../3-apps-workloads/300e0-xibosignage.md`](../3-apps-workloads/300e0-xibosignage.md)) |
 
 ---
 
@@ -319,7 +319,7 @@ tatsächliche Git-Ordnerstruktur (`argocd/apps/platform/…` bzw.
 | `wake_on_lan` | worker-0, worker-1 | `ethtool wol g` bei jedem Boot |
 | `cups_print_server` | homeserver | Druckserver, QPDL-Treiber-Build, zweite Warteschlange |
 | `alamos_kiosk` | Raspberry Pis | Chromium-Kiosk + Heartbeat-Timer |
-| `xibo_kiosk` | Raspberry Pis (xibosignage-Displays) | NFS-Mount `xibosignage-display`, Manifest-Timer, Chromium-Slideshow-Kiosk (kein offizieller Xibo-Player, siehe [`44-xibosignage.md`](44-xibosignage.md)) |
+| `xibo_kiosk` | Raspberry Pis (xibosignage-Displays) | NFS-Mount `xibosignage-display`, Manifest-Timer, Chromium-Slideshow-Kiosk (kein offizieller Xibo-Player, siehe [`../3-apps-workloads/300e0-xibosignage.md`](../3-apps-workloads/300e0-xibosignage.md)) |
 
 **Reihenfolge beim ersten Rollout:**
 
@@ -405,13 +405,13 @@ Dienste ausschließlich über ausgehende Cloudflare-Verbindungen. UFW erlaubt 22
 443, 631, 6443 und 30443 nur im LAN und im Tailnet, nach außen nur 41641/UDP.
 ArgoCD hat ausschließlich Leserechte auf das Git-Repo. Innerhalb von ArgoCD trennen
 zwei AppProjects (`platform` / `workloads`, siehe
-[docs/49-argocd-projects.md](49-argocd-projects.md)) Infrastruktur-Apps von
+[docs/b-kubernetes-gitops/b0020-argocd-projects.md](../b-kubernetes-gitops/b0020-argocd-projects.md)) Infrastruktur-Apps von
 Anwendungen mit echtem Nutzerkreis — jede App darf nur in ihren eigenen,
 namentlich erlaubten Namespace deployen. Der Shutdown-SSH-Key des
 Power-Managers ist per `command=`-Option fest auf `poweroff` beschränkt. Secrets liegen
 verschlüsselt in Git — Host-Werte per Ansible Vault, Cluster-Werte als SealedSecret, das
 nur der Controller im Cluster öffnen kann. CrowdSec beobachtet SSH- und Traefik-Logs
-und sperrt auffällige IPs per Firewall-Bouncer (siehe [docs/46-crowdsec.md](46-crowdsec.md)).
+und sperrt auffällige IPs per Firewall-Bouncer (siehe [docs/d-sicherheit/d0020-crowdsec.md](../d-sicherheit/d0020-crowdsec.md)).
 
 ---
 
@@ -452,5 +452,5 @@ SCHICHT 0  HP ProBook 450 G9 (.94, 24/7)   Lenovo M90q (.95, WoL)   MSI Tower (.
 
 ---
 
-*Erzeugt aus dem Repo-Stand `main`, Juli 2026. capulus-core · Ubuntu 26.04 LTS · k3s ·
+*Erzeugt aus dem Repo-Stand `main`, August 2026. capulus-core · Ubuntu 26.04 LTS · k3s ·
 ArgoCD · Tailscale · Ansible · MIT-Lizenz.*
