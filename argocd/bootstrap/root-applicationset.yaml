@@ -98,21 +98,6 @@ spec:
           name: zammad-redis
           jsonPointers:
             - /spec/updateStrategy/rollingUpdate/maxUnavailable
-        # zot StatefulSet: volumeClaimTemplates zeigt dauerhaft OutOfSync,
-        # obwohl storage/accessModes/storageClassName inhaltlich exakt mit
-        # dem Chart übereinstimmen — bekannte ArgoCD-Einschränkung bei
-        # StatefulSet + ServerSideApply (der Server ergänzt serverseitige
-        # Defaults wie apiVersion/kind je Template-Eintrag, volumeMode,
-        # status, die ArgoCDs Diffing hier nicht vollständig normalisiert).
-        # Verifiziert per manuellem Feld-für-Feld-Vergleich und
-        # "argocd app diff --core" (zeigt keinen echten Unterschied) —
-        # "argocd app sync" läuft jedes Mal erfolgreich durch, der Status
-        # bleibt trotzdem OutOfSync. Rein kosmetisch, kein Funktionsproblem.
-        - group: apps
-          kind: StatefulSet
-          name: zot
-          jsonPointers:
-            - /spec/volumeClaimTemplates
       syncPolicy:
         automated:
           prune: true
@@ -204,21 +189,6 @@ spec:
           name: zammad-redis
           jsonPointers:
             - /spec/updateStrategy/rollingUpdate/maxUnavailable
-        # zot StatefulSet: volumeClaimTemplates zeigt dauerhaft OutOfSync,
-        # obwohl storage/accessModes/storageClassName inhaltlich exakt mit
-        # dem Chart übereinstimmen — bekannte ArgoCD-Einschränkung bei
-        # StatefulSet + ServerSideApply (der Server ergänzt serverseitige
-        # Defaults wie apiVersion/kind je Template-Eintrag, volumeMode,
-        # status, die ArgoCDs Diffing hier nicht vollständig normalisiert).
-        # Verifiziert per manuellem Feld-für-Feld-Vergleich und
-        # "argocd app diff --core" (zeigt keinen echten Unterschied) —
-        # "argocd app sync" läuft jedes Mal erfolgreich durch, der Status
-        # bleibt trotzdem OutOfSync. Rein kosmetisch, kein Funktionsproblem.
-        - group: apps
-          kind: StatefulSet
-          name: zot
-          jsonPointers:
-            - /spec/volumeClaimTemplates
       syncPolicy:
         automated:
           prune: true

@@ -49,9 +49,9 @@ persistence:
 # "kubectl describe node worker-0" -> Allocatable nur 4 CPU / ~7.3Gi RAM
 # (Lenovo M90q). Der alte Default (6 CPU / 8Gi Requests) lag ueber der
 # gesamten Node-Kapazitaet -- der Pod waere nie ueber Pending
-# hinausgekommen. Andere Pods auf worker-0 sind nur kleine
-# DaemonSets/zot (~150m CPU / ~256Mi Requests zusammen), Ollama bekommt
-# also den Grossteil der Node fuer sich.
+# hinausgekommen. Andere Pods auf worker-0 sind nur kleine DaemonSets
+# (~150m CPU / ~256Mi Requests zusammen), Ollama bekommt also den
+# Grossteil der Node fuer sich.
 resources:
   requests:
     cpu: "3"
