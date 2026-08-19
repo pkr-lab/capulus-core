@@ -1,0 +1,16 @@
+---
+apiVersion: v2
+name: ollama
+description: Lokales LLM (Ollama) fuer KI-Antwortentwuerfe -- laeuft nur bei Bedarf auf worker-0, Start/Stop uebernimmt der taegliche n8n-Workflow.
+type: application
+version: 0.1.0
+appVersion: "0.3.14"
+keywords:
+  - ollama
+  - llm
+  - ai
+home: https://ollama.com
+sources:
+  - https://github.com/ollama/ollama
+maintainers:
+  - name: home-server-admin

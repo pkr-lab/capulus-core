@@ -1,0 +1,389 @@
+{
+  "name": "Zammad Tickets verarbeiten",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "e5e5e5e5-0000-4000-8000-000000000000",
+      "name": "Von Haupt-Workflow aufgerufen",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "ticket",
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {
+          "query": "state.name:new AND NOT tags:ki-entwurf-erstellt"
+        }
+      },
+      "id": "e5e5e5e5-0002-4000-8000-000000000002",
+      "name": "Offene Tickets suchen",
+      "type": "n8n-nodes-base.zammad",
+      "typeVersion": 1,
+      "position": [
+        520,
+        300
+      ],
+      "credentials": {
+        "zammadBasicAuthApi": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "Zammad ticket.emue365"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "e5e5e5e5-0004-4000-8000-000000000004a",
+              "leftValue": "={{ $json.group }}",
+              "rightValue": "CHANGE-ME: Gruppe(n) eintragen, die NICHT per KI beantwortet werden sollen (z.B. bereits per Zammad-Trigger/Textbaustein abgedeckt), oder Bedingung ganz entfernen/umkehren",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e5e5e5e5-0004-4000-8000-000000000004",
+      "name": "Nur relevante Tickets",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "ticketArticle",
+        "operation": "getAll",
+        "ticketId": "={{ $json.id }}",
+        "returnAll": true
+      },
+      "id": "e5e5e5e5-0005-4000-8000-000000000005",
+      "name": "Ticket-Artikel laden",
+      "type": "n8n-nodes-base.zammad",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        220
+      ],
+      "credentials": {
+        "zammadBasicAuthApi": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "Zammad ticket.emue365"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ticket-Objekt kommt aus dem Zweig \"Nur relevante Tickets\" (True), die Artikel-Liste aus \"Ticket-Artikel laden\".\nconst ticket = $('Nur relevante Tickets').item.json;\nconst articles = $input.first().json || [];\n\nfunction stripHtml(html) {\n  return String(html || '').replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim();\n}\n\nconst verlauf = articles\n  .map((a) => `[${a.from || 'unbekannt'}]: ${stripHtml(a.body)}`)\n  .join('\\n\\n');\n\nconst prompt = [\n  'Du bist Support-Assistent und entwirfst NUR einen Antwortvorschlag -- er wird von einem Menschen geprueft, bevor er verschickt wird.',\n  `Ticket-Titel: ${ticket.title}`,\n  '',\n  'Bisheriger Verlauf:',\n  verlauf,\n  '',\n  'Formuliere einen hoeflichen, knappen Antwortentwurf auf Deutsch. Wenn dir Informationen fehlen, formuliere stattdessen Rueckfragen statt zu raten.',\n].join('\\n');\n\nreturn [{ json: { ticket, prompt } }];"
+      },
+      "id": "e5e5e5e5-0006-4000-8000-000000000006",
+      "name": "LLM-Prompt bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://ollama.ollama.svc.cluster.local:11434/api/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'llama3.1:8b', prompt: $json.prompt, stream: false }) }}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "e5e5e5e5-0007-4000-8000-000000000007",
+      "name": "LLM-Anfrage (Ollama, lokal)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ollama /api/generate liefert mit stream:false ein einzelnes JSON-Objekt\n// mit dem fertigen Text im Feld \"response\" (siehe https://github.com/ollama/ollama/blob/main/docs/api.md#generate-a-completion).\nconst ticket = $('LLM-Prompt bauen').item.json.ticket;\nconst entwurf = $json.response || JSON.stringify($json);\n\nreturn [{ json: { ticket, entwurf } }];"
+      },
+      "id": "e5e5e5e5-0008-4000-8000-000000000008",
+      "name": "Antwortentwurf extrahieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "ticket",
+        "operation": "update",
+        "ticketId": "={{ $json.ticket.id }}",
+        "updateFields": {},
+        "article": {
+          "articleDetails": {
+            "body": "={{ $json.entwurf }}",
+            "sender": "System",
+            "type": "note",
+            "visibility": "internal"
+          }
+        }
+      },
+      "id": "e5e5e5e5-0009-4000-8000-000000000009",
+      "name": "Entwurf als interne Notiz speichern",
+      "type": "n8n-nodes-base.zammad",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        220
+      ],
+      "credentials": {
+        "zammadBasicAuthApi": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "Zammad ticket.emue365"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ticket.emue365.de/api/v1/tags/add",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ object: 'Ticket', o_id: $('Antwortentwurf extrahieren').item.json.ticket.id, item: 'ki-entwurf-erstellt' }) }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {}
+      },
+      "id": "e5e5e5e5-000a-4000-8000-00000000000a",
+      "name": "Ticket taggen (verhindert Doppel-Entwurf)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2340,
+        220
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "Zammad ticket.emue365 (Basic Auth, generisch)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://ntfy.ntfy.svc.cluster.local/zammad-ki-entwuerfe",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "KI-Entwurf wartet auf Freigabe"
+            },
+            {
+              "name": "Priority",
+              "value": "default"
+            },
+            {
+              "name": "Tags",
+              "value": "robot"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ 'Ticket #' + $('Antwortentwurf extrahieren').item.json.ticket.number + ': ' + $('Antwortentwurf extrahieren').item.json.ticket.title }}",
+        "options": {}
+      },
+      "id": "e5e5e5e5-000b-4000-8000-00000000000b",
+      "name": "Freigabe-Push senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2600,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Laeuft IMMER genau einmal, unabhaengig davon, ob 0 oder mehrere Tickets\n// gefunden/verarbeitet wurden -- \"Run Once for All Items\" ignoriert die\n// tatsaechliche Item-Anzahl. Zusaetzlich direkt vom Trigger-Node gespeist\n// (siehe connections unten), damit dieser Node auch dann feuert, wenn der\n// Ticket-Zweig oben komplett leer durchlaeuft. Der Haupt-Workflow verlaesst\n// sich auf genau dieses eine Rueckgabe-Item, um zuverlaessig weiterzulaufen\n// (Ollama wieder herunterskalieren).\nreturn [{ json: { status: 'done', verarbeiteteTickets: $input.all().length } }];"
+      },
+      "id": "e5e5e5e5-000c-4000-8000-00000000000c",
+      "name": "Abschluss (immer genau 1 Item)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Von Haupt-Workflow aufgerufen": {
+      "main": [
+        [
+          {
+            "node": "Offene Tickets suchen",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Abschluss (immer genau 1 Item)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Offene Tickets suchen": {
+      "main": [
+        [
+          {
+            "node": "Nur relevante Tickets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nur relevante Tickets": {
+      "main": [
+        [
+          {
+            "node": "Ticket-Artikel laden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Ticket-Artikel laden": {
+      "main": [
+        [
+          {
+            "node": "LLM-Prompt bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM-Prompt bauen": {
+      "main": [
+        [
+          {
+            "node": "LLM-Anfrage (Ollama, lokal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM-Anfrage (Ollama, lokal)": {
+      "main": [
+        [
+          {
+            "node": "Antwortentwurf extrahieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Antwortentwurf extrahieren": {
+      "main": [
+        [
+          {
+            "node": "Entwurf als interne Notiz speichern",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entwurf als interne Notiz speichern": {
+      "main": [
+        [
+          {
+            "node": "Ticket taggen (verhindert Doppel-Entwurf)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ticket taggen (verhindert Doppel-Entwurf)": {
+      "main": [
+        [
+          {
+            "node": "Freigabe-Push senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Freigabe-Push senden": {
+      "main": [
+        [
+          {
+            "node": "Abschluss (immer genau 1 Item)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Sub-Workflow, aufgerufen vom Haupt-Workflow 'Zammad Externer KI-Lauf (taeglich)' (zammad-externer-ki-lauf-taeglich.json) ueber einen Execute-Workflow-Node, WAEHREND Ollama bereits hochskaliert und bereit ist -- laeuft nicht eigenstaendig auf Zeitplan, daher Trigger-Typ 'Execute Workflow Trigger' statt Schedule Trigger. Sucht neue Tickets in der externen Zammad-Instanz https://ticket.emue365.de (Suchfilter 'state.name:new AND NOT tags:ki-entwurf-erstellt', Tag verhindert Doppel-Entwuerfe), erzeugt je Ticket per lokalem Ollama (http://ollama.ollama.svc.cluster.local:11434/api/generate, Modell llama3.1:8b) einen Antwortentwurf und speichert ihn NUR als INTERNE Notiz -- keine automatische oeffentliche Antwort. Nutzt fuer alle drei direkten Zammad-Schritte (Suche, Artikel laden, Notiz speichern) den nativen n8n-nodes-base.zammad-Node mit dem bereits hinterlegten Credential 'Zammad ticket.emue365' (Typ Zammad Basic Auth API); nur das Taggen bleibt roher HTTP-Request (kein natives Tag-Feature im Zammad-Node), dafuer zusaetzlich ein generisches Basic-Auth-Credential mit denselben Zugangsdaten. WICHTIG fuer den Haupt-Workflow: Der Node 'Abschluss (immer genau 1 Item)' laeuft im Modus 'Run Once for All Items' UND wird zusaetzlich direkt vom Trigger-Node gespeist (siehe connections) -- dadurch liefert dieser Sub-Workflow IMMER genau ein Ergebnis-Item zurueck, auch wenn 0 Tickets gefunden wurden. Der Haupt-Workflow verlaesst sich darauf, um Ollama zuverlaessig wieder herunterzuskalieren, auch an Tagen ohne neue Tickets. NACH DEM IMPORT: (1) Parameter der drei nativen Zammad-Nodes pruefen (siehe Hinweis in zammad-externer-ki-lauf-taeglich.json). (2) Credentials 'Zammad ticket.emue365' (Zammad Basic Auth API, 3x) und das generische Basic-Auth-Credential fuer den Tag-Node neu zuweisen. (3) Gruppen-Filter im IF-Node 'Nur relevante Tickets' setzen. (4) ntfy-Topic 'zammad-ki-entwuerfe' abonnieren. (5) Diesen Workflow AKTIVIEREN, damit der Haupt-Workflow ihn per Execute-Workflow-Node aufrufen kann, UND seine Workflow-ID im Haupt-Workflow-Node 'Zammad Tickets verarbeiten' eintragen (wird beim Import nicht automatisch verknuepft)."
+  }
+}

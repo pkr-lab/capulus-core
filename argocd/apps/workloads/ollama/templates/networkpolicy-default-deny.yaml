@@ -1,0 +1,18 @@
+# Grundeinstellung: ALLES (Ingress UND Egress) im ollama-Namespace ist
+# standardmaessig verboten -- keine ingress:/egress:-Regeln = alles
+# blockiert. Die einzige Ausnahme steht in
+# networkpolicy-allow-n8n-ingress.yaml. Damit kann Ollama weder ins
+# Internet noch zu anderen Systemen im Cluster verbinden, siehe
+# docs/3-apps-workloads/300g0-ollama.md, Abschnitt "Netzwerk-Isolation".
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ollama.fullname" . }}-default-deny
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ollama.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress

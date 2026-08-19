@@ -1,0 +1,63 @@
+---
+# Wird ausschliesslich vom n8n-Workflow "Zammad Externer KI-Lauf (taeglich)"
+# zwischen 0 und 1 hin- und hergeschaltet (kubectl-scale-aequivalenter PATCH
+# auf die Scale-Subresource, siehe docs/3-apps-workloads/300xx-ollama.md).
+# ArgoCD ignoriert /spec/replicas fuer dieses Deployment bewusst (siehe
+# argocd/bootstrap/root-applicationset.yaml) -- sonst wuerde selfHeal den
+# Pod waehrend eines laufenden KI-Laufs sofort wieder auf 0 zuruecksetzen.
+replicaCount: 0
+
+image:
+  repository: ollama/ollama
+  pullPolicy: IfNotPresent
+  tag: "0.3.14"
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Name der n8n-ServiceAccount (anderer Namespace) fuer das Scale-RBAC unten
+# (templates/role-n8n-scaler.yaml) -- muss zu
+# argocd/apps/workloads/n8n/values.yaml -> serviceAccount.name passen
+# (Default dort ist der Release-Name "n8n").
+n8nNamespace: n8n
+n8nServiceAccountName: n8n
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 11434
+  targetPort: 11434
+
+persistence:
+  enabled: true
+  storageClassName: nas
+  size: 20Gi
+  accessMode: ReadWriteOnce
+  mountPath: /root/.ollama
+
+# CHANGE-ME: vor dem ersten Rollout mit "kubectl describe node worker-0"
+# gegen die tatsaechliche Node-Kapazitaet (Lenovo M90q) pruefen und
+# anpassen -- im Repo sind dafuer keine exakten CPU/RAM-Werte dokumentiert.
+resources:
+  requests:
+    cpu: "6"
+    memory: 8Gi
+  limits:
+    cpu: "8"
+    memory: 10Gi
+
+nodeSelector:
+  kubernetes.io/hostname: worker-0
+
+affinity: {}
+tolerations: []
