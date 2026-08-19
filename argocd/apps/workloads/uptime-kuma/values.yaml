@@ -35,7 +35,7 @@ env:
   PUID: "1000"
   PGID: "1000"
   # Damit HTTP(s)-Monitore gegen *.homeserver (interne CA, siehe
-  # docs/54-internal-tls.md) nicht mit UNABLE_TO_VERIFY_LEAF_SIGNATURE
+  # docs/d-sicherheit/d0040-internal-tls.md) nicht mit UNABLE_TO_VERIFY_LEAF_SIGNATURE
   # fehlschlagen — Node.js vertraut sonst nur seinem eingebauten Root-Store.
   NODE_EXTRA_CA_CERTS: "/etc/ssl/homeserver-ca/homeserver-root-ca.pem"
 
@@ -55,7 +55,7 @@ ingress:
           pathType: Prefix
     # Öffentlich erreichbar über die bestehende *.pke-lab.de-Wildcard-Route
     # von cloudflared (kein Änderung an cloudflared nötig, siehe
-    # docs/23-cloudflare-deploy.md → "Neuen Dienst freigeben"). Bewusst
+    # docs/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md → "Neuen Dienst freigeben"). Bewusst
     # "status" statt "uptime-kuma" im Hostnamen, damit die eingesetzte
     # Software nicht schon aus der URL erkennbar ist. Nur die öffentliche
     # Status-Page-API (/api/status-page/...) wird von der "Updates"-Seite
@@ -87,7 +87,7 @@ affinity: {}
 
 # local-path bindet den Pod an den Node, auf dem die PVC zuerst provisioniert
 # wird — fest auf homeserver, damit es nicht vom Scheduler zufällig auf
-# worker-0/worker-1 landet (docs/16-nas-storage.md → Migrations-Notiz).
+# worker-0/worker-1 landet (docs/2-betrieb-hardware/20000-nas-storage.md → Migrations-Notiz).
 nodeSelector:
   kubernetes.io/hostname: homeserver
 tolerations: []

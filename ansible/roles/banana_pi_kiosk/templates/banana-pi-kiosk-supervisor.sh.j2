@@ -8,14 +8,14 @@
 #
 # Normalbetrieb: {{ banana_pi_kiosk_base_url }}/start?station={{ banana_pi_kiosk_station }}
 # (Cluster loest serverseitig zur echten AMweb-URL auf, siehe
-# docs/19-alamos-apager.md).
+# docs/3-apps-workloads/30010-alamos-apager.md).
 #
 # Fallback (alamos-apager {{ banana_pi_kiosk_failover_fail_threshold }}x in
 # Folge nicht erreichbar): lokal hinterlegte echte AMweb-URL (siehe
 # host_vars/{{ inventory_hostname }}/vault.yml). Gleiches Chromium-Profil in
 # beiden Faellen (kein --incognito) — der einmalige manuelle AMweb-Login
 # (Passwort + Verschluesselungspasswort) deckt beide Pfade ab, da beide auf
-# dieselbe AMweb-Domain zeigen. Details: docs/45-vereinsheim-alarmmonitor.md.
+# dieselbe AMweb-Domain zeigen. Details: docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md.
 set -uo pipefail
 
 BASE_URL="{{ banana_pi_kiosk_base_url }}"

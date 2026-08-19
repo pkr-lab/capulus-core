@@ -47,7 +47,7 @@ ingress:
         - path: /
           pathType: Prefix
     # Externer Host — per Cloudflare-Tunnel-Wildcard (cloudflared) an
-    # Traefik weitergereicht, siehe docs/56-domain-tiers.md.
+    # Traefik weitergereicht, siehe docs/c-netzwerk-dns/c0040-domain-tiers.md.
     - host: vault-tech.pke-lab.de
       paths:
         - path: /
@@ -59,12 +59,12 @@ persistence:
   # Bewusst auf "local-path" (Homeserver-System-SSD) belassen — ein Umzug
   # auf die NFS-"nas"-StorageClass wurde erwogen, aber verworfen: das NAS
   # erzwingt inzwischen all_squash (kein no_root_squash mehr verfügbar,
-  # siehe docs/16-nas-storage.md), worunter chmod/chown-lastige Container
+  # siehe docs/2-betrieb-hardware/20000-nas-storage.md), worunter chmod/chown-lastige Container
   # leiden. Vaultwarden selbst braucht das zwar nicht, aber die tägliche
   # Sicherung unten (backup-cronjob.yaml) spiegelt die Daten stattdessen
   # regelmäßig auf die NAS — bestes aus beiden Welten: schnelle lokale
   # SSD im Betrieb, Redundanz auf dem NAS (und von dort per restic weiter
-  # auf die externe USB-Platte, siehe docs/36-nas-backup.md).
+  # auf die externe USB-Platte, siehe docs/2-betrieb-hardware/20010-nas-backup.md).
   storageClassName: local-path
   size: 2Gi
   accessMode: ReadWriteOnce
@@ -79,7 +79,7 @@ env:
   # die HTTP-API — kein separater Port/Service nötig.
   WEBSOCKET_ENABLED: "true"
   # Fest auf "false" — Registrierung bleibt über die /admin-Oberfläche
-  # möglich (siehe docs/32-vaultwarden.md), der Server steht damit nicht
+  # möglich (siehe docs/3-apps-workloads/300a0-vaultwarden.md), der Server steht damit nicht
   # dauerhaft offen für neue Registrierungen im Internet.
   SIGNUPS_ALLOWED: "false"
   # Deaktiviert die (ohnehin meist ungenutzte) öffentliche Organisations-
@@ -88,7 +88,7 @@ env:
   TZ: Europe/Berlin
 
 # Admin-Token für die /admin-Oberfläche, aus dem SealedSecret in
-# templates/sealedsecret.yaml. Siehe docs/32-vaultwarden.md für den
+# templates/sealedsecret.yaml. Siehe docs/3-apps-workloads/300a0-vaultwarden.md für den
 # kubeseal-Workflow, der `encryptedAdminToken` unten befüllt.
 adminSecret:
   enabled: true
@@ -117,7 +117,7 @@ affinity: {}
 # Tägliche Sicherung der lokalen Vaultwarden-Daten auf die NAS
 # ============================================================
 # Läuft VOR dem täglichen restic-Lauf auf dem NAS selbst (02:00 Uhr,
-# siehe docs/36-nas-backup.md), damit dieser eine frische Kopie snapshotet.
+# siehe docs/2-betrieb-hardware/20010-nas-backup.md), damit dieser eine frische Kopie snapshotet.
 # db.sqlite3 läuft im WAL-Modus — ein simpler Dateikopie wäre inkonsistent,
 # daher `sqlite3 .backup` (nutzt SQLites eigene Online-Backup-API, sicher
 # gegen einen parallel schreibenden Vaultwarden-Prozess). Restliche Dateien

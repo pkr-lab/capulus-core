@@ -1,6 +1,6 @@
 ---
 # Single source of truth for the platform/workloads namespace-tier split
-# (docs/49-argocd-projects.md). Used to build each AppProject's allowed
+# (docs/b-kubernetes-gitops/b0020-argocd-projects.md). Used to build each AppProject's allowed
 # `destinations` and to label the resulting namespaces with `security-tier`.
 # Keep in sync with the folders under argocd/apps/platform/ and
 # argocd/apps/workloads/ — each entry here is also the app's namespace name
@@ -48,15 +48,15 @@ argocd_workloads_apps:
   - xibosignage
   - zammad
 
-# Phase 3 der Security-Härtung (docs/51-security-hardening-roadmap.md,
-# docs/52-network-policies.md). War default false, damit ein normaler
+# Phase 3 der Security-Härtung (docs/d-sicherheit/d0010-security-hardening-roadmap.md,
+# docs/d-sicherheit/d0030-network-policies.md). War default false, damit ein normaler
 # `make argocd`-Lauf nicht ungefragt cluster-weite NetworkPolicies
 # ausrollt — nach Backup, Pilotlauf auf example-whoami/tinyteller und
-# vollständig verifiziertem Rollout (13.08.2026, siehe docs/52) auf true
+# vollständig verifiziertem Rollout (13.08.2026, siehe docs/d-sicherheit/d0030-network-policies.md) auf true
 # gesetzt, damit künftige `make argocd`-Läufe den Zustand halten.
 argocd_apply_network_policies: true
 
-# Phase 3, Schritt 2 (docs/51, docs/52 → "Schrittweise pro Namespace
+# Phase 3, Schritt 2 (docs/d-sicherheit/d0010-security-hardening-roadmap.md, docs/d-sicherheit/d0030-network-policies.md → "Schrittweise pro Namespace
 # verfeinern"): Namespaces in dieser Liste bekommen die STRIKTE Policy
 # (nur eigener Namespace + kube-system + monitoring, KEIN pauschaler
 # Tier-weiter Zugriff mehr) statt der groben Tier-Default-Policy aus
@@ -68,7 +68,7 @@ argocd_network_policy_refined_namespaces:
   - tinyteller
   # Batch 2 (13.08.2026): Apps mit eigener DB, komplett im selben Namespace
   # (Postgres/State läuft dort, keine Cross-Namespace-Abhängigkeit für den
-  # Normalbetrieb geprüft — siehe docs/52 für den n8n-Sonderfall, ein
+  # Normalbetrieb geprüft — siehe docs/d-sicherheit/d0030-network-policies.md für den n8n-Sonderfall, ein
   # inaktiver Workflow, der VictoriaMetrics in `monitoring` direkt abfragt).
   - wikijs
   - mealie
@@ -125,7 +125,7 @@ argocd_network_policy_refined_namespaces:
 #
 # Gefunden per `grep -rn "svc.cluster.local" argocd/apps/` (13.08.2026,
 # nach dem Cloudflared-Beinahe-Incident aus Vorsicht komplett durchsucht,
-# siehe docs/52) — das sind alle im Repo sichtbaren Cross-Namespace-
+# siehe docs/d-sicherheit/d0030-network-policies.md) — das sind alle im Repo sichtbaren Cross-Namespace-
 # ClusterIP-Aufrufe, die nicht schon durch security-tier (Intra-Tier) oder
 # die generellen kube-system/monitoring/cloudflared-Ausnahmen abgedeckt
 # waren:

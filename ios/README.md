@@ -96,7 +96,7 @@ output, not a source file.
 ### 2. Get an API token
 
 Requires carplay-api already deployed with a sealed `CARPLAY_API_TOKEN` —
-see [`docs/43-carplay-api.md`](../docs/43-carplay-api.md#ersteinrichtung) in
+see [`docs/3-apps-workloads/300d0-carplay-api.md`](../docs/3-apps-workloads/300d0-carplay-api.md#ersteinrichtung) in
 capulus-core. Run the app, tap the gear icon on any tab → paste the same
 token you sealed for the backend → **Save to Keychain**.
 
@@ -128,8 +128,8 @@ real request succeeded).
    reports a sensor) plus uptime. Below that, Uptime-Kuma service status.
 2. **Helligkeit (Brightness)** — a single slider controlling the
    Homeserver's own screen brightness (it's a laptop, an HP ProBook 450
-   G9 — see `docs/01-overview.md`), proxied through carplay-api to
-   power-agent on the host (`docs/43-carplay-api.md#power-agent`), since
+   G9 — see `docs/a-betriebssystem/a0010-overview.md`), proxied through carplay-api to
+   power-agent on the host (`docs/3-apps-workloads/300d0-carplay-api.md#power-agent`), since
    the carplay-api pod itself has no sysfs access.
 3. **Steuerung (Power)** — Wake-on-LAN + shutdown buttons for worker-0 and
    worker-1 (each gated behind a plain "are you sure?" confirmation), and
@@ -137,7 +137,7 @@ real request succeeded).
    always-on node). Homeserver shutdown additionally requires typing the
    confirmation code — **the same one used to log into ArgoCD** — checked
    server-side against `SHUTDOWN_CONFIRMATION_CODE`
-   (`docs/43-carplay-api.md`). Wrong or missing code = request rejected,
+   (`docs/3-apps-workloads/300d0-carplay-api.md`). Wrong or missing code = request rejected,
    nothing happens.
 
 ## Deviations from the original file list / spec

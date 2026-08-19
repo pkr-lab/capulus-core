@@ -1,8 +1,8 @@
 ---
 # Echte ALAMOS-AMweb-URL fuer "vereinsheim-alarmmonitor" als lokaler
 # Kiosk-Fallback (siehe ansible/roles/banana_pi_kiosk und
-# docs/45-vereinsheim-alarmmonitor.md). Gleicher Wert wie der Stations-Key
-# im SealedSecret alamos-apager-stations (docs/19-alamos-apager.md),
+# docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md). Gleicher Wert wie der Stations-Key
+# im SealedSecret alamos-apager-stations (docs/3-apps-workloads/30010-alamos-apager.md),
 # Ansible-Vault-verschluesselt per `ansible-vault encrypt_string`.
 vault_vereinsheim_alarmmonitor_fallback_url: !vault |
           $ANSIBLE_VAULT;1.1;AES256

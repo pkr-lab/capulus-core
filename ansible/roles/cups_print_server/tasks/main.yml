@@ -5,7 +5,7 @@
 # Läuft auf homeserver. Installiert CUPS + Treiber-Pakete, aktiviert
 # Sharing (IPP/AirPrint via Avahi) und legt — sobald Device-URI und PPD
 # bekannt sind — eine Warteschlange für den lokal angeschlossenen
-# USB-Drucker an. Dokumentation: docs/38-printer.md.
+# USB-Drucker an. Dokumentation: docs/2-betrieb-hardware/20040-printer.md.
 # ============================================================
 
 - name: CUPS-/Drucker-Pakete installieren
@@ -67,7 +67,7 @@
 # "QPDL"-Protokoll, das im offiziellen printer-driver-splix-Paket fehlt.
 # Existiert nur als inoffizieller, nie ins offizielle OpenPrinting/splix
 # gemergter Patch — Quellcode wurde vor dem Einbau geprüft (siehe
-# docs/38-printer.md, Abschnitt "Warum dieser Fremdcode"). Bewusst
+# docs/2-betrieb-hardware/20040-printer.md, Abschnitt "Warum dieser Fremdcode"). Bewusst
 # opt-in (cups_print_server_build_qpdl_driver) und auf einen festen
 # Commit gepinnt, damit ein späterer Push auf den Branch nicht unbemerkt
 # anderen Code einschleust.
@@ -110,7 +110,7 @@
 # selbst — anders als der QPDL-Treiber-Patch selbst ist das kein
 # Fremdcode, sondern ein von uns geschriebener, verstandener ~10-Zeilen-
 # Fix auf Basis der öffentlichen CUPS-PPD-API (ppdFindOption). Details:
-# docs/38-printer.md, Abschnitt "Warum dieser Fremdcode".
+# docs/2-betrieb-hardware/20040-printer.md, Abschnitt "Warum dieser Fremdcode".
 - name: "Patch: PPDFile::getDefaultChoice() deklarieren (ppdfile.h)"
   ansible.builtin.blockinfile:
     path: "{{ cups_print_server_qpdl_build_dir }}/splix/include/ppdfile.h"
@@ -121,7 +121,7 @@
           * capulus-core: Fallback, falls cupsd keine per Job
           * aufgelöste Option weitergibt — liest den PPD-eigenen
           * *DefaultXxx-Wert direkt, ohne ppdFindMarkedChoice().
-          * Siehe docs/38-printer.md.
+          * Siehe docs/2-betrieb-hardware/20040-printer.md.
           */
         Value                   getDefaultChoice(const char *name);
   when:
@@ -239,7 +239,7 @@
          | default([])
          | select('search', '(?i)samsung|spl')
          | list
-         | default(['(keine gefunden — siehe docs/38-printer.md für Alternativen)'], true) }}
+         | default(['(keine gefunden — siehe docs/2-betrieb-hardware/20040-printer.md für Alternativen)'], true) }}
   when: cups_print_server_enabled | bool
 
 - name: Warnen, wenn Device-URI/PPD noch nicht gesetzt sind
@@ -249,7 +249,7 @@
       leer — die Warteschlange wird NICHT angelegt. Werte aus den
       lpinfo-Ausgaben oben übernehmen und in ansible/group_vars/all.yml
       eintragen, dann die Rolle erneut laufen lassen
-      (`make cups-print-server`). Siehe docs/38-printer.md.
+      (`make cups-print-server`). Siehe docs/2-betrieb-hardware/20040-printer.md.
   when:
     - cups_print_server_enabled | bool
     - (cups_print_server_device_uri | length == 0) or (cups_print_server_ppd | length == 0)
@@ -265,7 +265,7 @@
 # PPD-Options-Name aus *OpenUI *PageSize) statt des IPP-Alias "media" —
 # `lpadmin -o media=...` markiert die PPD-Option beim Anlegen der
 # Warteschlange NICHT (das übersetzt nur die Job-Verarbeitung bei `lp`),
-# `lpadmin -o PageSize=...` schon. Siehe docs/38-printer.md.
+# `lpadmin -o PageSize=...` schon. Siehe docs/2-betrieb-hardware/20040-printer.md.
 - name: Druckerwarteschlange anlegen/aktualisieren
   ansible.builtin.command:
     argv:
@@ -324,7 +324,7 @@
 # Eintrag in cups_print_server_extra_queues eine Warteschlange an. Kein
 # QPDL-Build, kein PageSize-Patch — gedacht für Drucker, die bereits
 # fertig gerastert per socket://-URI (Raw-TCP) ansprechbar sind. Siehe
-# docs/38-printer.md.
+# docs/2-betrieb-hardware/20040-printer.md.
 - name: "Extra-Queues: Splix-Katalog nach passenden PPDs durchsuchen (Debug)"
   ansible.builtin.debug:
     msg: >-
@@ -332,7 +332,7 @@
          | default([])
          | select('search', '(?i)splix|samsung|spl')
          | list
-         | default(['(keine gefunden — siehe docs/38-printer.md)'], true) }}
+         | default(['(keine gefunden — siehe docs/2-betrieb-hardware/20040-printer.md)'], true) }}
   when:
     - cups_print_server_enabled | bool
     - cups_print_server_extra_queues | length > 0
@@ -342,7 +342,7 @@
     msg: >-
       Queue "{{ item.name }}": ppd ist noch leer — wird NICHT angelegt.
       Passenden Treffer aus der Splix-Katalog-Debug-Ausgabe oben in
-      cups_print_server_extra_queues eintragen. Siehe docs/38-printer.md.
+      cups_print_server_extra_queues eintragen. Siehe docs/2-betrieb-hardware/20040-printer.md.
   loop: "{{ cups_print_server_extra_queues }}"
   loop_control:
     label: "{{ item.name }}"

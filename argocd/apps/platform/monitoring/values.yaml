@@ -58,7 +58,7 @@ victoria-metrics-k8s-stack:
           - ReadWriteOnce
         # War auf "nas" (NFS), bis das UGREEN-NAS all_squash erzwang und
         # VictoriaMetrics beim Öffnen bestehender Storage-Parts mit
-        # "permission denied" panickte (docs/16-nas-storage.md). TSDB-Daten
+        # "permission denied" panickte (docs/2-betrieb-hardware/20000-nas-storage.md). TSDB-Daten
         # sind reiner State → lokaler Storage. Bewusst ohne Datenmigration
         # neu aufgesetzt (nur 15d Retention, Verdacht auf teilbeschädigte
         # Parts durch die vorherigen Schreibfehler).
@@ -106,9 +106,9 @@ victoria-metrics-k8s-stack:
   #   alle Alerts (außer InfoInhibitor/Watchdog) → gotify-bridge
   #   zusätzlich severity=critical → auch ntfy /Home-Lab (iOS Push)
   #   zusätzlich NUR alertname=BananaPiAlarmmonitorDown → auch n8n-Webhook
-  #     (-> Zammad-Ticket, siehe docs/45-vereinsheim-alarmmonitor.md). Rein
+  #     (-> Zammad-Ticket, siehe docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md). Rein
   #     additiv: die anderen Alamos-Raspberry-Pis bekommen bewusst weiterhin
-  #     KEIN Ticket pro Ausfall (siehe docs/19-alamos-apager.md), nur dieser
+  #     KEIN Ticket pro Ausfall (siehe docs/3-apps-workloads/30010-alamos-apager.md), nur dieser
   #     eine Alertname bekommt den zusätzlichen Pfad.
   #
   # gotify-bridge: argocd/apps/platform/gotify-bridge/ — übersetzt Alertmanager-JSON
@@ -279,7 +279,7 @@ victoria-metrics-k8s-stack:
       path: /
       pathType: Prefix
       # Zweiter Host: extern, per Cloudflare-Tunnel-Wildcard (cloudflared)
-      # an Traefik weitergereicht, siehe docs/56-domain-tiers.md.
+      # an Traefik weitergereicht, siehe docs/c-netzwerk-dns/c0040-domain-tiers.md.
       hosts:
         - grafana.tech.homeserver
         - grafana-tech.pke-lab.de
@@ -309,7 +309,7 @@ victoria-metrics-k8s-stack:
     # maxUnavailable: 1 blockiert genau dieser eine feststeckende Pod
     # JEDEN weiteren Rollout, auch auf gesunden Nodes (homeserver) — der
     # Helm-Release/die ArgoCD-App bleibt dadurch dauerhaft "Progressing"
-    # statt "Healthy" (siehe docs/50-incident-2026-08-12.md, Abschnitt
+    # statt "Healthy" (siehe docs/d-sicherheit/d0000-incident-2026-08-12.md, Abschnitt
     # "Grafana zeigte nach Recovery nur noch UGREEN-NAS-Werte"). Fix:
     # genug Unavailable-Budget, dass beide Worker gleichzeitig "stuck"
     # sein können, ohne den Rollout auf homeserver zu blockieren.

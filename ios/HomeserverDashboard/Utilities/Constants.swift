@@ -3,9 +3,8 @@ import Foundation
 enum Constants {
     /// Base URL of carplay-api. Every *.homeserver service in this cluster
     /// is plain HTTP behind Traefik (see argocd/apps/*/values.yaml —
-    /// ingress.tls is empty everywhere; HTTPS/mTLS is a documented but
-    /// not-yet-merged migration, docs/14-cert-login.md, so far only
-    /// targeting a handful of admin UIs). Matching that live reality
+    /// ingress.tls is empty everywhere; HTTPS/mTLS is an unimplemented idea,
+    /// not yet written up as a doc). Matching that live reality
     /// instead of pretending HTTPS is already there — see Info.plist's
     /// NSAppTransportSecurity exception for the "homeserver" domain, and
     /// MTLSDelegate.swift for what "secure" actually means here today.

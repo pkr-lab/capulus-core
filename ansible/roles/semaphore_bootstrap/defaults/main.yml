@@ -131,4 +131,4 @@ semaphore_projects:
     # nightly_worker_wake (läuft auf homeserver, 01:00 Uhr) worker-0 per
     # Wake-on-LAN und triggert dieses Template gezielt über die
     # Semaphore-API, sobald der Node Ready ist — siehe
-    # docs/59-nightly-worker-update.md.
+    # docs/2-betrieb-hardware/20030-nightly-worker-update.md.

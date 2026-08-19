@@ -4,7 +4,7 @@
 #
 # Secrets-Block (SealedSecret):
 #   DB-Passwort mit kubeseal versiegeln und hier eintragen.
-#   Anleitung: docs/35-immich.md → Abschnitt "Secrets versiegeln"
+#   Anleitung: docs/3-apps-workloads/300c0-immich.md → Abschnitt "Secrets versiegeln"
 # ============================================================
 
 secrets:
@@ -64,7 +64,7 @@ server:
           - path: /
             pathType: Prefix
       # Externer Host — per Cloudflare-Tunnel-Wildcard (cloudflared) an
-      # Traefik weitergereicht, siehe docs/56-domain-tiers.md.
+      # Traefik weitergereicht, siehe docs/c-netzwerk-dns/c0040-domain-tiers.md.
       - host: immich-prod.pke-lab.de
         paths:
           - path: /
@@ -86,7 +86,7 @@ server:
   # liegen, kein Duplikat in der "library"-PVC oben. Analog zu Jellyfins
   # media-Mount (siehe argocd/apps/jellyfin/values.yaml), nur read-only
   # und opt-in, da der Unterordner auf dem NAS erst manuell angelegt
-  # werden muss (siehe docs/35-immich.md → "Externe Bibliothek").
+  # werden muss (siehe docs/3-apps-workloads/300c0-immich.md → "Externe Bibliothek").
   externalLibrary:
     enabled: false
     mountPath: /mnt/external

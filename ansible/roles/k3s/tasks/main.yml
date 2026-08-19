@@ -12,12 +12,12 @@
     group: root
     mode: '0755'
 
-# ---- Audit-Log (Security-Härtung Phase 4, docs/53) ----------
+# ---- Audit-Log (Security-Härtung Phase 4, docs/d-sicherheit/d0050-secrets-encryption-audit-log.md) ----------
 # Policy-Datei muss existieren, BEVOR k3s mit dem entsprechenden
 # --audit-policy-file-Flag neu startet, sonst verweigert der apiserver den
 # Start. Reines Datei-Templating hier ist ungefährlich (kein Restart-
 # Trigger) — der eigentliche Aktivierungsschritt ist der manuelle Restart
-# in docs/53.
+# in docs/d-sicherheit/d0050-secrets-encryption-audit-log.md.
 - name: Template kube-apiserver audit policy
   ansible.builtin.template:
     src: audit-policy.yaml.j2

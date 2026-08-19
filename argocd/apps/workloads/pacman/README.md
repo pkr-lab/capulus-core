@@ -5,7 +5,7 @@ HTML5-Pacman-Spiel, self-hosted für den öffentlichen Zugriff. Ausgeliefert
 serviert **und** pro Request eine strukturierte JSON-Zugriffszeile loggt
 (Client-IP inkl. IPv6, User-Agent, optional GeoIP-Standort) — für die
 Schulung, die zeigt, was ein Webserver über einen Besucher herausfindet.
-Details/Setup der GeoIP-Anreicherung: [docs/57-pacman-visitor-tracking.md](../../../docs/57-pacman-visitor-tracking.md).
+Details/Setup der GeoIP-Anreicherung: [docs/3-apps-workloads/300f0-pacman-visitor-tracking.md](../../../docs/3-apps-workloads/300f0-pacman-visitor-tracking.md).
 
 Das Spiel selbst (`src/`) ist vendored von
 [platzhersh/pacman-canvas](https://github.com/platzhersh/pacman-canvas)
@@ -86,7 +86,7 @@ docker run --rm --read-only --user 65532:65532 -p 8080:8080 pacman-local
 ## Extern erreichbar
 
 `values.yaml` trägt bereits einen zweiten Ingress-Host
-(`pacman-prod.pke-lab.de`) gemäß [docs/56-domain-tiers.md](../../../docs/56-domain-tiers.md)
+(`pacman-prod.pke-lab.de`) gemäß [docs/c-netzwerk-dns/c0040-domain-tiers.md](../../../docs/c-netzwerk-dns/c0040-domain-tiers.md)
 — Tier **prod**, da Endnutzer-Content ohne eigenen Betriebs-/Admin-Zweck.
 `cloudflared/values.yaml` muss dafür **nicht** angepasst werden (siehe
 dortige Wildcard-Regel), Traefik matcht den Host direkt aus dieser
@@ -95,7 +95,7 @@ dortige Wildcard-Regel), Traefik matcht den Host direkt aus dieser
 ## GeoIP-Anreicherung
 
 Standardmäßig an (`geoip.enabled: true`) — das ist der eigentliche Zweck
-dieser App (Schulungs-Demo, siehe docs/57). Bei Bedarf abschaltbar:
+dieser App (Schulungs-Demo, siehe docs/3-apps-workloads/300f0-pacman-visitor-tracking.md). Bei Bedarf abschaltbar:
 
 ```yaml
 geoip:
@@ -113,7 +113,7 @@ Ein initContainer (`curlimages/curl`) lädt die aktuelle DB-IP-City-Lite-DB
 gemeinsames `emptyDir`. Schlägt der Download fehl, läuft der Pod trotzdem
 an — `pacman-server` erkennt die fehlende `.mmdb`-Datei und loggt dann nur
 die rohe IP (siehe `openGeoIP()` in `server/cmd/server/main.go`), kein
-CrashLoop. Details/Datenschutz-Kontext: docs/57.
+CrashLoop. Details/Datenschutz-Kontext: docs/3-apps-workloads/300f0-pacman-visitor-tracking.md.
 
 **`curlimages/curl` braucht eine explizite numerische UID/GID:** Das Image
 setzt `USER curl_user` (symbolisch, UID 100 / GID 101), nicht numerisch —
@@ -169,19 +169,19 @@ Namensfeld im Nickname-Overlay serverseitig (`window.PACMAN_TRAINING_MODE`,
 gerendert in `main.go`'s `serveIndexWithFingerprint()`) an dieselbe
 versteckte Autofill-Ernte, die `fingerprint.js`'s `harvestAutofill()`
 bereits für ihr eigenes Ecken-Widget nutzt (siehe
-[docs/57](../../../docs/57-pacman-visitor-tracking.md)): unsichtbare
+[docs/3-apps-workloads/300f0-pacman-visitor-tracking.md](../../../docs/3-apps-workloads/300f0-pacman-visitor-tracking.md)): unsichtbare
 E-Mail-/Tel-/Adresse-/PLZ-Felder im **selben** `<form>` wie das sichtbare
 Namensfeld, siehe `addHiddenAutofillFields()` in `src/nickname.js`. Nimmt
 der Browser eine gespeicherte Autofill-Vorschlag für "Name" an, füllt er
 typischerweise alle Felder im selben Formular mit — die verdeckten Werte
 gehen an `/api/fingerprint` (serverseitiges Log, `client_fingerprint`-Zeile,
-siehe docs/57), nie an `/api/leaderboard`. Der Spitzname/die öffentliche
+siehe docs/3-apps-workloads/300f0-pacman-visitor-tracking.md), nie an `/api/leaderboard`. Der Spitzname/die öffentliche
 Bestenliste bleiben davon unberührt.
 
 **Für den Unterrichtseinsatz gedacht:** Schüler geben ihren echten Namen
 ein, im Anschluss werden die geloggten Daten (inkl. evtl. mitgelaufener
 E-Mail/Tel/Adresse) live im Grafana-Dashboard gezeigt und danach gelöscht
-— siehe docs/57 für Aufbewahrung/Löschung (VictoriaLogs-Retention, aktuell
+— siehe docs/3-apps-workloads/300f0-pacman-visitor-tracking.md für Aufbewahrung/Löschung (VictoriaLogs-Retention, aktuell
 14 Tage, oder manuell vorher).
 
 **Kein UI-Hinweis/Banner** — bewusst so gewünscht: das Namensfeld im
@@ -204,7 +204,7 @@ den Hostnamen:
 > Der Serverstart loggt bei `enabled: true` zusätzlich eine
 > `"training mode ENABLED"`-Warnzeile als Erinnerung (siehe `main.go`).
 > `fingerprint.js`'s eigenes Ecken-Widget läuft davon unabhängig bereits
-> heute unconditional — siehe docs/57.
+> heute unconditional — siehe docs/3-apps-workloads/300f0-pacman-visitor-tracking.md.
 
 ## Sicherheits-Notizen
 
@@ -220,7 +220,7 @@ den Hostnamen:
   Direct-Download, ohne Auth/Account.
 - Die Zugriffslogs (inkl. IP/GeoIP bei aktivierter Anreicherung) landen im
   zentralen Logging-Stack (`argocd/apps/platform/logging/`,
-  VictoriaLogs) — Aufbewahrung/Zweckbindung siehe docs/57.
+  VictoriaLogs) — Aufbewahrung/Zweckbindung siehe docs/3-apps-workloads/300f0-pacman-visitor-tracking.md.
 
 ## Autoscaling
 
@@ -229,4 +229,4 @@ den Hostnamen:
 RAM-lastiges Verhalten hat. Kein `ReadWriteOnce`-Storage im Spiel, also
 auch keine Notwendigkeit für erzwungene Node-Co-Location per
 `podAffinity` (anders als z. B. immich/nextcloud). Details/Konventionen:
-[docs/39-hpa-autoscaling.md](../../../docs/39-hpa-autoscaling.md).
+[docs/b-kubernetes-gitops/b0040-hpa-autoscaling.md](../../../docs/b-kubernetes-gitops/b0040-hpa-autoscaling.md).

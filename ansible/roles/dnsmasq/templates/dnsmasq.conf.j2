@@ -5,7 +5,7 @@
 # Upstream DNS: Pi-hole (k3s NodePort, argocd/apps/platform/pihole). Pi-hole selbst
 # leitet gefilterte Anfragen an die Fritz!Box weiter (siehe dnsUpstreams in
 # argocd/apps/platform/pihole/values.yaml). So bekommt jedes Gerät, das dnsmasq
-# bereits als DNS nutzt (siehe docs/09-dns-architecture.md), automatisch
+# bereits als DNS nutzt (siehe docs/c-netzwerk-dns/c0000-dns-architecture.md), automatisch
 # Werbeblocking — ganz ohne Router-Konfiguration.
 no-resolv
 server={{ network_static_ip }}#{{ pihole_dns_nodeport }}

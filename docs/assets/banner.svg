@@ -215,17 +215,6 @@
       </circle>
       <text x="59" y="30" text-anchor="middle" fill="#FED7AA">Grafana</text>
     </g>
-
-    <!-- Authentik -->
-    <g transform="translate(1240,312)" opacity="0">
-      <animate attributeName="opacity" values="0;1" dur="0.3s" fill="freeze" begin="1.1s"/>
-      <rect x="0" y="0" rx="20" ry="20" width="122" height="46" fill="#0D1425" stroke="#0EA5E9" stroke-width="1.5"/>
-      <rect x="0" y="0" rx="20" ry="20" width="122" height="46" fill="#0EA5E9" opacity="0.08"/>
-      <circle cx="22" cy="23" r="5" fill="#0EA5E9" opacity="0.9">
-        <animate attributeName="opacity" values="0.9;0.3;0.9" dur="2.0s" repeatCount="indefinite"/>
-      </circle>
-      <text x="61" y="30" text-anchor="middle" fill="#BAE6FD">Authentik</text>
-    </g>
   </g>
 
   <!-- ──────────────── BOTTOM ACCENT LINE ──────────────── -->

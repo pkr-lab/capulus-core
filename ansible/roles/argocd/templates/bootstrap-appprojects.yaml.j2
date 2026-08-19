@@ -1,5 +1,5 @@
 # Single source of truth for the two bootstrap AppProjects (platform /
-# workloads namespace-tier split, see docs/49-argocd-projects.md).
+# workloads namespace-tier split, see docs/b-kubernetes-gitops/b0020-argocd-projects.md).
 # GENERATED alongside the ApplicationSet — run `make render-bootstrap` after
 # editing this file, argocd_platform_apps/argocd_workloads_apps in
 # ansible/roles/argocd/defaults/main.yml, or the argocd_repo_*/argocd_namespace
@@ -24,7 +24,7 @@ spec:
   description: >-
     Plattformdienste (Schicht 3): Identity/Secrets/Netzwerk/Monitoring-
     Infrastruktur, auf die andere Apps aufbauen. Admin-/Infrastruktur-
-    Charakter, siehe docs/01-overview.md Abschnitt 5.
+    Charakter, siehe docs/a-betriebssystem/a0010-overview.md Abschnitt 5.
   sourceRepos:
     - "{{ argocd_repo_url }}"
   destinations:
@@ -37,7 +37,7 @@ spec:
     # where Traefik/CoreDNS actually read them from).
     - server: https://kubernetes.default.svc
       namespace: kube-system
-    # cert-manager (docs/54-internal-tls.md): eigener Namespace wie jede
+    # cert-manager (docs/d-sicherheit/d0040-internal-tls.md): eigener Namespace wie jede
     # andere App, aber bewusst NICHT in argocd_platform_apps — das ist
     # Cluster-Infrastruktur wie kube-system/argocd, kein App-Tier-Namespace,
     # und soll deshalb kein tier-default-ingress NetworkPolicy/security-tier-
@@ -59,7 +59,7 @@ metadata:
 spec:
   description: >-
     Anwendungen (Schicht 4): Apps mit echtem Nutzerkreis (Familie, Vereins-
-    mitglieder, Kunden), siehe docs/01-overview.md Abschnitt 5.
+    mitglieder, Kunden), siehe docs/a-betriebssystem/a0010-overview.md Abschnitt 5.
   sourceRepos:
     - "{{ argocd_repo_url }}"
   destinations:

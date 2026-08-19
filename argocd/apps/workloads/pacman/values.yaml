@@ -6,7 +6,7 @@ replicaCount: 1
 
 # CPU-only: stateless static/Go server, no memory-bound workload. No
 # ReadWriteOnce storage involved, so no podAffinity co-location concern
-# either (see docs/39-hpa-autoscaling.md).
+# either (see docs/b-kubernetes-gitops/b0040-hpa-autoscaling.md).
 autoscaling:
   enabled: true
   minReplicas: 1
@@ -64,7 +64,7 @@ resources:
 # Webserver über Besucher herausfinden kann — IP inkl. IPv6, Standort).
 # Quelle: DB-IP City Lite (db-ip.com, CC BY 4.0) — kostenlos, kein Account/
 # License-Key nötig, monatlicher Direct-Download, siehe README.md. Default
-# an, da das der eigentliche Zweck der App ist (siehe docs/57). Schlägt
+# an, da das der eigentliche Zweck der App ist (siehe docs/3-apps-workloads/300f0-pacman-visitor-tracking.md). Schlägt
 # der DB-Download trotzdem mal fehl, läuft pacman-server weiter (loggt
 # dann nur die rohe IP), siehe server/cmd/server/main.go.
 geoip:
@@ -77,7 +77,7 @@ geoip:
 # Namensfeld im Nickname-Overlay (src/nickname.js) an dieselbe versteckte
 # Autofill-Ernte (E-Mail/Tel/Adresse/PLZ), die fingerprint.js's
 # harvestAutofill() bereits für die eigene Ecke nutzt (siehe
-# docs/57-pacman-visitor-tracking.md). Standardmäßig AUS.
+# docs/3-apps-workloads/300f0-pacman-visitor-tracking.md). Standardmäßig AUS.
 #
 # ACHTUNG: Dieser Host ist über ingress.hosts (s. o.) öffentlich ohne
 # Auth/IP-Allowlist erreichbar (pacman-prod.pke-lab.de). enabled: true

@@ -4,7 +4,7 @@
 # ============================================================
 # Macht einen USB-Drucker, der direkt am Homeserver hängt, per CUPS im
 # Heimnetz + Tailnet verfügbar — IPP/AirPrint für Handys/Tablets, IPP für
-# Windows/Linux-Clients. Vollständige Anleitung: docs/38-printer.md.
+# Windows/Linux-Clients. Vollständige Anleitung: docs/2-betrieb-hardware/20040-printer.md.
 # ============================================================
 
 cups_print_server_enabled: true
@@ -21,14 +21,14 @@ cups_print_server_printer_location: "2.OG Homeserver"
 # (PPD) ausführen — beide Ausgaben zeigt der Rollen-Lauf bereits als Debug
 # an. Solange einer der beiden Werte hier leer ist, installiert die Rolle
 # nur Pakete + Sharing und überspringt das Anlegen der Warteschlange.
-# Siehe docs/38-printer.md.
+# Siehe docs/2-betrieb-hardware/20040-printer.md.
 cups_print_server_device_uri: ""
 cups_print_server_ppd: ""
 
 # Papiergröße als Queue-Default (PPD-*PageSize*-Choice-Name, z.B.
 # "Letter", "A4", "Legal" — siehe *PageSize-Zeilen in der jeweiligen PPD)
 # — bei manchen PPDs/Filtern (u.a. dem QPDL-Treiber, siehe
-# docs/38-printer.md) reicht der PPD-eigene *DefaultPageSize* nicht aus,
+# docs/2-betrieb-hardware/20040-printer.md) reicht der PPD-eigene *DefaultPageSize* nicht aus,
 # ein explizit als Queue-Default gesetztes PageSize verhindert leere
 # Ausdrucke bei Clients, die die Seitengröße nicht selbst mitgeben.
 cups_print_server_media_size: "A4"
@@ -66,7 +66,7 @@ cups_print_server_admin_users:
 # Existiert nur als inoffizieller Patch, der nie ins offizielle
 # OpenPrinting/splix-Repo gemergt wurde. Standardmäßig AUS — bewusst
 # opt-in, da hier Fremdcode aus einem gepinnten Commit kompiliert und
-# als root installiert wird (Review-Notizen: docs/38-printer.md).
+# als root installiert wird (Review-Notizen: docs/2-betrieb-hardware/20040-printer.md).
 cups_print_server_build_qpdl_driver: false
 cups_print_server_qpdl_repo: "https://gitlab.com/ScumCoder/splix.git"
 # Gepinnter Commit (patches-Branch, Stand 2024-03-31: "Fix m2020 being
@@ -81,7 +81,7 @@ cups_print_server_qpdl_build_dir: "/usr/local/src/splix-qpdl"
 # Patches). Gedacht für Netzwerkdrucker, die bereits per socket://-URI
 # (Raw-TCP, z.B. Port 9100) erreichbar sind — z.B. ein per USB an einer
 # FritzBox hängender Drucker, den diese als Netzwerkdrucker teilt. Siehe
-# docs/38-printer.md.
+# docs/2-betrieb-hardware/20040-printer.md.
 #
 # Schema je Eintrag:
 #   name:          Warteschlangenname (keine Leerzeichen/Sonderzeichen)

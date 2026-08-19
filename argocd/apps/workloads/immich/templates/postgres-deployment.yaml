@@ -20,7 +20,7 @@ spec:
       # ghcr.io/immich-app/postgres basiert auf dem offiziellen postgres-
       # Image (UID/GID 999) — ursprünglich wurde hier direkt als 999
       # gestartet, um den internen chown-Fixup zu überspringen (analog zu
-      # docs/20-wikijs.md). Das reicht auf diesem NAS aber nicht.
+      # docs/3-apps-workloads/30030-wikijs.md). Das reicht auf diesem NAS aber nicht.
       #
       # PGDATA zeigt bewusst auf "pgdata_fixed" statt "pgdata": Der NFS-
       # Export /volume2/immich-storage squasht auf diesem UGREEN-NAS-Modell

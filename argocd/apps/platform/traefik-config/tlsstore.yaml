@@ -1,5 +1,5 @@
-# Security-Härtung Phase 5 (docs/51-security-hardening-roadmap.md,
-# docs/54-internal-tls.md): hinterlegt das *.homeserver-Zertifikat (Secret
+# Security-Härtung Phase 5 (docs/d-sicherheit/d0010-security-hardening-roadmap.md,
+# docs/d-sicherheit/d0040-internal-tls.md): hinterlegt das *.homeserver-Zertifikat (Secret
 # wird von cert-manager verwaltet — siehe
 # argocd/apps/platform/cert-manager/templates/certificate-homeserver-wildcard.yaml,
 # selber Namespace/Secret-Name, kein SealedSecret mehr) als
