@@ -1,5 +1,5 @@
 # Aktiviert Prometheus-Metriken für das k3s-eigene, im kube-system
-# gebündelte Traefik (siehe docs/04-k3s.md) — braucht dafür eine
+# gebündelte Traefik (siehe docs/b-kubernetes-gitops/b0000-k3s.md) — braucht dafür eine
 # HelmChartConfig, k3s' eigenes CRD zum additiven Überschreiben der Werte
 # des eingebauten HelmChart-Objekts "traefik" (kein separates ArgoCD-App,
 # k3s' interner helm-controller wendet das an, sobald das CR existiert).

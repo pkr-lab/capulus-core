@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Subpage 2: brightness, Wake-on-LAN + shutdown for worker-0/worker-1,
 /// and shutdown (only — the Homeserver has no WoL path, it's the always-on
-/// control plane, see docs/37-cluster-power-manager.md) for the Homeserver
+/// control plane, see docs/2-betrieb-hardware/20020-cluster-power-manager.md) for the Homeserver
 /// itself gated behind an extra warning + the same confirmation code as
 /// ArgoCD. Alerts live in their own tab, see AlertsView.swift.
 struct PowerView: View {
@@ -244,7 +244,7 @@ private struct HomeserverPowerCard: View {
                     }
                 }
 
-                Text("Kein Wake-on-LAN möglich — der Homeserver ist der einzige Dauerläufer im Cluster (siehe docs/01-overview.md).")
+                Text("Kein Wake-on-LAN möglich — der Homeserver ist der einzige Dauerläufer im Cluster (siehe docs/a-betriebssystem/a0010-overview.md).")
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.textMuted)
 
@@ -286,7 +286,7 @@ private struct PowerButtonStyle: ButtonStyle {
 
 /// The extra warning + code prompt gating a Homeserver shutdown — the code
 /// is the same one used for the ArgoCD admin login (see
-/// docs/43-carplay-api.md), checked server-side against
+/// docs/3-apps-workloads/300d0-carplay-api.md), checked server-side against
 /// SHUTDOWN_CONFIRMATION_CODE. The app never stores or pre-fills it.
 private struct HomeserverShutdownSheet: View {
     let isBusy: Bool

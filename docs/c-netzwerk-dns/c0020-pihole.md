@@ -3,7 +3,7 @@
 [Pi-hole](https://pi-hole.net) läuft als ArgoCD-verwaltete App im k3s-Cluster
 (`argocd/apps/platform/pihole/`) und wird von `dnsmasq` auf dem Home-Server als
 Upstream-DNS genutzt. Dadurch bekommt jedes Gerät, das dnsmasq bereits als
-DNS-Server verwendet (siehe [`09-dns-architecture.md`](09-dns-architecture.md)),
+DNS-Server verwendet (siehe [`c0000-dns-architecture.md`](c0000-dns-architecture.md)),
 automatisch Werbe-/Tracking-Blocking — **ohne die Fritz!Box anzufassen**.
 
 ```
@@ -14,7 +14,7 @@ Client → dnsmasq (192.168.178.94:53)
 
 Details zum Forward-Pfad und zum Failure-Mode (kein Fallback auf die
 Fritz!Box, falls Pi-hole ausfällt) stehen in
-[`09-dns-architecture.md#pi-hole-werbeblocking-im-dns-forward`](09-dns-architecture.md#pi-hole-werbeblocking-im-dns-forward).
+[`c0000-dns-architecture.md#pi-hole-werbeblocking-im-dns-forward`](c0000-dns-architecture.md#pi-hole-werbeblocking-im-dns-forward).
 
 ---
 
@@ -119,7 +119,7 @@ Web-UI unter `https://pihole.homeserver/admin` mit dem Passwort aus 1.1
 Damit ein Gerät tatsächlich durch Pi-hole gefiltert wird, muss es
 **dnsmasq auf dem Home-Server** (`192.168.178.94`, Port 53) als DNS-Server
 verwenden — dnsmasq leitet alle nicht-`*.homeserver`-Anfragen automatisch
-an Pi-hole weiter (siehe [`09-dns-architecture.md`](09-dns-architecture.md#pi-hole-werbeblocking-im-dns-forward)).
+an Pi-hole weiter (siehe [`c0000-dns-architecture.md`](c0000-dns-architecture.md#pi-hole-werbeblocking-im-dns-forward)).
 
 > **Wichtig**: Trag niemals den Pi-hole-NodePort (`:30053`) direkt als
 > DNS-Server ein — Betriebssysteme erwarten DNS auf Port 53, den nur
@@ -171,7 +171,7 @@ networksetup -setdnsservers "Wi-Fi" 192.168.178.94 192.168.178.1
 Gilt nur für dieses eine WLAN und muss bei jedem neuen Netzwerk wiederholt
 werden; über Mobilfunk greift das Heimnetz ohnehin nicht. Für unterwegs
 stattdessen Tailscale mit Split-DNS nutzen (siehe
-[`09-dns-architecture.md → Weg 1`](09-dns-architecture.md)).
+[`c0000-dns-architecture.md → Weg 1`](c0000-dns-architecture.md)).
 
 ### Android
 
@@ -266,7 +266,7 @@ ArgoCD es nicht automatisch prunt, dann den Pi-hole-Pod neu starten.
 |---|---|
 | Pod `CrashLoopBackOff` nach Erstdeployment | `encryptedPassword` ist noch `REPLACE_ME_WITH_KUBESEAL_OUTPUT` — Schritt 1.3 abschließen |
 | `pihole-webpassword`-Secret fehlt | `kubectl -n pihole describe sealedsecret pihole-webpassword` — Ciphertext muss gegen den Public Key dieses Clusters erzeugt worden sein |
-| Kein Internet mehr auf Geräten, die dnsmasq als DNS nutzen | Pi-hole-Pod down + `make dnsmasq` bereits gelaufen → kein Fallback auf die Fritz!Box (siehe [`09-dns-architecture.md`](09-dns-architecture.md)). `kubectl -n pihole get pods` prüfen, Pod ggf. neu starten |
+| Kein Internet mehr auf Geräten, die dnsmasq als DNS nutzen | Pi-hole-Pod down + `make dnsmasq` bereits gelaufen → kein Fallback auf die Fritz!Box (siehe [`c0000-dns-architecture.md`](c0000-dns-architecture.md)). `kubectl -n pihole get pods` prüfen, Pod ggf. neu starten |
 | Legitime Seite wird geblockt | Domain in der Pi-hole-Web-UI unter **Domains** auf die Allowlist setzen |
 | `pihole.homeserver` löst nicht auf | Prüfen, ob `pihole` in `dnsmasq_hosts` in `group_vars/all.yml` steht (wird automatisch über die `*.homeserver`-Wildcard aufgelöst, sollte also ohne Eintrag funktionieren), sonst `make dnsmasq` erneut ausführen |
 | DNS-Antworten kommen doppelt so langsam | NodePort-Hop (`dnsmasq → Pi-hole → Fritz!Box`) fügt einen zusätzlichen Forward hinzu — normal, sollte aber im einstelligen ms-Bereich bleiben. Bei spürbaren Verzögerungen `kubectl -n pihole top pod` prüfen |

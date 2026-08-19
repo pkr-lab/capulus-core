@@ -7,13 +7,13 @@ xibo_kiosk_enabled: true
 # NFS-Server + fester Pfad des "xibosignage-display"-Ordners auf dem UGREEN
 # NAS. MUSS identisch zu argocd/apps/workloads/n8n values.yaml -> xibosignage.display
 # sein — n8n schreibt dorthin, dieser Pi liest read-only davon. Siehe
-# docs/44-xibosignage.md.
+# docs/3-apps-workloads/300e0-xibosignage.md.
 xibo_kiosk_nfs_server: "192.168.178.97"
 xibo_kiosk_nfs_path: "/volume1/k8s-storage/xibosignage-display"
 xibo_kiosk_mount_point: "/mnt/xibosignage-display"
 
 # Kein echter Xibo-Player: Xibo unterstützt keinen Raspberry Pi offiziell
-# (docs/44-xibosignage.md). Stattdessen liefert ein winziger lokaler
+# (docs/3-apps-workloads/300e0-xibosignage.md). Stattdessen liefert ein winziger lokaler
 # Python-Webserver eine statische Slideshow-Seite aus, die den obigen
 # NFS-Mount periodisch neu einliest.
 xibo_kiosk_http_port: 8080

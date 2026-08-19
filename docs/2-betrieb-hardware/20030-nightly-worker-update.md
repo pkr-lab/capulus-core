@@ -1,9 +1,9 @@
-# 59 — Nightly Worker Update: automatisches apt-Update für worker-0/worker-1
+# Nightly Worker Update: automatisches apt-Update für worker-0/worker-1
 
 worker-0 und worker-1 sind reine k3s-Compute-Nodes ohne die volle
-[`common`-Rolle](../ansible/roles/common) des Homeservers — sie bekommen
+[`common`-Rolle](../../ansible/roles/common) des Homeservers — sie bekommen
 dadurch nie ein OS-Update, zumal sie die meiste Zeit per
-[Cluster Power Manager](37-cluster-power-manager.md) ausgeschaltet sind.
+[Cluster Power Manager](20020-cluster-power-manager.md) ausgeschaltet sind.
 `nightly_worker_wake` schließt diese Lücke: jede Nacht um 01:00 Uhr
 werden beide Worker per Wake-on-LAN geweckt, per Semaphore
 `apt update && apt dist-upgrade` gefahren (inkl. automatischem Reboot,
@@ -57,15 +57,15 @@ Bericht — mit einem generischen "Skript brach ab"-Hinweis, falls der
 Abbruch unerwartet war.
 
 **Warum über Semaphore statt eines eigenen Update-SSH-Keys?** Semaphore
-hat über [`semaphore_targets`](../ansible/roles/semaphore_targets) bereits
+hat über [`semaphore_targets`](../../ansible/roles/semaphore_targets) bereits
 vollen, Vault-fähigen SSH-Zugriff auf beide Worker und führt bereits
-`worker-0.yml`/`worker-1.yml` aus (siehe [08-semaphore.md](08-semaphore.md)).
+`worker-0.yml`/`worker-1.yml` aus (siehe [../b-kubernetes-gitops/b0030-semaphore.md](../b-kubernetes-gitops/b0030-semaphore.md)).
 `nightly_worker_wake` triggert nur ein bestehendes Template zur richtigen
 Zeit, statt einen zweiten, separat gepflegten Zugangsweg mit eigenem
 Schlüsselmaterial aufzubauen. Für den Shutdown-Pfad gilt weiterhin das
 Gegenteil: dort bleibt bewusst der auf `sudo poweroff` beschränkte Key aus
 `cluster_power_manager` im Einsatz, siehe
-[37-cluster-power-manager.md](37-cluster-power-manager.md).
+[20020-cluster-power-manager.md](20020-cluster-power-manager.md).
 
 **Warum `cluster-power-manager.service` während des Fensters stoppen?**
 Der lastbasierte Watchdog würde einen Worker sonst mit eigener Logik
@@ -101,15 +101,15 @@ rebooteten Worker mit `"rebooted": true`.
 
 | Rolle | Läuft auf | Zweck |
 |---|---|---|
-| [`worker_apt_update`](../ansible/roles/worker_apt_update) | worker-0, worker-1 | `apt update && apt dist-upgrade`; bei `/var/run/reboot-required` automatisch cordon+drain (delegiert auf homeserver) + Reboot |
-| [`nightly_worker_wake`](../ansible/roles/nightly_worker_wake) | homeserver | systemd-Timer + Skript: wecken, Semaphore-Template triggern, Zeitbudget überwachen, herunterfahren, Bericht an n8n |
+| [`worker_apt_update`](../../ansible/roles/worker_apt_update) | worker-0, worker-1 | `apt update && apt dist-upgrade`; bei `/var/run/reboot-required` automatisch cordon+drain (delegiert auf homeserver) + Reboot |
+| [`nightly_worker_wake`](../../ansible/roles/nightly_worker_wake) | homeserver | systemd-Timer + Skript: wecken, Semaphore-Template triggern, Zeitbudget überwachen, herunterfahren, Bericht an n8n |
 
 `worker_apt_update` ist der erste Schritt in `worker-0.yml`/`worker-1.yml`
 und läuft damit bei **jedem** Lauf dieser Playbooks — auch bei einem
 manuellen `make worker-0`/`make worker-1` oder `make worker-apt-update`.
 
 Dazu kommt der n8n-Workflow
-[`nightly-worker-update-to-zammad.json`](../argocd/apps/workloads/n8n/workflows/nightly-worker-update-to-zammad.json)
+[`nightly-worker-update-to-zammad.json`](../../argocd/apps/workloads/n8n/workflows/nightly-worker-update-to-zammad.json)
 (kein Ansible, muss einmalig manuell in n8n importiert werden) — siehe
 [Bericht (Zammad-Ticket via n8n)](#bericht-zammad-ticket-via-n8n).
 
@@ -132,7 +132,7 @@ Prinzip bis zu einer Mindestdauer zu warten. In der Praxis dauert ein
 ein zusätzlicher Reboot (falls nötig) weitere 30–90 Sekunden; die
 25-Minuten-Grenze ist ein Sicherheitsnetz, kein Zielwert. Alle Werte
 lassen sich in `group_vars/all.yml` überschreiben (identisches Muster wie
-bei [`cluster_power_manager`](37-cluster-power-manager.md)).
+bei [`cluster_power_manager`](20020-cluster-power-manager.md)).
 
 ---
 
@@ -144,7 +144,7 @@ bei [`cluster_power_manager`](37-cluster-power-manager.md)).
 egal ob alles glatt lief, ein Worker nicht aufgewacht ist, ein Update
 fehlschlug, das Zeitbudget erreicht wurde, oder das Skript selbst
 unerwartet abbrach. Der n8n-Workflow
-[`nightly-worker-update-to-zammad.json`](../argocd/apps/workloads/n8n/workflows/nightly-worker-update-to-zammad.json)
+[`nightly-worker-update-to-zammad.json`](../../argocd/apps/workloads/n8n/workflows/nightly-worker-update-to-zammad.json)
 baut daraus **ein Zammad-Ticket pro Nacht** in der Gruppe
 `Support::Administration`.
 
@@ -194,13 +194,13 @@ Handlungsbedarf, nur zur Information im Ticket.
    `argocd/apps/workloads/n8n/workflows/nightly-worker-update-to-zammad.json`
 2. Node „Zammad-Ticket erstellen“ → Credential zuweisen (bestehende
    „Zammad Token Auth (Rotation-Reminder)“ wiederverwenden, siehe
-   [55-secrets-rotation.md](55-secrets-rotation.md), oder neu anlegen:
+   [../d-sicherheit/d0060-secrets-rotation.md](../d-sicherheit/d0060-secrets-rotation.md), oder neu anlegen:
    Base URL `https://zammad.homeserver`, Access Token mit Berechtigung
    `ticket.agent`)
 3. Workflow **aktivieren** (Import allein reicht nicht)
 4. `nightly_worker_wake_n8n_webhook_url` gegen die tatsächliche n8n-Ingress-
    Adresse prüfen (Default passt zu `n8n.prod.homeserver`, siehe
-   [29-n8n.md](29-n8n.md))
+   [../3-apps-workloads/30070-n8n.md](../3-apps-workloads/30070-n8n.md))
 
 Ist der Webhook nicht erreichbar, bricht der nächtliche Zyklus **nicht**
 ab — nur eine Journal-Warnung (`n8n-Webhook ... nicht erreichbar`), Worker
@@ -270,7 +270,7 @@ curl -i http://semaphore-api.tech.homeserver/api/ping
 ```
 
 Meist rotiertes Admin-Passwort in der Semaphore-UI (siehe
-[08-semaphore.md](08-semaphore.md)) oder Semaphore-Pod noch nicht bereit.
+[../b-kubernetes-gitops/b0030-semaphore.md](../b-kubernetes-gitops/b0030-semaphore.md)) oder Semaphore-Pod noch nicht bereit.
 
 **Kein Semaphore-Projekt/Template gefunden:**
 
@@ -340,6 +340,6 @@ im Node „Zammad-Ticket erstellen“ prüfen (siehe
 
 ## Relevante Links
 
-- [Cluster Power Manager (lastbasiertes WoL-Zu-/Abschalten)](37-cluster-power-manager.md)
-- [Semaphore-UI](08-semaphore.md)
-- [k3s-Referenz](04-k3s.md)
+- [Cluster Power Manager (lastbasiertes WoL-Zu-/Abschalten)](20020-cluster-power-manager.md)
+- [Semaphore-UI](../b-kubernetes-gitops/b0030-semaphore.md)
+- [k3s-Referenz](../b-kubernetes-gitops/b0000-k3s.md)

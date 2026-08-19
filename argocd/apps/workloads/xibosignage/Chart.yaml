@@ -6,7 +6,7 @@ description: |
   Displays, Zeitpläne). Bündelt CMS-Web, XMR (Message-Relay), MySQL,
   Memcached und QuickChart als eigene Deployments (kein Bitnami-Subchart,
   1:1 aus dem offiziellen xibosignage/xibo-docker docker-compose.yml
-  übernommen), siehe docs/44-xibosignage.md.
+  übernommen), siehe docs/3-apps-workloads/300e0-xibosignage.md.
 
   Die eigentliche Wiedergabe läuft NICHT über einen offiziellen/inoffiziellen
   Xibo-Player (Raspberry Pi wird von Xibo nicht unterstützt) — stattdessen

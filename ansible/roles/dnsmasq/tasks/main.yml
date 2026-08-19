@@ -9,7 +9,7 @@
 # DNS-Server für dein gesamtes LAN — das wäre ein Single Point of
 # Failure. Stattdessen ist *.homeserver-Auflösung *opt-in* pro Gerät.
 # Empfohlener Weg: Tailscale Split DNS. Details und Alternativen in
-# docs/09-dns-architecture.md.
+# docs/c-netzwerk-dns/c0000-dns-architecture.md.
 # ============================================================
 
 - name: Install dnsmasq

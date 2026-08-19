@@ -25,13 +25,14 @@ github:
   extraFiles:
     - path: "README.md"
       slug: "ReadMe"
-    - path: "DEPLOY.md"
-      slug: "Deploy"
-  # Optionaler GitHub-PAT (nur für die Contents-Listing-Anfrage relevant,
-  # nicht für die Datei-Downloads über raw.githubusercontent.com). Bei
-  # einem öffentlichen Repo im 15-Minuten-Takt nicht nötig
-  # (unauthenticated: 60 req/h). Name/Key eines VORHANDENEN Secrets im
-  # Namespace — wird NICHT von diesem Chart angelegt.
+  # Optionaler GitHub-PAT (nur für Contents-Listing-Anfragen relevant, nicht
+  # für die Datei-Downloads über raw.githubusercontent.com). sync.py listet
+  # docs/ eine Ebene rekursiv (1 Call für docs/ selbst + 1 pro
+  # Unterordner/Kategorie, aktuell ~11 Calls/Lauf) — bei 15-Minuten-Takt
+  # macht das ~44 Contents-API-Calls/h, noch unter dem unauthenticated-Limit
+  # von 60 req/h, aber mit wenig Puffer für weitere Kategorie-Unterordner.
+  # Name/Key eines VORHANDENEN Secrets im Namespace — wird NICHT von diesem
+  # Chart angelegt.
   tokenSecretName: ""
   tokenSecretKey: token
 

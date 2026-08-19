@@ -1,7 +1,7 @@
 # pacman — Besucher-Tracking (IP/GeoIP) für die Schulung
 
 `argocd/apps/workloads/pacman/` liefert neben dem eigentlichen Spiel
-(siehe [dessen README](../argocd/apps/workloads/pacman/README.md)) auch
+(siehe [dessen README](../../argocd/apps/workloads/pacman/README.md)) auch
 eine bewusst sichtbare Demonstration dessen, was ein gewöhnlicher
 Webserver über einen Besucher herausfindet — Client-IP (v4 **und** v6),
 User-Agent und (optional) der aus der IP abgeleitete GeoIP-Standort. Zweck
@@ -16,6 +16,8 @@ Tracking von Endnutzern.
 > öffentlichen Seite ohne Hinweis. Aufbewahrung ist an die
 > VictoriaLogs-Retention gekoppelt (`argocd/apps/platform/logging/values.yaml`,
 > aktuell 14 Tage) — es gibt keine zusätzliche, längerfristige Speicherung.
+
+---
 
 ## Architektur
 
@@ -45,6 +47,8 @@ weiter — die Erfassung passiert komplett in `pacman-server` selbst, andere
 Apps im Cluster sind davon nicht betroffen (bewusste Entscheidung: nur
 `pacman`, nicht zentral am Ingress, siehe Commit-Historie).
 
+---
+
 ## GeoIP: lokale DB-IP-Lite-DB statt Live-API
 
 Bewusste Wahl gegen eine externe Lookup-API (z. B. ip-api.com): Mit einer
@@ -59,7 +63,7 @@ liest beide unverändert.
 
 Standardmäßig aktiv (`geoip.enabled: true`), da das der eigentliche Zweck
 dieser App ist — bei Bedarf abschaltbar, siehe
-[Chart-README](../argocd/apps/workloads/pacman/README.md#geoip-anreicherung).
+[Chart-README](../../argocd/apps/workloads/pacman/README.md#geoip-anreicherung).
 
 Ein `initContainer` (`curlimages/curl`) lädt bei **jedem Pod-Start** die
 aktuelle DB-IP-City-Lite-DB neu in ein gemeinsames `emptyDir` — kein
@@ -68,6 +72,8 @@ Schulungs-Anwendungsfall. Schlägt der Download fehl, läuft der Pod
 trotzdem an: `pacman-server` erkennt die fehlende `.mmdb`-Datei beim Start
 und loggt dann nur die rohe IP ohne Standort (siehe `openGeoIP()` in
 `main.go`) — kein CrashLoop.
+
+---
 
 ## Grafana-Dashboard
 
@@ -92,13 +98,15 @@ und entpacken die JSON-Logzeile per LogsQL `| unpack_json`/Feld-Zugriff.
 > stille No-Ops — kein Query-Fehler, aber auch keine Treffer, das
 > Dashboard blieb leer.
 
+---
+
 ## Training Mode: Autofill-Ernte über das Nickname-Feld
 
 Zusätzlich zu `fingerprint.js`'s eigenem Ecken-Widget (oben beschrieben,
 läuft unconditional) gibt es einen zweiten, expliziten Schalter
 `trainingMode.enabled` (Chart-Value, Env `TRAINING_MODE`) — koppelt das
 Namensfeld der Bestenliste (`src/nickname.js`, siehe
-[Chart-README](../argocd/apps/workloads/pacman/README.md#bestenliste-nickname--leaderboard))
+[Chart-README](../../argocd/apps/workloads/pacman/README.md#bestenliste-nickname--leaderboard))
 an dieselbe versteckte E-Mail/Tel/Adresse/PLZ-Ernte. Anders als das
 Ecken-Widget ist dieser Weg **standardmäßig aus** und muss bewusst über
 ein Chart-Release aktiviert werden.
@@ -110,6 +118,8 @@ jeden Besucher dieser URL in dem Zeitraum, nicht nur die informierte
 Klasse. Details, Risiko-Abwägung und Betriebsempfehlung (nur für das
 Zeitfenster der Stunde aktivieren) stehen im Chart-README unter "Training
 Mode".
+
+---
 
 ## Bekannte Grenzen
 

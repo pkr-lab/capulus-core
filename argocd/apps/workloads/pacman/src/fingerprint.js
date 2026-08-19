@@ -1,5 +1,5 @@
 // Client-side visitor-fingerprint capture for the IT-security training
-// demo (docs/57-pacman-visitor-tracking.md). NOT part of the vendored
+// demo (docs/3-apps-workloads/300f0-pacman-visitor-tracking.md). NOT part of the vendored
 // pacman-canvas game — added by us, injected server-side into index.htm
 // by main.go's serveIndexWithFingerprint() (keeps the vendored file
 // untouched for easier future re-vendoring).
@@ -16,7 +16,7 @@
 // suggestion dropdown, which JS cannot trigger — but Chrome fills every
 // matching field in a form together once the user accepts one
 // suggestion, so the hidden fields can ride along with the visible one.
-// Scoped strictly to the training context described in docs/57 —
+// Scoped strictly to the training context described in docs/3-apps-workloads/300f0-pacman-visitor-tracking.md —
 // disclosed verbally to participants, then shown live via the Grafana
 // dashboard as the reveal.
 (function () {
@@ -158,7 +158,7 @@
   // autofill suggestion for "Name" can pull the hidden fields along with
   // it. This mirrors how real deceptive forms work (a plausible-looking
   // single field hiding a bigger form), rather than a purely invisible
-  // attack — still fully disclosed afterward per docs/57.
+  // attack — still fully disclosed afterward per docs/3-apps-workloads/300f0-pacman-visitor-tracking.md.
   //
   // NOTE: since then, the game gained a *real* leaderboard with its own
   // page-load name field (src/nickname.js's #nickname-overlay, unrelated

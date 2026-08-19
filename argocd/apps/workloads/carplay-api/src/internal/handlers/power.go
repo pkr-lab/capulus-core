@@ -66,7 +66,7 @@ func (h *PowerHandler) Wake(c *gin.Context) {
 
 	if req.Target == models.PowerTargetHomeserver {
 		// The homeserver is the always-on control plane — it has no WoL
-		// path to wake it from, see docs/37-cluster-power-manager.md.
+		// path to wake it from, see docs/2-betrieb-hardware/20020-cluster-power-manager.md.
 		c.JSON(http.StatusBadRequest, gin.H{"error": "homeserver has no wake action"})
 		return
 	}

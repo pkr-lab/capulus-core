@@ -4,7 +4,7 @@
 #
 # Secrets-Block (SealedSecret):
 #   Werte mit kubeseal versiegeln und hier eintragen.
-#   Anleitung: docs/17-zammad.md → Abschnitt "Schritt 1 — Secrets versiegeln"
+#   Anleitung: docs/3-apps-workloads/30000-zammad.md → Abschnitt "Schritt 1 — Secrets versiegeln"
 # ============================================================
 
 secrets:
@@ -45,7 +45,7 @@ zammad:
             pathType: Prefix
       # Externer Host — bewusst "support", nicht "zammad" (so lautet der
       # öffentliche Hostname in cloudflared). Per Cloudflare-Tunnel-Wildcard
-      # an Traefik weitergereicht, siehe docs/56-domain-tiers.md.
+      # an Traefik weitergereicht, siehe docs/c-netzwerk-dns/c0040-domain-tiers.md.
       - host: support-tech.pke-lab.de
         paths:
           - path: /
@@ -197,7 +197,7 @@ zammad:
   # ---- PostgreSQL Sub-Chart (Bitnami) -----------------------
   # War auf "nas" (NFS), bis das UGREEN-NAS all_squash statt no_root_squash
   # erzwang und der Bitnami-Entrypoint (chmod auf das Datenverzeichnis)
-  # dauerhaft mit "Operation not permitted" scheiterte (docs/16-nas-storage.md).
+  # dauerhaft mit "Operation not permitted" scheiterte (docs/2-betrieb-hardware/20000-nas-storage.md).
   # DB-Datenverzeichnis ist reiner State → lokaler Storage auf der
   # Homeserver-SSD statt NAS.
   postgresql:

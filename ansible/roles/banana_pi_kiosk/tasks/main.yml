@@ -8,7 +8,7 @@
 # nachgebildet), und ein lokaler Failover-Supervisor, der bei
 # Nichterreichbarkeit von alamos-apager auf eine lokal hinterlegte,
 # Vault-verschluesselte Fallback-URL umschaltet (siehe
-# docs/45-vereinsheim-alarmmonitor.md und docs/19-alamos-apager.md).
+# docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md und docs/3-apps-workloads/30010-alamos-apager.md).
 # ============================================================
 
 - name: Sicherstellen dass banana_pi_kiosk_station gesetzt ist
@@ -32,7 +32,7 @@
       banana_pi_kiosk_fallback_url ist nicht gesetzt (oder noch der
       Platzhalter aus host_vars/{{ inventory_hostname }}/vault.yml). Echte
       ALAMOS-AMweb-URL per `ansible-vault encrypt_string` eintragen — siehe
-      Kommentar in dieser Datei und docs/45-vereinsheim-alarmmonitor.md.
+      Kommentar in dieser Datei und docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md.
   when: banana_pi_kiosk_enabled | bool
 
 - name: Kiosk-Pakete installieren (Debian-Paketnamen, nicht Raspbian)
@@ -52,13 +52,13 @@
     cache_valid_time: 3600
   when: banana_pi_kiosk_enabled | bool
 
-# ---- Homeserver-Root-CA vertrauen (https://*.homeserver, siehe docs/54-internal-tls.md) --
-# Anders als die uebrigen Geraete in docs/54 ("Client-Geraete", dort bewusst
+# ---- Homeserver-Root-CA vertrauen (https://*.homeserver, siehe docs/d-sicherheit/d0040-internal-tls.md) --
+# Anders als die uebrigen Geraete in docs/d-sicherheit/d0040-internal-tls.md ("Client-Geraete", dort bewusst
 # manuell -- kein Remote-Zugriff/kein einheitlicher OS-Mechanismus) ist
 # dieser Pi bereits Ansible-verwaltet, daher hier automatisiert statt
 # manuell nachgezogen. Quelle bleibt EINZIG das committete
 # docs/assets/homeserver-root-ca.pem (keine Kopie im Rollen-files/-
-# Verzeichnis) -- sonst muesste eine kuenftige CA-Rotation (docs/54,
+# Verzeichnis) -- sonst muesste eine kuenftige CA-Rotation (docs/d-sicherheit/d0040-internal-tls.md,
 # Abschnitt "CA laeuft aus / CA-Key kompromittiert") zusaetzlich hier
 # nachgepflegt werden.
 - name: Homeserver-Root-CA-Zertifikat deployen
@@ -74,7 +74,7 @@
 # ---- Homeserver-Root-CA zusaetzlich in die NSS-Datenbank importieren -----
 # Chromium vertraut auf Linux NICHT (nur) dem System-Trust-Store
 # (update-ca-certificates) -- es liest Zertifikate aus der NSS-Datenbank
-# des jeweiligen Users (~/.pki/nssdb), siehe docs/54-internal-tls.md,
+# des jeweiligen Users (~/.pki/nssdb), siehe docs/d-sicherheit/d0040-internal-tls.md,
 # Abschnitt "Client-Geraete" ("Fuer Firefox/Chrome zusaetzlich (NSS-
 # Datenbank)"). Genau dieser Schritt fehlte hier bisher -- Symptom:
 # Chromium zeigt trotz erfolgreichem update-ca-certificates weiterhin
@@ -120,7 +120,7 @@
 # auf :0 (tty7) startet — parallel zu unserer eigenen manuellen X-Session
 # auf :1 (tty1) via Autologin unten. Auf einem 2-GB-RAM-Geraet unnoetiger
 # Speicherverbrauch und moeglicher Mitverursacher der Chromium-Absturz-
-# schleife (siehe docs/45-vereinsheim-alarmmonitor.md). "failed_when: false",
+# schleife (siehe docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md). "failed_when: false",
 # da der Dienst je nach Image ggf. gar nicht existiert.
 - name: lightdm stoppen und deaktivieren (falls vorhanden)
   ansible.builtin.systemd:
@@ -195,7 +195,7 @@
 # ---- On-Demand-Screenshot (manuelle Sichtpruefung, kein Automatismus) ---
 # Bewusst kein Timer/Dienst (kein x11vnc, kein Cron) -- nur ein Skript, das
 # bei Bedarf per SSH ausgefuehrt wird, siehe
-# docs/45-vereinsheim-alarmmonitor.md, "Sichtpruefung ohne physischen
+# docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md, "Sichtpruefung ohne physischen
 # Zugriff". Vermeidet einen staendig offenen/laufenden Zugriffspfad.
 - name: Screenshot-Skript deployen
   ansible.builtin.template:

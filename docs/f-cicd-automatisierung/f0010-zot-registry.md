@@ -1,4 +1,4 @@
-# 58 — Zot (self-hosted OCI-Registry)
+# Zot (self-hosted OCI-Registry)
 
 [Zot](https://zotregistry.dev) (CNCF Sandbox) ist die selbst gehostete
 Alternative zu `ghcr.io` für eigene Images — Zweck: Images müssen nicht
@@ -73,7 +73,7 @@ und jedes `imagePullSecret`, das Apps zum Pullen aus Zot nutzen.
 ## Images nach Zot bauen/pushen (kaniko)
 
 Analog zu `pacman`/`n8n` (siehe deren READMEs bzw.
-[docs/29-n8n.md](29-n8n.md)) über das `kaniko-build-push`
+[docs/3-apps-workloads/30070-n8n.md](../3-apps-workloads/30070-n8n.md)) über das `kaniko-build-push`
 Argo-WorkflowTemplate — nur der `image`-Parameter zeigt auf Zot statt
 `ghcr.io`:
 
@@ -197,4 +197,4 @@ Sync läuft erfolgreich durch.
 - [Zot Helm-Chart](https://zotregistry.dev/helm-charts/) (Chart-Repo, in
   `Chart.yaml` als `dependencies` eingebunden, wie bei `minio`)
 - [project-zot/zot auf GitHub](https://github.com/project-zot/zot)
-- [Argo Workflows / kaniko-build-push](12-argo-workflows.md)
+- [Argo Workflows / kaniko-build-push](f0000-argo-workflows.md)

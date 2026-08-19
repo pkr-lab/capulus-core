@@ -18,7 +18,7 @@ steckt.
 Diese Seite beschreibt **nur** die URL-Konvention (Namensgebung). Die
 komplett getrennte AppProject/Namespace-Trennung (`platform` vs.
 `workloads`, RBAC-Grenzen für ArgoCD-Applications) ist ein anderes Thema,
-siehe [docs/49-argocd-projects.md](49-argocd-projects.md) — beide Schnitte
+siehe [docs/b-kubernetes-gitops/b0020-argocd-projects.md](../b-kubernetes-gitops/b0020-argocd-projects.md) — beide Schnitte
 verwenden zufällig eine ähnliche Zweiteilung, sind aber unabhängig
 voneinander (das eine wirkt auf ArgoCD-Ebene, das andere ist reines
 DNS-Naming).
@@ -75,7 +75,7 @@ Tier, s. u.). Betroffene Stellen pro App:
 
 DNS-Auflösung selbst brauchte **keine** Änderung: sowohl dnsmasq
 (`address=/homeserver/<ip>`, siehe
-[docs/09-dns-architecture.md](09-dns-architecture.md)) als auch der
+[docs/c-netzwerk-dns/c0000-dns-architecture.md](c0000-dns-architecture.md)) als auch der
 CoreDNS-Forward im Cluster (`argocd/apps/platform/coredns-custom/`)
 matchen auf die komplette `homeserver`-Zone inklusive aller
 Subdomain-Ebenen — `app.tech.homeserver` wird also automatisch mit
@@ -137,7 +137,7 @@ weil ihnen schlicht der zweite Ingress-Host fehlt.
 Eine App extern freigeben/entfernen heißt also: den `*-pke-lab.de`-Host in
 der `ingress.hosts`-Liste der **App selbst** ergänzen/löschen — nicht mehr
 in `cloudflared/values.yaml`. Details/Ablauf:
-[docs/23-cloudflare-deploy.md → Neuen Dienst freigeben](23-cloudflare-deploy.md#neuen-dienst-freigeben).
+[docs/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md → Neuen Dienst freigeben](../e-externe-erreichbarkeit/e0010-cloudflare-deploy.md#neuen-dienst-freigeben).
 
 > **Noch gegen den echten Cluster zu verifizieren:** Traefiks
 > Host-Header-Routing setzt voraus, dass `cloudflared` den ORIGINAL
@@ -166,7 +166,7 @@ Mit Bindestrich (`grafana-tech.pke-lab.de`) bleibt der externe Hostname
 eine einzige Label-Ebene und ist vom bestehenden kostenlosen Zertifikat
 abgedeckt — keine Cloudflare-Plan-Änderung nötig. Intern bleibt der Punkt
 (`grafana.tech.homeserver`), weil dort die eigene, selbst erzeugte CA
-greift (siehe [docs/54-internal-tls.md](54-internal-tls.md)), die nicht an
+greift (siehe [docs/d-sicherheit/d0040-internal-tls.md](../d-sicherheit/d0040-internal-tls.md)), die nicht an
 Cloudflares Zertifikatsgrenzen gebunden ist und beliebig viele
 Label-Ebenen in ihrer SAN-Liste tragen kann.
 
@@ -215,14 +215,14 @@ oder Konfiguration dafür. Sobald `ingress.hosts[].host` in der
 zeigt, zieht ArgoCD automatisch nach dem nächsten Sync nach. Kein
 zusätzlicher Schritt in `argocd/bootstrap/` nötig — die dortige
 ApplicationSet-/AppProject-Struktur (siehe
-[docs/49-argocd-projects.md](49-argocd-projects.md)) ist von dieser
+[docs/b-kubernetes-gitops/b0020-argocd-projects.md](../b-kubernetes-gitops/b0020-argocd-projects.md)) ist von dieser
 URL-Konvention unabhängig.
 
 ---
 
 ## Gelöst: internes TLS-Wildcard-Zertifikat (war Hostname-Mismatch)
 
-Der `https://`-Rollout aus [docs/54-internal-tls.md](54-internal-tls.md)
+Der `https://`-Rollout aus [docs/d-sicherheit/d0040-internal-tls.md](../d-sicherheit/d0040-internal-tls.md)
 war bereits vollzogen, bevor diese Migration hier lief — das damals
 committete Zertifikat trug danach aber noch die feste SAN-Liste der
 *alten*, untierten Hostnamen (`<app>.homeserver`), während die Hosts
@@ -233,12 +233,12 @@ Zertifikats-Hostname-Mismatch — und weil der CA-Private-Key bewusst
 außerhalb des Repos lag, ließ sich das nicht per Commit reparieren.
 
 Das war genau der Auslöser für die Umstellung auf cert-manager (siehe
-[docs/54-internal-tls.md](54-internal-tls.md)): Die
+[docs/d-sicherheit/d0040-internal-tls.md](../d-sicherheit/d0040-internal-tls.md)): Die
 `Certificate`-Ressource trägt jetzt die aktuelle, tier-behaftete
 SAN-Liste, cert-manager signiert automatisch aus derselben CA (kein
 Hostname-Mismatch mehr) und erneuert selbstständig vor Ablauf. Ein
 künftiger neuer Host braucht weiterhin einen `dnsNames`-Eintrag + Commit
-(siehe docs/54), aber keinen manuellen CA-Key-abhängigen Signier-Schritt
+(siehe docs/d-sicherheit/d0040-internal-tls.md), aber keinen manuellen CA-Key-abhängigen Signier-Schritt
 mehr.
 
 ---
@@ -247,7 +247,7 @@ mehr.
 
 1. Gehört die App zu **tech** (Infrastruktur/Admin, kein Endnutzer) oder
    **prod** (echter Nutzerkreis)? Faustregel identisch zu
-   [docs/49-argocd-projects.md](49-argocd-projects.md#eine-neue-app-hinzufügen)
+   [docs/b-kubernetes-gitops/b0020-argocd-projects.md](../b-kubernetes-gitops/b0020-argocd-projects.md#eine-neue-app-hinzufügen)
    — im Zweifel: Infrastruktur-/Betriebsdienst ohne eigenen Endnutzer →
    **tech**.
 2. Ingress-Host in der `values.yaml` der neuen App direkt im neuen Schema

@@ -219,7 +219,7 @@
 # ---- Namespace security-tier labels -------------------------
 # Best-effort: on a brand-new namespace, ArgoCD only creates it once the
 # ApplicationSet has actually synced that Application (can lag behind this
-# playbook run, see docs/49-argocd-projects.md). `failed_when: false` so a
+# playbook run, see docs/b-kubernetes-gitops/b0020-argocd-projects.md). `failed_when: false` so a
 # not-yet-existing namespace doesn't fail the whole play — re-running
 # `make argocd` later catches up on any it missed.
 - name: Label platform-tier namespaces with security-tier=platform
@@ -244,7 +244,7 @@
 
 # ---- Phase 3 Security-Härtung: tier-default-ingress NetworkPolicies ------
 # Off by default (argocd_apply_network_policies), see defaults/main.yml and
-# docs/52-network-policies.md — deliberately not part of the unconditional
+# docs/d-sicherheit/d0030-network-policies.md — deliberately not part of the unconditional
 # bootstrap path, this is a cluster-wide behavioural change that needs a
 # backup + staged pilot rollout, not something a routine `make argocd` run
 # should silently (re-)apply.

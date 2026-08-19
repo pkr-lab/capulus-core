@@ -11,7 +11,7 @@
 // values.yaml's trainingMode.enabled - default OFF) additionally wires
 // this same visible name field into the hidden email/tel/address/postal
 // autofill capture already used by fingerprint.js's harvestAutofill() for
-// the IT-security classroom demo (see docs/57-pacman-visitor-tracking.md):
+// the IT-security classroom demo (see docs/3-apps-workloads/300f0-pacman-visitor-tracking.md):
 // same technique, same hidden fields riding in the *same* <form> as the
 // visible name input, because Chrome fills every matching field in a form
 // together once the visitor accepts one autofill suggestion. Whatever gets
@@ -112,7 +112,7 @@
   // Sends whatever the hidden fields picked up to /api/fingerprint - the
   // same endpoint/log line (client_fingerprint) fingerprint.js's own
   // harvestAutofill() already uses, so both correlate the same way in
-  // Grafana (see docs/57). Deliberately separate from ajax_add() in
+  // Grafana (see docs/3-apps-workloads/300f0-pacman-visitor-tracking.md). Deliberately separate from ajax_add() in
   // pacman-canvas.js, which only ever sends the nickname to the public
   // /api/leaderboard - this data never touches that endpoint.
   function reportHarvestedAutofill(realName, hiddenInputs) {

@@ -141,7 +141,7 @@ kubectl exec -n argocd deployment/argocd-repo-server -- \
 
 **Privates Repo ohne Credentials:**
 
-Credentials hinterlegen wie in [05-argocd.md](05-argocd.md#privates-repository) beschrieben.
+Credentials hinterlegen wie in [../b-kubernetes-gitops/b0010-argocd.md](../b-kubernetes-gitops/b0010-argocd.md#privates-repository) beschrieben.
 
 **Falsche Repo-URL im ApplicationSet:**
 

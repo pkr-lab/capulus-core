@@ -13,7 +13,7 @@ Homepage (oder Homarr) – ein Dashboard mit Links/Status für alle eure Self-Ho
 ### Einsatzbereich
 
 Recherche: Alarm-Erkennung + Audio-Ausgabe am Banana Pi
-Ich habe mir den bestehenden Aufbau angeschaut (banana_pi_kiosk-Rolle, docs/19-alamos-apager.md, docs/45-vereinsheim-alarmmonitor.md) und dazu im ALAMOS-Handbuch recherchiert. Kurz zur Einordnung: Der Pi zeigt aktuell nur die AMweb-Seite im Chromium-Kiosk an — er selbst "weiß" nicht, ob gerade ein Alarm läuft, das steckt komplett in der AMweb-Seite (Cloud-Dienst von Alamos GmbH).
+Ich habe mir den bestehenden Aufbau angeschaut (banana_pi_kiosk-Rolle, docs/3-apps-workloads/30010-alamos-apager.md, docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md) und dazu im ALAMOS-Handbuch recherchiert. Kurz zur Einordnung: Der Pi zeigt aktuell nur die AMweb-Seite im Chromium-Kiosk an — er selbst "weiß" nicht, ob gerade ein Alarm läuft, das steckt komplett in der AMweb-Seite (Cloud-Dienst von Alamos GmbH).
 
 1. Kann der Pi den Alarmstatus über eine URL auslesen?
 Ja — ALAMOS/AMweb bietet dafür mehrere serverseitige Schnittstellen (dokumentiert im Alamos-Handbuch, das hinter einem Login liegt, den ihr über den bestehenden Alamos-Account ja schon habt):

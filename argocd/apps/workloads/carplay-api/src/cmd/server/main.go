@@ -213,7 +213,7 @@ type config struct {
 	// Compared against the "code" field of POST /api/power/shutdown when
 	// Target is "homeserver" — deliberately kept in lockstep with the
 	// ArgoCD admin password by whoever rotates it (see
-	// docs/43-carplay-api.md), not verified live against ArgoCD itself.
+	// docs/3-apps-workloads/300d0-carplay-api.md), not verified live against ArgoCD itself.
 	shutdownConfirmationCode string
 }
 

@@ -109,7 +109,7 @@ const (
 
 // WakeRequest is the body for POST /api/power/wake. Only worker-0/worker-1
 // can be woken — the homeserver is the always-on control plane and has no
-// WoL path (see docs/37-cluster-power-manager.md).
+// WoL path (see docs/2-betrieb-hardware/20020-cluster-power-manager.md).
 type WakeRequest struct {
 	Target PowerTarget `json:"target" binding:"required"`
 }

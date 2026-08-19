@@ -1,4 +1,4 @@
-# 33 — Nextcloud
+# Nextcloud
 
 [Nextcloud](https://nextcloud.com) ist eine selbst gehostete
 Datei-Sync-, Kalender- und Kontakte-Plattform (Google-Drive-/-Workspace-
@@ -18,14 +18,14 @@ Ersatz). Die Deployment-Konfiguration liegt unter `argocd/apps/workloads/nextclo
 | Persistenz  | StorageClass `nas` (UGREEN NAS, NFS)   | —           |
 
 Nutzdaten (`html`- und `data`-Verzeichnis) liegen auf der
-`nas`-StorageClass (siehe [docs/16-nas-storage.md](16-nas-storage.md)) —
+`nas`-StorageClass (siehe [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md)) —
 keine NodeAffinity nötig. `data` ist bewusst als eigenes, separat
 dimensioniertes PVC von `html` getrennt (Standard-Startgröße 100Gi,
 `html`/App-Code nur 5Gi), damit die eigentlichen Nutzerdateien unabhängig
 von der App-Installation wachsen können.
 
 > **Warum kein Bitnami-Subchart?** Analog zu Wiki.js/Zammad — siehe
-> [docs/20-wikijs.md](20-wikijs.md) für die Begründung (Bitnami-Charts seit
+> [docs/3-apps-workloads/30030-wikijs.md](30030-wikijs.md) für die Begründung (Bitnami-Charts seit
 > August 2025 eingeschränkt/kostenpflichtig).
 
 ---
@@ -37,13 +37,13 @@ von der App-Installation wachsen können.
 - **`nas-storage`-App ist deployt** (`argocd/apps/platform/nas-storage/`) und die
   StorageClass `nas` existiert: `kubectl get storageclass nas`
 - **NAS ist online und der NFS-Export erreichbar** (siehe
-  [docs/16-nas-storage.md](16-nas-storage.md)) — sonst bleiben die PVCs
+  [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md)) — sonst bleiben die PVCs
   auf `Pending`
 - `kubeseal` CLI ist lokal installiert
 - `kubectl` ist mit dem Cluster verbunden
 - (Optional, für externen Zugriff) `argocd/apps/platform/cloudflared/` ist bereits
   deployt — die Ingress-Regel für `nextcloud.pke-lab.de` ist schon
-  eingetragen (siehe [docs/23-cloudflare-deploy.md](23-cloudflare-deploy.md))
+  eingetragen (siehe [docs/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md](../e-externe-erreichbarkeit/e0010-cloudflare-deploy.md))
 
 ---
 
@@ -102,8 +102,8 @@ Installation durch, das kann 1–2 Minuten dauern (siehe `readinessProbe`
 gegen `/status.php`).
 
 **DNS:** `nextcloud.prod.homeserver` ist dank Wildcard-DNS sofort erreichbar
-(siehe [docs/09-dns-architecture.md](09-dns-architecture.md) und
-[docs/56-domain-tiers.md](56-domain-tiers.md) zum `prod`-Tier-Präfix).
+(siehe [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md) und
+[docs/c-netzwerk-dns/c0040-domain-tiers.md](../c-netzwerk-dns/c0040-domain-tiers.md) zum `prod`-Tier-Präfix).
 
 ---
 
@@ -133,7 +133,7 @@ Mobile-/Desktop-Sync-Clients außerhalb von LAN/Tailscale:
 Eintrag weist Nextcloud Requests mit "Access through untrusted domain" ab.
 **Achtung:** Das greift nur bei der Erstinstallation (siehe
 Troubleshooting-Abschnitt unten) — ändert sich der Hostname später (z. B.
-bei einer Domain-Tier-Migration wie in docs/56 beschrieben), muss
+bei einer Domain-Tier-Migration wie in docs/c-netzwerk-dns/c0040-domain-tiers.md beschrieben), muss
 `trusted_domains` in der bereits bestehenden `config.php` separat
 nachgezogen werden.
 
@@ -172,7 +172,7 @@ Zwei unterschiedliche Ursachen möglich:
    crasht trotzdem:** `NEXTCLOUD_TRUSTED_DOMAINS`/`trustedDomains` wirkt
    nur bei der Erstinstallation — bei einem bereits vorhandenen
    `config.php` (z. B. nach einer Domain-Umbenennung wie der
-   Tier-Migration in docs/56) bleibt der alte Eintrag stehen, jeder
+   Tier-Migration in docs/c-netzwerk-dns/c0040-domain-tiers.md) bleibt der alte Eintrag stehen, jeder
    Health-Check schlägt dann dauerhaft mit `{"error": "Trusted domain
    error.", "code": 15}` fehl → `CrashLoopBackOff`. Prüfen:
    ```bash
@@ -287,7 +287,7 @@ kubectl describe pvc -n nextcloud nextcloud-data
 kubectl -n nas-storage get pods
 ```
 
-Details: [docs/16-nas-storage.md → Fehlerbehebung](16-nas-storage.md#fehlerbehebung).
+Details: [docs/2-betrieb-hardware/20000-nas-storage.md → Fehlerbehebung](../2-betrieb-hardware/20000-nas-storage.md#fehlerbehebung).
 
 ---
 
@@ -302,7 +302,7 @@ Details: [docs/16-nas-storage.md → Fehlerbehebung](16-nas-storage.md#fehlerbeh
 
 `persistence.data.size` in `values.yaml` bei Bedarf erhöhen — `nas` erlaubt
 zwar kein Online-Volume-Expansion (siehe
-[docs/16-nas-storage.md](16-nas-storage.md)), ein größerer Wert wirkt sich
+[docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md)), ein größerer Wert wirkt sich
 aber nur auf die Kubernetes-Quota aus, nicht auf den tatsächlich auf dem
 NAS belegten Speicher (nfs-subdir-external-provisioner erzwingt keine
 Quotas auf Dateisystem-Ebene).
@@ -318,7 +318,7 @@ beim gleichzeitigen Zugriff auf die geteilte `html`/`data`-PVC in die
 Quere kommen. Da diese PVCs `ReadWriteOnce` sind, erzwingt eine
 `podAffinity` zusätzlich, dass beide Replicas auf demselben Node laufen.
 PostgreSQL und Redis bleiben unangetastet (Single-Writer, kein HPA).
-Details für alle Apps: [39-hpa-autoscaling.md](39-hpa-autoscaling.md).
+Details für alle Apps: [../b-kubernetes-gitops/b0040-hpa-autoscaling.md](../b-kubernetes-gitops/b0040-hpa-autoscaling.md).
 
 ---
 
@@ -326,6 +326,6 @@ Details für alle Apps: [39-hpa-autoscaling.md](39-hpa-autoscaling.md).
 
 - [Nextcloud-Dokumentation](https://docs.nextcloud.com)
 - [Nextcloud Docker-Image](https://github.com/nextcloud/docker)
-- [NAS-Storage (UGREEN NAS)](16-nas-storage.md)
-- [Cloudflare Tunnel — Deploy](23-cloudflare-deploy.md)
-- [ArgoCD Setup](05-argocd.md)
+- [NAS-Storage (UGREEN NAS)](../2-betrieb-hardware/20000-nas-storage.md)
+- [Cloudflare Tunnel — Deploy](../e-externe-erreichbarkeit/e0010-cloudflare-deploy.md)
+- [ArgoCD Setup](../b-kubernetes-gitops/b0010-argocd.md)

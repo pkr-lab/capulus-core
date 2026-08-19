@@ -7,7 +7,7 @@
 # Tailscale-Peers haben. -remoteWrite.tmpDataPath puffert lokal, falls das
 # Ziel (Cluster/Tailscale) kurz nicht erreichbar ist — Nachrichten gehen
 # dabei nicht verloren, werden nur verzoegert zugestellt. Siehe
-# docs/45-vereinsheim-alarmmonitor.md.
+# docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md.
 [Unit]
 Description=vmagent (Metriken-Push fuer {{ inventory_hostname }})
 After=network-online.target prometheus-node-exporter.service

@@ -3,7 +3,7 @@
 # xibo_kiosk role — Raspberry-Pi-Bilder-Slideshow (xibosignage)
 # ============================================================
 # Kein echter Xibo-Player: Xibo unterstützt keinen Raspberry Pi offiziell
-# (docs/44-xibosignage.md). Stattdessen mountet der Pi read-only den
+# (docs/3-apps-workloads/300e0-xibosignage.md). Stattdessen mountet der Pi read-only den
 # NFS-Ordner "xibosignage-display" (vom n8n-Workflow befüllt, siehe
 # argocd/apps/workloads/n8n/workflows/xibosignage-inbox-to-display.json) und zeigt
 # dessen Inhalt per Chromium-Kiosk gegen einen winzigen lokalen

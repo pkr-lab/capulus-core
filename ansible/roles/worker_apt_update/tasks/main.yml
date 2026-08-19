@@ -9,7 +9,7 @@
 # 01:00 über nightly_worker_wake (läuft auf homeserver): dieses weckt den
 # Worker per Wake-on-LAN, lässt Semaphore das "Deploy worker-*"-Template
 # (das diese Rolle enthält) laufen, und fährt den Worker danach wieder
-# herunter — siehe docs/59-nightly-worker-update.md.
+# herunter — siehe docs/2-betrieb-hardware/20030-nightly-worker-update.md.
 # ============================================================
 
 - name: Update apt cache

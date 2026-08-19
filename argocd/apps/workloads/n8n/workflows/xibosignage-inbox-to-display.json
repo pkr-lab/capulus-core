@@ -127,6 +127,6 @@
     "executionOrder": "v1"
   },
   "meta": {
-    "description": "Beobachtet /data/xibosignage-inbox (NFS-Mount, siehe argocd/apps/workloads/n8n/values.yaml -> xibosignage), skaliert neue Bilder auf Pi-3B+-taugliche Aufloesung und schreibt sie nach /data/xibosignage-display, von wo der Raspberry-Pi-Kiosk (ansible/roles/xibo_kiosk) sie per NFS liest und als Slideshow zeigt. Details: docs/44-xibosignage.md."
+    "description": "Beobachtet /data/xibosignage-inbox (NFS-Mount, siehe argocd/apps/workloads/n8n/values.yaml -> xibosignage), skaliert neue Bilder auf Pi-3B+-taugliche Aufloesung und schreibt sie nach /data/xibosignage-display, von wo der Raspberry-Pi-Kiosk (ansible/roles/xibo_kiosk) sie per NFS liest und als Slideshow zeigt. Details: docs/3-apps-workloads/300e0-xibosignage.md."
   }
 }

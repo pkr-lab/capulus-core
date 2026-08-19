@@ -11,13 +11,19 @@ data:
     """
     Docs -> Wiki.js Sync.
 
-    Pollt die GitHub Contents API für die Top-Level *.md-Dateien in `docs/`
-    des konfigurierten Repos und spiegelt sie via Wiki.js GraphQL-API unter
-    WIKIJS_LOCALE/WIKIJS_PATH_PREFIX. Volle Reconciliation bei jedem Lauf:
-    Wiki-Seiten unter dem Präfix, deren Quelldatei nicht mehr existiert,
-    werden gelöscht. Kein Cluster-State nötig — GitHub ist bei jedem Lauf
-    die alleinige Quelle der Wahrheit. Nutzt ausschließlich die
-    Python-Standardbibliothek.
+    Pollt die GitHub Contents API für `docs/` des konfigurierten Repos —
+    sowohl *.md-Dateien direkt unter `docs/` (z. B. TEMPLATE.md) als auch
+    eine Ebene tiefer in Kategorie-Unterordnern (z. B.
+    `docs/a-betriebssystem/a0000-ubuntu-server-install.md`) — und spiegelt
+    sie via Wiki.js GraphQL-API unter WIKIJS_LOCALE/WIKIJS_PATH_PREFIX,
+    unter Beibehaltung der Unterordnerstruktur. `docs/assets/` und
+    `docs/superpowers/**` werden automatisch übersprungen (keine *.md direkt
+    in `assets/`, `superpowers/` ist zwei Ebenen tief und damit außerhalb
+    der einen Rekursionsebene, die dieser Sync abläuft). Volle
+    Reconciliation bei jedem Lauf: Wiki-Seiten unter dem Präfix, deren
+    Quelldatei nicht mehr existiert, werden gelöscht. Kein Cluster-State
+    nötig — GitHub ist bei jedem Lauf die alleinige Quelle der Wahrheit.
+    Nutzt ausschließlich die Python-Standardbibliothek.
     """
     import json
     import os
@@ -60,13 +66,26 @@ data:
 
 
     def list_docs():
-        entries = github_request(
+        # Rekursion genau eine Ebene tief: docs/*.md direkt (subfolder="")
+        # plus docs/<kategorie>/*.md (subfolder="<kategorie>"). Absichtlich
+        # nicht tiefer — docs/superpowers/{plans,specs}/*.md liegen zwei
+        # Ebenen tief und sollen NICHT gespiegelt werden (eigenes,
+        # unabhängiges Namensschema, kein Wiki-Inhalt).
+        top_entries = github_request(
             f"/repos/{GITHUB_OWNER}/{GITHUB_REPO}/contents/{GITHUB_DOCS_PATH}?ref={GITHUB_BRANCH}"
         )
-        return [
-            e for e in entries
-            if e.get("type") == "file" and e.get("name", "").endswith(".md")
-        ]
+        docs = []
+        for e in top_entries:
+            if e.get("type") == "file" and e.get("name", "").endswith(".md"):
+                docs.append(("", e))
+            elif e.get("type") == "dir":
+                sub_entries = github_request(
+                    f"/repos/{GITHUB_OWNER}/{GITHUB_REPO}/contents/{GITHUB_DOCS_PATH}/{e['name']}?ref={GITHUB_BRANCH}"
+                )
+                for se in sub_entries:
+                    if se.get("type") == "file" and se.get("name", "").endswith(".md"):
+                        docs.append((e["name"], se))
+        return docs
 
 
     def parse_extra_files():
@@ -106,8 +125,10 @@ data:
         return body["data"]
 
 
-    def docs_wiki_path(filename):
+    def docs_wiki_path(subfolder, filename):
         slug = filename[:-3] if filename.endswith(".md") else filename
+        if subfolder:
+            return f"{WIKIJS_PATH_PREFIX}/{WIKIJS_DOCS_SUBPATH}/{subfolder}/{slug}"
         return f"{WIKIJS_PATH_PREFIX}/{WIKIJS_DOCS_SUBPATH}/{slug}"
 
 
@@ -124,11 +145,14 @@ data:
 
 
     def numbered_title(filename, content):
-        # Docs-Dateinamen tragen eine Sortiernummer (z. B. "01-overview.md"),
-        # die Markdown-H1 aber meist nicht — ohne sie fehlt die Nummer im
-        # Wiki.js-Sidebar-Titel, obwohl der Slug sie weiterhin enthält.
+        # Docs-Dateinamen tragen eine 5-stellige Hex-Sortiernummer (z. B.
+        # "a0000-ubuntu-server-install.md" — erstes Zeichen kodiert die
+        # Kategorie), die Markdown-H1 aber meist nicht — ohne sie fehlt die
+        # Nummer im Wiki.js-Sidebar-Titel, obwohl der Slug sie weiterhin
+        # enthält. TEMPLATE.md trägt bewusst keine Nummer, matcht hier also
+        # nicht und behält einfach seinen Fallback-Titel.
         title = extract_title(content, filename[:-3])
-        match = re.match(r"(\d+)[-_.]*", filename)
+        match = re.match(r"([0-9a-f]{5})[-_.]*", filename)
         if match and not title.startswith(match.group(1)):
             return f"{match.group(1)} - {title}"
         return title
@@ -201,9 +225,9 @@ data:
         existing_pages = list_wiki_pages_under_prefix()
         seen_paths = set()
 
-        for entry in docs:
+        for subfolder, entry in docs:
             filename = entry["name"]
-            target_path = docs_wiki_path(filename)
+            target_path = docs_wiki_path(subfolder, filename)
             seen_paths.add(target_path)
             try:
                 content = fetch_raw(entry["download_url"])
@@ -226,8 +250,8 @@ data:
                 print(f"[ERR] {path}: Download fehlgeschlagen: {exc}", file=sys.stderr)
                 continue
             # Titel bewusst nicht aus der Markdown-H1 ziehen — der
-            # konfigurierte slug (z. B. "ReadMe"/"Deploy") ist hier der
-            # gewünschte, feste Wiki.js-Titel.
+            # konfigurierte slug (z. B. "ReadMe") ist hier der gewünschte,
+            # feste Wiki.js-Titel.
             title = slug
             try:
                 upsert(target_path, content, title, existing_pages.get(target_path))

@@ -14,7 +14,7 @@ uptime-kuma.homeserver  →  Traefik  →  uptime-kuma (Port 3001)
 ```
 
 > **Warum `local-path` statt `nas`:** War testweise auf `nas`, ist aber nach
-> Umstellung des NAS auf `all_squash` (siehe [docs/16-nas-storage.md](16-nas-storage.md))
+> Umstellung des NAS auf `all_squash` (siehe [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md))
 > mit Permission-Fehlern abgestürzt und wurde zurück auf `local-path`
 > gestellt.
 
@@ -75,7 +75,7 @@ internen Host einen externen Ingress-Host an (`status-prod.pke-lab.de` —
 bewusst ohne "uptime-kuma" im Namen, damit die eingesetzte Software nicht
 schon aus der URL erkennbar ist), erreichbar über die bestehende
 `*.pke-lab.de`-Wildcard-Route von cloudflared — kein Änderung an
-cloudflared nötig, siehe [docs/23](23-cloudflare-deploy.md#neuen-dienst-freigeben).
+cloudflared nötig, siehe [docs/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md](../e-externe-erreichbarkeit/e0010-cloudflare-deploy.md#neuen-dienst-freigeben).
 
 Die eigentliche Status-Page ist ein manueller Einmal-Schritt in der
 Kuma-UI (nicht Teil von Git/Helm):
