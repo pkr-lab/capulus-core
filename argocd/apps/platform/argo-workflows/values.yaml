@@ -71,7 +71,7 @@ argo-workflows:
 #   echo -n "<value>" | kubeseal --raw --namespace argo-workflows \
 #     --name argo-artifacts-s3 --controller-name sealed-secrets-controller \
 #     --controller-namespace sealed-secrets --from-file=/dev/stdin
-# See docs/12-argo-workflows.md for the full workflow (incl. the GHCR token).
+# See docs/f-cicd-automatisierung/f0000-argo-workflows.md for the full workflow (incl. the GHCR token).
 
 # S3 access for the artifact repository — must match the MinIO root creds.
 artifactSecret:

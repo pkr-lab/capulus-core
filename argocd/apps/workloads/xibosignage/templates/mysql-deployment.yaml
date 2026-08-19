@@ -21,7 +21,7 @@ spec:
     spec:
       # Der NFS-Export der "nas"-StorageClass squasht auf diesem UGREEN-NAS
       # jede Anfrage serverseitig auf die feste Identität 1000:10 (siehe
-      # docs/16-nas-storage.md und der identische Fix bei wikijs/immich
+      # docs/2-betrieb-hardware/20000-nas-storage.md und der identische Fix bei wikijs/immich
       # Postgres). Das offizielle mysql-Image erkennt einen nicht-root
       # Startprozess und überspringt seinen sonst root-only chown-Schritt —
       # solange runAsUser/runAsGroup exakt der Squash-Identität entsprechen,

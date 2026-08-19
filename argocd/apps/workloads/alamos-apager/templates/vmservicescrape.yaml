@@ -5,7 +5,7 @@
 # erfolgreichen /start-Anfrage (= Kiosk hat die echte AMweb-URL tatsaechlich
 # angefragt) und des letzten Heartbeats. Genutzt vom
 # "Banana-Pi-Down -> Zammad-Ticket"-n8n-Workflow, siehe
-# docs/45-vereinsheim-alarmmonitor.md.
+# docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md.
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMServiceScrape
 metadata:

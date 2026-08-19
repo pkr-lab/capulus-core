@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Lets the user paste the bearer token generated in
-/// docs/43-carplay-api.md ("Ersteinrichtung") into the Keychain.
+/// docs/3-apps-workloads/300d0-carplay-api.md ("Ersteinrichtung") into the Keychain.
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var token: String = ""
@@ -19,7 +19,7 @@ struct SettingsView: View {
                 } header: {
                     Text("carplay-api Token")
                 } footer: {
-                    Text("Erzeugt per kubeseal beim Einrichten von carplay-api — siehe docs/43-carplay-api.md \"Ersteinrichtung\" im capulus-core-Repo.")
+                    Text("Erzeugt per kubeseal beim Einrichten von carplay-api — siehe docs/3-apps-workloads/300d0-carplay-api.md \"Ersteinrichtung\" im capulus-core-Repo.")
                 }
 
                 Section {

@@ -6,7 +6,7 @@
 # Cluster-Redirect-URL (argocd/apps/workloads/alamos-apager), die echte AMweb-URL und
 # alle Heartbeat/Alerting-Logik bleiben im Cluster. Ein systemd-Timer pingt
 # periodisch den Heartbeat-Endpunkt, damit ein Ausfall zentral per ntfy
-# erkannt wird (siehe docs/20-alamos-apager.md).
+# erkannt wird (siehe docs/3-apps-workloads/30010-alamos-apager.md).
 # ============================================================
 
 - name: Sicherstellen dass alamos_kiosk_station gesetzt ist
@@ -32,7 +32,7 @@
     cache_valid_time: 3600
   when: alamos_kiosk_enabled | bool
 
-# ---- Homeserver-Root-CA vertrauen (https://*.homeserver, siehe docs/54-internal-tls.md) --
+# ---- Homeserver-Root-CA vertrauen (https://*.homeserver, siehe docs/d-sicherheit/d0040-internal-tls.md) --
 # Gleiches Vorgehen wie ansible/roles/banana_pi_kiosk (dort ausfuehrlich
 # begruendet) -- dieser Pi ist ebenfalls Ansible-verwaltet, daher hier
 # automatisiert statt manuell nachgezogen. Quelle bleibt EINZIG das

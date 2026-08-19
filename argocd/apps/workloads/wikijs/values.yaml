@@ -4,7 +4,7 @@
 #
 # Secrets-Block (SealedSecret):
 #   DB-Passwort mit kubeseal versiegeln und hier eintragen.
-#   Anleitung: docs/20-wikijs.md → Abschnitt "Secrets versiegeln"
+#   Anleitung: docs/3-apps-workloads/30030-wikijs.md → Abschnitt "Secrets versiegeln"
 # ============================================================
 
 secrets:
@@ -59,7 +59,7 @@ wikijs:
           - path: /
             pathType: Prefix
       # Externer Host — per Cloudflare-Tunnel-Wildcard (cloudflared) an
-      # Traefik weitergereicht, siehe docs/56-domain-tiers.md.
+      # Traefik weitergereicht, siehe docs/c-netzwerk-dns/c0040-domain-tiers.md.
       - host: wiki-prod.pke-lab.de
         paths:
           - path: /
@@ -74,7 +74,7 @@ wikijs:
       memory: 512Mi
 
   # Wiki.js speichert Seiten UND Assets vollständig in PostgreSQL (siehe
-  # docs/20-wikijs.md) — der App-Pod selbst braucht kein PVC und keine
+  # docs/3-apps-workloads/30030-wikijs.md) — der App-Pod selbst braucht kein PVC und keine
   # NodeAffinity, im Gegensatz zu Postgres unten.
   nodeSelector: {}
   affinity: {}
@@ -82,7 +82,7 @@ wikijs:
 
 # ============================================================
 # PostgreSQL (eigenes Deployment, kein Bitnami-Subchart)
-# Persistenz auf der "nas"-StorageClass (docs/16-nas-storage.md)
+# Persistenz auf der "nas"-StorageClass (docs/2-betrieb-hardware/20000-nas-storage.md)
 # ============================================================
 postgresql:
   image:

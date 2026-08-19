@@ -10,7 +10,7 @@
 
 # The official installer only wires up the CrowdSec APT repo + GPG key for
 # the running distro (it does not install the crowdsec package itself) —
-# same reasoning as Tailscale's own client install docs (docs/06-tailscale.md):
+# same reasoning as Tailscale's own client install docs (docs/c-netzwerk-dns/c0010-tailscale.md):
 # it's the maintained way to pick the right repo instead of hand-pinning a
 # codename that may not exist yet on packagecloud for a brand-new Ubuntu LTS.
 - name: Download official CrowdSec repository install script
@@ -91,7 +91,7 @@
 
 # NOTE: exact host log path depends on the k3s/containerd log layout and
 # isn't verified against a live cluster here — check
-# docs/46-crowdsec.md#traefik-log-verifizieren after rollout.
+# docs/d-sicherheit/d0020-crowdsec.md#traefik-log-verifizieren after rollout.
 - name: Deploy Traefik log acquisition config
   ansible.builtin.template:
     src: acquis-traefik.yaml.j2
@@ -125,5 +125,5 @@
     msg: >
       WARNING: `cscli bouncers list` returned no registered bouncer.
       crowdsec-firewall-bouncer likely failed to auto-register — check
-      `journalctl -u crowdsec-firewall-bouncer` and docs/46-crowdsec.md.
+      `journalctl -u crowdsec-firewall-bouncer` and docs/d-sicherheit/d0020-crowdsec.md.
   when: "'[]' in crowdsec_bouncers.stdout"

@@ -1,17 +1,17 @@
 # Ersetzt sowohl den manuellen "SAN-Liste live aus dem Cluster ziehen +
 # openssl signieren + kubeseal"-Ablauf als auch das committete
-# SealedSecret aus docs/54-internal-tls.md — cert-manager erstellt das
+# SealedSecret aus docs/d-sicherheit/d0040-internal-tls.md — cert-manager erstellt das
 # `homeserver-wildcard-tls`-Secret jetzt selbst (namespace kube-system,
 # exakt der Name, den argocd/apps/platform/traefik-config/tlsstore.yaml
 # als Traefik-Default-Zertifikat referenziert) und erneuert es automatisch
 # vor Ablauf (duration/renewBefore unten) — kein Kalender-Reminder für den
 # 11.11.2028 mehr nötig.
 #
-# KEIN echtes `*.homeserver`-Wildcard (wie in docs/54 erklärt, strukturell
+# KEIN echtes `*.homeserver`-Wildcard (wie in docs/d-sicherheit/d0040-internal-tls.md erklärt, strukturell
 # unmöglich — Single-Label-TLD, RFC-6125/X509_check_host-Regel, unabhängig
 # vom Tool). Explizite `dnsNames`-Liste bleibt deshalb bestehen, jetzt aber
 # tier-behaftet (`<app>.tech.homeserver`/`<app>.prod.homeserver`, siehe
-# docs/56-domain-tiers.md) — der alte SealedSecret trug noch die
+# docs/c-netzwerk-dns/c0040-domain-tiers.md) — der alte SealedSecret trug noch die
 # UNTIERTE Liste von vor der Domain-Tier-Migration, was seither zu einem
 # Zertifikats-Hostname-Mismatch auf jedem tier-behafteten Host führte
 # (das eigentliche "der aktuelle Weg funktioniert nicht"). Ein neuer Host

@@ -76,7 +76,7 @@ final class HomeserverAPIClient {
     }
 
     /// `code` is required (and checked server-side) only when `target ==
-    /// .homeserver` — see docs/43-carplay-api.md and PowerView's
+    /// .homeserver` — see docs/3-apps-workloads/300d0-carplay-api.md and PowerView's
     /// confirmation sheet.
     func shutdown(target: PowerTarget, code: String? = nil) async throws {
         let body = try encoder.encode(ShutdownRequestBody(target: target.rawValue, code: code))

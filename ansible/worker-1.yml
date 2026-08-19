@@ -11,7 +11,7 @@
 #      nie ein OS-Update, da es keine common-Rolle nutzt). Laeuft
 #      normalerweise nachts um 01:00 ueber nightly_worker_wake auf
 #      homeserver, das dieses Playbook per Semaphore-API triggert, siehe
-#      docs/59-nightly-worker-update.md.
+#      docs/2-betrieb-hardware/20030-nightly-worker-update.md.
 #   2. k3s_agent — tritt dem k3s-Cluster als Worker-Node bei
 #      (benoetigt laufenden k3s-Server auf homeserver/.94)
 #   3. thermal_watchdog / resource_watchdog — automatischer Shutdown bei

@@ -2,7 +2,7 @@
 # ============================================================
 # group_vars für die Inventory-Gruppe "banana_pis"
 # (Banana-Pi-Alarmmonitore, Armbian — siehe
-# docs/45-vereinsheim-alarmmonitor.md und ansible/banana-pi-kiosks.yml)
+# docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md und ansible/banana-pi-kiosks.yml)
 # ============================================================
 #
 # Anders als bei den Raspberry-Pi-Alarmmonitoren (ansible/alarm-kiosks.yml,

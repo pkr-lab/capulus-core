@@ -2,7 +2,7 @@
 # ============================================================
 # MediaMTX — RTSP/RTMP/WebRTC/HLS Media-Server
 #
-# Setup-/Betriebs-Anleitung: docs/24-mediamtx.md
+# Setup-/Betriebs-Anleitung: docs/3-apps-workloads/30040-mediamtx.md
 # ============================================================
 
 # Nur wirksam solange autoscaling.enabled=false ist — danach übernimmt der
@@ -64,7 +64,7 @@ service:
 
 # Publish-Service — RTMP/RTSP als NodePort für Encoder/OBS/ffmpeg im
 # LAN/Tailnet. Bewusst NICHT über Cloudflare Tunnel erreichbar: Streaming-
-# Quellen bleiben grundsätzlich intern (siehe docs/24-mediamtx.md,
+# Quellen bleiben grundsätzlich intern (siehe docs/3-apps-workloads/30040-mediamtx.md,
 # Abschnitt "Warum Publish nicht über Cloudflare läuft"). NodePorts sind
 # durch die bestehenden UFW-Regeln bereits auf LAN/Tailnet beschränkt
 # (siehe README.md#networking--security) — keine zusätzliche
@@ -84,7 +84,7 @@ publishService:
 # argocd/apps/platform/cloudflared/values.yaml). Absicherung läuft komplett über
 # mediamtx' eigene interne Auth (siehe `auth` unten) — der Browser bekommt
 # beim Öffnen einen normalen HTTP-Basic-Auth-Dialog von mediamtx selbst,
-# kein externer Identity-Provider nötig. Details: docs/24-mediamtx.md.
+# kein externer Identity-Provider nötig. Details: docs/3-apps-workloads/30040-mediamtx.md.
 ingress:
   enabled: true
   className: traefik
@@ -106,7 +106,7 @@ ingress:
 # Passwort werden nur als SHA256-Hash hinterlegt (`sha256:<Base64-Hash>`),
 # nie im Klartext, damit sie gefahrlos in Git landen können. Die Platzhalter
 # unten sind absichtlich ungültige Hashes — Auth ist damit standardmäßig für
-# jeden dicht, bis echte Hashes eingetragen werden (docs/24-mediamtx.md,
+# jeden dicht, bis echte Hashes eingetragen werden (docs/3-apps-workloads/30040-mediamtx.md,
 # Schritt 2).
 auth:
   streamer:

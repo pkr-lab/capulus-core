@@ -15,14 +15,14 @@ data:
   #   GET /metrics                  -> Prometheus-Metriken (siehe unten)
   # Ein Background-Thread prüft periodisch, ob ein Standort länger als
   # HEARTBEAT_TIMEOUT_SECONDS keinen Heartbeat gesendet hat, und meldet das
-  # per ntfy (kein Zammad-Ticket — siehe docs/19-alamos-apager.md).
+  # per ntfy (kein Zammad-Ticket — siehe docs/3-apps-workloads/30010-alamos-apager.md).
   #
   # /metrics exportiert je Standort den Zeitstempel der letzten erfolgreichen
   # /start-Anfrage (= der Kiosk-Browser hat die echte AMweb-URL tatsächlich
   # angefragt) und des letzten Heartbeats — genutzt vom
   # "Banana-Pi-Down -> Zammad-Ticket"-Workflow (argocd/apps/workloads/n8n/workflows),
   # um im Ticket zu zeigen, wann der Standort zuletzt erfolgreich war (siehe
-  # docs/45-vereinsheim-alarmmonitor.md). Cluster-intern per VMServiceScrape
+  # docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md). Cluster-intern per VMServiceScrape
   # gescraped (vmservicescrape.yaml) — funktioniert unabhängig davon, ob ein
   # Standort per LAN oder Tailscale angebunden ist, da alamos-apager selbst
   # immer im Cluster läuft.

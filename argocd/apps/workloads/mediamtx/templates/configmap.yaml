@@ -25,7 +25,7 @@ data:
     srt: no
 
     # Publish- und Leseautorisierung über mediamtx' eingebaute interne
-    # Benutzerverwaltung (docs/24-mediamtx.md) — kein externer
+    # Benutzerverwaltung (docs/3-apps-workloads/30040-mediamtx.md) — kein externer
     # Identity-Provider mehr nötig.
     authMethod: internal
     authInternalUsers:

@@ -2,7 +2,7 @@
 # ============================================================
 # group_vars für die Inventory-Gruppe "xibo_displays"
 # (Raspberry Pi 3 B+, xibosignage-Bilder-Slideshow — siehe
-# docs/44-xibosignage.md und ansible/xibo-kiosks.yml)
+# docs/3-apps-workloads/300e0-xibosignage.md und ansible/xibo-kiosks.yml)
 # ============================================================
 
 # Eigener Tailscale-Hostname pro Pi statt des globalen "hostname"
@@ -20,7 +20,7 @@ tailscale_advertise_routes: ""
 # Home-Servers (group_vars/all.yml) wiederverwenden, der ist typischerweise
 # Single-Use und bereits verbraucht. Bei mehreren Displays empfiehlt sich ein
 # WIEDERVERWENDBARER Key mit eigenem Tag (z.B. "tag:xibo-display"), siehe
-# docs/06-tailscale.md und docs/44-xibosignage.md.
+# docs/c-netzwerk-dns/c0010-tailscale.md und docs/3-apps-workloads/300e0-xibosignage.md.
 #
 #   ansible-vault encrypt_string 'tskey-auth-...' --name 'tailscale_auth_key'
 #

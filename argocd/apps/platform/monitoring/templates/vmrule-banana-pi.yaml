@@ -1,12 +1,12 @@
 # Ausfallerkennung fuer den Banana-Pi-Alarmmonitor "vereinsheim-
 # alarmmonitor" auf Host-Ebene — unabhaengig vom App-Level-Heartbeat in
 # argocd/apps/workloads/alamos-apager (der nur ntfy ausloest, siehe
-# docs/19-alamos-apager.md).
+# docs/3-apps-workloads/30010-alamos-apager.md).
 #
 # WICHTIG — absent_over_time statt up==0: dieser Host wird nicht vom Cluster
 # gescraped (Pods haben keinen Pfad zu Tailscale-Peers), sondern pusht seine
 # eigenen Metriken per remote_write (ansible/roles/vmagent, siehe
-# docs/45-vereinsheim-alarmmonitor.md). Faellt der Pi aus, wird "up" also
+# docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md). Faellt der Pi aus, wird "up" also
 # nicht auf 0 gesetzt (das wuerde eine laufende Scrape-Verbindung
 # voraussetzen) — die Zeitreihe hoert einfach auf, sich zu aktualisieren
 # und wird nach der VictoriaMetrics-Staleness-Frist als fehlend behandelt.

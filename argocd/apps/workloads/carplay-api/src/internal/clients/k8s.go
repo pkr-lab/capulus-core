@@ -14,8 +14,9 @@ import (
 
 // K8sConfigMapClient reads a single ConfigMap key via the in-cluster API
 // using this pod's own ServiceAccount token — no client-go dependency (this
-// binary otherwise has zero Kubernetes API surface, see docs/43-carplay-
-// api.md "power-agent" section on why it stays unprivileged). Mirrors the
+// binary otherwise has zero Kubernetes API surface, see
+// docs/3-apps-workloads/300d0-carplay-api.md "power-agent" section on why
+// it stays unprivileged). Mirrors the
 // same minimal approach github-release-watcher's Python watcher already
 // uses for its own state ConfigMap (argocd/apps/workloads/github-release-watcher/
 // templates/configmap.yaml).

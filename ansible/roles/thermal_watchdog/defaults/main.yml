@@ -18,7 +18,7 @@ thermal_watchdog_poll_seconds: 10
 # ntfy-Ziel für die Shutdown-Meldung. Wird per `curl --resolve` direkt auf
 # die statische Server-IP aufgelöst, damit die Meldung auch dann
 # rausgeht, wenn auf diesem Host kein *.homeserver-DNS eingerichtet ist
-# (siehe docs/09-dns-architecture.md).
+# (siehe docs/c-netzwerk-dns/c0000-dns-architecture.md).
 thermal_watchdog_ntfy_host: "ntfy.tech.homeserver"
 thermal_watchdog_ntfy_ip: "{{ network_static_ip }}"
 thermal_watchdog_ntfy_topic: "Home-Lab-System"

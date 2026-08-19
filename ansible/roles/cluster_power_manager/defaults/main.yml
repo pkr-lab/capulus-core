@@ -79,7 +79,7 @@ cluster_power_manager_ntfy_topic: "Home-Lab-System"
 # minimale Semaphore-Inventory des "home-server"-Projekts, siehe
 # group_vars/all.yml -- bricht hostvars['worker-0'] hart mit "Task failed:
 # hostvars['worker-0']" ab und reißt den kompletten Playbook-Lauf mit sich
-# (siehe docs/59-nightly-worker-update.md, Abschnitt Fehlerbehebung).
+# (siehe docs/2-betrieb-hardware/20030-nightly-worker-update.md, Abschnitt Fehlerbehebung).
 # hostvars.get() liefert stattdessen einfach {} und damit unten leere
 # Defaults -- die Warnung weiter unten greift dann korrekt, statt den Lauf
 # abzubrechen.
