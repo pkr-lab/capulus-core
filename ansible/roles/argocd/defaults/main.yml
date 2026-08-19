@@ -25,7 +25,6 @@ argocd_platform_apps:
   - semaphore
   - headlamp
   - traefik-config
-  - zot
 
 argocd_workloads_apps:
   - alamos-apager

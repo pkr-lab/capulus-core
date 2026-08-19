@@ -1,4 +1,5 @@
 {
+  "id": "eavJtybObMXc3Qpa",
   "name": "Zammad Externer KI-Lauf (taeglich)",
   "nodes": [
     {
@@ -53,7 +54,7 @@
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "REPLACE_ME_NACH_IMPORT",
+          "id": "qw2XzzCvd5uEKb0e",
           "name": "carplay-api API Token"
         }
       }
@@ -123,7 +124,7 @@
         "source": "database",
         "workflowId": {
           "__rl": true,
-          "value": "REPLACE_ME_NACH_IMPORT",
+          "value": "LMcJQDnN9zK5n9mN",
           "mode": "list",
           "cachedResultName": "Zammad Tickets verarbeiten"
         },
@@ -269,6 +270,6 @@
     "executionOrder": "v1"
   },
   "meta": {
-    "description": "Haupt-Workflow, laeuft 1x taeglich (Default 07:00 Uhr, im Schedule-Trigger anpassbar). Lebenszyklus-Orchestrierung fuer das lokale LLM (Ollama, siehe argocd/apps/workloads/ollama/ und docs/3-apps-workloads/300xx-ollama.md), das mit replicas:0 im Ruhezustand laeuft und NUR fuer die Dauer dieses Laufs hochgefahren wird: (1) weckt worker-0 (Lenovo M90q) explizit ueber den power-agent-Wake-Endpoint (proxied durch carplay-api, POST /api/power/wake -- der bestehende cluster_power_manager wuerde NICHT reagieren, der beobachtet nur die Last auf homeserver, keine Pending-Pods), (2) skaliert das ollama-Deployment per direktem Kubernetes-API-Call (PATCH auf die Scale-Subresource, Auth ueber das automatisch gemountete ServiceAccount-Token des n8n-Pods selbst, RBAC dafuer in argocd/apps/workloads/ollama/templates/role-n8n-scaler.yaml) von 0 auf 1 hoch, (3) wartet pauschal 150s auf Node-Boot+Pod-Start+Ollama-Bereitschaft (Startwert, nach echten Laeufen justieren), (4) ruft den Sub-Workflow 'Zammad Tickets verarbeiten' (zammad-tickets-verarbeiten.json) auf und wartet auf dessen Abschluss -- dieser liefert GARANTIERT genau ein Ergebnis-Item zurueck, auch bei 0 gefundenen Tickets, damit dieser Haupt-Workflow zuverlaessig weiterlaeuft, (5) skaliert ollama wieder auf 0 herunter. TLS-Pruefung gegen die Kubernetes-API bewusst per 'allowUnauthorizedCerts' uebersprungen (Traffic bleibt intern; sauberer waere das Mounten von ca.crt, aber kein Blocker fuer den ersten Wurf). NACH DEM IMPORT zwingend noetig: (1) Credential 'carplay-api API Token' (Header-Auth, Header 'Authorization', Value 'Bearer <TOKEN>' -- der bereits in argocd/apps/workloads/carplay-api/values.yaml versiegelte apiToken, siehe docs/3-apps-workloads/300d0-carplay-api.md) anlegen und dem Node 'Worker-0 wecken' zuweisen. (2) Im Node 'Zammad Tickets verarbeiten' (Execute Workflow) die echte Workflow-ID des importierten Sub-Workflows eintragen -- wird beim Import NICHT automatisch verknuepft. (3) Uhrzeit im Schedule-Trigger nach Bedarf anpassen. (4) Diesen Workflow AKTIVIEREN. (5) Vor dem produktiven Einsatz: einmal manuell ausloesen (nicht auf den Trigger warten), pruefen dass Wake/Scale-up/Wait/Sub-Workflow/Scale-down komplett durchlaufen, Wait-Dauer ggf. nachjustieren."
+    "description": "Haupt-Workflow, laeuft 1x taeglich (Default 07:00 Uhr, im Schedule-Trigger anpassbar). Lebenszyklus-Orchestrierung fuer das lokale LLM (Ollama, siehe argocd/apps/workloads/ollama/ und docs/3-apps-workloads/300xx-ollama.md), das mit replicas:0 im Ruhezustand laeuft und NUR fuer die Dauer dieses Laufs hochgefahren wird: (1) weckt worker-0 (Lenovo M90q) explizit ueber den power-agent-Wake-Endpoint (proxied durch carplay-api, POST /api/power/wake -- der bestehende cluster_power_manager wuerde NICHT reagieren, der beobachtet nur die Last auf homeserver, keine Pending-Pods), (2) skaliert das ollama-Deployment per direktem Kubernetes-API-Call (PATCH auf die Scale-Subresource, Auth ueber das automatisch gemountete ServiceAccount-Token des n8n-Pods selbst, RBAC dafuer in argocd/apps/workloads/ollama/templates/role-n8n-scaler.yaml) von 0 auf 1 hoch, (3) wartet pauschal 150s auf Node-Boot+Pod-Start+Ollama-Bereitschaft (Startwert, nach echten Laeufen justieren), (4) ruft den Sub-Workflow 'Zammad Tickets verarbeiten' (zammad-tickets-verarbeiten.json) auf und wartet auf dessen Abschluss -- dieser liefert GARANTIERT genau ein Ergebnis-Item zurueck, auch bei 0 gefundenen Tickets, damit dieser Haupt-Workflow zuverlaessig weiterlaeuft, (5) skaliert ollama wieder auf 0 herunter. TLS-Pruefung gegen die Kubernetes-API bewusst per 'allowUnauthorizedCerts' uebersprungen (Traffic bleibt intern; sauberer waere das Mounten von ca.crt, aber kein Blocker fuer den ersten Wurf). Stand 19.08.2026: Credential 'carplay-api API Token' (Header-Auth, Header 'Authorization', Wert aus dem bereits in argocd/apps/workloads/carplay-api/values.yaml versiegelten apiToken, siehe docs/3-apps-workloads/300d0-carplay-api.md) angelegt (n8n-Credential-ID qw2XzzCvd5uEKb0e) und dem Node 'Worker-0 wecken' zugewiesen -- vorher war dort GAR KEIN Credential verknuepft (Import setzt einen unbekannten Platzhalter-Wert automatisch auf null), der Wake-Call lief also ohne Authorization-Header und schlug mit 401 fehl. Im Node 'Zammad Tickets verarbeiten' (Execute Workflow) ist die echte Workflow-ID des Sub-Workflows (LMcJQDnN9zK5n9mN) eingetragen. NOCH OFFEN (bewusst nicht von Claude gesetzt): (1) Uhrzeit im Schedule-Trigger nach Bedarf anpassen. (2) Diesen Workflow AKTIVIEREN. (3) Vor dem produktiven Einsatz: einmal manuell ausloesen (nicht auf den Trigger warten), pruefen dass Wake/Scale-up/Wait/Sub-Workflow/Scale-down komplett durchlaufen, Wait-Dauer ggf. nachjustieren."
   }
 }
