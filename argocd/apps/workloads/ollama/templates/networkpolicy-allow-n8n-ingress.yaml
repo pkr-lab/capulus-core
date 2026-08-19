@@ -1,0 +1,28 @@
+# Einzige Ausnahme zum Default-Deny: die n8n-Pods (nicht "irgendwas im
+# n8n-Namespace") duerfen Ollama auf seinem HTTP-Port erreichen. Nutzt das
+# von Kubernetes automatisch gesetzte, stabile Namespace-Label
+# kubernetes.io/metadata.name -- kein manuelles Labeln des n8n-Namespace
+# noetig. Egress bleibt bewusst ohne jede Ausnahme (siehe
+# networkpolicy-default-deny.yaml).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ollama.fullname" . }}-allow-n8n-ingress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ollama.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.n8nNamespace }}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: n8n
+      ports:
+        - protocol: TCP
+          port: {{ .Values.service.targetPort }}
