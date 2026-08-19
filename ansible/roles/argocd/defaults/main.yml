@@ -38,6 +38,7 @@ argocd_workloads_apps:
   - mediamtx
   - n8n
   - nextcloud
+  - ollama
   - pacman
   - paperless-ngx
   - tinyteller
@@ -129,6 +130,18 @@ argocd_network_policy_refined_namespaces:
 # ClusterIP-Aufrufe, die nicht schon durch security-tier (Intra-Tier) oder
 # die generellen kube-system/monitoring/cloudflared-Ausnahmen abgedeckt
 # waren:
+# Apps, die ihre eigenen, vollstaendigen NetworkPolicies mitbringen (siehe
+# argocd/apps/workloads/<app>/templates/networkpolicy-*.yaml) und deshalb
+# NICHT zusaetzlich die generische tier-default-ingress-Policy bekommen
+# duerfen: die tier-default-Policy wuerde per Ingress-Union zusaetzliche
+# Quellen (kube-system/monitoring/cloudflared, ggf. der ganze Tier)
+# erlauben und damit eine bewusst engere Policy wieder aufweichen.
+# - ollama: einzige erlaubte Quelle ist n8n, siehe
+#   argocd/apps/workloads/ollama/templates/networkpolicy-*.yaml und
+#   docs/3-apps-workloads/300g0-ollama.md, Abschnitt "Netzwerk-Isolation".
+argocd_network_policy_excluded_apps:
+  - ollama
+
 argocd_network_policy_extra_ingress:
   # wiki-docs-sync (eigener CronJob-Namespace) ruft wikijs per ClusterIP
   # direkt an, nicht über Traefik. wikijs ist verfeinert (Schritt 2).
