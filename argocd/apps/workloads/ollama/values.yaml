@@ -45,16 +45,20 @@ persistence:
   accessMode: ReadWriteOnce
   mountPath: /root/.ollama
 
-# CHANGE-ME: vor dem ersten Rollout mit "kubectl describe node worker-0"
-# gegen die tatsaechliche Node-Kapazitaet (Lenovo M90q) pruefen und
-# anpassen -- im Repo sind dafuer keine exakten CPU/RAM-Werte dokumentiert.
+# Gegen die tatsaechliche Node-Kapazitaet geprueft (19.08.2026):
+# "kubectl describe node worker-0" -> Allocatable nur 4 CPU / ~7.3Gi RAM
+# (Lenovo M90q). Der alte Default (6 CPU / 8Gi Requests) lag ueber der
+# gesamten Node-Kapazitaet -- der Pod waere nie ueber Pending
+# hinausgekommen. Andere Pods auf worker-0 sind nur kleine
+# DaemonSets/zot (~150m CPU / ~256Mi Requests zusammen), Ollama bekommt
+# also den Grossteil der Node fuer sich.
 resources:
   requests:
-    cpu: "6"
-    memory: 8Gi
+    cpu: "3"
+    memory: 5Gi
   limits:
-    cpu: "8"
-    memory: 10Gi
+    cpu: "4"
+    memory: 6500Mi
 
 nodeSelector:
   kubernetes.io/hostname: worker-0

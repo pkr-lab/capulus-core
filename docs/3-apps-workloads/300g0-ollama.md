@@ -98,6 +98,21 @@ sonstige ausgehende Verbindungen — "kein Internet, keine anderen Systeme"
 ist damit die dauerhafte, in Git verankerte Grundeinstellung, nicht nur
 eine Momentaufnahme.
 
+**Wichtig — `ollama` muss von der generischen `tier-default-ingress`-Policy
+ausgeschlossen sein** (`argocd_network_policy_excluded_apps` in
+`ansible/roles/argocd/defaults/main.yml`, ausgewertet in
+`ansible/roles/argocd/templates/bootstrap-networkpolicies.yaml.j2`). Ohne
+diesen Ausschluss würde jeder Workload-Namespace automatisch zusätzlich
+eine `tier-default-ingress`-Policy bekommen, die u. a. `kube-system`,
+`monitoring` und `cloudflared` (und je nach Verfeinerungsstufe den ganzen
+Workload-Tier) als Ingress-Quelle erlaubt — NetworkPolicy-Ingress-Regeln
+mehrerer Policies auf denselben Pod werden per Union kombiniert, sodass
+diese generische Regel die absichtlich enge "nur n8n"-Policy oben wieder
+aufweichen würde. Gefunden und gefixt am 19.08.2026 beim ersten
+tatsächlichen Rollout — `ollama` fehlte zunächst sowohl in
+`argocd_workloads_apps` (AppProject-Destination, ArgoCD-Sync schlug mit
+`InvalidSpecError` fehl) als auch in dieser Ausschlussliste.
+
 > **Ob NetworkPolicy auf diesem Cluster tatsächlich durchgesetzt wird, ist
 > nicht verifiziert.** k3s läuft mit Standard-Flannel + dem seit v1.21
 > mitgelieferten, separaten kube-router-basierten NetworkPolicy-Controller
