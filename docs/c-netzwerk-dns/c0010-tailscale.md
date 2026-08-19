@@ -115,7 +115,7 @@ Variable `tailscale_advertise_routes` (Default `{{ local_subnet }}`, siehe
 `ansible/roles/tailscale/defaults/main.yml`). Geräte, die nur selbst im
 Tailnet erreichbar sein sollen, ohne fremden LAN-Traffic weiterzuleiten —
 z. B. die xibosignage-Raspberry-Pis, siehe
-[docs/44-xibosignage.md](44-xibosignage.md) — setzen sie in ihren
+[docs/3-apps-workloads/300e0-xibosignage.md](../3-apps-workloads/300e0-xibosignage.md) — setzen sie in ihren
 `group_vars` auf `""`, dann lässt die Rolle `--advertise-routes` beim
 `tailscale up`/`tailscale set`-Aufruf komplett weg:
 
@@ -339,7 +339,7 @@ Auth-Keys werden dann mit den passenden Tags erstellt (`tag:homeserver` für den
 
 ## Troubleshooting
 
-Detaillierte Schritte in [07-troubleshooting.md](07-troubleshooting.md#tailscale-not-connecting).
+Detaillierte Schritte in [../a-betriebssystem/a0040-troubleshooting.md](../a-betriebssystem/a0040-troubleshooting.md#tailscale-not-connecting).
 
 Schnell-Checks:
 

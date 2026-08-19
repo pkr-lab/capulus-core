@@ -4,14 +4,14 @@
 # Startet Chromium im Kiosk-Modus gegen die alamos-apager Redirect-URL.
 # Die echte ALAMOS-AMweb-URL kennt der Pi nie — der Cluster loest
 # /start?station={{ alamos_kiosk_station }} serverseitig auf (siehe
-# argocd/apps/workloads/alamos-apager und docs/20-alamos-apager.md).
+# argocd/apps/workloads/alamos-apager und docs/3-apps-workloads/30010-alamos-apager.md).
 #
 # BEWUSST OHNE --incognito: AMweb verlangt beim Laden ein Passwort +
 # Verschluesselungspasswort (Formular auf der Seite, kein Basic-Auth) und
 # kann nicht automatisiert eingeloggt werden. Ohne --incognito bleibt die
 # Chromium-Session (Cookies/LocalStorage) ueber Neustarts hinweg erhalten,
 # sodass der Login nur einmalig manuell am Pi noetig ist. Siehe
-# docs/19-alamos-apager.md, Abschnitt "Pi-Provisionierung".
+# docs/3-apps-workloads/30010-alamos-apager.md, Abschnitt "Pi-Provisionierung".
 set -euo pipefail
 
 export DISPLAY=:0

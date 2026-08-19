@@ -12,13 +12,13 @@
 # Pausiert cluster-power-manager.service für die Dauer des Fensters,
 # damit der lastbasierte Watchdog nicht mitten in einem apt-Upgrade
 # gegenläufig einen Worker herunterfährt (siehe
-# docs/37-cluster-power-manager.md) -- beide teilen sich denselben
+# docs/2-betrieb-hardware/20020-cluster-power-manager.md) -- beide teilen sich denselben
 # poweroff-Key und dieselbe woke_at-Buchführung in STATE_DIR.
 #
 # Sendet am Ende IMMER einen strukturierten Bericht (was wurde geupdated,
 # wo gab es Fehler) an den n8n-Webhook, der daraus ein Zammad-Ticket
 # baut -- siehe argocd/apps/workloads/n8n/workflows/
-# nightly-worker-update-to-zammad.json und docs/59-nightly-worker-update.md.
+# nightly-worker-update-to-zammad.json und docs/2-betrieb-hardware/20030-nightly-worker-update.md.
 # ntfy bleibt zusätzlich als schnelle Push-Benachrichtigung bestehen.
 #
 # Shutdown, Watchdog-Neustart und Bericht laufen zentral über einen

@@ -18,7 +18,7 @@ import (
 // and it's deliberately public/unauthenticated (that's the point of a
 // status page). A status page with the configured slug must exist in the
 // Uptime-Kuma UI with every monitor to show added to it; see
-// docs/43-carplay-api.md.
+// docs/3-apps-workloads/300d0-carplay-api.md.
 //
 // The exact JSON shape isn't formally versioned upstream, so parsing here
 // is defensive: any monitor/heartbeat field that's missing or a different

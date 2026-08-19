@@ -13,7 +13,7 @@ homeserver/worker-0/worker-1 verteilen.
 > `immich-nas` (→ `/volume2/immich-storage`, App
 > `argocd/apps/platform/immich-storage/`) — bewusst getrennt, damit die
 > Fotobibliothek nicht im geteilten Cluster-Storage-Export landet. Details:
-> [docs/35-immich.md](35-immich.md).
+> [docs/3-apps-workloads/300c0-immich.md](../3-apps-workloads/300c0-immich.md).
 
 ---
 
@@ -412,7 +412,7 @@ automatisch etwas an.
 Konkretes Beispiel für beide Situationen zusammen (Xibo-CMS-eigene Bibliothek
 über die dynamische `nas`-StorageClass, geteilter Inbox/Display-Ordner über
 die statische-PV-Technik für n8n **und** einen Raspberry Pi gleichzeitig):
-[docs/44-xibosignage.md](44-xibosignage.md).
+[docs/3-apps-workloads/300e0-xibosignage.md](../3-apps-workloads/300e0-xibosignage.md).
 
 ---
 
@@ -423,4 +423,4 @@ Eine externe USB-Platte hängt direkt am UGREEN NAS und sichert regelmäßig
 `immich-storage`) per restic (inkrementell, dedupliziert, verschlüsselt).
 Läuft als UGOS-Task-Scheduler-Job direkt auf dem NAS, analog zur
 Monitoring-Exporter-Einrichtung oben. Vollständige Anleitung inkl.
-Zeitplan-Empfehlungen und Restore: **[docs/36-nas-backup.md](36-nas-backup.md)**.
+Zeitplan-Empfehlungen und Restore: **[docs/2-betrieb-hardware/20010-nas-backup.md](20010-nas-backup.md)**.

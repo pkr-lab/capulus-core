@@ -14,7 +14,7 @@ timezone: "Europe/Berlin"
 # ("Capulus-Core::RepoBenachrichtigung") waren bereits für DocFlowEngine
 # geprüft; die 9 neu hinzugekommenen Self-Hosted-Apps haben notifyZammad:
 # false, erzeugen also KEINE Tickets, nur die App-Update-Liste (siehe
-# docs/25-github-release-watcher.md).
+# docs/f-cicd-automatisierung/f0040-github-release-watcher.md).
 suspend: false
 concurrencyPolicy: Forbid
 failedJobsHistoryLimit: 3

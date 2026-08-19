@@ -4,7 +4,7 @@
 #
 # Secrets-Block (SealedSecret):
 #   DB- und Admin-Passwort mit kubeseal versiegeln und hier eintragen.
-#   Anleitung: docs/33-nextcloud.md → Abschnitt "Secrets versiegeln"
+#   Anleitung: docs/3-apps-workloads/300b0-nextcloud.md → Abschnitt "Secrets versiegeln"
 # ============================================================
 
 secrets:
@@ -14,7 +14,7 @@ secrets:
   #   echo -n 'DB_PASSWORT' | kubeseal --raw --namespace nextcloud \
   #     --name nextcloud-secrets --controller-namespace sealed-secrets \
   #     --controller-name sealed-secrets-controller
-  # kubeseal --raw erlaubt nur EINEN Key pro Aufruf — siehe docs/33-nextcloud.md
+  # kubeseal --raw erlaubt nur EINEN Key pro Aufruf — siehe docs/3-apps-workloads/300b0-nextcloud.md
   # für den vollständigen Multi-Key-Workflow (--merge-into).
   encryptedDbPassword: "AgBRRf1qcn/M/ba+hiOzNdQHAscrbYBsKOybwwxCkHT9TK2/7MJaL6k3dyFaKH245qfjg6c8Z1P2MIBroZA6S9JFHqK39C9N37hOx44yZLDTzxvsD0BjHDmnkWnN4/RriaRruhU1uxOoXXfNcjvaKAvVjfbnQXIrF8wudnA/mCjyLxS4NoEKMaJe2FlTjd+dQnQWCDmqZsm7TexebiB6WwdkcK7qqwGUpImf60a9H1H6l+6DWO9BRnyo8Ww4Nv5wLXjq2T6W9Rs3G048rtcR+qVaE1Mev6GFsiAZXO9xE+aR5/+p6Zy29NntKvWyb4HPDIzmIyg/3JIIZoPdOLcGa/JhnSaczyop9hToELwveGrfbwfOWs3OnUXqHQLo7cm4DjgU0TZAbdzapaB7dTFGfTrc0vA67x0N32NP9lncM9Af28t3u03LuJgq0yE8wW3qwajtJr1ZDToKj00Lq8QQ/KaQrrEktCbHzF5D/M7da8bsiDKZ7IcjZbd4vCmQcfETcUnS7cdigZt/HuyDEN34vkhNFvYCREBgCExNadQCVrzaTVTgHXMiQh8/yVZSLNUqrEXm6QsAQNtjiKLIx1fHPWqMj9dyhH1kE94hLyyzGH5dlmPOhdo7n3DqJevFIt9W4gbb+Zq1JcznSWo49lN8GoMKOz1ArN9Tz4Y0y3gMlJBB1mwiZunoCi23lgkMBOqd9Hg3pHOEwRHmqu40oMpr/hHMmLwBLfnqrSu3ZKBhDnsckQ=="
   encryptedAdminPassword: "AgA6EC7vsyg3EHyEtDY/RbPKQxpeyCmY3Wp2ewLNcpHKRLsB6Eq5Y1aG+HF69defiQDIjKQp6h5uY9z8v7ezQbbpnuTzEmv7dgU1SepHJlUgjnM3gMTAsHRqAnh77sDo/ZzPRNBEPs8B2PgrO1Y/jW9cTl9H51buZWR5oxndGPRmRtQ4e4eupT0ivcmRwZ4A2iDjBbgfIguYZL+jWIvb+C8GxuIwyEOQXPpvWcX2x1U39Z0njYN2BrVmyDOXxAxfjZSmOz9P5C4oZ5u5tpMG5kjFHyxigATwDKBwXCBJ+DPz1iL0ExBF/18KK2ceElxHdvzHgBYbIPn4eGDaLPz7z7neuZP4PtskRXvO8XGJQD75aoG3/AE4O2xQBR/sMfcjvhOCEwxJIBVT00tju9j4L7MZLvIlvjVoDRjcm+TbmqdCVmuk/fMigDrEgCey+zIK+v2XI1HQL0ecJSIxQe4xFjch83/JyT43GRpY/IizmUASW4jfUYaKuJxgoS74H5DbsltktyZMGlAmtI3RdXsmBIgWj/yt1hJeBohWCxQKmDwaWDdjEv5lPmTzci6cuETu8c15eyLHsBYmQg2Y/4DxwxwDEe3k7LxaoVLcg8yQQ6UeIPW/Wg6vK2pnHpr8I6vvMnwL72F8Gjx2VcSZg6RXuKQXK4D6oc9eRWO7R7iGbAQOa1GI5iCXzHPLd/Penj5TSYhVZOT+k1+zI7B6iodAPl3aIuXWOdwtNBQ="
@@ -84,7 +84,7 @@ nextcloud:
   # Option — mit der Konsequenz, dass Versions-Upgrades manuell/vorsichtig
   # gehandhabt werden müssen (Tag NICHT einfach hochziehen), bis eine
   # grundsätzlichere Lösung (z. B. Primärspeicher auf S3/MinIO umstellen,
-  # siehe docs/33-nextcloud.md) ansteht.
+  # siehe docs/3-apps-workloads/300b0-nextcloud.md) ansteht.
   podSecurityContext: {}
   securityContext:
     allowPrivilegeEscalation: false
@@ -106,7 +106,7 @@ nextcloud:
           - path: /
             pathType: Prefix
       # Externer Host — per Cloudflare-Tunnel-Wildcard (cloudflared) an
-      # Traefik weitergereicht, siehe docs/56-domain-tiers.md.
+      # Traefik weitergereicht, siehe docs/c-netzwerk-dns/c0040-domain-tiers.md.
       - host: nextcloud-prod.pke-lab.de
         paths:
           - path: /
@@ -146,7 +146,7 @@ nextcloud:
 
 # ============================================================
 # PostgreSQL (eigenes Deployment, kein Bitnami-Subchart)
-# Persistenz auf der "nas"-StorageClass (docs/16-nas-storage.md)
+# Persistenz auf der "nas"-StorageClass (docs/2-betrieb-hardware/20000-nas-storage.md)
 # ============================================================
 postgresql:
   image:
@@ -163,7 +163,7 @@ postgresql:
   persistence:
     enabled: true
     # War auf "nas" (NFS), bis das UGREEN-NAS all_squash statt no_root_squash
-    # erzwang und jedes chmod/chown des DB-Containers scheiterte (docs/16-nas-storage.md).
+    # erzwang und jedes chmod/chown des DB-Containers scheiterte (docs/2-betrieb-hardware/20000-nas-storage.md).
     # Postgres-Datenverzeichnis ist reiner State, gehört daher auf lokalen
     # Storage — Files/Blobs (html/data oben) bleiben bewusst auf "nas".
     storageClassName: local-path

@@ -1,4 +1,4 @@
-# 20 — Wiki.js
+# Wiki.js
 
 Wiki.js ist ein Open-Source-Wiki/Knowledge-Base-System mit Markdown-Editor,
 eingebauten Benutzergruppen und pfadbasierten Zugriffsregeln (Page Rules).
@@ -20,7 +20,7 @@ Wiki.js speichert **sämtliche** Inhalte — Seiten, Versionshistorie und
 hochgeladene Assets (Bilder, PDFs, etc.) — direkt in PostgreSQL. Der
 Wiki.js-Pod selbst ist zustandslos und braucht kein eigenes PVC; nur
 PostgreSQL benötigt Persistenz. PostgreSQL läuft mit `storageClassName: nas`
-(siehe [docs/16-nas-storage.md](16-nas-storage.md)) — keine NodeAffinity
+(siehe [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md)) — keine NodeAffinity
 mehr nötig, damit liegen alle Wiki-Daten auf dem NAS statt auf der
 Homeserver-System-SSD.
 
@@ -40,7 +40,7 @@ Homeserver-System-SSD.
 - **`nas-storage`-App ist deployt** (`argocd/apps/platform/nas-storage/`) und die
   StorageClass `nas` existiert: `kubectl get storageclass nas`
 - **NAS ist online und der NFS-Export erreichbar** (siehe
-  [docs/16-nas-storage.md](16-nas-storage.md)) — sonst bleibt die
+  [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md)) — sonst bleibt die
   PostgreSQL-PVC auf `Pending`
 - `kubeseal` CLI ist lokal installiert
 - `kubectl` ist mit dem Cluster verbunden
@@ -103,10 +103,10 @@ Erwartete Reihenfolge:
 
 > Falls `wikijs-postgresql-*` dauerhaft `Pending` bleibt: das NAS ist
 > offline oder die `nas`-StorageClass fehlt — siehe
-> [docs/16-nas-storage.md](16-nas-storage.md) → Fehlerbehebung.
+> [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md) → Fehlerbehebung.
 
 **DNS:** `wiki.homeserver` ist sofort erreichbar — dank der Wildcard-DNS-Konfiguration
-(`address=/homeserver/<server-ip>` in dnsmasq, siehe [docs/09-dns-architecture.md](09-dns-architecture.md))
+(`address=/homeserver/<server-ip>` in dnsmasq, siehe [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md))
 ist **kein** manueller DNS-Eintrag nötig.
 
 ---
@@ -197,7 +197,7 @@ kubectl describe pvc -n wikijs wikijs-postgresql-data
 kubectl -n nas-storage get pods
 ```
 
-Details: [docs/16-nas-storage.md](16-nas-storage.md) → Fehlerbehebung.
+Details: [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md) → Fehlerbehebung.
 
 ---
 
@@ -221,7 +221,7 @@ Die Wiki.js-App-Komponente skaliert per HPA auf 1–3 Replicas (CPU 75% /
 RAM 80%) — da Seiten und Assets vollständig in PostgreSQL liegen (kein
 PVC am App-Pod), ist das ohne weitere Vorkehrungen (kein Affinity-Trick
 nötig) sicher. PostgreSQL selbst bleibt unangetastet (Single-Writer,
-kein HPA). Details für alle Apps: [39-hpa-autoscaling.md](39-hpa-autoscaling.md).
+kein HPA). Details für alle Apps: [../b-kubernetes-gitops/b0040-hpa-autoscaling.md](../b-kubernetes-gitops/b0040-hpa-autoscaling.md).
 
 ---
 
@@ -231,6 +231,6 @@ kein HPA). Details für alle Apps: [39-hpa-autoscaling.md](39-hpa-autoscaling.md
 - [Wiki.js — Groups & Permissions](https://docs.requarks.io/groups)
 - [Wiki.js Docker-Installation](https://docs.requarks.io/install/docker)
 - [Wiki.js GitHub Repository](https://github.com/requarks/wiki)
-- [NAS-Storage (UGREEN NAS)](16-nas-storage.md)
-- [DNS-Architektur (Wildcard `*.homeserver`)](09-dns-architecture.md)
-- [ArgoCD Setup](05-argocd.md)
+- [NAS-Storage (UGREEN NAS)](../2-betrieb-hardware/20000-nas-storage.md)
+- [DNS-Architektur (Wildcard `*.homeserver`)](../c-netzwerk-dns/c0000-dns-architecture.md)
+- [ArgoCD Setup](../b-kubernetes-gitops/b0010-argocd.md)

@@ -1,4 +1,4 @@
-# Ersetzt den manuellen openssl-Signierschritt aus docs/54-internal-tls.md:
+# Ersetzt den manuellen openssl-Signierschritt aus docs/d-sicherheit/d0040-internal-tls.md:
 # cert-manager signiert `Certificate`-Ressourcen ab jetzt selbstständig mit
 # derselben Homeserver-Root-CA, die bisher per Hand für jede Leaf-
 # Zertifikats-Erneuerung genutzt wurde.
@@ -6,17 +6,17 @@
 # Bewusst KEIN `SelfSigned`-Bootstrap-Issuer + neu generierte Root-CA (der
 # naheliegende cert-manager-Standardweg) — das würde eine komplett neue CA
 # erzeugen und auf JEDEM Client-Gerät einen erneuten Trust-Store-Rollout
-# nötig machen (siehe docs/54, Abschnitt "Client-Geräte"). Stattdessen wird
+# nötig machen (siehe docs/d-sicherheit/d0040-internal-tls.md, Abschnitt "Client-Geräte"). Stattdessen wird
 # die BESTEHENDE CA (rootCA.pem/rootCA-key.pem, bisher nur lokal für
 # `openssl x509 -req -CA ...` genutzt) einmalig manuell als Kubernetes-
-# Secret importiert (Befehl: docs/54, Abschnitt "Einmaliger Import") — exakt
+# Secret importiert (Befehl: docs/d-sicherheit/d0040-internal-tls.md, Abschnitt "Einmaliger Import") — exakt
 # dieselbe CA bleibt gültig, das bereits auf allen Geräten installierte
 # docs/assets/homeserver-root-ca.pem muss NICHT erneuert werden.
 #
 # Der CA-Private-Key wandert damit bewusst ins Cluster (nötig, damit
 # cert-manager selbstständig signieren/erneuern kann — das ist der ganze
 # Sinn dieser Migration). Anders als bei App-Secrets deshalb NICHT als
-# SealedSecret im Repo (gleiche Begründung wie zuvor in docs/54: der
+# SealedSecret im Repo (gleiche Begründung wie zuvor in docs/d-sicherheit/d0040-internal-tls.md: der
 # CA-Key ist höherwertiger als ein normales App-Secret, ein Repo-Leak der
 # sealed-secrets-Controller-Keys darf ihn nicht mit offenlegen) — Import
 # bleibt ein einmaliger manueller `kubectl create secret`-Schritt außerhalb

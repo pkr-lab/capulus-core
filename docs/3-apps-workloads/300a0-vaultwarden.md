@@ -62,9 +62,7 @@ nächsten Schritt versiegeln.
 
 Oder per CLI. Falls das lokale kubeconfig nicht auf den Home-Server zeigt
 (z. B. von einer Workstation ohne Cluster-Zugriff), Public Key einmalig
-vom Server holen und mit `--cert` an alle `kubeseal`-Aufrufe übergeben
-(Details: [docs/14-cert-login.md → kubeseal ohne lokalen
-Cluster-Kontext](14-cert-login.md#kubeseal-ohne-lokalen-cluster-kontext)):
+vom Server holen und mit `--cert` an alle `kubeseal`-Aufrufe übergeben:
 
 ```bash
 mkdir -p ~/homelab-certs
@@ -199,7 +197,7 @@ Secret im Cluster löschen, falls ArgoCD es nicht automatisch prunt.
 
 Eine Migration von `persistence.storageClassName` auf die NFS-`nas`-
 StorageClass (wie beim Großteil der übrigen Apps, siehe
-[docs/16-nas-storage.md](16-nas-storage.md)) wurde erwogen, aber **bewusst
+[docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md)) wurde erwogen, aber **bewusst
 verworfen**: das NAS erzwingt inzwischen `all_squash` (kein
 `no_root_squash` mehr verfügbar), was bei Vaultwardens SQLite-Datei zu
 Permission-Problemen führt — siehe Kommentar in
@@ -210,7 +208,7 @@ Stattdessen sichert ein nächtlicher `backup`-CronJob (eigene PVC, bewusst
 `storageClassName: nas`, siehe `backup-cronjob.yaml`) die SQLite-Datenbank
 per `sqlite3 .backup` (nutzt SQLites eigene Online-Backup-API, sicher auch
 bei einer laufenden, offenen DB) auf das NAS — Details:
-[docs/36-nas-backup.md](36-nas-backup.md).
+[docs/2-betrieb-hardware/20010-nas-backup.md](../2-betrieb-hardware/20010-nas-backup.md).
 
 ---
 
@@ -223,7 +221,7 @@ verschlüsselt in `db.sqlite3` + `rsa_key.pem`. Der Account ist deshalb
 nach einem Redeploy (z. B. verlorene `local-path`-PVC nach einem
 Node-Wechsel) automatisch wieder vollständig da, sobald diese Dateien aus
 dem NAS-Backup (siehe [Abschnitt 7](#7-warum-kein-nas-storage-für-die-haupt-pvc)
-und [docs/36-nas-backup.md](36-nas-backup.md)) zurückkopiert sind — ein
+und [docs/2-betrieb-hardware/20010-nas-backup.md](../2-betrieb-hardware/20010-nas-backup.md)) zurückkopiert sind — ein
 separater Schritt, um den Nutzer "neu anzulegen", ist nicht nötig.
 
 Dafür gibt es die Ansible-Rolle `vaultwarden_restore`
@@ -259,7 +257,7 @@ NAS noch existiert und der letzte nächtliche `backup-cronjob.yaml`-Lauf
 erfolgreich war (`kubectl -n vaultwarden get jobs`). Ist auch dieser Stand
 verloren (z. B. NAS-Totalausfall), bleibt nur der manuelle
 restic-Restore von der externen USB-Platte, siehe
-[docs/36-nas-backup.md → Wiederherstellung](36-nas-backup.md#wiederherstellung)
+[docs/2-betrieb-hardware/20010-nas-backup.md → Wiederherstellung](../2-betrieb-hardware/20010-nas-backup.md#wiederherstellung)
 — das NAS selbst bleibt bewusst außerhalb von Ansible verwaltet, dieser
 Pfad wird nicht automatisiert.
 

@@ -1,4 +1,4 @@
-# 37 — Cluster Power Manager: Worker per Wake-on-LAN dazuschalten
+# Cluster Power Manager: Worker per Wake-on-LAN dazuschalten
 
 Homeserver (192.168.178.94) läuft dauerhaft. worker-0 und worker-1
 (192.168.178.95/.96) sollen dagegen **nur dann laufen, wenn sie
@@ -7,7 +7,7 @@ groß, weckt der Homeserver worker-0 per Wake-on-LAN (WoL), bei
 anhaltend hoher Last zusätzlich worker-1. Geht die Last wieder zurück,
 schaltet der Homeserver die Worker in umgekehrter Reihenfolge wieder ab.
 
-Ergänzt [thermal_watchdog/resource_watchdog](04-k3s.md), die jeden Node
+Ergänzt [thermal_watchdog/resource_watchdog](../b-kubernetes-gitops/b0000-k3s.md), die jeden Node
 bei **eigener** Übertemperatur/Überlast selbst herunterfahren — dieses
 Feature steuert stattdessen die **anderen** Nodes basierend auf der Last
 des Homeservers.
@@ -61,10 +61,10 @@ abfließen sollte, kann damit nichts anderes ausgeführt werden.
 
 | Rolle | Läuft auf | Zweck |
 |---|---|---|
-| [`wake_on_lan`](../ansible/roles/wake_on_lan) | worker-0, worker-1 | Aktiviert WoL (`ethtool wol g`) persistent bei jedem Boot |
-| [`cluster_power_manager`](../ansible/roles/cluster_power_manager) | homeserver | Erzeugt den Shutdown-SSH-Key, deployt den Watchdog (`cluster-power-manager.service`) |
-| [`cluster_power_manager_target`](../ansible/roles/cluster_power_manager_target) | worker-0, worker-1 | Autorisiert den Public Key des Homeservers, beschränkt auf `poweroff` |
-| [`power_agent`](../ansible/roles/power_agent) | homeserver | HTTP-Gegenstück für **manuelle** Wake-/Shutdown-Taps aus der iOS-App (siehe [docs/43-carplay-api.md](43-carplay-api.md#power-agent)) — nutzt denselben SSH-Key, dieselbe `woke_at`-Buchführung und dieselbe Worker-Liste wie oben weiter, damit sich App-Taps und dieser automatische Last-Watchdog nicht widersprechen. Läuft direkt nach `cluster_power_manager` in `site.yml`. |
+| [`wake_on_lan`](../../ansible/roles/wake_on_lan) | worker-0, worker-1 | Aktiviert WoL (`ethtool wol g`) persistent bei jedem Boot |
+| [`cluster_power_manager`](../../ansible/roles/cluster_power_manager) | homeserver | Erzeugt den Shutdown-SSH-Key, deployt den Watchdog (`cluster-power-manager.service`) |
+| [`cluster_power_manager_target`](../../ansible/roles/cluster_power_manager_target) | worker-0, worker-1 | Autorisiert den Public Key des Homeservers, beschränkt auf `poweroff` |
+| [`power_agent`](../../ansible/roles/power_agent) | homeserver | HTTP-Gegenstück für **manuelle** Wake-/Shutdown-Taps aus der iOS-App (siehe [docs/3-apps-workloads/300d0-carplay-api.md](../3-apps-workloads/300d0-carplay-api.md#power-agent)) — nutzt denselben SSH-Key, dieselbe `woke_at`-Buchführung und dieselbe Worker-Liste wie oben weiter, damit sich App-Taps und dieser automatische Last-Watchdog nicht widersprechen. Läuft direkt nach `cluster_power_manager` in `site.yml`. |
 
 Reihenfolge beim erstmaligen Rollout wichtig: `make install` (site.yml,
 erzeugt den SSH-Key auf homeserver) **vor** `make worker-0` /
@@ -111,7 +111,7 @@ make cluster-power-manager
 ## Schwellwerte & Hysterese
 
 Defaults in
-[`ansible/roles/cluster_power_manager/defaults/main.yml`](../ansible/roles/cluster_power_manager/defaults/main.yml),
+[`ansible/roles/cluster_power_manager/defaults/main.yml`](../../ansible/roles/cluster_power_manager/defaults/main.yml),
 überschreibbar in `ansible/group_vars/all.yml`:
 
 | Variable | Default | Bedeutung |
@@ -209,6 +209,6 @@ typische Lastspitze kürzer ist als die konfigurierte Sustain-Dauer.
 
 ## Relevante Links
 
-- [k3s-Referenz (Cluster-Topologie, cordon/drain/uncordon)](04-k3s.md)
-- [resource_watchdog / thermal_watchdog](../ansible/roles/resource_watchdog)
-- [NAS-Backup](36-nas-backup.md)
+- [k3s-Referenz (Cluster-Topologie, cordon/drain/uncordon)](../b-kubernetes-gitops/b0000-k3s.md)
+- [resource_watchdog / thermal_watchdog](../../ansible/roles/resource_watchdog)
+- [NAS-Backup](20010-nas-backup.md)

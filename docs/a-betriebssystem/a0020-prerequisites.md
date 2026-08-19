@@ -98,7 +98,7 @@ ssh ubuntu@192.168.1.100 "python3 --version"
    - **Ephemeral**: Nein (der Server soll im Netz bleiben)
    - **Tags**: optional (z. B. `tag:homeserver`)
 5. Key kopieren (beginnt mit `tskey-auth-…`).
-6. Mit Ansible-Vault verschlüsseln (siehe [Installation Guide](03-installation.md)).
+6. Mit Ansible-Vault verschlüsseln (siehe [Installation Guide](a0030-installation.md)).
 
 ### Git-Repository für GitOps
 

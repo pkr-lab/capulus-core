@@ -1,4 +1,4 @@
-# 39 — Horizontale Autoskalierung (HPA)
+# Horizontale Autoskalierung (HPA)
 
 Auslöser: Immich stürzte bei vielen/großen Uploads ab (OOMKilled), und
 Kubernetes hat nicht automatisch mehr Pods gestartet — schlicht weil
@@ -20,7 +20,7 @@ das Limit selbst erhöht werden. Für Immich konkret: viele parallele
 Uploads verteilen sich jetzt auf mehrere `immich-server`-Pods, ein
 einzelnes 4K-Video, das für sich allein schon >4Gi RAM braucht, crasht
 trotzdem (siehe `server.resources.limits` in
-[argocd/apps/workloads/immich/values.yaml](../argocd/apps/workloads/immich/values.yaml)).
+[argocd/apps/workloads/immich/values.yaml](../../argocd/apps/workloads/immich/values.yaml)).
 
 ---
 
@@ -29,7 +29,7 @@ trotzdem (siehe `server.resources.limits` in
 ### 1. ArgoCD `selfHeal` vs. HPA — das `replicas`-Problem
 
 Das Root-ApplicationSet
-([argocd/bootstrap/root-applicationset.yaml](../argocd/bootstrap/root-applicationset.yaml))
+([argocd/bootstrap/root-applicationset.yaml](../../argocd/bootstrap/root-applicationset.yaml))
 läuft mit `syncPolicy.automated.selfHeal: true` **und**
 `syncOptions: [ServerSideApply=true]`. Ohne Gegenmaßnahme würde ArgoCD bei
 jedem Sync die von git/Helm vorgegebene, statische `replicas`-Zahl wieder
@@ -104,7 +104,7 @@ versehentlich überschreibt.
 
 Bei Nextcloud ist das nur sicher, weil die App bereits ein eigenes Redis
 für verteiltes Datei-Locking nutzt (siehe
-[33-nextcloud.md](33-nextcloud.md)) — geteilter Storage + mehrere
+[../3-apps-workloads/300b0-nextcloud.md](../3-apps-workloads/300b0-nextcloud.md)) — geteilter Storage + mehrere
 App-Pods funktioniert bei Nextcloud nur, wenn das Locking nicht auch noch
 lokal im Dateisystem passiert.
 
@@ -117,23 +117,23 @@ sie haben schlicht kein PVC (Wiki.js speichert alles in PostgreSQL).
 
 | App | Komponente | Replicas | Trigger | Besonderheit |
 |---|---|---|---|---|
-| [immich](35-immich.md) | `server` | 1–3 | CPU 75% / RAM 80% | podAffinity (RWO-Library) |
+| [immich](../3-apps-workloads/300c0-immich.md) | `server` | 1–3 | CPU 75% / RAM 80% | podAffinity (RWO-Library) |
 | immich | `machine-learning` | 1–2 | CPU 75% / RAM 80% | podAffinity (RWO-Model-Cache); niedrigeres Max, da jede Inferenz-Instanz bis zu 4 Kerne/4Gi allein beansprucht |
-| [nextcloud](33-nextcloud.md) | App-Tier | 1–2 | CPU 75% / RAM 80% | podAffinity (RWO `html`/`data`); sicher dank Redis-Locking |
-| [wikijs](20-wikijs.md) | App-Tier | 1–3 | CPU 75% / RAM 80% | kein PVC, kein Affinity-Trick nötig |
-| [cloudflared](23-cloudflare-deploy.md) | — | 2–4 | CPU 70% | Minimum bleibt 2 (zwei unabhängige Edge-Verbindungen) |
+| [nextcloud](../3-apps-workloads/300b0-nextcloud.md) | App-Tier | 1–2 | CPU 75% / RAM 80% | podAffinity (RWO `html`/`data`); sicher dank Redis-Locking |
+| [wikijs](../3-apps-workloads/30030-wikijs.md) | App-Tier | 1–3 | CPU 75% / RAM 80% | kein PVC, kein Affinity-Trick nötig |
+| [cloudflared](../e-externe-erreichbarkeit/e0010-cloudflare-deploy.md) | — | 2–4 | CPU 70% | Minimum bleibt 2 (zwei unabhängige Edge-Verbindungen) |
 | example-whoami | — | 1–3 | CPU 70% | Test-App |
 | gotify-bridge, ntfy-bridge | — | 1–3 | CPU 75% | stateless Webhook-Übersetzer |
-| [mediamtx](24-mediamtx.md) | — | 1–2 | CPU 75% | hilft nur bei neuen Verbindungen — ein laufender RTMP/RTSP-Stream bleibt am ursprünglichen Pod hängen (kein Rebalancing) |
+| [mediamtx](../3-apps-workloads/30040-mediamtx.md) | — | 1–2 | CPU 75% | hilft nur bei neuen Verbindungen — ein laufender RTMP/RTSP-Stream bleibt am ursprünglichen Pod hängen (kein Rebalancing) |
 | headlamp | — | 1–3 | CPU 75% | hand-geschriebener HPA, Upstream-Chart hat kein natives Autoscaling |
 | kubeseal-webgui | — | 1–2 | CPU 75% | hand-geschriebener HPA |
-| [zammad](17-zammad.md) | `nginx` | 1–3 | CPU 70% | hand-geschriebener HPA |
+| [zammad](../3-apps-workloads/30000-zammad.md) | `nginx` | 1–3 | CPU 70% | hand-geschriebener HPA |
 | zammad | `railsserver` | 1–3 | CPU 75% / RAM 80% | hand-geschriebener HPA |
 
 Alle Schwellenwerte sind bewusst konservativ gewählt (CPU 70–75%, RAM 80%)
 — lieber eine Replica zu früh dazu als spät, da Homeserver aktuell der
 einzige durchgehend laufende Node ist (siehe
-[37-cluster-power-manager.md](37-cluster-power-manager.md)).
+[../2-betrieb-hardware/20020-cluster-power-manager.md](../2-betrieb-hardware/20020-cluster-power-manager.md)).
 
 ---
 

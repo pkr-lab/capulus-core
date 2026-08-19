@@ -52,7 +52,7 @@ Was die Rolle macht:
 
 1. Installiert das offizielle CrowdSec-APT-Repository (per
    `install.crowdsec.net`-Skript — analog zur Tailscale-Client-Installation
-   in [docs/06-tailscale.md](06-tailscale.md), weil das die vom Hersteller
+   in [docs/c-netzwerk-dns/c0010-tailscale.md](../c-netzwerk-dns/c0010-tailscale.md), weil das die vom Hersteller
    gepflegte Methode ist, das richtige Repo für die laufende Distribution zu
    finden, statt einen Codename hart zu verdrahten).
 2. Installiert und startet `crowdsec` (Agent + lokale API).

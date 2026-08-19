@@ -17,7 +17,7 @@ Sicherheitsupdates.
 | `argocd/apps/*/Chart.yaml` | `helmv3` | `dependencies[].version` (Subchart-Versionen) |
 | `.github/workflows/*.yml` | `github-actions` | `uses: actions/checkout@vX` |
 
-Config liegt in [`renovate.json`](../renovate.json) im Repo-Root.
+Config liegt in [`renovate.json`](../../renovate.json) im Repo-Root.
 
 **Bewusst ausgenommen:** `**/charts/**` (vendored `.tgz`-Subcharts, z. B.
 `argocd/apps/platform/headlamp/charts/headlamp-*.tgz`) und `Chart.lock` — die werden
@@ -43,9 +43,9 @@ Renovate-PR gegen eine generierte Lockdatei.
 - Es rollt nichts im Cluster aus — erst nach dem Merge auf `main` greift der
   normale GitOps-Kreislauf: ArgoCD pollt das Repo und synct die geänderte
   `values.yaml` wie jede andere Änderung auch (siehe
-  [docs/05-argocd.md](05-argocd.md)).
+  [docs/b-kubernetes-gitops/b0010-argocd.md](../b-kubernetes-gitops/b0010-argocd.md)).
 - Ein Merge auf `main` löst zusätzlich automatisch ein neues GitHub-Release
-  aus, siehe [docs/48-release-automation.md](48-release-automation.md).
+  aus, siehe [docs/f-cicd-automatisierung/f0030-release-automation.md](f0030-release-automation.md).
 
 ---
 

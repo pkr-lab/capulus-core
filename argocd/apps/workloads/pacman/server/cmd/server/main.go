@@ -187,7 +187,7 @@ func getenv(key, fallback string) string {
 
 // parseUserAgent pulls a browser name/version and OS name out of a raw
 // User-Agent string, in browser/OS split for the Grafana table (see
-// docs/57-pacman-visitor-tracking.md). Deliberately simple ordered
+// docs/3-apps-workloads/300f0-pacman-visitor-tracking.md). Deliberately simple ordered
 // substring matching, not a full UA-parser library — order matters
 // because most UA strings claim to be several browsers at once (e.g.
 // Edge and Opera both include "Chrome/" and "Safari/" tokens for
@@ -315,7 +315,7 @@ func withAccessLog(logger *slog.Logger, geo *geoip2.Reader, next http.Handler) h
 			// Client-side fingerprinting (canvas/WebGL/audio/autofill
 			// harvesting) is a separate "client_fingerprint" log line, see
 			// fingerprint.js and handleFingerprint() below. See
-			// docs/57-pacman-visitor-tracking.md.
+			// docs/3-apps-workloads/300f0-pacman-visitor-tracking.md.
 			"accept_language", r.Header.Get("Accept-Language"),
 			"accept_encoding", r.Header.Get("Accept-Encoding"),
 			"sec_ch_ua", r.Header.Get("Sec-Ch-Ua"),

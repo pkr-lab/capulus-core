@@ -185,5 +185,5 @@
       - "Next steps:"
       - "  1) Wait ~3 minutes for ArgoCD to deploy the semaphore app."
       - "  2) Open the URL, log in, change the admin password."
-      - "  3) Create your first Project (see docs/08-semaphore.md)."
+      - "  3) Create your first Project (see docs/b-kubernetes-gitops/b0030-semaphore.md)."
       - "=================================================="

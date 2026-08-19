@@ -7,10 +7,8 @@ import Foundation
 /// *.homeserver service in this cluster (see Constants.swift) — there is no
 /// TLS handshake to pin a certificate against, so implementing pinning here
 /// would just be a check that never runs. Real client-certificate mTLS
-/// *is* a documented plan for this cluster (docs/14-cert-login.md, home-lab
-/// CA + `RequireAndVerifyClientCert` at the Traefik layer) but it isn't
-/// merged, and so far only targets a handful of admin UIs (Authentik,
-/// Grafana, ...), not this API.
+/// (home-lab CA + `RequireAndVerifyClientCert` at the Traefik layer) is an
+/// unimplemented idea, not yet written up as a doc or targeting this API.
 ///
 /// This delegate is kept as the extension point for when/if that migration
 /// reaches carplay-api: once its IngressRoute references the `mtls-homelab`

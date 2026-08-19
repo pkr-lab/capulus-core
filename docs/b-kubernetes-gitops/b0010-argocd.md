@@ -115,7 +115,7 @@ kubectl apply -f repo-secret.yaml
 
 ## ApplicationSet-Struktur
 
-Seit [docs/49-argocd-projects.md](49-argocd-projects.md) gibt es **zwei
+Seit [docs/b-kubernetes-gitops/b0020-argocd-projects.md](b0020-argocd-projects.md) gibt es **zwei
 separate Bootstrap-`ApplicationSet`-Ressourcen** statt einer einzigen —
 `home-server-apps-platform` und `home-server-apps-workloads`
 (`argocd/bootstrap/root-applicationset.yaml`, zwei YAML-Dokumente in einer
@@ -157,7 +157,7 @@ spec:
 > Bewusst **zwei getrennte Ressourcen** statt einer mit zwei Generatoren oder
 > einem aus dem Pfad abgeleiteten Project-Wert — beide Alternativen wurden
 > verworfen, Details und Begründung in
-> [docs/49-argocd-projects.md](49-argocd-projects.md#wie-es-technisch-funktioniert).
+> [docs/b-kubernetes-gitops/b0020-argocd-projects.md](b0020-argocd-projects.md#wie-es-technisch-funktioniert).
 
 **Funktionsweise:**
 
@@ -169,12 +169,12 @@ spec:
   Tier-Ebene ändert nichts an Namespaces**, nur an der Pfadstruktur in Git.
 - AppProject = `platform` bzw. `workloads`, je nachdem welches
   ApplicationSet die App gefunden hat (siehe
-  [docs/49-argocd-projects.md](49-argocd-projects.md) für die Details der
+  [docs/b-kubernetes-gitops/b0020-argocd-projects.md](b0020-argocd-projects.md) für die Details der
   AppProject-`destinations`).
 - ArgoCD synct den Inhalt des Verzeichnisses in den Cluster.
 
 **Beispielhafte Verzeichnis-Struktur** (Auszug — vollständige, aktuell gepflegte
-Liste aller Apps: [README.md → Repository-Layout](../README.md#repository-layout)):
+Liste aller Apps: [README.md → Repository-Layout](../../README.md#repository-layout)):
 
 ```
 argocd/apps/
@@ -209,7 +209,7 @@ Der GitOps-Workflow für neue Apps:
 
 1. Tier entscheiden: **Platform** (Infrastruktur/Admin-Charakter) oder
    **Workloads** (echter Nutzerkreis) — siehe
-   [docs/49-argocd-projects.md](49-argocd-projects.md#die-zwei-tiers).
+   [docs/b-kubernetes-gitops/b0020-argocd-projects.md](b0020-argocd-projects.md#die-zwei-tiers).
 2. Verzeichnis `argocd/apps/platform/<app-name>/` oder
    `argocd/apps/workloads/<app-name>/` anlegen.
 3. Kubernetes-Manifests oder Helm-Chart hineinlegen.
@@ -454,7 +454,7 @@ wird der Sync sofort nach jedem Push ausgelöst:
 
 Hinweis: Der Server muss aus den GitHub-Servern erreichbar sein. Über Tailscale
 geht das nur, wenn er als
-[Tailscale-Exit-Node](06-tailscale.md) eingerichtet oder Subnet-Routing
+[Tailscale-Exit-Node](../c-netzwerk-dns/c0010-tailscale.md) eingerichtet oder Subnet-Routing
 konfiguriert ist.
 
 Alternativ ist der 3-Minuten-Poll für einen Home-Server völlig ausreichend.

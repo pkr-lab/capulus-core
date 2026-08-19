@@ -85,7 +85,7 @@ mit Arexibo) dazukommt.
 
 Liegt unter `argocd/apps/workloads/xibosignage/`, wird wie jede andere App in
 `argocd/apps/*` automatisch von ArgoCD erkannt und ausgerollt (siehe
-[docs/05-argocd.md](05-argocd.md)) — keine manuelle Registrierung nötig.
+[docs/b-kubernetes-gitops/b0010-argocd.md](../b-kubernetes-gitops/b0010-argocd.md)) — keine manuelle Registrierung nötig.
 
 Komponenten (1:1 aus dem offiziellen
 [xibosignage/xibo-docker](https://github.com/xibosignage/xibo-docker)
@@ -139,12 +139,12 @@ Login ändern** (Einstellungen → Mein Konto).
 
 `xibosignage-inbox` und `xibosignage-display` sind **feste** Pfade unter dem
 bestehenden `k8s-storage`-Export (`nas`-StorageClass, siehe
-[docs/16-nas-storage.md](16-nas-storage.md)) — **nicht** dynamisch vom
+[docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md)) — **nicht** dynamisch vom
 `nfs-subdir-external-provisioner` vergeben, weil sowohl n8n (Kubernetes-Pod)
 als auch der Raspberry Pi (rohes NFS, kein Kubernetes) als auch die eigene
 OnlineSync denselben, vorhersagbaren Pfad ansprechen müssen. Details zur
 Technik (statische PV mit `nfs:`-Block statt PVC über eine StorageClass):
-[docs/16-nas-storage.md](16-nas-storage.md#fixer-pfad-statt-dynamischer-subdir-name).
+[docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md#fixer-pfad-statt-dynamischer-subdir-name).
 
 ### Einmalig: Ordner auf dem NAS anlegen
 
@@ -271,7 +271,7 @@ ein eigener Tailscale-Auth-Key für diese Geräte-Gruppe — **nicht** den
 Home-Server-Key aus `group_vars/all.yml` wiederverwenden (der ist i. d. R.
 Single-Use und bereits verbraucht). Empfehlung bei mehreren Displays: ein
 **wiederverwendbarer** Key mit eigenem Tag (`tag:xibo-display`), siehe
-[docs/06-tailscale.md](06-tailscale.md#auth-key-besorgen):
+[docs/c-netzwerk-dns/c0010-tailscale.md](../c-netzwerk-dns/c0010-tailscale.md#auth-key-besorgen):
 
 ```bash
 ansible-vault encrypt_string 'tskey-auth-...' --name 'tailscale_auth_key'
@@ -295,7 +295,7 @@ Das Playbook `ansible/xibo-kiosks.yml` führt pro Pi aus:
 |---|---|
 | `tailscale` | VPN-Beitritt, reiner Client (kein Subnetz-Advertising) — Fernzugriff/-wartung ohne Portfreigabe |
 | `xibo_kiosk` | NFS-Mount von `xibosignage-display` (read-only), Manifest-Generator-Timer, lokaler Python-Webserver, Chromium-Kiosk-Slideshow |
-| `thermal_watchdog` / `resource_watchdog` | Selbstschutz für unbeaufsichtigte Geräte (gleiches Bundling wie bei den ALAMOS-Kiosks, siehe [docs/19-alamos-apager.md](19-alamos-apager.md)) |
+| `thermal_watchdog` / `resource_watchdog` | Selbstschutz für unbeaufsichtigte Geräte (gleiches Bundling wie bei den ALAMOS-Kiosks, siehe [docs/3-apps-workloads/30010-alamos-apager.md](30010-alamos-apager.md)) |
 
 ### Wie die Slideshow funktioniert
 
@@ -311,7 +311,7 @@ Das Playbook `ansible/xibo-kiosks.yml` führt pro Pi aus:
   `http://127.0.0.1:8080/`.
 
 Das Semaphore-Projekt **"xibo-displays"** ist nach `make semaphore-bootstrap`
-automatisch in der UI verfügbar (siehe [docs/08-semaphore.md](08-semaphore.md))
+automatisch in der UI verfügbar (siehe [docs/b-kubernetes-gitops/b0030-semaphore.md](../b-kubernetes-gitops/b0030-semaphore.md))
 — **bewusst ohne** automatischen Schedule, analog zu `alarm-kiosks`.
 
 ---
@@ -321,14 +321,14 @@ automatisch in der UI verfügbar (siehe [docs/08-semaphore.md](08-semaphore.md))
 | Symptom | Check |
 |---|---|
 | Xibo-CMS-Pod bleibt `CrashLoopBackOff` beim allerersten Start | `kubectl -n xibosignage logs deploy/xibosignage-cms` — meist DB noch nicht bereit, Pod startet automatisch neu; bei anhaltenden Fehlern MySQL-Pod-Status prüfen (`kubectl -n xibosignage get pods`) |
-| MySQL-Pod: `Permission denied` auf `/var/lib/mysql` | NFS-Squash-Identität auf dem UGREEN NAS hat sich geändert (siehe [docs/16-nas-storage.md](16-nas-storage.md) und die identische Problemlösung bei wikijs/immich) — `mysql.securityContext.runAsUser`/`runAsGroup` in `argocd/apps/workloads/xibosignage/values.yaml` an die aktuelle Squash-Identität anpassen. **Nicht** auf `cms.securityContext` übertragen — das offizielle xibo-cms-Image braucht beim ersten Start Root (schreibt `/root/.my.cnf`, konfiguriert Apache/PHP/cron unter `/etc`), analog zu wikijs/immich bleibt `cms.securityContext` deshalb bewusst leer |
+| MySQL-Pod: `Permission denied` auf `/var/lib/mysql` | NFS-Squash-Identität auf dem UGREEN NAS hat sich geändert (siehe [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md) und die identische Problemlösung bei wikijs/immich) — `mysql.securityContext.runAsUser`/`runAsGroup` in `argocd/apps/workloads/xibosignage/values.yaml` an die aktuelle Squash-Identität anpassen. **Nicht** auf `cms.securityContext` übertragen — das offizielle xibo-cms-Image braucht beim ersten Start Root (schreibt `/root/.my.cnf`, konfiguriert Apache/PHP/cron unter `/etc`), analog zu wikijs/immich bleibt `cms.securityContext` deshalb bewusst leer |
 | CMS-Pod: `CrashLoopBackOff`, Logs voller `Permission denied` (`/root/.my.cnf`, `/etc/apache2`, `/etc/php`, `settings.php`) und `ERROR 1045 ... UNKNOWN_USER` | `cms.securityContext` in `argocd/apps/workloads/xibosignage/values.yaml` wurde (versehentlich) auf `runAsUser: 1000` o.ä. gesetzt — muss leer (`{}`) sein, da das CMS-Image root für sein Setup braucht |
-| `xibo.homeserver` löst nicht auf | Wildcard-DNS prüfen: `nslookup xibo.homeserver` (siehe [docs/09-dns-architecture.md](09-dns-architecture.md)) |
+| `xibo.homeserver` löst nicht auf | Wildcard-DNS prüfen: `nslookup xibo.homeserver` (siehe [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md)) |
 | n8n "Local File Trigger" feuert nicht | `kubectl -n n8n exec deploy/n8n -- ls -la /data/xibosignage-inbox` — Mount vorhanden? PVC `xibosignage-inbox-data` im Status `Bound`? (`kubectl -n n8n get pvc`) |
 | n8n-PVCs bleiben `Pending` | Statische PV falsch benannt/gebunden — `kubectl get pv xibosignage-inbox-pv xibosignage-display-pv` prüfen, `nfs.path` muss exakt existieren (siehe [Ordner anlegen](#nas-ordner-einrichten-inboxdisplay-onlinesync)) |
 | Pi zeigt nur "Warte auf Bilder…" | `ssh pi@<host> 'cat /var/www/xibosignage-slideshow/manifest.json'` — leer? `mountpoint /mnt/xibosignage-display` prüfen, ggf. `sudo mount -a` |
 | Pi-Mount schlägt fehl | `nfs-common` installiert? (`dpkg -l | grep nfs-common`), NAS vom Pi aus erreichbar? (`showmount -e 192.168.178.97`) |
 | Chromium startet nicht / schwarzer Bildschirm | Autologin auf dem Pi aktiv? `systemctl status xibosignage-kiosk xibosignage-webserver` auf dem Pi |
-| `Permission denied (publickey)` bei `make xibo-kiosks` | `make semaphore-targets` lief nicht für den neuen Pi (siehe [docs/08-semaphore.md](08-semaphore.md)) |
+| `Permission denied (publickey)` bei `make xibo-kiosks` | `make semaphore-targets` lief nicht für den neuen Pi (siehe [docs/b-kubernetes-gitops/b0030-semaphore.md](../b-kubernetes-gitops/b0030-semaphore.md)) |
 | Nach Workflow-Import in n8n: "Watch Inbox" und/oder "Original archivieren" zeigen "Install this node to use it" | n8n blockt Local File Trigger/Execute Command standardmäßig (Sicherheitsfeature) — `env.NODES_EXCLUDE: "[]"` in `argocd/apps/workloads/n8n/values.yaml` setzt das für diese Instanz zurück, danach n8n-Pod neu starten und Workflow neu öffnen |
 | Pi advertised ungewollt das Heim-Subnetz im Tailscale-Adminpanel | `tailscale_advertise_routes: ""` fehlt in `ansible/group_vars/xibo_displays.yml` — sollte nach dem nächsten Rollout verschwinden (`tailscale set --advertise-routes=` ohne Wert entfernt bestehende Routes nicht automatisch, ggf. einmalig `sudo tailscale set --advertise-routes=` manuell auf dem Pi nachziehen) |

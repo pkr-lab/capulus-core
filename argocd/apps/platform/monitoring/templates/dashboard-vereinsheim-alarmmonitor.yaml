@@ -9,7 +9,7 @@ data:
   vereinsheim-alarmmonitor.json: |
     {
       "annotations": {"list": []},
-      "description": "Alles Wichtige zum Banana-Pi-Alarmmonitor 'vereinsheim-alarmmonitor' auf einen Blick: Rhein-Pegel Andernach (oben, gleiche Quelle wie dashboard-rhein-andernach.yaml), Erreichbarkeit, Uptime, CPU/RAM/Temperatur/Disk sowie der ALAMOS-Status (letzte AMweb-Anfrage, letzter Heartbeat). Geraete-Metriken kommen per vmagent-Push (Tailscale-only-Standort, kein Cluster-Scrape), siehe docs/45-vereinsheim-alarmmonitor.md.",
+      "description": "Alles Wichtige zum Banana-Pi-Alarmmonitor 'vereinsheim-alarmmonitor' auf einen Blick: Rhein-Pegel Andernach (oben, gleiche Quelle wie dashboard-rhein-andernach.yaml), Erreichbarkeit, Uptime, CPU/RAM/Temperatur/Disk sowie der ALAMOS-Status (letzte AMweb-Anfrage, letzter Heartbeat). Geraete-Metriken kommen per vmagent-Push (Tailscale-only-Standort, kein Cluster-Scrape), siehe docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md.",
       "editable": true,
       "graphTooltip": 1,
       "links": [],

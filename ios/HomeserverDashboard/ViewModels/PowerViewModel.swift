@@ -2,7 +2,7 @@ import Foundation
 
 /// Backs the Brightness and Power tabs: brightness get/set and
 /// wake/shutdown actions, all proxied by carplay-api to power-agent on the
-/// homeserver host (see docs/43-carplay-api.md "power-agent"). Kept
+/// homeserver host (see docs/3-apps-workloads/300d0-carplay-api.md "power-agent"). Kept
 /// separate from DashboardViewModel since these are user-triggered actions
 /// with their own loading/error state, not part of the 30s polling loop.
 @MainActor

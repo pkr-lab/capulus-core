@@ -25,10 +25,10 @@ power_agent_port: 9101
 # erzeugt und lokal unter diesem Pfad abgelegt (siehe tasks/main.yml) —
 # nicht hier als Variable gesetzt, weil derselbe Wert danach manuell in
 # argocd/apps/workloads/carplay-api/values.yaml (secrets.powerAgentToken) versiegelt
-# werden muss. Siehe docs/43-carplay-api.md "power-agent".
+# werden muss. Siehe docs/3-apps-workloads/300d0-carplay-api.md "power-agent".
 power_agent_token_path: /etc/power-agent/token
 
-# HP ProBook 450 G9 (siehe docs/01-overview.md) — mit
+# HP ProBook 450 G9 (siehe docs/a-betriebssystem/a0010-overview.md) — mit
 # `ls /sys/class/backlight/` auf dem Homeserver prüfen, falls sich das
 # Kernel-Backlight-Device je ändert (z.B. nach einem BIOS-/Kernel-Update).
 power_agent_backlight_path: /sys/class/backlight/intel_backlight/brightness

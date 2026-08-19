@@ -64,11 +64,11 @@ der direkt auf dem nackten Homeserver-Host läuft (systemd-Service, NICHT
 im Cluster) und:
 
 - die Bildschirmhelligkeit über `/sys/class/backlight/intel_backlight/`
-  liest/schreibt (HP ProBook 450 G9, siehe `docs/01-overview.md`),
+  liest/schreibt (HP ProBook 450 G9, siehe `docs/a-betriebssystem/a0010-overview.md`),
 - `wakeonlan` für worker-0/worker-1 auslöst,
 - worker-0/worker-1 über denselben SSH-Key wie `cluster_power_manager`
   herunterfährt (forced command, nur `sudo poweroff` möglich — siehe
-  [docs/37-cluster-power-manager.md](37-cluster-power-manager.md)), und
+  [docs/2-betrieb-hardware/20020-cluster-power-manager.md](../2-betrieb-hardware/20020-cluster-power-manager.md)), und
 - den Homeserver selbst herunterfährt (`sudo poweroff`, lokal, da der
   Agent als root läuft).
 
@@ -106,7 +106,7 @@ funktioniert hätte), wurde angepasst:
 - **Paketierung**: Helm-Chart (`Chart.yaml`/`values.yaml`/`templates/`) wie
   jede andere App unter `argocd/apps/`, kein rohes Kustomize/kubectl-YAML —
   sonst hätte die App nicht automatisch über die ArgoCD-`ApplicationSet`
-  (siehe [docs/05-argocd.md](05-argocd.md)) ausgerollt werden können.
+  (siehe [docs/b-kubernetes-gitops/b0010-argocd.md](../b-kubernetes-gitops/b0010-argocd.md)) ausgerollt werden können.
 - **Namespace**: `carplay-api`, nicht `homeserver-app` — die
   `ApplicationSet` leitet den Namespace aus dem Verzeichnisnamen ab.
 - **mTLS**: nicht umgesetzt. Traefik terminiert in diesem Cluster kein
@@ -118,8 +118,7 @@ funktioniert hätte), wurde angepasst:
 ## Ersteinrichtung
 
 1. **`kubeseal`-Zertifikat besorgen** (einmalig, überspringen falls
-   `~/homelab-certs/sealed-secrets.pem` schon existiert — siehe
-   [docs/14-cert-login.md](14-cert-login.md#kubeseal-ohne-lokalen-cluster-kontext)):
+   `~/homelab-certs/sealed-secrets.pem` schon existiert):
 
    ```bash
    mkdir -p ~/homelab-certs
@@ -176,7 +175,7 @@ funktioniert hätte), wurde angepasst:
    `target: "homeserver"` mit `503` blockiert, worker-0/worker-1 sind
    davon nicht betroffen). Denselben Wert wie das aktuelle
    ArgoCD-Admin-Passwort verwenden (siehe
-   [docs/05-argocd.md](05-argocd.md)) und bei jeder Passwort-Rotation hier
+   [docs/b-kubernetes-gitops/b0010-argocd.md](../b-kubernetes-gitops/b0010-argocd.md)) und bei jeder Passwort-Rotation hier
    mit erneuern:
 
    ```bash
@@ -208,7 +207,7 @@ funktioniert hätte), wurde angepasst:
 2. Slug vergeben (Default in `values.yaml`: `homeserver`) — muss exakt mit
    `config.uptimeKuma.slug` übereinstimmen.
 3. Alle Monitore hinzufügen, die im Dashboard erscheinen sollen (siehe
-   [docs/30-uptime-kuma.md](30-uptime-kuma.md) für die vorhandene
+   [docs/3-apps-workloads/30080-uptime-kuma.md](30080-uptime-kuma.md) für die vorhandene
    Monitor-Liste).
 4. Speichern — die Seite muss nicht öffentlich beworben werden, sie muss
    nur existieren; `carplay-api` liest sie serverseitig.
@@ -217,7 +216,7 @@ funktioniert hätte), wurde angepasst:
 
 Kein GitHub Actions in diesem Repo — Image-Builds laufen über das
 `kaniko-build-push`-WorkflowTemplate aus
-[docs/12-argo-workflows.md](12-argo-workflows.md):
+[docs/f-cicd-automatisierung/f0000-argo-workflows.md](../f-cicd-automatisierung/f0000-argo-workflows.md):
 
 ```bash
 argo submit --from workflowtemplate/kaniko-build-push \
@@ -285,4 +284,4 @@ Die wichtigsten:
 | App bekommt `401` beim Homeserver-Shutdown | Eingegebener Code ≠ `secrets.shutdownConfirmationCode`-Klartext — meist nach einer ArgoCD-Passwort-Rotation, die hier noch nicht nachgezogen wurde |
 | App bekommt `502` auf Helligkeit/Wake/Shutdown | `secrets.powerAgentToken` stimmt nicht mit `/etc/power-agent/token` auf dem Homeserver überein, oder power-agent läuft nicht (`systemctl status power-agent` auf dem Homeserver) — siehe [power-agent](#power-agent) |
 | App bekommt `403` nach Aktivieren der IP-Allowlist | `config.trustedProxies` fehlt/falsch — App sieht Traefik-Pod-IP statt Tailscale-IP, siehe [Absicherung](#absicherung) |
-| `carplay-api.homeserver` löst nicht auf | Wildcard-DNS prüfen: `nslookup carplay-api.homeserver` (siehe [docs/09-dns-architecture.md](09-dns-architecture.md)) |
+| `carplay-api.homeserver` löst nicht auf | Wildcard-DNS prüfen: `nslookup carplay-api.homeserver` (siehe [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md)) |

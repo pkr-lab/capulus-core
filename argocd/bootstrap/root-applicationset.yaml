@@ -5,7 +5,7 @@
 # committed copy.
 #
 # Apps live under argocd/apps/platform/<app> or argocd/apps/workloads/<app>
-# (see docs/49-argocd-projects.md) — each app keeps its own namespace
+# (see docs/b-kubernetes-gitops/b0020-argocd-projects.md) — each app keeps its own namespace
 # (destination.namespace is still just the app's basename, unaffected by the
 # directory nesting). Two SEPARATE ApplicationSet resources below (one per
 # tier) each carry a hardcoded, literal `spec.project` — deliberately not a
@@ -61,7 +61,7 @@ spec:
         # but ServerSideApply treats an explicit null as "clear this field",
         # which resets it to the schema default (1) on every sync — fighting
         # the HPA's scale-up and leaving the app permanently OutOfSync (seen
-        # on zammad-railsserver, docs/17-zammad.md). Ignoring /spec/replicas
+        # on zammad-railsserver, docs/3-apps-workloads/30000-zammad.md). Ignoring /spec/replicas
         # here only matches Applications that actually contain a resource
         # with this exact kind+name, so it's a no-op for every other app.
         - group: apps
@@ -156,7 +156,7 @@ spec:
         # but ServerSideApply treats an explicit null as "clear this field",
         # which resets it to the schema default (1) on every sync — fighting
         # the HPA's scale-up and leaving the app permanently OutOfSync (seen
-        # on zammad-railsserver, docs/17-zammad.md). Ignoring /spec/replicas
+        # on zammad-railsserver, docs/3-apps-workloads/30000-zammad.md). Ignoring /spec/replicas
         # here only matches Applications that actually contain a resource
         # with this exact kind+name, so it's a no-op for every other app.
         - group: apps

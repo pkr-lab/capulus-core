@@ -17,7 +17,7 @@ folgt exakt dem bereits verifizierten Muster der http_access-Panels
 (gleiches Namespace-Label, gleiche `_msg:"..."`-Filterform, nur anderer
 Message-Typ/andere Feldnamen aus main.go/handleFingerprint) — nach dem
 ersten echten `client_fingerprint`-Log in Grafana Explore gegenprüfen.
-Details/Kontext: docs/57-pacman-visitor-tracking.md.
+Details/Kontext: docs/3-apps-workloads/300f0-pacman-visitor-tracking.md.
 */}}
 {{- if .Values.geoip.enabled }}
 apiVersion: v1
@@ -31,7 +31,7 @@ data:
   pacman-visitors.json: |
     {
       "annotations": {"list": []},
-      "description": "pacman — Besucher-IPs (inkl. IPv6), GeoIP-Standort und Client-Fingerprint aus den Zugriffslogs. Schulungszweck, siehe docs/57-pacman-visitor-tracking.md.",
+      "description": "pacman — Besucher-IPs (inkl. IPv6), GeoIP-Standort und Client-Fingerprint aus den Zugriffslogs. Schulungszweck, siehe docs/3-apps-workloads/300f0-pacman-visitor-tracking.md.",
       "editable": true,
       "graphTooltip": 1,
       "links": [],

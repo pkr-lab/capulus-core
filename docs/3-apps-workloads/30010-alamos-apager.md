@@ -40,7 +40,7 @@ seinen eigenen Stationsnamen, die echte AMweb-URL bleibt serverseitig.
 
 Liegt unter `argocd/apps/workloads/alamos-apager/`, wird wie jede andere App in
 `argocd/apps/*` automatisch von ArgoCD erkannt und ausgerollt (siehe
-[docs/05-argocd.md](05-argocd.md)) — keine manuelle Registrierung nötig.
+[docs/b-kubernetes-gitops/b0010-argocd.md](../b-kubernetes-gitops/b0010-argocd.md)) — keine manuelle Registrierung nötig.
 
 Wichtigste `values.yaml`-Knobs:
 
@@ -63,7 +63,7 @@ echte AMweb-URL tatsächlich angefragt) und des letzten Heartbeats
 Down-Status (`alamos_apager_station_down`). Läuft cluster-intern, also
 unabhängig davon, ob ein Standort per LAN oder nur per Tailscale angebunden
 ist — genutzt vom Zammad-Ticket-Workflow des Banana-Pi-Standorts, siehe
-[docs/45-vereinsheim-alarmmonitor.md](45-vereinsheim-alarmmonitor.md).
+[docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md](30020-vereinsheim-alarmmonitor.md).
 
 **Bewusst kein Login vor `/start`/`/heartbeat`:** Der Pi ruft beide
 Endpunkte unbeaufsichtigt auf (Chromium-Kiosk beim Boot, Heartbeat-Timer
@@ -153,7 +153,7 @@ einen `alamos-heartbeat.timer` (Default alle 60s, siehe
 
 Das Semaphore-Projekt **"alarm-kiosks"** ist nach `make semaphore-bootstrap`
 automatisch in der UI verfügbar (siehe
-[docs/08-semaphore.md](08-semaphore.md)) — **bewusst ohne** automatischen
+[docs/b-kubernetes-gitops/b0030-semaphore.md](../b-kubernetes-gitops/b0030-semaphore.md)) — **bewusst ohne** automatischen
 Schedule, anders als `home-server`/`worker-0`: ein Re-Run soll hier nur per
 Knopfdruck laufen.
 
@@ -175,8 +175,8 @@ Knopfdruck laufen.
 |---|---|
 | Pi zeigt 404 statt AMweb-Seite | `kubectl -n alamos-apager get secret alamos-apager-stations -o jsonpath='{.data}'` — fehlt der Stationsname als Key? |
 | Pi zeigt AMweb-Login-Formular statt Alarmmonitor | Chromium-Session abgelaufen/gelöscht — einmaligen manuellen Login (Passwort + Verschlüsselungspasswort, siehe [Pi-Provisionierung](#pi-provisionierung-ansible)) am Pi wiederholen |
-| `alamos-apager.homeserver` löst nicht auf | Wildcard-DNS prüfen: `nslookup alamos-apager.homeserver` (siehe [docs/09-dns-architecture.md](09-dns-architecture.md)) |
+| `alamos-apager.homeserver` löst nicht auf | Wildcard-DNS prüfen: `nslookup alamos-apager.homeserver` (siehe [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md)) |
 | Kein ntfy-Alarm bei Ausfall | `kubectl -n alamos-apager logs deploy/alamos-apager` — `NTFY_URL`/`NTFY_TOPIC` korrekt? ntfy-Topic im Client abonniert? |
 | Chromium startet nicht / schwarzer Bildschirm | Autologin auf dem Pi aktiv? `systemctl status alamos-kiosk` auf dem Pi |
-| `Permission denied (publickey)` bei `make alarm-kiosks` | `make semaphore-targets` lief nicht für den neuen Pi (siehe [docs/08-semaphore.md](08-semaphore.md)) |
+| `Permission denied (publickey)` bei `make alarm-kiosks` | `make semaphore-targets` lief nicht für den neuen Pi (siehe [docs/b-kubernetes-gitops/b0030-semaphore.md](../b-kubernetes-gitops/b0030-semaphore.md)) |
 | Ansible-Fehler "alamos_kiosk_station ist nicht gesetzt" | Host-Var in `ansible/inventory/hosts.yml` fehlt — siehe [Pi-Provisionierung](#pi-provisionierung-ansible) |
