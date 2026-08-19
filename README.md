@@ -105,8 +105,8 @@ Für reproduzierbare Builds: `auto_upgrade: false` in `ansible/group_vars/all.ym
 
 ## Quickstart (5 Schritte)
 
-> Erstmalig auf der Maschine? Start mit **[Ubuntu-Server-Installation](docs/00-ubuntu-server-install.md)**.
-> Komplette Voraussetzungen: **[docs/02-prerequisites.md](docs/02-prerequisites.md)**.
+> Erstmalig auf der Maschine? Start mit **[Ubuntu-Server-Installation](docs/a-betriebssystem/a0000-ubuntu-server-install.md)**.
+> Komplette Voraussetzungen: **[docs/a-betriebssystem/a0020-prerequisites.md](docs/a-betriebssystem/a0020-prerequisites.md)**.
 
 <details open>
 <summary><strong>Schritt-für-Schritt aufklappen</strong></summary>
@@ -171,51 +171,74 @@ capulus-core/
 ├── README.md
 ├── Makefile                          # Convenience-Targets: install, lint, ping, check, …
 ├── docs/
-│   ├── 00-ubuntu-server-install.md   # Bare-Metal-Ubuntu-Installation
-│   ├── 01-overview.md                # Architektur-Diagramme
-│   ├── 02-prerequisites.md           # Voraussetzungen & Pre-flight
-│   ├── 03-installation.md            # Step-by-Step-Setup
-│   ├── 04-k3s.md                     # k3s + kubectl-Referenz
-│   ├── 05-argocd.md                  # GitOps-Nutzung
-│   ├── 06-tailscale.md               # VPN-Setup
-│   ├── 07-troubleshooting.md         # Häufige Probleme
-│   ├── 08-semaphore.md               # Semaphore-Web-UI für Ansible
-│   ├── 09-dns-architecture.md        # Split-DNS-Design & Ausfallsicherheit
-│   ├── 10-gotify.md                  # Push-Notifications via Gotify
-│   ├── 11-ntfy.md                    # iOS Push-Notifications via ntfy
-│   ├── 12-argo-workflows.md          # Private CI/CD mit Argo Workflows + MinIO
-│   ├── 16-nas-storage.md             # NAS-StorageClass (NFS, UGREEN NAS)
-│   ├── 17-zammad.md                  # Zammad Helpdesk/Ticket-System
-│   ├── 19-alamos-apager.md           # Alarmmonitor-Kiosk-Verwaltung (ALAMOS AMweb)
-│   ├── 20-wikijs.md                  # Wiki.js Team-Wiki
-│   ├── 22-cloudflare-tunnel.md       # Cloudflare Tunnel — Setup & Konzept
-│   ├── 23-cloudflare-deploy.md       # Cloudflare Tunnel — Deploy & Betrieb
-│   ├── 24-mediamtx.md                # Live-Streaming (RTMP/RTSP → HLS)
-│   ├── 25-github-release-watcher.md  # GitHub-Release → Zammad-E-Mail-Benachrichtigung
-│   ├── 26-paperless-ngx.md           # Dokumentenmanagement mit OCR
-│   ├── 27-mealie.md                  # Rezeptverwaltung + Wochenplaner
-│   ├── 29-n8n.md                     # Low-Code-Automatisierung
-│   ├── 30-uptime-kuma.md             # Status-Seite und Service-Alerting
-│   ├── 31-rhein-dashboard.md         # Grafana: Pegelonline, DWD, ELWIS, Hochwasser RLP
-│   ├── 32-vaultwarden.md             # Bitwarden-kompatibler Passwort-Manager
-│   ├── 33-nextcloud.md               # Datei-Sync, Kalender, Kontakte
-│   ├── 35-immich.md                  # Foto-/Video-Backup vom Handy
-│   ├── 36-nas-backup.md              # Externe USB-Platte am NAS: regelmäßige Backups
-│   ├── 37-cluster-power-manager.md   # Worker per Wake-on-LAN je nach Homeserver-Last dazuschalten
-│   ├── 38-printer.md                 # Samsung Xpress M2026 per CUPS im Heimnetz freigeben
-│   ├── 39-hpa-autoscaling.md         # Horizontale Autoskalierung (HPA) — welche Apps, welche Schwellenwerte
-│   ├── 40-pihole.md                  # Netzwerkweites Werbeblocking via Pi-hole
-│   ├── 42-port-uebersicht.md         # Port-/Ingress-Übersicht aller Apps
-│   ├── 43-carplay-api.md             # Homeserver-Dashboard-API (iOS-App, inkl. power-agent)
-│   ├── 44-xibosignage.md             # Xibo CMS + Bilder-Slideshow auf Raspberry Pi 3B+
-│   ├── 46-crowdsec.md                # Brute-Force-Schutz für SSH und Traefik
-│   ├── 47-renovate.md                # Automatische Update-PRs für Helm-Charts/Images
-│   ├── 48-release-automation.md      # GitHub Release bei jedem Merge auf main
-│   ├── 49-argocd-projects.md         # Platform/Workloads-AppProject-Trennung
-│   ├── 59-nightly-worker-update.md   # Nachts 01:00 Uhr: Worker per WoL wecken, apt-Update, wieder abschalten
-│   └── assets/banner.svg
-├── renovate.json                     # Renovate-Konfiguration (siehe docs/47-renovate.md)
-├── .releaserc.json                   # semantic-release-Konfiguration (siehe docs/48-release-automation.md)
+│   ├── TEMPLATE.md                   # Vorlage für neue Docs: Namensschema, Kategorien, Doc-Typen
+│   ├── a-betriebssystem/             # Betriebssystem & Grundlagen
+│   │   ├── a0000-ubuntu-server-install.md   # Bare-Metal-Ubuntu-Installation
+│   │   ├── a0010-overview.md                # Architektur-Diagramme
+│   │   ├── a0020-prerequisites.md           # Voraussetzungen & Pre-flight
+│   │   ├── a0030-installation.md            # Step-by-Step-Setup
+│   │   └── a0040-troubleshooting.md         # Häufige Probleme
+│   ├── b-kubernetes-gitops/          # Kubernetes & GitOps
+│   │   ├── b0000-k3s.md                     # k3s + kubectl-Referenz
+│   │   ├── b0010-argocd.md                  # GitOps-Nutzung
+│   │   ├── b0020-argocd-projects.md         # Platform/Workloads-AppProject-Trennung
+│   │   ├── b0030-semaphore.md               # Semaphore-Web-UI für Ansible
+│   │   └── b0040-hpa-autoscaling.md         # Horizontale Autoskalierung (HPA)
+│   ├── c-netzwerk-dns/               # Netzwerk & DNS
+│   │   ├── c0000-dns-architecture.md        # Split-DNS-Design & Ausfallsicherheit
+│   │   ├── c0010-tailscale.md               # VPN-Setup
+│   │   ├── c0020-pihole.md                  # Netzwerkweites Werbeblocking via Pi-hole
+│   │   ├── c0030-port-uebersicht.md         # Port-/Ingress-Übersicht aller Apps
+│   │   └── c0040-domain-tiers.md            # dev/tech/prod-URL-Konvention
+│   ├── e-externe-erreichbarkeit/     # Externe Erreichbarkeit
+│   │   ├── e0000-cloudflare-tunnel.md       # Cloudflare Tunnel — Setup & Konzept
+│   │   └── e0010-cloudflare-deploy.md       # Cloudflare Tunnel — Deploy & Betrieb
+│   ├── d-sicherheit/                 # Sicherheit
+│   │   ├── d0000-incident-2026-08-12.md            # Incident-Report: ApplicationSet-Migration löscht 32 Apps
+│   │   ├── d0010-security-hardening-roadmap.md     # Phasenplan der Security-Härtung
+│   │   ├── d0020-crowdsec.md                       # Brute-Force-Schutz für SSH und Traefik
+│   │   ├── d0030-network-policies.md               # Cluster-NetworkPolicies (Phase 3)
+│   │   ├── d0040-internal-tls.md                   # Internes TLS für *.homeserver (Phase 5)
+│   │   ├── d0050-secrets-encryption-audit-log.md   # Secrets-Encryption-at-Rest + Audit-Log (Phase 4)
+│   │   └── d0060-secrets-rotation.md               # Secrets-Rotation-Checkliste (Phase 7)
+│   ├── f-cicd-automatisierung/       # CI/CD & Automatisierung
+│   │   ├── f0000-argo-workflows.md          # Private CI/CD mit Argo Workflows + MinIO
+│   │   ├── f0010-zot-registry.md            # Self-hosted OCI-Registry
+│   │   ├── f0020-renovate.md                # Automatische Update-PRs für Helm-Charts/Images
+│   │   ├── f0030-release-automation.md      # GitHub Release bei jedem Merge auf main
+│   │   └── f0040-github-release-watcher.md  # GitHub-Release → Zammad-E-Mail-Benachrichtigung
+│   ├── 1-benachrichtigungen/         # Benachrichtigungen
+│   │   ├── 10000-gotify.md                  # Push-Notifications via Gotify
+│   │   └── 10010-ntfy.md                    # iOS Push-Notifications via ntfy
+│   ├── 2-betrieb-hardware/           # Betrieb & Hardware
+│   │   ├── 20000-nas-storage.md             # NAS-StorageClass (NFS, UGREEN NAS)
+│   │   ├── 20010-nas-backup.md              # Externe USB-Platte am NAS: regelmäßige Backups
+│   │   ├── 20020-cluster-power-manager.md   # Worker per Wake-on-LAN je nach Homeserver-Last dazuschalten
+│   │   ├── 20030-nightly-worker-update.md   # Nachts 01:00 Uhr: Worker per WoL wecken, apt-Update, wieder abschalten
+│   │   └── 20040-printer.md                 # Samsung Xpress M2026 per CUPS im Heimnetz freigeben
+│   ├── 3-apps-workloads/             # Apps & Workloads
+│   │   ├── 30000-zammad.md                  # Zammad Helpdesk/Ticket-System
+│   │   ├── 30010-alamos-apager.md           # Alarmmonitor-Kiosk-Verwaltung (ALAMOS AMweb)
+│   │   ├── 30020-vereinsheim-alarmmonitor.md # Banana-Pi-Alarmmonitor-Kiosk fürs Vereinsheim
+│   │   ├── 30030-wikijs.md                  # Wiki.js Team-Wiki
+│   │   ├── 30040-mediamtx.md                # Live-Streaming (RTMP/RTSP → HLS)
+│   │   ├── 30050-paperless-ngx.md           # Dokumentenmanagement mit OCR
+│   │   ├── 30060-mealie.md                  # Rezeptverwaltung + Wochenplaner
+│   │   ├── 30070-n8n.md                     # Low-Code-Automatisierung
+│   │   ├── 30080-uptime-kuma.md             # Status-Seite und Service-Alerting
+│   │   ├── 30090-rhein-dashboard.md         # Grafana: Pegelonline, DWD, ELWIS, Hochwasser RLP
+│   │   ├── 300a0-vaultwarden.md             # Bitwarden-kompatibler Passwort-Manager
+│   │   ├── 300b0-nextcloud.md               # Datei-Sync, Kalender, Kontakte
+│   │   ├── 300c0-immich.md                  # Foto-/Video-Backup vom Handy
+│   │   ├── 300d0-carplay-api.md             # Homeserver-Dashboard-API (iOS-App, inkl. power-agent)
+│   │   ├── 300e0-xibosignage.md             # Xibo CMS + Bilder-Slideshow auf Raspberry Pi 3B+
+│   │   └── 300f0-pacman-visitor-tracking.md # IP/GeoIP-Besucher-Tracking-Demo für die Schulung
+│   ├── assets/banner.svg
+│   └── superpowers/                  # Datierte Plan-/Spec-Docs, eigenes Namensschema
+│       ├── plans/
+│       └── specs/
+├── renovate.json                     # Renovate-Konfiguration (siehe docs/f-cicd-automatisierung/f0020-renovate.md)
+├── .releaserc.json                   # semantic-release-Konfiguration (siehe docs/f-cicd-automatisierung/f0030-release-automation.md)
 ├── .github/
 │   └── workflows/
 │       └── release.yml               # semantic-release bei jedem Push auf main
@@ -252,7 +275,7 @@ capulus-core/
     │   ├── root-applicationset.yaml  # Zwei Git-Generatoren: platform/* und workloads/*
     │   └── projects.yaml             # AppProjects "platform" und "workloads"
     └── apps/                         # Ein Ordner pro ArgoCD-Application, je Tier
-        ├── platform/                 # AppProject "platform" — Schicht 3, siehe docs/49-argocd-projects.md
+        ├── platform/                 # AppProject "platform" — Schicht 3, siehe docs/b-kubernetes-gitops/b0020-argocd-projects.md
         │   ├── sealed-secrets/       # SealedSecrets-Controller
         │   ├── kubeseal-webgui/      # Sealed-Secrets-Verschlüsselungs-UI
         │   ├── monitoring/           # VictoriaMetrics + Grafana
@@ -271,7 +294,7 @@ capulus-core/
         │   ├── semaphore/            # Ansible-Web-UI
         │   ├── headlamp/             # Kubernetes-Web-Dashboard
         │   └── traefik-config/       # Traefik-Zusatzkonfiguration
-        └── workloads/                # AppProject "workloads" — Schicht 4, siehe docs/49-argocd-projects.md
+        └── workloads/                # AppProject "workloads" — Schicht 4, siehe docs/b-kubernetes-gitops/b0020-argocd-projects.md
             ├── example-whoami/
             ├── alamos-apager/        # Alarmmonitor-Kiosk-Verwaltung (ALAMOS AMweb)
             ├── mediamtx/             # Live-Streaming (RTMP/RTSP → HLS)
@@ -326,7 +349,7 @@ kubectl -n monitoring get secret grafana-admin \
 
 Erst entscheiden: **Platform** (Infrastruktur/Admin-Charakter) oder
 **Workloads** (echter Nutzerkreis) — siehe
-[docs/49-argocd-projects.md](docs/49-argocd-projects.md).
+[docs/b-kubernetes-gitops/b0020-argocd-projects.md](docs/b-kubernetes-gitops/b0020-argocd-projects.md).
 
 ```bash
 mkdir -p argocd/apps/workloads/my-app
@@ -342,7 +365,7 @@ git push
 ```
 
 > Innerhalb von ~3 Minuten erkennt ArgoCD das neue Verzeichnis, erstellt eine `Application` namens `my-app` im Namespace `my-app` (AppProject `workloads`) und synct sie.
-> Details: **[docs/05-argocd.md](docs/05-argocd.md)**, **[docs/49-argocd-projects.md](docs/49-argocd-projects.md)**
+> Details: **[docs/b-kubernetes-gitops/b0010-argocd.md](docs/b-kubernetes-gitops/b0010-argocd.md)**, **[docs/b-kubernetes-gitops/b0020-argocd-projects.md](docs/b-kubernetes-gitops/b0020-argocd-projects.md)**
 
 ---
 
@@ -350,7 +373,7 @@ git push
 
 Jeder Hostname trägt ein Tier-Label (`tech` = Infrastruktur/Admin, `prod` =
 Apps mit echtem Nutzerkreis) — Details und Begründung:
-**[docs/56-domain-tiers.md](docs/56-domain-tiers.md)**.
+**[docs/c-netzwerk-dns/c0040-domain-tiers.md](docs/c-netzwerk-dns/c0040-domain-tiers.md)**.
 
 | Service | Tier | URL |
 |---|---|---|
@@ -381,9 +404,9 @@ Apps mit echtem Nutzerkreis) — Details und Begründung:
 > über Cloudflare Tunnel öffentlich unter einer eigenen Domain erreichbar
 > gemacht werden (z. B. `https://wiki-prod.deine-domain.de` — Bindestrich
 > statt Punkt vor dem Tier, siehe
-> [docs/56-domain-tiers.md](docs/56-domain-tiers.md#warum-punkt-intern-bindestrich-extern))
+> [docs/c-netzwerk-dns/c0040-domain-tiers.md](docs/c-netzwerk-dns/c0040-domain-tiers.md#warum-punkt-intern-bindestrich-extern))
 > — ohne VPN, ohne offene Ports. Setup:
-> **[docs/22-cloudflare-tunnel.md](docs/22-cloudflare-tunnel.md)**.
+> **[docs/e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md](docs/e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md)**.
 > Nextcloud, Immich und Vaultwarden sind zusätzlich unter
 > `https://nextcloud-prod.pke-lab.de`, `https://immich-prod.pke-lab.de` bzw.
 > `https://vault-tech.pke-lab.de` per Cloudflare Tunnel erreichbar (Details je
@@ -392,7 +415,7 @@ Apps mit echtem Nutzerkreis) — Details und Begründung:
 > Der Live-Stream ist zusätzlich unter `https://stream-prod.pke-lab.de` erreichbar,
 > abgesichert per mediamtx-eigenem HTTP-Basic-Login — kein externer
 > Identity-Provider, kein Cloudflare-Zero-Trust-Konto nötig. Details:
-> **[docs/24-mediamtx.md](docs/24-mediamtx.md)**.
+> **[docs/3-apps-workloads/30040-mediamtx.md](docs/3-apps-workloads/30040-mediamtx.md)**.
 
 ---
 
@@ -404,10 +427,10 @@ Apps mit echtem Nutzerkreis) — Details und Begründung:
 <tr><td>Keine öffentlichen Ports</td><td>Zugriff ausschließlich über LAN, Tailscale-VPN oder gezielt per Cloudflare Tunnel (ausgehende Verbindung, kein Port-Forwarding)</td></tr>
 <tr><td>UFW-Firewall</td><td>Erlaubt nur SSH, HTTP/HTTPS, k3s-API, ArgoCD-NodePort (HTTPS-only), Flannel, Tailscale-UDP</td></tr>
 <tr><td>Opt-in externe Erreichbarkeit</td><td>Nur explizit in <code>argocd/apps/platform/cloudflared/values.yaml</code> eingetragene Dienste sind öffentlich erreichbar, alles andere bleibt intern</td></tr>
-<tr><td>Brute-Force-Schutz</td><td>CrowdSec beobachtet SSH- und Traefik-Logs und lässt einen Firewall-Bouncer auffällige IPs sperren, siehe <a href="docs/46-crowdsec.md">docs/46-crowdsec.md</a></td></tr>
+<tr><td>Brute-Force-Schutz</td><td>CrowdSec beobachtet SSH- und Traefik-Logs und lässt einen Firewall-Bouncer auffällige IPs sperren, siehe <a href="docs/d-sicherheit/d0020-crowdsec.md">docs/d-sicherheit/d0020-crowdsec.md</a></td></tr>
 <tr><td>Ansible-Vault</td><td>Sensitive Secrets verschlüsselt at rest</td></tr>
 <tr><td>ArgoCD Read-only</td><td>Hat ausschließlich Read-Access auf das Git-Repo</td></tr>
-<tr><td>ArgoCD-AppProjects</td><td>Zwei Projects (<code>platform</code> / <code>workloads</code>) trennen Infrastruktur-Apps von Anwendungen mit echtem Nutzerkreis — jede App darf nur in ihren eigenen Namespace deployen, siehe <a href="docs/49-argocd-projects.md">docs/49-argocd-projects.md</a></td></tr>
+<tr><td>ArgoCD-AppProjects</td><td>Zwei Projects (<code>platform</code> / <code>workloads</code>) trennen Infrastruktur-Apps von Anwendungen mit echtem Nutzerkreis — jede App darf nur in ihren eigenen Namespace deployen, siehe <a href="docs/b-kubernetes-gitops/b0020-argocd-projects.md">docs/b-kubernetes-gitops/b0020-argocd-projects.md</a></td></tr>
 </tbody>
 </table>
 
@@ -426,54 +449,112 @@ Apps mit echtem Nutzerkreis) — Details und Begründung:
 
 </details>
 
-Vollständige Architektur: **[docs/01-overview.md](docs/01-overview.md)**
+Vollständige Architektur: **[docs/a-betriebssystem/a0010-overview.md](docs/a-betriebssystem/a0010-overview.md)**
 
 ---
 
 ## Dokumentation
 
+Alle Docs liegen unter `docs/`, sortiert in 9 Kategorie-Unterordner. Jede
+Datei trägt eine 5-stellige Hex-ID (erstes Zeichen = Kategorie) — Details
+und Konventionen für neue Docs: **[docs/TEMPLATE.md](docs/TEMPLATE.md)**.
+
+### Betriebssystem & Grundlagen (`a-betriebssystem/`)
+
 | Dokument | Inhalt |
 |---|---|
-| [Ubuntu-Server-Installation](docs/00-ubuntu-server-install.md) | ISO, USB-Stick, Installer, erster Boot |
-| [Architektur-Überblick](docs/01-overview.md) | Komponenten und Traffic-Flows |
-| [Voraussetzungen](docs/02-prerequisites.md) | Was vor dem Ansible-Run nötig ist |
-| [Installationsleitfaden](docs/03-installation.md) | Vollständiger Step-by-Step-Walkthrough |
-| [k3s-Referenz](docs/04-k3s.md) | Config, kubectl-Cheatsheet, Upgrades |
-| [ArgoCD-GitOps](docs/05-argocd.md) | App-Workflow, CLI, Sync-Policies |
-| [Tailscale-VPN](docs/06-tailscale.md) | Auth-Keys, MagicDNS, Subnet-Routes |
-| [Troubleshooting](docs/07-troubleshooting.md) | Diagnose-Playbook für häufige Probleme |
-| [Semaphore-UI](docs/08-semaphore.md) | Web-UI zum Ausführen von Playbooks |
-| [DNS-Architektur](docs/09-dns-architecture.md) | Warum der Home-Server NICHT dein LAN-DNS ist |
-| [Gotify-Push](docs/10-gotify.md) | Self-hosted Push-Notifications aus dem Stack |
-| [Argo Workflows](docs/12-argo-workflows.md) | Private CI/CD-Pipeline mit MinIO-Artifact-Store |
-| [ntfy iOS-Push](docs/11-ntfy.md) | Self-hosted ntfy mit iOS APNs-Relay |
-| [Alarmmonitor-Kiosks](docs/19-alamos-apager.md) | Raspberry-Pi-Kiosks für ALAMOS AMweb, zentral verwaltet |
-| [Cloudflare Tunnel — Setup](docs/22-cloudflare-tunnel.md) | Externe Erreichbarkeit ohne VPN: Konzept, Tunnel-Einrichtung, Absicherung |
-| [Cloudflare Tunnel — Deploy](docs/23-cloudflare-deploy.md) | Rollout, neuen Dienst freigeben, Rotation, Troubleshooting |
-| [MediaMTX Live-Streaming](docs/24-mediamtx.md) | RTMP/RTSP-Ingest → HLS, Publish- und Zuschauer-Autorisierung über mediamtx' eingebaute interne Benutzerverwaltung (HTTP Basic Auth) |
-| [GitHub Release Watcher](docs/25-github-release-watcher.md) | Neue GitHub-Releases erkennen und per Zammad-Ticket eine E-Mail-Benachrichtigung auslösen |
-| [Paperless-ngx](docs/26-paperless-ngx.md) | Dokumentenmanagement mit OCR — Briefe, Rechnungen, Verträge scannen und durchsuchen |
-| [Mealie](docs/27-mealie.md) | Rezeptverwaltung + Wochenplaner mit URL-Import |
-| [n8n](docs/29-n8n.md) | Low-Code-Automatisierung — Dienste verknüpfen ohne Programmieren |
-| [Uptime Kuma](docs/30-uptime-kuma.md) | Status-Seite und Alerting für alle Dienste |
-| [Rhein-Dashboard](docs/31-rhein-dashboard.md) | Grafana: Pegelonline, DWD-Warnungen, ELWIS, Hochwasservorhersage RLP |
-| [Vaultwarden](docs/32-vaultwarden.md) | Bitwarden-kompatibler Passwort-Manager für Browser/Mobile-Clients |
-| [Nextcloud](docs/33-nextcloud.md) | Datei-Sync, Kalender, Kontakte |
-| [Immich](docs/35-immich.md) | Foto-/Video-Backup vom Handy inkl. Gesichtserkennung, eigener NAS-Storage-Export |
-| [NAS-Backup](docs/36-nas-backup.md) | Externe USB-Platte am NAS: regelmäßige restic-Backups von volume1 + volume2 |
-| [Cluster Power Manager](docs/37-cluster-power-manager.md) | worker-0/worker-1 per Wake-on-LAN je nach Homeserver-Last automatisch dazu- und wieder abschalten |
-| [Drucker (CUPS)](docs/38-printer.md) | Samsung Xpress M2026 per USB am Homeserver, Freigabe im Heimnetz + Tailnet via IPP/AirPrint |
-| [Autoskalierung (HPA)](docs/39-hpa-autoscaling.md) | Welche Apps per HorizontalPodAutoscaler mitskalieren, welche bewusst nicht, und mit welchen Schwellenwerten |
-| [Pi-hole](docs/40-pihole.md) | Netzwerkweites Werbeblocking als DNS-Filter vor der Fritz!Box — kein Router-Eingriff nötig |
-| [Port-Übersicht](docs/42-port-uebersicht.md) | Interner Service-Port, LAN- und externe Erreichbarkeit für jede App |
-| [Homeserver-Dashboard-API](docs/43-carplay-api.md) | Go/Gin-API + power-agent für die reine-iOS-App Homeserver Dashboard (Metriken, Alerts, Status, Helligkeit, Wake/Shutdown) |
-| [xibosignage](docs/44-xibosignage.md) | Xibo CMS + Bilder-Slideshow auf Raspberry Pi 3B+, n8n-Workflow für automatisches Einspielen |
-| [CrowdSec](docs/46-crowdsec.md) | Brute-Force-Schutz für SSH und Traefik, Firewall-Bouncer, Whitelist für LAN/Tailnet |
-| [Renovate](docs/47-renovate.md) | Automatische Update-PRs für Helm-Chart-Versionen und Image-Tags |
-| [Release-Automatisierung](docs/48-release-automation.md) | GitHub Release + Changelog bei jedem Merge auf `main` via semantic-release |
-| [ArgoCD-Projects](docs/49-argocd-projects.md) | Platform/Workloads-AppProject-Trennung, Ordnerstruktur, neue App hinzufügen |
-| [Domain-Tiers](docs/56-domain-tiers.md) | dev/tech/prod-URL-Konvention (`app.tier.homeserver`), Ausnahmen, Cross-App-Referenzen |
-| [Nightly Worker Update](docs/59-nightly-worker-update.md) | worker-0/worker-1 nachts um 01:00 Uhr per Wake-on-LAN wecken, apt-Update fahren (max. 20 Min.), wieder herunterfahren |
+| [Ubuntu-Server-Installation](docs/a-betriebssystem/a0000-ubuntu-server-install.md) | ISO, USB-Stick, Installer, erster Boot |
+| [Architektur-Überblick](docs/a-betriebssystem/a0010-overview.md) | Komponenten und Traffic-Flows |
+| [Voraussetzungen](docs/a-betriebssystem/a0020-prerequisites.md) | Was vor dem Ansible-Run nötig ist |
+| [Installationsleitfaden](docs/a-betriebssystem/a0030-installation.md) | Vollständiger Step-by-Step-Walkthrough |
+| [Troubleshooting](docs/a-betriebssystem/a0040-troubleshooting.md) | Diagnose-Playbook für häufige Probleme |
+
+### Kubernetes & GitOps (`b-kubernetes-gitops/`)
+
+| Dokument | Inhalt |
+|---|---|
+| [k3s-Referenz](docs/b-kubernetes-gitops/b0000-k3s.md) | Config, kubectl-Cheatsheet, Upgrades |
+| [ArgoCD-GitOps](docs/b-kubernetes-gitops/b0010-argocd.md) | App-Workflow, CLI, Sync-Policies |
+| [ArgoCD-Projects](docs/b-kubernetes-gitops/b0020-argocd-projects.md) | Platform/Workloads-AppProject-Trennung, Ordnerstruktur, neue App hinzufügen |
+| [Semaphore-UI](docs/b-kubernetes-gitops/b0030-semaphore.md) | Web-UI zum Ausführen von Playbooks |
+| [Autoskalierung (HPA)](docs/b-kubernetes-gitops/b0040-hpa-autoscaling.md) | Welche Apps per HorizontalPodAutoscaler mitskalieren, welche bewusst nicht, und mit welchen Schwellenwerten |
+
+### Netzwerk & DNS (`c-netzwerk-dns/`)
+
+| Dokument | Inhalt |
+|---|---|
+| [DNS-Architektur](docs/c-netzwerk-dns/c0000-dns-architecture.md) | Warum der Home-Server NICHT dein LAN-DNS ist |
+| [Tailscale-VPN](docs/c-netzwerk-dns/c0010-tailscale.md) | Auth-Keys, MagicDNS, Subnet-Routes |
+| [Pi-hole](docs/c-netzwerk-dns/c0020-pihole.md) | Netzwerkweites Werbeblocking als DNS-Filter vor der Fritz!Box — kein Router-Eingriff nötig |
+| [Port-Übersicht](docs/c-netzwerk-dns/c0030-port-uebersicht.md) | Interner Service-Port, LAN- und externe Erreichbarkeit für jede App |
+| [Domain-Tiers](docs/c-netzwerk-dns/c0040-domain-tiers.md) | dev/tech/prod-URL-Konvention (`app.tier.homeserver`), Ausnahmen, Cross-App-Referenzen |
+
+### Externe Erreichbarkeit (`e-externe-erreichbarkeit/`)
+
+| Dokument | Inhalt |
+|---|---|
+| [Cloudflare Tunnel — Setup](docs/e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md) | Externe Erreichbarkeit ohne VPN: Konzept, Tunnel-Einrichtung, Absicherung |
+| [Cloudflare Tunnel — Deploy](docs/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md) | Rollout, neuen Dienst freigeben, Rotation, Troubleshooting |
+
+### Sicherheit (`d-sicherheit/`)
+
+| Dokument | Inhalt |
+|---|---|
+| [Incident-Report 12.08.2026](docs/d-sicherheit/d0000-incident-2026-08-12.md) | Postmortem: ApplicationSet-Migration löschte versehentlich 32 Apps, Ursache + Gegenmaßnahmen |
+| [Security-Härtung — Roadmap](docs/d-sicherheit/d0010-security-hardening-roadmap.md) | Phasenplan der Security-Härtung nach dem Incident vom 12.08.2026 |
+| [CrowdSec](docs/d-sicherheit/d0020-crowdsec.md) | Brute-Force-Schutz für SSH und Traefik, Firewall-Bouncer, Whitelist für LAN/Tailnet |
+| [Cluster-NetworkPolicies](docs/d-sicherheit/d0030-network-policies.md) | NetworkPolicies je Namespace, Default-Deny + explizite Ausnahmen (Härtung Phase 3) |
+| [Internes TLS](docs/d-sicherheit/d0040-internal-tls.md) | cert-manager + eigene CA für HTTPS auf `*.homeserver` (Härtung Phase 5) |
+| [Secrets-Encryption + Audit-Log](docs/d-sicherheit/d0050-secrets-encryption-audit-log.md) | k3s Secrets-at-Rest-Verschlüsselung + API-Audit-Log (Härtung Phase 4) |
+| [Secrets-Rotation-Checkliste](docs/d-sicherheit/d0060-secrets-rotation.md) | Checkliste zur regelmäßigen Rotation aller Cluster-Secrets (Härtung Phase 7) |
+
+### CI/CD & Automatisierung (`f-cicd-automatisierung/`)
+
+| Dokument | Inhalt |
+|---|---|
+| [Argo Workflows](docs/f-cicd-automatisierung/f0000-argo-workflows.md) | Private CI/CD-Pipeline mit MinIO-Artifact-Store |
+| [Zot Registry](docs/f-cicd-automatisierung/f0010-zot-registry.md) | Self-hosted OCI-Registry für interne Images |
+| [Renovate](docs/f-cicd-automatisierung/f0020-renovate.md) | Automatische Update-PRs für Helm-Chart-Versionen und Image-Tags |
+| [Release-Automatisierung](docs/f-cicd-automatisierung/f0030-release-automation.md) | GitHub Release + Changelog bei jedem Merge auf `main` via semantic-release |
+| [GitHub Release Watcher](docs/f-cicd-automatisierung/f0040-github-release-watcher.md) | Neue GitHub-Releases erkennen und per Zammad-Ticket eine E-Mail-Benachrichtigung auslösen |
+
+### Benachrichtigungen (`1-benachrichtigungen/`)
+
+| Dokument | Inhalt |
+|---|---|
+| [Gotify-Push](docs/1-benachrichtigungen/10000-gotify.md) | Self-hosted Push-Notifications aus dem Stack |
+| [ntfy iOS-Push](docs/1-benachrichtigungen/10010-ntfy.md) | Self-hosted ntfy mit iOS APNs-Relay |
+
+### Betrieb & Hardware (`2-betrieb-hardware/`)
+
+| Dokument | Inhalt |
+|---|---|
+| [NAS-Storage](docs/2-betrieb-hardware/20000-nas-storage.md) | NFS-StorageClass gegen die UGREEN NAS (RAID1), Migration einzelner Apps von local-path |
+| [NAS-Backup](docs/2-betrieb-hardware/20010-nas-backup.md) | Externe USB-Platte am NAS: regelmäßige restic-Backups von volume1 + volume2 |
+| [Cluster Power Manager](docs/2-betrieb-hardware/20020-cluster-power-manager.md) | worker-0/worker-1 per Wake-on-LAN je nach Homeserver-Last automatisch dazu- und wieder abschalten |
+| [Nightly Worker Update](docs/2-betrieb-hardware/20030-nightly-worker-update.md) | worker-0/worker-1 nachts um 01:00 Uhr per Wake-on-LAN wecken, apt-Update fahren (max. 20 Min.), wieder herunterfahren |
+| [Drucker (CUPS)](docs/2-betrieb-hardware/20040-printer.md) | Samsung Xpress M2026 per USB am Homeserver, Freigabe im Heimnetz + Tailnet via IPP/AirPrint |
+
+### Apps & Workloads (`3-apps-workloads/`)
+
+| Dokument | Inhalt |
+|---|---|
+| [Zammad](docs/3-apps-workloads/30000-zammad.md) | Helpdesk-/Ticket-System, u. a. Ziel für github-release-watcher-Benachrichtigungen |
+| [Alarmmonitor-Kiosks](docs/3-apps-workloads/30010-alamos-apager.md) | Raspberry-Pi-Kiosks für ALAMOS AMweb, zentral verwaltet |
+| [Vereinsheim-Alarmmonitor](docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md) | Banana-Pi-Kiosk fürs Vereinsheim, Alarmstatus-Anzeige + Heartbeat-Monitoring |
+| [Wiki.js](docs/3-apps-workloads/30030-wikijs.md) | Team-Wiki, `docs/` wird per wiki-docs-sync automatisch gespiegelt |
+| [MediaMTX Live-Streaming](docs/3-apps-workloads/30040-mediamtx.md) | RTMP/RTSP-Ingest → HLS, Publish- und Zuschauer-Autorisierung über mediamtx' eingebaute interne Benutzerverwaltung (HTTP Basic Auth) |
+| [Paperless-ngx](docs/3-apps-workloads/30050-paperless-ngx.md) | Dokumentenmanagement mit OCR — Briefe, Rechnungen, Verträge scannen und durchsuchen |
+| [Mealie](docs/3-apps-workloads/30060-mealie.md) | Rezeptverwaltung + Wochenplaner mit URL-Import |
+| [n8n](docs/3-apps-workloads/30070-n8n.md) | Low-Code-Automatisierung — Dienste verknüpfen ohne Programmieren |
+| [Uptime Kuma](docs/3-apps-workloads/30080-uptime-kuma.md) | Status-Seite und Alerting für alle Dienste |
+| [Rhein-Dashboard](docs/3-apps-workloads/30090-rhein-dashboard.md) | Grafana: Pegelonline, DWD-Warnungen, ELWIS, Hochwasservorhersage RLP |
+| [Vaultwarden](docs/3-apps-workloads/300a0-vaultwarden.md) | Bitwarden-kompatibler Passwort-Manager für Browser/Mobile-Clients |
+| [Nextcloud](docs/3-apps-workloads/300b0-nextcloud.md) | Datei-Sync, Kalender, Kontakte |
+| [Immich](docs/3-apps-workloads/300c0-immich.md) | Foto-/Video-Backup vom Handy inkl. Gesichtserkennung, eigener NAS-Storage-Export |
+| [Homeserver-Dashboard-API](docs/3-apps-workloads/300d0-carplay-api.md) | Go/Gin-API + power-agent für die reine iOS-App Homeserver Dashboard (Metriken, Alerts, Status, Helligkeit, Wake/Shutdown) |
+| [xibosignage](docs/3-apps-workloads/300e0-xibosignage.md) | Xibo CMS + Bilder-Slideshow auf Raspberry Pi 3B+, n8n-Workflow für automatisches Einspielen |
+| [pacman — Besuchertracking](docs/3-apps-workloads/300f0-pacman-visitor-tracking.md) | IP/GeoIP-Besucher-Tracking-Demo für die IT-Security-Schulung |
 
 ---
 

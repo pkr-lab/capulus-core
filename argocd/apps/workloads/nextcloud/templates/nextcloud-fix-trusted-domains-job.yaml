@@ -2,7 +2,7 @@
 #
 # Hintergrund: config.php auf der "html"-PVC (NFS/"nas") gehört UID 1000,
 # nicht www-data (33) — Folge des all_squash der UGREEN-NAS (siehe
-# docs/33-nextcloud.md, docs/16-nas-storage.md und den Kommentar bei
+# docs/3-apps-workloads/300b0-nextcloud.md, docs/2-betrieb-hardware/20000-nas-storage.md und den Kommentar bei
 # postgresql.persistence in values.yaml, wo dasselbe Problem bereits dazu
 # geführt hat, dass Postgres auf "local-path" statt "nas" liegt). Nextclouds
 # `occ` verweigert den Dienst, wenn die aufrufende UID nicht exakt dem
@@ -13,7 +13,7 @@
 # braucht anders als `su` keinen /etc/passwd-Eintrag).
 #
 # Zweck: trusted_domains in config.php war seit der Domain-Tier-Migration
-# (docs/56-domain-tiers.md: nextcloud.homeserver → nextcloud.prod.homeserver
+# (docs/c-netzwerk-dns/c0040-domain-tiers.md: nextcloud.homeserver → nextcloud.prod.homeserver
 # usw.) nicht mehr aktuell — NEXTCLOUD_TRUSTED_DOMAINS greift nur bei der
 # Erstinstallation, nicht bei bestehendem config.php. Ergebnis: jeder
 # Readiness/Liveness-Check schlug mit "Trusted domain error" (HTTP 400)

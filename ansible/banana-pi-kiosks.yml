@@ -18,23 +18,23 @@
 # Voraussetzungen:
 #   1. Armbian (Debian 13 "Trixie" minimal) bereits geflasht, Ersteinrichtung
 #      (Netzwerk/SSH, Kiosk-User angelegt) erledigt — siehe
-#      docs/45-vereinsheim-alarmmonitor.md.
+#      docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md.
 #   2. ERSTER Lauf MUSS passieren, waehrend der Pi noch am LAN haengt
 #      (ansible_host = LAN-IP) — Ansible installiert Tailscale erst in
 #      diesem Lauf, kann also nicht schon vorher darueber verbinden. Nach
 #      dem ersten erfolgreichen Lauf + Umzug an den Tailscale-only-Standort
 #      ansible_host in ansible/inventory/hosts.yml auf die Tailscale-IP/
-#      MagicDNS-Namen umstellen (siehe docs/45-vereinsheim-alarmmonitor.md).
+#      MagicDNS-Namen umstellen (siehe docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md).
 #   3. Host unter "banana_pis" in ansible/inventory/hosts.yml mit gesetztem
 #      banana_pi_kiosk_station eintragen.
 #   4. Standort-URL als Key im SealedSecret alamos-apager-stations UND als
 #      Ansible-Vault-verschluesselter Wert in
 #      host_vars/<host>/vault.yml (banana_pi_kiosk_fallback_url) hinterlegt
-#      (siehe docs/19-alamos-apager.md und docs/45-vereinsheim-alarmmonitor.md).
+#      (siehe docs/3-apps-workloads/30010-alamos-apager.md und docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md).
 #   5. Tailscale Split-DNS fuer die Suchdomaene "homeserver" + die vom
 #      Homeserver beworbene Route (192.168.178.0/24) im Tailscale-Adminpanel
-#      genehmigt (siehe docs/08-semaphore.md, Abschnitt "Zugriff über
-#      Tailscale", und docs/45-vereinsheim-alarmmonitor.md) — sonst loest
+#      genehmigt (siehe docs/b-kubernetes-gitops/b0030-semaphore.md, Abschnitt "Zugriff über
+#      Tailscale", und docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md) — sonst loest
 #      der Pi weder alamos-apager.prod.homeserver auf, noch erreicht er es.
 #
 # Aufruf:

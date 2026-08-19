@@ -19,7 +19,7 @@ spec:
       labels:
         {{- include "nextcloud.postgresql.selectorLabels" . | nindent 8 }}
     spec:
-      # Siehe docs/20-wikijs.md — als UID/GID 999 direkt starten, damit der
+      # Siehe docs/3-apps-workloads/30030-wikijs.md — als UID/GID 999 direkt starten, damit der
       # interne chown-Fixup übersprungen wird (scheitert sonst auf dem
       # NFS-Mount der "nas"-StorageClass).
       securityContext:

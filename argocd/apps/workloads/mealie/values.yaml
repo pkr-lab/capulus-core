@@ -43,7 +43,7 @@ ingress:
         - path: /
           pathType: Prefix
     # Externer Host — per Cloudflare-Tunnel-Wildcard (cloudflared) an
-    # Traefik weitergereicht, siehe docs/56-domain-tiers.md.
+    # Traefik weitergereicht, siehe docs/c-netzwerk-dns/c0040-domain-tiers.md.
     - host: mealie-prod.pke-lab.de
       paths:
         - path: /

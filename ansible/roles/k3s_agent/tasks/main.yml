@@ -9,7 +9,7 @@
 
 # ---- NFS-Client (Voraussetzung für die "nas"-StorageClass) --
 # Kubelet muss auf JEDEM Node NFS-Mounts erstellen können, sonst bleiben
-# PVCs auf der "nas"-StorageClass hier Pending. Siehe docs/16-nas-storage.md.
+# PVCs auf der "nas"-StorageClass hier Pending. Siehe docs/2-betrieb-hardware/20000-nas-storage.md.
 - name: nfs-common installieren
   ansible.builtin.apt:
     name: nfs-common

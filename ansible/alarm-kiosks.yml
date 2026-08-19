@@ -15,7 +15,7 @@
 #   2. Host unter "raspberry_pis" in ansible/inventory/hosts.yml mit
 #      gesetztem alamos_kiosk_station eintragen.
 #   3. Standort-URL als Key im SealedSecret alamos-apager-stations
-#      angelegt (siehe docs/20-alamos-apager.md).
+#      angelegt (siehe docs/3-apps-workloads/30010-alamos-apager.md).
 #
 # Aufruf:
 #   make alarm-kiosks

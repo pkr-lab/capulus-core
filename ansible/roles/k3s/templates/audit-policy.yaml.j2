@@ -1,6 +1,6 @@
 # Kubernetes-Audit-Policy — generiert von Ansible, nicht manuell editieren.
-# Security-Härtung Phase 4 (docs/51-security-hardening-roadmap.md,
-# docs/53-secrets-encryption-audit-log.md).
+# Security-Härtung Phase 4 (docs/d-sicherheit/d0010-security-hardening-roadmap.md,
+# docs/d-sicherheit/d0050-secrets-encryption-audit-log.md).
 #
 # Bewusst schlank statt "RequestResponse für alles" — ein Homelab-Cluster
 # mit begrenztem lokalen SSD-Platz braucht kein vollständiges
@@ -57,6 +57,6 @@ rules:
 
   # Alles andere (Deployments, Services, NetworkPolicies, Namespaces, …)
   # auf Metadata-Level als Auffangregel — deckt z. B. auch künftige
-  # NetworkPolicy-Änderungen (docs/52) ab, ohne für jeden Resource-Typ
+  # NetworkPolicy-Änderungen (docs/d-sicherheit/d0030-network-policies.md) ab, ohne für jeden Resource-Typ
   # eine eigene Regel zu brauchen.
   - level: Metadata

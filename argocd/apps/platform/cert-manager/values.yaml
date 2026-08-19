@@ -47,6 +47,6 @@ cert-manager:
   # (ArgoCD prunt abgeschlossene Jobs nicht automatisch nach). Deaktiviert,
   # da die eigentliche Verifikation ohnehin über den echten
   # `homeserver-wildcard-tls`-Certificate-Status läuft (siehe
-  # docs/54-internal-tls.md).
+  # docs/d-sicherheit/d0040-internal-tls.md).
   startupapicheck:
     enabled: false

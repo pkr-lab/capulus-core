@@ -1,6 +1,6 @@
 # StorageClass "nas": dynamischer Speicher über NFS-Export auf dem UGREEN NAS
 # (192.168.178.97, RAID1). Ersetzt die alte "hdd"-StorageClass (worker-0/sda),
-# siehe docs/16-nas-storage.md → Migrations-Runbook.
+# siehe docs/2-betrieb-hardware/20000-nas-storage.md → Migrations-Runbook.
 #
 # Verwendung in PVCs:
 #   storageClassName: nas
