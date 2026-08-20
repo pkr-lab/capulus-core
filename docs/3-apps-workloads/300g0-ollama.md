@@ -12,7 +12,7 @@ externen Zammad-Instanz `https://ticket.emue365.de` zu erzeugen.
 
 ```
 n8n (taeglich, 07:00 Uhr)
-  1. POST carplay-api.homeserver/api/power/wake  {"target":"worker-0"}
+  1. POST carplay-api.prod.homeserver/api/power/wake  {"target":"worker-0"}
        -> weckt den Lenovo M90q per Wake-on-LAN
   2. PATCH kubernetes.default.svc/.../deployments/ollama/scale {"spec":{"replicas":1}}
        -> Ollama-Pod startet auf worker-0
