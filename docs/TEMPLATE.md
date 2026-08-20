@@ -41,11 +41,18 @@ ans Ende der Kategorie angehängt zu werden.
 | `1` | Benachrichtigungen | `1-benachrichtigungen/` |
 | `2` | Betrieb & Hardware | `2-betrieb-hardware/` |
 | `3` | Apps & Workloads | `3-apps-workloads/` |
+| `4` | Planung | `4-planung/` |
+
+`4-planung/` ist die einzige Kategorie, die nicht den aktuellen Ist-Zustand
+beschreibt: sie hält ausgiebig recherchierte, aber noch nicht (vollständig)
+umgesetzte Architektur-/Rollout-Pläne, bis sie entweder umgesetzt sind (dann
+wandert das Ergebnis als eigenes Doc in die fachlich passende Kategorie,
+z. B. `d-sicherheit/`) oder verworfen werden.
 
 Passt ein neues Thema in keine bestehende Kategorie, ist das ein Signal, kurz
 zu prüfen, ob eine zehnte Kategorie wirklich nötig ist, statt es einer
-unpassenden zuzuordnen — Hex hat mit `0` und `4`–`9` (abzüglich der schon
-genutzten Ziffern `1`–`3`) noch Reserve.
+unpassenden zuzuordnen — Hex hat mit `0` und `5`–`9` (abzüglich der schon
+genutzten Ziffern `1`–`4`) noch Reserve.
 
 ### Cross-Referenzen
 

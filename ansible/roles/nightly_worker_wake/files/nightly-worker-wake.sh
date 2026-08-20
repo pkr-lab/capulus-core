@@ -133,11 +133,18 @@ send_report() {
 }
 
 wait_for_ready() {
-  local name="$1" waited=0
+  local name="$1" waited=0 ready
   while (( waited < READY_TIMEOUT_SECONDS )); do
-    if kubectl get node "$name" --no-headers 2>/dev/null | grep -Eq '\sReady\s'; then
-      return 0
-    fi
+    # Auf die "Ready"-Condition direkt prüfen statt auf die STATUS-Spalte
+    # von `kubectl get node` zu grep'en: sobald der Node noch cordoned ist
+    # (z.B. weil ein vorheriger Lauf wegen dieses Bugs nie uncordon
+    # erreicht hat), liest die Spalte "Ready,SchedulingDisabled" -- OHNE
+    # Leerzeichen nach "Ready" -- wodurch \sReady\s NIE matcht, selbst
+    # wenn der Node laengst bereit ist. Das fuehrte zu einer sich selbst
+    # aufrechterhaltenden Falle: Node bleibt cordoned -> naechste Nacht
+    # wieder "not_ready" erkannt -> bleibt cordoned -> usw.
+    ready="$(kubectl get node "$name" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)"
+    [ "$ready" = "True" ] && return 0
     sleep 5
     waited=$(( waited + 5 ))
   done
@@ -234,7 +241,12 @@ semaphore_fill_report_from_output() {
     | jq -r '.[].output' 2>/dev/null || true)"
   [ -z "$output" ] && return 0
 
-  recap="$(printf '%s\n' "$output" | grep -E "^${name}[[:space:]]*:" | tail -1 | tr -d '\r')"
+  # Ansible faerbt die PLAY-RECAP-Zeile eines Hosts mit ANSI-Codes ein,
+  # sobald er unreachable/failed ist (z.B. "\e[1;31mworker-0\e[0m : ...") --
+  # ohne das Stripping matcht der Anker "^${name}" nie, und der dadurch
+  # leere grep laesst unter `pipefail` das nachfolgende `set -e` das ganze
+  # Skript abbrechen (recap=$(...) ist eine Zuweisung, kein `if`/`||`).
+  recap="$(printf '%s\n' "$output" | sed -E 's/\x1b\[[0-9;]*m//g' | grep -E "^${name}[[:space:]]*:" | tail -1 | tr -d '\r' || true)"
   wp_recap["$name"]="$recap"
 
   if printf '%s' "$recap" | grep -Eq 'changed=[1-9]'; then

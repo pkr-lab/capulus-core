@@ -3,7 +3,9 @@
   "name": "Zammad Tickets verarbeiten",
   "nodes": [
     {
-      "parameters": {},
+      "parameters": {
+        "inputSource": "passthrough"
+      },
       "id": "e5e5e5e5-0000-4000-8000-000000000000",
       "name": "Von Haupt-Workflow aufgerufen",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -17,10 +19,7 @@
       "parameters": {
         "resource": "ticket",
         "operation": "getAll",
-        "returnAll": true,
-        "filters": {
-          "query": "state.name:new AND NOT tags:ki-entwurf-erstellt"
-        }
+        "returnAll": true
       },
       "id": "e5e5e5e5-0002-4000-8000-000000000002",
       "name": "Offene Tickets suchen",
@@ -47,9 +46,27 @@
           },
           "conditions": [
             {
+              "id": "e5e5e5e5-0004-4000-8000-000000000004b",
+              "leftValue": "={{ $json.state_id }}",
+              "rightValue": "CHANGE-ME: ID des Zammad-Status \"new\" eintragen (Admin > Ticket-Status pruefen; Standard-Zammad-Installation: 1) -- der native Zammad-Node liefert nur state_id, keinen Statusnamen, und die Get-Many-Suche oben filtert serverseitig gar nicht",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "e5e5e5e5-0004-4000-8000-000000000004c",
+              "leftValue": "={{ $json.owner_id }}",
+              "rightValue": "CHANGE-ME: Zammad-User-ID des KI-Agenten eintragen (Admin > Benutzer), dessen zugewiesene Tickets bearbeitet werden sollen -- nur Tickets mit diesem owner_id werden verarbeitet, keine anderen",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
               "id": "e5e5e5e5-0004-4000-8000-000000000004a",
-              "leftValue": "={{ $json.group }}",
-              "rightValue": "CHANGE-ME: Gruppe(n) eintragen, die NICHT per KI beantwortet werden sollen (z.B. bereits per Zammad-Trigger/Textbaustein abgedeckt), oder Bedingung ganz entfernen/umkehren",
+              "leftValue": "={{ $json.group_id }}",
+              "rightValue": "CHANGE-ME: Gruppen-ID(n) eintragen, die NICHT per KI beantwortet werden sollen (z.B. bereits per Zammad-Trigger/Textbaustein abgedeckt), oder Bedingung ganz entfernen/umkehren",
               "operator": {
                 "type": "string",
                 "operation": "notEquals"
@@ -71,10 +88,9 @@
     },
     {
       "parameters": {
-        "resource": "ticketArticle",
-        "operation": "getAll",
-        "ticketId": "={{ $json.id }}",
-        "returnAll": true
+        "resource": "ticket",
+        "operation": "get",
+        "id": "={{ $json.id }}"
       },
       "id": "e5e5e5e5-0005-4000-8000-000000000005",
       "name": "Ticket-Artikel laden",
@@ -93,7 +109,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Ticket-Objekt kommt aus dem Zweig \"Nur relevante Tickets\" (True), die Artikel-Liste aus \"Ticket-Artikel laden\".\nconst ticket = $('Nur relevante Tickets').item.json;\nconst articles = $input.first().json || [];\n\nfunction stripHtml(html) {\n  return String(html || '').replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim();\n}\n\nconst verlauf = articles\n  .map((a) => `[${a.from || 'unbekannt'}]: ${stripHtml(a.body)}`)\n  .join('\\n\\n');\n\nconst prompt = [\n  'Du bist Support-Assistent und entwirfst NUR einen Antwortvorschlag -- er wird von einem Menschen geprueft, bevor er verschickt wird.',\n  `Ticket-Titel: ${ticket.title}`,\n  '',\n  'Bisheriger Verlauf:',\n  verlauf,\n  '',\n  'Formuliere einen hoeflichen, knappen Antwortentwurf auf Deutsch. Wenn dir Informationen fehlen, formuliere stattdessen Rueckfragen statt zu raten.',\n].join('\\n');\n\nreturn [{ json: { ticket, prompt } }];"
+        "jsCode": "// \"Ticket-Artikel laden\" (Zammad Ticket:Get) liefert das Ticket-Objekt UND haengt\n// zusaetzlich ein \"articles\"-Array mit dem Artikel-Verlauf an (der native Node\n// ruft dafuer intern zusaetzlich /ticket_articles/by_ticket/:id auf).\nconst { articles, ...ticket } = $input.first().json;\n\nfunction stripHtml(html) {\n  return String(html || '').replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim();\n}\n\nconst verlauf = (articles || [])\n  .map((a) => `[${a.from || 'unbekannt'}]: ${stripHtml(a.body)}`)\n  .join('\\n\\n');\n\nconst prompt = [\n  'Du bist Support-Assistent und entwirfst NUR einen Antwortvorschlag -- er wird von einem Menschen geprueft, bevor er verschickt wird.',\n  `Ticket-Titel: ${ticket.title}`,\n  '',\n  'Bisheriger Verlauf:',\n  verlauf,\n  '',\n  'Formuliere einen hoeflichen, knappen Antwortentwurf auf Deutsch. Wenn dir Informationen fehlen, formuliere stattdessen Rueckfragen statt zu raten.',\n].join('\\n');\n\nreturn [{ json: { ticket, prompt } }];"
       },
       "id": "e5e5e5e5-0006-4000-8000-000000000006",
       "name": "LLM-Prompt bauen",
@@ -150,19 +166,14 @@
       "parameters": {
         "resource": "ticket",
         "operation": "update",
-        "ticketId": "={{ $json.ticket.id }}",
-        "updateFields": {},
-        "article": {
-          "articleDetails": {
-            "body": "={{ $json.entwurf }}",
-            "sender": "System",
-            "type": "note",
-            "visibility": "internal"
-          }
+        "id": "={{ $json.ticket.id }}",
+        "updateFields": {
+          "note": "={{ $json.entwurf }}",
+          "state_id": "CHANGE-ME: ID des Zammad-Status \"pending close\" (\"Warten auf Schliessen\") eintragen -- Admin > Ticket-Status pruefen (Standard-Zammad-Installation: 4)"
         }
       },
       "id": "e5e5e5e5-0009-4000-8000-000000000009",
-      "name": "Entwurf als interne Notiz speichern",
+      "name": "Entwurf als interne Notiz speichern + Status setzen",
       "type": "n8n-nodes-base.zammad",
       "typeVersion": 1,
       "position": [
@@ -173,41 +184,6 @@
         "zammadBasicAuthApi": {
           "id": "REPLACE_ME_NACH_IMPORT",
           "name": "Zammad ticket.emue365"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://ticket.emue365.de/api/v1/tags/add",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ object: 'Ticket', o_id: $('Antwortentwurf extrahieren').item.json.ticket.id, item: 'ki-entwurf-erstellt' }) }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpBasicAuth",
-        "options": {}
-      },
-      "id": "e5e5e5e5-000a-4000-8000-00000000000a",
-      "name": "Ticket taggen (verhindert Doppel-Entwurf)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2340,
-        220
-      ],
-      "credentials": {
-        "httpBasicAuth": {
-          "id": "REPLACE_ME_NACH_IMPORT",
-          "name": "Zammad ticket.emue365 (Basic Auth, generisch)"
         }
       }
     },
@@ -243,7 +219,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2600,
+        2340,
         220
       ]
     },
@@ -339,25 +315,14 @@
       "main": [
         [
           {
-            "node": "Entwurf als interne Notiz speichern",
+            "node": "Entwurf als interne Notiz speichern + Status setzen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Entwurf als interne Notiz speichern": {
-      "main": [
-        [
-          {
-            "node": "Ticket taggen (verhindert Doppel-Entwurf)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Ticket taggen (verhindert Doppel-Entwurf)": {
+    "Entwurf als interne Notiz speichern + Status setzen": {
       "main": [
         [
           {
@@ -385,6 +350,6 @@
     "executionOrder": "v1"
   },
   "meta": {
-    "description": "Sub-Workflow, aufgerufen vom Haupt-Workflow 'Zammad Externer KI-Lauf (taeglich)' (zammad-externer-ki-lauf-taeglich.json) ueber einen Execute-Workflow-Node, WAEHREND Ollama bereits hochskaliert und bereit ist -- laeuft nicht eigenstaendig auf Zeitplan, daher Trigger-Typ 'Execute Workflow Trigger' statt Schedule Trigger. Sucht neue Tickets in der externen Zammad-Instanz https://ticket.emue365.de (Suchfilter 'state.name:new AND NOT tags:ki-entwurf-erstellt', Tag verhindert Doppel-Entwuerfe), erzeugt je Ticket per lokalem Ollama (http://ollama.ollama.svc.cluster.local:11434/api/generate, Modell llama3.1:8b) einen Antwortentwurf und speichert ihn NUR als INTERNE Notiz -- keine automatische oeffentliche Antwort. Nutzt fuer alle drei direkten Zammad-Schritte (Suche, Artikel laden, Notiz speichern) den nativen n8n-nodes-base.zammad-Node mit dem bereits hinterlegten Credential 'Zammad ticket.emue365' (Typ Zammad Basic Auth API); nur das Taggen bleibt roher HTTP-Request (kein natives Tag-Feature im Zammad-Node), dafuer zusaetzlich ein generisches Basic-Auth-Credential mit denselben Zugangsdaten. WICHTIG fuer den Haupt-Workflow: Der Node 'Abschluss (immer genau 1 Item)' laeuft im Modus 'Run Once for All Items' UND wird zusaetzlich direkt vom Trigger-Node gespeist (siehe connections) -- dadurch liefert dieser Sub-Workflow IMMER genau ein Ergebnis-Item zurueck, auch wenn 0 Tickets gefunden wurden. Der Haupt-Workflow verlaesst sich darauf, um Ollama zuverlaessig wieder herunterzuskalieren, auch an Tagen ohne neue Tickets. NACH DEM IMPORT: (1) Parameter der drei nativen Zammad-Nodes pruefen (siehe Hinweis in zammad-externer-ki-lauf-taeglich.json). (2) Credentials 'Zammad ticket.emue365' (Zammad Basic Auth API, 3x) und das generische Basic-Auth-Credential fuer den Tag-Node neu zuweisen. (3) Gruppen-Filter im IF-Node 'Nur relevante Tickets' setzen. (4) ntfy-Topic 'zammad-ki-entwuerfe' abonnieren. (5) Diesen Workflow AKTIVIEREN, damit der Haupt-Workflow ihn per Execute-Workflow-Node aufrufen kann, UND seine Workflow-ID im Haupt-Workflow-Node 'Zammad Tickets verarbeiten' eintragen (wird beim Import nicht automatisch verknuepft)."
+    "description": "Sub-Workflow, aufgerufen vom Haupt-Workflow 'Zammad Externer KI-Lauf (taeglich)' (zammad-externer-ki-lauf-taeglich.json) ueber einen Execute-Workflow-Node, WAEHREND Ollama bereits hochskaliert und bereit ist -- laeuft nicht eigenstaendig auf Zeitplan, daher Trigger-Typ 'Execute Workflow Trigger' statt Schedule Trigger. WICHTIG (anhand des n8n-Zammad-Node-Quelltexts n8n-io/n8n packages/nodes-base/nodes/Zammad verifiziert, nicht mehr nur angenommen): Die Ticket-Ressource des nativen Node kennt NUR die Operationen create/get/getAll/update/delete, KEINE eigene 'Ticket Article'-Ressource -- Artikel kommen ueber 'get' automatisch mit (siehe unten). 'getAll' akzeptiert KEINERLEI Filter-/Query-Parameter (ruft serverseitig nur ungefiltert GET /tickets auf) und liefert Ticket-Felder ausschliesslich als rohe IDs (state_id/owner_id/group_id), keine Namen. Deshalb: Node 'Offene Tickets suchen' (Ticket:GetAll, returnAll) liefert ALLE fuer das Credential sichtbaren Tickets ungefiltert; die eigentliche Filterung -- state_id = 'new', owner_id = zugewiesener KI-Agent, optional group_id-Ausschluss -- passiert danach im IF-Node 'Nur relevante Tickets' anhand dieser drei CHANGE-ME-IDs (Admin > Ticket-Status bzw. Benutzer in Zammad nachschauen). Nur Tickets des im owner_id-CHANGE-ME eingetragenen Agenten werden bearbeitet, keine anderen. Node 'Ticket-Artikel laden' ist Ticket:Get (Feld 'id', NICHT 'ticketId') -- die Zammad-API-Antwort enthaelt neben den Ticket-Feldern automatisch ein 'articles'-Array (der native Node ruft dafuer intern zusaetzlich /ticket_articles/by_ticket/:id auf). Erzeugt je Ticket per lokalem Ollama (http://ollama.ollama.svc.cluster.local:11434/api/generate, Modell llama3.1:8b) einen Antwortentwurf. Node 'Entwurf als interne Notiz speichern + Status setzen' ist Ticket:Update (Feld 'id', NICHT 'ticketId'; KEIN 'article'-Feld bei Update, das gibt es nur bei Create) mit updateFields.note (der native Node baut daraus serverseitig automatisch ein Artikel-Objekt mit internal:true/type:note/content_type:text/html -- dadurch zwingend NUR eine interne Notiz, nichts wird automatisch an den Kunden verschickt und sonst passiert am Ticket nichts weiter) sowie updateFields.state_id (CHANGE-ME, Zielwert 'pending close'/'Warten auf Schliessen'). Es werden KEINE Tags mehr gesetzt -- der Statuswechsel weg von 'new' dient gleichzeitig als Doppel-Entwurf-Schutz, da der IF-Node oben nur state_id = 'new' durchlaesst. Alle drei nativen Zammad-Nodes nutzen dasselbe, bereits in n8n hinterlegte Credential 'Zammad ticket.emue365' (Typ Zammad Basic Auth API). WICHTIG fuer den Haupt-Workflow: Der Node 'Abschluss (immer genau 1 Item)' laeuft im Modus 'Run Once for All Items' UND wird zusaetzlich direkt vom Trigger-Node gespeist (siehe connections) -- dadurch liefert dieser Sub-Workflow IMMER genau ein Ergebnis-Item zurueck, auch wenn 0 Tickets gefunden wurden. Der Haupt-Workflow verlaesst sich darauf, um Ollama zuverlaessig wieder herunterzuskalieren, auch an Tagen ohne neue Tickets. NACH DEM IMPORT: (1) Alle drei CHANGE-ME-Platzhalter im IF-Node 'Nur relevante Tickets' setzen: state_id fuer 'new' (Standard-Zammad: 1), owner_id des KI-Agenten, optional group_id-Ausschluss (Bedingung sonst entfernen). (2) state_id (Zielwert fuer 'pending close', Standard-Zammad: 4) im Node 'Entwurf als interne Notiz speichern + Status setzen' setzen -- im UI per Dropdown waehlen statt den Platzhaltertext stehen zu lassen. (3) Credentials 'Zammad ticket.emue365' (Zammad Basic Auth API, 3x) neu zuweisen. (4) ntfy-Topic 'zammad-ki-entwuerfe' abonnieren. (5) Diesen Workflow AKTIVIEREN, damit der Haupt-Workflow ihn per Execute-Workflow-Node aufrufen kann, UND seine Workflow-ID im Haupt-Workflow-Node 'Zammad Tickets verarbeiten' eintragen (wird beim Import nicht automatisch verknuepft)."
   }
 }
