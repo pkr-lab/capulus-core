@@ -200,7 +200,7 @@
           ]
         },
         "sendBody": true,
-        "specifyBody": "raw",
+        "contentType": "raw",
         "rawContentType": "text/plain",
         "body": "={{ 'Ticket #' + $('Antwortentwurf extrahieren').item.json.ticket.number + ': ' + $('Antwortentwurf extrahieren').item.json.ticket.title }}",
         "options": {}
