@@ -1,0 +1,185 @@
+---
+replicaCount: 1
+# Session-/Regulation-State liegt lokal (SQLite + In-Memory), keine geteilte
+# Session-Store — mehr als 1 Replica würde Logins zufällig auf einer Instanz
+# ohne die passende Session landen lassen. Passt zur aktuellen
+# Cluster-Realität: nur `homeserver` ist schedulebar (worker-0/worker-1
+# NotReady), siehe docs/4-planung/40000-authelia-sso.md.
+
+image:
+  repository: authelia/authelia
+  pullPolicy: IfNotPresent
+  tag: "4.39.20"
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 9091
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations: {}
+  hosts:
+    # Zwei interne Hostnamen sind kein Zufall: "homeserver" ist ein
+    # Single-Label-Fake-TLD ohne Punkt, Authelias Session-Cookie-Domain
+    # verlangt aber mindestens einen Punkt (validiert per
+    # `authelia config validate`) — ein Cookie mit Domain "homeserver" wird
+    # von Authelia selbst abgelehnt. Deshalb bekommt jede Domain-Tier-Ebene
+    # (tech.homeserver / prod.homeserver) ihren eigenen Cookie-Scope +
+    # eigenen Portal-Hostnamen (session.cookies in configuration.yml unten),
+    # sonst funktioniert SSO nur innerhalb einer Tier-Ebene, nicht darüber
+    # hinweg. pke-lab.de braucht das NICHT (echte Domain mit Punkt), ein
+    # einziger externer Hostname deckt beide Tiers ab.
+    - host: auth.tech.homeserver
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: auth.prod.homeserver
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: auth-tech.pke-lab.de
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+persistence:
+  enabled: true
+  storageClassName: local-path
+  size: 1Gi
+  accessMode: ReadWriteOnce
+  mountPath: /config
+
+# local-path bindet den Pod an den Node, auf dem die PVC zuerst provisioniert
+# wird — fest auf homeserver, analog zu uptime-kuma/values.yaml.
+nodeSelector:
+  kubernetes.io/hostname: homeserver
+
+tolerations: []
+affinity: {}
+
+resources:
+  requests:
+    cpu: 20m
+    memory: 64Mi
+  limits:
+    cpu: 300m
+    memory: 256Mi
+
+# Secrets kommen aus templates/sealedsecret.yaml (SealedSecret,
+# verschlüsselt mit dem kubeseal-Public-Key dieses Clusters). Erzeugt am
+# 21.08.2026 per `authelia crypto rand`/`authelia crypto hash generate
+# argon2` (siehe docs/4-planung/40000-authelia-sso.md) + `kubeseal --raw
+# --namespace authelia --name authelia-secrets`. Enthält:
+#   - jwt-secret: signiert Passwort-Reset-Links (identity_validation)
+#   - session-secret: verschlüsselt Session-Cookies
+#   - storage-encryption-key: verschlüsselt die SQLite-Storage (TOTP-Secrets etc.)
+#   - users_database.yml: Nutzerdatenbank (Argon2id-Hash), initial 1 Admin-User
+secrets:
+  secretName: authelia-secrets
+  encryptedJwtSecret: "AgB8H4t1rj17qdszDLrNbxQq6x1VOstS/83t1HaKKD98czRJQcCosdWDyFVQt2LxUqJ3nYglnFmjgdbeRjwCuD/jOEUh7EadrmU0yH978Sfcr5MUn45OwR3nj1hzdh3PXDjBu5DQLZEWlxK5n05U/lX6rZdpvSAeyEACfTMpklhlYgcPJh1GIKTV5MqiIQp4gX0lKmY0cz3pbU+iyg50mY2IUCvl4nrumHfT9ZoqMC6YeUl7R7sJFcLlLAEkkqkqKn6TVNTnVNQtrfWMMCuQsypoWvfk0K89GlS8kHUQndW4eUN4Y+1QhG/9FyR77IExheC/0LkjWJramvhZOCqkaGfvkBV2aDwnqmSXh/btI++TFGCYRi3bqOOZVlPi0v8Ow10VnkyFM9oCJyTxT7ncxie+kEq8deemCojM3KGu/e7z3I+194YeB85hpXGZPjbcXqkOrki+XvBwFFPmrtt+qFexvcnphjJqDRf7uv4ja4hAg0ub31AQhMBEYT7y/k6ZQV9qYWCMeBUvJLLlAqwc5CCeHd43GzhxrcbLTXZyYw7ZTZY8Mht9Q0sspUkfPPmT8zyphLdg2uapv5KFEb5jbpjTVexW8ecZ0kVxHzK7hxEEuZN7nwOU4cMrPGLLnV/tztmzlq49ta7txCmIrj4rBWFpoJg2rgWDo5TRL5TXgAJLewqiaoArSP2/zxp4zx9IYyNw4+AyaUHfNkAs8JdXAcBpuz32QPm6ytdVb63eAupEyswzEjlaIYk4NhuGkx5DK4FpV98nfrvS7sWs0iAON37v"
+  encryptedSessionSecret: "AgCGX76LEtYIPQ7NoNRgqgMs/qf5ZI2sFp87CAdkfIVIJxbRigCS0cw1iqXY1PICRndG/oujRGB7Lpq1dnkXiyS3U30E3SEixJ//AnvkMa9sEWqCDJ7MDXf0BRcOyBj8CxKeBLo/zIfD7ruwQG5qJu9OMfDiuRrqUkK2mzR4QzKQFxg+79gC2oRgq+LaWZofc7ZdEZ6xkq8yoIUZ6e9MwXz33pyGE4IWXTmjwFu/0BHq4KAUjj7TMwLwlSe2aWl78+Sir/LukGqH/veA6Vl8kd2QzadErlPoxO5u1Aa5IiKEsxX5M4Ji5ZM3oWE6qdKW6N3vNaKjr7nGqxGKqHeaYf2mFyyfgToUjmZ7ruzodB846hrKmF+PP6P2efmMKKIzMiji5Kzpw/Xxd97Fu4qlY33vct6zytqLyY0HnI6g1nlFWJoElIyC0z/towFEHTaX8Q+/xRNKcAa/MIT9WNV/fPF3JByokyEngrpvFRDSlDUH9auGvt5j2NUshaZEX8Tm/lWCjuyUJjuBfAYxRVLVFgQUCDVRczmq80ToN+/AWREf2KQ11Vh5zUtj6RYV+SHfaTDjiy9E+kPPo3laqXcEerjT4pdbsO726c3yWhy9/LnYypQDJnqsSfX3xFovESz+V8oxBwvWh/M3wxBX6+Shb3NQqINKQTmqMBWqI4pt1ytw/Xx1fCUAj/6baoNnuUA41IAHjf7C82YuNah9BPpvbNFEj82CzImR13uMmlR5cXdq+6vzPhYubeM4iPAUcFRI4QAgrAF3JKfG5gG3+ySD7QDR"
+  encryptedStorageEncryptionKey: "AgAWWqE1xZ2aZNJBQm/3iQZ0EOzdoNcTKq+eVKd9YjJEK3Kps0H+/YmG/Uri81mh8MM29BK0mnEutdSavKsKu6/24CB/v3va1+XmY/7It/D2Km5/keLDU08rFFXeKrSHPimE6ywqGTjDkZ0ghkCs/tvB9c9+PhGu9wCjejKUCedUTHlfEHwfQWZweZuUdMMOlZviZjJvxHL1BqE3jem+PKwuz8yuU0bqkkzd3fnyaYMpssNKs2OZFDELCV47+KOqk1CRIhANAHg4ISkmVvHXPZrn8L066yz1BoGuiNG4kfBa9PEvARuDVQY55i2BO3C7mTANqQAQJnkt6lNrbFF0/+KjNOItOwz9g46UlFPjFATJl1yT92tBRbBKqU8zLzJxhJVAJPSn2uDqVbxWCBKnF+UsK8Q7mc/OmedICyZZYmrMBwnFEyTpBkaBvABFArMVlfqjzdJf6lOHziacisRLAqnTgYIstbAl0ca6iDPcP3Vb90AZivCYzV5fkST15kyP12uLHLFD1fvsAdyphSiIQhlNb1g4HicUGhfOJ2GS17oocxj936lSawqpXMkzJkFWoP1mWsovrX1+4KKHmWjQ5qAc8llTM/951AMBya/kdL9mXy4yvZq5nKKJ+mYvQGoarpuyVhrpTiCYdOfpqal1AL3UPyaM2ls+V4E1J9IG2VUg0F1SVwQdodUZP6gqaamkG8DQ1PXPO4EcQRSiAbqZ/Q/3a66+22Uh3rL5AiR3ZzaVZz1KpPKwn2pY8nG6Or54HsJV2IygrDvhDaj82qghRi//"
+  encryptedUsersDatabase: "AgB1NnvxtHVSJpacVsmRY9m1nJa8mYpWDnwNELkvgmFUOSuMU107vNb/aMStjlcTSUIr88IZ5X3FXH+fz+rFsjbliYriLmoWQhlm+Fps7UOXnQH515TyS4l4w8NlkW+NSWR6S1VN/iQGiKePxW0vXeEwXKFG6kS1Hh/4HLTrDubem+DjYIE0Gq4+ecSIUS7XlY23V57xVwLHolSyDY4KcbGR2q1SpYlCDYePjZ8Q8lKG2BwqKkNU5bDRmbr14hVhO7uyYmwtC1CFMpi9BNHpq6DlyUaMUvJZbZMUMzwT9S2Q8cZURyOyPofDYdWF93rl1Ca0SRMwIyXQ8c+8zr2DJEACVcQA+Ay6aopuWywXMwJxgLw0tUu1Hnb2Wg0rKTEimFArKcZa2RY9fLqDa38jiVF/P5aMjtCRbCYuNvwZR1nvIdUoF1Vmgqg8fQ15Na8HN3TusjXA8sTUUjS8TEH0XVoW5XHIrTtkcZS3SXSOFHnIqpHJ4wt+ZZq378n8rtCiYJT9KDpuZZx9h48fKQ3Ine/tUX5eq6UaqIYDzTC3LrgYg2VnmrawAPmmTBtYhAdsjzeGtX/lqfxuZrjT3z+8ZJCoJCzVmZeTHMMf1ks+zRAYjaBBxgSbHZoRaR8TElJfBrmAun6YEL0EwxBXsKKiZCQhPYnkv0sFkVpPBwHbf6l+qYn//jxXhCzaTfF1WOYqXBzh2WxAsDmhgk4tDSpSJd86JDB8M293QuVizUgGdBtAwVW3qUZgTwVCB1Dn8jREJl0yb5tPZ0xaUbDYfbN4cQbzxUvR6T2v59BK0K8lkcWONfTof9QCG5jKyLUsrSLPNHQtn1IcjfKj5WJ03eh0+kwtDCiwVB2pnh67dl3Ig8u6gprr6kNUO/46mPXk4o+OpXMTexEsNEAWrudMTn5mGvndz/E3WYD4OnkQcjIKK8NXOo0XPkML9o5SpSyPYf5KwfJf4t2vMIPOf3nR9kBXQzXO4KNNKlZiOdc="
+
+# `authelia config validate` erfolgreich gegen diese Datei getestet
+# (v4.39.20, 21.08.2026) — Session-Secret/Storage-Encryption-Key/
+# Reset-Password-JWT-Secret kommen NICHT hier rein, sondern per Env-Var aus
+# dem SealedSecret oben (siehe templates/deployment.yaml).
+#
+# access_control-Regeln wachsen mit jedem Rollout-Batch
+# (docs/4-planung/40000-authelia-sso.md, Baustein 7) — aktuell nur der
+# Pilot (Uptime Kuma, one_factor). Admin-Tools kommen mit Batch 2 als eigene
+# domain-Liste mit policy: two_factor dazu.
+config: |
+  theme: light
+
+  server:
+    address: 'tcp://:9091'
+
+  log:
+    level: info
+
+  totp:
+    issuer: 'homeserver'
+
+  authentication_backend:
+    file:
+      path: /config/users_database.yml
+      password:
+        algorithm: argon2
+        argon2:
+          variant: argon2id
+          iterations: 3
+          memory: 65536
+          parallelism: 4
+          key_length: 32
+          salt_length: 16
+
+  access_control:
+    default_policy: deny
+    rules:
+      # Batch 1 (Pilot) — siehe docs/4-planung/40000-authelia-sso.md
+      - domain: "uptime-kuma.prod.homeserver"
+        policy: one_factor
+
+  session:
+    cookies:
+      - domain: 'prod.homeserver'
+        authelia_url: 'https://auth.prod.homeserver'
+        name: 'authelia_session'
+        expiration: '1h'
+        inactivity: '5m'
+      - domain: 'tech.homeserver'
+        authelia_url: 'https://auth.tech.homeserver'
+        name: 'authelia_session'
+        expiration: '1h'
+        inactivity: '5m'
+      - domain: 'pke-lab.de'
+        authelia_url: 'https://auth-tech.pke-lab.de'
+        name: 'authelia_session'
+        expiration: '1h'
+        inactivity: '5m'
+
+  regulation:
+    max_retries: 5
+    find_time: '2m'
+    ban_time: '15m'
+
+  storage:
+    local:
+      path: /config/db.sqlite3
+
+  notifier:
+    # Kein SMTP-Relay im Repo vorhanden — filesystem-Notifier schreibt
+    # Passwort-Reset-/Identitätsbestätigungs-Links in eine Datei im Pod
+    # (per `kubectl exec` lesbar), verschickt aber keine echte E-Mail. Für
+    # den Admin-Only-Pilot ausreichend; bei Bedarf später auf smtp:
+    # umstellen, sobald ein Mail-Relay existiert.
+    filesystem:
+      filename: /config/notification.txt
