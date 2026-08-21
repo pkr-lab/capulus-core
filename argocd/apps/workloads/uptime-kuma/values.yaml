@@ -51,8 +51,12 @@ ingress:
   # der interne Haupt-Host ist geschützt. Der externe Status-Host unten
   # bleibt bewusst unverändert (eigener Ingress ohne Middleware), Batch 5
   # entscheidet separat, ob externe Hosts auch Authelia bekommen.
+  # authelia-prod, NICHT authelia-tech — Uptime Kuma liegt unter
+  # prod.homeserver, Middleware muss zum Tier passen (siehe
+  # argocd/apps/platform/authelia/templates/middleware.yaml, Kommentar dort
+  # für die Redirect-Loop-Falle, die das ohne Tier-Zuordnung auslöst).
   annotations:
-    traefik.ingress.kubernetes.io/router.middlewares: "authelia-authelia@kubernetescrd"
+    traefik.ingress.kubernetes.io/router.middlewares: "authelia-authelia-prod@kubernetescrd"
   hosts:
     - host: uptime-kuma.prod.homeserver
       paths:

@@ -14,7 +14,7 @@ Rollout-Batch.
 ## Architektur
 
 ```
-Browser ──▶ Traefik (kube-system) ──▶ Middleware "authelia-authelia@kubernetescrd"
+Browser ──▶ Traefik (kube-system) ──▶ Middleware "authelia-authelia-<tier>@kubernetescrd"
                                           │
                           nicht eingeloggt│eingeloggt
                                           ▼         ▼
@@ -55,8 +55,17 @@ Browser ──▶ Traefik (kube-system) ──▶ Middleware "authelia-authelia@
 4. `authelia` als neuer Namespace in
    `ansible/roles/argocd/defaults/main.yml` (`argocd_platform_apps` +
    `argocd_network_policy_refined_namespaces`, Batch-4-Block) ergänzt.
-5. Traefik-`Middleware` (`authelia-authelia@kubernetescrd`) als Teil des
-   Charts (`templates/middleware.yaml`).
+5. Traefik-`Middleware` als Teil des Charts (`templates/middleware.yaml`) —
+   **eine pro Domain-Tier** (`authelia-prod`, `authelia-tech`,
+   `authelia-external`), referenziert als
+   `authelia-authelia-<tier>@kubernetescrd`. Nicht eine gemeinsame
+   Middleware für alle Apps: Traefiks ForwardAuth-Adresse trägt einen
+   statischen `rd=`-Fallback als Login-Portal-Basis-URL — mit nur einer
+   Middleware würden alle Apps unabhängig vom Tier zur selben Portal-Domain
+   geschickt, deren Session-Cookie aber nur für dieses eine Tier gültig ist
+   → Endlos-Redirect-Schleife (live beim Pilot aufgetreten, siehe
+   Rollout-Log unten). Jede App referenziert die zu ihrem eigenen Tier
+   passende Middleware in ihrer eigenen `ingress.annotations`.
 
 ### Admin-Zugang
 
@@ -102,7 +111,7 @@ sichtbarer Button im Login-Flow.
 
 | Datum | Batch | Was |
 |---|---|---|
-| 21.08.2026 | 1 (Pilot) | Authelia deployt, Middleware angelegt, Uptime Kuma (nur interner Host) geschützt + `-native`-Bypass eingerichtet. Config lokal validiert vor Rollout. |
+| 21.08.2026 | 1 (Pilot) | Authelia deployt, Uptime Kuma (nur interner Host) geschützt + `-native`-Bypass eingerichtet. Config lokal validiert vor Rollout. Drei Live-Fixes nötig: (1) Container-Args `--config=X` → `--config X` (Image-Entrypoint erkennt nur die getrennte Form), (2) `enableServiceLinks: false` gesetzt (Kubernetes injiziert sonst `AUTHELIA_*`-Service-Discovery-Env-Vars, die mit Authelias eigenem Config-Env-Prefix kollidieren), (3) Middleware von einer gemeinsamen auf drei Tier-spezifische aufgeteilt (Redirect-Loop, siehe Architektur-Abschnitt oben). |
 
 Nächste Schritte (Batch 2–5) siehe
 [40000-authelia-sso.md](../4-planung/40000-authelia-sso.md) → Baustein 7 —
@@ -117,5 +126,6 @@ Browser, TOTP wo relevant, `curl -sI` auf beide Hosts pro App).
 |---|---|
 | `502`/`503` auf `auth.*.homeserver` | `kubectl -n authelia get pods` / `logs` prüfen — Storage-PVC oder Secret-Mount? |
 | Login funktioniert, aber Redirect zurück zur App schlägt fehl | Cookie-Domain-Mismatch — Ziel-Host muss unter dem Tier liegen, für das ein `session.cookies`-Eintrag existiert (aktuell `prod.homeserver`, `tech.homeserver`, `pke-lab.de`). |
+| Seite lädt endlos / Browser "reloaded" ständig, App öffnet nie | Falsche Middleware referenziert — App muss `authelia-authelia-<eigenes-Tier>@kubernetescrd` nutzen, nicht `-tech` für eine `prod.homeserver`-App (oder umgekehrt). `kubectl -n authelia logs deploy/authelia` zeigt bei diesem Fehler ständig denselben `/api/verify`-Redirect zur falschen Portal-Domain. |
 | Config-Änderungen an `values.yaml` → `config:` werden nicht übernommen | `strategy.type: Recreate` im Deployment — ArgoCD muss den Pod neu erstellen, kein reines ConfigMap-Reload zur Laufzeit. |
 | `config validate` lokal testen | `docker run --rm -v $PWD:/config -e AUTHELIA_SESSION_SECRET=... -e AUTHELIA_STORAGE_ENCRYPTION_KEY=... -e AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET=... authelia/authelia:4.39.20 authelia config validate --config /config/configuration.yml` |
