@@ -4,23 +4,36 @@ worker-0 und worker-1 sind reine k3s-Compute-Nodes ohne die volle
 [`common`-Rolle](../../ansible/roles/common) des Homeservers — sie bekommen
 dadurch nie ein OS-Update, zumal sie die meiste Zeit per
 [Cluster Power Manager](20020-cluster-power-manager.md) ausgeschaltet sind.
-`nightly_worker_wake` schließt diese Lücke: jede Nacht um 01:00 Uhr
-werden beide Worker per Wake-on-LAN geweckt, per Semaphore
-`apt update && apt dist-upgrade` gefahren (inkl. automatischem Reboot,
-falls ein Kernel-/libc-Update das verlangt), und danach wieder
-heruntergefahren — mit einem harten Zeitbudget von maximal 25 Minuten.
-Am Ende jedes Laufs geht IMMER ein Bericht (was wurde geupdated, wo gab
-es Fehler, wurde rebootet) als Zammad-Ticket über n8n raus, siehe
-[Bericht (Zammad-Ticket via n8n)](#bericht-zammad-ticket-via-n8n) unten.
+`nightly_worker_wake` schließt diese Lücke: jede Nacht um 01:00 Uhr Berlin
+Zeit löst ein n8n-Workflow (Schedule-Trigger) das Wecken aus, beide Worker
+werden per Wake-on-LAN geweckt, per Semaphore `apt update && apt
+dist-upgrade` gefahren (inkl. automatischem Reboot, falls ein
+Kernel-/libc-Update das verlangt), und danach bis spätestens 01:30 Uhr
+wieder heruntergefahren — hartes Zeitbudget von maximal 25 Minuten ab dem
+ersten Wake. Am Ende jedes Laufs geht IMMER ein Bericht (was wurde
+geupdated, wo gab es Fehler, wurde rebootet) als Zammad-Ticket über n8n
+raus, siehe [Bericht (Zammad-Ticket via n8n)](#bericht-zammad-ticket-via-n8n)
+unten.
+
+Das **lastbasierte** Zu-/Abschalten von worker-0/worker-1 tagsüber
+(CPU/RAM-Watchdog, unabhängig von der Uhrzeit) ist NICHT Teil dieses
+Workflows und bleibt bewusst reines Ansible/systemd auf dem Homeserver —
+siehe [Cluster Power Manager](20020-cluster-power-manager.md). Nur der
+**zeitgesteuerte** nächtliche Update-Zyklus wird von n8n angestoßen.
 
 ---
 
 ## Architektur
 
 ```
-┌─────────────────────── homeserver (01:00 Uhr, systemd-Timer) ──────────────────────┐
+┌── n8n ("Nightly Worker Wake Trigger", Schedule-Trigger 01:00 Uhr) ──┐
+│  SSH-Node -> homeserver, forced-command-Key (siehe unten)           │
+└──────────────────────────────┬───────────────────────────────────────┘
+                                │ SSH (forced: systemctl start ...)
+                                ▼
+┌─────────────────────── homeserver ──────────────────────────────────────────────────┐
 │                                                                                       │
-│  nightly-worker-wake.service (oneshot)                                              │
+│  nightly-worker-wake.service (oneshot, per SSH-Forced-Command gestartet)            │
 │  ├─ 1. cluster-power-manager.service stoppen (Kollisionsschutz, siehe unten)         │
 │  ├─ 2. wakeonlan an worker-0 + worker-1, auf kubectl-Ready warten, uncordon          │
 │  ├─ 3. Login bei Semaphore (Admin-Passwort aus /etc/semaphore-secrets)              │
@@ -44,6 +57,31 @@ es Fehler, wurde rebootet) als Zammad-Ticket über n8n raus, siehe
 │                       │Zugriff)│ führt worker_apt_ │  └─────────────────────┘
 └─────────────────────┘   │ update + k3s_agent + Watchdogs └──────────────────┘
 ```
+
+**Warum triggert n8n statt eines systemd-Timers?** Der 01:00-Uhr-Zeitpunkt
+lag früher als `OnCalendar`-Ausdruck direkt im systemd-Timer der Rolle.
+Jetzt gibt der n8n-Workflow
+[`nightly-worker-wake-trigger.json`](../../argocd/apps/workloads/n8n/workflows/nightly-worker-wake-trigger.json)
+den Zeitpunkt vor und startet den Zyklus per SSH. `nightly-worker-wake.sh`
+selbst, das Zeitbudget, der Shutdown-Pfad und der Bericht bleiben dabei
+komplett unverändert — nur der Auslöser wandert von einem lokalen
+systemd-Timer zu einem extern (n8n) gesteuerten Trigger. **Das eigentliche
+Wake-on-LAN bleibt bewusst auf dem homeserver**, nicht in n8n: WoL-Magic-
+Packets sind Broadcast-Frames im lokalen Netzsegment, der n8n-Pod läuft
+aber im k3s-Overlay-Netz ohne `hostNetwork` und hätte keinen zuverlässigen
+Weg, worker-0/worker-1 direkt zu wecken.
+
+Der SSH-Zugang von n8n zum homeserver ist über einen dedizierten Key
+abgesichert, der per **forced command** (siehe `authorized_keys`) exakt
+auf `sudo systemctl start nightly-worker-wake.service` beschränkt ist —
+identisches Muster wie der poweroff-only-Key von
+[`cluster_power_manager_target`](../../ansible/roles/cluster_power_manager_target)
+(dort: Homeserver → Worker, hier: n8n → Homeserver). Selbst wenn der
+private Schlüssel abfließen sollte, kann er ausschließlich diesen einen
+Service starten — kein interaktives Shell-Login, kein Port-/Agent-
+Forwarding. Details zur Einrichtung siehe
+[Bericht (Zammad-Ticket via n8n)](#bericht-zammad-ticket-via-n8n) unten,
+Abschnitt "Einmalige Einrichtung — Trigger".
 
 **Warum ein `EXIT`-Trap für Shutdown/Bericht statt Aufrufen am Skriptende?**
 Bricht das Skript unerwartet ab (z.B. Semaphore-API mitten im Lauf nicht
@@ -72,8 +110,8 @@ Der lastbasierte Watchdog würde einen Worker sonst mit eigener Logik
 (CPU/RAM niedrig + `MIN_UPTIME_SECONDS` erreicht) parallel herunterfahren
 können — im ungünstigsten Fall mitten in einem laufenden
 `apt dist-upgrade`, was `dpkg` in einem kaputten Zwischenzustand
-zurücklassen kann. Der Timer stoppt den Dienst deshalb zu Beginn und
-startet ihn am Ende wieder.
+zurücklassen kann. `nightly-worker-wake.sh` stoppt den Dienst deshalb zu
+Beginn und startet ihn am Ende wieder.
 
 **Automatischer Reboot bei `reboot-required`:** Kernel-/libc-Updates
 verlangen gelegentlich einen Neustart, damit sie tatsächlich greifen.
@@ -102,16 +140,22 @@ rebooteten Worker mit `"rebooted": true`.
 | Rolle | Läuft auf | Zweck |
 |---|---|---|
 | [`worker_apt_update`](../../ansible/roles/worker_apt_update) | worker-0, worker-1 | `apt update && apt dist-upgrade`; bei `/var/run/reboot-required` automatisch cordon+drain (delegiert auf homeserver) + Reboot |
-| [`nightly_worker_wake`](../../ansible/roles/nightly_worker_wake) | homeserver | systemd-Timer + Skript: wecken, Semaphore-Template triggern, Zeitbudget überwachen, herunterfahren, Bericht an n8n |
+| [`nightly_worker_wake`](../../ansible/roles/nightly_worker_wake) | homeserver | Skript + SSH-Forced-Command-Key für den n8n-Trigger: wecken, Semaphore-Template triggern, Zeitbudget überwachen, herunterfahren, Bericht an n8n |
 
 `worker_apt_update` ist der erste Schritt in `worker-0.yml`/`worker-1.yml`
 und läuft damit bei **jedem** Lauf dieser Playbooks — auch bei einem
 manuellen `make worker-0`/`make worker-1` oder `make worker-apt-update`.
 
-Dazu kommt der n8n-Workflow
-[`nightly-worker-update-to-zammad.json`](../../argocd/apps/workloads/n8n/workflows/nightly-worker-update-to-zammad.json)
-(kein Ansible, muss einmalig manuell in n8n importiert werden) — siehe
-[Bericht (Zammad-Ticket via n8n)](#bericht-zammad-ticket-via-n8n).
+Dazu kommen zwei n8n-Workflows (kein Ansible, müssen einmalig manuell in
+n8n importiert werden):
+
+- [`nightly-worker-wake-trigger.json`](../../argocd/apps/workloads/n8n/workflows/nightly-worker-wake-trigger.json)
+  — Schedule-Trigger 01:00 Uhr, löst den Zyklus per SSH aus (siehe
+  [Architektur](#architektur) oben und [Bericht (Zammad-Ticket via n8n)](#bericht-zammad-ticket-via-n8n)
+  unten, Abschnitt "Einmalige Einrichtung — Trigger").
+- [`nightly-worker-update-to-zammad.json`](../../argocd/apps/workloads/n8n/workflows/nightly-worker-update-to-zammad.json)
+  — Webhook, baut aus dem Bericht das Zammad-Ticket, siehe
+  [Bericht (Zammad-Ticket via n8n)](#bericht-zammad-ticket-via-n8n).
 
 ---
 
@@ -119,8 +163,8 @@ Dazu kommt der n8n-Workflow
 
 | Variable | Default | Bedeutung |
 |---|---|---|
-| `nightly_worker_wake_oncalendar` | `*-*-* 01:00:00 <timezone>` | systemd-`OnCalendar`-Ausdruck |
-| `nightly_worker_wake_max_runtime_seconds` | 1500 (25 Min.) | Hartes Limit ab dem ersten Wake — danach Task-Stop + Shutdown, egal ob das Update (inkl. eines eventuellen Reboots) fertig ist |
+| — | `01:00 Uhr, Europe/Berlin` | Zeitpunkt kommt jetzt aus dem Schedule-Trigger von [`nightly-worker-wake-trigger.json`](../../argocd/apps/workloads/n8n/workflows/nightly-worker-wake-trigger.json), nicht mehr aus einer Ansible-Variable — dort anpassen |
+| `nightly_worker_wake_max_runtime_seconds` | 1500 (25 Min.) | Hartes Limit ab dem ersten Wake — danach Task-Stop + Shutdown, egal ob das Update (inkl. eines eventuellen Reboots) fertig ist. Passt unter das 01:00–01:30-Uhr-Fenster |
 | `nightly_worker_wake_ready_timeout_seconds` | 180 | Wie lange nach dem Magic Packet auf `kubectl get node ... Ready` gewartet wird |
 | `nightly_worker_wake_stop_grace_seconds` | 30 | Gnadenfrist nach einem Semaphore-Task-Stop-Request, bevor trotzdem heruntergefahren wird |
 | `nightly_worker_wake_poll_seconds` | 15 | Poll-Intervall beim Warten auf den Semaphore-Task |
@@ -188,7 +232,33 @@ Kernel-/libc-Update verlangte einen Neustart, `worker_apt_update` hat ihn
 automatisch durchgeführt (siehe [Architektur](#architektur) oben) — kein
 Handlungsbedarf, nur zur Information im Ticket.
 
-**Einmalige Einrichtung:**
+**Einmalige Einrichtung — Trigger (`nightly-worker-wake-trigger.json`):**
+
+1. `make nightly-worker-wake` (oder `make install`) laufen lassen — die
+   Rolle erzeugt dabei einmalig das SSH-Schlüsselpaar unter
+   `/etc/nightly-worker-wake/n8n_trigger_ed25519` auf dem homeserver und
+   autorisiert den Public Key (forced command, siehe
+   [Architektur](#architektur) oben).
+2. Privaten Schlüssel einmalig auslesen:
+   ```bash
+   ssh ubuntu@192.168.178.94 sudo cat /etc/nightly-worker-wake/n8n_trigger_ed25519
+   ```
+   Inhalt **nicht** ins Repo committen — nur zum Anlegen der n8n-Credential
+   im nächsten Schritt verwenden.
+3. In n8n: *Workflows* → *Import from File* →
+   `argocd/apps/workloads/n8n/workflows/nightly-worker-wake-trigger.json`
+4. Node „Worker-Update ausloesen (SSH, forced command)“ → neue SSH-
+   Credential (Private Key) anlegen: Host `192.168.178.94`, Port `22`,
+   Username `ubuntu` (Default von `nightly_worker_wake_n8n_trigger_ssh_user`),
+   Private Key = Inhalt aus Schritt 2.
+5. Workflow **aktivieren** (Import allein reicht nicht).
+
+Der eingetragene Befehl im SSH-Node ist informativ — durchgesetzt wird
+ausschließlich der per `authorized_keys` hinterlegte forced command
+(`sudo systemctl start nightly-worker-wake.service`); ein anderer Befehl
+im Node würde ignoriert bzw. durch den forced command überschrieben.
+
+**Einmalige Einrichtung — Bericht (`nightly-worker-update-to-zammad.json`):**
 
 1. In n8n: *Workflows* → *Import from File* →
    `argocd/apps/workloads/n8n/workflows/nightly-worker-update-to-zammad.json`
@@ -249,15 +319,43 @@ Mit `DRY_RUN=1` protokolliert das Skript jeden Schritt, sendet aber kein
 `cordon`/`drain`/`poweroff` aus. Der `systemctl edit --runtime`-Drop-in
 verschwindet beim nächsten Boot automatisch wieder.
 
-Zeitpunkt/Timer prüfen:
-
-```bash
-systemctl list-timers nightly-worker-wake.timer
-```
+Den n8n-Trigger selbst testen, ohne auf 01:00 Uhr zu warten: im
+importierten Workflow [`nightly-worker-wake-trigger.json`](../../argocd/apps/workloads/n8n/workflows/nightly-worker-wake-trigger.json)
+den SSH-Node manuell ausführen ("Execute step") — das löst denselben
+forced command aus wie der nächtliche Schedule-Trigger.
 
 ---
 
 ## Fehlerbehebung
+
+**Nächtlicher Zyklus läuft gar nicht erst an (kein Journal-Eintrag um 01:00 Uhr):**
+
+Der Trigger kommt jetzt von n8n, nicht mehr von einem lokalen systemd-
+Timer — zuerst dort prüfen:
+
+```bash
+# n8n: Workflow "Nightly Worker Wake Trigger" -> Executions -> letzte
+# Ausführung ansehen (Fehler am SSH-Node?)
+```
+
+Häufigste Ursachen: Workflow nicht aktiviert (Import allein reicht
+nicht, siehe [Bericht (Zammad-Ticket via n8n)](#bericht-zammad-ticket-via-n8n)
+weiter unten, Abschnitt "Einmalige Einrichtung — Trigger"), SSH-Credential
+zeigt auf einen veralteten privaten Schlüssel (z.B. nach einem Neu-
+Provisionieren des homeserver, das den Key unter
+`/etc/nightly-worker-wake/n8n_trigger_ed25519` neu erzeugt hätte —
+passiert normalerweise NICHT, da `ssh-keygen` idempotent mit `creates:`
+läuft, siehe `ansible/roles/nightly_worker_wake/tasks/main.yml`), oder
+der sudoers-Eintrag fehlt (`nightly_worker_wake_enabled: false` gesetzt
+gewesen?). Manuell nachvollziehen:
+
+```bash
+ssh -i <n8n-private-key> ubuntu@192.168.178.94 "irgendein-befehl"
+# Sollte trotzdem nightly-worker-wake.service starten (forced command)
+# und NICHT den übergebenen Befehl ausführen -- eine Fehlermeldung wie
+# "sudo: a password is required" deutet auf einen fehlenden/falschen
+# Eintrag in /etc/sudoers.d/nightly-worker-wake-n8n-trigger hin.
+```
 
 **Semaphore-Login schlägt fehl (`WARNUNG: Semaphore-Login fehlgeschlagen`):**
 

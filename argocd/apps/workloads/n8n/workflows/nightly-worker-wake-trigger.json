@@ -1,0 +1,62 @@
+{
+  "id": "nWakeTrig01AbCdEf",
+  "name": "Nightly Worker Wake Trigger",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 1,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "e1e1e1e1-0001-4000-8000-000000000001",
+      "name": "Taeglich 01:00 Uhr",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "privateKey",
+        "command": "sudo /usr/bin/systemctl start nightly-worker-wake.service"
+      },
+      "id": "e1e1e1e1-0002-4000-8000-000000000002",
+      "name": "Worker-Update ausloesen (SSH, forced command)",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [520, 300],
+      "credentials": {
+        "sshPrivateKey": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "Nightly Worker Wake Trigger (homeserver)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Taeglich 01:00 Uhr": {
+      "main": [
+        [
+          {
+            "node": "Worker-Update ausloesen (SSH, forced command)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Ersetzt den frueheren systemd-Timer von ansible/roles/nightly_worker_wake: loest jede Nacht um 01:00 Uhr (Instanz-Zeitzone Europe/Berlin, siehe TZ in argocd/apps/workloads/n8n/values.yaml) den Wake/Update/Shutdown-Zyklus fuer worker-0/worker-1 aus. Der SSH-Node verbindet sich zum homeserver (ansible_host aus ansible/inventory/hosts.yml) mit einem dedizierten, per forced-command auf GENAU 'sudo /usr/bin/systemctl start nightly-worker-wake.service' eingeschraenkten Key (kein voller SSH-Zugriff, selbst wenn der private Schluessel abfliesst) -- der tatsaechliche Ablauf (WoL, Semaphore-Trigger, Zeitbudget, Shutdown, Zammad-Bericht) bleibt unveraendert in nightly-worker-wake.sh, siehe docs/2-betrieb-hardware/20030-nightly-worker-update.md. Das eigentliche apt-Update/Wake-on-LAN kann NICHT direkt aus n8n heraus laufen, weil der n8n-Pod nicht im selben Broadcast-Segment wie worker-0/worker-1 haengt -- WoL-Pakete muessen vom homeserver selbst gesendet werden. Der Bericht (Zammad-Ticket) laeuft weiterhin ueber den separaten Workflow nightly-worker-update-to-zammad.json (Webhook, wird von nightly-worker-wake.sh am Ende jedes Laufs aufgerufen). NACH DEM IMPORT: 1) Node 'Worker-Update ausloesen' -> neue SSH-Credential (Private Key) anlegen: Host = ansible_host von homeserver, Port 22, Username = nightly_worker_wake_n8n_trigger_ssh_user (Default 'ubuntu', siehe ansible/roles/nightly_worker_wake/defaults/main.yml), Private Key = Inhalt von /etc/nightly-worker-wake/n8n_trigger_ed25519 auf dem homeserver (einmalig manuell auslesen, z.B. per 'sudo cat', NICHT ins Repo committen). 2) Workflow AKTIVIEREN (Import allein reicht nicht). Details: docs/2-betrieb-hardware/20030-nightly-worker-update.md."
+  }
+}
