@@ -53,6 +53,39 @@ unsichtbar.
 
 ---
 
+## Incident: neue App (authelia) lässt `make argocd` an fehlendem Namespace scheitern
+
+**Was passiert ist:** Beim Hinzufügen von `authelia` (21.08.2026,
+[docs/4-planung/40000-authelia-sso.md](../4-planung/40000-authelia-sso.md))
+zu `argocd_platform_apps` schlug der Task „Apply tier-default-ingress
+NetworkPolicies" fehl: `namespaces "authelia" not found`. Ursache: der
+ArgoCD-Sync, der den `authelia`-Namespace anlegt, kann hinter diesem
+Playbook-Lauf zurücklagen (derselbe Effekt wie bei den
+`security-tier`-Label-Tasks, siehe deren `failed_when: false`-Kommentar in
+[ansible/roles/argocd/tasks/main.yml](../../ansible/roles/argocd/tasks/main.yml)).
+Anders als bei den Label-Tasks (ein `kubectl`-Aufruf pro Namespace) wird die
+NetworkPolicy-Datei aber als **eine** Multi-Dokument-YAML mit einem
+einzigen `kubectl apply -f` angewendet — ein fehlender Namespace ließ damit
+den kompletten Apply fehlschlagen, obwohl alle anderen 35 Policies
+problemlos durchgingen (`kubectl apply` verarbeitet trotzdem jedes
+Dokument, meldet aber am Ende den Gesamtfehler).
+
+**Fix:** Neuer Task „Get existing namespaces" vor dem Templating holt die
+aktuell existierenden Namespaces per `kubectl get namespaces`; das Template
+([bootstrap-networkpolicies.yaml.j2](../../ansible/roles/argocd/templates/bootstrap-networkpolicies.yaml.j2))
+überspringt Apps, deren Namespace noch nicht existiert. Ein fehlender
+Namespace fällt beim nächsten `make argocd`-Lauf nach, statt den gesamten
+Apply-Schritt zu blockieren — dasselbe Best-effort-Verhalten wie bei den
+Label-Tasks.
+
+**Lektion:** Jede neue App in `argocd_platform_apps` /
+`argocd_workloads_apps` kann beim ersten `make argocd`-Lauf nach dem
+Hinzufügen noch keinen Namespace haben, solange ArgoCD nicht synchronisiert
+hat — betrifft nicht nur die Label-Tasks, sondern jeden Task, der über
+diese Listen iteriert und einen existierenden Namespace voraussetzt.
+
+---
+
 ## Beinahe-Incident: wiki-docs-sync -> wikijs
 
 Beim Verfeinern von `wikijs` (Schritt 2, Batch 2) übersehen: `wiki-docs-sync`
