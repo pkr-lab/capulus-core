@@ -21,6 +21,13 @@ spec:
       labels:
         {{- include "authelia.selectorLabels" . | nindent 8 }}
     spec:
+      # Kubernetes injiziert sonst automatisch Service-Discovery-Env-Vars
+      # (AUTHELIA_PORT, AUTHELIA_SERVICE_HOST, ...) für den gleichnamigen
+      # Service "authelia" — Authelia interpretiert JEDE AUTHELIA_*-Variable
+      # als Config-Override, was mit server.address kollidiert (fatal beim
+      # Start). Betrifft nur Apps, deren Service-Name mit dem Env-Prefix
+      # kollidiert — andere Charts hier brauchen das nicht.
+      enableServiceLinks: false
       serviceAccountName: {{ include "authelia.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
