@@ -1,0 +1,17 @@
+---
+apiVersion: v2
+name: authelia
+description: Zentrale SSO-/2FA-ForwardAuth-Instanz vor allen Apps mit eigener Anmeldemaske.
+type: application
+version: 0.1.0
+appVersion: "4.39.20"
+keywords:
+  - authelia
+  - sso
+  - forward-auth
+  - 2fa
+home: https://www.authelia.com/
+sources:
+  - https://github.com/authelia/authelia
+maintainers:
+  - name: home-server-admin
