@@ -248,6 +248,27 @@
 # bootstrap path, this is a cluster-wide behavioural change that needs a
 # backup + staged pilot rollout, not something a routine `make argocd` run
 # should silently (re-)apply.
+#
+# Same lag as the labeling tasks above: a brand-new app's namespace may not
+# exist yet if ArgoCD hasn't synced it (this file is applied as one
+# `kubectl apply -f`, so a single missing namespace would otherwise fail the
+# whole batch even though every other namespace's policy is fine). Fetch the
+# namespaces that currently exist and only template policies for those; a
+# not-yet-existing one is picked up on the next `make argocd` run.
+- name: Get existing namespaces
+  ansible.builtin.command: >
+    kubectl get namespaces -o jsonpath={.items[*].metadata.name}
+  register: argocd_existing_namespaces_raw
+  changed_when: false
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  when: argocd_apply_network_policies | bool
+
+- name: Set existing namespaces fact
+  ansible.builtin.set_fact:
+    argocd_existing_namespaces: "{{ argocd_existing_namespaces_raw.stdout.split() }}"
+  when: argocd_apply_network_policies | bool
+
 - name: Template tier-default-ingress NetworkPolicies
   ansible.builtin.template:
     src: bootstrap-networkpolicies.yaml.j2
