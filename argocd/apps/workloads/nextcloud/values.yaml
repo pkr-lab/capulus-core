@@ -118,6 +118,16 @@ nextcloud:
   # weist Nextcloud Requests mit "Access through untrusted domain" ab.
   trustedDomains: "nextcloud.prod.homeserver nextcloud-prod.pke-lab.de"
 
+  # Erzwingt den öffentlichen Host für alle von Nextcloud generierten URLs
+  # (v. a. Freigabe-/Share-Links) — unabhängig davon, über welchen der
+  # beiden trustedDomains-Hosts man gerade zugreift. Gesetzt via
+  # templates/nextcloud-fix-config-job.yaml (occ, s. dortiger Kommentar zur
+  # Begründung). Interne Erreichbarkeit über nextcloud.prod.homeserver
+  # bleibt unverändert bestehen.
+  overwriteProtocol: "https"
+  overwriteHost: "nextcloud-prod.pke-lab.de"
+  overwriteCliUrl: "https://nextcloud-prod.pke-lab.de"
+
   persistence:
     html:
       enabled: true
