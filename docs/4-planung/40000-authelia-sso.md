@@ -159,13 +159,27 @@ Der zugehörige Chart-Template-Block ist pro Chart einmalig zu ergänzen
 `argocd/apps/platform/gotify/templates/` (dort existiert der
 `ingressApi`-Mechanismus bereits als Referenzimplementierung).
 
-Neue, kleine Wiki.js-Seite "Dienste-Portal — native Anmeldung" mit einer
-Tabelle aller `-native`-URLs. Authelias Login-Seite bekommt über
-`theme: custom` + einen gemounteten `assets/`-Ordner (offiziell unterstütztes
-Authelia-Feature, kein Fork/Patch) einen festen Footer-Link "Probleme beim
-Login? → native Anmeldung" dorthin. Bewusst **ein generischer** Link statt
-dynamischer Pro-App-Logik — vermeidet JS, das bei Authelia-Updates brechen
-könnte, und bleibt damit simpel im Sinne der Vorgabe.
+Neue, kleine Doc-Seite (automatisch per `wiki-docs-sync` nach Wiki.js
+gespiegelt, siehe [d0071-native-login-fallback.md](../d-sicherheit/d0071-native-login-fallback.md))
+mit einer Tabelle aller `-native`-URLs.
+
+> **Korrektur nach Live-Recherche (21.08.2026):** Der ursprünglich geplante
+> Footer-Link direkt auf Authelias Login-Seite (`theme: custom` +
+> `asset_path`) ist **nicht umsetzbar wie angenommen** — Authelias offiziell
+> dokumentierter Asset-Override-Mechanismus
+> (`/reference/guides/server-asset-overrides/`) erlaubt ausschließlich
+> `favicon.ico`, `logo.png` und Locale-Text-Overrides (JSON,
+> Text-Strings ohne HTML). Ein echter klickbarer Link auf der Login-Seite
+> selbst würde einen Fork/Rebuild des Authelia-Frontends erfordern — genau
+> der "super schwere Workaround", den der Plan explizit vermeiden soll.
+> **Der "Knopfdruck" funktioniert deshalb aktuell nur über die dedizierte
+> `-native`-Hostnamen + die zentrale Übersichtsseite, nicht als Link
+> innerhalb von Authelias eigener Login-Maske.** Falls das nicht ausreicht,
+> müsste eine echte UI-Änderung her (z. B. ein eigener, Authelia
+> vorgeschalteter Chooser — das würde aber pro App eine unauthentifizierte
+> Zwischenseite bei JEDEM Besuch einbauen und widerspricht "Authelia ist die
+> erste Wahl" aus der ursprünglichen Anfrage). Offener Punkt, siehe
+> [d0070-authelia-sso.md](../d-sicherheit/d0070-authelia-sso.md).
 
 ### 4. Access-Control-Policy (Authelia `configuration.yml`)
 
