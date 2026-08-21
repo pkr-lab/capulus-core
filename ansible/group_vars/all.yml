@@ -433,7 +433,21 @@ network_dns:
 # docs/2-betrieb-hardware/20030-nightly-worker-update.md. Auf dem
 # Homeserver ausschließlich per forced-command auf
 # "sudo systemctl start nightly-worker-wake.service" autorisiert
-# (ansible/roles/nightly_worker_wake/tasks/main.yml). Unsensibel, darf
-# committet werden — der private Schlüssel liegt NUR in einer n8n-SSH-
-# Credential, nie im Repo oder auf dem Homeserver.
-nightly_worker_wake_n8n_trigger_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPkQTcniibj5UHKcRks8qKsMK8Q1DR7bPMU4FYlwlIVf n8n-nightly-worker-trigger"
+# (ansible/roles/nightly_worker_wake/tasks/main.yml). Ein Public Key ist
+# für sich genommen unsensibel (er autorisiert nichts ohne den
+# zugehörigen privaten Schlüssel) — hier trotzdem vault-verschlüsselt,
+# damit nicht auf den ersten Blick aus dem Repo ablesbar ist, welcher
+# konkrete Key aktuell zum Auslösen berechtigt ist. Der private Schlüssel
+# liegt NUR in einer n8n-SSH-Credential, nie im Repo oder auf dem
+# Homeserver.
+nightly_worker_wake_n8n_trigger_public_key: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          36373733336235623733333366303936383037366365383464303861383063646433383863376664
+          3231346331643736346538613338343032333763303964630a373465663663323138356330663034
+          30303638343963353661386565363763373130653939396164363036343139326237643938623638
+          3438323730353663360a303061343635633166646666616561326232373434663930353437643534
+          34336534626438396531643539373234306430313831633039636361653963316566626432633638
+          65306562303934396136316539653361376538626361656436363765646533633931303662643165
+          61303836356239306137323138356464613939626265643466313266383565323334386363306266
+          31363264336138356134386533333766323132306436313537626564616264363132643161623634
+          39306536363164306362663665333634303138383566383737663338366333363361
