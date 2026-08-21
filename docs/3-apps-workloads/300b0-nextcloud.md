@@ -137,6 +137,19 @@ bei einer Domain-Tier-Migration wie in docs/c-netzwerk-dns/c0040-domain-tiers.md
 `trusted_domains` in der bereits bestehenden `config.php` separat
 nachgezogen werden.
 
+**Freigabe-Links (Share-Links) zeigen immer auf die öffentliche Domain:**
+Ohne weitere Konfiguration baut Nextclouds URL-Generator Freigabe-Links aus
+dem Host, über den man gerade eingeloggt ist — meldet man sich intern über
+`nextcloud.prod.homeserver` an, sind erzeugte Links nur im LAN/Tailscale
+aufrufbar und lassen sich nicht nach außen teilen. `overwriteHost` /
+`overwriteProtocol` / `overwriteCliUrl` in `values.yaml` erzwingen deshalb
+`https://nextcloud-prod.pke-lab.de` als Basis für **alle** generierten
+URLs, unabhängig vom Zugriffs-Host — gesetzt über denselben Repair-`Job`
+wie `trusted_domains` (siehe `templates/nextcloud-fix-config-job.yaml`,
+Troubleshooting-Abschnitt unten). Die interne Erreichbarkeit über
+`nextcloud.prod.homeserver` bleibt davon unberührt, nur die *generierten*
+Links ändern sich.
+
 ---
 
 ## Hintergrund-Jobs (Cron)
@@ -187,9 +200,11 @@ Zwei unterschiedliche Ursachen möglich:
    `www-data`. Statt manuell mit `kubectl exec` am Pod zu hantieren
    (schwer nachvollziehbar, nicht reproduzierbar), liegt dafür ein
    git-getrackter, einmaliger Reparatur-`Job` bereit:
-   `templates/nextcloud-fix-trusted-domains-job.yaml` — startet explizit
+   `templates/nextcloud-fix-config-job.yaml` — startet explizit
    mit `runAsUser: 1000` (passend zur tatsächlichen `config.php`-Owner-UID)
-   und setzt `trusted_domains` aus `values.yaml` neu. Als ArgoCD-Sync-Hook
+   und setzt `trusted_domains` sowie `overwritehost`/`overwriteprotocol`/
+   `overwrite.cli.url` (siehe Abschnitt "Freigabe-Links" oben) aus
+   `values.yaml` neu. Als ArgoCD-Sync-Hook
    (`PostSync` + `BeforeHookCreation,HookSucceeded`) definiert — läuft bei
    jedem Sync frisch und räumt sich danach selbst auf, kein manuelles
    `kubectl delete job` nötig (**wichtig:** ohne diese Hook-Annotationen

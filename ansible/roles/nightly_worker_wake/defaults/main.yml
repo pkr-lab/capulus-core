@@ -2,12 +2,14 @@
 # ============================================================
 # nightly_worker_wake — Defaults
 # ============================================================
-# Weckt ALLE Worker (worker-0, worker-1) jede Nacht um 01:00 Uhr per
-# Wake-on-LAN, lässt Semaphore das jeweilige "Deploy worker-*"-Template
-# laufen (enthält jetzt auch worker_apt_update, siehe worker-0.yml/
-# worker-1.yml) und fährt die Worker danach wieder herunter — spätestens
-# nach nightly_worker_wake_max_runtime_seconds, damit kein Worker
-# versehentlich die ganze Nacht durchläuft. Läuft NUR auf homeserver.
+# Weckt ALLE Worker (worker-0, worker-1) jede Nacht um 01:00 Uhr (Trigger
+# kommt per SSH-Forced-Command von einem n8n-Schedule-Workflow, siehe
+# unten) per Wake-on-LAN, lässt Semaphore das jeweilige "Deploy worker-*"-
+# Template laufen (enthält jetzt auch worker_apt_update, siehe
+# worker-0.yml/worker-1.yml) und fährt die Worker danach wieder herunter
+# — spätestens nach nightly_worker_wake_max_runtime_seconds, damit kein
+# Worker versehentlich die ganze Nacht durchläuft. Läuft NUR auf
+# homeserver.
 #
 # Pausiert cluster_power_manager (docs/2-betrieb-hardware/20020-cluster-power-manager.md) für
 # die Dauer des Fensters, damit dessen lastbasierter Watchdog nicht
@@ -20,9 +22,27 @@
 # abzuschalten, ohne die Rolle aus dem Playbook zu entfernen.
 nightly_worker_wake_enabled: true
 
-# systemd-Timer-Ausdruck (siehe systemd.time(7)) — 01:00 Uhr, Zeitzone aus
-# der globalen `timezone`-Variable (group_vars/all.yml).
-nightly_worker_wake_oncalendar: "*-*-* 01:00:00 {{ timezone }}"
+# ---- n8n-Trigger (ersetzt den früheren systemd-Timer) -----------------
+# Der 01:00-Uhr-Zeitpunkt wird jetzt vom Schedule-Trigger im n8n-Workflow
+# argocd/apps/workloads/n8n/workflows/nightly-worker-wake-trigger.json
+# vorgegeben (Zeitzone Europe/Berlin, siehe TZ in argocd/apps/workloads/
+# n8n/values.yaml), nicht mehr von einem systemd-Timer auf dem
+# Homeserver — siehe docs/2-betrieb-hardware/20030-nightly-worker-update.md.
+# Autorisiert wird ein extern erzeugter SSH-Key, der AUSSCHLIESSLICH per
+# forced-command "sudo systemctl start nightly-worker-wake.service"
+# eingeschränkt ist (kein voller SSH-Zugriff, selbst wenn der private
+# Schlüssel jemals abfließen sollte) — identisches Muster zu
+# cluster_power_manager_target (dort: poweroff-only-Key). Diese Rolle
+# erzeugt das Schlüsselpaar bewusst NICHT selbst (anders als
+# cluster_power_manager): der private Schlüssel muss direkt in eine
+# n8n-SSH-Credential wandern, nie in eine Datei auf dem Homeserver oder
+# ins Repo. Key lokal erzeugen:
+#   ssh-keygen -t ed25519 -f n8n_trigger_ed25519 -N "" -C "n8n-nightly-worker-trigger"
+# Public Key hier eintragen (unsensibel, darf ins Repo), Private Key nur
+# in n8n einfügen und danach lokal löschen.
+nightly_worker_wake_n8n_trigger_ssh_user: ubuntu
+nightly_worker_wake_n8n_trigger_public_key: ""
+nightly_worker_wake_systemctl_bin: /usr/bin/systemctl
 
 # Hartes Zeitbudget ab dem ersten Wake (Sekunden): laufende Updates
 # werden spätestens jetzt per Semaphore-Task-Stop abgebrochen und ALLE
