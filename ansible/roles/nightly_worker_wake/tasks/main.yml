@@ -45,28 +45,56 @@
   when: nightly_worker_wake_enabled | bool
   notify: Reload systemd for nightly worker wake
 
-- name: systemd-Timer deployen
-  ansible.builtin.template:
-    src: nightly-worker-wake.timer.j2
-    dest: /etc/systemd/system/nightly-worker-wake.timer
-    owner: root
-    group: root
-    mode: "0644"
-  when: nightly_worker_wake_enabled | bool
-  notify: Reload systemd for nightly worker wake
-
-- name: nightly-worker-wake.timer aktivieren und starten
-  ansible.builtin.systemd:
-    name: nightly-worker-wake.timer
-    daemon_reload: true
-    enabled: true
-    state: started
-  when: nightly_worker_wake_enabled | bool
-
-- name: nightly-worker-wake.timer deaktivieren, falls nightly_worker_wake_enabled false
+- name: Alten nightly-worker-wake.timer deaktivieren (Trigger läuft jetzt über n8n statt systemd-Timer)
   ansible.builtin.systemd:
     name: nightly-worker-wake.timer
     enabled: false
     state: stopped
-  when: not (nightly_worker_wake_enabled | bool)
   failed_when: false
+
+- name: Alte Timer-Unit-Datei entfernen (Rest einer älteren Rollen-Version)
+  ansible.builtin.file:
+    path: /etc/systemd/system/nightly-worker-wake.timer
+    state: absent
+  notify: Reload systemd for nightly worker wake
+
+- name: Warnen, falls noch kein n8n-Trigger-Public-Key gesetzt ist
+  ansible.builtin.debug:
+    msg: >-
+      WARNUNG: nightly_worker_wake_n8n_trigger_public_key ist leer -- der
+      n8n-Trigger kann sich noch nicht per SSH verbinden. Key lokal
+      erzeugen (ssh-keygen -t ed25519 -f n8n_trigger_ed25519 -N ""),
+      Public Key hier eintragen (group_vars/all.yml), Private Key in eine
+      n8n-SSH-Credential einfügen. Siehe docs/2-betrieb-hardware/20030-nightly-worker-update.md.
+  when:
+    - nightly_worker_wake_enabled | bool
+    - (nightly_worker_wake_n8n_trigger_public_key | length) < 20
+
+- name: n8n-Trigger-Key autorisieren (nur für Service-Start, forced command)
+  ansible.posix.authorized_key:
+    user: "{{ nightly_worker_wake_n8n_trigger_ssh_user }}"
+    state: present
+    key: "{{ nightly_worker_wake_n8n_trigger_public_key }}"
+    key_options: >-
+      command="sudo {{ nightly_worker_wake_systemctl_bin }} start nightly-worker-wake.service",no-agent-forwarding,no-port-forwarding,no-pty,no-X11-forwarding
+    comment: "n8n-nightly-worker-trigger"
+  when:
+    - nightly_worker_wake_enabled | bool
+    - (nightly_worker_wake_n8n_trigger_public_key | length) >= 20
+
+- name: Passwortlosen sudo für Service-Start erlauben ({{ nightly_worker_wake_n8n_trigger_ssh_user }})
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/nightly-worker-wake-n8n-trigger
+    content: |
+      {{ nightly_worker_wake_n8n_trigger_ssh_user }} ALL=(root) NOPASSWD: {{ nightly_worker_wake_systemctl_bin }} start nightly-worker-wake.service
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "visudo -cf %s"
+  when: nightly_worker_wake_enabled | bool
+
+- name: sudoers-Freigabe für n8n-Trigger entfernen, falls nightly_worker_wake_enabled false
+  ansible.builtin.file:
+    path: /etc/sudoers.d/nightly-worker-wake-n8n-trigger
+    state: absent
+  when: not (nightly_worker_wake_enabled | bool)
