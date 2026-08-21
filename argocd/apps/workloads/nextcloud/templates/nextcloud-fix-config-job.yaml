@@ -12,12 +12,26 @@
 # indem er direkt mit `runAsUser: 1000` startet (kernelseitiges setuid,
 # braucht anders als `su` keinen /etc/passwd-Eintrag).
 #
-# Zweck: trusted_domains in config.php war seit der Domain-Tier-Migration
+# Zweck 1: trusted_domains in config.php war seit der Domain-Tier-Migration
 # (docs/c-netzwerk-dns/c0040-domain-tiers.md: nextcloud.homeserver → nextcloud.prod.homeserver
 # usw.) nicht mehr aktuell — NEXTCLOUD_TRUSTED_DOMAINS greift nur bei der
 # Erstinstallation, nicht bei bestehendem config.php. Ergebnis: jeder
 # Readiness/Liveness-Check schlug mit "Trusted domain error" (HTTP 400)
 # fehl → CrashLoopBackOff.
+#
+# Zweck 2: overwritehost/overwriteprotocol/overwrite.cli.url erzwingen,
+# dass Nextcloud alle generierten URLs (insbesondere Freigabe-/Share-Links)
+# mit dem öffentlich erreichbaren `nextcloud-prod.pke-lab.de` statt dem
+# jeweils aktuellen Request-Host bildet. Ohne diese drei Keys übernimmt der
+# URL-Generator den Host, über den gerade zugegriffen wurde — meldet man
+# sich also intern über `nextcloud.prod.homeserver` an und erzeugt dort
+# einen Freigabe-Link, ist der Link nur im LAN/Tailscale aufrufbar und
+# lässt sich nicht nach außen teilen. Die interne Erreichbarkeit über
+# `nextcloud.prod.homeserver` bleibt davon unberührt — die drei Keys
+# wirken nur auf die URL-*Generierung*, nicht auf trusted_domains/Routing.
+#
+# Beide Fixe laufen im selben Job, weil beide denselben UID-1000-Workaround
+# (s. u.) für den `occ`-Aufruf gegen config.php brauchen.
 #
 # Argo-Sync-Hook statt normale Ressource: Jobs sind immutable, ein
 # zweiter Sync-Versuch gegen dieselbe, bereits existierende Job-Ressource
@@ -30,11 +44,11 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: nextcloud-fix-trusted-domains
+  name: nextcloud-fix-config
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "nextcloud.labels" . | nindent 4 }}
-    app.kubernetes.io/component: trusted-domains-fix
+    app.kubernetes.io/component: config-fix
   annotations:
     argocd.argoproj.io/hook: PostSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
@@ -44,7 +58,7 @@ spec:
     metadata:
       labels:
         {{- include "nextcloud.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/component: trusted-domains-fix
+        app.kubernetes.io/component: config-fix
     spec:
       restartPolicy: Never
       securityContext:
@@ -61,6 +75,10 @@ spec:
               php occ config:system:set trusted_domains {{ add $i 1 }} --value={{ $domain | quote }}
               {{- end }}
               echo "trusted_domains repaired"
+              php occ config:system:set overwriteprotocol --value={{ .Values.nextcloud.overwriteProtocol | quote }}
+              php occ config:system:set overwritehost --value={{ .Values.nextcloud.overwriteHost | quote }}
+              php occ config:system:set overwrite.cli.url --value={{ .Values.nextcloud.overwriteCliUrl | quote }}
+              echo "overwrite host/protocol/cli-url set for share links"
           volumeMounts:
             - name: html
               mountPath: /var/www/html
