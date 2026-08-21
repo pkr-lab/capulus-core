@@ -102,6 +102,19 @@ Kuma-UI (nicht Teil von Git/Helm):
 
 ---
 
+## Authelia-SSO (Pilot seit 21.08.2026)
+
+Der interne Host (`uptime-kuma.prod.homeserver`) verlangt jetzt zuerst einen
+Authelia-Login (`one_factor`, siehe
+[docs/d-sicherheit/d0070-authelia-sso.md](../d-sicherheit/d0070-authelia-sso.md)).
+Der externe Status-Host (`status-prod.pke-lab.de`) ist davon **nicht**
+betroffen — bewusst unverändert, siehe dortiger Rollout-Plan. Für native
+Anmeldung ohne Authelia (z. B. falls Authelia mal nicht erreichbar ist):
+`https://uptime-kuma-native.prod.homeserver` — siehe
+[docs/d-sicherheit/d0071-native-login-fallback.md](../d-sicherheit/d0071-native-login-fallback.md).
+
+---
+
 ## Konfiguration (values.yaml)
 
 | Key | Bedeutung | Default |

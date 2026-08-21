@@ -1,0 +1,24 @@
+{{- if .Values.ingressNative.enabled }}
+# Bypass-Ingress ohne ForwardAuth — Ziel des "Native Anmeldung"-Links auf
+# Authelias Login-Seite, siehe docs/4-planung/40000-authelia-sso.md.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "uptime-kuma.fullname" . }}-native
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "uptime-kuma.labels" . | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.ingressNative.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "uptime-kuma.fullname" . }}
+                port:
+                  name: http
+{{- end }}
