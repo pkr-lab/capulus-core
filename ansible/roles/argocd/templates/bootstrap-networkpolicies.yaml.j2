@@ -47,8 +47,15 @@
 # defaults/main.yml) und werden hier komplett uebersprungen — die
 # tier-default-Policy wuerde per Ingress-Union zusaetzliche Quellen
 # erlauben und eine bewusst engere Policy wieder aufweichen.
+#
+# Apps, deren Namespace noch nicht existiert (ArgoCD-Sync kann hinter
+# diesem Playbook-Lauf zuruecklagen, siehe Kommentar im Task in
+# tasks/main.yml), werden ebenfalls uebersprungen — sonst wuerde der
+# einzelne `kubectl apply -f` fuer die ganze Datei fehlschlagen, obwohl
+# alle anderen Namespaces in Ordnung sind. Naechster `make argocd`-Lauf
+# holt sie nach.
 {% for app in argocd_platform_apps %}
-{% if app not in argocd_network_policy_excluded_apps %}
+{% if app not in argocd_network_policy_excluded_apps and app in argocd_existing_namespaces %}
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -90,7 +97,7 @@ spec:
 {% endif %}
 {% endfor %}
 {% for app in argocd_workloads_apps %}
-{% if app not in argocd_network_policy_excluded_apps %}
+{% if app not in argocd_network_policy_excluded_apps and app in argocd_existing_namespaces %}
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

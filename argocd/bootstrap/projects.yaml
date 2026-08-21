@@ -33,6 +33,8 @@ spec:
     - server: https://kubernetes.default.svc
       namespace: kubeseal-webgui
     - server: https://kubernetes.default.svc
+      namespace: authelia
+    - server: https://kubernetes.default.svc
       namespace: monitoring
     - server: https://kubernetes.default.svc
       namespace: logging
