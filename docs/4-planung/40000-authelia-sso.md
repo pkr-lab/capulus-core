@@ -109,7 +109,16 @@ Neuer Chart-Ordner `argocd/apps/platform/authelia/` (Struktur analog zu
 
 ### 2. Traefik-Middleware (ForwardAuth)
 
-Neue `Middleware`-Ressource in `argocd/apps/platform/authelia/templates/`:
+> **Korrektur nach Live-Rollout (21.08.2026):** Eine einzige gemeinsame
+> Middleware wie unten skizziert verursacht eine Endlos-Redirect-Schleife,
+> sobald Apps aus unterschiedlichen Domain-Tiers sie referenzieren — der
+> `rd=`-Wert ist eine statische Login-Portal-Basis-URL, keine dynamisch pro
+> Tier berechnete. Tatsächlich umgesetzt: **eine Middleware pro Tier**
+> (`authelia-prod`, `authelia-tech`, `authelia-external`). Details:
+> [d0070-authelia-sso.md](../d-sicherheit/d0070-authelia-sso.md).
+
+Neue `Middleware`-Ressource in `argocd/apps/platform/authelia/templates/`
+(Skizze unten zeigt nur eine Instanz — real also dreifach, je Tier):
 
 ```yaml
 apiVersion: traefik.io/v1alpha1
