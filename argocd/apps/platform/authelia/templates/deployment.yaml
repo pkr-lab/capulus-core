@@ -30,8 +30,12 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # entrypoint.sh des Images erkennt NUR das exakte Argument "--config"
+          # (kein "--config=..."), sonst wird arg[0] als beliebiger Befehl
+          # exec't statt an authelia übergeben ("illegal option --").
           args:
-            - --config=/config/configuration.yml
+            - --config
+            - /config/configuration.yml
           ports:
             - name: http
               containerPort: {{ .Values.service.targetPort }}
