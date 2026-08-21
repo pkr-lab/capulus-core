@@ -37,6 +37,12 @@ spec:
     - homeserver
     - alamos-apager.prod.homeserver
     - argo-workflows.tech.homeserver
+    # Authelia-Portal, zwei Hostnamen (nicht einer) — Begründung:
+    # docs/4-planung/40000-authelia-sso.md, Baustein 1 (Cookie-Domain
+    # braucht mindestens einen Punkt, "homeserver" allein reicht nicht,
+    # daher ein Hostname pro Domain-Tier).
+    - auth.prod.homeserver
+    - auth.tech.homeserver
     - carplay-api.prod.homeserver
     - demo.prod.homeserver
     - gotify-api.tech.homeserver
@@ -57,6 +63,9 @@ spec:
     - stream.prod.homeserver
     - tinyteller.prod.homeserver
     - uptime-kuma.prod.homeserver
+    # Bypass-Ingress "Knopfdruck zur nativen Anmeldung" für Uptime Kuma
+    # (Batch 1/Pilot), siehe docs/4-planung/40000-authelia-sso.md, Baustein 3.
+    - uptime-kuma-native.prod.homeserver
     - vault.tech.homeserver
     - vm-write.tech.homeserver
     - whoami.prod.homeserver

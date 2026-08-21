@@ -1,0 +1,121 @@
+# Authelia — Zentrale SSO-/2FA-Instanz
+
+[Authelia](https://www.authelia.com/) läuft als neue Platform-App
+(`argocd/apps/platform/authelia/`) und schützt schrittweise jede App mit
+eigener Anmeldemaske per Traefik-ForwardAuth. Nachfolger des früher
+entfernten Authentik-Setups — Architektur-Begründung, Leitentscheidungen und
+der komplette Rollout-Plan stehen in
+[docs/4-planung/40000-authelia-sso.md](../4-planung/40000-authelia-sso.md).
+Dieses Doc ist der Ist-Zustand-/Runbook-Teil, wächst mit jedem weiteren
+Rollout-Batch.
+
+---
+
+## Architektur
+
+```
+Browser ──▶ Traefik (kube-system) ──▶ Middleware "authelia-authelia@kubernetescrd"
+                                          │
+                          nicht eingeloggt│eingeloggt
+                                          ▼         ▼
+                          Authelia-Portal      Ziel-App (Backend-Service)
+                  (auth.tech.homeserver /
+                   auth.prod.homeserver)
+```
+
+- **Storage:** SQLite (`local-path`-PVC, 1 Gi), file-basierte Nutzerdatenbank
+  (Argon2id-Hashes) — kein Postgres/Redis, genau eine Replica (Session-State
+  ist lokal).
+- **Zwei interne Hostnamen** (`auth.tech.homeserver`, `auth.prod.homeserver`)
+  statt einem: "homeserver" ist ein Single-Label-Fake-TLD ohne Punkt,
+  Authelias Session-Cookie-Domain-Validierung verlangt aber mindestens einen
+  Punkt (`authelia config validate` lehnt `domain: homeserver` explizit ab).
+  Jede Domain-Tier-Ebene bekommt deshalb ihren eigenen Cookie-Scope + eigenen
+  Portal-Hostnamen. `auth-tech.pke-lab.de` (extern) braucht das nicht — echte
+  Domain mit Punkt, ein Hostname deckt beide Tiers ab.
+- **Notifier:** `filesystem` (kein SMTP-Relay im Repo vorhanden) — Passwort-
+  Reset-Links landen in `/config/notification.txt` im Pod, kein echter
+  Mailversand. Bei Bedarf später auf `smtp:` umstellen.
+
+---
+
+## Setup (bereits erledigt)
+
+1. Secrets generiert (`authelia crypto rand` / `authelia crypto hash
+   generate argon2`, Docker-Image `authelia/authelia:4.39.20`) und mit
+   `kubeseal --raw --namespace authelia --name authelia-secrets` versiegelt:
+   `jwt-secret`, `session-secret`, `storage-encryption-key`,
+   `users_database.yml` (initial 1 Admin-User, Gruppe `admins`).
+2. Chart lokal gegen `authelia config validate` getestet, bevor es in den
+   Cluster ging (Docker, `authelia/authelia:latest`) — dabei die
+   Cookie-Domain-Einschränkung oben entdeckt und korrigiert.
+3. `auth.tech.homeserver` + `auth.prod.homeserver` in
+   `argocd/apps/platform/cert-manager/templates/certificate-homeserver-wildcard.yaml`
+   ergänzt.
+4. `authelia` als neuer Namespace in
+   `ansible/roles/argocd/defaults/main.yml` (`argocd_platform_apps` +
+   `argocd_network_policy_refined_namespaces`, Batch-4-Block) ergänzt.
+5. Traefik-`Middleware` (`authelia-authelia@kubernetescrd`) als Teil des
+   Charts (`templates/middleware.yaml`).
+
+### Admin-Zugang
+
+Initialer Admin-User `admin`, Passwort wurde beim Erstsetup einmalig im Chat
+mitgeteilt — **sofort nach dem ersten Login ändern** (Authelia hat dafür
+keinen erzwungenen Passwortwechsel beim Erststart, das ist ein manueller
+Schritt über die Portal-UI). E-Mail im `users_database.yml` ist ein
+Platzhalter (`admin@homeserver.local`, nur für den bisher inaktiven
+SMTP-Notifier relevant) — bei Bedarf anpassen.
+
+---
+
+## Access-Control (aktueller Stand)
+
+| Domain | Policy | Batch |
+|---|---|---|
+| `uptime-kuma.prod.homeserver` | `one_factor` | 1 (Pilot) |
+
+Weitere Domains kommen batchweise dazu, siehe
+[40000-authelia-sso.md](../4-planung/40000-authelia-sso.md) → Baustein 7.
+Änderung: `argocd/apps/platform/authelia/values.yaml` →
+`config.access_control.rules` (ConfigMap, kein Secret — kein `kubeseal`
+nötig für neue Regeln).
+
+---
+
+## Bypass-Ingress ("native Anmeldung")
+
+Jede geschützte App bekommt einen zweiten Ingress ohne
+ForwardAuth-Middleware (`<app>-native.<tier>.homeserver`). Aktuelle Liste:
+[d0071-native-login-fallback.md](d0071-native-login-fallback.md).
+
+**Wichtig, siehe dortige Begründung:** Ein klickbarer Link direkt auf
+Authelias Login-Seite ist **nicht** umgesetzt — Authelias offizieller
+Asset-Override deckt nur Favicon/Logo/Text ab, kein HTML/Links, ohne das
+Frontend zu forken. Der Fallback ist aktuell nur über die dedizierten
+`-native`-URLs bzw. die Übersichtsseite selbst erreichbar, nicht als
+sichtbarer Button im Login-Flow.
+
+---
+
+## Rollout-Log
+
+| Datum | Batch | Was |
+|---|---|---|
+| 21.08.2026 | 1 (Pilot) | Authelia deployt, Middleware angelegt, Uptime Kuma (nur interner Host) geschützt + `-native`-Bypass eingerichtet. Config lokal validiert vor Rollout. |
+
+Nächste Schritte (Batch 2–5) siehe
+[40000-authelia-sso.md](../4-planung/40000-authelia-sso.md) → Baustein 7 —
+jeweils erst nach Verifikation des vorherigen Batches (Login-Flow im
+Browser, TOTP wo relevant, `curl -sI` auf beide Hosts pro App).
+
+---
+
+## Troubleshooting
+
+| Symptom | Hinweis |
+|---|---|
+| `502`/`503` auf `auth.*.homeserver` | `kubectl -n authelia get pods` / `logs` prüfen — Storage-PVC oder Secret-Mount? |
+| Login funktioniert, aber Redirect zurück zur App schlägt fehl | Cookie-Domain-Mismatch — Ziel-Host muss unter dem Tier liegen, für das ein `session.cookies`-Eintrag existiert (aktuell `prod.homeserver`, `tech.homeserver`, `pke-lab.de`). |
+| Config-Änderungen an `values.yaml` → `config:` werden nicht übernommen | `strategy.type: Recreate` im Deployment — ArgoCD muss den Pod neu erstellen, kein reines ConfigMap-Reload zur Laufzeit. |
+| `config validate` lokal testen | `docker run --rm -v $PWD:/config -e AUTHELIA_SESSION_SECRET=... -e AUTHELIA_STORAGE_ENCRYPTION_KEY=... -e AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET=... authelia/authelia:4.39.20 authelia config validate --config /config/configuration.yml` |
