@@ -1,0 +1,26 @@
+{{- if .Values.ingressNative.enabled }}
+# Bypass-Ingress ohne ForwardAuth — Ziel des "Native Anmeldung"-Links,
+# siehe docs/d-sicherheit/d0071-native-login-fallback.md.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "mealie.fullname" . }}-native
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mealie.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingressNative.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "mealie.fullname" . }}
+                port:
+                  name: http
+{{- end }}

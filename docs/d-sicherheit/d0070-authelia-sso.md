@@ -23,9 +23,11 @@ Browser ──▶ Traefik (kube-system) ──▶ Middleware "authelia-authelia-
                    auth.prod.homeserver)
 ```
 
-- **Storage:** SQLite (`local-path`-PVC, 1 Gi), file-basierte Nutzerdatenbank
-  (Argon2id-Hashes) — kein Postgres/Redis, genau eine Replica (Session-State
-  ist lokal).
+- **Storage:** SQLite (`local-path`-PVC, 1 Gi) für Session-/Regulation-State
+  — kein Postgres/Redis, genau eine Replica (Session-State ist lokal).
+- **Nutzerquelle:** seit dem LDAP-Cutover (22.08.2026)
+  [lldap](d0072-lldap.md) statt file-basierter `users_database.yml` — echte
+  benannte Identitäten mit Gruppen statt einem einzelnen Pilot-Admin.
 - **Zwei interne Hostnamen** (`auth.tech.homeserver`, `auth.prod.homeserver`)
   statt einem: "homeserver" ist ein Single-Label-Fake-TLD ohne Punkt,
   Authelias Session-Cookie-Domain-Validierung verlangt aber mindestens einen
@@ -44,8 +46,10 @@ Browser ──▶ Traefik (kube-system) ──▶ Middleware "authelia-authelia-
 1. Secrets generiert (`authelia crypto rand` / `authelia crypto hash
    generate argon2`, Docker-Image `authelia/authelia:4.39.20`) und mit
    `kubeseal --raw --namespace authelia --name authelia-secrets` versiegelt:
-   `jwt-secret`, `session-secret`, `storage-encryption-key`,
-   `users_database.yml` (initial 1 Admin-User, Gruppe `admins`).
+   `jwt-secret`, `session-secret`, `storage-encryption-key`. Der ursprünglich
+   4. Key (`users_database.yml`, file-basiert, 1 Pilot-Admin) ist mit dem
+   LDAP-Cutover (Batch 2) entfallen — ersetzt durch `ldap-bind-password`,
+   siehe [lldap-Setup](d0072-lldap.md).
 2. Chart lokal gegen `authelia config validate` getestet, bevor es in den
    Cluster ging (Docker, `authelia/authelia:latest`) — dabei die
    Cookie-Domain-Einschränkung oben entdeckt und korrigiert.
@@ -67,28 +71,41 @@ Browser ──▶ Traefik (kube-system) ──▶ Middleware "authelia-authelia-
    Rollout-Log unten). Jede App referenziert die zu ihrem eigenen Tier
    passende Middleware in ihrer eigenen `ingress.annotations`.
 
-### Admin-Zugang
+### Nutzerverwaltung
 
-Initialer Admin-User `admin`, Passwort wurde beim Erstsetup einmalig im Chat
-mitgeteilt — **sofort nach dem ersten Login ändern** (Authelia hat dafür
-keinen erzwungenen Passwortwechsel beim Erststart, das ist ein manueller
-Schritt über die Portal-UI). E-Mail im `users_database.yml` ist ein
-Platzhalter (`admin@homeserver.local`, nur für den bisher inaktiven
-SMTP-Notifier relevant) — bei Bedarf anpassen.
+Seit dem LDAP-Cutover (22.08.2026) kommen alle Identitäten aus
+[lldap](d0072-lldap.md) — Setup, Passwort-Vergabe und Gruppenzuordnung
+laufen dort über die Web-UI, nicht mehr über eine SealedSecret-Datei in
+diesem Repo. `argocd/apps/platform/authelia/values.yaml` →
+`config.authentication_backend.ldap` verweist auf lldap, das Bind-Passwort
+kommt per Env-Var aus `authelia-secrets` (Key `ldap-bind-password`,
+identischer Wert wie `bind-password` in `lldap-secrets`).
 
 ---
 
 ## Access-Control (aktueller Stand)
 
-| Domain | Policy | Batch |
-|---|---|---|
-| `uptime-kuma.prod.homeserver` | `one_factor` | 1 (Pilot) |
+| Subject | Domain | Policy | Zugriff |
+|---|---|---|---|
+| `user:admin` | `*.tech.homeserver`, `*.prod.homeserver` | `one_factor` | Fallback/Break-Glass, alles, nur intern, bewusst kein 2FA |
+| `group:admins` (`pke`) | `*.tech.homeserver`, `*.prod.homeserver` | `two_factor` | Vollzugriff, nur intern |
+| `group:dlrg-einsatz` | `grafana.tech.homeserver`, `grafana-tech.pke-lab.de` | `one_factor` | Grafana, intern + extern |
+| `user:ake` | `immich.prod.homeserver`, `immich-prod.pke-lab.de` | `one_factor` | Immich, intern + extern |
+| `user:rdn` | `mealie.prod.homeserver`, `mealie-prod.pke-lab.de` | `one_factor` | Mealie, intern + extern |
 
-Weitere Domains kommen batchweise dazu, siehe
+`uptime-kuma.prod.homeserver` hat **keine eigene Regel mehr** — niemand aus
+der aktuellen Identitätsliste war explizit zugewiesen, Zugriff läuft jetzt
+implizit über die `group:admins`-Catch-all-Regel (erste Zeile, greift
+zuerst). Das ist eine bewusste Verschärfung gegenüber dem Pilot (der noch
+`one_factor` für JEDEN authentifizierten Nutzer erlaubte).
+
+Weitere Regeln kommen bei Bedarf dazu, siehe
 [40000-authelia-sso.md](../4-planung/40000-authelia-sso.md) → Baustein 7.
 Änderung: `argocd/apps/platform/authelia/values.yaml` →
 `config.access_control.rules` (ConfigMap, kein Secret — kein `kubeseal`
-nötig für neue Regeln).
+nötig für neue Regeln, aber `authelia config validate` lokal testen, siehe
+Troubleshooting unten — `subject:`-Syntax und Domain-Wildcards sind
+fehleranfällig).
 
 ---
 
@@ -112,8 +129,9 @@ sichtbarer Button im Login-Flow.
 | Datum | Batch | Was |
 |---|---|---|
 | 21.08.2026 | 1 (Pilot) | Authelia deployt, Uptime Kuma (nur interner Host) geschützt + `-native`-Bypass eingerichtet. Config lokal validiert vor Rollout. Drei Live-Fixes nötig: (1) Container-Args `--config=X` → `--config X` (Image-Entrypoint erkennt nur die getrennte Form), (2) `enableServiceLinks: false` gesetzt (Kubernetes injiziert sonst `AUTHELIA_*`-Service-Discovery-Env-Vars, die mit Authelias eigenem Config-Env-Prefix kollidieren), (3) Middleware von einer gemeinsamen auf drei Tier-spezifische aufgeteilt (Redirect-Loop, siehe Architektur-Abschnitt oben). |
+| 22.08.2026 | 2 (LDAP-Cutover) | [lldap](d0072-lldap.md) deployt, `authentication_backend` von `file` auf `ldap` umgestellt, `access_control` auf `subject:`-basierte Regeln erweitert (5 Identitäten: `admin`, `pke`, `dlrg-einsatz`-Gruppe, `ake`, `rdn`). Grafana, Immich, Mealie neu per ForwardAuth geschützt, Immich + Mealie mit `-native`-Bypass (Immich zwingend, Mobile-App). Vollständig lokal per Docker-Netzwerk gegen echtes lldap ende-zu-ende getestet (LDAP-Bind, Gruppen-Auflösung, `subject:`/Domain-Wildcard-Matching) — alle drei zuvor unklaren Mechanismen vor dem Cluster-Rollout bestätigt. |
 
-Nächste Schritte (Batch 2–5) siehe
+Weiterer Ausbau (Batch 3+, weitere Apps/Identitäten) siehe
 [40000-authelia-sso.md](../4-planung/40000-authelia-sso.md) → Baustein 7 —
 jeweils erst nach Verifikation des vorherigen Batches (Login-Flow im
 Browser, TOTP wo relevant, `curl -sI` auf beide Hosts pro App).
@@ -128,4 +146,6 @@ Browser, TOTP wo relevant, `curl -sI` auf beide Hosts pro App).
 | Login funktioniert, aber Redirect zurück zur App schlägt fehl | Cookie-Domain-Mismatch — Ziel-Host muss unter dem Tier liegen, für das ein `session.cookies`-Eintrag existiert (aktuell `prod.homeserver`, `tech.homeserver`, `pke-lab.de`). |
 | Seite lädt endlos / Browser "reloaded" ständig, App öffnet nie | Falsche Middleware referenziert — App muss `authelia-authelia-<eigenes-Tier>@kubernetescrd` nutzen, nicht `-tech` für eine `prod.homeserver`-App (oder umgekehrt). `kubectl -n authelia logs deploy/authelia` zeigt bei diesem Fehler ständig denselben `/api/verify`-Redirect zur falschen Portal-Domain. |
 | Config-Änderungen an `values.yaml` → `config:` werden nicht übernommen | `strategy.type: Recreate` im Deployment — ArgoCD muss den Pod neu erstellen, kein reines ConfigMap-Reload zur Laufzeit. |
-| `config validate` lokal testen | `docker run --rm -v $PWD:/config -e AUTHELIA_SESSION_SECRET=... -e AUTHELIA_STORAGE_ENCRYPTION_KEY=... -e AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET=... authelia/authelia:4.39.20 authelia config validate --config /config/configuration.yml` |
+| `config validate` lokal testen | `docker run --rm -v $PWD:/config -e AUTHELIA_SESSION_SECRET=... -e AUTHELIA_STORAGE_ENCRYPTION_KEY=... -e AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET=... -e AUTHELIA_AUTHENTICATION_BACKEND_LDAP_PASSWORD=... authelia/authelia:4.39.20 authelia config validate --config /config/configuration.yml` |
+| Kein Nutzer kann sich mehr einloggen, Logs zeigen LDAP-Fehler | lldap nicht erreichbar oder Bind-Passwort falsch — siehe [d0072-lldap.md](d0072-lldap.md) → Troubleshooting. |
+| Nutzer korrekt eingeloggt, aber 401 auf einer bestimmten App | Fehlende oder falsche `subject:`-Regel — `default_policy: deny` blockt alles ohne exakt passende Regel, Gruppenzugehörigkeit in lldap prüfen. |

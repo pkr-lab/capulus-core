@@ -274,7 +274,13 @@ victoria-metrics-k8s-stack:
     ingress:
       enabled: true
       ingressClassName: traefik
-      annotations: {}
+      # Authelia-SSO (docs/d-sicherheit/d0070-authelia-sso.md) — gilt für
+      # BEIDE Hosts unten (ein Ingress-Objekt für beide, kein Split wie bei
+      # den eigenen Charts). Nur die dlrg-einsatz-Gruppe hat aktuell Zugriff
+      # (access_control-Regel in argocd/apps/platform/authelia/values.yaml),
+      # sonst die admins-Gruppe über die Catch-all-Regel.
+      annotations:
+        traefik.ingress.kubernetes.io/router.middlewares: "authelia-authelia-tech@kubernetescrd"
       labels: {}
       path: /
       pathType: Prefix

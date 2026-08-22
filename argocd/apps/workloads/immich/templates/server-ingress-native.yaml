@@ -1,0 +1,27 @@
+{{- if .Values.server.ingressNative.enabled }}
+# Bypass-Ingress ohne ForwardAuth — Ziel des "Native Anmeldung"-Links,
+# zwingend für die Immich-Mobile-App (bricht sonst am Browser-Redirect).
+# Siehe docs/d-sicherheit/d0071-native-login-fallback.md.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "immich.server.fullname" . }}-native
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "immich.server.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.server.ingress.className }}
+  ingressClassName: {{ .Values.server.ingress.className }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.server.ingressNative.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "immich.server.fullname" . }}
+                port:
+                  name: http
+{{- end }}

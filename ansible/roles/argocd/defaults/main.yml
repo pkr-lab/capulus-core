@@ -10,6 +10,7 @@ argocd_platform_apps:
   - sealed-secrets
   - kubeseal-webgui
   - authelia
+  - lldap
   - monitoring
   - logging
   - gotify
@@ -102,6 +103,10 @@ argocd_network_policy_refined_namespaces:
   # Namespace + kube-system reicht — Traefik ruft von dort per ForwardAuth
   # /api/verify auf, Authelia selbst ruft keine andere App direkt an.
   - authelia
+  # lldap (22.08.2026): eigener Namespace + kube-system (Web-UI-Ingress)
+  # reicht NICHT allein — Authelia ruft lldap zusätzlich per ClusterIP auf
+  # Port 3890 an (LDAP-Bind), siehe extra_ingress unten.
+  - lldap
   - sealed-secrets
   - kubeseal-webgui
   - monitoring
@@ -147,6 +152,11 @@ argocd_network_policy_excluded_apps:
   - ollama
 
 argocd_network_policy_extra_ingress:
+  # lldap (22.08.2026, docs/4-planung/40000-authelia-sso.md): Authelia bindet
+  # per ClusterIP direkt gegen lldaps LDAP-Port (3890), nicht über Traefik —
+  # ohne diese Ausnahme scheitert jeder Login (Bind-Timeout).
+  lldap:
+    - authelia
   # wiki-docs-sync (eigener CronJob-Namespace) ruft wikijs per ClusterIP
   # direkt an, nicht über Traefik. wikijs ist verfeinert (Schritt 2).
   wikijs:
