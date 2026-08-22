@@ -63,6 +63,10 @@ spec:
     - minio.tech.homeserver
     - n8n.prod.homeserver
     - nextcloud.prod.homeserver
+    # Bypass-Ingress "Knopfdruck zur nativen Anmeldung" für Nextcloud —
+    # zwingend, sonst brechen Desktop-/Mobile-Sync-Clients am
+    # Browser-Redirect, siehe docs/d-sicherheit/d0071-native-login-fallback.md.
+    - nextcloud-native.prod.homeserver
     - ntfy.tech.homeserver
     - paperless.prod.homeserver
     - pihole.tech.homeserver
