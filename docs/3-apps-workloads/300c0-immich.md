@@ -29,6 +29,19 @@ und Timeline-Ansicht. Die Deployment-Konfiguration liegt unter
 
 ---
 
+## Authelia-SSO (seit 22.08.2026)
+
+`immich.prod.homeserver` und `immich-prod.pke-lab.de` verlangen zuerst
+einen Authelia-Login — nur der Nutzer `ake` hat Zugriff (siehe
+[docs/d-sicherheit/d0070-authelia-sso.md](../d-sicherheit/d0070-authelia-sso.md)).
+**Wichtig für die Mobile-App:** Die Immich-App kann den Browser-Redirect
+nicht durchlaufen — sie muss gegen den Bypass-Host konfiguriert werden:
+`https://immich-native.prod.homeserver` (App-eigener E-Mail-/Passwort-Login,
+kein Authelia), siehe
+[docs/d-sicherheit/d0071-native-login-fallback.md](../d-sicherheit/d0071-native-login-fallback.md).
+
+---
+
 ## Dedizierter Storage: `immich-nas` statt `nas`
 
 Anders als die übrigen Apps in diesem Repo liegt Immichs kompletter

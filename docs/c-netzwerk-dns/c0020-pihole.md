@@ -1,4 +1,4 @@
-# Pi-hole — Netzwerkweites Werbeblocking
+Dan# Pi-hole — Netzwerkweites Werbeblocking
 
 [Pi-hole](https://pi-hole.net) läuft als ArgoCD-verwaltete App im k3s-Cluster
 (`argocd/apps/platform/pihole/`) und wird von `dnsmasq` auf dem Home-Server als

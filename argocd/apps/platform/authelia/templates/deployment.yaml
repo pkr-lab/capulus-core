@@ -63,6 +63,11 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.secrets.secretName }}
                   key: jwt-secret
+            - name: AUTHELIA_AUTHENTICATION_BACKEND_LDAP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.secretName }}
+                  key: ldap-bind-password
           livenessProbe:
             httpGet:
               path: /api/health
@@ -88,10 +93,6 @@ spec:
               mountPath: /config/configuration.yml
               subPath: configuration.yml
               readOnly: true
-            - name: secrets-file
-              mountPath: /config/users_database.yml
-              subPath: users_database.yml
-              readOnly: true
       volumes:
         - name: data
           {{- if .Values.persistence.enabled }}
@@ -103,12 +104,6 @@ spec:
         - name: config
           configMap:
             name: {{ include "authelia.fullname" . }}-config
-        - name: secrets-file
-          secret:
-            secretName: {{ .Values.secrets.secretName }}
-            items:
-              - key: users_database.yml
-                path: users_database.yml
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
