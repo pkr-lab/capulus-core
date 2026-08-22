@@ -92,6 +92,11 @@ identischer Wert wie `bind-password` in `lldap-secrets`).
 | `user:ake` | `immich.prod.homeserver`, `immich-prod.pke-lab.de` | `one_factor` | Immich, intern + extern |
 | `user:rdn` | `mealie.prod.homeserver`, `mealie-prod.pke-lab.de` | `one_factor` | Mealie, intern + extern |
 
+**Nextcloud** (`nextcloud.prod.homeserver` + `nextcloud-prod.pke-lab.de`,
+seit 22.08.2026 geschützt) braucht **keine eigene Regel** — niemand
+Bestimmtes wurde zugewiesen, Zugriff läuft komplett über die
+`group:admins`-Catch-all-Regel oben (nur `pke`).
+
 **Grafana ist bewusst NICHT geschützt** (22.08.2026, Nutzerentscheidung —
 "keine wichtigen Daten dahinter") — eigener Grafana-Login reicht,
 `ingress.annotations` in `argocd/apps/platform/monitoring/values.yaml` ist
@@ -138,6 +143,7 @@ sichtbarer Button im Login-Flow.
 | 22.08.2026 | 2 (LDAP-Cutover) | [lldap](d0072-lldap.md) deployt, `authentication_backend` von `file` auf `ldap` umgestellt, `access_control` auf `subject:`-basierte Regeln erweitert (5 Identitäten: `admin`, `pke`, `dlrg-einsatz`-Gruppe, `ake`, `rdn`). Grafana, Immich, Mealie neu per ForwardAuth geschützt, Immich + Mealie mit `-native`-Bypass (Immich zwingend, Mobile-App). Vollständig lokal per Docker-Netzwerk gegen echtes lldap ende-zu-ende getestet (LDAP-Bind, Gruppen-Auflösung, `subject:`/Domain-Wildcard-Matching) — alle drei zuvor unklaren Mechanismen vor dem Cluster-Rollout bestätigt. Zwei Live-Fixes nach dem Rollout: (1) `lldap`/`authelia` fehlten zunächst im `platform`-AppProject (`make render-bootstrap && make argocd` nötig, gleiches Muster wie beim Pilot), (2) externe `*.pke-lab.de`-Hosts lieferten 401 statt Redirect — `cloudflared` auf Traefiks HTTPS-Entrypoint (443, `noTLSVerify`) statt Klartext-Port 80 umgestellt, siehe Troubleshooting. |
 
 | 22.08.2026 | — | Grafana wieder entfernt (Nutzerentscheidung — keine wichtigen Daten dahinter, eigener Login reicht). `dlrg-einsatz`-Gruppe bleibt in lldap bestehen, aber ohne aktive `access_control`-Regel. |
+| 22.08.2026 | — | Nextcloud dazu (admins-only, keine neue Regel nötig — Catch-all reicht), `-native`-Bypass ergänzt (Sync-Clients). Zammad bewusst **nicht** geschützt (Nutzerentscheidung) — der externe Host ist für anonyme Ticket-Einreichungen ohne Account gedacht, Authelia davor hätte das gebrochen. |
 
 Weiterer Ausbau (Batch 3+, weitere Apps/Identitäten) siehe
 [40000-authelia-sso.md](../4-planung/40000-authelia-sso.md) → Baustein 7 —
