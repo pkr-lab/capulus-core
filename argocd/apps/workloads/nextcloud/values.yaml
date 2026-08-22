@@ -99,11 +99,7 @@ nextcloud:
   ingress:
     enabled: true
     className: traefik
-    # Authelia-SSO (docs/d-sicherheit/d0070-authelia-sso.md) — nur die
-    # admins-Gruppe (aktuell: pke) kommt rein, sonst niemand. Gilt für
-    # beide Hosts unten.
-    annotations:
-      traefik.ingress.kubernetes.io/router.middlewares: "authelia-authelia-prod@kubernetescrd"
+    annotations: {}
     hosts:
       - host: nextcloud.prod.homeserver
         paths:
@@ -117,20 +113,10 @@ nextcloud:
             pathType: Prefix
     tls: []
 
-  # "Knopfdruck zur nativen Anmeldung" — Bypass-Ingress ohne
-  # ForwardAuth-Middleware, ZWINGEND für Desktop-/Mobile-Sync-Clients (die
-  # verstehen keinen Browser-Redirect), siehe
-  # docs/d-sicherheit/d0071-native-login-fallback.md.
-  ingressNative:
-    enabled: true
-    host: nextcloud-native.prod.homeserver
-
   # Trusted Domains: intern (*.homeserver, Traefik) + extern (Cloudflare
-  # Tunnel, siehe argocd/apps/platform/cloudflared/values.yaml) + der
-  # native Bypass-Host (ingressNative oben) — Sync-Clients sprechen
-  # Nextcloud über diesen Host direkt an, ohne Authelia. Ohne alle drei
-  # Einträge weist Nextcloud Requests mit "Access through untrusted domain" ab.
-  trustedDomains: "nextcloud.prod.homeserver nextcloud-prod.pke-lab.de nextcloud-native.prod.homeserver"
+  # Tunnel, siehe argocd/apps/platform/cloudflared/values.yaml). Ohne beide Einträge
+  # weist Nextcloud Requests mit "Access through untrusted domain" ab.
+  trustedDomains: "nextcloud.prod.homeserver nextcloud-prod.pke-lab.de"
 
   # Erzwingt den öffentlichen Host für alle von Nextcloud generierten URLs
   # (v. a. Freigabe-/Share-Links) — unabhängig davon, über welchen der
