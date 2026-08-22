@@ -118,6 +118,20 @@ gegen `/status.php`).
 
 ---
 
+## Authelia-SSO (seit 22.08.2026)
+
+`nextcloud.prod.homeserver` und `nextcloud-prod.pke-lab.de` verlangen
+zuerst einen Authelia-Login — nur die `admins`-Gruppe (aktuell `pke`) hat
+Zugriff, keine eigene Freigabe für andere Nutzer (siehe
+[docs/d-sicherheit/d0070-authelia-sso.md](../d-sicherheit/d0070-authelia-sso.md)).
+**Wichtig für Desktop-/Mobile-Sync-Clients:** Die verstehen den
+Browser-Redirect nicht — Client gegen den Bypass-Host konfigurieren:
+`https://nextcloud-native.prod.homeserver` (Nextcloud-eigener Login, kein
+Authelia), siehe
+[docs/d-sicherheit/d0071-native-login-fallback.md](../d-sicherheit/d0071-native-login-fallback.md).
+
+---
+
 ## Externe Erreichbarkeit (Cloudflare Tunnel)
 
 `nextcloud-prod.pke-lab.de` ist bereits in
