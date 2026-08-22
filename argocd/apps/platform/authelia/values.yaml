@@ -156,11 +156,6 @@ config: |
         subject: "group:admins"
         policy: two_factor
 
-      # DLRG-Einsatz — Grafana, intern + extern (Einsatzdienst unterwegs).
-      - domain: ["grafana.tech.homeserver", "grafana-tech.pke-lab.de"]
-        subject: "group:dlrg-einsatz"
-        policy: one_factor
-
       # ake — Immich, intern + extern (Mobile-App-Sync).
       - domain: ["immich.prod.homeserver", "immich-prod.pke-lab.de"]
         subject: "user:ake"
