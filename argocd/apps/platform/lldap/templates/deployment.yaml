@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "authelia.fullname" . }}
+  name: {{ include "lldap.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "authelia.labels" . | nindent 4 }}
+    {{- include "lldap.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      {{- include "authelia.selectorLabels" . | nindent 6 }}
+      {{- include "lldap.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -19,91 +19,77 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "authelia.selectorLabels" . | nindent 8 }}
+        {{- include "lldap.selectorLabels" . | nindent 8 }}
     spec:
       # Kubernetes injiziert sonst automatisch Service-Discovery-Env-Vars
-      # (AUTHELIA_PORT, AUTHELIA_SERVICE_HOST, ...) für den gleichnamigen
-      # Service "authelia" — Authelia interpretiert JEDE AUTHELIA_*-Variable
-      # als Config-Override, was mit server.address kollidiert (fatal beim
-      # Start). Betrifft nur Apps, deren Service-Name mit dem Env-Prefix
-      # kollidiert — andere Charts hier brauchen das nicht.
+      # für den gleichnamigen Service — gleiche Vorsichtsmaßnahme wie bei
+      # Authelia (siehe dortiger templates/deployment.yaml-Kommentar).
       enableServiceLinks: false
-      serviceAccountName: {{ include "authelia.serviceAccountName" . }}
+      serviceAccountName: {{ include "lldap.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          # entrypoint.sh des Images erkennt NUR das exakte Argument "--config"
-          # (kein "--config=..."), sonst wird arg[0] als beliebiger Befehl
-          # exec't statt an authelia übergeben ("illegal option --").
-          args:
-            - --config
-            - /config/configuration.yml
           ports:
+            - name: ldap
+              containerPort: {{ .Values.service.ldapPort }}
+              protocol: TCP
             - name: http
-              containerPort: {{ .Values.service.targetPort }}
+              containerPort: {{ .Values.service.httpPort }}
               protocol: TCP
           env:
-            - name: AUTHELIA_SESSION_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.secrets.secretName }}
-                  key: session-secret
-            - name: AUTHELIA_STORAGE_ENCRYPTION_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.secrets.secretName }}
-                  key: storage-encryption-key
-            - name: AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: LLDAP_JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.secrets.secretName }}
                   key: jwt-secret
-            - name: AUTHELIA_AUTHENTICATION_BACKEND_LDAP_PASSWORD
+            - name: LLDAP_KEY_SEED
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.secrets.secretName }}
-                  key: ldap-bind-password
+                  key: key-seed
+            - name: LLDAP_LDAP_USER_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.secretName }}
+                  key: root-password
           livenessProbe:
-            httpGet:
-              path: /api/health
-              port: http
+            exec:
+              command: ["/app/lldap", "healthcheck", "--config-file", "/data/lldap_config.toml"]
             initialDelaySeconds: 10
             periodSeconds: 30
-            timeoutSeconds: 3
+            timeoutSeconds: 5
             failureThreshold: 3
           readinessProbe:
-            httpGet:
-              path: /api/health
-              port: http
+            exec:
+              command: ["/app/lldap", "healthcheck", "--config-file", "/data/lldap_config.toml"]
             initialDelaySeconds: 5
             periodSeconds: 10
-            timeoutSeconds: 2
+            timeoutSeconds: 5
             failureThreshold: 3
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             - name: data
               mountPath: {{ .Values.persistence.mountPath }}
-            - name: config
-              mountPath: /config/configuration.yml
-              subPath: configuration.yml
-              readOnly: true
       volumes:
         - name: data
           {{- if .Values.persistence.enabled }}
           persistentVolumeClaim:
-            claimName: {{ include "authelia.fullname" . }}-data
+            claimName: {{ include "lldap.fullname" . }}-data
           {{- else }}
           emptyDir: {}
           {{- end }}
-        - name: config
-          configMap:
-            name: {{ include "authelia.fullname" . }}-config
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

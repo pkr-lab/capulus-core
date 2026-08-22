@@ -1,0 +1,16 @@
+---
+apiVersion: v2
+name: lldap
+description: Leichtgewichtiger LDAP-Server (Nutzer-/Gruppenverwaltung für Authelia).
+type: application
+version: 0.1.0
+appVersion: "0.6.3"
+keywords:
+  - lldap
+  - ldap
+  - identity
+home: https://github.com/lldap/lldap
+sources:
+  - https://github.com/lldap/lldap
+maintainers:
+  - name: home-server-admin

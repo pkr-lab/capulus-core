@@ -50,8 +50,16 @@ spec:
     - grafana.tech.homeserver
     - headlamp.tech.homeserver
     - immich.prod.homeserver
+    # Bypass-Ingress "Knopfdruck zur nativen Anmeldung" für Immich — hier
+    # zwingend, sonst bricht die Mobile-App unter dem Browser-Redirect,
+    # siehe docs/4-planung/40000-authelia-sso.md.
+    - immich-native.prod.homeserver
     - kubeseal-webgui.tech.homeserver
+    # lldap-Web-UI (Nutzer-/Gruppenverwaltung), Tailscale/LAN-only wie
+    # andere Admin-Tools, siehe docs/d-sicherheit/d0072-lldap.md.
+    - lldap.tech.homeserver
     - mealie.prod.homeserver
+    - mealie-native.prod.homeserver
     - minio.tech.homeserver
     - n8n.prod.homeserver
     - nextcloud.prod.homeserver
