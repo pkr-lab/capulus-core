@@ -15,6 +15,11 @@ oder man aus einem anderen Grund die App-eigene Anmeldung braucht.
 | App | Authelia-geschützt (Standard) | Native Anmeldung (Fallback) |
 |---|---|---|
 | Uptime Kuma | https://uptime-kuma.prod.homeserver | https://uptime-kuma-native.prod.homeserver |
+| Immich | https://immich.prod.homeserver / https://immich-prod.pke-lab.de | https://immich-native.prod.homeserver (**Pflicht für die Mobile-App**) |
+| Mealie | https://mealie.prod.homeserver / https://mealie-prod.pke-lab.de | https://mealie-native.prod.homeserver |
+
+Grafana hat **keinen** `-native`-Host — die dlrg-einsatz-Gruppe braucht keine
+App-eigene Anmeldung als Fallback, Grafana bleibt komplett hinter Authelia.
 
 Diese Tabelle wächst mit jedem weiteren Rollout-Batch
 ([d0070-authelia-sso.md](d0070-authelia-sso.md) → Rollout-Log).
