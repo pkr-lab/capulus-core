@@ -156,11 +156,6 @@ config: |
         subject: "group:admins"
         policy: two_factor
 
-      # ake — Immich, intern + extern (Mobile-App-Sync).
-      - domain: ["immich.prod.homeserver", "immich-prod.pke-lab.de"]
-        subject: "user:ake"
-        policy: one_factor
-
       # rdn — Mealie, intern + extern.
       - domain: ["mealie.prod.homeserver", "mealie-prod.pke-lab.de"]
         subject: "user:rdn"
