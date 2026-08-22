@@ -33,6 +33,18 @@ Standard-Credentials beim ersten Login:
 
 ---
 
+## Authelia-SSO (seit 22.08.2026)
+
+`mealie.prod.homeserver` und `mealie-prod.pke-lab.de` verlangen zuerst
+einen Authelia-Login — nur der Nutzer `rdn` hat Zugriff (siehe
+[docs/d-sicherheit/d0070-authelia-sso.md](../d-sicherheit/d0070-authelia-sso.md)).
+Die App-eigene Anmeldung oben (Standard-Admin bzw. eigener Account) bleibt
+unverändert bestehen, ist aber nur noch über den nicht-Authelia-geschützten
+Bypass-Host erreichbar: `https://mealie-native.prod.homeserver` (siehe
+[docs/d-sicherheit/d0071-native-login-fallback.md](../d-sicherheit/d0071-native-login-fallback.md)).
+
+---
+
 ## Rezept importieren
 
 1. URL einer Kochseite kopieren (z. B. `https://www.chefkoch.de/...`)

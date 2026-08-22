@@ -36,7 +36,11 @@ service:
 ingress:
   enabled: true
   className: traefik
-  annotations: {}
+  # Authelia-SSO (docs/d-sicherheit/d0070-authelia-sso.md) — gilt für beide
+  # Hosts unten. Nur der Nutzer "rdn" hat Zugriff (access_control-Regel in
+  # argocd/apps/platform/authelia/values.yaml), sonst admins.
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: "authelia-authelia-prod@kubernetescrd"
   hosts:
     - host: mealie.prod.homeserver
       paths:
@@ -49,6 +53,13 @@ ingress:
         - path: /
           pathType: Prefix
   tls: []
+
+# "Knopfdruck zur nativen Anmeldung" — Bypass-Ingress ohne
+# ForwardAuth-Middleware (Mealie-Mobile-App), siehe
+# docs/d-sicherheit/d0071-native-login-fallback.md.
+ingressNative:
+  enabled: true
+  host: mealie-native.prod.homeserver
 
 persistence:
   enabled: true
