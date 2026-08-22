@@ -71,7 +71,10 @@ Passwort einloggen.
 **Group Management → Create a group**, zwei neue Gruppen:
 
 - `admins` — Vollzugriff mit 2FA (aktuell: `pke`)
-- `dlrg-einsatz` — Grafana-Zugriff für den Einsatzdienst
+- `dlrg-einsatz` — ursprünglich für Grafana-Zugriff gedacht, seit 22.08.2026
+  ohne aktive `access_control`-Regel (Grafana bewusst nicht mehr hinter
+  Authelia, siehe [d0070-authelia-sso.md](d0070-authelia-sso.md)) — Gruppe
+  bleibt für spätere Verwendung bestehen
 
 (Die eingebauten Gruppen `lldap_admin`, `lldap_password_manager`,
 `lldap_strict_readonly` sind lldap-intern — nicht anfassen, außer für
@@ -105,7 +108,7 @@ Nutzeransicht, min. 8 Zeichen) und ggf. Gruppenzugehörigkeit zuweisen:
 |---|---|---|
 | `admin` | — (keine Gruppe, eigene Regel in Authelia) | Fallback/Break-Glass, alles, nur intern, kein 2FA |
 | `pke` | `admins` | Vollzugriff, nur intern, 2FA Pflicht |
-| `dlrg-einsatz-1` | `dlrg-einsatz` | Grafana (intern + extern) |
+| `dlrg-einsatz-1` | `dlrg-einsatz` | aktuell keine aktive Regel (siehe oben) |
 | `ake` | — (keine Gruppe) | Immich (intern + extern) |
 | `rdn` | — (keine Gruppe) | Mealie (intern + extern) |
 
