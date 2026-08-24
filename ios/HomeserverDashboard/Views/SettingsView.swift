@@ -8,6 +8,8 @@ struct SettingsView: View {
     @State private var statusMessage: String?
     @State private var tankerkoenigKey: String = ""
     @State private var tankerkoenigStatusMessage: String?
+    @State private var wolAgentToken: String = ""
+    @State private var wolAgentStatusMessage: String?
 
     var body: some View {
         NavigationView {
@@ -57,6 +59,29 @@ struct SettingsView: View {
                             .foregroundColor(.secondary)
                     }
                 }
+
+                Section {
+                    SecureField("Bearer token", text: $wolAgentToken)
+                        .textInputAutocapitalization(.never)
+                        .disableAutocorrection(true)
+                } header: {
+                    Text("Vereinsheim-WoL-Agent-Token")
+                } footer: {
+                    Text("Auf dem Pi selbst erzeugt (docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md im capulus-core-Repo, Abschnitt \"Wake-on-LAN für den Windows-PC\") — auslesen mit: ssh pela@vereinsheim-alarmmonitor sudo cat /etc/banana-pi-wol-agent/token")
+                }
+
+                Section {
+                    Button("In Keychain speichern") { saveWolAgentToken() }
+                        .disabled(wolAgentToken.isEmpty)
+                    Button("Gespeichertes Token entfernen", role: .destructive) { removeWolAgentToken() }
+                }
+
+                if let wolAgentStatusMessage {
+                    Section {
+                        Text(wolAgentStatusMessage)
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
             .navigationTitle("Einstellungen")
             .toolbar {
@@ -70,6 +95,9 @@ struct SettingsView: View {
                 }
                 if (try? KeychainService.shared.getTankerkoenigAPIKey()) != nil {
                     tankerkoenigStatusMessage = "Es ist bereits ein Key gespeichert."
+                }
+                if (try? KeychainService.shared.getWolAgentToken()) != nil {
+                    wolAgentStatusMessage = "Es ist bereits ein Token gespeichert."
                 }
             }
         }
@@ -103,5 +131,20 @@ struct SettingsView: View {
     private func removeTankerkoenigKey() {
         KeychainService.shared.deleteTankerkoenigAPIKey()
         tankerkoenigStatusMessage = "Key entfernt."
+    }
+
+    private func saveWolAgentToken() {
+        do {
+            try KeychainService.shared.saveWolAgentToken(wolAgentToken)
+            wolAgentStatusMessage = "Token gespeichert."
+            wolAgentToken = ""
+        } catch {
+            wolAgentStatusMessage = "Speichern fehlgeschlagen: \(error.localizedDescription)"
+        }
+    }
+
+    private func removeWolAgentToken() {
+        KeychainService.shared.deleteWolAgentToken()
+        wolAgentStatusMessage = "Token entfernt."
     }
 }

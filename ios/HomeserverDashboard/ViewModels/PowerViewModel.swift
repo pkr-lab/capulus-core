@@ -17,7 +17,12 @@ final class PowerViewModel: ObservableObject {
     @Published var actionError: String?
     @Published var lastActionSucceeded: PowerTarget?
 
+    @Published var pendingRemoteWol: RemoteWolTarget?
+    @Published var remoteWolError: String?
+    @Published var lastRemoteWolSucceeded: RemoteWolTarget?
+
     private let apiClient = HomeserverAPIClient()
+    private let wolAgentClient = RemoteWolAgentClient()
 
     private init() {}
 
@@ -71,5 +76,21 @@ final class PowerViewModel: ObservableObject {
         }
         pendingAction = nil
         await DashboardViewModel.shared.fetchDashboard()
+    }
+
+    /// Wakes a device at the vereinsheim-alarmmonitor site by relaying
+    /// through the Pi itself, bypassing carplay-api entirely (see
+    /// RemoteWolAgentClient.swift). No dashboard refresh afterward — this
+    /// target has no host entry in carplay-api's dashboard payload.
+    func wakeRemote(_ target: RemoteWolTarget) async {
+        pendingRemoteWol = target
+        remoteWolError = nil
+        do {
+            try await wolAgentClient.wake(target)
+            lastRemoteWolSucceeded = target
+        } catch {
+            remoteWolError = error.localizedDescription
+        }
+        pendingRemoteWol = nil
     }
 }

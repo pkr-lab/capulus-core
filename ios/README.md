@@ -47,8 +47,8 @@ ios/
     ├── ViewModels/
     │   ├── DashboardViewModel.swift  # 30s polling loop for GET /api/dashboard
     │   └── PowerViewModel.swift      # Brightness + wake/shutdown actions
-    ├── Models/                       # Codable, 1:1 with carplay-api's JSON
-    ├── Services/                     # API client, Keychain, connectivity
+    ├── Models/                       # Codable, mostly 1:1 with carplay-api's JSON (RemoteWolTarget is the one exception — talks to the Pi's own agent, not carplay-api)
+    ├── Services/                     # API clients, Keychain, connectivity
     ├── Utilities/
     │   ├── Theme.swift                # Design tokens ported from github.com/pkr-lab/EDV-Kretzer + GlassCard/SectionCard/ScreenBackground
     │   ├── ColorHelper.swift          # Status (alert level / service state / percentage) → color
@@ -100,6 +100,12 @@ see [`docs/3-apps-workloads/300d0-carplay-api.md`](../docs/3-apps-workloads/300d
 capulus-core. Run the app, tap the gear icon on any tab → paste the same
 token you sealed for the backend → **Save to Keychain**.
 
+For the "Windows-PC (Vereinsheim)" wake button on the Steuerung tab, a
+second, separate token is needed — see
+[`docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md`, "iOS-App"](../docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md#ios-app)
+in capulus-core for how to read it off the Pi. Same Settings screen,
+second token field.
+
 ### 3. Run
 
 ⌘R in Xcode, on a Simulator or a real device on the same network/Tailscale
@@ -110,8 +116,10 @@ tunnel as the homeserver.
 | Setting | Where | Default |
 |---|---|---|
 | API base URL | `Utilities/Constants.swift` → `apiBaseURL` | `https://carplay-api.homeserver` |
+| WoL agent base URL (vereinsheim-alarmmonitor) | `Constants.swift` → `wolAgentBaseURL` | `http://100.123.214.4:9102` (Tailscale IP) |
 | Refresh interval | `Constants.swift` → `refreshInterval` | 30s |
 | Bearer token | Settings screen (gear icon) → iOS Keychain | none until set |
+| WoL agent bearer token | Settings screen (gear icon) → iOS Keychain | none until set |
 
 Reachability requires Tailscale active on the device (or being on the LAN)
 — see `Services/TailscaleConnectivity.swift` for what this app can and
@@ -138,7 +146,13 @@ real request succeeded).
    confirmation code — **the same one used to log into ArgoCD** — checked
    server-side against `SHUTDOWN_CONFIRMATION_CODE`
    (`docs/3-apps-workloads/300d0-carplay-api.md`). Wrong or missing code = request rejected,
-   nothing happens.
+   nothing happens. A fourth card wakes the Windows PC at the
+   vereinsheim-alarmmonitor site — no online status (that site has no
+   dashboard entry) and no confirmation, since it's WoL-only. This one
+   bypasses carplay-api entirely and talks straight to a small agent
+   running on the Pi itself, over Tailscale — see
+   `docs/4-planung/40020-vereinsheim-wol-router-vpn.md` in capulus-core
+   for why.
 
 ## Deviations from the original file list / spec
 
