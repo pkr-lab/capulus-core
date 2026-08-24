@@ -8,3 +8,12 @@ hostname: vereinsheim-alarmmonitor
 # Cluster" — nur fuer diesen Host. Wert liegt verschluesselt in
 # vault.yml, hier nur die Referenz.
 banana_pi_kiosk_fallback_url: "{{ vault_vereinsheim_alarmmonitor_fallback_url }}"
+
+# Geraete im lokalen Standort-LAN, die dieser Pi per Wake-on-LAN wecken kann
+# (siehe ansible/roles/banana_pi_kiosk/defaults/main.yml und
+# docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md, "Wake-on-LAN
+# fuer den Windows-PC"). CHANGE-ME durch die echte MAC-Adresse der
+# LAN-NIC des PCs ersetzen (z.B. `getmac` in einer Eingabeaufforderung
+# unter Windows, oder ipconfig /all).
+banana_pi_kiosk_wol_devices:
+  windows-pc: "CHANGE-ME"

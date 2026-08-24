@@ -13,6 +13,17 @@ enum Constants {
     /// your ingress host differs (see README "Configuration").
     static let apiBaseURL = URL(string: "http://carplay-api.prod.homeserver")!
 
+    /// Base URL of `banana-pi-wol-agent`, running directly on
+    /// vereinsheim-alarmmonitor (capulus-core's `banana_pi_kiosk` role) —
+    /// NOT proxied through carplay-api, see RemoteWolAgentClient.swift.
+    /// Deliberately a raw Tailscale IP, not a *.homeserver hostname: this
+    /// device is Tailscale-only and unreachable from the cluster (see
+    /// docs/4-planung/40020-vereinsheim-wol-router-vpn.md in
+    /// capulus-core). Unlike apiBaseURL, this needs NO
+    /// NSAppTransportSecurity exception in project.yml — ATS only
+    /// applies to domain names, never to numeric IP literals.
+    static let wolAgentBaseURL = URL(string: "http://100.123.214.4:9102")!
+
     static let refreshInterval: TimeInterval = 30
 
     static let requestTimeout: TimeInterval = 10
@@ -26,6 +37,7 @@ enum Constants {
         static let service = "com.yourname.homeserver-dashboard"
         static let tokenAccount = "carplay-api-bearer-token"
         static let tankerkoenigAPIKeyAccount = "tankerkoenig-api-key"
+        static let wolAgentTokenAccount = "vereinsheim-wol-agent-bearer-token"
     }
 
     /// Same location Glance's two Wetter-Widgets use (see
