@@ -86,6 +86,14 @@ env:
   # Registrierung.
   INVITATIONS_ALLOWED: "true"
   TZ: Europe/Berlin
+  # SMTP für Passwort-Reset- und Organisations-Einladungsmails (netcup-
+  # Postfach). SMTP_PASSWORD kommt separat aus dem SealedSecret unten.
+  SMTP_HOST: mxe9f8.netcup.net
+  SMTP_PORT: "465"
+  SMTP_SECURITY: force_tls
+  SMTP_FROM: info@edv-kretzer.de
+  SMTP_FROM_NAME: Vaultwarden
+  SMTP_USERNAME: info@edv-kretzer.de
 
 # Admin-Token für die /admin-Oberfläche, aus dem SealedSecret in
 # templates/sealedsecret.yaml. Siehe docs/3-apps-workloads/300a0-vaultwarden.md für den
@@ -100,6 +108,14 @@ adminSecret:
   #         --controller-namespace sealed-secrets \
   #         --controller-name sealed-secrets-controller --from-file=/dev/stdin
   encryptedAdminToken: "AgCtSQDVjhk8x1al1q+huzOBvm8N39BvK8nU+awOd/MTDn2/37KKK+vAjWH9gLScCgsalGigAAL7wXXdPAqm5HpniDf1mPoKXVY2NyJ7ZJnmfpvnUICPofBZaifE6NTZZiOo7WKY/uKM74b2CkxP61lg4y+icaDObyd61rO6qhQdddxR7iBbkj2I+6kLzb3mCBqq/mNmBYvCTZr2HzYtvasDwLyufgC0ZquqjP17HDpzxcjGAUtEzSOydCs/D30WJZW882hoQlkGQJDKLTbCEv66Xw+sLOchxccBtkzlSuuf+Kp0b5qfmJLzoZKzS63hZpMv2V2Hwtbd9MKXEBsAGs6agI83xzwRfmhjeh48OU8fpWpD1KbdNNtMiNrYH9N8HOjfkJLnqoYrnQRRcJfepNVfYzDVPK0uckUMd9MfWr0WksXrQ4Qm/TyN9RBagWjC+xWeYug9o0h+QWWJzqKdAiYLwaeBVv8kJ9YIe6vzLqIgqr6pXrskyXVSUYHGfjsKZ2KjV5vkp6yBRhV7BzPDGOHTx4fI5oHE/8UZoD6VcDlBS2J0BEWHf1YhkjacVuf1f3mPg48CBeNIVy0aU1mUrHNO8OwFpllatx7WJ5fdv7EQ4zg2e/eMf+cAXkDGAjcGsi56PN3ExZEZs3t6O9VMLmRGJcmCyNLlEisPII+umw17Qayh3+aQdjoHrZg5OPJA2JwInegxbTEtUr5gOl3YqHdr7Nv2nE6LuCUl8ayniCjYN/rlwap2qJ4IQT3l+kOv6kbhxfJheSXUmPXAXU8YWjqY0N6tkbRmq34OlZEE0vH6av4OVO21H+80BaOtW4e0BKZ4vVX45YzzCwkuYwguFzHk7xUuAN1n"
+
+# SMTP-Passwort für das netcup-Postfach (info@edv-kretzer.de), aus dem
+# SealedSecret in templates/sealedsecret.yaml. Gleicher kubeseal-Workflow
+# wie beim adminSecret oben, siehe docs/3-apps-workloads/300a0-vaultwarden.md.
+smtpSecret:
+  enabled: true
+  secretName: vaultwarden-smtp
+  encryptedSmtpPassword: "AgCHdYxiDtbqChZs7mn1y5W8N/6UBebVEj+MMHm+05MX6PUmd8lc0Tsw+5FE2miaWMsfKddhq6Rssk7Rma7cLQ4bAt2XgLtZ4rKAGSOUqLEG8XGoVnwvxs3I61S1x6Ot5OtjGpEnjQKbYML4GhlOXb2GXgxP2rv95sGfl3qotxRu6MiI/8iIMy6lM3Kf5PyDvA4oOzjq08LUtmuzllI1TNVmrCAOHNrd8gb+dXDFOdCvPIAHI9+8b/g2Fe2XufNCcspBrVWVrPryxEtfX61K44YaJ2L8QjFy7N83UvbZmTDDzPir1OAr0aanT804cUUBWxx4rwWAegrEe/8LuEf8bFZ2gMz9JeOEevwEN9Aic8qCZ/49Fd75gZeor4Qc9Tb+UfWBCWlEAsrH2kg9im5xMuCeISGOnemwIq+l4ZTfGZMgF5BeLVTF45I9LXUKLed6omzemH1txQqspwtMdGjgEWqEsjR+ETkBrwiEuXYhdaRhbUiEoFbjnCL3RyGDBZiBYubrMxZNbvlFBtfgaN9S0MAp0q1mZD57ppPegD5cTK7+VeFfk3phbcXM/tapHIhd65s0y5a/nhSyaxM07XHxjsNhTvNzHR8UA5ZR6rzzrvQArW0WHFNPyoSh0MG3XAEhaPvfvP7I+k+tH/GFOGy4rZTlM1Vljbh6ABcL9shWeUzb72Ck6fBSh0BluRlR17v5lYZXKhcO6+9yt0ygZKVwUVN5eB0ALw=="
 
 resources:
   requests:
