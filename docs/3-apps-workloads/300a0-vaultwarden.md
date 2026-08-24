@@ -163,9 +163,61 @@ aber nur die `pke-lab.de`-Domain ist von unterwegs erreichbar.
 
 Unter `https://vault.pke-lab.de/admin` (oder intern
 `https://vault.homeserver/admin`) mit dem Klartext-Passwort aus Schritt 1.1
-einloggen. Dort lassen sich u. a. Nutzer verwalten, Diagnosen einsehen und
-SMTP für E-Mail-Versand (Passwort-Reset, Einladungen) konfigurieren, falls
-später gewünscht.
+einloggen. Dort lassen sich u. a. Nutzer verwalten und Diagnosen einsehen.
+SMTP für E-Mail-Versand (Passwort-Reset, Organisations-Einladungen) ist
+seit dem netcup-Postfach-Setup fest in `values.yaml` hinterlegt (siehe
+Abschnitt 4a) und muss dort **nicht** zusätzlich in der `/admin`-UI
+gepflegt werden — ein dort manuell gesetzter SMTP-Wert würde ohnehin bei
+jedem Pod-Neustart wieder auf den Env-Var-Wert zurückfallen.
+
+---
+
+## 4a. SMTP-Einladungsmails
+
+Ohne SMTP-Konfiguration erzeugt Vaultwarden zwar einen Einladungs-Token,
+verschickt aber **keine** E-Mail — das ist Standardverhalten von
+Vaultwarden ohne `SMTP_HOST`. Konfiguriert ist das netcup-Postfach
+`info@edv-kretzer.de`:
+
+```yaml
+env:
+  SMTP_HOST: mxe9f8.netcup.net
+  SMTP_PORT: "465"
+  SMTP_SECURITY: force_tls      # implizites TLS auf Port 465 (nicht STARTTLS)
+  SMTP_FROM: info@edv-kretzer.de
+  SMTP_FROM_NAME: Vaultwarden
+  SMTP_USERNAME: info@edv-kretzer.de
+
+smtpSecret:
+  enabled: true
+  secretName: vaultwarden-smtp
+  encryptedSmtpPassword: "AgB...langes-base64..."
+```
+
+`SMTP_PASSWORD` kommt aus dem `vaultwarden-smtp`-SealedSecret
+(`templates/sealedsecret.yaml`, Key `smtp-password`), analog zum
+Admin-Token — gleicher `kubeseal`-Workflow wie in Schritt 1.2, nur mit
+Namen `vaultwarden-smtp` und Postfach-Klartext-Passwort statt Argon2-Hash:
+
+```bash
+echo -n '<netcup-postfach-passwort>' \
+  | kubeseal --raw \
+      --namespace vaultwarden \
+      --name vaultwarden-smtp \
+      --controller-namespace sealed-secrets \
+      --controller-name sealed-secrets-controller \
+      --from-file=/dev/stdin
+```
+
+Bei Postfach-Passwort-Rotation: neuen Ciphertext erzeugen,
+`encryptedSmtpPassword` ersetzen, committen + pushen. Das alte
+`vaultwarden-smtp`-Secret im Cluster löschen, falls ArgoCD es nicht
+automatisch prunt.
+
+**Verifizieren:** Eine Organisations-Einladung im Web-Vault verschicken
+und `kubectl -n vaultwarden logs deploy/vaultwarden | grep -i smtp`
+prüfen — bei falschem Port/Security-Kombination (z. B. `starttls` auf
+Port 465) schlägt der Verbindungsaufbau fehl und landet dort als Fehler.
 
 ---
 
@@ -176,7 +228,10 @@ später gewünscht.
 | `env.DOMAIN` | Öffentliche Basis-URL (Links, WebAuthn-Origin-Check) | `https://vault.pke-lab.de` |
 | `env.SIGNUPS_ALLOWED` | Neue Registrierungen erlauben | `true` (nach Account-Anlage auf `false` setzen) |
 | `env.WEBSOCKET_ENABLED` | Live-Sync zwischen Clients | `true` |
+| `env.SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURITY` | Mailserver für Einladungs-/Reset-Mails | `mxe9f8.netcup.net` / `465` / `force_tls` |
+| `env.SMTP_FROM` / `SMTP_USERNAME` | Absenderadresse = Postfach-Login | `info@edv-kretzer.de` |
 | `adminSecret.encryptedAdminToken` | Versiegelter Argon2-Hash für `/admin` | — (Schritt 1) |
+| `smtpSecret.encryptedSmtpPassword` | Versiegeltes netcup-Postfach-Passwort | — (Abschnitt 4a) |
 | `persistence.size` | Datenspeicher (SQLite + Anhänge + Icon-Cache) | `2Gi` |
 
 ---
@@ -272,3 +327,4 @@ Pfad wird nicht automatisiert.
 | Browser-Erweiterung/App kann sich nicht verbinden | `env.DOMAIN` muss exakt zur benutzten Server-URL passen (Schema + Host), sonst schlägt der WebAuthn-Origin-Check fehl |
 | Kein Live-Sync zwischen Geräten | `env.WEBSOCKET_ENABLED` prüfen; Traefik/Cloudflare müssen Websocket-Upgrades durchreichen (Standard bei beiden, kein Extra-Konfig nötig) |
 | `/admin` liefert 404/Fehler trotz korrektem Token | `ADMIN_TOKEN` env im Pod prüfen (`kubectl -n vaultwarden exec deploy/vaultwarden -- env \| grep ADMIN_TOKEN`) — muss aus dem Secret injiziert worden sein |
+| Keine Einladungs-/Reset-Mail kommt an | `kubectl -n vaultwarden logs deploy/vaultwarden \| grep -i smtp` prüfen — häufigste Ursache: falsche `SMTP_SECURITY`/`SMTP_PORT`-Kombination (Port 465 braucht `force_tls`, Port 587 braucht `starttls`) oder `vaultwarden-smtp`-Secret fehlt (siehe Abschnitt 4a) |
