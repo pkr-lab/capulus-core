@@ -46,6 +46,13 @@ spec:
                   name: {{ .Values.adminSecret.secretName }}
                   key: admin-token
             {{- end }}
+            {{- if .Values.smtpSecret.enabled }}
+            - name: SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.smtpSecret.secretName }}
+                  key: smtp-password
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /alive
