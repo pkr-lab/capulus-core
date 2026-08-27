@@ -50,7 +50,20 @@ struct PowerView: View {
                             onShutdown: { showingHomeserverWarning = true }
                         )
 
+                        RemoteWolCard(
+                            target: .windowsPC,
+                            isBusy: powerViewModel.pendingRemoteWol == .windowsPC,
+                            lastSucceeded: powerViewModel.lastRemoteWolSucceeded == .windowsPC,
+                            onWake: { Task { await powerViewModel.wakeRemote(.windowsPC) } }
+                        )
+
                         if let error = powerViewModel.actionError {
+                            Text(error)
+                                .font(.system(size: 13))
+                                .foregroundStyle(Theme.statusBad)
+                        }
+
+                        if let error = powerViewModel.remoteWolError {
                             Text(error)
                                 .font(.system(size: 13))
                                 .foregroundStyle(Theme.statusBad)
@@ -254,6 +267,48 @@ private struct HomeserverPowerCard: View {
                 }
                 .buttonStyle(PowerButtonStyle(kind: .destructive))
                 .disabled(isBusy)
+            }
+        }
+    }
+}
+
+/// Wakes a device at the vereinsheim-alarmmonitor site, relayed through
+/// the Pi itself (banana-pi-wol-agent) — see RemoteWolAgentClient.swift.
+/// No online/offline dot: unlike worker-0/worker-1/Homeserver, this
+/// target has no host entry in carplay-api's dashboard, so there's no
+/// status to show beyond the outcome of the last wake attempt. WoL-only,
+/// no shutdown — capulus-core has no remote shutdown path for it either.
+private struct RemoteWolCard: View {
+    let target: RemoteWolTarget
+    let isBusy: Bool
+    let lastSucceeded: Bool
+    let onWake: () -> Void
+
+    var body: some View {
+        SectionCard(title: target.displayName, systemImage: "wifi.router") {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Kein Online-Status verfügbar — externer Standort ohne eigenes Monitoring.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.textMuted)
+
+                if lastSucceeded {
+                    Text("Magic Packet gesendet.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.statusGood)
+                }
+
+                HStack(spacing: 12) {
+                    Button(action: onWake) {
+                        Label("Aufwecken", systemImage: "bolt.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(PowerButtonStyle(kind: .primary))
+                    .disabled(isBusy)
+
+                    if isBusy {
+                        ProgressView().tint(Theme.textPrimary)
+                    }
+                }
             }
         }
     }

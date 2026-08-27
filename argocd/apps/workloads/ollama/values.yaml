@@ -52,13 +52,23 @@ persistence:
 # hinausgekommen. Andere Pods auf worker-0 sind nur kleine DaemonSets
 # (~150m CPU / ~256Mi Requests zusammen), Ollama bekommt also den
 # Grossteil der Node fuer sich.
+#
+# memory NACHTRAEGLICH auf 6Gi/7Gi angehoben (27.08.2026, erster echter
+# End-to-End-Testlauf des n8n-Workflows): mit dem alten Limit (6500Mi)
+# lehnte Ollama den generate-Call fuer llama3.1:8b IMMER mit 500 "model
+# requires more system memory (6.1 GiB) than is available (6.0 GiB)" ab
+# -- das Modell selbst braucht schon mehr als das damalige Limit, unabhaengig
+# von der Node-Kapazitaet. 7Gi Limit passt noch unter die ~7.3Gi
+# Node-Allocatable (siehe oben), bleibt aber knapp -- ein groesseres/
+# weniger stark quantisiertes Modell braeuchte mehr RAM, als dieser Node
+# hergibt (Hardware-Grenze, kein Config-Wert).
 resources:
   requests:
     cpu: "3"
-    memory: 5Gi
+    memory: 6Gi
   limits:
     cpu: "4"
-    memory: 6500Mi
+    memory: 7Gi
 
 nodeSelector:
   kubernetes.io/hostname: worker-0

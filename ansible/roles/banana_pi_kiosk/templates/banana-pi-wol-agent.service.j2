@@ -1,0 +1,15 @@
+# Managed by Ansible (banana_pi_kiosk role) — do not edit manually.
+[Unit]
+Description=banana-pi-wol-agent - HTTP wrapper around banana-pi-wol.sh for the Homeserver Dashboard app (reachable via Tailscale only)
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/banana-pi-wol-agent/config.env
+ExecStart=/usr/bin/python3 /usr/local/bin/banana-pi-wol-agent.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

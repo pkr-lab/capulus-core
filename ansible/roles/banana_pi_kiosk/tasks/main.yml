@@ -206,6 +206,126 @@
     mode: "0755"
   when: banana_pi_kiosk_enabled | bool
 
+# ---- Wake-on-LAN-Relay (andere Geraete im Standort-LAN wecken) ---------
+# Bewusst kein Timer/Dienst -- nur ein Skript, das bei Bedarf per SSH
+# ausgefuehrt wird (gleiches Prinzip wie das Screenshot-Skript oben), siehe
+# docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md, "Wake-on-LAN
+# fuer den Windows-PC".
+- name: wakeonlan installieren
+  ansible.builtin.apt:
+    name: wakeonlan
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: banana_pi_kiosk_enabled | bool and banana_pi_kiosk_wol_enabled | bool
+
+- name: Wake-on-LAN-Skript deployen
+  ansible.builtin.template:
+    src: banana-pi-wol.sh.j2
+    dest: /usr/local/bin/banana-pi-wol.sh
+    owner: root
+    group: root
+    mode: "0755"
+  when: banana_pi_kiosk_enabled | bool and banana_pi_kiosk_wol_enabled | bool
+
+# ---- Wake-on-LAN-HTTP-Agent (direkter App-Zugriff über Tailscale) ------
+# Der Pi ist Tailscale-only (siehe Netzwerk-Abschnitt oben) -- carplay-api
+# (im Cluster) hat KEINEN Pfad zu Tailscale-Peers, kann diesen Endpunkt
+# also nicht aufrufen. Stattdessen spricht die iOS-App diesen Agenten
+# DIREKT über die Tailscale-IP des Pi an -- siehe
+# docs/4-planung/40020-vereinsheim-wol-router-vpn.md. Bindet bewusst auf
+# 0.0.0.0 (nicht nur tailscale0) und sichert stattdessen per Bearer-Token
+# ab, gleiches Modell wie power-agent auf dem Homeserver
+# (ansible/roles/power_agent). Kein UFW-Eintrag nötig: banana-pi-kiosks.yml
+# bindet die common-Rolle (die UFW konfiguriert) gar nicht ein.
+- name: Config-Verzeichnis für WoL-HTTP-Agent anlegen
+  ansible.builtin.file:
+    path: /etc/banana-pi-wol-agent
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  when: banana_pi_kiosk_enabled | bool and banana_pi_kiosk_wol_agent_enabled | bool
+
+- name: Bearer-Token für WoL-HTTP-Agent erzeugen (falls noch nicht vorhanden)
+  ansible.builtin.shell:
+    cmd: "umask 077 && openssl rand -hex 32 > {{ banana_pi_kiosk_wol_agent_token_path }}"
+    creates: "{{ banana_pi_kiosk_wol_agent_token_path }}"
+  when: banana_pi_kiosk_enabled | bool and banana_pi_kiosk_wol_agent_enabled | bool
+
+- name: Token-Datei-Rechte absichern
+  ansible.builtin.file:
+    path: "{{ banana_pi_kiosk_wol_agent_token_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  when: banana_pi_kiosk_enabled | bool and banana_pi_kiosk_wol_agent_enabled | bool
+
+- name: Erzeugtes WoL-Agent-Token einlesen
+  ansible.builtin.slurp:
+    src: "{{ banana_pi_kiosk_wol_agent_token_path }}"
+  register: banana_pi_kiosk_wol_agent_token_raw
+  when: banana_pi_kiosk_enabled | bool and banana_pi_kiosk_wol_agent_enabled | bool
+
+- name: WoL-HTTP-Agent-Skript deployen
+  ansible.builtin.copy:
+    src: banana-pi-wol-agent.py
+    dest: /usr/local/bin/banana-pi-wol-agent.py
+    owner: root
+    group: root
+    mode: "0755"
+  when: banana_pi_kiosk_enabled | bool and banana_pi_kiosk_wol_agent_enabled | bool
+  notify: Restart banana-pi wol agent
+
+- name: WoL-HTTP-Agent-Konfiguration templaten
+  ansible.builtin.template:
+    src: banana-pi-wol-agent.env.j2
+    dest: /etc/banana-pi-wol-agent/config.env
+    owner: root
+    group: root
+    mode: "0600"
+  when: banana_pi_kiosk_enabled | bool and banana_pi_kiosk_wol_agent_enabled | bool
+  vars:
+    banana_pi_kiosk_wol_agent_token: "{{ banana_pi_kiosk_wol_agent_token_raw.content | b64decode | trim }}"
+  notify: Restart banana-pi wol agent
+
+- name: WoL-HTTP-Agent-systemd-Unit deployen
+  ansible.builtin.template:
+    src: banana-pi-wol-agent.service.j2
+    dest: /etc/systemd/system/banana-pi-wol-agent.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: banana_pi_kiosk_enabled | bool and banana_pi_kiosk_wol_agent_enabled | bool
+  notify: Restart banana-pi wol agent
+
+- name: WoL-HTTP-Agent aktivieren und starten
+  ansible.builtin.systemd:
+    name: banana-pi-wol-agent
+    daemon_reload: true
+    enabled: true
+    state: started
+  when: banana_pi_kiosk_enabled | bool and banana_pi_kiosk_wol_agent_enabled | bool
+
+- name: WoL-HTTP-Agent deaktivieren, falls banana_pi_kiosk_wol_agent_enabled false
+  ansible.builtin.systemd:
+    name: banana-pi-wol-agent
+    enabled: false
+    state: stopped
+  when: not (banana_pi_kiosk_wol_agent_enabled | bool) or not (banana_pi_kiosk_enabled | bool)
+  failed_when: false
+
+- name: Hinweis zum WoL-Agent-Token ausgeben
+  ansible.builtin.debug:
+    msg: >-
+      WoL-Agent-Token liegt in {{ banana_pi_kiosk_wol_agent_token_path }} auf
+      {{ inventory_hostname }}. Falls dies eine Ersteinrichtung oder eine
+      Token-Rotation war: Wert per
+      "ssh {{ ansible_user }}@{{ inventory_hostname }} sudo cat {{ banana_pi_kiosk_wol_agent_token_path }}"
+      auslesen und in der iOS-App unter Einstellungen einfügen -- siehe
+      docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md.
+  when: banana_pi_kiosk_enabled | bool and banana_pi_kiosk_wol_agent_enabled | bool
+
 # ---- Heartbeat (zentraler ntfy-Ausfall-Alarm in alamos-apager) ---------
 - name: Heartbeat-Skript deployen
   ansible.builtin.copy:
