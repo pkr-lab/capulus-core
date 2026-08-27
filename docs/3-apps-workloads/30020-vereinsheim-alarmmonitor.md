@@ -31,7 +31,9 @@ die es bei den Raspberry Pis bewusst nicht gibt:
 5. [Server-Fallback](#server-fallback)
 6. [Grafana (Push statt Pull)](#grafana-push-statt-pull)
 7. [Zammad-Ticket via n8n](#zammad-ticket-via-n8n)
-8. [Fehlerbehebung](#fehlerbehebung)
+8. [Sichtprüfung ohne physischen Zugriff](#sichtprüfung-ohne-physischen-zugriff)
+9. [Wake-on-LAN für den Windows-PC](#wake-on-lan-für-den-windows-pc)
+10. [Fehlerbehebung](#fehlerbehebung)
 
 ---
 
@@ -315,6 +317,65 @@ scp pela@vereinsheim-alarmmonitor:/home/pela/kiosk-screenshot.png .
 Nutzt `scrot` gegen `DISPLAY=:0` (die X-Session des Kiosk-Users) und
 überschreibt bei jedem Aufruf dieselbe Datei.
 
+## Wake-on-LAN für den Windows-PC
+
+Ein Windows-PC hängt per LAN am selben Router/Repeater wie dieser Pi.
+Semaphore/n8n können ihn nicht direkt aufwecken (kein Pfad zu
+Tailscale-Peers, siehe oben) — stattdessen verschickt der Pi selbst das
+Magic Packet lokal ins Standort-LAN, ausgelöst manuell per SSH von jeder
+Tailnet-Maschine, analog zum Screenshot-Skript unten:
+
+```bash
+ssh pela@vereinsheim-alarmmonitor banana-pi-wol.sh windows-pc
+```
+
+MAC-Adressen-Tabelle: `ansible/host_vars/vereinsheim-alarmmonitor/vars.yml`
+(`banana_pi_kiosk_wol_devices`, Alias → MAC). Rollen-Implementierung:
+`ansible/roles/banana_pi_kiosk/templates/banana-pi-wol.sh.j2` +
+`ansible/roles/banana_pi_kiosk/tasks/main.yml` (Kill-switch
+`banana_pi_kiosk_wol_enabled`).
+
+**Voraussetzungen (einmalig, nicht per Ansible automatisierbar):**
+
+- Auf dem PC: WoL im BIOS/UEFI aktivieren, NIC-Eigenschaften → "Wake on
+  Magic Packet" aktivieren, **Windows-Schnellstart deaktivieren** (sonst
+  wird beim "Herunterfahren" nur hybrid-hibernated, NIC bleibt nicht
+  empfangsbereit).
+- Pi und PC müssen im selben L2-Segment/Subnetz hängen (`ip a` auf dem Pi
+  vs. IP des PCs vergleichen) — sonst kommt der Broadcast nicht an.
+- Client-/AP-Isolation im Router-/Repeater-WebUI muss deaktiviert sein,
+  sonst wird jede Geräte-zu-Geräte-Kommunikation (auch der Broadcast)
+  geräuschlos verworfen, obwohl beide im selben Netz hängen.
+
+Architektur-Hintergrund und der geplante Router-VPN-Fallback (für den
+Fall, dass der Pi selbst nicht erreichbar ist) stehen in
+[docs/4-planung/40020-vereinsheim-wol-router-vpn.md](../4-planung/40020-vereinsheim-wol-router-vpn.md).
+
+### iOS-App
+
+Die "Homeserver Dashboard"-App hat im Tab "Steuerung" einen eigenen
+"Aufwecken"-Button für den Windows-PC. Anders als bei worker-0/worker-1
+läuft das **nicht** über carplay-api (der Cluster-Pod hat keinen Pfad zu
+Tailscale-Peers) — die App spricht stattdessen einen kleinen HTTP-Agenten
+(`banana-pi-wol-agent`, Teil der `banana_pi_kiosk`-Rolle) direkt über die
+Tailscale-IP des Pi an, Port 9102, Bearer-Token-gesichert. Der Agent ruft
+intern nur `banana-pi-wol.sh` auf — keine doppelte MAC-Verwaltung.
+
+Token für die App-Einstellungen auslesen:
+
+```bash
+ssh pela@vereinsheim-alarmmonitor sudo cat /etc/banana-pi-wol-agent/token
+```
+
+In der App: Zahnrad-Symbol → "Vereinsheim-WoL-Agent-Token" → einfügen →
+"In Keychain speichern".
+
+Bewusster Kompromiss mit dem sonst geltenden Prinzip "kein dauerhaft
+offener Port" auf diesem Pi — Details und Begründung in
+[docs/4-planung/40020-vereinsheim-wol-router-vpn.md](../4-planung/40020-vereinsheim-wol-router-vpn.md).
+Kill-switch: `banana_pi_kiosk_wol_agent_enabled: false` (behält nur den
+SSH-Weg).
+
 ## Fehlerbehebung
 
 | Symptom | Check |
@@ -329,6 +390,9 @@ Nutzt `scrot` gegen `DISPLAY=:0` (die X-Session des Kiosk-Users) und
 | Kein Zammad-Ticket trotz 10+ Minuten Ausfall | `kubectl -n monitoring get vmrule banana-pi-availability` (Alert "firing"?), Alertmanager-Route korrekt? n8n-Workflow aktiv? |
 | Ticket erstellt, aber keine Mail | Zammad-Agent-Mitgliedschaft/Benachrichtigung prüfen (siehe oben), ausgehender E-Mail-Kanal in Zammad konfiguriert? |
 | n8n-Workflow schlägt am Zammad-Node fehl | Header-Auth-Credential zugewiesen? Token gültig/`ticket.agent`-Berechtigung? |
+| `banana-pi-wol.sh` läuft durch, PC wacht trotzdem nicht auf | WoL im BIOS/NIC des PCs aktiv? Windows-Schnellstart deaktiviert? Client-/AP-Isolation im Router/Repeater aktiv? Pi und PC wirklich im selben Subnetz (`ip a`)? |
+| iOS-App: "Aufwecken" bei Windows-PC schlägt fehl (401) | Token in der App aktuell? Neu auslesen: `ssh pela@vereinsheim-alarmmonitor sudo cat /etc/banana-pi-wol-agent/token` |
+| iOS-App: "Aufwecken" bei Windows-PC ohne Antwort/Timeout | Tailscale auf dem Handy aktiv? `systemctl status banana-pi-wol-agent` auf dem Pi — läuft der Dienst? `curl -X POST http://100.123.214.4:9102/wol -H "Authorization: Bearer <token>" -d '{"target":"windows-pc"}'` von einer Tailnet-Maschine zum Gegenchecken |
 
 ## Relevante Links
 
@@ -340,5 +404,6 @@ Nutzt `scrot` gegen `DISPLAY=:0` (die X-Session des Kiosk-Users) und
 - [docs/f-cicd-automatisierung/f0040-github-release-watcher.md](../f-cicd-automatisierung/f0040-github-release-watcher.md) — Zammad-API-Ticket-Muster
 - [docs/3-apps-workloads/30070-n8n.md](30070-n8n.md) — n8n-Setup
 - [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md) — VMStaticScrape-Muster (ugreen-nas, Pull-Vergleichsfall)
+- [docs/4-planung/40020-vereinsheim-wol-router-vpn.md](../4-planung/40020-vereinsheim-wol-router-vpn.md) — Architektur-Plan Wake-on-LAN + Router-VPN-Fallback
 - [Armbian — Banana Pi M2 Ultra](https://armbian.com/boards/bananapim2ultra)
 - [VictoriaMetrics vmagent](https://docs.victoriametrics.com/victoriametrics/vmagent/)
