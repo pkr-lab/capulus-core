@@ -211,7 +211,7 @@ kubectl -n ollama delete networkpolicy ollama-temp-allow-egress-internet
 | `replicaCount` | Ruhezustand-Replicas — wird von n8n überschrieben, siehe oben | `0` |
 | `image.tag` | Ollama-Image-Version | `0.3.14` |
 | `nodeSelector` | Pinnt den Pod auf `worker-0` (Lenovo M90q) | `kubernetes.io/hostname: worker-0` |
-| `resources` | CPU/RAM für ein 7-8B-Q4-Modell — vor Rollout gegen echte Node-Kapazität prüfen | siehe `values.yaml` |
+| `resources` | CPU/RAM für ein 7-8B-Q4-Modell — vor Rollout gegen echte Node-Kapazität prüfen. `memory` am 27.08.2026 nach dem ersten echten End-to-End-Testlauf von 5Gi/6500Mi auf 6Gi/7Gi angehoben, da Ollama den `/api/generate`-Call für `llama3.1:8b` sonst mit `500 model requires more system memory (6.1 GiB) than is available` ablehnt — das Modell selbst braucht schon mehr als das alte Limit. 7Gi Limit passt noch knapp unter die ~7,3Gi Node-Allocatable von `worker-0`; ein größeres/weniger stark quantisiertes Modell würde mehr RAM brauchen, als dieser Node hergibt (Hardware-Grenze) | siehe `values.yaml` |
 | `persistence.size` | Modell-Storage (NFS, `nas`-StorageClass) | `20Gi` |
 | `n8nServiceAccountName` / `n8nNamespace` | Ziel-ServiceAccount für das Scale-RBAC | `n8n` / `n8n` |
 
@@ -229,3 +229,5 @@ kubectl -n ollama delete networkpolicy ollama-temp-allow-egress-internet
 | `ollama pull` schlägt fehl (kein Internet) | Temporäre Egress-Ausnahme aus „Netzwerk-Isolation“ vergessen? Muss vor dem Pull gesetzt UND danach wieder gelöscht werden |
 | n8n bekommt Timeout bei `/api/generate`, obwohl Ollama laut `kubectl get pods` läuft | `networkpolicy-allow-n8n-ingress.yaml` korrekt deployt? Label `app.kubernetes.io/name: n8n` bei den n8n-Pods vorhanden (`kubectl -n n8n get pods --show-labels`)? |
 | Verifikationstest (Schritt 5 oben) zeigt, dass Ollama trotz Default-Deny von überall erreichbar bleibt | NetworkPolicy wird auf diesem Cluster nicht durchgesetzt (k3s-NetworkPolicy-Controller inaktiv?) — kein Workaround hier, sondern als Befund zurückmelden statt selbstständig CNI zu wechseln |
+| `/api/generate` liefert `500 model requires more system memory (X GiB) than is available (Y GiB)` | `resources.limits.memory` in `values.yaml` zu knapp für das geladene Modell — anheben (siehe Kommentar dort), aber gegen `kubectl describe node worker-0` → Allocatable prüfen; ist die Node-Kapazität selbst der Flaschenhals, hilft nur mehr RAM oder ein kleineres/staerker quantisiertes Modell |
+| Live-`kubectl patch`/`edit` auf dem `ollama`-Deployment wird nach Sekunden wieder zurückgesetzt | Erwartetes ArgoCD-`selfHeal`-Verhalten für JEDES Feld außer `/spec/replicas` (dafür existiert die `ignoreDifferences`-Ausnahme oben) — Änderungen an `resources`, `image` etc. gehören in `values.yaml`, nicht als Live-Patch |

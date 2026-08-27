@@ -45,6 +45,18 @@ final class KeychainService {
         delete(account: Constants.Keychain.tankerkoenigAPIKeyAccount)
     }
 
+    func saveWolAgentToken(_ token: String) throws {
+        try save(token, account: Constants.Keychain.wolAgentTokenAccount)
+    }
+
+    func getWolAgentToken() throws -> String {
+        try get(account: Constants.Keychain.wolAgentTokenAccount)
+    }
+
+    func deleteWolAgentToken() {
+        delete(account: Constants.Keychain.wolAgentTokenAccount)
+    }
+
     private func save(_ value: String, account: String) throws {
         let data = Data(value.utf8)
 

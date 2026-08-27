@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Managed by Ansible (banana_pi_kiosk role) — do not edit manually.
+#
+# Verschickt ein Wake-on-LAN-Magic-Packet lokal ins Standort-LAN. Bewusst
+# KEIN Timer/Dienst -- nur manuell per SSH ausfuehren, wenn ein Geraet am
+# selben Standort geweckt werden soll, siehe
+# docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md, "Wake-on-LAN
+# fuer den Windows-PC". Der Pi selbst ist per Tailscale erreichbar
+# (Semaphore/n8n haben KEINEN Pfad zu Tailscale-Peers), broadcastet das
+# Magic Packet aber lokal -- funktioniert nur, wenn Zielgeraet und Pi im
+# selben L2-Segment haengen (keine Client-/AP-Isolation im Router/Repeater).
+set -euo pipefail
+
+ALIAS="${1:?Usage: banana-pi-wol.sh <alias> (verfuegbar: {{ banana_pi_kiosk_wol_devices.keys() | join(', ') }})}"
+
+declare -A DEVICES=(
+{% for alias, mac in banana_pi_kiosk_wol_devices.items() %}
+  ["{{ alias }}"]="{{ mac }}"
+{% endfor %}
+)
+
+MAC="${DEVICES[$ALIAS]:-}"
+if [ -z "$MAC" ]; then
+  echo "Unbekannter Alias '${ALIAS}'. Verfuegbar: ${!DEVICES[*]}" >&2
+  exit 1
+fi
+
+echo "Sende Wake-on-LAN an '${ALIAS}' (${MAC})..."
+wakeonlan "$MAC"

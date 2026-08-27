@@ -20,3 +20,9 @@
     name: banana-pi-daily-reboot.timer
     daemon_reload: true
     state: restarted
+
+- name: Restart banana-pi wol agent
+  ansible.builtin.systemd:
+    name: banana-pi-wol-agent
+    daemon_reload: true
+    state: restarted
