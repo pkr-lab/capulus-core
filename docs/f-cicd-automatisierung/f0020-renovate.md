@@ -60,6 +60,15 @@ Renovate läuft als GitHub App, nicht als Workflow-Datei — die Config in
 3. Renovate erkennt `renovate.json` automatisch beim nächsten Lauf und öffnet
    den initialen „Configure Renovate"-PR sowie das Dependency-Dashboard-Issue.
 
+**Wichtige Falle bei Repos in einer Org:** Liegt das Repo unter einer GitHub-
+Org (hier `pkr-lab`) statt einem persönlichen Account, muss die App auf
+**Org-Ebene** installiert/autorisiert sein
+(`github.com/organizations/pkr-lab/settings/installations`). Eine App-
+Installation, die nur für den persönlichen Account bestand, wandert bei einem
+Repo-Transfer in eine Org **nicht** automatisch mit — Renovate verliert dann
+kommentarlos den Zugriff und öffnet einfach keine PRs mehr, ohne Fehlermeldung
+irgendwo im Repo selbst.
+
 ---
 
 ## Troubleshooting
@@ -68,4 +77,32 @@ Renovate läuft als GitHub App, nicht als Workflow-Datei — die Config in
 |---|---|
 | Kein PR trotz neuer Upstream-Version | Dependency-Dashboard-Issue prüfen — Update evtl. wegen Versions-Constraint zurückgehalten |
 | PR für `charts/*.tgz` oder `Chart.lock` erscheint doch | `packageRules`-Ausschluss in `renovate.json` prüfen, Pfad ggf. nicht getroffen |
-| Renovate reagiert gar nicht | GitHub-App-Installation prüfen (Schritt oben) — ohne installierte App liest niemand `renovate.json` |
+| Renovate reagiert **gar nicht** mehr (kein Dependency-Dashboard-Issue, keine PRs, obwohl `renovate.json` valide ist) | Meist ein App-Installations-Problem, kein Config-Problem — lokal geprüft: `renovate.json` ist gültiges JSON, alle `fileMatch`-Pfade (`argocd/apps/*/values.yaml`, `.../Chart.yaml`) existieren tatsächlich im Repo. Nächste Schritte: 1) [github.com/settings/installations](https://github.com/settings/installations) bzw. für Orgs `github.com/organizations/pkr-lab/settings/installations` öffnen und prüfen, ob die Renovate-App dort noch gelistet ist und Zugriff auf `capulus-core` hat. 2) Falls nicht (mehr) installiert oder Zugriff entzogen: unter „Einmalige Einrichtung" oben neu installieren. 3) Bis das geklärt ist, läuft der Fallback-Workflow unten unabhängig von der App. |
+
+---
+
+## Self-hosted Fallback (GitHub Actions)
+
+Falls die GitHub App (wieder) den Zugriff verliert, öffnet
+[`.github/workflows/renovate.yml`](../../.github/workflows/renovate.yml) die
+gleichen PRs unabhängig davon — über
+[`renovatebot/github-action`](https://github.com/renovatebot/github-action)
+mit einem PAT statt der App. Er nutzt dieselbe `renovate.json`, es gibt also
+keine zweite Config zu pflegen.
+
+**Einmalige Einrichtung:**
+
+1. Fine-grained Personal Access Token erstellen, gescoped **nur** auf
+   `pkr-lab/capulus-core`, mit Repository-Permissions: `Contents`,
+   `Pull requests`, `Issues`, `Workflows` je auf „Read and write".
+2. Token als Repo-Secret `RENOVATE_TOKEN` hinterlegen
+   (Settings → Secrets and variables → Actions → New repository secret).
+3. Fertig — der Workflow läuft danach automatisch montags 05:00 UTC (vor dem
+   `before 6am on monday`-Zeitplan in `renovate.json`, Europe/Berlin) und ist
+   zusätzlich per „Run workflow" manuell auslösbar.
+
+**Verhältnis zur App:** Beide Wege schreiben denselben `renovate.json`-Stand
+in dieselben PRs — es entsteht kein Konflikt, wenn irgendwann beide parallel
+laufen. Der Workflow ist als Fallback gedacht, nicht als Ersatz: Läuft die App
+wieder normal, kann `RENOVATE_TOKEN` einfach ungesetzt bleiben oder der
+Workflow deaktiviert werden.
