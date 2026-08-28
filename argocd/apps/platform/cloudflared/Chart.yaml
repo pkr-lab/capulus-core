@@ -7,7 +7,7 @@ description: |
   Portfreigabe am Router oder offene Ports in der UFW-Firewall.
 type: application
 version: 0.1.0
-appVersion: "2026.7.3"
+appVersion: "2026.8.2"
 keywords:
   - cloudflare
   - tunnel
