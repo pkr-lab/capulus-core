@@ -10,7 +10,7 @@ replicaCount: 0
 image:
   repository: ollama/ollama
   pullPolicy: IfNotPresent
-  tag: "0.3.14"
+  tag: "0.33.1"
 
 nameOverride: ""
 fullnameOverride: ""

@@ -4,7 +4,7 @@ name: mealie
 description: Recipe management and meal planning with URL import.
 type: application
 version: 0.1.0
-appVersion: "v3.22.0"
+appVersion: "v3.24.0"
 keywords:
   - mealie
   - recipes
