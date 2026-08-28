@@ -1,0 +1,41 @@
+name: Renovate (self-hosted fallback)
+
+# Fallback runner for Renovate, independent of the Renovate GitHub App.
+# The App-based setup (see docs/f-cicd-automatisierung/f0020-renovate.md)
+# silently stops opening PRs whenever its installation loses access to this
+# repo - most commonly after the repo moves between a personal account and
+# an org, since the App has to be (re-)installed at the new scope. This
+# workflow runs the *same* renovate.json via `renovatebot/github-action`
+# instead, using a PAT, so updates keep flowing even if the App breaks again.
+#
+# Setup: create a fine-grained PAT scoped to this repo only, with
+# Contents / Pull requests / Issues / Workflows set to Read and write, and
+# store it as the repo secret RENOVATE_TOKEN. Nothing else to configure -
+# renovate.json is reused as-is.
+on:
+  schedule:
+    - cron: "0 5 * * 1" # Monday 05:00 UTC, ahead of the Monday-before-6am-Berlin schedule in renovate.json
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Self-hosted Renovate
+        uses: renovatebot/github-action@v46.2.3
+        env:
+          RENOVATE_REPOSITORIES: pkr-lab/capulus-core
+          LOG_LEVEL: debug
+        with:
+          configurationFile: renovate.json
+          token: ${{ secrets.RENOVATE_TOKEN }}
