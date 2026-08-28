@@ -205,7 +205,8 @@ capulus-core/
 │   │   ├── f0000-argo-workflows.md          # Private CI/CD mit Argo Workflows + MinIO
 │   │   ├── f0020-renovate.md                # Automatische Update-PRs für Helm-Charts/Images
 │   │   ├── f0030-release-automation.md      # GitHub Release bei jedem Merge auf main
-│   │   └── f0040-github-release-watcher.md  # GitHub-Release → Zammad-E-Mail-Benachrichtigung
+│   │   ├── f0040-github-release-watcher.md  # GitHub-Release → Zammad-E-Mail-Benachrichtigung
+│   │   └── f0050-gitlab-mirror.md           # Vollspiegelung zu GitLab als Redundanz für GitHub-Ausfall
 │   ├── 1-benachrichtigungen/         # Benachrichtigungen
 │   │   ├── 10000-gotify.md                  # Push-Notifications via Gotify
 │   │   └── 10010-ntfy.md                    # iOS Push-Notifications via ntfy
@@ -240,7 +241,8 @@ capulus-core/
 ├── .releaserc.json                   # semantic-release-Konfiguration (siehe docs/f-cicd-automatisierung/f0030-release-automation.md)
 ├── .github/
 │   └── workflows/
-│       └── release.yml               # semantic-release bei jedem Push auf main
+│       ├── release.yml               # semantic-release bei jedem Push auf main
+│       └── mirror-gitlab.yml         # Vollspiegelung zu GitLab (siehe docs/f-cicd-automatisierung/f0050-gitlab-mirror.md)
 ├── ansible/
 │   ├── site.yml                      # Entry-Point
 │   ├── requirements.yml              # Galaxy-Collections
@@ -515,6 +517,7 @@ und Konventionen für neue Docs: **[docs/TEMPLATE.md](docs/TEMPLATE.md)**.
 | [Renovate](docs/f-cicd-automatisierung/f0020-renovate.md) | Automatische Update-PRs für Helm-Chart-Versionen und Image-Tags |
 | [Release-Automatisierung](docs/f-cicd-automatisierung/f0030-release-automation.md) | GitHub Release + Changelog bei jedem Merge auf `main` via semantic-release |
 | [GitHub Release Watcher](docs/f-cicd-automatisierung/f0040-github-release-watcher.md) | Neue GitHub-Releases erkennen und per Zammad-Ticket eine E-Mail-Benachrichtigung auslösen |
+| [GitLab-Mirror](docs/f-cicd-automatisierung/f0050-gitlab-mirror.md) | Vollspiegelung (alle Branches + Tags) zu GitLab als Redundanz für den Fall eines GitHub-Ausfalls |
 
 ### Benachrichtigungen (`1-benachrichtigungen/`)
 
