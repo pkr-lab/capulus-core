@@ -1,0 +1,38 @@
+name: Mirror to GitLab
+
+# Full mirror of this repo (all branches + all tags, incl. semantic-release
+# version tags) to a GitLab remote, purely for redundancy — see
+# docs/f-cicd-automatisierung/f0050-gitlab-mirror.md. GitLab is a passive
+# backup target: nothing is ever pushed *from* GitLab back here, and this
+# workflow force-overwrites the GitLab project's refs to match GitHub on
+# every run, so the GitLab side must stay untouched by hand.
+on:
+  push:
+    branches: [main]
+    tags: ["**"]
+  schedule:
+    - cron: "0 */6 * * *" # safety net in case a push-triggered run was missed
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mirror-gitlab
+  cancel-in-progress: true
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mirror GitHub -> GitLab
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLAB_REMOTE: ${{ secrets.GITLAB_MIRROR_REMOTE }} # e.g. gitlab.com/<group>/capulus-core.git or git.example.com/<group>/capulus-core.git
+          GITLAB_USER: ${{ secrets.GITLAB_MIRROR_USER }} # username matching the GitLab token below
+          GITLAB_TOKEN: ${{ secrets.GITLAB_MIRROR_TOKEN }} # GitLab project/personal access token, scope write_repository
+        run: |
+          set -euo pipefail
+          git clone --mirror "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" mirror.git
+          cd mirror.git
+          git push --mirror "https://${GITLAB_USER}:${GITLAB_TOKEN}@${GITLAB_REMOTE}"
