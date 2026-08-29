@@ -2,11 +2,11 @@
 replicaCount: 1
 
 image:
-  # Custom image with n8n-nodes-imap baked in, see ./image/Dockerfile. Über
-  # kaniko-build-push gebaut und gepusht (siehe argocd/apps/workloads/pacman/README.md
-  # fürs allgemeine Vorgehen) — vorher lokal per "k3s ctr images import" auf
-  # homeserver eingespielt (kein Registry-Push), das erzwang den
-  # nodeSelector unten. Mit Registry-Image entfällt die Node-Bindung.
+  # Custom image with n8n-nodes-imap baked in, see ./image/Dockerfile.
+  # Gebaut/gepusht über .github/workflows/build-images.yml bei jeder
+  # Änderung an image/Dockerfile (siehe argocd/apps/workloads/pacman/README.md,
+  # Abschnitt "Image bauen"). Tag manuell aus dem Workflow-Run-Summary
+  # übernehmen.
   repository: ghcr.io/pkr-lab/n8n-custom
   pullPolicy: IfNotPresent
   tag: "2.35.3-imap"
