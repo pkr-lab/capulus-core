@@ -7,8 +7,10 @@
 replicaCount: 1
 
 image:
-  # Über kaniko-build-push gebaut und gepusht, siehe README.md dieses
-  # Charts. Nach dem ersten Push hier Repository/Tag setzen.
+  # Gebaut/gepusht über .github/workflows/build-images.yml bei jeder
+  # Änderung an Dockerfile/src (siehe argocd/apps/workloads/pacman/README.md,
+  # Abschnitt "Image bauen"). Tag manuell aus dem Workflow-Run-Summary
+  # übernehmen.
   repository: ghcr.io/pkr-lab/carplay-api
   tag: "v5"
   pullPolicy: IfNotPresent
