@@ -6,7 +6,7 @@ image:
   pullPolicy: IfNotPresent
   # Pinned für Reproduzierbarkeit. Releases:
   # https://github.com/dani-garcia/vaultwarden/releases
-  tag: "1.37.1"
+  tag: "1.37.2"
 
 nameOverride: ""
 fullnameOverride: ""

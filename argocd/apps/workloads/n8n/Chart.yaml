@@ -4,7 +4,7 @@ name: n8n
 description: Low-code workflow automation (self-hosted Zapier alternative).
 type: application
 version: 0.1.0
-appVersion: "2.35.3"
+appVersion: "2.36.8"
 keywords:
   - n8n
   - automation

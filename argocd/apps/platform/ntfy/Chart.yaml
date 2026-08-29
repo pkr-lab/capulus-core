@@ -4,7 +4,7 @@ name: ntfy
 description: Self-hosted ntfy push-notification server with iOS support via upstream relay.
 type: application
 version: 0.1.0
-appVersion: "v2.26.3"
+appVersion: "v2.28.0"
 keywords:
   - ntfy
   - notifications
