@@ -99,6 +99,28 @@ spec:
           name: zammad-redis
           jsonPointers:
             - /spec/updateStrategy/rollingUpdate/maxUnavailable
+        # victoria-metrics-operator Webhook-TLS: der Chart generiert das
+        # selbstsignierte CA/Zertifikat per Helm genCA/genSignedCert bei
+        # jedem Render neu. Der eingebaute Schutz dagegen
+        # (admissionWebhooks.keepTLSSecret: true, Chart-Default) nutzt
+        # Helm's `lookup`, um das bestehende Secret wiederzuverwenden —
+        # `lookup` liefert aber bei `helm template` (das macht ArgoCDs
+        # repo-server fuers Diffing) immer ein leeres Ergebnis, da dabei
+        # kein Live-Cluster-Zugriff stattfindet. Der Schutz greift bei
+        # ArgoCD also nie, und Secret-Daten sowie Webhook-caBundle
+        # unterscheiden sich dauerhaft vom Live-Stand -> permanent
+        # OutOfSync. Unbedenklich zu ignorieren, da admissionWebhooks.policy
+        # bereits auf Ignore steht (siehe monitoring/values.yaml) — exakt
+        # wegen derselben Webhook-Flakiness.
+        - kind: Secret
+          name: monitoring-victoria-metrics-operator-validation
+          jsonPointers:
+            - /data
+        - group: admissionregistration.k8s.io
+          kind: ValidatingWebhookConfiguration
+          name: monitoring-victoria-metrics-operator-admission
+          jqPathExpressions:
+            - '.webhooks[].clientConfig.caBundle'
       syncPolicy:
         automated:
           prune: true
