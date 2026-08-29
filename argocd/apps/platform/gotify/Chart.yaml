@@ -4,7 +4,7 @@ name: gotify
 description: Self-hosted Gotify push-notification server for scanner + alert notifications.
 type: application
 version: 0.1.0
-appVersion: "3.0.0"
+appVersion: "3.1.0"
 keywords:
   - gotify
   - notifications

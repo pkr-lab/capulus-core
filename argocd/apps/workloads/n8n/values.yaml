@@ -9,7 +9,7 @@ image:
   # übernehmen.
   repository: ghcr.io/pkr-lab/n8n-custom
   pullPolicy: IfNotPresent
-  tag: "2.35.3-imap"
+  tag: "2.36.8-imap"
 
 nameOverride: ""
 fullnameOverride: ""
