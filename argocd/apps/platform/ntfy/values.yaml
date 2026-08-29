@@ -6,7 +6,7 @@ image:
   pullPolicy: IfNotPresent
   # Pinned for reproducibility. Bump to track upstream releases:
   # https://hub.docker.com/r/binwiederhier/ntfy/tags
-  tag: "v2.26.3"
+  tag: "v2.28.0"
 
 nameOverride: ""
 fullnameOverride: ""
