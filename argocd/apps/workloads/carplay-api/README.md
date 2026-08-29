@@ -88,23 +88,16 @@ go run ./cmd/server
 curl localhost:8080/health
 ```
 
-## Build & push (this repo's actual CI, not GitHub Actions)
+## Build & push
 
-There's no GitHub Actions in this repo — image builds go through the
-`kaniko-build-push` Argo WorkflowTemplate already installed by
-`argocd/apps/platform/argo-workflows/`:
-
-```bash
-argo submit --from workflowtemplate/kaniko-build-push \
-  -p repo=https://github.com/pkr-lab/capulus-core.git \
-  -p revision=main \
-  -p context=argocd/apps/workloads/carplay-api \
-  -p dockerfile=Dockerfile \
-  -p image=ghcr.io/<your-gh-username>/carplay-api:latest
-```
-
-Then point `image.repository`/`image.tag` in `values.yaml` at the pushed
-image (and an `imagePullSecrets` entry if the GHCR package is private).
+Automated via [`.github/workflows/build-images.yml`](../../../../.github/workflows/build-images.yml)
+on every push to `main` touching `Dockerfile`/`src/**` here — builds and
+pushes to `ghcr.io/pkr-lab/carplay-api`. See
+[pacman/README.md](../pacman/README.md#image-bauen) for the general
+mechanics (tag scheme, where the run reports the new tag, manual
+`workflow_dispatch` rebuild). The workflow does not touch `values.yaml`;
+set `image.tag` to the reported tag and commit that yourself (and add an
+`imagePullSecrets` entry if the GHCR package is private).
 
 ## Tests
 
