@@ -32,36 +32,32 @@ selbst aktualisiert sich nicht von allein aus Git).
 
 ## Image bauen
 
-Kein CI-Workflow baut Images automatisch (siehe `.github/workflows/`,
-das kümmert sich nur um Releases). Images werden manuell über das
-`kaniko-build-push` Argo WorkflowTemplate gebaut, das bereits von
-`argocd/apps/platform/argo-workflows/` installiert ist:
+Automatisiert über [`.github/workflows/build-images.yml`](../../../../.github/workflows/build-images.yml):
+bei jedem Push auf `main`, der `Dockerfile`, `server/**` oder `src/**`
+dieses Charts ändert, baut ein GitHub-Actions-Job das Image per
+`docker/build-push-action` und pusht es nach `ghcr.io/pkr-lab/pacman` —
+kein `argo submit`/Cluster-Zugriff mehr nötig. Der Workflow deckt
+`pacman`, `carplay-api` und `n8n` in einer Matrix ab; Details/Doku:
+[docs/f-cicd-automatisierung/f0060-build-images.md](../../../../docs/f-cicd-automatisierung/f0060-build-images.md).
 
-```bash
-export ARGO_SERVER=argo-workflows.tech.homeserver:80
-export ARGO_HTTP1=true
-export ARGO_SECURE=false
-export ARGO_TOKEN="Bearer $(kubectl -n argo-workflows create token argo-workflow)"
+Der resultierende Tag (`sha-<kurzer-commit-sha>`) steht im Job-Summary
+des jeweiligen Workflow-Runs (GitHub → Actions → "Build Workload Images").
+Der Workflow committet **nichts** zurück — `image.tag` in `values.yaml`
+wird von Hand auf diesen Wert gesetzt und selbst committet/gepusht.
 
-argo submit -n argo-workflows --from workflowtemplate/kaniko-build-push \
-  -p repo=https://github.com/pkr-lab/capulus-core.git \
-  -p revision=main \
-  -p context=argocd/apps/workloads/pacman \
-  -p dockerfile=Dockerfile \
-  -p image=ghcr.io/pkr-lab/pacman:v1
-```
+Ein Rebuild ohne Datei-Änderung (z. B. nur um ein neues Base-Image
+einzufangen) lässt sich über "Run workflow" (`workflow_dispatch`, App
+auswählbar) manuell anstoßen.
 
-Danach `image.repository`/`image.tag` in `values.yaml` auf das gepushte
-Image setzen.
+**Tags sind bewusst pro Commit eindeutig (`sha-<sha>`):** Das umgeht das
+alte Mutable-Tag-Problem (`pullPolicy: IfNotPresent` + wiederverwendeter
+Tag ⇒ ein Node mit lokal gecachtem Image pullt neuen Inhalt unter
+gleichem Tag nicht automatisch nach) von vornherein — jeder Build erzeugt
+zwangsläufig einen neuen Tag, nie eine Wiederverwendung.
 
-**Tags sind mutable, `pullPolicy: IfNotPresent` cached lokal:** Wird ein
-bereits verwendeter Tag (z. B. `v1`) neu gebaut und gepusht, ohne den Tag
-zu ändern, pullt ein Node mit lokal gecachtem Image den neuen Inhalt
-**nicht** automatisch nach — der Pod läuft dann weiter mit dem alten,
-möglicherweise fehlerhaften Bild-Inhalt. Für Fixes daher immer einen
-**neuen** Tag vergeben (`v2`, `v3`, …) statt einen bestehenden Tag
-wiederzuverwenden; das erzwingt sowohl den Neu-Pull als auch macht in
-`values.yaml`/`git log` sichtbar, welcher Chart-Stand welches Image nutzt.
+Das `kaniko-build-push`-Argo-WorkflowTemplate (`argocd/apps/platform/argo-workflows/`)
+bleibt als manueller Fallback für Ad-hoc-Images außerhalb dieser drei Apps
+bestehen, siehe [docs/f-cicd-automatisierung/f0000-argo-workflows.md](../../../../docs/f-cicd-automatisierung/f0000-argo-workflows.md#32-image-build-kaniko-build-push).
 
 **GHCR-Package-Sichtbarkeit:** frisch gepushte GHCR-Packages sind
 standardmäßig **privat** — der Pod scheitert dann mit

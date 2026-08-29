@@ -1,0 +1,122 @@
+name: Build Workload Images
+
+# Builds/pushes the three custom-built workload images (pacman, carplay-api,
+# n8n) to GHCR whenever their build context changes on main. Replaces the
+# previous manual `argo submit --from workflowtemplate/kaniko-build-push`
+# step — see argocd/apps/workloads/pacman/README.md#image-bauen.
+#
+# Does NOT touch values.yaml: the resulting tag is printed to the run's job
+# summary, `image.tag` still gets set by hand and committed by whoever ran
+# the build (Renovate-style auto-commits are deliberately out of scope here).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "argocd/apps/workloads/pacman/Dockerfile"
+      - "argocd/apps/workloads/pacman/server/**"
+      - "argocd/apps/workloads/pacman/src/**"
+      - "argocd/apps/workloads/pacman/.dockerignore"
+      - "argocd/apps/workloads/carplay-api/Dockerfile"
+      - "argocd/apps/workloads/carplay-api/src/**"
+      - "argocd/apps/workloads/carplay-api/.dockerignore"
+      - "argocd/apps/workloads/n8n/image/Dockerfile"
+  workflow_dispatch:
+    inputs:
+      app:
+        description: "App neu bauen (all = alle drei, z.B. nach einem reinen Base-Image-Update ohne Dateiänderung)"
+        type: choice
+        options: [all, pacman, carplay-api, n8n]
+        default: all
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: build-images-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: pacman
+            path: argocd/apps/workloads/pacman
+            dockerfile: argocd/apps/workloads/pacman/Dockerfile
+            image: ghcr.io/pkr-lab/pacman
+          - app: carplay-api
+            path: argocd/apps/workloads/carplay-api
+            dockerfile: argocd/apps/workloads/carplay-api/Dockerfile
+            image: ghcr.io/pkr-lab/carplay-api
+          - app: n8n
+            path: argocd/apps/workloads/n8n/image
+            dockerfile: argocd/apps/workloads/n8n/image/Dockerfile
+            image: ghcr.io/pkr-lab/n8n-custom
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Per-app gate: the workflow-level `paths` filter above only decides
+      # whether the run happens at all, not which of the 3 matrix apps
+      # actually changed - without this, editing just pacman's Dockerfile
+      # would rebuild carplay-api and n8n too.
+      - name: Decide whether to build this app
+        id: gate
+        env:
+          BEFORE: ${{ github.event.before }}
+          DISPATCH_APP: ${{ github.event.inputs.app }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "$DISPATCH_APP" = "all" ] || [ "$DISPATCH_APP" = "${{ matrix.app }}" ]; then
+              echo "build=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "build=false" >> "$GITHUB_OUTPUT"
+            fi
+            exit 0
+          fi
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$BEFORE" "${{ github.sha }}" -- "${{ matrix.path }}" | grep -q .; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Determine image tag
+        if: steps.gate.outputs.build == 'true'
+        id: tag
+        run: echo "tag=sha-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        if: steps.gate.outputs.build == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        if: steps.gate.outputs.build == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.path }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ matrix.image }}:${{ steps.tag.outputs.tag }}
+
+      - name: Report new tag
+        if: steps.gate.outputs.build == 'true'
+        run: |
+          {
+            echo "### ${{ matrix.app }}: neues Image gepusht"
+            echo
+            echo '```'
+            echo "${{ matrix.image }}:${{ steps.tag.outputs.tag }}"
+            echo '```'
+            echo
+            echo "Manuell in \`argocd/apps/workloads/${{ matrix.app }}/values.yaml\` (\`image.tag\`) eintragen und committen/pushen."
+          } >> "$GITHUB_STEP_SUMMARY"

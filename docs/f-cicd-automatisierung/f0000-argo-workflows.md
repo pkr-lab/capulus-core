@@ -147,6 +147,11 @@ korrekt verdrahtet ist.
 
 ### 3.2 Image-Build (`kaniko-build-push`)
 
+**Für `pacman`, `carplay-api` und `n8n` inzwischen abgelöst** durch
+`.github/workflows/build-images.yml` (siehe
+[f0060-build-images.md](f0060-build-images.md)) — dieser Weg hier bleibt
+als manueller Fallback für Ad-hoc-Builds anderer Images bestehen:
+
 ```bash
 argo submit -n argo-workflows --from workflowtemplate/kaniko-build-push \
   -p repo=https://github.com/pke/<repo-mit-Dockerfile>.git \
