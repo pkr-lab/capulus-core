@@ -1,10 +1,44 @@
 # Ollama — lokales LLM, nur bei Bedarf hochgefahren
 
-Ollama stellt ein lokal gehostetes LLM (`llama3.1:8b`, Q4-quantisiert) über
-eine einfache HTTP-API bereit. Genutzt wird es aktuell ausschließlich vom
-n8n-Workflow **„Zammad Externer KI-Lauf (täglich)“**
-(siehe [30070-n8n.md](30070-n8n.md)), um Antwortentwürfe für Tickets in der
-externen Zammad-Instanz `https://ticket.emue365.de` zu erzeugen.
+Ollama stellt ein lokal gehostetes LLM (`llama3.2:3b`) über eine einfache
+HTTP-API bereit. Genutzt wird es aktuell ausschließlich vom n8n-Workflow
+**„Zammad Externer KI-Lauf (täglich)“** (siehe [30070-n8n.md](30070-n8n.md)),
+um Antwortentwürfe für Tickets in der externen Zammad-Instanz
+`https://ticket.emue365.de` zu erzeugen.
+
+Ursprünglich als `llama3.1:8b` (Q4) geplant — beim ersten echten
+End-to-End-Testlauf (27.08.2026) scheiterte der `/api/generate`-Call jedoch
+zuverlässig mit `model requires more system memory (6.1 GiB) than is
+available (6.0 GiB)`. `worker-0` (Lenovo M90q) hat nur ~7,3Gi
+Node-Allocatable; ein Hochsetzen des Pod-Memory-Limits (5Gi/6500Mi auf
+6Gi/7Gi) änderte **nichts** an dieser Meldung — Ollama 0.3.14 liest hier
+offenbar den tatsächlichen freien Host-Speicher, nicht das Cgroup-Limit des
+Pods. `llama3.2:3b` (~2GB) passt mit deutlichem Puffer in die vorhandene
+Hardware. Bei einem Wechsel auf ein größeres/weniger stark quantisiertes
+Modell dieselbe Prüfung wiederholen, bevor Zeit in Config-Tuning gesteckt
+wird — das Pod-Memory-Limit ist hier nachweislich nicht der Hebel.
+
+**CPU-Performance ist der eigentliche Flaschenhals, nicht RAM.** `worker-0`
+läuft auf einem **Intel Pentium Gold G5400T** — `cat /proc/cpuinfo` zeigt
+**kein AVX2/FMA, nur SSE4_1/SSE4_2**. Ollamas CPU-Backend (llama.cpp) ist
+auf AVX2 für schnelle Matrixoperationen angewiesen; ohne das fällt es auf
+einen deutlich langsameren generischen Pfad zurück. Gemessen (27.08.2026,
+`llama3.2:3b`, einfacher Testprompt): `total_duration` 62s für ganze 9
+Antwort-Tokens, davon 35s allein für die Prompt-Auswertung von 33
+Eingabe-Tokens — **~1 Token/Sekunde**, unabhängig vom Modell. Bei den
+tatsächlich langen Ticket-Verläufen als Prompt bedeutet das mehrere zehn
+Minuten pro Ticket; der HTTP-Request-Node „LLM-Anfrage (Ollama, lokal)“
+im Sub-Workflow wurde deshalb zweimal hochgesetzt: 180000ms → 1800000ms
+(30min, reichte für ein reales Ticket mit langem Verlauf NICHT — Ollamas
+eigenes Log zeigte 29m59s Laufzeit vor einem 500er) → aktuell `3600000`ms
+(60min). Mit dem ursprünglichen kurzen Timeout brach der Call mit einem
+rohen `ECONNABORTED`/„connection was aborted“ ab statt eines sauberen
+Timeout-Fehlers. Auch 60min ist nur ein Erfahrungswert für bisher
+beobachtete Ticket-Längen, keine harte Garantie. Das ist eine harte
+Hardware-Grenze, keine Ollama-/n8n-Konfigurationsfrage — ein kleineres
+Modell (z. B. `llama3.2:1b`) wäre pro Token schneller, bliebe aber ohne
+AVX2 im selben langsamen Pfad. Abhilfe nur durch andere/neuere Hardware
+für diesen Workload.
 
 ---
 
@@ -145,7 +179,7 @@ spec:
     - {}
 EOF
 
-kubectl -n ollama exec deploy/ollama -- ollama pull llama3.1:8b
+kubectl -n ollama exec deploy/ollama -- ollama pull llama3.2:3b
 
 # Danach SOFORT wieder entfernen:
 kubectl -n ollama delete networkpolicy ollama-temp-allow-egress-internet
@@ -165,7 +199,7 @@ kubectl -n ollama delete networkpolicy ollama-temp-allow-egress-internet
    kubectl -n ollama scale deploy/ollama --replicas=1
    # warten bis der Pod Ready ist, dann die temporaere Egress-Policy
    # anwenden (siehe oben), pullen, Policy wieder loeschen:
-   kubectl -n ollama exec deploy/ollama -- ollama pull llama3.1:8b
+   kubectl -n ollama exec deploy/ollama -- ollama pull llama3.2:3b
    kubectl -n ollama scale deploy/ollama --replicas=0
    ```
    Das Modell bleibt auf der PVC erhalten, auch wenn der Pod auf 0
@@ -174,7 +208,7 @@ kubectl -n ollama delete networkpolicy ollama-temp-allow-egress-internet
 3. **Direkt testen** (Pod kurz hochskaliert lassen):
    ```bash
    kubectl -n ollama port-forward deploy/ollama 11434:11434
-   curl http://localhost:11434/api/generate -d '{"model":"llama3.1:8b","prompt":"Sag Hallo auf Deutsch.","stream":false}'
+   curl http://localhost:11434/api/generate -d '{"model":"llama3.2:3b","prompt":"Sag Hallo auf Deutsch.","stream":false}'
    ```
 4. n8n-Workflows einrichten: siehe [30070-n8n.md](30070-n8n.md), Abschnitt
    „Zammad Externer KI-Lauf (täglich)“.
@@ -211,7 +245,7 @@ kubectl -n ollama delete networkpolicy ollama-temp-allow-egress-internet
 | `replicaCount` | Ruhezustand-Replicas — wird von n8n überschrieben, siehe oben | `0` |
 | `image.tag` | Ollama-Image-Version | `0.3.14` |
 | `nodeSelector` | Pinnt den Pod auf `worker-0` (Lenovo M90q) | `kubernetes.io/hostname: worker-0` |
-| `resources` | CPU/RAM für ein 7-8B-Q4-Modell — vor Rollout gegen echte Node-Kapazität prüfen. `memory` am 27.08.2026 nach dem ersten echten End-to-End-Testlauf von 5Gi/6500Mi auf 6Gi/7Gi angehoben, da Ollama den `/api/generate`-Call für `llama3.1:8b` sonst mit `500 model requires more system memory (6.1 GiB) than is available` ablehnt — das Modell selbst braucht schon mehr als das alte Limit. 7Gi Limit passt noch knapp unter die ~7,3Gi Node-Allocatable von `worker-0`; ein größeres/weniger stark quantisiertes Modell würde mehr RAM brauchen, als dieser Node hergibt (Hardware-Grenze) | siehe `values.yaml` |
+| `resources` | CPU/RAM für das aktuelle Modell (`llama3.2:3b`) — vor einem Modell-Wechsel gegen echte Node-Kapazität prüfen. `memory` am 27.08.2026 versuchsweise von 5Gi/6500Mi auf 6Gi/7Gi angehoben, um `llama3.1:8b` doch noch zu laden — **ohne Wirkung** (Ollama 0.3.14 meldete unveraendert `model requires more system memory`, siehe Hinweis oben zu Cgroup-Limit vs. tatsaechlichem Host-Speicher). Der eigentliche Fix war der Modell-Wechsel auf `llama3.2:3b`, das 6Gi/7Gi-Limit blieb danach unangetastet (deutlich mehr als das ~2GB-Modell braucht, aber kein Grund es wieder zu verkleinern) | siehe `values.yaml` |
 | `persistence.size` | Modell-Storage (NFS, `nas`-StorageClass) | `20Gi` |
 | `n8nServiceAccountName` / `n8nNamespace` | Ziel-ServiceAccount für das Scale-RBAC | `n8n` / `n8n` |
 
