@@ -214,20 +214,13 @@ funktioniert hätte), wurde angepasst:
 
 ## Image bauen & pushen
 
-Kein GitHub Actions in diesem Repo — Image-Builds laufen über das
-`kaniko-build-push`-WorkflowTemplate aus
-[docs/f-cicd-automatisierung/f0000-argo-workflows.md](../f-cicd-automatisierung/f0000-argo-workflows.md):
+Automatisiert über `.github/workflows/build-images.yml`: baut/pusht bei
+jeder Änderung an `Dockerfile`/`src/**` automatisch nach
+`ghcr.io/pkr-lab/carplay-api`. Details/Tag-Schema/manueller Rebuild:
+[docs/f-cicd-automatisierung/f0060-build-images.md](../f-cicd-automatisierung/f0060-build-images.md).
 
-```bash
-argo submit --from workflowtemplate/kaniko-build-push \
-  -p repo=https://github.com/pkr-lab/capulus-core.git \
-  -p revision=main \
-  -p context=argocd/apps/workloads/carplay-api \
-  -p dockerfile=argocd/apps/workloads/carplay-api/Dockerfile \
-  -p image=ghcr.io/<dein-gh-username>/carplay-api:latest
-```
-
-Danach `image.repository`/`image.tag` in `values.yaml` setzen. Ist das
+Der Workflow setzt `values.yaml` nicht selbst — den im Job-Summary
+gemeldeten Tag manuell in `image.tag` eintragen und committen. Ist das
 GHCR-Package privat, zusätzlich ein `imagePullSecrets`-Secret anlegen (siehe
 Kommentar in `values.yaml`).
 

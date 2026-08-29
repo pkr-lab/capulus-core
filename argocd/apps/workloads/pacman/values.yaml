@@ -14,8 +14,10 @@ autoscaling:
   targetCPUUtilizationPercentage: 70
 
 image:
-  # Über kaniko-build-push gebaut und gepusht, siehe README.md dieses
-  # Charts. Nach dem ersten Push hier Repository/Tag setzen.
+  # Gebaut/gepusht über .github/workflows/build-images.yml bei jeder
+  # Änderung an Dockerfile/server/src (siehe README.md dieses Charts,
+  # Abschnitt "Image bauen"). Tag manuell aus dem Workflow-Run-Summary
+  # übernehmen.
   repository: ghcr.io/pkr-lab/pacman
   tag: "v8"
   pullPolicy: IfNotPresent
