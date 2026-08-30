@@ -23,9 +23,7 @@ secrets:
 wikijs:
   # Nur wirksam solange autoscaling.enabled=false ist (siehe unten) —
   # danach übernimmt der HPA die Replica-Anzahl.
-  # Temporär auf 0 für die Postgres-16→18-Migration (docs/3-apps-workloads/30030-wikijs.md
-  # → Datenbank-Major-Upgrade). Nach erfolgreichem Restore wieder auf 1 setzen.
-  replicaCount: 0
+  replicaCount: 1
 
   # Seiten/Assets liegen zwar vollständig in PostgreSQL, aber Wiki.js
   # cached API-Enable-Status/Key-Validierung offenbar pro Pod-Instanz ohne
@@ -33,10 +31,7 @@ wikijs:
   # Pods führten zu inkonsistenten "API Key invalid"/"API disabled"-Fehlern
   # beim wiki-docs-sync. maxReplicas daher vorerst auf 1 gedeckelt.
   autoscaling:
-    # Temporär deaktiviert für die Postgres-16→18-Migration — sonst
-    # überschreibt der HPA (minReplicas: 1) den replicaCount: 0 oben.
-    # Nach erfolgreichem Restore wieder auf true setzen.
-    enabled: false
+    enabled: true
     minReplicas: 1
     maxReplicas: 1
     targetCPUUtilizationPercentage: 75
@@ -93,10 +88,12 @@ postgresql:
   image:
     repository: postgres
     pullPolicy: IfNotPresent
-    # Major-Upgrade 16→18 in Arbeit (docs/3-apps-workloads/30030-wikijs.md →
-    # Datenbank-Major-Upgrade) — PGDATA in templates/postgres-deployment.yaml
-    # zeigt parallel auf einen neuen, leeren Unterordner (pgdata_fixed_pg18),
-    # alte Daten bleiben unangetastet als Rollback-Fallback erhalten.
+    # Major-Upgrade 16→18 am 2026-08-30 abgeschlossen (docs/3-apps-workloads/30030-wikijs.md →
+    # Datenbank-Major-Upgrade, Dump/Restore-Verfahren). PGDATA in
+    # templates/postgres-deployment.yaml zeigt seitdem auf
+    # pgdata_fixed_pg18 — der alte pgdata_fixed-Ordner liegt als
+    # Rollback-Fallback noch auf derselben PVC, kann nach ein paar Tagen
+    # störungsfreiem Betrieb aufgeräumt werden.
     tag: "18-alpine"
 
   database: wiki
