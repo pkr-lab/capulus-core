@@ -246,6 +246,66 @@ unterwegs würde die App nur zuhause im WLAN synchronisieren.
 
 ---
 
+## Datenbank-Major-Upgrade (Postgres 14 → 16)
+
+Gleiches Grundprinzip wie bei [Nextcloud](300b0-nextcloud.md#datenbank-major-upgrade-postgres-16--18)
+und [Wiki.js](30030-wikijs.md#datenbank-major-upgrade-postgres-16--18) — mit
+zwei Immich-spezifischen Besonderheiten:
+
+- **Kein Standard-`postgres`-Image**: `postgresql.image.repository` ist
+  `ghcr.io/immich-app/postgres`, ein Custom-Build mit der VectorChord-
+  Extension für die Ähnlichkeitssuche (`values.yaml`-Tag aktuell
+  `14-vectorchord0.4.3-pgvectors0.2.0`). Laut
+  [offizieller Immich-Doku](https://docs.immich.app/administration/postgres-standalone)
+  unterstützt Immich Postgres `>= 14, < 20` mit VectorChord `>= 0.3, < 2.0`
+  — Postgres 16 ist also im unterstützten Bereich, **aber vor dem Mergen
+  prüfen**, dass der von Renovate vorgeschlagene neue Tag denselben
+  VectorChord-Versions-Suffix behält (z. B.
+  `16-vectorchord0.4.3-pgvectors0.2.0`) und nicht gleichzeitig einen
+  VectorChord-Sprung außerhalb des unterstützten Bereichs mitbringt.
+- **Zwei Consumer der DB**: sowohl `immich-server` als auch
+  `immich-machine-learning` müssen vor dem Umschalten auf 0 Replicas
+  skaliert werden, nicht nur der Server.
+
+**Ablauf:**
+
+1. **Dump** (ergänzend zum nächtlichen restic-Backup unter der separaten
+   `immich-nas`-StorageClass, siehe
+   [docs/2-betrieb-hardware/20010-nas-backup.md](../2-betrieb-hardware/20010-nas-backup.md)):
+   ```bash
+   kubectl -n immich exec deploy/immich-postgresql -- \
+     pg_dump -U immich -Fc immich > immich-pg14-$(date +%F).dump
+   ```
+2. Beide Consumer stoppen:
+   ```bash
+   kubectl -n immich scale deploy/immich-server immich-machine-learning --replicas=0
+   ```
+3. In der Chart-Vorlage:
+   - `values.yaml`: `postgresql.image.tag` auf den neuen Postgres-16-Tag
+     mit passendem VectorChord-Suffix setzen (siehe Hinweis oben).
+   - `templates/postgres-deployment.yaml`: `PGDATA` von
+     `/var/lib/postgresql/data/pgdata_fixed` auf
+     `/var/lib/postgresql/data/pgdata_fixed_pg16` ändern — gleicher Trick
+     wie bei Wiki.js, `runAsUser`/`runAsGroup: 1000/10` unverändert lassen.
+   - Committen/pushen, ArgoCD syncen lassen.
+4. Dump zurückspielen — `pg_restore` legt die VectorChord-Extension dabei
+   automatisch mit an (im Dump als `CREATE EXTENSION`-Statement enthalten,
+   die Extension selbst ist im Ziel-Image bereits vorhanden):
+   ```bash
+   kubectl -n immich cp immich-pg14-*.dump immich-postgresql-<pod>:/tmp/restore.dump
+   kubectl -n immich exec deploy/immich-postgresql -- \
+     pg_restore -U immich -d immich /tmp/restore.dump
+   ```
+5. Beide Consumer wieder hochskalieren, App öffnen, Timeline + Gesichts-/
+   Ähnlichkeitssuche stichprobenartig prüfen (letzteres hängt direkt an
+   VectorChord — ein guter Indikator, dass die Extension sauber
+   mitgewandert ist).
+6. **Rollback:** Schritt 3 revertieren, alter `pgdata_fixed`-Ordner bleibt
+   unangetastet auf derselben PVC.
+7. Nach störungsfreier Testphase alten `pgdata_fixed`-Ordner aufräumen.
+
+---
+
 ## Troubleshooting
 
 ### `immich-postgresql`/`immich-server`-PVC bleibt `Pending`
