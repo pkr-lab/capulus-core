@@ -1,6 +1,6 @@
 dependencies:
 - name: kubeseal-webgui
   repository: oci://ghcr.io/jaydee94/kubeseal-webgui/charts
-  version: 6.0.13
-digest: sha256:88348a75b384b088072f2080c37cc2f5d67c29f2ec360a5f0d44a95f985611b1
-generated: "2026-07-27T17:35:40.640611464+02:00"
+  version: 6.0.14
+digest: sha256:e1de2a623ffb620963a026e51647c41d4953ebc33eeca3a2e9b8948832fe93c7
+generated: "2026-08-28T13:20:19.323397+02:00"
