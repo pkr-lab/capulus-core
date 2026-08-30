@@ -1,0 +1,130 @@
+{
+  "id": "aE1nSaTz0001AmWeb",
+  "name": "ALAMOS-Einsatzalarm -> Zammad-Ticket",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "alamos-einsatz",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "d1d1d1d1-0001-4000-8000-000000000001",
+      "name": "Webhook (GET)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        260,
+        200
+      ],
+      "webhookId": "alamos-einsatz-get"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "alamos-einsatz",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "d1d1d1d1-0002-4000-8000-000000000002",
+      "name": "Webhook (POST)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        260,
+        400
+      ],
+      "webhookId": "alamos-einsatz-post"
+    },
+    {
+      "parameters": {
+        "jsCode": "// CHANGE-ME: Zammad-Gruppe + Requester ggf. anpassen (siehe docs/f-cicd-automatisierung/f0040-github-release-watcher.md fuer die Regeln dazu -- ZAMMAD_REQUESTER_EMAIL muss ein bereits existierender Zammad-User sein).\nconst ZAMMAD_GROUP = 'Support::Administration';\nconst ZAMMAD_REQUESTER_EMAIL = 'info@edv-kretzer.de';\n\n// Wie lange (ms) ein inhaltsgleicher Alarm als Duplikat gilt -- schuetzt\n// gegen Mehrfach-Tickets, falls der AMweb-Webhook pro offenem Kiosk-Tab\n// feuert (bis zu 3 Standorte moeglich, siehe\n// docs/4-planung/40060-alamos-einsatz-email-benachrichtigung.md,\n// offene Punkte -- ob das tatsaechlich passiert, war ohne Alamos-Login\n// nicht abschliessend zu klaeren).\nconst DEDUP_WINDOW_MS = 2 * 60 * 1000;\n\n// Beide Webhook-Trigger-Varianten (GET-Query-Parameter ODER POST-JSON-Body)\n// zusammenfuehren -- welche Variante ihr in AMweb konfiguriert (AMweb-Seiten-\n// Webhook vs. \"Allgemeine Webhooks\"), war ohne Alamos-Login nicht\n// abschliessend zu klaeren, siehe docs/4-planung/40060-....\nconst raw = $input.item.json;\nconst merged = { ...(raw.query || {}), ...(raw.body || {}) };\n\nif (Object.keys(merged).length === 0) {\n  throw new Error('Webhook ohne jegliche Query-/Body-Daten empfangen -- AMweb-Webhook-Konfiguration pruefen.');\n}\n\n// Bekannte Platzhalter laut Alamos-Handbuch (Allgemeine Webhooks): \"keyword\"\n// und \"unit\". Weitere Feldnamen (Adresse, Fahrzeuge, Meldebild, ...) sind\n// nur in der eingeloggten Webhook-Vorschau/\"Webhook Test\" des\n// Alamos-Accounts einsehbar -- deshalb werden unten ALLE empfangenen Felder\n// unveraendert mit ausgegeben, nicht nur eine feste Vorauswahl (\"alle Daten\n// die moeglich sind abgreifen\").\nconst keyword = merged.keyword || merged.stichwort || merged.Stichwort || null;\nconst unit = merged.unit || merged.station || null;\n\nconst title = keyword\n  ? `ALAMOS-Einsatzalarm: ${keyword}${unit ? ` (${unit})` : ''}`\n  : `ALAMOS-Einsatzalarm${unit ? ` (${unit})` : ''}`;\n\nconst fieldLines = Object.entries(merged)\n  .map(([key, value]) => `- ${key}: ${typeof value === 'object' ? JSON.stringify(value) : value}`)\n  .join('\\n');\n\nconst bodyText = [\n  'Neuer Einsatzalarm von ALAMOS AMweb.',\n  '',\n  'Empfangene Rohdaten (alles, was der Webhook mitgeliefert hat):',\n  fieldLines,\n  '',\n  `Empfangen: ${new Date().toISOString()}`,\n].join('\\n');\n\n// Duplikat-Schutz ueber Workflow-Static-Data (ueberlebt einzelne\n// Workflow-Laeufe, aber keinen n8n-Neustart -- fuer den Zweck ausreichend,\n// da echte Mehrfach-Ausloesungen desselben Alarms innerhalb von Sekunden\n// eintreffen wuerden, nicht erst nach einem Neustart).\nconst staticData = $getWorkflowStaticData('node');\nstaticData.recentAlarms = staticData.recentAlarms || {};\n\nconst dedupKey = keyword && unit ? `${keyword}|${unit}` : JSON.stringify(merged);\nconst now = Date.now();\n\nfor (const [existingKey, ts] of Object.entries(staticData.recentAlarms)) {\n  if (now - ts > DEDUP_WINDOW_MS) delete staticData.recentAlarms[existingKey];\n}\n\nif (staticData.recentAlarms[dedupKey] !== undefined) {\n  // Duplikat innerhalb des Zeitfensters -- kein zweites Ticket erzeugen.\n  return [];\n}\nstaticData.recentAlarms[dedupKey] = now;\n\nreturn [{\n  json: {\n    title,\n    group: ZAMMAD_GROUP,\n    customer: ZAMMAD_REQUESTER_EMAIL,\n    article: {\n      subject: title,\n      body: bodyText,\n      content_type: 'text/plain',\n      type: 'note',\n      internal: false,\n    },\n  },\n}];"
+      },
+      "id": "d1d1d1d1-0003-4000-8000-000000000003",
+      "name": "Einsatzdaten aufbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://zammad.tech.homeserver/api/v1/tickets",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "d1d1d1d1-0004-4000-8000-000000000004",
+      "name": "Zammad-Ticket erstellen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "Zammad API Token"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook (GET)": {
+      "main": [
+        [
+          {
+            "node": "Einsatzdaten aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook (POST)": {
+      "main": [
+        [
+          {
+            "node": "Einsatzdaten aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Einsatzdaten aufbereiten": {
+      "main": [
+        [
+          {
+            "node": "Zammad-Ticket erstellen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Webhook-Ziel fuer den ALAMOS-AMweb-Alarmwebhook (AMweb-Seiteneinstellung ODER \"Allgemeine Webhooks\", siehe docs/4-planung/40060-alamos-einsatz-email-benachrichtigung.md): http://n8n.prod.homeserver/webhook/alamos-einsatz als Webhook-Ziel-URL in Alamos eintragen (funktioniert sowohl als GET- als auch als POST-Ziel, beide Trigger-Nodes teilen sich denselben Pfad). Der Code-Node 'Einsatzdaten aufbereiten' fuehrt Query-Parameter (GET) und JSON-Body (POST) zusammen, gibt ALLE empfangenen Felder unveraendert im Ticket-Text aus (exakte Feldnamen wie Adresse/Fahrzeuge/Meldebild waren ohne eingeloggten Alamos-Account nicht zu ermitteln) und filtert Mehrfach-Ausloesungen desselben Alarms (z.B. weil mehrere Kiosk-Standorte gleichzeitig feuern) ueber ein 2-Minuten-Zeitfenster in Workflow-Static-Data. Danach legt der Node 'Zammad-Ticket erstellen' (raw HTTP-Request, gleiches Muster wie banana-pi-down-to-zammad.json) ein Ticket in der Gruppe 'Support::Administration' an -- die Mail-Benachrichtigung an info@edv-kretzer.de laeuft ueber Zammads eigene Agenten-Benachrichtigung, kein eigener E-Mail-Node noetig. NACH DEM IMPORT: 1) Node 'Zammad-Ticket erstellen' -> Credential 'Zammad API Token' zuweisen (Header-Auth, Header-Name 'Authorization', Value 'Token token=<ZAMMAD_TOKEN>' -- falls aus banana-pi-down-to-zammad.json bereits vorhanden, dieselbe Credential wiederverwenden). 2) Workflow AKTIVIEREN (Import allein reicht nicht). 3) Im Alamos-Account die Webhook-Ziel-URL http://n8n.prod.homeserver/webhook/alamos-einsatz eintragen. Offene Fragen zu exakten Feldnamen, Duplikat-Verhalten und der zusaetzlichen Rueckmeldungen-API: docs/4-planung/40060-alamos-einsatz-email-benachrichtigung.md."
+  }
+}
