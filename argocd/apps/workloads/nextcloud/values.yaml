@@ -50,7 +50,14 @@ nextcloud:
     # gegen die echte "html"-PVC, 2026-08-17). Ein Tag-Wechsel auf eine
     # andere Version löst beim nächsten Pod-Start Nextclouds Upgrade-Pfad
     # aus — und der ist auf dieser NAS aktuell fatal, s.u.
-    tag: "34.0.3-apache"
+    #
+    # ROLLBACK 2026-08-30: Renovate-PR #201 hat den Tag trotz dieser
+    # Warnung auf 34.0.3-apache angehoben (automatisierter Merge, Kommentar
+    # hier wurde dabei nicht gelesen) — Pod ging exakt in den unten
+    # beschriebenen endlosen CrashLoopBackOff. Zurückgesetzt auf 34.0.2-apache,
+    # passend zur echten PVC-Version, bis ein sicherer Upgrade-Weg (s.u.
+    # "Andere Lösung"/S3-Storage) existiert.
+    tag: "34.0.2-apache"
 
   # Offizielles Apache-Image läuft als root (kein USER im Dockerfile,
   # Apache-Master-Prozess braucht Port 80). Analog zu Vaultwarden kein
