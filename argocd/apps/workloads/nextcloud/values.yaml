@@ -25,7 +25,9 @@ secrets:
 nextcloud:
   # Nur wirksam solange autoscaling.enabled=false ist (siehe unten) —
   # danach übernimmt der HPA die Replica-Anzahl.
-  replicaCount: 1
+  # Temporär auf 0 für die Postgres-16→18-Migration (docs/3-apps-workloads/300b0-nextcloud.md
+  # → Datenbank-Major-Upgrade). Nach erfolgreichem Restore wieder auf 1 setzen.
+  replicaCount: 0
 
   # Mehrere App-Pods sind hier — trotz ReadWriteOnce html/data-PVCs (siehe
   # persistence unten) — sicher: Nextcloud nutzt das eigene Redis (siehe
@@ -36,7 +38,10 @@ nextcloud:
   # daher zusätzlich podAffinity (siehe templates/nextcloud-deployment.yaml),
   # damit alle Replicas auf demselben Node laufen.
   autoscaling:
-    enabled: true
+    # Temporär deaktiviert für die Postgres-16→18-Migration — sonst
+    # überschreibt der HPA (minReplicas: 1) den replicaCount: 0 oben.
+    # Nach erfolgreichem Restore wieder auf true setzen.
+    enabled: false
     minReplicas: 1
     maxReplicas: 2
     targetCPUUtilizationPercentage: 75
