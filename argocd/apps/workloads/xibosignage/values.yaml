@@ -26,9 +26,12 @@ mysql:
   image:
     repository: mysql
     pullPolicy: IfNotPresent
-    # Identisch zur Version aus dem offiziellen xibosignage/xibo-docker
-    # docker-compose.yml.
-    tag: "8.4"
+    # Major-Upgrade 8.4→26.7 in Arbeit (docs/3-apps-workloads/300e0-xibosignage.md →
+    # Datenbank-Major-Upgrade) — mountPath in templates/mysql-deployment.yaml
+    # hat einen neuen subPath (mysql-data-v26) bekommen, damit MySQL 26 in
+    # einem frischen, leeren Unterordner derselben PVC initialisiert statt
+    # gegen das alte 8.4-Datenverzeichnis an der PVC-Wurzel zu starten.
+    tag: "26.7"
 
   database: cms
   username: cms
