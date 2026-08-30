@@ -316,6 +316,56 @@ automatisch in der UI verfügbar (siehe [docs/b-kubernetes-gitops/b0030-semaphor
 
 ---
 
+## Datenbank-Major-Upgrade (MySQL 8.4 → 26.x)
+
+MySQL ist seit den 9.x-„Innovation"-Releases auf ein Jahres-basiertes
+Versionsschema umgestiegen — die von Renovate vorgeschlagene Version
+`26.x` ist also eine echte, aktuelle MySQL-Version und kein Datenfehler
+(auch wenn der Sprung von `8.4` auf `26.x` auf den ersten Blick komisch
+aussieht). `8.4` ist die aktuelle LTS-Reihe; ein Wechsel auf `26.x` ist
+kein Zwang, nur bei Bedarf.
+
+Gleiches Grundprinzip wie bei den Postgres-Apps oben: ein reiner Tag-Bump
+lässt den MySQL-Pod nicht gegen ein inkompatibles altes Datenverzeichnis
+starten. Anders als beim offiziellen `postgres`-Image gibt es beim
+offiziellen `mysql`-Image aber keinen einfachen `PGDATA`-artigen Env-Var-
+Trick — stattdessen denselben Effekt über `subPath` im Volume-Mount
+erreichen (neuer, leerer Unterordner derselben PVC):
+
+1. **Dump** (ergänzend zum nächtlichen restic-Backup, siehe
+   [docs/2-betrieb-hardware/20010-nas-backup.md](../2-betrieb-hardware/20010-nas-backup.md)):
+   ```bash
+   kubectl -n xibosignage exec deploy/xibosignage-mysql -- \
+     mysqldump -u cms -p"$(kubectl -n xibosignage get secret xibosignage-secrets -o jsonpath='{.data.db-password}' | base64 -d)" \
+     --databases cms > xibo-mysql84-$(date +%F).sql
+   ```
+2. Xibo CMS auf 0 Replicas skalieren (`kubectl -n xibosignage scale deploy/xibosignage-cms --replicas=0`).
+3. In der Chart-Vorlage:
+   - `values.yaml`: `mysql.image.tag: "8.4"` → gewünschte `26.x`-Version
+     (vorher Docker-Hub-Tag-Liste für `mysql` gegenchecken, welche
+     `26.x`-Version aktuell empfohlen ist).
+   - `templates/mysql-deployment.yaml`: beim `volumeMounts`-Eintrag für
+     `data` (`mountPath: /var/lib/mysql`) ein `subPath: mysql-data-v26`
+     ergänzen — MySQL initialisiert dann in einem frischen Unterordner
+     derselben PVC, statt gegen das alte 8.4-Datenverzeichnis an der
+     PVC-Wurzel zu starten.
+   - Committen/pushen, ArgoCD syncen lassen.
+4. Dump zurückspielen:
+   ```bash
+   kubectl -n xibosignage cp xibo-mysql84-*.sql xibosignage-mysql-<pod>:/tmp/restore.sql
+   kubectl -n xibosignage exec deploy/xibosignage-mysql -- \
+     sh -c 'mysql -u cms -p"$MYSQL_PASSWORD" cms < /tmp/restore.sql'
+   ```
+5. Xibo CMS wieder hochskalieren, Login + Displays/Playlists
+   stichprobenartig prüfen.
+6. **Rollback:** Schritt 3 revertieren (Tag zurück auf `8.4`, `subPath`
+   entfernen) — die alten Daten liegen unangetastet an der PVC-Wurzel.
+7. Nach störungsfreier Testphase alten Datenbestand an der PVC-Wurzel
+   aufräumen (per einmaligem Job, analog zu den `fix-permissions`-
+   Mustern bei den Postgres-Apps).
+
+---
+
 ## Fehlerbehebung
 
 | Symptom | Check |
