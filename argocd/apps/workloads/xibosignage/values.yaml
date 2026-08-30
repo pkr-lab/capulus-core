@@ -26,11 +26,12 @@ mysql:
   image:
     repository: mysql
     pullPolicy: IfNotPresent
-    # Major-Upgrade 8.4→26.7 in Arbeit (docs/3-apps-workloads/300e0-xibosignage.md →
-    # Datenbank-Major-Upgrade) — mountPath in templates/mysql-deployment.yaml
-    # hat einen neuen subPath (mysql-data-v26) bekommen, damit MySQL 26 in
-    # einem frischen, leeren Unterordner derselben PVC initialisiert statt
-    # gegen das alte 8.4-Datenverzeichnis an der PVC-Wurzel zu starten.
+    # Major-Upgrade 8.4→26.7 am 2026-08-30 abgeschlossen (docs/3-apps-workloads/300e0-xibosignage.md →
+    # Datenbank-Major-Upgrade, Dump/Restore-Verfahren). mountPath in
+    # templates/mysql-deployment.yaml zeigt seitdem per subPath auf
+    # mysql-data-v26 — die alten 8.4-Daten liegen als Rollback-Fallback
+    # noch an der PVC-Wurzel, können nach ein paar Tagen störungsfreiem
+    # Betrieb aufgeräumt werden.
     tag: "26.7"
 
   database: cms
@@ -117,9 +118,7 @@ quickchart:
 # Xibo CMS (cms-web)
 # ============================================================
 cms:
-  # Temporär auf 0 für die MySQL-8.4→26-Migration (docs/3-apps-workloads/300e0-xibosignage.md
-  # → Datenbank-Major-Upgrade). Nach erfolgreichem Restore wieder auf 1 setzen.
-  replicaCount: 0
+  replicaCount: 1
 
   image:
     repository: ghcr.io/xibosignage/xibo-cms
