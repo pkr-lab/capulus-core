@@ -93,7 +93,11 @@ postgresql:
   image:
     repository: postgres
     pullPolicy: IfNotPresent
-    tag: "16-alpine"
+    # Major-Upgrade 16→18 in Arbeit (docs/3-apps-workloads/30030-wikijs.md →
+    # Datenbank-Major-Upgrade) — PGDATA in templates/postgres-deployment.yaml
+    # zeigt parallel auf einen neuen, leeren Unterordner (pgdata_fixed_pg18),
+    # alte Daten bleiben unangetastet als Rollback-Fallback erhalten.
+    tag: "18-alpine"
 
   database: wiki
   username: wikijs
