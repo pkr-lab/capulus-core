@@ -32,6 +32,12 @@
       "description": "Security patch releases land immediately, not on the weekly schedule.",
       "matchUpdateTypes": ["patch"],
       "schedule": ["at any time"]
+    },
+    {
+      "description": "Nextcloud app image paused: all_squash on the NFS 'nas' StorageClass breaks the container's chown-based upgrade rsync on every version mismatch between image and PVC (CrashLoopBackOff, see argocd/apps/workloads/nextcloud/values.yaml and docs/3-apps-workloads/300b0-nextcloud.md#datenbank-major-upgrade-postgres-16--18). Re-enable once a safe upgrade path (e.g. S3/MinIO as primary storage) exists.",
+      "matchFileNames": ["argocd/apps/workloads/nextcloud/values.yaml"],
+      "matchPackageNames": ["nextcloud"],
+      "enabled": false
     }
   ],
   "prConcurrentLimit": 5,
