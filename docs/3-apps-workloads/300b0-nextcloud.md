@@ -164,6 +164,71 @@ der [offiziellen Nextcloud-Doku](https://docs.nextcloud.com/server/latest/admin_
 
 ---
 
+## Datenbank-Major-Upgrade (Postgres 16 → 18)
+
+Renovate schlägt für `argocd/apps/workloads/nextcloud/values.yaml` irgendwann
+den Sprung von `postgresql.image.tag: "16-alpine"` auf `18-alpine` vor. Ein
+reiner Tag-Bump reicht dafür **nicht** — Postgres verweigert den Start, wenn
+das vorhandene Datenverzeichnis von einer älteren Major-Version stammt
+("database files are incompatible with server"). Der PR bleibt also
+liegen, bis das Upgrade manuell durchgeführt wurde.
+
+**Ablauf (Dump & Restore auf neuen PGDATA-Unterordner, gleiche PVC):**
+Die `postgres-deployment.yaml` zeigt `PGDATA` bereits auf einen
+Unterordner (`/var/lib/postgresql/data/pgdata`) statt auf die PVC-Wurzel —
+das lässt sich nutzen, um Postgres 18 in einen **frischen, leeren
+Unterordner derselben PVC** starten zu lassen, ohne die alten Daten
+anzufassen. Kein zweiter PVC, keine ArgoCD-Klimmzüge nötig, und ein
+Rollback ist nur ein Revert der beiden geänderten Zeilen.
+
+1. **Zusätzlicher Konsistenz-Dump** (ergänzend zum nächtlichen
+   dateisystem-Backup aus [docs/2-betrieb-hardware/20010-nas-backup.md](../2-betrieb-hardware/20010-nas-backup.md) —
+   das ist nur crash-consistent, kein `pg_dump`):
+   ```bash
+   kubectl -n nextcloud exec deploy/nextcloud-postgresql -- \
+     pg_dump -U nextcloud -Fc nextcloud > nextcloud-pg16-$(date +%F).dump
+   ```
+2. **Nextcloud in Wartungsmodus + auf 0 Replicas skalieren** (verhindert
+   Schreibzugriffe während des Umschaltens):
+   ```bash
+   kubectl -n nextcloud exec deploy/nextcloud -- occ maintenance:mode --on
+   kubectl -n nextcloud scale deploy/nextcloud --replicas=0
+   ```
+3. **In der Chart-Vorlage zwei Stellen ändern** (lokal, noch nicht pushen):
+   - `values.yaml`: `postgresql.image.tag: "16-alpine"` → `"18-alpine"`
+   - `templates/postgres-deployment.yaml`: `PGDATA`-Wert von
+     `/var/lib/postgresql/data/pgdata` auf
+     `/var/lib/postgresql/data/pgdata_pg18` ändern (neuer, leerer
+     Unterordner — der alte `pgdata`-Ordner bleibt als Rollback-Fallback
+     unangetastet auf derselben PVC liegen).
+   - Committen/pushen (macht ihr selbst), ArgoCD syncen lassen. Der neue
+     Postgres-18-Pod startet danach mit leerer, frischer Datenbank.
+4. **Dump zurückspielen:**
+   ```bash
+   kubectl -n nextcloud cp nextcloud-pg16-*.dump nextcloud-postgresql-<pod>:/tmp/restore.dump
+   kubectl -n nextcloud exec deploy/nextcloud-postgresql -- \
+     pg_restore -U nextcloud -d nextcloud /tmp/restore.dump
+   ```
+5. **Verifikation:** `kubectl scale deploy/nextcloud --replicas=1`,
+   `occ maintenance:mode --off`, einloggen, ein paar Dateien/Freigaben
+   stichprobenartig prüfen.
+6. **Rollback**, falls irgendwas nicht passt: einfach Schritt 3 revertieren
+   (Tag zurück auf `16-alpine`, `PGDATA` zurück auf `pgdata`) — die alten
+   Daten liegen unverändert auf derselben PVC, kein Restore aus dem
+   nächtlichen Backup nötig.
+7. **Aufräumen** erst nach ein paar Tagen störungsfreiem Betrieb: alten
+   `pgdata`-Ordner per einmaligem Job löschen, um PVC-Platz freizugeben
+   (analog zum `fix-permissions`-initContainer-Muster oben in derselben
+   Datei).
+
+> **Hinweis `storageClassName: local-path`:** Anders als die meisten
+> anderen Apps liegt die Nextcloud-Postgres-PVC bewusst nicht auf der
+> NFS-`nas`-StorageClass (siehe Kommentar in `values.yaml`) — der Pod ist
+> dadurch an einen festen Node gebunden. Das ändert am Ablauf oben nichts,
+> nur zur Einordnung, falls der Node mal getauscht werden soll.
+
+---
+
 ## Troubleshooting
 
 ### Pod startet, `/status.php` liefert aber lange keine Antwort

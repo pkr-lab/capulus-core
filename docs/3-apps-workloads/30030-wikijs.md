@@ -163,6 +163,40 @@ kann — ein einziges Wiki, klar getrennte Sichtbarkeiten.
 
 ---
 
+## Datenbank-Major-Upgrade (Postgres 16 → 18)
+
+Gleiches Prinzip wie bei [Nextcloud](300b0-nextcloud.md#datenbank-major-upgrade-postgres-16--18):
+ein reiner Tag-Bump auf `postgres:18-alpine` lässt den Pod crashloopen,
+weil das bestehende Datenverzeichnis noch im Postgres-16-Format ist.
+Hier zusätzlich zu beachten: `PGDATA` zeigt schon auf `pgdata_fixed` (nicht
+`pgdata`) — Folge des Squash-Identity-Fixes weiter oben in dieser Datei
+(NFS-Export squasht auf UID/GID `1000:10`). Für das Upgrade denselben
+Trick anwenden, nur mit einem weiteren neuen Unterordner:
+
+1. **Dump** (zusätzlich zum nächtlichen restic-Backup, siehe
+   [docs/2-betrieb-hardware/20010-nas-backup.md](../2-betrieb-hardware/20010-nas-backup.md)):
+   ```bash
+   kubectl -n wikijs exec deploy/wikijs-postgresql -- \
+     pg_dump -U wikijs -Fc wiki > wikijs-pg16-$(date +%F).dump
+   ```
+2. Wiki.js auf 0 Replicas skalieren (`kubectl -n wikijs scale deploy/wikijs --replicas=0`).
+3. In der Chart-Vorlage:
+   - `values.yaml`: `postgresql.image.tag: "16-alpine"` → `"18-alpine"`
+   - `templates/postgres-deployment.yaml`: `PGDATA` von
+     `/var/lib/postgresql/data/pgdata_fixed` auf
+     `/var/lib/postgresql/data/pgdata_fixed_pg18` ändern. `runAsUser`/
+     `runAsGroup: 1000/10` bleiben unverändert — die Squash-Identität
+     betrifft nur den Verzeichnis-Owner, nicht die Postgres-Version.
+   - Committen/pushen, ArgoCD syncen lassen.
+4. Dump zurückspielen (`kubectl cp` + `pg_restore -U wikijs -d wiki`,
+   analog zu Nextcloud).
+5. Wiki.js wieder hochskalieren, Login + ein paar Seiten prüfen.
+6. **Rollback:** Schritt 3 revertieren, alter `pgdata_fixed`-Ordner liegt
+   unangetastet auf derselben PVC.
+7. Nach störungsfreier Testphase alten `pgdata_fixed`-Ordner aufräumen.
+
+---
+
 ## Troubleshooting
 
 ### Wiki.js-Pod startet, bleibt aber `Not Ready`
