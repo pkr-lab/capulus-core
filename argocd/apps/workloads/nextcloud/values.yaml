@@ -50,7 +50,7 @@ nextcloud:
     # gegen die echte "html"-PVC, 2026-08-17). Ein Tag-Wechsel auf eine
     # andere Version löst beim nächsten Pod-Start Nextclouds Upgrade-Pfad
     # aus — und der ist auf dieser NAS aktuell fatal, s.u.
-    tag: "34.0.2-apache"
+    tag: "34.0.3-apache"
 
   # Offizielles Apache-Image läuft als root (kein USER im Dockerfile,
   # Apache-Master-Prozess braucht Port 80). Analog zu Vaultwarden kein
