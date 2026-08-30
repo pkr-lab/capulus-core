@@ -376,6 +376,9 @@ offener Port" auf diesem Pi — Details und Begründung in
 Kill-switch: `banana_pi_kiosk_wol_agent_enabled: false` (behält nur den
 SSH-Weg).
 
+Online-Status prüfen und den PC wieder herunterfahren: siehe
+[docs/3-apps-workloads/30021-vereinsheim-windows-pc-steuerung.md](30021-vereinsheim-windows-pc-steuerung.md).
+
 ## Fehlerbehebung
 
 | Symptom | Check |
@@ -397,6 +400,7 @@ SSH-Weg).
 ## Relevante Links
 
 - [docs/3-apps-workloads/30010-alamos-apager.md](30010-alamos-apager.md) — Basis-Architektur (Raspberry-Pi-Flotte)
+- [docs/3-apps-workloads/30021-vereinsheim-windows-pc-steuerung.md](30021-vereinsheim-windows-pc-steuerung.md) — Windows-PC: Online-Check & Herunterfahren
 - [docs/b-kubernetes-gitops/b0030-semaphore.md](../b-kubernetes-gitops/b0030-semaphore.md) — Tailscale Split-DNS-Setup
 - [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md) — `*.homeserver`-Auflösung
 - [docs/c-netzwerk-dns/c0010-tailscale.md](../c-netzwerk-dns/c0010-tailscale.md) — Tailscale-Grundlagen
