@@ -174,7 +174,11 @@ postgresql:
   image:
     repository: postgres
     pullPolicy: IfNotPresent
-    tag: "16-alpine"
+    # Major-Upgrade 16→18 in Arbeit (docs/3-apps-workloads/300b0-nextcloud.md →
+    # Datenbank-Major-Upgrade) — PGDATA in templates/postgres-deployment.yaml
+    # zeigt parallel auf einen neuen, leeren Unterordner (pgdata_pg18),
+    # alte Daten bleiben unangetastet als Rollback-Fallback erhalten.
+    tag: "18-alpine"
 
   database: nextcloud
   username: nextcloud
