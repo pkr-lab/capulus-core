@@ -16,4 +16,4 @@ banana_pi_kiosk_fallback_url: "{{ vault_vereinsheim_alarmmonitor_fallback_url }}
 # LAN-NIC des PCs ersetzen (z.B. `getmac` in einer Eingabeaufforderung
 # unter Windows, oder ipconfig /all).
 banana_pi_kiosk_wol_devices:
-  windows-pc: "E4-54-e8-5F-23-85"
+  windows-pc: "E4:54:E8:5F:23:85"
