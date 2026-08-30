@@ -23,7 +23,9 @@ secrets:
 wikijs:
   # Nur wirksam solange autoscaling.enabled=false ist (siehe unten) —
   # danach übernimmt der HPA die Replica-Anzahl.
-  replicaCount: 1
+  # Temporär auf 0 für die Postgres-16→18-Migration (docs/3-apps-workloads/30030-wikijs.md
+  # → Datenbank-Major-Upgrade). Nach erfolgreichem Restore wieder auf 1 setzen.
+  replicaCount: 0
 
   # Seiten/Assets liegen zwar vollständig in PostgreSQL, aber Wiki.js
   # cached API-Enable-Status/Key-Validierung offenbar pro Pod-Instanz ohne
@@ -31,7 +33,10 @@ wikijs:
   # Pods führten zu inkonsistenten "API Key invalid"/"API disabled"-Fehlern
   # beim wiki-docs-sync. maxReplicas daher vorerst auf 1 gedeckelt.
   autoscaling:
-    enabled: true
+    # Temporär deaktiviert für die Postgres-16→18-Migration — sonst
+    # überschreibt der HPA (minReplicas: 1) den replicaCount: 0 oben.
+    # Nach erfolgreichem Restore wieder auf true setzen.
+    enabled: false
     minReplicas: 1
     maxReplicas: 1
     targetCPUUtilizationPercentage: 75
