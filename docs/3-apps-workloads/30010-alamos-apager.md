@@ -168,6 +168,10 @@ Knopfdruck laufen.
   ein kurzer Pi-Reboot soll nicht jedes Mal ein Ticket erzeugen. Bei
   wiederkehrenden Ausfällen liegt die Nachverfolgung beim Betrachten der
   ntfy-Historie.
+- **Einsatzalarme** (nicht Ausfälle) erzeugen dagegen bewusst **wohl** ein
+  Zammad-Ticket, über einen separaten n8n-Workflow, der direkt an
+  ALAMOS AMweb (nicht an `alamos-apager`) hängt — siehe
+  [300h0-alamos-einsatz-zammad.md](300h0-alamos-einsatz-zammad.md).
 
 ## Fehlerbehebung
 
