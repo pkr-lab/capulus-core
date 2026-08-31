@@ -20,10 +20,51 @@ inkl. offener Fragen steht in
 
 ## Architektur
 
+**Der einzige Auslöser dieses Workflows ist der ALAMOS-Webhook selbst —
+kein Polling.** Ohne die Ziel-URL im Alamos-Account einzutragen (siehe
+[Einrichtung](#einrichtung), Schritt 5) läuft der Workflow nie an und es
+entsteht nie ein Ticket, egal wie viele echte Einsätze reinkommen.
+
+**Empfehlung: AMweb-Seiteneinstellung-Webhook nutzen, nicht "Allgemeine
+Webhooks"** — nur für Ersteren ist öffentlich dokumentiert, dass der Aufruf
+**aus dem Browser-Tab heraus** feuert, also von der Kiosk-Chromium-Session
+selbst, die ohnehin schon im LAN/Tailscale hängt und `*.homeserver`
+auflöst (identisch dazu, wie der Kiosk die echte AMweb-Seite lädt). Die
+interne URL `n8n.prod.homeserver` reicht dafür aus, **keine öffentliche
+Erreichbarkeit nötig**. Bei "Allgemeine Webhooks" (Account-Ebene) war
+öffentlich nicht zu klären, ob der Call stattdessen von Alamos'
+Cloud-Servern selbst kommt (also wirklich aus dem öffentlichen Internet) —
+falls ja, würde `n8n.prod.homeserver` **nicht** funktionieren: n8n wurde
+bewusst aus dem Cloudflare-Tunnel entfernt (siehe
+`argocd/apps/workloads/n8n/values.yaml`, Kommentar bei `env.N8N_HOST`) und
+ist absichtlich nur intern erreichbar. Öffentliche Freigabe (und sei es nur
+dieses eine Webhook-Pfads über einen neuen Cloudflare-Tunnel-Eintrag, siehe
+[e0000-cloudflare-tunnel.md](../e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md))
+wäre eine bewusste Sicherheitsentscheidung, die hier nicht vorweggenommen
+wird — falls "Allgemeine Webhooks" gewünscht ist, das bitte vorher
+absprechen.
+
+**Zusätzliches Risiko, unabhängig von der Webhook-Variante — Private
+Network Access:** Die AMweb-Seite selbst wird von einer öffentlichen
+Origin (`amweb.alamos.cloud` o. ä.) geladen. Moderne Chromium-Versionen
+blockieren per **Private Network Access** standardmäßig JS-Requests
+(`fetch`/XHR) von einer öffentlichen Seite zu einer **privaten**
+Netzwerk-Adresse — und `n8n.prod.homeserver` löst intern auf eine private
+IP auf. Das deckt sich vermutlich mit der Handbuch-Warnung "Aufruf lokaler
+URLs... wird i. d. R. vom Browser aus Sicherheitsgründen blockiert" (die
+könnte mehr meinen als nur `localhost`). Ob die konkrete
+Chromium-Version auf den Kiosk-Pis (`chromium-browser`-Paket, Raspberry Pi
+OS bzw. Armbian) das tatsächlich blockt, lässt sich nur durch einen
+Testlauf klären (siehe Fehlerbehebung, "Webhook kommt gar nicht in n8n
+an"). Blockt der Browser den Call, hilft nur eine öffentlich erreichbare
+Ziel-URL — dieselbe Sicherheitsabwägung wie oben bei "Allgemeine
+Webhooks".
+
 ```
 ALAMOS AMweb (Cloud-Dienst)
    │  Webhook, GET oder POST, nur bei echten Alarmen
    │  (AMweb-Seiteneinstellung ODER "Allgemeine Webhooks" im Alamos-Admin)
+   │  Ziel-URL MUSS dort eingetragen sein, siehe Einrichtung Schritt 5
    ▼
 http://n8n.prod.homeserver/webhook/alamos-einsatz
    │
@@ -37,7 +78,8 @@ http://n8n.prod.homeserver/webhook/alamos-einsatz
    │          - filtert Mehrfach-Auslösungen desselben Alarms innerhalb von
    │            2 Minuten (Workflow-Static-Data, siehe unten)
    ▼
-Zammad-Ticket erstellen (POST /api/v1/tickets, Gruppe Support::Administration)
+Zammad-Ticket erstellen (nativer n8n-nodes-base.zammad-Node, Ticket→Create,
+                          Gruppe Support::Administration)
    │
    ▼
 Zammads Agenten-Benachrichtigung → Mail an info@edv-kretzer.de
@@ -45,6 +87,11 @@ Zammads Agenten-Benachrichtigung → Mail an info@edv-kretzer.de
 
 Workflow-Datei:
 `argocd/apps/workloads/n8n/workflows/alamos-einsatz-to-zammad.json`.
+Nutzt bewusst den **nativen `n8n-nodes-base.zammad`-Node** (wie
+`nightly-worker-update-to-zammad.json`/`yearly-secrets-rotation-reminder.json`),
+nicht den rohen HTTP-Request-Node wie im älteren
+`banana-pi-down-to-zammad.json` — andere Credential (Typ „Zammad Token Auth
+API“ statt Header-Auth), siehe Einrichtung.
 
 ### Warum zwei Webhook-Trigger auf demselben Pfad
 
@@ -72,22 +119,30 @@ Sekunden eintreffen, nicht nach einem Neustart).
 ## Einrichtung
 
 1. **Voraussetzung:** Zammad-API-Token mit Berechtigung `ticket.agent`
-   vorhanden (falls schon für `banana-pi-down-to-zammad.json`
-   eingerichtet, siehe
-   [30020-vereinsheim-alarmmonitor.md, Zammad-Ticket via n8n](30020-vereinsheim-alarmmonitor.md#zammad-ticket-via-n8n),
-   kann dieselbe Credential wiederverwendet werden). Sonst neu erzeugen wie
-   in [f0040-github-release-watcher.md, Schritt 1](../f-cicd-automatisierung/f0040-github-release-watcher.md#schritt-1--zammad-api-token-erzeugen)
-   beschrieben.
+   vorhanden. **Achtung:** Der native Zammad-Node braucht eine Credential
+   vom Typ **„Zammad Token Auth API"** (`zammadTokenAuthApi`) — das ist
+   ein anderer Credential-**Typ** als die Header-Auth-Credential "Zammad
+   API Token", die `banana-pi-down-to-zammad.json` nutzt; die beiden lassen
+   sich nicht wiederverwenden, auch wenn derselbe Zammad-Token dahinter
+   stehen kann. Falls schon für `nightly-worker-update-to-zammad.json` oder
+   `yearly-secrets-rotation-reminder.json` eine Credential dieses Typs
+   angelegt wurde (z. B. "Zammad Token Auth (Rotation-Reminder)"), kann die
+   wiederverwendet werden, sofern sie auf dieselbe Zammad-Instanz zeigt.
+   Sonst Token neu erzeugen wie in
+   [f0040-github-release-watcher.md, Schritt 1](../f-cicd-automatisierung/f0040-github-release-watcher.md#schritt-1--zammad-api-token-erzeugen)
+   beschrieben, Credential in n8n neu anlegen: Typ "Zammad Token Auth API",
+   Base URL `http://zammad.tech.homeserver`, Access Token aus Schritt 1.
 2. **n8n:** `alamos-einsatz-to-zammad.json` importieren, im Node
-   "Zammad-Ticket erstellen" die Header-Auth-Credential "Zammad API Token"
-   zuweisen (Header-Name `Authorization`, Value
-   `Token token=<ZAMMAD_TOKEN>`) — Credential-IDs werden beim Import nicht
-   übernommen, normaler Post-Import-Schritt.
+   "Zammad-Ticket erstellen" die Credential aus Schritt 1 zuweisen —
+   Credential-IDs werden beim Import nicht übernommen, normaler
+   Post-Import-Schritt.
 3. Workflow in n8n **aktivieren** (Import allein reicht nicht).
 4. Webhook-URL kopieren: `http://n8n.prod.homeserver/webhook/alamos-einsatz`.
-5. **Im Alamos-Account** (mit eurem bestehenden Login): Webhook-Konfiguration
-   öffnen (AMweb-Seiteneinstellung oder "Allgemeine Webhooks" im
-   Admin-Bereich), obige URL als Ziel eintragen. Dabei gleich in der
+5. **Im Alamos-Account** (mit eurem bestehenden Login) — **dieser Schritt
+   ist zwingend, ohne ihn feuert der Workflow nie**: Webhook-Konfiguration
+   **der AMweb-Seiteneinstellung** öffnen (nicht "Allgemeine Webhooks",
+   siehe Begründung oben unter Architektur — sonst evtl. öffentliche
+   Erreichbarkeit nötig), obige URL als Ziel eintragen. Dabei gleich in der
    Vorschau/"Webhook Test" nachsehen, welche Platzhalter tatsächlich
    angeboten werden — das beantwortet die im Planungsdokument offene Frage
    nach den exakten Feldnamen.
@@ -121,7 +176,7 @@ Sekunden eintreffen, nicht nach einem Neustart).
 | n8n-Execution zeigt Fehler "Webhook ohne jegliche Query-/Body-Daten empfangen" | Alamos-Webhook-Konfiguration prüfen — Ziel-URL korrekt, Platzhalter im Body/in der Query wirklich gesetzt? |
 | Ticket wird unterdrückt, obwohl es ein neuer Einsatz war | `DEDUP_WINDOW_MS` zu großzügig, oder `keyword`/`unit` fehlen und der Fallback-Payload-Vergleich trifft zufällig — Rohdaten in der n8n-Execution ansehen |
 | Ticket erstellt, aber keine Mail | Zammad-Agenten-Mitgliedschaft/Benachrichtigung prüfen (siehe oben), ausgehender E-Mail-Kanal in Zammad konfiguriert? |
-| n8n-Workflow schlägt am Zammad-Node fehl | Header-Auth-Credential zugewiesen? Token gültig/`ticket.agent`-Berechtigung? |
+| n8n-Workflow schlägt am Zammad-Node fehl | Credential vom Typ "Zammad Token Auth API" zugewiesen (nicht die Header-Auth-Credential aus `banana-pi-down-to-zammad.json`)? Base URL korrekt (`http://zammad.tech.homeserver`)? Token gültig/`ticket.agent`-Berechtigung? |
 | Webhook kommt gar nicht in n8n an | `alamos-einsatz-get`/`alamos-einsatz-post` — läuft der Kiosk/AMweb-Zugriff über dieselbe `*.homeserver`-Route wie sonst? (Tailscale Split-DNS bei `vereinsheim-alarmmonitor`, siehe [30020](30020-vereinsheim-alarmmonitor.md#netzwerk-tailscale-only)) |
 
 ## Relevante Links
