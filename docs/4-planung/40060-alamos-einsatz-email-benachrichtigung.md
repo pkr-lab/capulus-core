@@ -149,9 +149,19 @@ beantworten, sondern nur direkt in eurem Alamos-Account:
 2. **Browser-Tab- vs. Konto-Ebene.** Feuert der Webhook pro AMweb-Kiosk-Tab
    (dann bei 3 Standorten = 3 Auslösungen pro echtem Einsatz, siehe
    [30010](../3-apps-workloads/30010-alamos-apager.md) für die
-   Standort-Liste) oder zentral einmal pro Konto? Bestimmt, ob im Zielsystem
-   eine Duplikat-Erkennung nötig ist (z. B. über Einsatznummer + Alarmzeit
-   als Idempotenz-Schlüssel).
+   Standort-Liste) oder zentral einmal pro Konto? Bestimmt nicht nur, ob im
+   Zielsystem eine Duplikat-Erkennung nötig ist (z. B. über Einsatznummer +
+   Alarmzeit als Idempotenz-Schlüssel), sondern auch, **ob die Ziel-URL
+   öffentlich erreichbar sein muss**: Für die AMweb-Seiteneinstellung ist
+   dokumentiert, dass der Aufruf aus dem Browser-Tab (Kiosk-Chromium, im
+   LAN/Tailscale) feuert — dafür reicht die interne URL
+   `n8n.prod.homeserver`. Ob "Allgemeine Webhooks" stattdessen
+   server-seitig direkt von Alamos' Cloud aus feuert (und damit eine
+   öffentliche URL bräuchte, die n8n aktuell bewusst nicht hat — siehe
+   [300h0-alamos-einsatz-zammad.md, Architektur](../3-apps-workloads/300h0-alamos-einsatz-zammad.md#architektur)),
+   war öffentlich nicht zu klären. **Deshalb aktuelle Empfehlung/Umsetzung:
+   AMweb-Seiteneinstellung-Webhook verwenden**, nicht "Allgemeine
+   Webhooks", solange das nicht geklärt ist.
 3. **GET vs. POST bei "Allgemeine Webhooks".** POST liefert laut
    Handbuch-Snippet ein JSON-Objekt, GET nur Query-Parameter — relevant für
    den Empfänger-Endpunkt.
