@@ -20,6 +20,22 @@ resource_watchdog_cpu_sustain_seconds: 300
 resource_watchdog_ram_threshold: 90
 resource_watchdog_ram_sustain_seconds: 300
 
+# Frühwarnstufe: sendet EINMALIG eine ntfy-Warnung (kein Shutdown), sobald
+# der Wert für *_warn_sustain_seconds über der Warnschwelle bleibt. Bewusst
+# eigenständig vom VMRule/Alertmanager-Pfad (CPU 80%/RAM 70%, siehe
+# argocd/apps/platform/monitoring/templates/vmrule-resources.yaml) — dieser
+# Watchdog läuft dependency-frei direkt auf dem Host und warnt daher auch
+# dann noch, wenn der Cluster/Monitoring-Stack selbst schon unter der Last
+# leidet, die zum Shutdown führt (der eigentliche Grund, warum
+# resource_watchdog überhaupt außerhalb von Prometheus/k8s läuft — siehe
+# Kommentar oben in tasks/main.yml). Schwelle knapp unter dem harten
+# Threshold und Sustain-Dauer knapp unter dessen Sustain, damit die Warnung
+# bei stetig steigender Last praktisch immer vor dem Shutdown ankommt.
+resource_watchdog_cpu_warn_threshold: 85
+resource_watchdog_cpu_warn_sustain_seconds: 60
+resource_watchdog_ram_warn_threshold: 80
+resource_watchdog_ram_warn_sustain_seconds: 60
+
 # ntfy-Ziel für die Shutdown-Meldung. Wird per `curl --resolve` direkt auf
 # die statische Server-IP aufgelöst (siehe thermal_watchdog-Rolle für die
 # Begründung).
@@ -31,6 +47,10 @@ resource_watchdog_metrics:
   - name: cpu
     threshold: "{{ resource_watchdog_cpu_threshold }}"
     sustain_seconds: "{{ resource_watchdog_cpu_sustain_seconds }}"
+    warn_threshold: "{{ resource_watchdog_cpu_warn_threshold }}"
+    warn_sustain_seconds: "{{ resource_watchdog_cpu_warn_sustain_seconds }}"
   - name: ram
     threshold: "{{ resource_watchdog_ram_threshold }}"
     sustain_seconds: "{{ resource_watchdog_ram_sustain_seconds }}"
+    warn_threshold: "{{ resource_watchdog_ram_warn_threshold }}"
+    warn_sustain_seconds: "{{ resource_watchdog_ram_warn_sustain_seconds }}"

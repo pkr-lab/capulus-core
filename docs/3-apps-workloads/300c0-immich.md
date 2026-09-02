@@ -342,15 +342,27 @@ kubectl describe sealedsecret -n immich immich-secrets
 
 | Komponente             | CPU Request | RAM Request | RAM Limit | Storage                    |
 |--------------------------|-------------|--------------|-----------|------------------------------|
-| immich-server             | 250m        | 512Mi        | 2Gi       | 500Gi Bibliothek (`immich-nas`) |
+| immich-server             | 250m        | 512Mi        | 4Gi       | 500Gi Bibliothek (`immich-nas`) |
 | immich-machine-learning   | 500m        | 1Gi          | 4Gi       | 10Gi Modell-Cache (`immich-nas`)|
 | PostgreSQL                | 200m        | 512Mi        | 2Gi       | 20Gi (`immich-nas`)          |
 | Valkey/Redis               | 25m         | 64Mi         | 256Mi     | —                            |
-| **Gesamt**                | ~975m       | ~2,1Gi       | ~8,25Gi   | 530Gi auf `immich-nas`       |
+| **Gesamt (1 Replica je Komponente)** | ~975m | ~2,1Gi | ~10,25Gi | 530Gi auf `immich-nas` |
+| **Worst Case (volle Autoskalierung, siehe unten)** | — | — | **~22,25Gi** | — |
 
 `server.persistence.library.size` bei Bedarf erhöhen — wie bei Nextcloud
 wirkt sich das nur auf die Kubernetes-Quota aus, nicht auf den
 tatsächlich belegten NAS-Speicher.
+
+Das RAM-Limit für `immich-server` wurde am 2026-07-27 bewusst von 2Gi auf
+4Gi angehoben (Absturz bei großen Uploads, siehe
+[../b-kubernetes-gitops/b0040-hpa-autoscaling.md](../b-kubernetes-gitops/b0040-hpa-autoscaling.md)) —
+NICHT wieder absenken, ohne die Ursache dieser Änderung erneut zu prüfen.
+Da der Worst-Case-Wert (volle Autoskalierung aller vier Komponenten
+gleichzeitig auf demselben Node, siehe `podAffinity` unten) einen
+erheblichen Teil des Homeserver-RAM beanspruchen kann, greift stattdessen
+der [Kubelet-RAM-Schutz](../2-betrieb-hardware/20020-cluster-power-manager.md#mehrschichtiger-ram-schutz):
+Der Kubelet evakuiert/killt einzelne Pods, bevor die Gesamtlast den Node
+gefährdet.
 
 ---
 

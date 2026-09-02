@@ -6,6 +6,15 @@
 # the value stays at/above THRESHOLD for SUSTAIN_SECONDS, sends an ntfy
 # notification and powers the host off. Mirrors thermal-watchdog.sh so the
 # safety cutoff also works if the cluster itself is struggling under load.
+#
+# Optional early-warning stage (WARN_THRESHOLD): fires a single ntfy
+# notification, no shutdown, once the value stays at/above WARN_THRESHOLD
+# for WARN_SUSTAIN_SECONDS. Runs independently of Prometheus/Alertmanager
+# (argocd/apps/platform/monitoring/templates/vmrule-resources.yaml already
+# warns at lower thresholds) so a warning still reaches the user even if
+# the cluster's own monitoring stack is the thing struggling under the
+# load — see docs/2-betrieb-hardware/20020-cluster-power-manager.md →
+# "Mehrschichtiger RAM-Schutz".
 set -euo pipefail
 
 METRIC="${METRIC:?METRIC not set (cpu|ram)}"
@@ -15,11 +24,16 @@ POLL_SECONDS="${POLL_SECONDS:?POLL_SECONDS not set}"
 NTFY_HOST="${NTFY_HOST:?NTFY_HOST not set}"
 NTFY_IP="${NTFY_IP:?NTFY_IP not set}"
 NTFY_TOPIC="${NTFY_TOPIC:?NTFY_TOPIC not set}"
+# Optional: leave WARN_THRESHOLD empty to disable the early-warning stage.
+WARN_THRESHOLD="${WARN_THRESHOLD:-}"
+WARN_SUSTAIN_SECONDS="${WARN_SUSTAIN_SECONDS:-60}"
 # Set DRY_RUN=1 (e.g. via `systemctl edit --runtime resource-watchdog@<metric>`)
 # to test the full detection -> notify path without actually powering off.
 DRY_RUN="${DRY_RUN:-0}"
 
 over_since=0
+warn_over_since=0
+warn_sent=0
 
 cpu_percent() {
   local _ u1 n1 s1 i1 iw1 irq1 sirq1 st1 u2 n2 s2 i2 iw2 irq2 sirq2 st2
@@ -66,6 +80,18 @@ notify_shutdown() {
     "http://${NTFY_HOST}/${NTFY_TOPIC}" || true
 }
 
+notify_warning() {
+  local title="Warnung: hohe ${METRIC^^}-Auslastung"
+  local body="$(hostname): ${METRIC} >= ${WARN_THRESHOLD}% seit ${WARN_SUSTAIN_SECONDS}s. Bei Anstieg auf ${THRESHOLD}% fuer ${SUSTAIN_SECONDS}s schaltet sich der Host automatisch ab."
+  curl --fail --silent --show-error --max-time 5 \
+    --resolve "${NTFY_HOST}:80:${NTFY_IP}" \
+    -H "Title: ${title}" \
+    -H "Priority: 4" \
+    -H "Tags: warning" \
+    -d "$body" \
+    "http://${NTFY_HOST}/${NTFY_TOPIC}" || true
+}
+
 logger -t "resource-watchdog-${METRIC}" "started (threshold=${THRESHOLD}% sustain=${SUSTAIN_SECONDS}s poll=${POLL_SECONDS}s)"
 
 while true; do
@@ -87,6 +113,19 @@ while true; do
     fi
   else
     over_since=0
+  fi
+
+  if [ -n "$WARN_THRESHOLD" ] && [ "$value" -ge "$WARN_THRESHOLD" ]; then
+    if [ "$warn_over_since" -eq 0 ]; then
+      warn_over_since="$now"
+    elif [ "$warn_sent" -eq 0 ] && (( now - warn_over_since >= WARN_SUSTAIN_SECONDS )); then
+      logger -t "resource-watchdog-${METRIC}" "${value}% >= ${WARN_THRESHOLD}% for $(( now - warn_over_since ))s -- warning"
+      notify_warning
+      warn_sent=1
+    fi
+  else
+    warn_over_since=0
+    warn_sent=0
   fi
 
   sleep "$POLL_SECONDS"
