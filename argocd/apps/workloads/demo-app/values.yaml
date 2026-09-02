@@ -4,7 +4,7 @@ replicaCount: 1
 
 image:
   repository: hashicorp/http-echo
-  tag: "0.2.3"
+  tag: "1.0.0"
   pullPolicy: IfNotPresent
 
 message: "Hello from GitOps - Version 1"
