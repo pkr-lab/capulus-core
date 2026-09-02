@@ -37,3 +37,18 @@ kube-apiserver-arg:
   - "audit-log-maxbackup={{ k3s_audit_log_max_backups }}"
   - "audit-log-maxsize={{ k3s_audit_log_max_size_mb }}"
 {% endif %}
+{% if k3s_kubelet_memory_protection_enabled | bool %}
+# RAM-Schutz auf Kubelet-Ebene: reserviert RAM für OS/kubelet/containerd,
+# damit Pod-Speicherdruck nicht Systemdienste wie sshd/tailscaled treffen
+# kann, und lässt den Kubelet betroffene Pods evakuieren/OOM-killen,
+# BEVOR resource_watchdog (ansible/roles/resource_watchdog) bei 90%
+# sustained den kompletten Node abschaltet. eviction-hard-Schwelle bewusst
+# unter den 90% des resource_watchdog, damit Kubernetes zuerst eine
+# Chance zur geordneten Reaktion bekommt (siehe
+# docs/2-betrieb-hardware/20020-cluster-power-manager.md →
+# "Mehrschichtiger RAM-Schutz").
+kubelet-arg:
+  - "eviction-hard=memory.available<{{ k3s_kubelet_eviction_hard_memory }}"
+  - "system-reserved=memory={{ k3s_kubelet_system_reserved_memory }}"
+  - "kube-reserved=memory={{ k3s_kubelet_kube_reserved_memory }}"
+{% endif %}
