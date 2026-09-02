@@ -4,3 +4,12 @@ server: "https://{{ hostvars[k3s_server_host]['ansible_host'] }}:6443"
 token: "{{ k3s_node_token }}"
 node-name: "{{ k3s_agent_hostname }}"
 resolv-conf: /run/systemd/resolve/resolv.conf
+{% if k3s_kubelet_memory_protection_enabled | bool %}
+# RAM-Schutz auf Kubelet-Ebene — gleiches Prinzip wie beim Server
+# (ansible/roles/k3s/templates/k3s-config.yaml.j2), siehe dort für die
+# Begründung.
+kubelet-arg:
+  - "eviction-hard=memory.available<{{ k3s_kubelet_eviction_hard_memory }}"
+  - "system-reserved=memory={{ k3s_kubelet_system_reserved_memory }}"
+  - "kube-reserved=memory={{ k3s_kubelet_kube_reserved_memory }}"
+{% endif %}
