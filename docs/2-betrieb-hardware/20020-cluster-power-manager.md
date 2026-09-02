@@ -207,8 +207,71 @@ typische Lastspitze kürzer ist als die konfigurierte Sustain-Dauer.
 
 ---
 
+## Mehrschichtiger RAM-Schutz
+
+Der Homeserver ist aktuell der einzige durchgehend laufende Node, und
+mehrere Apps skalieren per HPA hoch (siehe
+[b0040-hpa-autoscaling.md](../b-kubernetes-gitops/b0040-hpa-autoscaling.md)) —
+wegen `podAffinity` bei RWO-Storage landen neue Replicas dabei zwingend
+auf demselben Node wie die bereits laufenden (z. B. Immich, siehe
+[300c0-immich.md](../3-apps-workloads/300c0-immich.md)). Skalierung hilft
+also gegen viele parallele Anfragen, kann aber im Zweifel selbst den
+RAM-Druck auf dem Homeserver erhöhen, statt ihn zu verteilen. Cluster
+Power Manager weckt zwar zusätzliche Worker bei hoher Homeserver-Last,
+verschiebt aber keine bereits laufenden, affinity-gebundenen Pods dorthin.
+
+Gegen einen daraus resultierenden RAM-Engpass greifen vier Schichten,
+von früh/sanft bis spät/hart:
+
+1. **VMRule/Alertmanager-Warnung** (RAM ≥ 70% / CPU ≥ 80%, 2 Minuten,
+   [vmrule-resources.yaml](../../argocd/apps/platform/monitoring/templates/vmrule-resources.yaml))
+   — nur Gotify-Push, kein Eingriff. Läuft **im** Cluster und kann daher
+   selbst betroffen sein, wenn genau der Ressourcendruck, vor dem sie
+   warnen soll, den Monitoring-Stack mit ausbremst.
+2. **resource_watchdog-Frühwarnung** (RAM ≥ 80% / CPU ≥ 85%, 60s,
+   [ansible/roles/resource_watchdog](../../ansible/roles/resource_watchdog)) —
+   läuft dependency-frei direkt auf dem Host (kein Prometheus/k8s in der
+   Messkette) und schickt eine einmalige ntfy-Warnung, auch wenn Schicht 1
+   gerade selbst ausfällt. Ebenfalls kein Eingriff, reine Vorwarnung vor
+   dem automatischen Shutdown.
+3. **Kubelet-Eviction** (verfügbarer RAM < 15%, `eviction-hard` +
+   `system-reserved`/`kube-reserved` in `ansible/group_vars/all.yml` →
+   `k3s_kubelet_*`) — der Kubelet evakuiert/killt gezielt einzelne Pods
+   (typischerweise den größten Speicherverbraucher), bevor der gesamte
+   Node gefährdet ist, und reserviert RAM für OS/kubelet/containerd/sshd/
+   tailscaled, damit Pod-Speicherdruck nicht diese Systemdienste trifft.
+   Wirkt erst nach `sudo systemctl restart k3s` (bzw. `k3s-agent`) auf dem
+   jeweiligen Node.
+4. **resource_watchdog-Shutdown** (RAM/CPU ≥ 90%, 300s sustained,
+   [ansible/roles/resource_watchdog](../../ansible/roles/resource_watchdog)) —
+   letzte Instanz, wenn Schicht 3 die Last nicht mehr abfangen konnte:
+   fährt den kompletten Node herunter. Erreichbar dann nur noch über
+   physischen Zugriff, NICHT mehr über Tailscale (Poweroff, kein Hang).
+
+Schicht 2 und 3 wurden ergänzt, nachdem ein reiner Shutdown ohne
+Vorwarnung (Schicht 1 + 4 allein) dazu führte, dass der Homeserver ohne
+erkennbaren Grund "einfach weg" war, obwohl er nur sauber heruntergefahren
+hatte.
+
+**Nachtrag 2026-09-02:** Der Vorfall, der diese vier Schichten ausgelöst
+hat, stellte sich bei der Log-Analyse als **kein** RAM/CPU-Problem heraus,
+sondern als physischer Link-Verlust auf `eno1` (Realtek `r8169`,
+`journalctl`: `Lost carrier` / `Link is Down` um 13:29:47, danach keine
+Erholung mehr bis zum nächsten harten Reset). `ethtool --show-eee eno1`
+zeigte "EEE status: enabled - active" bei 1Gbps — eine bekannte
+Schwachstelle mancher Realtek-NICs. Fix: `network_disable_eee` (Default
+`true`, `ansible/group_vars/all.yml`) deaktiviert Energy Efficient
+Ethernet persistent beim Boot (`common`-Rolle, analog zum
+`enable-wol.service`-Muster in
+[`ansible/roles/wake_on_lan`](../../ansible/roles/wake_on_lan)). Die vier
+Schichten oben bleiben trotzdem sinnvoll — sie schützen vor echtem
+Ressourcendruck, unabhängig von dieser konkreten Ursache.
+
+---
+
 ## Relevante Links
 
 - [k3s-Referenz (Cluster-Topologie, cordon/drain/uncordon)](../b-kubernetes-gitops/b0000-k3s.md)
 - [resource_watchdog / thermal_watchdog](../../ansible/roles/resource_watchdog)
+- [HPA-Autoskalierung (podAffinity/RWO-Hintergrund)](../b-kubernetes-gitops/b0040-hpa-autoscaling.md)
 - [NAS-Backup](20010-nas-backup.md)
