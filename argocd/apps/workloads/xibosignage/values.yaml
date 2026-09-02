@@ -26,9 +26,13 @@ mysql:
   image:
     repository: mysql
     pullPolicy: IfNotPresent
-    # Identisch zur Version aus dem offiziellen xibosignage/xibo-docker
-    # docker-compose.yml.
-    tag: "8.4"
+    # Major-Upgrade 8.4→26.7 am 2026-08-30 abgeschlossen (docs/3-apps-workloads/300e0-xibosignage.md →
+    # Datenbank-Major-Upgrade, Dump/Restore-Verfahren). mountPath in
+    # templates/mysql-deployment.yaml zeigt seitdem per subPath auf
+    # mysql-data-v26 — die alten 8.4-Daten liegen als Rollback-Fallback
+    # noch an der PVC-Wurzel, können nach ein paar Tagen störungsfreiem
+    # Betrieb aufgeräumt werden.
+    tag: "26.7"
 
   database: cms
   username: cms

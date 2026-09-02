@@ -169,7 +169,13 @@ postgresql:
   image:
     repository: postgres
     pullPolicy: IfNotPresent
-    tag: "16-alpine"
+    # Major-Upgrade 16→18 am 2026-08-30 abgeschlossen (docs/3-apps-workloads/300b0-nextcloud.md →
+    # Datenbank-Major-Upgrade, Dump/Restore-Verfahren). PGDATA in
+    # templates/postgres-deployment.yaml zeigt seitdem auf pgdata_pg18 —
+    # der alte pgdata-Ordner liegt als Rollback-Fallback noch auf
+    # derselben PVC, kann nach ein paar Tagen störungsfreiem Betrieb
+    # aufgeräumt werden.
+    tag: "18-alpine"
 
   database: nextcloud
   username: nextcloud

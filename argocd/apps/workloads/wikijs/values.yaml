@@ -88,7 +88,13 @@ postgresql:
   image:
     repository: postgres
     pullPolicy: IfNotPresent
-    tag: "16-alpine"
+    # Major-Upgrade 16→18 am 2026-08-30 abgeschlossen (docs/3-apps-workloads/30030-wikijs.md →
+    # Datenbank-Major-Upgrade, Dump/Restore-Verfahren). PGDATA in
+    # templates/postgres-deployment.yaml zeigt seitdem auf
+    # pgdata_fixed_pg18 — der alte pgdata_fixed-Ordner liegt als
+    # Rollback-Fallback noch auf derselben PVC, kann nach ein paar Tagen
+    # störungsfreiem Betrieb aufgeräumt werden.
+    tag: "18-alpine"
 
   database: wiki
   username: wikijs
