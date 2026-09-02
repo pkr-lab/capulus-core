@@ -179,7 +179,16 @@ postgresql:
   image:
     repository: ghcr.io/immich-app/postgres
     pullPolicy: IfNotPresent
-    tag: "14-vectorchord0.4.3-pgvectors0.2.0"
+    # Major-Upgrade 14→16 am 2026-08-30 abgeschlossen (docs/3-apps-workloads/300c0-immich.md →
+    # Datenbank-Major-Upgrade, Dump/Restore-Verfahren) — kein exakter
+    # pgvectors0.2.0-Tag für Postgres 16 verfügbar (GHCR-Tag-Liste geprüft),
+    # nächster Treffer derselben vectorchord0.4.3-Familie ist pgvectors0.2.1
+    # (Patch-Bump, innerhalb des laut docs.immich.app unterstützten Bereichs
+    # VectorChord >=0.3,<2.0). PGDATA in templates/postgres-deployment.yaml
+    # zeigt seitdem auf pgdata_fixed_pg16 — der alte pgdata_fixed-Ordner
+    # liegt als Rollback-Fallback noch auf derselben PVC, kann nach ein
+    # paar Tagen störungsfreiem Betrieb aufgeräumt werden.
+    tag: "16-vectorchord0.4.3-pgvectors0.2.1"
 
   database: immich
   username: immich

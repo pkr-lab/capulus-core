@@ -71,7 +71,7 @@ spec:
             - name: POSTGRES_INITDB_ARGS
               value: {{ .Values.postgresql.initdbArgs | quote }}
             - name: PGDATA
-              value: /var/lib/postgresql/data/pgdata_fixed
+              value: /var/lib/postgresql/data/pgdata_fixed_pg16
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
