@@ -1,7 +1,7 @@
 ---
 image:
   repository: python
-  tag: "3.12-slim"
+  tag: "3.14-slim"
   pullPolicy: IfNotPresent
 
 # CronJob-Schedule (Standard: alle 120 Minuten / 2 Stunden).
