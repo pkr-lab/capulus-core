@@ -8,7 +8,7 @@ image:
   # sauber fuer v3: PAPERLESS_SECRET_KEY + PAPERLESS_DBENGINE bereits gesetzt,
   # keine deprecated Env-Vars, keine Verschluesselung im Einsatz. Such-Index
   # baut sich beim ersten Start automatisch neu auf (Whoosh -> tantivy).
-  tag: "3.1.1"
+  tag: "3.1.2"
 
 redis:
   image: redis:8-alpine
