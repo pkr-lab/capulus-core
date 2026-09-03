@@ -73,7 +73,7 @@ geoip:
   enabled: true
   updaterImage:
     repository: curlimages/curl
-    tag: "8.11.0"
+    tag: "8.22.0"
 
 # Schulungs-Erweiterung (siehe README.md "Bestenliste"): koppelt das
 # Namensfeld im Nickname-Overlay (src/nickname.js) an dieselbe versteckte
