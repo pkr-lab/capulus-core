@@ -1,0 +1,10 @@
+---
+# Kill-switch: auf false setzen (z.B. in host_vars) um die EEE-Deaktivierung
+# auf einem bestimmten Host zu deaktivieren, ohne die Rolle aus dem
+# Playbook zu entfernen (analog zu resource_watchdog_enabled).
+disable_eee_enabled: true
+
+# Netzwerkinterface, auf dem EEE deaktiviert wird. Default: das Interface
+# der Default-Route (per Ansible-Facts ermittelt) — gleiches Prinzip wie
+# wake_on_lan_interface in ansible/roles/wake_on_lan.
+disable_eee_interface: "{{ ansible_default_ipv4.interface }}"
