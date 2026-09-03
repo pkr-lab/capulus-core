@@ -14,16 +14,19 @@
 #      docs/2-betrieb-hardware/20030-nightly-worker-update.md.
 #   2. k3s_agent — tritt dem k3s-Cluster als Worker-Node bei
 #      (benoetigt laufenden k3s-Server auf homeserver/.94)
-#   3. thermal_watchdog / resource_watchdog — automatischer Shutdown bei
+#   3. disable_eee — deaktiviert Energy Efficient Ethernet dauerhaft
+#      (Vorfall 2026-09-02 auf homeserver: EEE verursachte einen
+#      Link-Drop ohne Selbstheilung, siehe ansible/roles/disable_eee)
+#   4. thermal_watchdog / resource_watchdog — automatischer Shutdown bei
 #      Uebertemperatur bzw. anhaltend hoher CPU/RAM-Last
-#   4. wake_on_lan — WoL-Empfangsbereitschaft, damit cluster_power_manager
+#   5. wake_on_lan — WoL-Empfangsbereitschaft, damit cluster_power_manager
 #      (laeuft auf homeserver, siehe ansible/site.yml) diesen Node aus dem
 #      ausgeschalteten Zustand aufwecken kann
-#   5. cluster_power_manager_target — autorisiert den auf homeserver
+#   6. cluster_power_manager_target — autorisiert den auf homeserver
 #      erzeugten Shutdown-Key hier, beschraenkt auf "poweroff" (setzt
 #      voraus, dass site.yml bereits gegen homeserver gelaufen ist, sonst
 #      existiert der Public Key dort noch nicht)
-#   6. Uncordon — stellt sicher dass worker-1 schedulable bleibt
+#   7. Uncordon — stellt sicher dass worker-1 schedulable bleibt
 #      (kubectl drain/cordon durch Maintenance-Schritte rueckgaengig machen)
 # ============================================================
 #
@@ -41,6 +44,8 @@
       tags: [apt-update, updates]
     - role: k3s_agent
       tags: [k3s-agent, kubernetes]
+    - role: disable_eee
+      tags: [disable-eee, network]
     - role: thermal_watchdog
       tags: [thermal-watchdog, thermal]
     - role: resource_watchdog
