@@ -220,7 +220,7 @@ redis:
   image:
     repository: redis
     pullPolicy: IfNotPresent
-    tag: "7-alpine"
+    tag: "8-alpine"
 
   service:
     port: 6379
