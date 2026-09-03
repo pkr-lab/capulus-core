@@ -23,6 +23,8 @@
       tags: [dnsmasq, dns]
     - role: tailscale
       tags: [tailscale, vpn]
+    - role: disable_eee
+      tags: [disable-eee, network]
     - role: k3s
       tags: [k3s, kubernetes]
     - role: argocd

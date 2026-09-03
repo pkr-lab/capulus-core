@@ -308,6 +308,7 @@ tatsächliche Git-Ordnerstruktur (`argocd/apps/platform/…` bzw.
 | `tailscale` | homeserver, xibosignage-Displays | WireGuard-Mesh-VPN, Auth-Key aus Ansible Vault; auf Displays reiner Client ohne Subnetz-Advertising |
 | `k3s` | homeserver | Kubernetes-Control-Plane + Helm |
 | `k3s_agent` | worker-0, worker-1 | Cluster-Beitritt per Join-Token vom Control-Plane |
+| `disable_eee` | homeserver, worker-0, worker-1 | Energy Efficient Ethernet dauerhaft deaktivieren (Realtek-NIC-Link-Drops) |
 | `argocd` | homeserver | ArgoCD per Helm + Bootstrap-ApplicationSet |
 | `semaphore_secrets` | homeserver | Bootstrap-Secret für den Semaphore-Pod |
 | `semaphore_targets` | alle verwalteten Hosts | SSH-Pubkey von Semaphore in `authorized_keys` |

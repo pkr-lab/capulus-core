@@ -442,15 +442,6 @@ network_dns:
   - "1.1.1.1"
   - "8.8.8.8"
 
-# Deaktiviert Energy Efficient Ethernet auf `network_interface` persistent
-# beim Boot (via ethtool, Kill-Switch analog zu resource_watchdog_enabled).
-# Hintergrund: Vorfall 2026-09-02, eno1 (Realtek r8169) verlor das
-# Trägersignal und erholte sich nicht mehr selbst — EEE stand danach auf
-# "enabled - active", eine bekannte Ursache für genau solche Link-Drops
-# bei manchen Realtek-NICs. Siehe
-# docs/2-betrieb-hardware/20020-cluster-power-manager.md.
-network_disable_eee: true
-
 # ---- nightly_worker_wake: n8n-Trigger-Key ------------------
 # Public Key des SSH-Keys, mit dem der n8n-Workflow
 # nightly-worker-wake-trigger.json den 01:00-Uhr-Zyklus auslöst — siehe
