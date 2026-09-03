@@ -9,10 +9,14 @@
   "labels": ["dependencies"],
   "commitMessagePrefix": "feat(deps):",
   "helm-values": {
-    "fileMatch": ["^argocd/apps/.+/values\\.yaml$"]
+    "managerFilePatterns": [
+      "/^argocd/apps/.+/values\\.yaml$/"
+    ]
   },
   "helmv3": {
-    "fileMatch": ["^argocd/apps/.+/Chart\\.yaml$"]
+    "managerFilePatterns": [
+      "/^argocd/apps/.+/Chart\\.yaml$/"
+    ]
   },
   "github-actions": {
     "enabled": true
