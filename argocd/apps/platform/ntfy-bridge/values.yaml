@@ -12,7 +12,7 @@ autoscaling:
 
 image:
   repository: python
-  tag: "3.12-slim"
+  tag: "3.14-slim"
   pullPolicy: IfNotPresent
 
 # ntfy connection — URL of the ntfy service (in-cluster or external).
