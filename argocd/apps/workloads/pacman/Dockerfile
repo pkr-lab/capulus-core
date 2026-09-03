@@ -2,7 +2,7 @@
 # base with no shell, package manager, or libc — nothing an attacker could
 # use if the container were ever compromised, and nothing to patch either.
 # Mirrors argocd/apps/workloads/carplay-api/Dockerfile.
-FROM golang:1.23-alpine AS builder
+FROM golang:1.27-alpine AS builder
 
 WORKDIR /build
 
