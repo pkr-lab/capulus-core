@@ -1,0 +1,52 @@
+---
+# ============================================================
+# disable_eee role — Energy Efficient Ethernet dauerhaft deaktivieren
+# ============================================================
+# Vorfall 2026-09-02 (homeserver): eno1 (Realtek r8169) verlor das
+# Trägersignal ("Lost carrier"/"Link is Down") und erholte sich bis zum
+# nächsten harten Reset nicht mehr selbst — Homeserver dadurch komplett
+# unerreichbar, auch über Tailscale. `ethtool --show-eee eno1` zeigte
+# danach "EEE status: enabled - active" bei 1Gbps — eine bekannte
+# Schwachstelle bestimmter Realtek-NICs. Eigene Rolle statt Teil von
+# `common`, damit auch worker-0/worker-1 (die `common` nicht durchlaufen,
+# siehe ansible/worker-0.yml) denselben Schutz bekommen, falls sie
+# dieselbe NIC-Generation verbaut haben. Netplan/systemd-networkd bieten
+# dafür keinen Schalter, daher wie bei wake_on_lan
+# (ansible/roles/wake_on_lan) ein eigener oneshot-Service, der `ethtool`
+# beim Boot aufruft. Siehe
+# docs/2-betrieb-hardware/20020-cluster-power-manager.md →
+# "Mehrschichtiger RAM-Schutz" für den Rest der Diagnose an jenem Tag.
+# ============================================================
+
+- name: ethtool installieren (für EEE-Konfiguration)
+  ansible.builtin.apt:
+    name: ethtool
+    state: present
+    update_cache: true
+  when: disable_eee_enabled | bool
+
+- name: systemd-Unit zur EEE-Deaktivierung beim Boot deployen
+  ansible.builtin.template:
+    src: disable-eee.service.j2
+    dest: /etc/systemd/system/disable-eee.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: disable_eee_enabled | bool
+  register: disable_eee_unit
+
+- name: disable-eee.service aktivieren und (neu) starten
+  ansible.builtin.systemd:
+    name: disable-eee.service
+    daemon_reload: true
+    enabled: true
+    state: "{{ 'restarted' if disable_eee_unit.changed else 'started' }}"
+  when: disable_eee_enabled | bool
+
+- name: disable-eee.service deaktivieren, falls disable_eee_enabled false
+  ansible.builtin.systemd:
+    name: disable-eee.service
+    enabled: false
+    state: stopped
+  when: not (disable_eee_enabled | bool)
+  failed_when: false

@@ -259,13 +259,16 @@ sondern als physischer Link-Verlust auf `eno1` (Realtek `r8169`,
 `journalctl`: `Lost carrier` / `Link is Down` um 13:29:47, danach keine
 Erholung mehr bis zum nächsten harten Reset). `ethtool --show-eee eno1`
 zeigte "EEE status: enabled - active" bei 1Gbps — eine bekannte
-Schwachstelle mancher Realtek-NICs. Fix: `network_disable_eee` (Default
-`true`, `ansible/group_vars/all.yml`) deaktiviert Energy Efficient
-Ethernet persistent beim Boot (`common`-Rolle, analog zum
+Schwachstelle mancher Realtek-NICs. Fix:
+[`ansible/roles/disable_eee`](../../ansible/roles/disable_eee)
+deaktiviert Energy Efficient Ethernet persistent beim Boot (analog zum
 `enable-wol.service`-Muster in
-[`ansible/roles/wake_on_lan`](../../ansible/roles/wake_on_lan)). Die vier
-Schichten oben bleiben trotzdem sinnvoll — sie schützen vor echtem
-Ressourcendruck, unabhängig von dieser konkreten Ursache.
+[`ansible/roles/wake_on_lan`](../../ansible/roles/wake_on_lan)) — eigene
+Rolle statt Teil von `common`, damit auch worker-0/worker-1 (die
+`common` nicht durchlaufen) denselben Schutz bekommen, falls sie
+dieselbe NIC-Generation verbaut haben. Die vier Schichten oben bleiben
+trotzdem sinnvoll — sie schützen vor echtem Ressourcendruck, unabhängig
+von dieser konkreten Ursache.
 
 ---
 
