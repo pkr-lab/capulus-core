@@ -14,7 +14,7 @@
 # the volume at runtime. N8N_CUSTOM_EXTENSIONS points n8n at an independent
 # directory instead, so it survives PVC mounts and pod restarts alike.
 
-FROM node:20.17.0-alpine AS builder
+FROM node:24.20.0-alpine AS builder
 
 RUN apk add --no-cache python3 make g++
 
