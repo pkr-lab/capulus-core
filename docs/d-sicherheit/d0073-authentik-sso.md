@@ -25,7 +25,13 @@ Browser ──▶ Traefik (kube-system) ──▶ Middleware "authentik-authenti
 
 - **Storage:** eigenes, leichtgewichtiges Postgres-Deployment (kein
   Bitnami-Subchart, siehe 40070 → Ausgangslage), `local-path`-PVC (2 Gi).
-  Kein Redis — Authentik läuft mit einer Server-Replica ohne Pflicht-Redis.
+  **Korrektur nach Live-Rollout:** ursprünglich war "kein Pflicht-Redis"
+  angenommen — falsch, die deployte Version verlangt beim Start zwingend
+  erreichbares Redis (Cache/Task-Broker), sonst bleibt der Server-Pod
+  dauerhaft bei `Redis Connection failed, retrying...` hängen und wird nie
+  ready. Eigenes, ebenfalls leichtgewichtiges Redis-Deployment ergänzt
+  (kein PVC, reiner Cache/Broker, Muster wie
+  `argocd/apps/workloads/immich/templates/redis-*.yaml`).
 - **Nutzerquelle:** [lldap](d0072-lldap.md) per LDAP Source, Bind als
   `authentik-bind` (Gruppe `lldap_strict_readonly`).
 - **Zwei Hostnamen** (im Unterschied zur ursprünglichen Planung in 40070,
@@ -142,7 +148,8 @@ zweiten, ungeschützten `-native`-Hostnamen:
 
 | Datum | Was |
 |---|---|
-| — | Chart + Blueprints vorbereitet, Authelia-Chart entfernt, Cross-Referenzen umgestellt (siehe Setup oben). **Noch nicht deployt** — offene Punkte oben zuerst abarbeiten. |
+| 06.09.2026 | Chart + Blueprints vorbereitet, Authelia-Chart entfernt, Cross-Referenzen umgestellt (siehe Setup oben). |
+| 06.09.2026 | Erster Live-Rollout. Drei Fixes während der Inbetriebnahme nötig: (1) Alle 5 Secret-Werte in `authentik-credentials` waren mit `kubeseal --raw <<< "$VALUE"` versiegelt — das Bash-Here-String hängt einen Trailing-Newline an, Postgres' Entrypoint trimmt den beim `initdb`-Setzen des Rollen-Passworts weg, Authentiks eigener Config-Loader nicht → `password authentication failed for user authentik` auf dem echten (scram-sha-256-)Auth-Pfad; ein `PGPASSWORD`-Test über `127.0.0.1` täuschte fälschlich Erfolg vor, weil dort `pg_hba.conf` bedingungslos `trust` erlaubt. Neu versiegelt mit `printf '%s' | kubeseal --raw`. (2) Beim erneuten Einfügen war `encryptedBootstrapPassword` zusätzlich auf 717 statt eines gültigen Vielfachen-von-4 base64-Zeichen verstümmelt (vermutlich beim manuellen Einfügen) — SealedSecret-Controller verweigerte daraufhin JEDE Aktualisierung der ganzen Secret-Gruppe (`illegal base64 data at input byte 716`), auch nachdem ArgoCD den korrigierten Rest bereits synced hatte. Neu versiegelt und diesmal per Skript statt manuell eingefügt, alle 5 Werte zusätzlich strikt als Base64 validiert. (3) Fälschliche Annahme "kein Pflicht-Redis" — die deployte Version verlangt beim Start zwingend erreichbares Redis, sonst bleibt der Server-Pod dauerhaft bei `Redis Connection failed, retrying...` hängen. Eigenes Redis-Deployment ergänzt (siehe Architektur oben). Zusätzliche Lehre: die ArgoCD-Application trackt `main`, nicht Feature-Branches — Fixes auf einem unmerged Branch zeigen live schlicht keine Wirkung, unabhängig davon wie oft `kubectl rollout restart` läuft. |
 
 Wird bei jedem weiteren Schritt ergänzt (analog zum bisherigen
 Authelia-Rollout-Log).
