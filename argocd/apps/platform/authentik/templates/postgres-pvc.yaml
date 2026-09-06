@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "authentik.fullname" . }}-postgres
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "authentik.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.postgresql.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.postgresql.persistence.size }}
+  storageClassName: {{ .Values.postgresql.persistence.storageClassName }}

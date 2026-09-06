@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "authentik.fullname" . }}-postgres
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "authentik.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: postgres
+      protocol: TCP
+      name: postgres
+  selector:
+    {{- include "authentik.postgresSelectorLabels" . | nindent 4 }}

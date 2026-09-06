@@ -1,0 +1,48 @@
+# Mealie hinter ForwardAuth — Zugriff nur für den Nutzer "rdn" (entspricht
+# dem letzten Authelia-Zustand vor der Ablösung, siehe
+# docs/d-sicherheit/d0073-authentik-sso.md → Access-Control). Kein
+# TOTP-Zwang (nicht Mitglied der admins-Gruppe, siehe 01-admin-2fa-policy.yaml).
+version: 1
+metadata:
+  name: app-mealie
+entries:
+  - model: authentik_providers_proxy.proxyprovider
+    id: mealie-provider
+    identifiers:
+      name: mealie
+    attrs:
+      mode: forward_single
+      external_host: https://mealie.prod.homeserver
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+
+  - model: authentik_core.application
+    id: mealie-app
+    identifiers:
+      slug: mealie
+    attrs:
+      name: Mealie
+      provider: !KeyOf mealie-provider
+      policy_engine_mode: any
+
+  - model: authentik_policies_expression.expressionpolicy
+    id: mealie-rdn-only-policy
+    identifiers:
+      name: mealie-rdn-only
+    attrs:
+      expression: |
+        return request.user.username == "rdn"
+
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf mealie-app
+      policy: !KeyOf mealie-rdn-only-policy
+      order: 0
+
+  - model: authentik_outposts.outpost
+    identifiers:
+      name: authentik Embedded Outpost
+    attrs:
+      providers:
+        - !KeyOf mealie-provider
+    state: present

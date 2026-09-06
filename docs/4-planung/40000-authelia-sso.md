@@ -1,5 +1,12 @@
 # Authelia als zentrale SSO-Instanz vor allen Apps mit Login
 
+> **Historischer Kontext:** Authelia wurde vollständig durch Authentik
+> abgelöst, siehe [40070-authentik-sso-iac.md](40070-authentik-sso-iac.md)
+> (Planung) und [d0073-authentik-sso.md](../d-sicherheit/d0073-authentik-sso.md)
+> (Ist-Zustand). Dieses Doc bleibt als historischer Kontext bestehen — die
+> Ist-Zustand-Runbooks `d0070-authelia-sso.md`/`d0071-native-login-fallback.md`
+> beschreiben keine laufende Infrastruktur mehr und wurden entfernt.
+
 Architektur- und Rollout-Plan für einen zentralen Single-Sign-On-Layer via
 [Authelia](https://www.authelia.com/) vor jeder App mit eigener Anmeldemaske.
 Noch **nicht umgesetzt** — dieses Doc hält den recherchierten und mit dem

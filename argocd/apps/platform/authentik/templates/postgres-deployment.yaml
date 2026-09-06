@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "authentik.fullname" . }}-postgres
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "authentik.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "authentik.postgresSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "authentik.postgresSelectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.postgresql.database | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.postgresql.username | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.credentials.secretName }}
+                  key: db-password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - name: postgres
+              containerPort: 5432
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "{{ .Values.postgresql.username }}"]
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "{{ .Values.postgresql.username }}"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.postgresql.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "authentik.fullname" . }}-postgres
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
