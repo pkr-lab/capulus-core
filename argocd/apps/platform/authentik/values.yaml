@@ -3,8 +3,13 @@
 # docs/4-planung/40070-authentik-sso-iac.md → Ausgangslage) — stattdessen
 # ein eigenes, leichtgewichtiges Postgres-Deployment nach demselben Muster
 # wie argocd/apps/workloads/{wikijs,nextcloud,immich}/templates/postgres-*.yaml.
-# Ebenfalls kein Redis: Authentik läuft seit mehreren Major-Versionen ohne
-# Pflicht-Redis (In-Memory-Cache reicht bei einer Server-Replica).
+#
+# Korrektur (nach Live-Rollout): ursprünglich war "kein Pflicht-Redis"
+# angenommen — falsch, die deployte Version verlangt beim Start zwingend
+# erreichbares Redis (Cache/Task-Broker), sonst wird der Server-Pod nie
+# ready ("Redis Connection failed, retrying..."). Eigenes, ebenfalls
+# leichtgewichtiges Redis-Deployment ergänzt (kein PVC, reiner Cache/Broker,
+# Muster wie argocd/apps/workloads/immich/templates/redis-*.yaml).
 
 image:
   repository: ghcr.io/goauthentik/server
@@ -111,6 +116,21 @@ postgresql:
     storageClassName: local-path
     size: 2Gi
     accessMode: ReadWriteOnce
+
+# ---------------------------------------------------------------
+# Redis (eigenes, leichtgewichtiges Deployment — kein PVC, reiner Cache/Broker)
+# ---------------------------------------------------------------
+redis:
+  image:
+    repository: docker.io/valkey/valkey
+    pullPolicy: IfNotPresent
+    tag: "9-alpine"
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
 
 # ---------------------------------------------------------------
 # Secrets — SealedSecret, verschlüsselt mit dem kubeseal-Public-Key dieses
