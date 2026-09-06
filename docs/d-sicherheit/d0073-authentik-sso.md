@@ -117,8 +117,23 @@ kein Authentik-seitiger Schritt.
 
 | App | Policy | Zugriff |
 |---|---|---|
-| Uptime Kuma (`uptime-kuma.prod.homeserver`) | `admins`-Gruppe | Vollzugriff, nur intern, 2FA Pflicht (Gruppen-Policy) |
-| Mealie (`mealie.prod.homeserver` **+** `mealie-prod.pke-lab.de`) | `user == rdn` | Nur `rdn`, intern + extern, kein 2FA-Zwang — **zwei** Provider/Application-Paare (ein `forward_single`-Provider pro `external_host`, siehe `blueprints/apps/mealie.yaml`), gleiche Policy auf beide gebunden |
+| Uptime Kuma (`uptime-kuma.prod.homeserver`) | `admins` ODER Gruppe `uptime-kuma-user` | Nur intern, 2FA für `admins`-Mitglieder |
+| Mealie (`mealie.prod.homeserver` **+** `mealie-prod.pke-lab.de`) | `admins` ODER Gruppe `mealie-user` | Intern + extern, kein 2FA-Zwang für `mealie-user` — **zwei** Provider/Application-Paare (ein `forward_single`-Provider pro `external_host`, siehe `blueprints/apps/mealie.yaml`), gleiche Policy auf beide gebunden |
+
+**Korrektur (nach Live-Rollout):** ursprünglich fest verdrahtet (`user ==
+rdn` für Mealie, nur `admins` für Uptime Kuma) — auf gruppenbasierte
+Policies umgestellt (`<app>-user`-Gruppen), damit neue Personen ohne
+Blueprint-Edit hinzugefügt werden können (siehe
+[d0074-authentik-iac-cookbook.md](d0074-authentik-iac-cookbook.md),
+Abschnitt 3). **Manueller Schritt beim Umstieg:** Gruppen `mealie-user`
+und `uptime-kuma-user` in lldap anlegen, `rdn` in `mealie-user` aufnehmen
+(sonst verliert `rdn` den Zugriff auf Mealie) — siehe
+[d0072-lldap.md](d0072-lldap.md). Die alten Policy-Objekte `mealie-rdn-only`/`uptime-kuma-admins-only`
+wären sonst als verwaiste, nicht mehr gebundene Objekte in Authentik
+stehen geblieben (Blueprints löschen beim Umbenennen nichts automatisch,
+siehe Cookbook Abschnitt 1) — per
+`blueprints/99-cleanup-renamed-policies.yaml` (`state: absent`) über IaC
+statt manuell in der UI entfernt.
 
 **Immich, Nextcloud, Grafana, Zammad sind bewusst NICHT geschützt** —
 identische Entscheidung wie zuvor bei Authelia (eigener App-Login reicht
