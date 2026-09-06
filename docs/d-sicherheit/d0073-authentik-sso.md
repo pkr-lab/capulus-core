@@ -28,12 +28,16 @@ Browser ──▶ Traefik (kube-system) ──▶ Middleware "authentik-authenti
   Kein Redis — Authentik läuft mit einer Server-Replica ohne Pflicht-Redis.
 - **Nutzerquelle:** [lldap](d0072-lldap.md) per LDAP Source, Bind als
   `authentik-bind` (Gruppe `lldap_strict_readonly`).
-- **Ein** interner Hostname (`authentik.tech.homeserver`) — im Unterschied
-  zu Authelia braucht Authentik keine Tier-spezifischen Cookie-Domains
-  (kein bekanntes Äquivalent zur Authelia-Einschränkung, dass die
-  Cookie-Domain mindestens einen Punkt enthalten muss und `homeserver`
-  allein nicht reicht — vor dem ersten produktiven Login trotzdem einmal
-  browserseitig verifizieren, siehe Verifikation unten).
+- **Zwei Hostnamen** (im Unterschied zur ursprünglichen Planung in 40070,
+  die nur einen internen Host vorsah): `authentik.tech.homeserver` (intern)
+  **und** `authentik-tech.pke-lab.de` (extern, Bindestrich statt Punkt,
+  siehe [c0040-domain-tiers.md](../c-netzwerk-dns/c0040-domain-tiers.md)).
+  Der externe Host ist **nicht optional** — Mealie ist auch extern
+  geschützt (`mealie-prod.pke-lab.de`), ein von dort zum Login
+  redirecteter Browser muss Authentik erreichen können. Kein
+  Tier-spezifisches Cookie-Domain-Problem wie bei Authelia bekannt (vor dem
+  ersten produktiven Login trotzdem einmal browserseitig verifizieren,
+  siehe Verifikation unten).
 - **ForwardAuth:** eine einzige gemeinsame Traefik-Middleware für alle
   Tiers (`templates/middleware.yaml`) — Authentiks eingebetteter Outpost
   berechnet die Rückkehr-URL dynamisch aus `X-Forwarded-Host`/`-Proto`,
@@ -65,7 +69,9 @@ Browser ──▶ Traefik (kube-system) ──▶ Middleware "authentik-authenti
 3. `authentik.tech.homeserver` in
    `argocd/apps/platform/cert-manager/templates/certificate-homeserver-wildcard.yaml`
    ergänzt (ersetzt die zwei Authelia-Hostnamen `auth.tech.homeserver`/
-   `auth.prod.homeserver`).
+   `auth.prod.homeserver`). `authentik-tech.pke-lab.de` braucht **keinen**
+   eigenen Eintrag dort — externe Hosts laufen über Cloudflares eigenes
+   Wildcard-Zertifikat für `*.pke-lab.de`, nicht über die interne CA.
 4. `authentik` als neuer Namespace in
    `ansible/roles/argocd/defaults/main.yml` (`argocd_platform_apps` +
    `argocd_network_policy_refined_namespaces` + `argocd_network_policy_extra_ingress.lldap`)
@@ -106,7 +112,7 @@ kein Authentik-seitiger Schritt.
 | App | Policy | Zugriff |
 |---|---|---|
 | Uptime Kuma (`uptime-kuma.prod.homeserver`) | `admins`-Gruppe | Vollzugriff, nur intern, 2FA Pflicht (Gruppen-Policy) |
-| Mealie (`mealie.prod.homeserver`, `mealie-prod.pke-lab.de`) | `user == rdn` | Nur `rdn`, intern + extern, kein 2FA-Zwang |
+| Mealie (`mealie.prod.homeserver` **+** `mealie-prod.pke-lab.de`) | `user == rdn` | Nur `rdn`, intern + extern, kein 2FA-Zwang — **zwei** Provider/Application-Paare (ein `forward_single`-Provider pro `external_host`, siehe `blueprints/apps/mealie.yaml`), gleiche Policy auf beide gebunden |
 
 **Immich, Nextcloud, Grafana, Zammad sind bewusst NICHT geschützt** —
 identische Entscheidung wie zuvor bei Authelia (eigener App-Login reicht
