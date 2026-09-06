@@ -1,0 +1,16 @@
+{{- if .Values.backup.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "authentik.fullname" . }}-postgres-backup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "authentik.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.backup.size }}
+  storageClassName: {{ .Values.backup.storageClassName }}
+{{- end }}

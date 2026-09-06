@@ -266,11 +266,12 @@ tunnel:
   # komplettes Label matchen, keine Tier-spezifischen Muster wie
   # "*.tech.deine-domain.de" — Details/Begründung: docs/c-netzwerk-dns/c0040-domain-tiers.md).
   #
-  # HTTPS (443), nicht Klartext-Port 80: seit Authelia (docs/d-sicherheit/d0070-authelia-sso.md)
-  # lehnt Authelia Session-Cookies über eine als "unsicher" gemeldete
-  # Verbindung ab — auf Port 80 setzte Traefik X-Forwarded-Proto: http,
-  # obwohl TLS längst an der Cloudflare-Edge terminiert war (401 statt
-  # Redirect für jeden extern exponierten, Authelia-geschützten Host).
+  # HTTPS (443), nicht Klartext-Port 80: seit dem SSO-Rollout (ursprünglich
+  # Authelia, jetzt Authentik — docs/d-sicherheit/d0073-authentik-sso.md)
+  # werden Session-Cookies über eine als "unsicher" gemeldete Verbindung
+  # abgelehnt — auf Port 80 setzte Traefik X-Forwarded-Proto: http, obwohl
+  # TLS längst an der Cloudflare-Edge terminiert war (401 statt Redirect für
+  # jeden extern exponierten, SSO-geschützten Host).
   # noTLSVerify: true, weil das interne Zertifikat von der privaten
   # Homeserver-CA kommt, die cloudflared nicht kennt — die eigentliche
   # Sicherheitsgrenze ist ohnehin die Cloudflare-Tunnel-Verschlüsselung
