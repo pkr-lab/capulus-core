@@ -48,6 +48,11 @@ app.kubernetes.io/component: worker
 app.kubernetes.io/component: postgres
 {{- end }}
 
+{{- define "authentik.redisSelectorLabels" -}}
+{{ include "authentik.selectorLabels" . }}
+app.kubernetes.io/component: redis
+{{- end }}
+
 {{- define "authentik.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
 {{- default (include "authentik.fullname" .) .Values.serviceAccount.name }}
@@ -101,4 +106,6 @@ DB-/Secret-Konfiguration (Muster wie beim offiziellen goauthentik/helm-Chart).
   value: "none"
 - name: AUTHENTIK_LOG_LEVEL
   value: {{ .Values.logLevel | quote }}
+- name: AUTHENTIK_REDIS__HOST
+  value: {{ include "authentik.fullname" . }}-redis
 {{- end }}
