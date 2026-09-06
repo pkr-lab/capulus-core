@@ -1,0 +1,171 @@
+---
+# Kein Bitnami-Postgres-Subchart wie im historischen Setup (siehe
+# docs/4-planung/40070-authentik-sso-iac.md → Ausgangslage) — stattdessen
+# ein eigenes, leichtgewichtiges Postgres-Deployment nach demselben Muster
+# wie argocd/apps/workloads/{wikijs,nextcloud,immich}/templates/postgres-*.yaml.
+# Ebenfalls kein Redis: Authentik läuft seit mehreren Major-Versionen ohne
+# Pflicht-Redis (In-Memory-Cache reicht bei einer Server-Replica).
+
+image:
+  repository: ghcr.io/goauthentik/server
+  # TODO vor erstem Sync: aktuellste stabile Version prüfen
+  # (https://github.com/goauthentik/authentik/releases) — dieser Tag ist ein
+  # zum Planungszeitpunkt bekannter Startwert, kein garantiert aktueller.
+  tag: "2025.8.3"
+  pullPolicy: IfNotPresent
+
+logLevel: info
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+# ---------------------------------------------------------------
+# Server (Web-UI + API + eingebetteter Outpost für ForwardAuth)
+# ---------------------------------------------------------------
+server:
+  replicaCount: 1
+  # HPA/Autoscaling bewusst nicht vorgesehen — Ein-Node-Cluster
+  # (worker-0/worker-1 NotReady), mehr Replicas bringen keine
+  # Ausfallsicherheit, nur zusätzlichen RAM-Verbrauch. Identische
+  # Begründung wie bei authelia/values.yaml und historisch bei Authentik.
+  resources:
+    # Historisch validierte Werte (letzter Stand vor der Entfernung,
+    # 18.08.2026) als Startpunkt übernommen — vor dem ersten Rollout-Batch
+    # trotzdem `kubectl describe node homeserver` gegen das aktuelle
+    # Gesamtbudget prüfen (siehe docs/4-planung/40070-authentik-sso-iac.md).
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 768Mi
+  service:
+    port: 80
+    targetPort: 9000
+    metricsPort: 9300
+  ingress:
+    enabled: true
+    className: traefik
+    annotations: {}
+    hosts:
+      - authentik.tech.homeserver
+    tls: []
+
+# ---------------------------------------------------------------
+# Worker (Background-Tasks: Blueprints anwenden, Flows ausführen, ...)
+# ---------------------------------------------------------------
+worker:
+  replicaCount: 1
+  resources:
+    # Historisch mit 384Mi/768Mi bereits einmal OOMKilled gewesen
+    # (Commit 983e338 hat auf diesen Wert angehoben) — hier von Anfang an
+    # mit dem gefixten Wert UND einem VMRule-Alert (siehe
+    # templates/vmservicescrape.yaml) statt reaktivem Nachziehen.
+    requests:
+      cpu: 50m
+      memory: 384Mi
+    limits:
+      memory: 768Mi
+
+# ---------------------------------------------------------------
+# Postgres (eigenes, leichtgewichtiges Deployment — kein Subchart)
+# ---------------------------------------------------------------
+postgresql:
+  database: authentik
+  username: authentik
+  image:
+    repository: postgres
+    tag: "17-bookworm"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+  persistence:
+    storageClassName: local-path
+    size: 2Gi
+    accessMode: ReadWriteOnce
+
+# ---------------------------------------------------------------
+# Secrets — SealedSecret, verschlüsselt mit dem kubeseal-Public-Key dieses
+# Clusters. Erzeugt per `openssl rand` + `kubeseal --raw --namespace
+# authentik --name authentik-credentials --controller-namespace
+# sealed-secrets --controller-name sealed-secrets-controller` (Muster wie
+# bei authelia/lldap). Enthält:
+#   - secret-key: Authentiks interner Signier-/Verschlüsselungsschlüssel
+#   - db-password: Passwort für den "authentik"-User im eigenen Postgres
+#   - bootstrap-password: initiales Passwort für den Erstadmin "akadmin"
+#     (einmalig im Chat mitgeteilt, siehe docs/d-sicherheit/d0073-authentik-sso.md —
+#     SOFORT nach dem ersten Login ändern, analog lldap-root)
+#   - bootstrap-email: E-Mail für "akadmin" (Platzhalter, wird nie versendet,
+#     kein SMTP-Relay im Repo vorhanden)
+#   - ldap-bind-password: Passwort des Service-Accounts "authentik-bind" in
+#     lldap (Gruppe lldap_strict_readonly) — muss manuell in lldaps Web-UI
+#     gesetzt werden, siehe docs/d-sicherheit/d0072-lldap.md und
+#     docs/d-sicherheit/d0073-authentik-sso.md, Abschnitt "LDAP Source".
+credentials:
+  secretName: authentik-credentials
+  encryptedSecretKey: "AgAAZjSAiuO1zRGR0FmOJaDuzJRgV2K9+/KzxW31VAyxyWnDvEN3yA3b+VMo6pnvX/Ma+5xmlXWx0pRBpakpvABjjKJA+r8bl2SXvvJWXdkxKpsp0m14iT3KF1qLXceyszkt6iaWcedrXS/m1dUOYIp1bzpNvHT/ROzfE59wLaDy4H2xvEQ/ADapeE1IzZhF+JE3qE91oz2cKYoTgO2IVinWHpl+RCC1g87VwURg4LzNC4CyGBwxRpDjHCOpmFz8zthauA5FK+Ea2ytKcx1HxjUwUVTsCa1S1lEMjvb7KJ3mR2V3T+iXnueqghfJzaSWS1O1e/63J15WHS/b+KHb+LKG72pLTV1XcC8LSGGdSgfcYpY9mLAHzvZ7rCwP/s1Wb3ukFkfDQ+nWmyS8gHIHaFa6czogn2Vz6gtF455WhBFp/t9ad5XbqAd6ssINntsNJUpnfCZjlaNRbrxW4lfF7ivLYBwFyq7Bgsv46oNxfeAhzFMdExqv2CZUgFp22AfUStMIgeJwF4SxXryJyNYbs5zv89nEz+oJk6KpB1hpfRcjF/+ND5Foxv/88ICzpQLHEcEc48I2Tb/OXOkKvhSWQoxOC+shNJ5l3VTBw584IjuOuHYS5jfZKJs3GKxTfKeOdCWDkdYNYwuOmiB5KAF1bmv4V8a1ppWcFP8EQqDyGn04rgvLdLAC0M2/8eymohn9+tv16XNnz/YvK8G4wBtYLDi8xqL+vcZ2LhVLGEHv0tCXmaJLGW984shpAdJQGO3SCYSGpbaCWFfq9AvoZDbcYT/2wQ=="
+  encryptedDbPassword: "AgBgXiSFgG71xFlPg95YD7DV3hxLf+Kn9SCVt3Euphj+e+vs8j1jKwYsnoVUB7dGBpgnLU+MQl9US0P9iX2HD4G1Xrnjt0wBwgIFmJ/vAeJkMeyEpv/qxJr/ra1H+gKZfrptaSo0COq4N2h6zFxlzAgqIIscYFFjYxJga+te0jYJJzjvr/FFqxiZhOUDQpdd9Ua+NRQHmBA1FtesPG5CGgYE9TI9DOLrQuo0Z1M8OBDI8U3tywnwYbw6AnjhvwP68WJSW0NabOyl8RojdEpkPTqsMvemoLb4lw0j9t6KQ4GbXXR5q0C9ELSOkKhGUttBYA8amvX/jZBGCuV0bofcsGrNzti62C0q79+cUD7sVG7izE9aCetDaJgddfRAdNSygN+iawjUoNhbGPMEi7MOqeOvFxtvra7Vo6Kxhn9FZlLvgl2M+xFFisjrzde2ccz9ilO9UicuBkip9fOKgiYPcGq3lC6yGUS/LQsOLJncUZjhGDZpDaMliNw7d59bLpU56aLjM1Yop5OU4+0gmdScy3JCXNA3ISEjYU2sGtL/2GHZ2hBv7ikY3zCBMaY0LLocamVUOsgjqjpzMEuhzZd2y9xPwyKBnFdJk+P4ekzvlHRvZ7LvL9j422Nl3DmeCG8qpmpKEI6RBRQsP+yZiACjx9eDi7RcI5g9usfCtdPgDQkYSSEQlXpvN88foxO7FS/UuRbuI7O6XLoRSdZOJzHOFBl7FCFJaSEWwekK+pYu+LO6B04="
+  encryptedBootstrapPassword: "AgAioOrRX5Bp1SpuAa+Dc3YhMqxq8MIrhjBOvavScwsJkZlaNFPEIUPCnb0k7STVms2G6hkkBWon96EV9Qq9DNhhgwSR1BeybtHTawbt59VBk1wLekwp6eyehWRstCLWwYCyvku41Tjd/+9hoNE4MxbGU/MxYs7IOerz06sXUNWVvogxdHbneiMV2VMa2J28dkRXEvrU/LtBPfrWeBH0vEKYB9SQvkOAz2aoUIPXWBt/7VhuFWRIg+0v+mHHTJAr/FJwHexPW8lxaD7OtvRg2t6G8Zht25ElAbw4nFCDKejcnJMUDrk27zHgwo9J9qDcXXyiMJgt6hb+UCvvUaQghPXwT2dWCjZc9d7dzNvVLBoMIk8gGHSkCwKMWX2cbaEyEPP1XCJXbSbOLO3+Orkga/nAJfwmo1yZTX1GN5dA7FW89Yre9PUpH+3f83NGPdFQoi4L1RlAWsrIOXkocAGUdhEB8M+v8QKhZNAz0rmgk6iGyPMXuXkWT08dF1DB7oFiVdknLweXGLwyZ3aV1lFOkbM87mX1vr9GW7X6KsX8L3XBdLHNt8lcOXp85mTOBoLJ4EXekh6BIxJQ2UqiqhtGEnUUTZxCc9pV3G9ooOzix9hvA58atzAbRRTGUKyZy/OEqA4p7OfwFwKHiffX2wDSPVbHEisn6xiFRh3pZ7yrXdj8nrqlPzdDR6GIARzdou3q+2wt7lUQ4zxkWxVBaWBccjlAMkdXeflvQkG4"
+  encryptedBootstrapEmail: "AgCGzpmPIxCl0slflA1hYJ/NbI4jZNCnS1O4mEEtimgfb1/PG9GwyRY1HckRZdTnmxSWD9DkyARYPIzPsg0ts5kXG5a0zXQCTu994unz60ZJK67zZ8xXgHqNIrNizoFWTSR69hyDEKzvcpt5m0ZoVSbpj7Dw+HPDDF0Tm8SNyqOeiYHMasHj4LegeCrVmicg6mEttjzp4iysPFY7Wlgx1fZIbwXRGqmi3gtJWy69ZM0ZkK4rCpK05F3J5lf7s+O1YP0dY1P0a4E/ne93QUrl7Jp8lXWKnJGtWRb6kshgUiwFqs44t7LM6JjbAM35DHup9feluXwtLAEaXzKrfs50RC7cf9LkRO02e+NP2kv5FxVaNUa4KFl3n5TRzYrNAECYYePEK54NVyw46/Z1XvxYr/sb2C+G3gPnVpsfDGe0Mz62P6ryXFIx+3rCzeVqi3EBry3q9PAWvFHqnH6Tf9qr6RQrgIyyPucol3u/wjQaWIKy7nBQYQcK4XpQorMwgsjlW7ilru/ITu/g7IcZ7baE1z57815g8k+NWDq6LyEsbiUnYcaDAF+RosFIJidLNQTiv7WfNo4Bnbjudn5lFYXTyoJmhyUjugCYDVai3HHVG4s5F4VGm6JUVOKfYbRpMRDfhrqjyhhQNPftMTNhhfgUizzs4DDVJT4hcbiqrD7/pbPGd7DsbDsvxzXw1aT0Jn2Vhv9HWvS1jYlrCXVSOc0yfr87ECngRjLTNI5Z"
+  encryptedLdapBindPassword: "AgAeuHPAMSiFux+dhZz4KrF2t1z724+huAiCmamNbwRI/6s5n4WewhNwPp+18xNxznbKyqot5a+BR1U9o//celtdF6b7UmN64O2W8kEqqAAuCh2jtWfwwFtcgcjo+IhG8dAGmslXVmT5CATvSlAmr8WTDejc/o8ho0tz5z3M7HqXUCB3ZBWVp5XvMHn0n1gs1d6A90/nvhQiRkf2ge/bJEVQE8V+wXFE6mE7B0fZcZLjpnDPS7ids+elukyeG5VibGJ/6gCrABIkAZ7KIW+26qyqvaFP9nP1ppjp2TSpYRdlu0vy22H2jBeSp6Tv5u2S9/rjqGqXAkPbG52xQttWryjd5kPI9Kuj2J+3zCoHAMSfzC3W/DGJR6pQgwVQL+wmwMCK3Ou1hLWGoGh7KSRXkzMBWqwFl3A9w9q771i+uYN0Amy4mdxvKjc5PGDt7v6mBPcdEdG/hYEK20gRSMjc/7iTBiSsYj0tKI6WDbza6ceOdBCN+zfqJVLjIm71XYT0sjZ2hfwoddqvsRYLq1QXIPokl0e9Q5X3jDTwlFWgyf2IDJbHV+2Q6LYP4uJ8BN97ym/oP8y7Nyn5VrMHIZAbQRzq/L4LTc2pIlSZ66W1Cs8Lf+M4O/SdAJs7V0vvp9CDSypIlh4aOckurYqGNQiG92/BCofwDBoQ6smXpOp2KO0Fuu1fSe+D3kkbD6e6a9pYz0EIEB/vBiOnq4+6KMBYFYYQr+OKF1HU1dVw"
+
+# local-path bindet den Pod an den Node, auf dem die PVC zuerst provisioniert
+# wird — fest auf homeserver, analog zu authelia/uptime-kuma/lldap.
+nodeSelector:
+  kubernetes.io/hostname: homeserver
+
+tolerations: []
+affinity: {}
+
+backup:
+  # pg_dump-CronJob auf die NAS — Muster wie
+  # argocd/apps/workloads/vaultwarden/templates/backup-cronjob.yaml.
+  enabled: true
+  schedule: "45 1 * * *"
+  timezone: "Europe/Berlin"
+  suspend: false
+  storageClassName: nas
+  size: 2Gi
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 3
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
+metrics:
+  enabled: true
+  # Handgeschriebene VMServiceScrape statt ServiceMonitor-CRD — die
+  # monitoring.coreos.com/v1-CRD ist in diesem Cluster nicht installiert,
+  # nur VictoriaMetrics-CRDs (Lehre aus der historischen Authentik-Runde,
+  # dort erst nachträglich korrigiert, siehe docs/4-planung/40070-authentik-sso-iac.md).
+
+blueprints:
+  # Blueprints werden aus templates/blueprints/*.yaml (Helm .Files.Glob) als
+  # ConfigMap gebaut und in Server + Worker unter /blueprints/custom
+  # gemountet — Authentik wendet sie beim Start automatisch an. Neue App
+  # anlegen = neue Datei unter templates/blueprints/apps/ committen, siehe
+  # docs/d-sicherheit/d0074-authentik-iac-cookbook.md.
+  mountPath: /blueprints/custom

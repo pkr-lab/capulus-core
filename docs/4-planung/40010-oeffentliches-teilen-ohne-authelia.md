@@ -1,9 +1,17 @@
 # Öffentliches Teilen (Immich/Nextcloud) ohne Gast-Accounts
 
+> **Historischer Kontext (Stand nach Ablösung von Authelia durch Authentik,
+> siehe [40070-authentik-sso-iac.md](40070-authentik-sso-iac.md)):**
+> Authelia wurde vollständig entfernt, dieses Doc bleibt als
+> recherchierter Stand bestehen — die ForwardAuth-vs-OIDC-Analyse unten
+> gilt strukturell unverändert für Authentik (dieselbe Domain-Gating-
+> Problematik bei `forward_single`/`forward_domain`-Proxy-Providern), nur
+> die konkreten Config-Schritte in Baustein "Migration" wären für
+> Authentik statt Authelia zu schreiben, falls dieser Plan aufgegriffen
+> wird.
+
 Architektur-Plan für das Problem, das zum Zurückbau von Authelia vor
-Immich und Nextcloud geführt hat (siehe
-[docs/d-sicherheit/d0070-authelia-sso.md](../d-sicherheit/d0070-authelia-sso.md)
-→ Rollout-Log, 22.08.2026). Noch **nicht umgesetzt** — hält den
+Immich und Nextcloud geführt hat. Noch **nicht umgesetzt** — hält den
 recherchierten Stand und mehrere Optionen mit Trade-offs fest, bevor der
 nächste Rollout-Schritt beginnt.
 

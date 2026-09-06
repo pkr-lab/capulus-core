@@ -1,0 +1,58 @@
+{{- if .Values.backup.enabled -}}
+# pg_dump-Backup auf die NAS (Muster wie
+# argocd/apps/workloads/vaultwarden/templates/backup-cronjob.yaml) — nötig,
+# weil Nutzer-Sessions/Self-Service-State in Postgres liegen, nicht in den
+# Blueprints (die sind bereits über Git versioniert, siehe
+# docs/4-planung/40070-authentik-sso-iac.md → Baustein 6).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "authentik.fullname" . }}-postgres-backup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "authentik.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  timeZone: {{ .Values.backup.timezone | quote }}
+  suspend: {{ .Values.backup.suspend }}
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: {{ .Values.backup.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.backup.successfulJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: pg-dump
+              image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.credentials.secretName }}
+                      key: db-password
+              command:
+                - sh
+                - -c
+                - |
+                  set -eu
+                  DATE=$(date +%Y%m%d-%H%M%S)
+                  pg_dump -h {{ include "authentik.fullname" . }}-postgres \
+                    -U {{ .Values.postgresql.username }} \
+                    -d {{ .Values.postgresql.database }} \
+                    -F c -f "/backup/authentik-${DATE}.dump"
+                  # Nur die letzten 14 Dumps behalten.
+                  cd /backup && ls -1t authentik-*.dump | tail -n +15 | xargs -r rm --
+                  echo "==> fertig: $(date -Iseconds)"
+              resources:
+                {{- toYaml .Values.backup.resources | nindent 16 }}
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+          volumes:
+            - name: backup
+              persistentVolumeClaim:
+                claimName: {{ include "authentik.fullname" . }}-postgres-backup
+{{- end }}

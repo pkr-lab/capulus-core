@@ -1,0 +1,18 @@
+---
+apiVersion: v2
+name: authentik
+description: Zentraler SSO-/2FA-Identity-Provider vor allen Apps mit eigener Anmeldemaske. Ablösung von Authelia, siehe docs/4-planung/40070-authentik-sso-iac.md.
+type: application
+version: 0.1.0
+appVersion: "2025.8.3"
+keywords:
+  - authentik
+  - sso
+  - oidc
+  - forward-auth
+  - 2fa
+home: https://goauthentik.io/
+sources:
+  - https://github.com/goauthentik/authentik
+maintainers:
+  - name: home-server-admin
