@@ -1,0 +1,18 @@
+# Räumt Policy-Objekte weg, die beim Umstieg von festverdrahteten
+# Usernamen auf gruppenbasierte Policies (mealie.yaml, uptime-kuma.yaml)
+# verwaist sind — Blueprints löschen beim Umbenennen eines identifiers-Werts
+# nichts automatisch, siehe docs/d-sicherheit/d0074-authentik-iac-cookbook.md,
+# Abschnitt 1. `state: absent` ist idempotent — sobald die Objekte weg sind,
+# tut dieser Eintrag nichts mehr, kann aber gefahrlos stehen bleiben.
+version: 1
+metadata:
+  name: cleanup-renamed-policies
+entries:
+  - model: authentik_policies_expression.expressionpolicy
+    identifiers:
+      name: mealie-rdn-only
+    state: absent
+  - model: authentik_policies_expression.expressionpolicy
+    identifiers:
+      name: uptime-kuma-admins-only
+    state: absent
