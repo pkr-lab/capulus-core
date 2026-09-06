@@ -1,0 +1,56 @@
+# Korrektur (nach Live-Rollout): ursprünglich als "kein Pflicht-Redis"
+# geplant (siehe docs/4-planung/40070-authentik-sso-iac.md, Ausgangslage) —
+# die tatsächlich deployte Version (Chart.yaml → appVersion) verlangt beim
+# Start zwingend eine erreichbare Redis-Instanz (Cache/Task-Broker), sonst
+# bleibt der Server-Pod dauerhaft "Redis Connection failed, retrying..." und
+# wird nie ready. Kein PVC — reiner Cache/Broker, Inhalt darf bei Neustart
+# verloren gehen. Muster wie argocd/apps/workloads/immich/templates/redis-deployment.yaml.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "authentik.fullname" . }}-redis
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "authentik.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "authentik.redisSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "authentik.redisSelectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+        - name: redis
+          image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
+          imagePullPolicy: {{ .Values.redis.image.pullPolicy }}
+          ports:
+            - name: redis
+              containerPort: 6379
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.redis.resources | nindent 12 }}
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
