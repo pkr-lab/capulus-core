@@ -80,11 +80,5 @@ entries:
       policy: !KeyOf mealie-access-policy
       order: 0
 
-  - model: authentik_outposts.outpost
-    identifiers:
-      name: authentik Embedded Outpost
-    attrs:
-      providers:
-        - !KeyOf mealie-provider
-        - !KeyOf mealie-external-provider
-    state: present
+  # Outpost-Registrierung NICHT hier — siehe
+  # blueprints/90-outpost-providers.yaml (zentrale Datei, Begründung dort).
