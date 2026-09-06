@@ -45,6 +45,42 @@
       tags: [cups-print-server, printer]
 
   post_tasks:
+    # UFW's nftables backend can silently drop its own default
+    # "-i lo -j ACCEPT" rule when its tables are rebuilt while k3s/kube-router
+    # hold their own nftables/iptables state on the same host (observed
+    # 2026-09-05: broke systemd-resolved's DNS stub, Tailscale check-ins, and
+    # local k3s API traffic on port 6444 for ~2 days, while inbound HTTPS kept
+    # working fine). Tagged `always` so this safeguard runs on every
+    # invocation of this play, even with `--tags` limiting which roles run —
+    # see docs/c-netzwerk-dns/c0000-dns-architecture.md → "Nachtrag 2026-09-06".
+    - name: Check whether UFW is dropping loopback traffic (known nftables bug)
+      ansible.builtin.command: iptables -C ufw-before-input -i lo -j ACCEPT
+      register: common_ufw_loopback_check
+      changed_when: false
+      failed_when: false
+      tags: [always]
+
+    - name: Self-heal UFW by disabling/re-enabling to rebuild its nftables tables
+      ansible.builtin.command: "{{ item }}"
+      loop:
+        - ufw disable
+        - ufw --force enable
+      when: common_ufw_loopback_check.rc != 0
+      changed_when: true
+      tags: [always]
+
+    - name: Warn that UFW's loopback rule had to be repaired
+      ansible.builtin.debug:
+        msg: >-
+          WARNING: UFW was dropping loopback traffic (missing '-i lo -j
+          ACCEPT' in ufw-before-input) — this breaks local DNS resolution,
+          Tailscale check-ins, and internal k3s API traffic. UFW was
+          disabled/re-enabled to rebuild its nftables tables from
+          /etc/ufw/before.rules. See
+          docs/c-netzwerk-dns/c0000-dns-architecture.md for details.
+      when: common_ufw_loopback_check.rc != 0
+      tags: [always]
+
     - name: Display setup summary
       ansible.builtin.debug:
         msg:
