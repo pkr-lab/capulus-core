@@ -51,12 +51,5 @@ entries:
       policy: !KeyOf uptime-kuma-access-policy
       order: 0
 
-  # Provider am eingebetteten Outpost registrieren, sonst greift
-  # /outpost.goauthentik.io/auth/traefik nicht für diese App.
-  - model: authentik_outposts.outpost
-    identifiers:
-      name: authentik Embedded Outpost
-    attrs:
-      providers:
-        - !KeyOf uptime-kuma-provider
-    state: present
+  # Outpost-Registrierung NICHT hier — siehe
+  # blueprints/90-outpost-providers.yaml (zentrale Datei, Begründung dort).
