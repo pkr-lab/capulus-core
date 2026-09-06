@@ -1,0 +1,39 @@
+# Zentrale Registrierung ALLER Provider am eingebetteten Outpost.
+#
+# Korrektur (nach Live-Rollout): ursprünglich hatte jede App ihr eigenes
+# `authentik_outposts.outpost`-Blueprint-Entry mit `attrs.providers: [...]`.
+# Authentik ERSETZT diese Liste beim Apply komplett, statt sie zu mergen —
+# welche Blueprint-Datei zuletzt angewendet wird, gewinnt und wischt die
+# Registrierung aller anderen Apps kommentarlos weg. Live beobachtet: die
+# Apply-Reihenfolge der Dateien unter /blueprints/custom ist NICHT
+# zuverlässig alphabetisch (Log zeigte z. B. "app-mealie" vor
+# "01-admin-2fa-policy" vor "uptime-kuma" vor "00-ldap-source") — vermutlich
+# ConfigMap-Key-Iteration ohne garantierte Sortierung. Ergebnis: Mealie-
+# Provider existierten korrekt, waren aber nicht mehr am Outpost
+# registriert → ForwardAuth-Check (`/outpost.goauthentik.io/auth/traefik`)
+# lieferte 404, Traefik reichte Authentiks 404-Antwort 1:1 an den Browser
+# durch statt zu Mealie durchzureichen oder zum Login umzuleiten.
+#
+# Deshalb: GENAU EINE Datei pflegt diese Liste für alle Apps, UND diese
+# Datei referenziert Provider bewusst per !Find (Live-DB-Lookup zum
+# Apply-Zeitpunkt) statt per !KeyOf (Referenz auf ein Objekt aus DERSELBEN
+# Apply-Reihenfolge) — !Find ist unabhängig von der Dateireihenfolge,
+# solange der referenzierte Provider aus einem früheren Apply-Durchlauf
+# bereits existiert (bei periodischem Re-Apply nach spätestens einem
+# weiteren Zyklus der Fall). Neue App hinzufügen = hier eine weitere
+# !Find-Zeile ergänzen, NICHT in der eigenen App-Blueprint-Datei ein
+# weiteres outpost-Entry anlegen. Siehe
+# docs/d-sicherheit/d0074-authentik-iac-cookbook.md, Abschnitt 3.
+version: 1
+metadata:
+  name: outpost-providers
+entries:
+  - model: authentik_outposts.outpost
+    identifiers:
+      name: authentik Embedded Outpost
+    attrs:
+      providers:
+        - !Find [authentik_providers_proxy.proxyprovider, [name, "mealie"]]
+        - !Find [authentik_providers_proxy.proxyprovider, [name, "mealie-external"]]
+        - !Find [authentik_providers_proxy.proxyprovider, [name, "uptime-kuma"]]
+    state: present
