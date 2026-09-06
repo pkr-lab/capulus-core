@@ -58,6 +58,19 @@ Authentik synchronisiert Nutzer/Gruppen automatisch von dort:
 Ausführliches Setup (Gruppen, Basis-Identitäten): siehe
 [d0072-lldap.md](d0072-lldap.md).
 
+> **App mit internem UND externem Host:** Ein
+> `authentik_providers_proxy.proxyprovider` im Modus `forward_single` ist an
+> genau **einen** `external_host` gebunden. Soll dieselbe App unter zwei
+> Hostnamen geschützt sein (z. B. `app.tech.homeserver` **und**
+> `app-tech.pke-lab.de`), braucht es **zwei** Provider + zwei Applications
+> (unterschiedliche `slug`s), beide mit derselben Policy und beide am
+> Embedded Outpost registriert — siehe `blueprints/apps/mealie.yaml` als
+> Referenzbeispiel. Ein extern erreichbarer Host muss außerdem selbst in
+> `argocd/apps/platform/authentik/values.yaml` → `server.ingress.hosts`
+> stehen (Authentiks eigenes Portal muss von dort aus erreichbar sein,
+> sonst läuft der Redirect ins Leere) — Naming-Konvention:
+> [c0040-domain-tiers.md](../c-netzwerk-dns/c0040-domain-tiers.md).
+
 ---
 
 ## 3. Neue App hinzufügen

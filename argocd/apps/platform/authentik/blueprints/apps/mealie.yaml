@@ -2,6 +2,16 @@
 # dem letzten Authelia-Zustand vor der Ablösung, siehe
 # docs/d-sicherheit/d0073-authentik-sso.md → Access-Control). Kein
 # TOTP-Zwang (nicht Mitglied der admins-Gruppe, siehe 01-admin-2fa-policy.yaml).
+#
+# ZWEI Provider/Application-Paare, nicht einer: Mealie ist sowohl intern
+# (mealie.prod.homeserver) als auch extern (mealie-prod.pke-lab.de)
+# geschützt, aber ein authentik_providers_proxy.proxyprovider im Modus
+# forward_single ist an genau EINEN external_host gebunden — ein zweiter
+# Hostname für dieselbe App braucht einen zweiten Provider (+ eigene
+# Application, da eine Application aktuell genau einen Provider referenziert).
+# Beide teilen sich dieselbe Policy. Siehe
+# docs/d-sicherheit/d0074-authentik-iac-cookbook.md, Abschnitt 3 (Hinweis
+# "App mit internem UND externem Host").
 version: 1
 metadata:
   name: app-mealie
@@ -25,6 +35,25 @@ entries:
       provider: !KeyOf mealie-provider
       policy_engine_mode: any
 
+  - model: authentik_providers_proxy.proxyprovider
+    id: mealie-external-provider
+    identifiers:
+      name: mealie-external
+    attrs:
+      mode: forward_single
+      external_host: https://mealie-prod.pke-lab.de
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+
+  - model: authentik_core.application
+    id: mealie-external-app
+    identifiers:
+      slug: mealie-external
+    attrs:
+      name: Mealie (extern)
+      provider: !KeyOf mealie-external-provider
+      policy_engine_mode: any
+
   - model: authentik_policies_expression.expressionpolicy
     id: mealie-rdn-only-policy
     identifiers:
@@ -39,10 +68,17 @@ entries:
       policy: !KeyOf mealie-rdn-only-policy
       order: 0
 
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf mealie-external-app
+      policy: !KeyOf mealie-rdn-only-policy
+      order: 0
+
   - model: authentik_outposts.outpost
     identifiers:
       name: authentik Embedded Outpost
     attrs:
       providers:
         - !KeyOf mealie-provider
+        - !KeyOf mealie-external-provider
     state: present
