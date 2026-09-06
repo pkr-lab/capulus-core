@@ -1,7 +1,10 @@
-# Mealie hinter ForwardAuth — Zugriff nur für den Nutzer "rdn" (entspricht
-# dem letzten Authelia-Zustand vor der Ablösung, siehe
-# docs/d-sicherheit/d0073-authentik-sso.md → Access-Control). Kein
-# TOTP-Zwang (nicht Mitglied der admins-Gruppe, siehe 01-admin-2fa-policy.yaml).
+# Mealie hinter ForwardAuth — Zugriff für "admins" ODER die App-Gruppe
+# "mealie-user" (in lldap anlegen, siehe docs/d-sicherheit/d0072-lldap.md).
+# WICHTIG beim Rollout dieser Änderung: "rdn" war bisher per Username fest
+# verdrahtet — muss jetzt manuell der neuen Gruppe "mealie-user" in lldap
+# zugewiesen werden, sonst verliert rdn den Zugriff! Kein TOTP-Zwang für
+# mealie-user (nur admins-Mitglieder brauchen TOTP, siehe
+# 01-admin-2fa-policy.yaml).
 #
 # ZWEI Provider/Application-Paare, nicht einer: Mealie ist sowohl intern
 # (mealie.prod.homeserver) als auch extern (mealie-prod.pke-lab.de)
@@ -55,23 +58,26 @@ entries:
       policy_engine_mode: any
 
   - model: authentik_policies_expression.expressionpolicy
-    id: mealie-rdn-only-policy
+    id: mealie-access-policy
     identifiers:
-      name: mealie-rdn-only
+      name: mealie-access
     attrs:
       expression: |
-        return request.user.username == "rdn"
+        return (
+          ak_is_group_member(request.user, name="admins")
+          or ak_is_group_member(request.user, name="mealie-user")
+        )
 
   - model: authentik_policies.policybinding
     identifiers:
       target: !KeyOf mealie-app
-      policy: !KeyOf mealie-rdn-only-policy
+      policy: !KeyOf mealie-access-policy
       order: 0
 
   - model: authentik_policies.policybinding
     identifiers:
       target: !KeyOf mealie-external-app
-      policy: !KeyOf mealie-rdn-only-policy
+      policy: !KeyOf mealie-access-policy
       order: 0
 
   - model: authentik_outposts.outpost

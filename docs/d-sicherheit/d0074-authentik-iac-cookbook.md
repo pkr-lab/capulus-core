@@ -76,9 +76,16 @@ Ausführliches Setup (Gruppen, Basis-Identitäten): siehe
 ## 3. Neue App hinzufügen
 
 Beispiel: eine neue App `beispiel-app` unter `beispiel.tech.homeserver`
-hinter Authentik stellen, Zugriff nur für die `admins`-Gruppe (2FA-Pflicht
-kommt automatisch über die bestehende Policy in
-`01-admin-2fa-policy.yaml`, siehe [d0073](d0073-authentik-sso.md)).
+hinter Authentik stellen, Zugriff für `admins` **oder** die neue
+App-Gruppe `beispiel-app-user`.
+
+**Empfohlenes Muster: eine eigene `<app>-user`-Gruppe pro App**, statt
+einzelne Usernamen fest ins Blueprint zu schreiben. Vorteil: eine weitere
+Person bekommt Zugriff, indem sie in lldap der Gruppe zugewiesen wird
+(Abschnitt 2) — **kein Blueprint-Edit, kein Commit nötig.** `admins`
+kommt zusätzlich immer überall rein (Vollzugriff, siehe
+[01-admin-2fa-policy.yaml](../../argocd/apps/platform/authentik/blueprints/01-admin-2fa-policy.yaml)).
+Referenzbeispiele: `blueprints/apps/{mealie,uptime-kuma}.yaml`.
 
 ### 3.1 Blueprint-Datei anlegen
 
@@ -109,21 +116,25 @@ entries:
       provider: !KeyOf beispiel-app-provider
       policy_engine_mode: any
 
-  # Zugriffs-Policy — Beispiel: nur "admins"-Gruppe. Für "jeder eingeloggte
-  # Nutzer" einfach den ganzen policybinding-Block weglassen (Application
-  # ohne Policy-Bindung = jeder authentifizierte Nutzer darf rein).
+  # Zugriffs-Policy — admins ODER die App-Gruppe "beispiel-app-user"
+  # (in lldap anlegen, siehe Abschnitt 2). Für "jeder eingeloggte Nutzer"
+  # einfach den ganzen policybinding-Block weglassen (Application ohne
+  # Policy-Bindung = jeder authentifizierte Nutzer darf rein).
   - model: authentik_policies_expression.expressionpolicy
-    id: beispiel-app-admins-only-policy
+    id: beispiel-app-access-policy
     identifiers:
-      name: beispiel-app-admins-only
+      name: beispiel-app-access
     attrs:
       expression: |
-        return ak_is_group_member(request.user, name="admins")
+        return (
+          ak_is_group_member(request.user, name="admins")
+          or ak_is_group_member(request.user, name="beispiel-app-user")
+        )
 
   - model: authentik_policies.policybinding
     identifiers:
       target: !KeyOf beispiel-app-app
-      policy: !KeyOf beispiel-app-admins-only-policy
+      policy: !KeyOf beispiel-app-access-policy
       order: 0
 
   # Ohne diesen Block greift die ForwardAuth-Middleware NICHT für diese App.
@@ -140,10 +151,20 @@ entries:
 
 | Ziel | `expression` |
 |---|---|
+| **App-Gruppe + admins (empfohlen)** | `return ak_is_group_member(request.user, name="admins") or ak_is_group_member(request.user, name="<app>-user")` |
 | Nur eine bestimmte Gruppe | `return ak_is_group_member(request.user, name="admins")` |
-| Nur ein bestimmter Nutzer | `return request.user.username == "rdn"` |
-| Mehrere Nutzer | `return request.user.username in ["rdn", "ake"]` |
+| Nur ein bestimmter Nutzer (Einzelfall, sonst Gruppe bevorzugen) | `return request.user.username == "rdn"` |
+| Mehrere feste Nutzer (Einzelfall, sonst Gruppe bevorzugen) | `return request.user.username in ["rdn", "ake"]` |
 | Jeder eingeloggte Nutzer | Policy-Block + `policybinding` komplett weglassen |
+
+**Naming-Konvention für App-Gruppen:** `<app>-user` (klein, Bindestrich,
+kein `admin_`/`user_`-Prefix) — passt zum bestehenden Stil in lldap
+(`admins`, `dlrg-einsatz`). Eine eigene `<app>-admin`-Gruppe zusätzlich zu
+`admins` lohnt sich nur, wenn die App selbst unterschiedliche URLs für
+Admin- vs. Nutzerzugriff hat — bei den meisten dieser Apps (eigene
+Admin-Rolle *innerhalb* der App, z. B. Mealie) reicht eine Gruppe pro App,
+die Admin/User-Unterscheidung passiert dann in der App selbst, nicht auf
+SSO-Ebene.
 
 ### 3.2 App-eigenen Ingress auf die Middleware zeigen lassen
 
