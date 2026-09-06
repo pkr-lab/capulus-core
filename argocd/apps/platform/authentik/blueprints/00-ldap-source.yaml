@@ -34,3 +34,22 @@ entries:
       sync_users: true
       sync_users_password: false
       sync_groups: true
+
+  # Korrektur (nach Live-Rollout): Nutzer landeten zwar per Sync in
+  # Authentik, aber jeder Login schlug mit "Invalid credentials" fehl,
+  # unabhängig vom eingegebenen (korrekten) lldap-Passwort. Ursache: die
+  # Standard-Passwort-Stage im default-authentication-flow prüft per
+  # Default NUR gegen Authentiks eigene, lokale Nutzer-DB
+  # (InbuiltBackend) — und die ist für LDAP-Nutzer leer, weil
+  # sync_users_password bewusst false ist (lldap gibt keine Passwort-Hashes
+  # heraus). Ohne den LDAPBackend zusätzlich in der Stage würde JEDER
+  # LDAP-Nutzer-Login unabhängig vom Passwort scheitern. InbuiltBackend
+  # bleibt zusätzlich bestehen, sonst verliert der lokale Bootstrap-Admin
+  # "akadmin" (kein LDAP-Nutzer) seinen Login.
+  - model: authentik_stages_password.passwordstage
+    identifiers:
+      name: default-authentication-password
+    attrs:
+      backends:
+        - authentik.core.auth.InbuiltBackend
+        - authentik.sources.ldap.auth.LDAPBackend
