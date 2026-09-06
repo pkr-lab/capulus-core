@@ -274,9 +274,10 @@ victoria-metrics-k8s-stack:
     ingress:
       enabled: true
       ingressClassName: traefik
-      # Bewusst KEIN Authelia davor (22.08.2026, Nutzerentscheidung) — keine
-      # wichtigen Daten hinter Grafana, eigener Login reicht. Siehe
-      # docs/d-sicherheit/d0070-authelia-sso.md.
+      # Bewusst KEIN SSO davor (22.08.2026, Nutzerentscheidung, gilt
+      # unverändert nach der Authentik-Ablösung) — keine wichtigen Daten
+      # hinter Grafana, eigener Login reicht. Siehe
+      # docs/d-sicherheit/d0073-authentik-sso.md.
       annotations: {}
       labels: {}
       path: /

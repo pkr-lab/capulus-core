@@ -93,15 +93,15 @@ Login-Fehlschläge auf den geschützten Diensten).
 
 **Risiko:** gering, additiv zum bestehenden Monitoring.
 
-### Phase 8 — Authelia SSO vor allen Apps mit Login
+### Phase 8 — Authentik SSO vor allen Apps mit Login
 
-**Status (21.08.2026): Batch 1 (Pilot) live.** Authelia als neue,
-leichtgewichtige Platform-App deployt (SQLite, kein Postgres/Redis wie beim
-früher entfernten Authentik), Uptime Kuma als erste App per
-Traefik-ForwardAuth geschützt, inkl. Bypass-Ingress für native Anmeldung.
-Vollständiger Plan, Architektur-Begründung und Rollout-Batches:
-[docs/4-planung/40000-authelia-sso.md](../4-planung/40000-authelia-sso.md).
-Laufender Ist-Zustand: [d0070-authelia-sso.md](d0070-authelia-sso.md).
+**Status: Ablösung von Authelia läuft.** Authelia lief als Zwischenlösung
+(SQLite, kein Postgres/Redis wie beim ursprünglichen Authentik-Setup),
+schützte Uptime Kuma und Mealie per Traefik-ForwardAuth. Wird jetzt
+vollständig durch Authentik ersetzt (Begründung, Architektur und
+Rollout-Batches: [docs/4-planung/40070-authentik-sso-iac.md](../4-planung/40070-authentik-sso-iac.md)).
+Historischer Kontext zu Authelia: [docs/4-planung/40000-authelia-sso.md](../4-planung/40000-authelia-sso.md).
+Laufender Ist-Zustand: [d0073-authentik-sso.md](d0073-authentik-sso.md).
 
 **Ziel:** Eine zentrale Anmeldung (+2FA für Admin-Tools) statt pro App
 eigener, unabhängiger Zugangsdaten — inkl. der Möglichkeit, bei Verdacht auf

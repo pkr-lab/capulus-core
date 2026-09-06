@@ -33,7 +33,7 @@ spec:
     - server: https://kubernetes.default.svc
       namespace: kubeseal-webgui
     - server: https://kubernetes.default.svc
-      namespace: authelia
+      namespace: authentik
     - server: https://kubernetes.default.svc
       namespace: lldap
     - server: https://kubernetes.default.svc

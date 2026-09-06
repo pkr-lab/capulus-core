@@ -1,0 +1,24 @@
+# EINE gemeinsame ForwardAuth-Middleware für alle Tiers — im Unterschied zu
+# Authelia (templates/middleware.yaml dort: drei Middlewares, eine pro Tier,
+# wegen einer statischen rd=-Basis-URL) berechnet Authentiks eingebetteter
+# Outpost die Rückkehr-URL dynamisch aus X-Forwarded-Host/-Proto des
+# ursprünglichen Requests (trustForwardHeader: true) — kein Tier-spezifischer
+# rd=-Parameter nötig, keine Redirect-Loop-Falle. Siehe
+# docs/d-sicherheit/d0073-authentik-sso.md.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "authentik.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "authentik.labels" . | nindent 4 }}
+spec:
+  forwardAuth:
+    address: "http://{{ include "authentik.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local/outpost.goauthentik.io/auth/traefik"
+    trustForwardHeader: true
+    authResponseHeaders:
+      - X-authentik-username
+      - X-authentik-groups
+      - X-authentik-email
+      - X-authentik-name
+      - X-authentik-uid

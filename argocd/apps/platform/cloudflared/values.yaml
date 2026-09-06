@@ -77,12 +77,14 @@ tunnel:
 
   ingress:
     rules:
-      # https://+443 statt http://+80 (22.08.2026, docs/d-sicherheit/d0070-authelia-sso.md):
-      # Authelia lehnt Session-Cookies über eine als "unsicher" gemeldete
-      # Verbindung ab — auf dem alten Klartext-Port 80 setzte Traefik
-      # X-Forwarded-Proto: http, obwohl TLS längst an der Cloudflare-Edge
-      # terminiert war (401 statt Redirect für jeden extern exponierten,
-      # Authelia-geschützten Host). noTLSVerify: true, weil das interne
+      # https://+443 statt http://+80 (22.08.2026, ursprünglich wegen
+      # Authelia, gilt unverändert für Authentik weiter — siehe
+      # docs/d-sicherheit/d0073-authentik-sso.md): Session-Cookies über eine
+      # als "unsicher" gemeldete Verbindung werden abgelehnt — auf dem alten
+      # Klartext-Port 80 setzte Traefik X-Forwarded-Proto: http, obwohl TLS
+      # längst an der Cloudflare-Edge terminiert war (401 statt Redirect für
+      # jeden extern exponierten, SSO-geschützten Host). noTLSVerify: true,
+      # weil das interne
       # Zertifikat von der privaten Homeserver-CA kommt, die cloudflared
       # nicht kennt — die eigentliche Sicherheitsgrenze ist ohnehin die
       # Cloudflare-Tunnel-Verschlüsselung selbst, nicht diese interne Hop.
