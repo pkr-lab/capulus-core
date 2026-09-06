@@ -216,4 +216,53 @@ Brauche ich *.homeserver auf diesem Gerät?
                  192.168.178.94 + 192.168.178.1 setzen
 ```
 
+---
+
+## Nachtrag 2026-09-06: UFW blockierte Loopback-DNS
+
+Der Home-Server war über HTTPS von außen normal erreichbar, aber
+Tailscale zeigte "last seen" mehrere Tage alt, und ein Ansible-Lauf
+schlug bei `Download Tailscale GPG signing key` mit
+`Temporary failure in name resolution` fehl. Root Cause war **kein**
+Netzwerk-/NIC-Problem (siehe
+[20020-cluster-power-manager.md → Nachtrag 2026-09-02](../2-betrieb-hardware/20020-cluster-power-manager.md)
+für den vorherigen, unabhängigen Vorfall), sondern eine **UFW-Firewall-
+Regression**: die aktive nftables-Regelmenge hatte die Standardregel
+`-A ufw-before-input -i lo -j ACCEPT` verloren (`/etc/ufw/before.rules`
+auf der Platte war unverändert korrekt), obwohl `ufw status` selbst
+unauffällig aussah. `/var/log/ufw.log` zeigte live geblockte
+`IN=lo SRC=127.0.0.1 DST=127.0.0.1`-Pakete.
+
+Das legt jeglichen Verkehr über Loopback lahm:
+- `systemd-resolved`'s DNS-Stub auf `127.0.0.53:53` hing (kein
+  Timeout, kein Fehler — einfach kein Response), was jede Anwendung
+  betrifft, die über NSS/glibc auflöst (Tailscale, apt, curl, Python/
+  Ansible `get_url`).
+- Interner k3s-API-Verkehr auf Port 6444 (Loopback) war ebenfalls
+  betroffen — `kubectl get nodes` hing aus demselben Grund.
+- Eingehender Verkehr über `eno1` (HTTPS, SSH) war NICHT betroffen,
+  weil der lief nie über Loopback — daher wirkte der Server von außen
+  gesund.
+
+**Ursache:** `/etc/ufw/user.rules` wurde am 2026-09-05 06:00 neu
+geschrieben (vermutlich durch einen automatisierten Ansible-Lauf, der
+`community.general.ufw`-Regeln aus der `common`- und `dnsmasq`-Rolle neu
+angewendet hat). UFW's nftables-Backend hat dabei offenbar mit den
+bereits vorhandenen k3s/kube-router-nftables-Tabellen kollidiert und die
+eigene Default-Regel `-i lo -j ACCEPT` beim Neuaufbau verloren — ein
+bekanntes Zusammenspiel-Problem zwischen UFW (nftables-Backend) und
+kube-proxy/kube-router auf demselben Host.
+
+**Sofortiger Fix:** `sudo ufw disable && sudo ufw --force enable` baut
+die nftables-Tabellen komplett neu auf und stellt die Loopback-Regel
+wieder her.
+
+**Dauerhafte Absicherung:** `ansible/site.yml` prüft in den
+`post_tasks` (Tag `always`, läuft also bei jedem Playbook-Aufruf,
+unabhängig von `--tags`) per `iptables -C ufw-before-input -i lo -j
+ACCEPT`, ob die Regel aktiv ist, und führt bei Bedarf denselben
+disable/enable-Zyklus automatisch aus. Das behebt nicht die
+Ursache (ein UFW/nftables-Bug im Zusammenspiel mit k3s), heilt aber
+zuverlässig jeden Ansible-Lauf danach selbst.
+
 [avm-dns]: https://en.fritz.com/service/knowledge-base/dok/FRITZ-Box-7590/165_Configuring-different-DNS-servers-in-the-FRITZ-Box/
