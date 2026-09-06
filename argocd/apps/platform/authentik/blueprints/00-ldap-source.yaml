@@ -1,0 +1,36 @@
+# LDAP Source — Authentik konsumiert lldap als Nutzerquelle (Authentik ist
+# hier NICHT der LDAP-Server, sondern der Client). Service-Account
+# "authentik-bind" muss vorab manuell in lldaps Web-UI angelegt und der
+# Gruppe "lldap_strict_readonly" hinzugefügt werden (gleiches Muster wie
+# "authelia-bind", siehe docs/d-sicherheit/d0072-lldap.md), Passwort
+# identisch zum Klartext, der beim Versiegeln von
+# argocd/apps/platform/authentik/values.yaml → credentials.encryptedLdapBindPassword
+# verwendet wurde. Details: docs/d-sicherheit/d0073-authentik-sso.md.
+#
+# WICHTIG: Feldnamen/Modelle hier sind gegen die zum Rollout-Zeitpunkt
+# aktuelle Authentik-Version zu prüfen (docs.goauthentik.io/docs/users-sources/sources/ldap/) —
+# dieses Blueprint ist der recherchierte Startpunkt, kein garantiert
+# 1:1 lauffähiger Endzustand für jede Version.
+version: 1
+metadata:
+  name: lldap-source
+entries:
+  - model: authentik_sources_ldap.ldapsource
+    id: lldap-source
+    identifiers:
+      slug: lldap
+    attrs:
+      name: lldap
+      enabled: true
+      server_uri: ldap://lldap.lldap.svc.cluster.local:3890
+      bind_cn: uid=authentik-bind,ou=people,dc=homeserver
+      bind_password: !Env AUTHENTIK_LDAP_BIND_PASSWORD
+      base_dn: dc=homeserver
+      additional_user_dn: ou=people
+      additional_group_dn: ou=groups
+      user_object_filter: "(objectClass=person)"
+      group_object_filter: "(objectClass=groupOfUniqueNames)"
+      object_uniqueness_field: uid
+      sync_users: true
+      sync_users_password: false
+      sync_groups: true

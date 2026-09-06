@@ -17,8 +17,11 @@ bleibt als historischer Kontext bestehen (Konvention analog zu
 
 Ein zentraler SSO-Layer existiert bereits — **Authelia**, live seit dem
 22.08.2026, LDAP-backed gegen `lldap`, mit TOTP-Pflicht für Admin-Tools und
-gestaffeltem Rollout ([40000-authelia-sso.md](40000-authelia-sso.md),
-[d0070-authelia-sso.md](../d-sicherheit/d0070-authelia-sso.md)). Authelia
+gestaffeltem Rollout ([40000-authelia-sso.md](40000-authelia-sso.md);
+Ist-Zustand-Runbook `d0070-authelia-sso.md` existierte zum Planungszeitpunkt
+dieses Docs, wurde im Zuge der Umsetzung entfernt und durch
+[d0073-authentik-sso.md](../d-sicherheit/d0073-authentik-sso.md) ersetzt).
+Authelia
 selbst ist der **Ersatz** für eine erste, umfangreiche Authentik-Runde:
 aufgebaut über rund 25 Commits/PRs (`feat/sso-authentik` bis
 `feat/minio-oidc`, u. a. OIDC-Integrationen für Headlamp (`08b8107`), Argo
@@ -355,9 +358,8 @@ Big-Bang-Cutover.
 
 ## 5. Checkliste fehlender Komponenten
 
-- [ ] **Dokumentation:** Neue Seite `d-sicherheit/d0073-authentik-sso.md`
-      (Architektur, Setup, Rollout-Log — Aufbau analog
-      [d0070-authelia-sso.md](../d-sicherheit/d0070-authelia-sso.md)); neue
+- [x] **Dokumentation:** [d0073-authentik-sso.md](../d-sicherheit/d0073-authentik-sso.md)
+      angelegt (Architektur, Setup, Rollout-Log); neue
       Phase in
       [d0010-security-hardening-roadmap.md](../d-sicherheit/d0010-security-hardening-roadmap.md);
       pro geänderter App ein kurzer Absatz in der jeweiligen

@@ -1,6 +1,6 @@
 {{- if .Values.ingressNative.enabled }}
 # Bypass-Ingress ohne ForwardAuth — Ziel des "Native Anmeldung"-Links,
-# siehe docs/d-sicherheit/d0071-native-login-fallback.md.
+# siehe docs/d-sicherheit/d0073-authentik-sso.md.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

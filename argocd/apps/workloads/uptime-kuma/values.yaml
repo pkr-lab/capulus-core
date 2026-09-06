@@ -47,16 +47,16 @@ service:
 ingress:
   enabled: true
   className: traefik
-  # Authelia-SSO-Pilot (Batch 1, docs/4-planung/40000-authelia-sso.md) — nur
-  # der interne Haupt-Host ist geschützt. Der externe Status-Host unten
-  # bleibt bewusst unverändert (eigener Ingress ohne Middleware), Batch 5
-  # entscheidet separat, ob externe Hosts auch Authelia bekommen.
-  # authelia-prod, NICHT authelia-tech — Uptime Kuma liegt unter
-  # prod.homeserver, Middleware muss zum Tier passen (siehe
-  # argocd/apps/platform/authelia/templates/middleware.yaml, Kommentar dort
-  # für die Redirect-Loop-Falle, die das ohne Tier-Zuordnung auslöst).
+  # Authentik-SSO (docs/d-sicherheit/d0073-authentik-sso.md, Ablösung von
+  # Authelia siehe docs/4-planung/40070-authentik-sso-iac.md) — nur der
+  # interne Haupt-Host ist geschützt, Zugriff nur für die "admins"-Gruppe
+  # (Policy-Blueprint argocd/apps/platform/authentik/blueprints/apps/uptime-kuma.yaml).
+  # Der externe Status-Host unten bleibt bewusst unverändert. Eine einzige
+  # Middleware reicht für alle Tiers — im Unterschied zu Authelia berechnet
+  # Authentiks eingebetteter Outpost die Rückkehr-URL dynamisch, siehe
+  # argocd/apps/platform/authentik/templates/middleware.yaml.
   annotations:
-    traefik.ingress.kubernetes.io/router.middlewares: "authelia-authelia-prod@kubernetescrd"
+    traefik.ingress.kubernetes.io/router.middlewares: "authentik-authentik@kubernetescrd"
   hosts:
     - host: uptime-kuma.prod.homeserver
       paths:
@@ -73,14 +73,14 @@ ingress:
 # "Updates"-Seite auf edv-kretzer.de per Hintergrund-Request abgefragt
 # (keine direkte Verlinkung, kein iframe) — das restliche Dashboard bleibt
 # hinter dem Admin-Login. Kein ForwardAuth hier (eigener, unveränderter
-# Ingress) — bewusst nicht Teil des Authelia-Pilots, siehe oben.
+# Ingress) — bewusst nicht Teil der Authentik-SSO, siehe oben.
 ingressPublic:
   enabled: true
   host: status-prod.pke-lab.de
 
 # "Knopfdruck zur nativen Anmeldung" — Bypass-Ingress ohne
-# ForwardAuth-Middleware, Ziel des Fallback-Links auf Authelias Login-Seite
-# (docs/4-planung/40000-authelia-sso.md, Baustein 3). Gleiches Muster wie
+# ForwardAuth-Middleware, Ziel des Fallback-Links auf Authentiks Login-Seite
+# (docs/d-sicherheit/d0073-authentik-sso.md). Gleiches Muster wie
 # gotify/values.yaml → ingressApi.
 ingressNative:
   enabled: true
