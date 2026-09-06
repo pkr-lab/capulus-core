@@ -1,6 +1,6 @@
 {{- if .Values.ingressNative.enabled }}
 # Bypass-Ingress ohne ForwardAuth — Ziel des "Native Anmeldung"-Links auf
-# Authelias Login-Seite, siehe docs/4-planung/40000-authelia-sso.md.
+# Authentiks Login-Seite, siehe docs/d-sicherheit/d0073-authentik-sso.md.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

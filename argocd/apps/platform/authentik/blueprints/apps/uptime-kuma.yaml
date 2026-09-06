@@ -1,0 +1,54 @@
+# Uptime Kuma hinter ForwardAuth — Zugriff nur für die "admins"-Gruppe
+# (entspricht dem letzten Authelia-Zustand vor der Ablösung, siehe
+# docs/d-sicherheit/d0073-authentik-sso.md → Access-Control). TOTP wird durch
+# die Policy aus 01-admin-2fa-policy.yaml erzwungen, nicht hier nochmal.
+#
+# Beispiel/Vorlage für weitere Apps — siehe
+# docs/d-sicherheit/d0074-authentik-iac-cookbook.md für das Vorgehen, um
+# eine neue App hinzuzufügen.
+version: 1
+metadata:
+  name: app-uptime-kuma
+entries:
+  - model: authentik_providers_proxy.proxyprovider
+    id: uptime-kuma-provider
+    identifiers:
+      name: uptime-kuma
+    attrs:
+      mode: forward_single
+      external_host: https://uptime-kuma.prod.homeserver
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+
+  - model: authentik_core.application
+    id: uptime-kuma-app
+    identifiers:
+      slug: uptime-kuma
+    attrs:
+      name: Uptime Kuma
+      provider: !KeyOf uptime-kuma-provider
+      policy_engine_mode: any
+
+  - model: authentik_policies_expression.expressionpolicy
+    id: uptime-kuma-admins-only-policy
+    identifiers:
+      name: uptime-kuma-admins-only
+    attrs:
+      expression: |
+        return ak_is_group_member(request.user, name="admins")
+
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf uptime-kuma-app
+      policy: !KeyOf uptime-kuma-admins-only-policy
+      order: 0
+
+  # Provider am eingebetteten Outpost registrieren, sonst greift
+  # /outpost.goauthentik.io/auth/traefik nicht für diese App.
+  - model: authentik_outposts.outpost
+    identifiers:
+      name: authentik Embedded Outpost
+    attrs:
+      providers:
+        - !KeyOf uptime-kuma-provider
+    state: present

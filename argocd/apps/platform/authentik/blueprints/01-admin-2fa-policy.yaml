@@ -1,0 +1,44 @@
+# TOTP-Pflicht für die "admins"-Gruppe (aus lldap synchronisiert, siehe
+# 00-ldap-source.yaml) — identische Abgrenzung wie bisher bei Authelia
+# (docs/4-planung/40000-authelia-sso.md, Baustein 4): nur Admin-/Infra-Tools
+# erzwingen 2FA, Endnutzer-Apps laufen mit Passwort-Login.
+#
+# WICHTIG: gegen docs.goauthentik.io/docs/add-secure-apps/flows-stages/stages/authenticator_totp/
+# und .../policies/ für die Ziel-Version prüfen, siehe Hinweis in
+# 00-ldap-source.yaml.
+version: 1
+metadata:
+  name: admin-2fa-enforcement
+entries:
+  - model: authentik_stages_authenticator_totp.authenticatortotpstage
+    id: totp-setup-stage
+    identifiers:
+      name: totp-setup
+    attrs:
+      digits: 6
+
+  - model: authentik_policies_expression.expressionpolicy
+    id: require-2fa-admins-policy
+    identifiers:
+      name: require-2fa-for-admins-group
+    attrs:
+      expression: |
+        # Nur Mitglieder der lldap-Gruppe "admins" müssen TOTP einrichten —
+        # alle anderen überspringen diese Stage.
+        return ak_is_group_member(request.user, name="admins")
+
+  - model: authentik_flows.flowstagebinding
+    id: totp-setup-binding
+    identifiers:
+      target: !Find [authentik_flows.flow, [slug, default-authentication-flow]]
+      stage: !KeyOf totp-setup-stage
+      order: 30
+    attrs:
+      evaluate_on_plan: false
+      re_evaluate_policies: true
+
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf totp-setup-binding
+      policy: !KeyOf require-2fa-admins-policy
+      order: 0

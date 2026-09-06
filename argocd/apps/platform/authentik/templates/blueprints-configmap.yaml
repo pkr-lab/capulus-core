@@ -1,0 +1,18 @@
+# Bündelt jede Datei unter blueprints/ (Chart-Root, inkl. Unterordner
+# blueprints/apps/) in eine ConfigMap, gemountet in Server + Worker unter
+# .Values.blueprints.mountPath. Authentik wendet jede *.yaml darin beim
+# Start automatisch an (kein manueller Trigger nötig). Neue App/Policy =
+# neue Datei hier committen, siehe
+# docs/d-sicherheit/d0074-authentik-iac-cookbook.md.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "authentik.fullname" . }}-blueprints
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "authentik.labels" . | nindent 4 }}
+data:
+  {{- range $path, $bytes := .Files.Glob "blueprints/**.yaml" }}
+  {{ base $path }}: |
+{{ $.Files.Get $path | nindent 4 }}
+  {{- end }}

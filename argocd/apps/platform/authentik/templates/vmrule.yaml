@@ -1,0 +1,35 @@
+{{- if .Values.metrics.enabled }}
+# Aktive OOM-Vorbeugung statt reaktivem Fix — der Worker war in der
+# historischen Authentik-Runde bereits einmal OOMKilled (Commit 983e338,
+# siehe docs/4-planung/40070-authentik-sso-iac.md → Ausgangslage). Warnt
+# rechtzeitig, bevor ein OOMKill passiert. Muster wie
+# argocd/apps/platform/monitoring/templates/vmrule-resources.yaml
+# (severity: warning → Gotify).
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: {{ include "authentik.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "authentik.labels" . | nindent 4 }}
+spec:
+  groups:
+    - name: authentik.resources
+      interval: 30s
+      rules:
+        - alert: AuthentikWorkerMemoryNearLimit
+          expr: >-
+            container_memory_working_set_bytes{namespace="{{ .Release.Namespace }}",container="worker"}
+            / {{ .Values.worker.resources.limits.memory | trimSuffix "Mi" }} / 1024 / 1024 * 100 >= 80
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Authentik-Worker nähert sich dem Memory-Limit"
+            description: >-
+              Authentik-Worker-Speichernutzung liegt seit 5 Minuten bei
+              {{ "{{ $value }}" }}% des konfigurierten Limits
+              ({{ .Values.worker.resources.limits.memory }}) — vor einem
+              erneuten OOMKill (historisch: Commit 983e338) Limit prüfen/
+              anheben.
+{{- end }}
