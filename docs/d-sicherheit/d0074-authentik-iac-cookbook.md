@@ -136,16 +136,19 @@ entries:
       target: !KeyOf beispiel-app-app
       policy: !KeyOf beispiel-app-access-policy
       order: 0
-
-  # Ohne diesen Block greift die ForwardAuth-Middleware NICHT für diese App.
-  - model: authentik_outposts.outpost
-    identifiers:
-      name: authentik Embedded Outpost
-    attrs:
-      providers:
-        - !KeyOf beispiel-app-provider
-    state: present
 ```
+
+> **Kein `authentik_outposts.outpost`-Entry in dieser Datei!** Live
+> beobachtet: Authentik ERSETZT die `providers`-Liste des Outposts beim
+> Apply komplett, statt sie zu mergen. Hätte jede App-Datei ihr eigenes
+> Outpost-Entry, würde die zuletzt angewendete Datei die Registrierung
+> aller anderen Apps kommentarlos wegwischen (Symptom: die betroffene App
+> zeigt plötzlich Authentiks eigene 404-Seite statt zum Login umzuleiten
+> oder durchzureichen — Traefik reicht bei einem 404 vom ForwardAuth-Check
+> die Antwort 1:1 durch). Stattdessen: neuen Provider in
+> **`blueprints/90-outpost-providers.yaml`** ergänzen (eine `!Find`-Zeile
+> pro App) — diese eine zentrale Datei ist die einzige Stelle, die
+> `providers` auf dem Outpost setzt.
 
 **Policy-Varianten** (den `expression`-Block entsprechend anpassen):
 
@@ -258,6 +261,7 @@ Vollständige Modell-/Feld-Referenz:
 |---|---|
 | Blueprint wird nicht angewendet, keine Fehlermeldung sichtbar | Worker-Pod neu gestartet? Blueprints werden beim Start + periodisch geprüft — `kubectl -n authentik rollout restart deployment authentik-worker` erzwingt einen sofortigen Versuch. |
 | `kubectl logs` zeigt "Invalid blueprint" / Feld unbekannt | Feldname/Modell stimmt nicht mit der deployten Authentik-Version überein — gegen [docs.goauthentik.io](https://docs.goauthentik.io/docs/customize/blueprints/v1/models/) für die exakte Version prüfen (`Chart.yaml` → `appVersion`). |
-| App erscheint, ForwardAuth liefert aber immer 403/401 | Provider fehlt im `authentik_outposts.outpost`-Eintrag (Abschnitt 3.1, letzter Block) — ohne Registrierung am Embedded Outpost greift `/outpost.goauthentik.io/auth/traefik` nicht für diese App. |
+| App zeigt Authentiks eigene 404-Seite ("Not Found", Authentik-Logo) statt Login-Redirect oder App-Inhalt | Provider fehlt am Embedded Outpost — `/outpost.goauthentik.io/auth/traefik` liefert dann 404, Traefik reicht diese Antwort bei ForwardAuth 1:1 durch. Fast immer, weil der Provider in `blueprints/90-outpost-providers.yaml` fehlt (dort per `!Find`-Zeile ergänzen) — **nicht** ein eigenes `authentik_outposts.outpost`-Entry in der App-Datei anlegen, siehe Warnhinweis in Abschnitt 3.1. Prüfen: `kubectl -n authentik exec deploy/authentik-server -c server -- ak shell -c "from authentik.outposts.models import Outpost; print([p.name for p in Outpost.objects.get(name='authentik Embedded Outpost').providers.all()])"` |
+| App erscheint, ForwardAuth liefert 401 statt Redirect zum Login | Provider ist zwar am Outpost registriert, aber `policy_engine_mode`/Policy-Bindings verweigern generell — Gruppenzugehörigkeit in lldap prüfen. |
 | Falscher Nutzer kommt trotzdem rein | `policy_engine_mode: any` + mehrere Policy-Bindings verhalten sich wie ODER — bei mehreren Regeln ggf. auf `all` (UND) umstellen oder Policies zusammenfassen. |
 | Neuer lldap-Nutzer taucht in Authentik nicht auf | LDAP-Source-Sync-Intervall abwarten oder manuell anstoßen (Abschnitt 2, Schritt 4). |
