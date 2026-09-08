@@ -20,7 +20,14 @@ die es bei den Raspberry Pis bewusst nicht gibt:
 3. **Grafana-Monitoring + Zammad-Ticket bei Ausfall** — taucht im
    Dashboard "Home Server Auslastung" auf (per **Push**, nicht Pull — siehe
    unten) und erzeugt (nur für dieses Gerät) ein Zammad-Ticket, wenn es
-   länger als 10 Minuten nicht erreichbar ist.
+   länger als 10 Minuten nicht erreichbar ist. Ein eigenes Standort-Dashboard
+   **"1002011-pis"** (`dashboard-1002011-pis.yaml`, benannt nach dem
+   ALAMOS-Standortcode des Vereinsheims, siehe `banana_pi_kiosk_station` in
+   `ansible/inventory/hosts.yml`) zeigt zusätzlich zum Rhein-Pegel und den
+   ALAMOS-Statuswerten auch CPU/RAM/Temperatur/Disk dieses Pi im Detail —
+   und, da am selben Standort, dieselben Metriken für die xibosignage-
+   Infotafel `infotafel` (siehe
+   [docs/3-apps-workloads/300e0-xibosignage.md, "Monitoring (Grafana)"](300e0-xibosignage.md#monitoring-grafana)).
 
 ## Inhaltsverzeichnis
 
@@ -218,6 +225,12 @@ nach.
 Kein Dashboard-Change nötig — "Home Server Auslastung"
 (`uid: homeserver-auslastung`) filtert dynamisch über die Grafana-Variable
 `$instance`; der Pi taucht automatisch auf, sobald seine Metriken ankommen.
+Zusätzlich hat der Pi (fest verdrahtet, nicht über `$instance`) eigene
+Detail-Panels im Standort-Dashboard **"1002011-pis"**
+(`argocd/apps/platform/monitoring/templates/dashboard-1002011-pis.yaml`,
+ehemals "Vereinsheim-Alarmmonitor" — umbenannt, als die xibosignage-
+Infotafel `infotafel` als zweites Gerät am selben Standort dazukam, siehe
+[docs/3-apps-workloads/300e0-xibosignage.md, "Monitoring (Grafana)"](300e0-xibosignage.md#monitoring-grafana)).
 
 ## Zammad-Ticket via n8n
 
