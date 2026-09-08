@@ -7,6 +7,11 @@
 #   Anleitung: docs/3-apps-workloads/300e0-xibosignage.md → Abschnitt "Secrets versiegeln"
 # ============================================================
 
+# Namespace des n8n-Playlist-Sync-Workflows (docs/3-apps-workloads/300e0-xibosignage.md)
+# -- braucht per NetworkPolicy Ingress-Ausnahme auf cms-web, siehe
+# templates/networkpolicy-allow-n8n-ingress.yaml.
+n8nNamespace: n8n
+
 secrets:
   enabled: true
   name: xibosignage-secrets
@@ -136,6 +141,16 @@ cms:
     annotations: {}
     hosts:
       - host: xibo.prod.homeserver
+        paths:
+          - path: /
+            pathType: Prefix
+      # Extern über Cloudflare Tunnel erreichbar (Wildcard "*.pke-lab.de" ->
+      # Traefik, siehe argocd/apps/platform/cloudflared/values.yaml), bewusst
+      # OHNE zusaetzliche Authentik-ForwardAuth-Middleware (anders als
+      # mealie/uptime-kuma) -- nur das Xibo-eigene CMS-Login schuetzt diesen
+      # Host, analog zum frueheren n8n-Setup. Siehe
+      # docs/3-apps-workloads/300e0-xibosignage.md.
+      - host: xibo-prod.pke-lab.de
         paths:
           - path: /
             pathType: Prefix
