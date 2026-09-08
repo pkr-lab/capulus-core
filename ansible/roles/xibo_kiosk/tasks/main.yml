@@ -24,6 +24,18 @@
     cache_valid_time: 3600
   when: xibo_kiosk_enabled | bool
 
+- name: xibosignage-display vor Attribut-Fix ggf. aushängen
+  # Idempotenz bei Wiederholungslaeufen: war der NFS-Mount aus einem
+  # frueheren (ggf. abgebrochenen) Lauf noch aktiv, blockt der read-only
+  # NFS-Export den chown/chmod im naechsten Task ("Das Dateisystem ist nur
+  # lesbar", da die Mountpoint-Attribute dann die des Exports sind statt
+  # der lokalen Verzeichnis-Attribute).
+  ansible.posix.mount:
+    path: "{{ xibo_kiosk_mount_point }}"
+    state: unmounted
+  when: xibo_kiosk_enabled | bool
+  failed_when: false
+
 - name: Mount-Point für xibosignage-display anlegen
   ansible.builtin.file:
     path: "{{ xibo_kiosk_mount_point }}"
