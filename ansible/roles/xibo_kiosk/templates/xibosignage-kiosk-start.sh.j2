@@ -20,7 +20,14 @@ for _ in $(seq 1 30); do
   sleep 1
 done
 
-exec chromium-browser \
+# Paketname/Binary-Name ist je nach Raspberry-Pi-OS-Version unterschiedlich:
+# auf aktuellen (Debian-trixie-basierten) Images ist "chromium-browser" nur
+# noch ein leeres transitionales Dummy-Paket, das Binary heisst "chromium"
+# -- auf aelteren Images ist es umgekehrt. Beide pruefen statt fest zu
+# verdrahten.
+CHROMIUM_BIN="$(command -v chromium || command -v chromium-browser)"
+
+exec "$CHROMIUM_BIN" \
   --kiosk \
   --incognito \
   --noerrdialogs \
