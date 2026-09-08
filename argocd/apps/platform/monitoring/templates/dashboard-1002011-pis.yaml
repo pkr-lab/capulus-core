@@ -1,15 +1,15 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: dashboard-vereinsheim-alarmmonitor
+  name: dashboard-1002011-pis
   namespace: {{ .Release.Namespace }}
   labels:
     grafana_dashboard: "1"
 data:
-  vereinsheim-alarmmonitor.json: |
+  1002011-pis.json: |
     {
       "annotations": {"list": []},
-      "description": "Alles Wichtige zum Banana-Pi-Alarmmonitor 'vereinsheim-alarmmonitor' auf einen Blick: Rhein-Pegel Andernach (oben, gleiche Quelle wie dashboard-rhein-andernach.yaml), Erreichbarkeit, Uptime, CPU/RAM/Temperatur/Disk sowie der ALAMOS-Status (letzte AMweb-Anfrage, letzter Heartbeat). Geraete-Metriken kommen per vmagent-Push (Tailscale-only-Standort, kein Cluster-Scrape), siehe docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md.",
+      "description": "Alles Wichtige zu den Geraeten am Standort 1002011 (Vereinsheim) auf einen Blick: Banana-Pi-Alarmmonitor 'vereinsheim-alarmmonitor' (Rhein-Pegel Andernach oben, gleiche Quelle wie dashboard-rhein-andernach.yaml, Erreichbarkeit/Uptime/CPU/RAM/Temperatur/Disk sowie ALAMOS-Status) und die xibosignage-Infotafel 'infotafel' (Erreichbarkeit/Uptime/CPU/RAM/Temperatur/Disk). vereinsheim-alarmmonitor-Metriken kommen per vmagent-Push (Tailscale-only-Standort, kein Cluster-Scrape), infotafel-Metriken per Cluster-VMStaticScrape (normales LAN) -- siehe docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md und docs/3-apps-workloads/300e0-xibosignage.md.",
       "editable": true,
       "graphTooltip": 1,
       "links": [],
@@ -703,11 +703,427 @@ data:
           ],
           "title": "Disk-Auslastung Verlauf (SD-Karte/eMMC)",
           "type": "timeseries"
+        },
+        {
+          "collapsed": false,
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 58},
+          "id": 100,
+          "panels": [],
+          "title": "infotafel (Raspberry Pi 3 B+, xibosignage)",
+          "type": "row"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 90},
+                  {"color": "red", "value": 300}
+                ]
+              },
+              "unit": "s"
+            }
+          },
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 59},
+          "id": 101,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "time() - timestamp(up{job=\"node-exporter\",instance=\"infotafel\"})",
+              "legendFormat": "Zuletzt gesehen vor",
+              "refId": "A"
+            }
+          ],
+          "title": "Zuletzt gesehen vor",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [],
+              "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]},
+              "unit": "s"
+            }
+          },
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 59},
+          "id": 102,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "node_time_seconds{instance=\"infotafel\"} - node_boot_time_seconds{instance=\"infotafel\"}",
+              "legendFormat": "Uptime",
+              "refId": "A"
+            }
+          ],
+          "title": "Uptime",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 70},
+                  {"color": "red", "value": 90}
+                ]
+              },
+              "unit": "percent",
+              "max": 100,
+              "min": 0
+            }
+          },
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 59},
+          "id": 103,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\",instance=\"infotafel\"}[5m])) * 100)",
+              "legendFormat": "CPU",
+              "refId": "A"
+            }
+          ],
+          "title": "CPU",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 70},
+                  {"color": "red", "value": 90}
+                ]
+              },
+              "unit": "percent",
+              "max": 100,
+              "min": 0
+            }
+          },
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 59},
+          "id": 104,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "(node_memory_MemTotal_bytes{instance=\"infotafel\"} - node_memory_MemAvailable_bytes{instance=\"infotafel\"}) / node_memory_MemTotal_bytes{instance=\"infotafel\"} * 100",
+              "legendFormat": "RAM",
+              "refId": "A"
+            }
+          ],
+          "title": "RAM",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 70},
+                  {"color": "red", "value": 85}
+                ]
+              },
+              "unit": "celsius"
+            }
+          },
+          "gridPos": {"h": 4, "w": 12, "x": 0, "y": 63},
+          "id": 105,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "avg(node_hwmon_temp_celsius{instance=\"infotafel\"})",
+              "legendFormat": "Temperatur",
+              "refId": "A"
+            }
+          ],
+          "title": "Temperatur",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 75},
+                  {"color": "red", "value": 90}
+                ]
+              },
+              "unit": "percent",
+              "max": 100,
+              "min": 0
+            }
+          },
+          "gridPos": {"h": 4, "w": 12, "x": 12, "y": 63},
+          "id": 106,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "(node_filesystem_size_bytes{instance=\"infotafel\",mountpoint=\"/\",fstype!~\"tmpfs|overlay\"} - node_filesystem_avail_bytes{instance=\"infotafel\",mountpoint=\"/\",fstype!~\"tmpfs|overlay\"}) / node_filesystem_size_bytes{instance=\"infotafel\",mountpoint=\"/\",fstype!~\"tmpfs|overlay\"} * 100",
+              "legendFormat": "Disk (/)",
+              "refId": "A"
+            }
+          ],
+          "title": "Disk (/)",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "percent",
+              "max": 100,
+              "min": 0
+            }
+          },
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 67},
+          "id": 107,
+          "options": {
+            "legend": {"calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom"},
+            "tooltip": {"mode": "multi", "sort": "desc"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\",instance=\"infotafel\"}[5m])) * 100)",
+              "legendFormat": "CPU",
+              "refId": "A"
+            }
+          ],
+          "title": "CPU Auslastung",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "bytes"
+            }
+          },
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 75},
+          "id": 108,
+          "options": {
+            "legend": {"calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom"},
+            "tooltip": {"mode": "multi", "sort": "desc"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "node_memory_MemTotal_bytes{instance=\"infotafel\"} - node_memory_MemAvailable_bytes{instance=\"infotafel\"}",
+              "legendFormat": "Genutzt",
+              "refId": "A"
+            },
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "node_memory_MemTotal_bytes{instance=\"infotafel\"}",
+              "legendFormat": "Gesamt",
+              "refId": "B"
+            }
+          ],
+          "title": "RAM Auslastung",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "celsius"
+            }
+          },
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 83},
+          "id": 109,
+          "options": {
+            "legend": {"calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom"},
+            "tooltip": {"mode": "multi", "sort": "desc"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "node_hwmon_temp_celsius{instance=\"infotafel\"}",
+              "legendFormat": "{{ "{{chip}}" }} {{ "{{sensor}}" }}",
+              "refId": "A"
+            }
+          ],
+          "title": "Temperatur Verlauf",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "Bps"
+            }
+          },
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 91},
+          "id": 110,
+          "options": {
+            "legend": {"calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom"},
+            "tooltip": {"mode": "multi", "sort": "desc"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "rate(node_network_receive_bytes_total{instance=\"infotafel\",device!~\"lo|veth.*|br.*|cali.*|tunl.*|tailscale.*\"}[5m])",
+              "legendFormat": "RX {{ "{{device}}" }}",
+              "refId": "A"
+            },
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "rate(node_network_transmit_bytes_total{instance=\"infotafel\",device!~\"lo|veth.*|br.*|cali.*|tunl.*|tailscale.*\"}[5m])",
+              "legendFormat": "TX {{ "{{device}}" }}",
+              "refId": "B"
+            }
+          ],
+          "title": "Netzwerk",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "percent",
+              "max": 100,
+              "min": 0
+            }
+          },
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 99},
+          "id": 111,
+          "options": {
+            "legend": {"calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom"},
+            "tooltip": {"mode": "multi", "sort": "desc"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "expr": "(node_filesystem_size_bytes{instance=\"infotafel\",mountpoint=\"/\",fstype!~\"tmpfs|overlay\"} - node_filesystem_avail_bytes{instance=\"infotafel\",mountpoint=\"/\",fstype!~\"tmpfs|overlay\"}) / node_filesystem_size_bytes{instance=\"infotafel\",mountpoint=\"/\",fstype!~\"tmpfs|overlay\"} * 100",
+              "legendFormat": "Disk (/)",
+              "refId": "A"
+            }
+          ],
+          "title": "Disk-Auslastung Verlauf (SD-Karte)",
+          "type": "timeseries"
         }
       ],
       "refresh": "30s",
       "schemaVersion": 38,
-      "tags": ["homelab", "alamos", "banana-pi", "rhein", "pegel"],
+      "tags": ["homelab", "1002011", "banana-pi", "xibosignage", "rhein", "pegel"],
       "templating": {
         "list": [
           {
@@ -727,7 +1143,7 @@ data:
       "time": {"from": "now-2d", "to": "now+2d"},
       "timepicker": {},
       "timezone": "browser",
-      "title": "Vereinsheim-Alarmmonitor",
-      "uid": "vereinsheim-alarmmonitor",
+      "title": "1002011-pis",
+      "uid": "1002011-pis",
       "version": 1
     }
