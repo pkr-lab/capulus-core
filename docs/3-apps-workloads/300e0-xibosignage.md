@@ -123,19 +123,25 @@ Den Output in `argocd/apps/workloads/xibosignage/values.yaml` unter
 
 ### Erster Start
 
-Nach dem Sync ist Xibo unter **https://xibo.homeserver** erreichbar. Das
-CMS-Image führt beim allerersten Start automatisch DB-Migrationen +
-Installation durch — das kann einige Minuten dauern
+Nach dem Sync ist Xibo unter **https://xibo.prod.homeserver** (intern) und
+**https://xibo-prod.pke-lab.de** (extern, über den Cloudflare Tunnel —
+Wildcard-DNS/-Ingress-Route, kein zusätzlicher DNS-Schritt nötig, siehe
+[docs/e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md](../e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md))
+erreichbar. Bewusst **ohne** zusätzliche Authentik-ForwardAuth-Middleware
+(anders als mealie/uptime-kuma) — nur das CMS-eigene Login schützt den
+externen Host. Das CMS-Image führt beim allerersten Start automatisch
+DB-Migrationen + Installation durch — das kann einige Minuten dauern
 (`kubectl -n xibosignage logs deploy/xibosignage-cms -f`).
 
 **Default-Login:** `xibo_admin` / `password` — **sofort nach dem ersten
-Login ändern** (Einstellungen → Mein Konto).
+Login ändern** (Einstellungen → Mein Konto), besonders wichtig durch die
+externe Erreichbarkeit.
 
 ### Konfiguration (values.yaml)
 
 | Key | Bedeutung | Default |
 |---|---|---|
-| `cms.env.CMS_SERVER_NAME` | Hostname, den das CMS für sich selbst annimmt | `xibo.homeserver` |
+| `cms.env.CMS_SERVER_NAME` | Hostname, den das CMS für sich selbst annimmt (self-generierte Links — bleibt auf dem internen Hostname, unabhängig vom zusätzlichen externen Ingress-Host) | `xibo.prod.homeserver` |
 | `cms.env.CMS_PHP_UPLOAD_MAX_FILESIZE` | Max. Upload-Größe pro Datei | `512M` |
 | `cms.persistence.library.size` | Medien-Bibliothek | `50Gi` |
 | `mysql.persistence.size` | Datenbank | `10Gi` |
