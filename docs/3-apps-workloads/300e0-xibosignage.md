@@ -1,10 +1,19 @@
 # xibosignage — Xibo CMS + Bilder-Slideshow auf Raspberry Pi 3 B+
 
 Digital-Signage-Setup: **Xibo CMS** läuft als zentrale Medien-/Asset-
-Verwaltung im k3s-Cluster, Bilder landen über eine vom Nutzer selbst
-eingerichtete **OnlineSync** in einem festen NAS-Ordner, ein **n8n-Workflow**
-verarbeitet neue Bilder automatisch, und ein **Raspberry Pi 3 B+** zeigt sie
-als Slideshow.
+Verwaltung im k3s-Cluster, Inhalte werden über eine **Xibo-CMS-Playlist** im
+Web-UI gepflegt, ein **n8n-Workflow** synchronisiert die Playlist-Bilder
+periodisch über die Xibo-REST-API in einen festen NAS-Ordner, und ein
+**Raspberry Pi 3 B+** zeigt sie als Slideshow.
+
+> **Alternative Quelle (deaktiviert):** Ursprünglich befüllte eine vom Nutzer
+> selbst eingerichtete **OnlineSync** (Handy-/Cloud-Ordner-Sync) den
+> NAS-Ordner. Dieser Pfad existiert weiterhin als deaktivierter n8n-Workflow
+> (`xibosignage-inbox-to-display.json`) für den Fall, dass spontane Fotos
+> ohne CMS-Umweg gezeigt werden sollen — siehe
+> [Alternative: OnlineSync → Inbox → Display](#alternative-deaktiviert-onlinesync--inbox--display).
+> Playlist-Sync und OnlineSync-Workflow **nicht gleichzeitig aktiv lassen**,
+> beide schreiben in denselben Ordner.
 
 > **Wichtig — kein offizieller Xibo-Player auf dem Pi:** Xibo Signage sagt
 > selbst, dass kein Raspberry-Pi-Modell für ihre Player geeignet ist. Der
@@ -21,48 +30,48 @@ als Slideshow.
 
 1. [Architektur](#architektur)
 2. [Xibo CMS deployen (argocd/apps/workloads/xibosignage)](#xibo-cms-deployen-argocdappsxibosignage)
-3. [NAS-Ordner einrichten (Inbox/Display, OnlineSync)](#nas-ordner-einrichten-inboxdisplay-onlinesync)
-4. [n8n-Workflow: Inbox → Display](#n8n-workflow-inbox--display)
-5. [Raspberry-Pi-Rollout (Ansible)](#raspberry-pi-rollout-ansible)
-6. [Fehlerbehebung](#fehlerbehebung)
+3. [NAS-Ordner einrichten (Display)](#nas-ordner-einrichten-display)
+4. [n8n-Workflow: Xibo-CMS-Playlist → Display (primär)](#n8n-workflow-xibo-cms-playlist--display-primär)
+5. [Alternative (deaktiviert): OnlineSync → Inbox → Display](#alternative-deaktiviert-onlinesync--inbox--display)
+6. [Raspberry-Pi-Rollout (Ansible)](#raspberry-pi-rollout-ansible)
+7. [Fehlerbehebung](#fehlerbehebung)
 
 ---
 
 ## Architektur
 
 ```
-                     ┌─────────────────────────────────────────┐
-                     │  Xibo CMS (k3s, Namespace xibosignage)   │
-                     │  cms-web ── MySQL ── XMR ── Memcached    │
-                     │             └── QuickChart               │
-                     │  https://xibo.homeserver                  │
-                     │  PVC "library"/"state" (StorageClass nas) │
-                     └─────────────────────────────────────────┘
-                        (zentrale Medien-/Asset-Verwaltung,
-                         unabhängig vom Anzeige-Pfad unten)
-
-  Handy/PC/Cloud                                      UGREEN NAS (192.168.178.97)
-  ────────────────                                     /volume1/k8s-storage/
-  Eigene "OnlineSync"   ──(SMB/NFS, User-Setup)──▶   xibosignage-inbox/
-  (z.B. UGOS-Cloud-Sync,                                    │
-   Handy-Ordner-Sync)                                       │ n8n: Local File Trigger
-                                                              ▼
-                                                    n8n (Namespace n8n)
-                                                    Resize (Edit Image) auf
-                                                    1920×1080, Original nach
-                                                    inbox/processed/ verschoben
-                                                              │
-                                                              ▼
-                                             /volume1/k8s-storage/
-                                             xibosignage-display/
-                                                              │
-                                                              │ NFS-Mount, read-only
-                                                              ▼
-                                             Raspberry Pi 3 B+
-                                             ansible/roles/xibo_kiosk:
-                                             manifest.json-Scan (alle 30s)
-                                             + Chromium-Kiosk-Slideshow
-                                             + Tailscale (Fernzugriff)
+┌─────────────────────────────────────────────┐
+│  Xibo CMS (k3s, Namespace xibosignage)       │
+│  cms-web ── MySQL ── XMR ── Memcached        │
+│             └── QuickChart                   │
+│  https://xibo.homeserver                     │
+│  PVC "library"/"state" (StorageClass nas)    │
+│                                               │
+│  Design → Playlists → "infotafel"            │
+│  (Bild-Widgets, Reihenfolge per Drag&Drop)    │
+└─────────────────────────────────────────────┘
+                    │ REST API (OAuth2 Client Credentials)
+                    │ GET /api/playlist?name=infotafel&embed=widgets
+                    │ GET /api/library/download/{mediaId}
+                    ▼
+         n8n (Namespace n8n), alle 5 Min.
+         xibosignage-playlist-sync.json:
+         Resize (Edit Image) auf 1920×1080,
+         Dateiname mit Reihenfolge-Präfix
+         (xibo-playlist-<order>-<mediaId>),
+         entfernte Playlist-Bilder aufräumen
+                    │
+                    ▼
+   /volume1/k8s-storage/xibosignage-display/  (UGREEN NAS, 192.168.178.97)
+                    │
+                    │ NFS-Mount, read-only
+                    ▼
+         Raspberry Pi 3 B+ ("infotafel")
+         ansible/roles/xibo_kiosk:
+         manifest.json-Scan (alle 30s, alphabetisch sortiert)
+         + Chromium-Kiosk-Slideshow
+         + Tailscale (Fernzugriff)
 ```
 
 Zwei bewusst getrennte Storage-Pfade:
@@ -70,14 +79,12 @@ Zwei bewusst getrennte Storage-Pfade:
 | Ordner | Wer schreibt | Wer liest | Zweck |
 |---|---|---|---|
 | Xibo-CMS-`library`-PVC | nur Xibo CMS selbst | nur Xibo CMS selbst | Interne Medien-Verwaltung (Layouts, Playlists) — Xibo speichert Dateien intern gehasht, kein direkter Dateizugriff von außen vorgesehen |
-| `xibosignage-inbox` (NAS, fester Pfad) | OnlineSync (Nutzer-Setup) | n8n | Rohdateien-Eingang |
-| `xibosignage-display` (NAS, fester Pfad) | n8n | Raspberry Pi (NFS, read-only) | Was tatsächlich auf dem Pi angezeigt wird |
+| `xibosignage-display` (NAS, fester Pfad) | n8n (Playlist-Sync, s.u.) | Raspberry Pi (NFS, read-only) | Was tatsächlich auf dem Pi angezeigt wird |
 
-Xibo CMS und die Inbox/Display-Ordner sind bewusst **unabhängig voneinander** —
-die Slideshow auf dem Pi funktioniert komplett ohne Xibo CMS. Das CMS dient
-als eigenständige Medien-/Asset-Verwaltungsoberfläche und steht bereit, falls
-später doch ein offiziell unterstütztes Player-Gerät (Windows/Android/Pi 4+
-mit Arexibo) dazukommt.
+Der Pi selbst spricht weiterhin **kein echtes Xibo-Player-Protokoll** (siehe
+Hinweis oben) — Xibo CMS ist nur noch die Verwaltungsoberfläche für die
+Playlist-Inhalte, der eigentliche Transport zum Pi läuft komplett über den
+`xibosignage-display`-Ordner + die bestehende Chromium-Kiosk-Slideshow.
 
 ---
 
@@ -135,15 +142,19 @@ Login ändern** (Einstellungen → Mein Konto).
 
 ---
 
-## NAS-Ordner einrichten (Inbox/Display, OnlineSync)
+## NAS-Ordner einrichten (Display)
 
 `xibosignage-inbox` und `xibosignage-display` sind **feste** Pfade unter dem
 bestehenden `k8s-storage`-Export (`nas`-StorageClass, siehe
 [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md)) — **nicht** dynamisch vom
 `nfs-subdir-external-provisioner` vergeben, weil sowohl n8n (Kubernetes-Pod)
-als auch der Raspberry Pi (rohes NFS, kein Kubernetes) als auch die eigene
-OnlineSync denselben, vorhersagbaren Pfad ansprechen müssen. Details zur
-Technik (statische PV mit `nfs:`-Block statt PVC über eine StorageClass):
+als auch der Raspberry Pi (rohes NFS, kein Kubernetes) denselben,
+vorhersagbaren Pfad ansprechen müssen. `xibosignage-inbox` wird nur vom
+deaktivierten Alternativ-Pfad gebraucht (siehe
+[Alternative: OnlineSync → Inbox → Display](#alternative-deaktiviert-onlinesync--inbox--display))
+— beide Ordner trotzdem gemeinsam anlegen, da beide PV/PVC-Paare unabhängig
+davon bestehen bleiben. Details zur Technik (statische PV mit `nfs:`-Block
+statt PVC über eine StorageClass):
 [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md#fixer-pfad-statt-dynamischer-subdir-name).
 
 ### Einmalig: Ordner auf dem NAS anlegen
@@ -165,6 +176,104 @@ Danach `argocd/apps/workloads/n8n` syncen lassen (siehe unten) — die beiden
 (`templates/xibosignage-pv.yaml`, `templates/xibosignage-pvc.yaml`) binden
 an genau diese Pfade.
 
+---
+
+## n8n-Workflow: Xibo-CMS-Playlist → Display (primär)
+
+`argocd/apps/workloads/n8n/values.yaml` mountet den Display-Ordner in den
+n8n-Pod (`xibosignage.display.mountPath`, Default `/data/xibosignage-display`)
+— keine weitere Konfiguration nötig.
+
+### 1. OAuth2-Application in Xibo CMS anlegen
+
+**Administration → Applications → Add Application** (Grant Type "Client
+Credentials"), Client-ID/Secret notieren. Der der Application zugeordnete
+User braucht **View-Recht** auf die Playlist "infotafel" (s. u.) und deren
+Library-Medien — Xibo prüft Objekt-Permissions pro Playlist/Medium, ein
+frisch angelegter Application-User sieht standardmäßig nur eigene Objekte.
+Einfachste Variante: Playlist + Bilder mit demselben User anlegen, den die
+Application referenziert.
+
+### 2. n8n-Credential anlegen
+
+n8n (https://n8n.homeserver) → **Credentials** → neue Credential vom Typ
+**OAuth2 API**, Name **`Xibo CMS (OAuth2 Client Credentials)`** (exakt so,
+der importierte Workflow referenziert die Credential über diesen Namen):
+
+- Grant Type: `Client Credentials`
+- Access Token URL: `http://xibosignage-cms.xibosignage.svc.cluster.local/api/authorize/access_token`
+- Client ID / Client Secret: aus Schritt 1
+
+### 3. Playlist in Xibo CMS anlegen
+
+**Design → Playlists → Add Playlist**, Name **`infotafel`** (= exakter
+Ansible-Inventory-Hostname des Displays, siehe
+[Raspberry-Pi-Rollout](#raspberry-pi-rollout-ansible) — der Workflow sucht
+per API-Filter nach genau diesem Namen). Bild-Widgets hinzufügen, Reihenfolge
+per Drag&Drop festlegen — die Reihenfolge wird beim Sync als Dateinamen-
+Präfix übernommen und bestimmt damit auch die Anzeige-Reihenfolge auf dem Pi.
+
+### 4. Workflow importieren
+
+Eine fertige Workflow-Definition liegt unter
+`argocd/apps/workloads/n8n/workflows/xibosignage-playlist-sync.json`:
+
+1. n8n → **Workflows** → **Import from File** →
+   `argocd/apps/workloads/n8n/workflows/xibosignage-playlist-sync.json`.
+2. Beim Import nach der Credential aus Schritt 2 gefragt werden (an jedem
+   HTTP-Request-Knoten) — zuweisen.
+3. Workflow öffnen, Knoten-Parameter prüfen (Node-Schemas können sich
+   zwischen n8n-Versionen leicht unterscheiden, insbesondere die genaue
+   Feldstruktur der Playlist-/Library-API-Antworten — Response von
+   "Playlist von Xibo CMS holen" einmal testweise ausführen und mit dem
+   Code-Node "Bild-Widgets extrahieren & sortieren" abgleichen; ebenso beim
+   **Edit Image**-Knoten die Resize-Optionen bestätigen) und **Activate**.
+
+Ablauf (alle 5 Minuten):
+
+```
+Alle 5 Minuten (Schedule Trigger)
+  → Playlist von Xibo CMS holen (HTTP Request, GET /api/playlist?name=infotafel&embed=widgets)
+  → Bild-Widgets extrahieren & sortieren (Code-Node: nur type=image, nach
+    displayOrder sortiert, ein Item pro Bild)
+  → Medien-Metadaten holen (HTTP Request, GET /api/library/{mediaId} — Dateiname/Extension)
+  → Mediendatei herunterladen (HTTP Request, GET /api/library/download/{mediaId})
+  → Auf Pi-Auflösung skalieren (Edit Image, resize auf max. 1920×1080)
+  → Zieldateiname bestimmen (Code-Node: xibo-playlist-<order>-<mediaId>.<ext>)
+  → In Display-Ordner schreiben (Read/Write Files from Disk, write, nach
+    /data/xibosignage-display)
+  → Alte Playlist-Bilder aufräumen (Code-Node, fs-Zugriff: löscht
+    xibo-playlist-*-Dateien, die in diesem Lauf nicht mehr aus der Playlist
+    kamen — Bild aus Playlist entfernt → verschwindet aus der Slideshow)
+```
+
+Der Pi selbst bekommt von n8n nichts mitgeteilt — er liest
+`xibosignage-display` einfach alle 30s neu ein (siehe
+[Raspberry-Pi-Rollout](#raspberry-pi-rollout-ansible)), alphabetisch nach
+Dateiname sortiert; der Reihenfolge-Präfix sorgt dafür, dass das der
+Playlist-Reihenfolge entspricht.
+
+**Bekannte Einschränkungen:** nur `type: image`-Widgets werden
+synchronisiert (keine Videos, siehe Hinweis oben). Individuelle
+Anzeigedauer pro Widget aus Xibo wird nicht übernommen — alle Bilder
+werden weiterhin gleich lang gezeigt (`xibo_kiosk_slide_duration_ms`).
+Aktuell genau eine Playlist ↔ ein Display (`infotafel`); ein zweites
+Display bräuchte einen eigenen Zielordner (Per-Host-NFS-Pfad-Override im
+Inventory) und eine zweite Workflow-Instanz mit anderem Playlist-Namen.
+
+---
+
+## Alternative (deaktiviert): OnlineSync → Inbox → Display
+
+Ursprüngliches Setup, bevor Xibo-CMS-Playlists als primäre Quelle genutzt
+wurden — bleibt als deaktivierter n8n-Workflow im Repo, falls spontane
+Fotos ohne CMS-Umweg gezeigt werden sollen. **Nicht gleichzeitig mit dem
+Playlist-Sync-Workflow aktiv lassen** (beide schreiben in denselben Ordner,
+der Playlist-Sync würde die Inbox-Ergebnisse als "nicht mehr in der
+Playlist" wieder löschen, sofern sie zufällig mit dem `xibo-playlist-`-
+Präfix kollidieren — tun sie zwar per Namensschema nicht, trotzdem
+unübersichtlich).
+
 ### Eigene OnlineSync einrichten
 
 Die eigentliche Synchronisation (Handy-Fotos, Cloud-Ordner, PC-Ordner → NAS)
@@ -177,29 +286,23 @@ stabiles Ziel dafür existiert:
   UGOS-Speicherplatz zeigen lassen wie der NFS-Export, oder NFS direkt,
   falls das Sync-Tool das unterstützt).
 - **NICHT** direkt in `xibosignage-display` syncen — dieser Ordner wird
-  ausschließlich vom n8n-Workflow beschrieben (verarbeitete, Pi-taugliche
-  Bilder). Rohdateien gehören in `xibosignage-inbox`.
-
----
-
-## n8n-Workflow: Inbox → Display
-
-`argocd/apps/workloads/n8n/values.yaml` mountet beide Ordner in den n8n-Pod
-(`xibosignage.inbox.mountPath` / `xibosignage.display.mountPath`, Default
-`/data/xibosignage-inbox` und `/data/xibosignage-display`) — nach dem Sync
-sofort im Pod verfügbar, keine weitere Konfiguration nötig.
+  ausschließlich von einem der beiden n8n-Workflows beschrieben
+  (verarbeitete, Pi-taugliche Bilder). Rohdateien gehören in
+  `xibosignage-inbox`.
 
 ### Workflow importieren
 
 Eine fertige Workflow-Definition liegt unter
-`argocd/apps/workloads/n8n/workflows/xibosignage-inbox-to-display.json`:
+`argocd/apps/workloads/n8n/workflows/xibosignage-inbox-to-display.json`
+(bleibt nach Import **deaktiviert**, solange der Playlist-Sync-Workflow
+läuft):
 
 1. n8n öffnen (https://n8n.homeserver) → **Workflows** → **Import from File**.
 2. `argocd/apps/workloads/n8n/workflows/xibosignage-inbox-to-display.json` auswählen.
 3. Workflow öffnen, Knoten-Parameter prüfen (Node-Schemas können sich
    zwischen n8n-Versionen leicht unterscheiden — insbesondere beim
-   **Edit Image**-Knoten die Resize-Optionen einmal in der UI bestätigen)
-   und **Activate**.
+   **Edit Image**-Knoten die Resize-Optionen einmal in der UI bestätigen).
+   **Nicht aktivieren**, solange der Playlist-Sync-Workflow der primäre Pfad ist.
 
 Ablauf:
 
@@ -216,30 +319,6 @@ Watch Inbox (Local File Trigger, beobachtet /data/xibosignage-inbox)
   → Original archivieren (Execute Command: mv nach inbox/processed/,
     verhindert erneutes Verarbeiten desselben Bilds)
 ```
-
-Der Pi selbst bekommt von n8n nichts mitgeteilt — er liest
-`xibosignage-display` einfach periodisch neu ein (siehe unten), das neue
-Bild taucht beim nächsten Manifest-Scan automatisch in der Slideshow auf.
-
-### Optional: Bilder zusätzlich in Xibo CMS registrieren
-
-Der obige Workflow ist unabhängig vom Xibo-CMS-Deploy — für eine zentrale
-Asset-Übersicht im CMS selbst lässt sich der Workflow um einen zusätzlichen
-Zweig erweitern:
-
-1. In Xibo CMS: **Administration → Applications → Add Application** (OAuth2
-   Client Credentials), Client-ID/Secret notieren.
-2. In n8n: neue Credential vom Typ **OAuth2 API** mit Access Token URL
-   `http://xibosignage-cms.xibosignage.svc.cluster.local/api/authorize/access_token`
-   und den Werten aus Schritt 1 anlegen.
-3. Nach dem Knoten "Originaldatei lesen" einen zusätzlichen **HTTP
-   Request**-Knoten (Authentication: die eben angelegte OAuth2-Credential)
-   einfügen: `POST http://xibosignage-cms.xibosignage.svc.cluster.local/api/library`,
-   Body Type "Form-Data", Feld `files` = Binärdaten der gelesenen Datei,
-   Feld `type` = `image`.
-
-Dieser Zweig ist bewusst **nicht** im importierten JSON enthalten, da er
-eigene, erst nach dem CMS-Deploy erzeugbare Zugangsdaten braucht.
 
 ---
 
@@ -374,8 +453,12 @@ erreichen (neuer, leerer Unterordner derselben PVC):
 | MySQL-Pod: `Permission denied` auf `/var/lib/mysql` | NFS-Squash-Identität auf dem UGREEN NAS hat sich geändert (siehe [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md) und die identische Problemlösung bei wikijs/immich) — `mysql.securityContext.runAsUser`/`runAsGroup` in `argocd/apps/workloads/xibosignage/values.yaml` an die aktuelle Squash-Identität anpassen. **Nicht** auf `cms.securityContext` übertragen — das offizielle xibo-cms-Image braucht beim ersten Start Root (schreibt `/root/.my.cnf`, konfiguriert Apache/PHP/cron unter `/etc`), analog zu wikijs/immich bleibt `cms.securityContext` deshalb bewusst leer |
 | CMS-Pod: `CrashLoopBackOff`, Logs voller `Permission denied` (`/root/.my.cnf`, `/etc/apache2`, `/etc/php`, `settings.php`) und `ERROR 1045 ... UNKNOWN_USER` | `cms.securityContext` in `argocd/apps/workloads/xibosignage/values.yaml` wurde (versehentlich) auf `runAsUser: 1000` o.ä. gesetzt — muss leer (`{}`) sein, da das CMS-Image root für sein Setup braucht |
 | `xibo.homeserver` löst nicht auf | Wildcard-DNS prüfen: `nslookup xibo.homeserver` (siehe [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md)) |
-| n8n "Local File Trigger" feuert nicht | `kubectl -n n8n exec deploy/n8n -- ls -la /data/xibosignage-inbox` — Mount vorhanden? PVC `xibosignage-inbox-data` im Status `Bound`? (`kubectl -n n8n get pvc`) |
-| n8n-PVCs bleiben `Pending` | Statische PV falsch benannt/gebunden — `kubectl get pv xibosignage-inbox-pv xibosignage-display-pv` prüfen, `nfs.path` muss exakt existieren (siehe [Ordner anlegen](#nas-ordner-einrichten-inboxdisplay-onlinesync)) |
+| Playlist-Sync-Workflow: HTTP-Request-Knoten schlagen mit `401`/`invalid_client` fehl | OAuth2-Application in Xibo CMS geprüft (Administration → Applications)? Client-ID/Secret in der n8n-Credential `Xibo CMS (OAuth2 Client Credentials)` korrekt? Access-Token-URL exakt `http://xibosignage-cms.xibosignage.svc.cluster.local/api/authorize/access_token`? |
+| Playlist-Sync-Workflow: `Error: Playlist "infotafel" nicht gefunden oder ohne widgets` | Playlist-Name im CMS muss exakt `infotafel` heißen (Design → Playlists); der Application-User braucht View-Recht auf die Playlist und ihre Bild-Widgets (Xibo-Objektberechtigungen, siehe [Playlist-Sync-Setup](#n8n-workflow-xibo-cms-playlist--display-primär)) |
+| Playlist-Sync-Workflow: `Mediendatei herunterladen` liefert `403` | Application-User hat kein View-Recht auf das konkrete Library-Medium — Berechtigung im CMS auf dem Medium bzw. dessen Ordner prüfen |
+| `infotafel` zeigt Bilder, die längst aus der Playlist entfernt wurden | `kubectl -n n8n exec deploy/n8n -- ls -la /data/xibosignage-display` — liegen noch `xibo-playlist-*`-Dateien ohne aktuelles Playlist-Gegenstück? Workflow-Ausführungshistorie in n8n prüfen, ob der letzte Lauf fehlgeschlagen ist (Cleanup-Schritt läuft nur bei erfolgreichem Durchlauf) |
+| n8n "Local File Trigger" feuert nicht (nur relevant für den [deaktivierten Alternativ-Pfad](#alternative-deaktiviert-onlinesync--inbox--display)) | `kubectl -n n8n exec deploy/n8n -- ls -la /data/xibosignage-inbox` — Mount vorhanden? PVC `xibosignage-inbox-data` im Status `Bound`? (`kubectl -n n8n get pvc`) |
+| n8n-PVCs bleiben `Pending` | Statische PV falsch benannt/gebunden — `kubectl get pv xibosignage-inbox-pv xibosignage-display-pv` prüfen, `nfs.path` muss exakt existieren (siehe [Ordner anlegen](#nas-ordner-einrichten-display)) |
 | Pi zeigt nur "Warte auf Bilder…" | `ssh pi@<host> 'cat /var/www/xibosignage-slideshow/manifest.json'` — leer? `mountpoint /mnt/xibosignage-display` prüfen, ggf. `sudo mount -a` |
 | Pi-Mount schlägt fehl | `nfs-common` installiert? (`dpkg -l | grep nfs-common`), NAS vom Pi aus erreichbar? (`showmount -e 192.168.178.97`) |
 | Chromium startet nicht / schwarzer Bildschirm | Autologin auf dem Pi aktiv? `systemctl status xibosignage-kiosk xibosignage-webserver` auf dem Pi |
