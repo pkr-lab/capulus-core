@@ -34,7 +34,8 @@ periodisch über die Xibo-REST-API in einen festen NAS-Ordner, und ein
 4. [n8n-Workflow: Xibo-CMS-Playlist → Display (primär)](#n8n-workflow-xibo-cms-playlist--display-primär)
 5. [Alternative (deaktiviert): OnlineSync → Inbox → Display](#alternative-deaktiviert-onlinesync--inbox--display)
 6. [Raspberry-Pi-Rollout (Ansible)](#raspberry-pi-rollout-ansible)
-7. [Fehlerbehebung](#fehlerbehebung)
+7. [Monitoring (Grafana)](#monitoring-grafana)
+8. [Fehlerbehebung](#fehlerbehebung)
 
 ---
 
@@ -373,6 +374,7 @@ Das Playbook `ansible/xibo-kiosks.yml` führt pro Pi aus:
 | Rolle | Zweck |
 |---|---|
 | `tailscale` | VPN-Beitritt, reiner Client (kein Subnetz-Advertising) — Fernzugriff/-wartung ohne Portfreigabe |
+| `node_exporter` | Metriken-Quelle (Port 9100, nur lokal) für Grafana, siehe [Monitoring](#monitoring-grafana) |
 | `xibo_kiosk` | NFS-Mount von `xibosignage-display` (read-only), Manifest-Generator-Timer, lokaler Python-Webserver, Chromium-Kiosk-Slideshow |
 | `thermal_watchdog` / `resource_watchdog` | Selbstschutz für unbeaufsichtigte Geräte (gleiches Bundling wie bei den ALAMOS-Kiosks, siehe [docs/3-apps-workloads/30010-alamos-apager.md](30010-alamos-apager.md)) |
 
@@ -392,6 +394,40 @@ Das Playbook `ansible/xibo-kiosks.yml` führt pro Pi aus:
 Das Semaphore-Projekt **"xibo-displays"** ist nach `make semaphore-bootstrap`
 automatisch in der UI verfügbar (siehe [docs/b-kubernetes-gitops/b0030-semaphore.md](../b-kubernetes-gitops/b0030-semaphore.md))
 — **bewusst ohne** automatischen Schedule, analog zu `alarm-kiosks`.
+
+---
+
+## Monitoring (Grafana)
+
+Anders als die Tailscale-only Banana-Pi-Alarmmonitore (vmagent-Push, siehe
+[docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md, "Grafana (Push statt Pull)"](30020-vereinsheim-alarmmonitor.md#grafana-push-statt-pull))
+hängen die xibosignage-Displays am normalen Heim-LAN — der Cluster kann
+`node_exporter` also direkt per **VMStaticScrape** scrapen, gleiches Muster
+wie bei `ugreen-nas`
+([docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md)):
+
+```
+node_exporter (Port 9100, ansible/roles/node_exporter)
+  → VMStaticScrape "infotafel-node-exporter"
+    (argocd/apps/platform/monitoring/templates/vmstaticscrape-infotafel.yaml,
+     Ziel 192.168.178.98:9100, label instance=infotafel)
+  → VictoriaMetrics im Cluster
+```
+
+Kein Dashboard-Change für "Home Server Auslastung" nötig (`uid:
+homeserver-auslastung`) — das Dashboard filtert dynamisch über die
+Grafana-Variable `$instance`, `infotafel` taucht dort automatisch mit auf,
+sobald die Metriken ankommen (identisches Prinzip wie bei den Banana-Pi-
+Alarmmonitoren).
+
+Da `infotafel` physisch am selben Standort (Vereinsheim, ALAMOS-Standortcode
+`1002011`) wie `vereinsheim-alarmmonitor` steht, hat es zusätzlich eigene
+Detail-Panels (Erreichbarkeit, Uptime, CPU, RAM, Temperatur, Disk) im
+gemeinsamen Standort-Dashboard **"1002011-pis"**
+(`argocd/apps/platform/monitoring/templates/dashboard-1002011-pis.yaml`,
+ehemals "Vereinsheim-Alarmmonitor" — umbenannt, als `infotafel` als zweites
+Geraet dazukam, siehe
+[docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md](30020-vereinsheim-alarmmonitor.md)).
 
 ---
 
@@ -465,3 +501,4 @@ erreichen (neuer, leerer Unterordner derselben PVC):
 | `Permission denied (publickey)` bei `make xibo-kiosks` | `make semaphore-targets` lief nicht für den neuen Pi (siehe [docs/b-kubernetes-gitops/b0030-semaphore.md](../b-kubernetes-gitops/b0030-semaphore.md)) |
 | Nach Workflow-Import in n8n: "Watch Inbox" und/oder "Original archivieren" zeigen "Install this node to use it" | n8n blockt Local File Trigger/Execute Command standardmäßig (Sicherheitsfeature) — `env.NODES_EXCLUDE: "[]"` in `argocd/apps/workloads/n8n/values.yaml` setzt das für diese Instanz zurück, danach n8n-Pod neu starten und Workflow neu öffnen |
 | Pi advertised ungewollt das Heim-Subnetz im Tailscale-Adminpanel | `tailscale_advertise_routes: ""` fehlt in `ansible/group_vars/xibo_displays.yml` — sollte nach dem nächsten Rollout verschwinden (`tailscale set --advertise-routes=` ohne Wert entfernt bestehende Routes nicht automatisch, ggf. einmalig `sudo tailscale set --advertise-routes=` manuell auf dem Pi nachziehen) |
+| `infotafel` taucht nicht in Grafana auf | `systemctl status prometheus-node-exporter` auf dem Pi — läuft der Dienst (Port 9100)? `curl -s 192.168.178.98:9100/metrics` von einem k3s-Node aus erreichbar? `kubectl -n monitoring get vmstaticscrape infotafel-node-exporter` |

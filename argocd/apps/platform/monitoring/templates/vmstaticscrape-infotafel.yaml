@@ -1,0 +1,22 @@
+# infotafel (192.168.178.98, xibosignage-Slideshow-Pi, siehe
+# docs/3-apps-workloads/300e0-xibosignage.md) haengt am normalen Heim-LAN --
+# anders als vereinsheim-alarmmonitor (Tailscale-only, vmagent-Push, siehe
+# docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md) kann der Cluster
+# node_exporter hier direkt per VMStaticScrape scrapen, gleiches Muster wie
+# ugreen-nas (vmstaticscrape-ugreen-nas.yaml). `instance: infotafel` matcht
+# damit den `$instance`-Dashboard-Filter in dashboard-homeservers.yaml UND
+# die eigenen Panels im "1002011-pis"-Dashboard (dashboard-1002011-pis.yaml)
+# -- kein weiterer Dashboard-Change fuer "Home Server Auslastung" noetig.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMStaticScrape
+metadata:
+  name: infotafel-node-exporter
+  namespace: {{ .Release.Namespace }}
+spec:
+  jobName: infotafel-node-exporter
+  targetEndpoints:
+    - targets:
+        - "192.168.178.98:9100"
+      labels:
+        job: node-exporter
+        instance: infotafel
