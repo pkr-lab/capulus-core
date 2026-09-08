@@ -5,7 +5,11 @@
 #
 # Provisioniert die xibosignage-Displays: Tailscale (Fernzugriff/Verwaltung
 # ohne Portfreigabe), NFS-Mount des "xibosignage-display"-Ordners + lokaler
-# Chromium-Kiosk (ansible/roles/xibo_kiosk), plus Thermal-/Resource-Watchdog
+# Chromium-Kiosk (ansible/roles/xibo_kiosk), node_exporter fuer Grafana
+# (die Displays haengen am normalen LAN, Cluster-seitiges Scrapen per
+# VMStaticScrape statt vmagent-Push -- anders als bei den Tailscale-only
+# Banana-Pi-Alarmmonitoren, siehe argocd/apps/platform/monitoring/templates/
+# vmstaticscrape-infotafel.yaml), plus Thermal-/Resource-Watchdog
 # (unbeaufsichtigte Geräte, gleiches Bundling wie bei den ALAMOS-Kiosks,
 # siehe ansible/alarm-kiosks.yml). Details: docs/3-apps-workloads/300e0-xibosignage.md.
 #
@@ -28,6 +32,8 @@
   roles:
     - role: tailscale
       tags: [tailscale, vpn]
+    - role: node_exporter
+      tags: [node-exporter, monitoring]
     - role: xibo_kiosk
       tags: [xibo-kiosk, kiosk]
     - role: thermal_watchdog
