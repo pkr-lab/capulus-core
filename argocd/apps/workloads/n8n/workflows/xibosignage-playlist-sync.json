@@ -7,14 +7,14 @@
         "rule": {
           "interval": [
             {
-              "field": "minutes",
-              "minutesInterval": 5
+              "field": "cronExpression",
+              "expression": "0 0 16 * * 4"
             }
           ]
         }
       },
       "id": "b2b2b2b2-0001-4000-8000-000000000001",
-      "name": "Alle 5 Minuten",
+      "name": "Jeden Donnerstag 16 Uhr",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
       "position": [260, 300]
@@ -159,7 +159,7 @@
     }
   ],
   "connections": {
-    "Alle 5 Minuten": {
+    "Jeden Donnerstag 16 Uhr": {
       "main": [[{ "node": "Playlist von Xibo CMS holen", "type": "main", "index": 0 }]]
     },
     "Playlist von Xibo CMS holen": {
