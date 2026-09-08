@@ -1,0 +1,33 @@
+# Der Namespace-weite Default (siehe docs/d-sicherheit/d0030-network-policies.md,
+# NetworkPolicy "tier-default-ingress") erlaubt Ingress nur aus demselben
+# Namespace, kube-system, monitoring und cloudflared -- der
+# xibosignage-playlist-sync-n8n-Workflow (docs/3-apps-workloads/300e0-xibosignage.md)
+# muss cms-web aber aus dem n8n-Namespace erreichen koennen. Gleiches Muster
+# wie argocd/apps/workloads/ollama/templates/networkpolicy-allow-n8n-ingress.yaml,
+# hier bewusst nur auf die cms-web-Pods beschraenkt (nicht die gesamte
+# xibosignage-podSelector: {}) -- n8n braucht nur die REST-API, nicht MySQL/XMR/
+# Memcached/QuickChart.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "xibosignage.cms.fullname" . }}-allow-n8n-ingress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "xibosignage.cms.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "xibosignage.cms.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.n8nNamespace }}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: n8n
+      ports:
+        - protocol: TCP
+          port: {{ .Values.cms.service.targetPort }}
