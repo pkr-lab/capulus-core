@@ -87,7 +87,10 @@ env:
   # allowed") -- betrifft beide xibosignage-Workflows (Playlist-Sync und die
   # deaktivierte OnlineSync-Alternative), siehe
   # docs/3-apps-workloads/300e0-xibosignage.md.
-  N8N_RESTRICT_FILE_ACCESS_TO: "/data/xibosignage-inbox,/data/xibosignage-display"
+  # Separator ist ein Semikolon, KEIN Komma (n8n-Doku widerspricht sich hier,
+  # im Code wird auf ";" gesplittet, siehe
+  # https://community.n8n.io/t/possible-issue-with-n8n-restrict-file-access-to-using-works-but-does-not-tested-in-docker/233555).
+  N8N_RESTRICT_FILE_ACCESS_TO: "/data/xibosignage-inbox;/data/xibosignage-display"
 
 resources:
   requests:
