@@ -81,6 +81,13 @@ env:
   # da der xibosignage-Workflow (docs/3-apps-workloads/300e0-xibosignage.md) genau diese
   # beiden Nodes braucht (Watch Inbox, Original archivieren).
   NODES_EXCLUDE: "[]"
+  # Seit n8n 1.123.5 beschraenkt der "Read/Write Files from Disk"-Node den
+  # Dateizugriff standardmaessig auf /home/node/.n8n-files, sofern hier nicht
+  # explizit erlaubte Pfade eingetragen sind ("Access to the file is not
+  # allowed") -- betrifft beide xibosignage-Workflows (Playlist-Sync und die
+  # deaktivierte OnlineSync-Alternative), siehe
+  # docs/3-apps-workloads/300e0-xibosignage.md.
+  N8N_RESTRICT_FILE_ACCESS_TO: "/data/xibosignage-inbox,/data/xibosignage-display"
 
 resources:
   requests:
