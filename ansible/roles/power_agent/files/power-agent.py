@@ -20,6 +20,7 @@ import json
 import os
 import subprocess
 import sys
+import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -33,6 +34,7 @@ SSH_KEY = os.environ["SSH_KEY"]
 KUBECONFIG_PATH = os.environ["KUBECONFIG_PATH"]
 STATE_DIR = os.environ["STATE_DIR"]
 POWEROFF_BIN = os.environ.get("POWEROFF_BIN", "/usr/sbin/poweroff")
+NODE_NAME = os.environ["NODE_NAME"]
 
 # TARGETS format: "name:ip:mac name:ip:mac ..." — same layout as
 # cluster_power_manager's WORKERS env var (config.env.j2), so both configs
@@ -121,14 +123,50 @@ def poweroff_target(name):
         pass
 
 
+def _run_best_effort(cmd, timeout):
+    # Every step here is a courtesy, not a precondition for the poweroff
+    # that always follows — a hung/failed kubectl must never strand the
+    # homeserver mid-shutdown. There's no Wake-on-LAN path back to it, so
+    # someone would have to physically walk over and power-cycle it.
+    try:
+        subprocess.run(cmd, check=False, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        log(f"timed out after {timeout}s: {' '.join(cmd)} -- continuing anyway")
+    except OSError as exc:
+        log(f"failed to run {' '.join(cmd)}: {exc} -- continuing anyway")
+
+
+def _graceful_poweroff_self():
+    # Same cordon+drain the automatic watchdog and poweroff_target() already
+    # do for worker-0/worker-1 (see cluster-power-manager.sh), just applied
+    # to the node this agent itself runs on. Draining evicts every pod
+    # through the normal k8s eviction API instead of everything getting
+    # SIGKILLed at once when k3s.service is torn down by systemd shutdown —
+    # each workload gets its terminationGracePeriod to flush and exit
+    # cleanly, one at a time, before the node goes away.
+    log(f"cordoning {NODE_NAME}")
+    _run_best_effort(["kubectl", "cordon", NODE_NAME], timeout=30)
+    log(f"draining {NODE_NAME} -- workloads get to shut down and flush before the node goes away")
+    _run_best_effort(
+        ["kubectl", "drain", NODE_NAME, "--ignore-daemonsets", "--delete-emptydir-data", "--timeout=180s"],
+        timeout=200,
+    )
+    log("stopping k3s")
+    _run_best_effort(["systemctl", "stop", "k3s"], timeout=60)
+    log("poweroff")
+    subprocess.Popen([POWEROFF_BIN])
+
+
 def poweroff_self():
     # The confirmation-code check already happened in carplay-api before
     # this endpoint was ever called (see internal/handlers/power.go) — this
     # agent trusts its own bearer token as sufficient authorization at this
-    # point. Popen (not run) so the HTTP response can still be written
-    # before the machine actually goes down.
-    log("shutting down homeserver itself -- confirmed request via app")
-    subprocess.Popen([POWEROFF_BIN])
+    # point. Run the drain/poweroff sequence in a background thread so the
+    # HTTP response can still be written immediately — the draining below
+    # evicts the very carplay-api pod that proxied this request, so nothing
+    # would be left to receive a response once it starts.
+    log("shutting down homeserver itself -- confirmed request via app, starting graceful drain")
+    threading.Thread(target=_graceful_poweroff_self, daemon=True).start()
 
 
 class Handler(BaseHTTPRequestHandler):
