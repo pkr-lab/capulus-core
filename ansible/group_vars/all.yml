@@ -9,34 +9,16 @@ hostname: homeserver
 timezone: Europe/Berlin                # CHANGE: your timezone
 
 # ---- Upgrade strategy --------------------------------------
-# When true (default), every Ansible run keeps the OS and all installed
-# components on the latest available stable version, and enables
-# unattended-upgrades for background security patches between runs.
-# Set to false to pin everything for reproducibility/CI.
 auto_upgrade: true
-
-# Reboot the server at the end of the `common` role if a kernel/libc update
-# placed `/var/run/reboot-required` on disk.
 auto_reboot_if_required: true
 
 # ---- k3s ---------------------------------------------------
-# When `k3s_version` is empty, the role follows `k3s_channel` (always latest
-# release in that channel). Set to a concrete version like "v1.30.2+k3s1" to pin.
-# See https://github.com/k3s-io/k3s/releases and
-# https://update.k3s.io/v1-release/channels for available channels.
 k3s_version: ""
 k3s_channel: stable
 k3s_server_ip: "{{ ansible_default_ipv4.address }}"
 k3s_pod_cidr: "10.42.0.0/16"
 k3s_service_cidr: "10.43.0.0/16"
 
-# Security-Härtung Phase 4 (docs/d-sicherheit/d0010-security-hardening-roadmap.md,
-# docs/d-sicherheit/d0050-secrets-encryption-audit-log.md). Beide Flags schreiben nur die
-# Config — nichts davon wirkt sich aus, bevor nicht ein bewusster,
-# manueller `sudo systemctl restart k3s` läuft (siehe docs/d-sicherheit/d0050-secrets-encryption-audit-log.md für die
-# vollständige Backup-→-Restart-→-Verify-Sequenz, inkl. des
-# `k3s secrets-encrypt rotate-keys`-Schritts, der nach dem ersten Restart
-# nötig ist, um bereits bestehende Secrets nachträglich zu verschlüsseln).
 k3s_secrets_encryption_enabled: true
 k3s_audit_log_enabled: true
 k3s_audit_log_max_age_days: 14
@@ -44,50 +26,26 @@ k3s_audit_log_max_backups: 5
 k3s_audit_log_max_size_mb: 100
 
 # ---- k3s Kubelet-RAM-Schutz ----------------------------------
-# Reserviert RAM für OS/kubelet/containerd und lässt den Kubelet Pods
-# evakuieren/OOM-killen, sobald verfügbarer RAM unter
-# k3s_kubelet_eviction_hard_memory fällt — bevor resource_watchdog
-# (ansible/roles/resource_watchdog, Default 90% sustained 300s) den
-# kompletten Node abschaltet. Siehe
-# docs/2-betrieb-hardware/20020-cluster-power-manager.md →
-# "Mehrschichtiger RAM-Schutz". Wie bei den Security-Härtung-Flags oben
-# wirkt eine Änderung erst nach einem bewussten
-# `sudo systemctl restart k3s` (bzw. `k3s-agent` auf den Workern).
 k3s_kubelet_memory_protection_enabled: true
 k3s_kubelet_eviction_hard_memory: "15%"
 k3s_kubelet_system_reserved_memory: "1Gi"
 k3s_kubelet_kube_reserved_memory: "512Mi"
 
 # ---- k3s Agent (Worker Node) --------------------------------
-# k3s_server_host: Ansible-Inventory-Name des Control-Plane-Servers.
-# Wird in der k3s_agent-Rolle verwendet, um per delegate_to den Join-Token
-# zu lesen und den Server-Endpoint dynamisch zu ermitteln.
 k3s_server_host: homeserver
-# Kubernetes-Node-Name des Worker-Nodes (muss im Cluster eindeutig sein).
 k3s_agent_hostname: worker-0
 
 # ---- Helm --------------------------------------------------
-# Empty = always install the latest Helm 3 release. Pin to e.g. "v3.16.0" if needed.
 helm_version: ""
 
 # ---- ArgoCD ------------------------------------------------
-# Argo Helm chart version. Empty + auto_upgrade=true ⇒ chart is upgraded to
-# latest on every run. Pin to a concrete chart version (e.g. "7.3.11") for
-# reproducibility — see https://artifacthub.io/packages/helm/argo/argo-cd
 argocd_version: ""
 argocd_namespace: argocd
 argocd_server_insecure: true
-# Git repo ArgoCD pulls from. Must be reachable by argocd-repo-server pod.
 argocd_repo_url: "https://github.com/pkr-lab/capulus-core.git"
-# Branch/tag/SHA ArgoCD tracks. Pinned to `main` (the GitOps branch) instead of
-# the ambiguous `HEAD` for reproducible bootstraps; set a tag or SHA to freeze.
 argocd_repo_revision: main
 
 # ---- Tailscale ---------------------------------------------
-# Generate the auth key at https://login.tailscale.com/admin/settings/keys
-# and ALWAYS store it vault-encrypted, e.g.:
-#   ansible-vault encrypt_string 'tskey-auth-...' --name 'tailscale_auth_key'
-# then paste the resulting `!vault |` block over the value below.
 tailscale_auth_key: !vault |
           $ANSIBLE_VAULT;1.1;AES256
           39313536306335373832643966316233303430323161316162316334616465373264306463323133
@@ -103,20 +61,9 @@ tailscale_hostname: "{{ hostname }}"
 local_subnet: "192.168.178.0/24"
 
 # ---- Pi-hole (network-wide ad blocking) --------------------
-# Cluster-App: argocd/apps/platform/pihole (Helm-Chart). dnsmasq (Rolle oben)
-# forwardet alle nicht-*.homeserver-Anfragen an diesen NodePort statt
-# direkt an die Fritz!Box — muss mit dnsService.nodePort in
-# argocd/apps/platform/pihole/values.yaml übereinstimmen.
 pihole_dns_nodeport: 30053
 
 # ---- Semaphore UI -----------------------------------------
-# Master Ansible-Vault password — same value you type when running
-# `ansible-playbook --ask-vault-pass`. Semaphore uses this so playbooks
-# triggered from the UI can decrypt vault-encrypted vars. To rotate:
-#
-#   ansible-vault encrypt_string 'YOUR_VAULT_PW' \
-#     --name 'semaphore_vault_password'
-#   then paste the resulting `!vault |` block over the value below.
 semaphore_vault_password: !vault |
           $ANSIBLE_VAULT;1.1;AES256
           35346131356339656538326366323064356465663434383638373535646463316638333139613938
@@ -126,18 +73,6 @@ semaphore_vault_password: !vault |
           6433
 
 # ---- Semaphore projects (auto-bootstrap) ------------------
-# After Semaphore is reachable, the `semaphore_bootstrap` role calls the
-# Semaphore REST API and idempotently creates two projects:
-#
-#   - home-server   (this repo, deployed against the home-server itself)
-#   - worker-0   (dieses Repo, ansible/worker-0.yml,
-#                    deployed to worker-0 at 192.168.178.95)
-#
-# To add a third project, copy/extend the `semaphore_projects` list from
-# ansible/roles/semaphore_bootstrap/defaults/main.yml here. The role only
-# creates resources that don't already exist — to change an existing one,
-# delete it in the UI and re-run `make semaphore-bootstrap`.
-
 semaphore_projects:
   - name: home-server
     description: "Deploy / re-provision the home-server itself."
@@ -151,14 +86,6 @@ semaphore_projects:
       - name: homeservers
         type: static
         ssh_key: semaphore-ssh-key
-        # worker-0/worker-1 hier NICHT als Play-Ziel (site.yml läuft nur
-        # gegen [homeservers]), sondern NUR damit hostvars['worker-0']/
-        # ['worker-1'] existieren -- cluster_power_manager_workers
-        # (ansible/roles/cluster_power_manager/defaults/main.yml) liest
-        # deren ansible_host/wake_on_lan_mac_address per hostvars.get(...).
-        # Ohne diese Zeilen bricht cluster_power_manager sonst nicht mehr
-        # hart ab (dank hostvars.get()-Fix), liefert aber leere MAC-
-        # Adressen -- siehe docs/2-betrieb-hardware/20030-nightly-worker-update.md.
         content: |
           [homeservers]
           homeserver ansible_host=192.168.178.94
@@ -204,13 +131,6 @@ semaphore_projects:
         environment: default-env
         vault_key: vault-password
         description: "apt-Update, k3s-Agent, thermal_watchdog, resource_watchdog auf worker-0."
-    # Bewusst KEIN Schedule hier: worker-0 ist meist per cluster_power_manager
-    # heruntergefahren, ein blinder täglicher Cron-Trigger würde nur an
-    # "Permission denied"/Timeout scheitern. Stattdessen weckt
-    # nightly_worker_wake (läuft auf homeserver, 01:00 Uhr) worker-0 per
-    # Wake-on-LAN und triggert dieses Template gezielt über die
-    # Semaphore-API, sobald der Node Ready ist — siehe
-    # docs/2-betrieb-hardware/20030-nightly-worker-update.md.
 
   - name: worker-1
     description: "Deploy k3s-Agent + Watchdogs auf worker-1 (192.168.178.96)."
@@ -237,13 +157,6 @@ semaphore_projects:
         environment: default-env
         vault_key: vault-password
         description: "apt-Update, k3s-Agent, thermal_watchdog, resource_watchdog auf worker-1."
-    # Bewusst KEIN Schedule hier: worker-1 ist meist per cluster_power_manager
-    # heruntergefahren, ein blinder täglicher Cron-Trigger würde nur an
-    # "Permission denied"/Timeout scheitern. Stattdessen weckt
-    # nightly_worker_wake (läuft auf homeserver, 01:00 Uhr) worker-1 per
-    # Wake-on-LAN und triggert dieses Template gezielt über die
-    # Semaphore-API, sobald der Node Ready ist — siehe
-    # docs/2-betrieb-hardware/20030-nightly-worker-update.md.
 
   - name: alarm-kiosks
     description: >-
@@ -271,9 +184,6 @@ semaphore_projects:
         environment: default-env
         vault_key: vault-password
         description: "Chromium-Kiosk + Heartbeat-Timer auf den Alarmmonitor-Pis."
-    # Bewusst kein Schedule: anders als bei home-server/worker-0 soll ein
-    # Re-Run hier nur manuell per Knopfdruck laufen, nicht automatisch nachts
-    # — siehe docs/3-apps-workloads/30010-alamos-apager.md.
 
   - name: xibo-displays
     description: >-
@@ -300,8 +210,6 @@ semaphore_projects:
         environment: default-env
         vault_key: vault-password
         description: "Tailscale + Chromium-Slideshow-Kiosk auf den xibosignage-Displays."
-    # Bewusst kein Schedule, gleiches Prinzip wie bei alarm-kiosks: ein
-    # Re-Run soll hier nur manuell per Knopfdruck laufen.
 
   - name: banana-pi-kiosks
     description: >-
@@ -335,21 +243,10 @@ semaphore_projects:
         environment: default-env
         vault_key: vault-password
         description: "Chromium-Kiosk + Server-Fallback + node_exporter + Watchdogs auf den Banana-Pi-Alarmmonitoren."
-    # Bewusst kein Schedule, gleiches Prinzip wie bei alarm-kiosks: ein
-    # Re-Run soll hier nur manuell per Knopfdruck laufen.
 
 # ---- Scanner / Paperless Ingestion ------------------------
-# Fujitsu USB-Scanner direkt am Home-Server; scanbd hört auf den
-# Hardware-Button und schreibt Scans als PDF in den SMB-Share von
-# worker-0, von wo Paperless-NGX sie automatisch einliest.
-#
-# USB-IDs auf dem Host ermitteln (`lsusb | grep -i fujitsu`):
 scanner_usb_vendor_id: "04c5"
 scanner_usb_product_id: "132b"
-#
-# Das SMB-Passwort MUSS vault-encrypted sein.
-#   ansible-vault encrypt_string 'DEIN_SMB_PASSWORT' \
-#     --name 'scanner_smb_password'
 scanner_consume_mount_type: "cifs"
 scanner_smb_share: "//192.168.178.95/personal_folder/paperless/consume"
 scanner_smb_username: "pkretzer"
@@ -362,15 +259,6 @@ scanner_smb_password: !vault |
           3031
 
 # ---- Gotify push notifications ----------------------------
-# Cluster-App: argocd/apps/platform/gotify (Helm-Chart). Workflow + kubeseal-Schritte
-# stehen in docs/1-benachrichtigungen/10000-gotify.md.
-#
-# 1) Admin-Passwort für das initiale Login (SealedSecret im Cluster):
-#    ansible-vault encrypt_string 'DEIN_ADMIN_PW' --name 'gotify_admin_password'
-# gotify_admin_password: !vault | ...
-#
-# 2) App-Token aus dem Gotify-Web-UI (Applications → Create → "Scanner"):
-#    ansible-vault encrypt_string 'AppTokenXXX' --name 'scanner_gotify_token'
 scanner_gotify_enabled: true
 scanner_gotify_url: "http://gotify.tech.homeserver"
 scanner_gotify_token: !vault |
@@ -382,32 +270,9 @@ scanner_gotify_token: !vault |
           3037
 
 # ---- Drucker (CUPS) ----------------------------------------
-# Samsung Xpress M2026 per USB direkt am Homeserver; cups_print_server
-# gibt ihn per IPP/AirPrint im LAN + Tailnet frei. Device-URI und PPD
-# erst nach dem ersten Rollen-Lauf bekannt — siehe docs/2-betrieb-hardware/20040-printer.md.
-#
-# Device-URI ermittelt per `lpinfo -v` auf dem Homeserver — meldet sich
-# als generische "M2020 Series" (viele günstige Samsung-SPL2-Modelle
-# M2020/M2021/M2022/M2026 teilen sich denselben USB-Controller-Chip).
 cups_print_server_device_uri: "usb://Samsung/M2020%20Series?serial=08HVB8GM1B0870W"
-#
-# Weder printer-driver-splix noch hplip unterstützen die M2020-Serie
-# (spricht ein neueres "QPDL"-Protokoll) — daher der inoffizielle,
-# quellcode-geprüfte QPDL-Treiber-Build (Details + Review-Notizen:
-# docs/2-betrieb-hardware/20040-printer.md).
 cups_print_server_build_qpdl_driver: true
-# Passende PPD nach dem Build (bestätigt per lpinfo -m auf homeserver):
 cups_print_server_ppd: "samsung/m2020.ppd"
-
-# Samsung ML-1630W: hängt NICHT am Homeserver, sondern per USB an einer
-# FritzBox im Mesh/Repeater-Modus, die ihn als Netzwerkdrucker über
-# Raw-TCP Port 9100 teilt. FritzBox und Homeserver sind im selben
-# Hauptnetz (keine Gast-WLAN-Isolation) — direkter socket://-Zugriff
-# reicht, kein USB-Passthrough nötig. Spricht natives SPL2, das
-# printer-driver-splix (bereits installiert) regulär abdeckt — kein
-# QPDL-Build nötig. ppd erst nach dem ersten Rollen-Lauf einmalig per
-# lpinfo -m auf dem Homeserver ermitteln (Debug-Ausgabe der Rolle zeigt
-# passende Treffer) und hier eintragen. Siehe docs/2-betrieb-hardware/20040-printer.md.
 cups_print_server_extra_queues:
   - name: "Samsung_ML-1630"
     device_uri: "socket://192.168.178.57:9100"
@@ -429,10 +294,6 @@ cups_print_server_extra_queues:
 #   ansible-vault encrypt_string 'DEIN_SUDO_PW' --name 'vault_worker_1_become_password'
 
 # ---- Optional: configure a static IP via Netplan ----------
-# Set to true to have Ansible deploy /etc/netplan/99-static.yaml.
-# WARNING: the SSH session will briefly drop while the new IP is applied.
-# Make sure `ansible_host` in the inventory matches `network_static_ip`
-# (or update it after the first run).
 network_configure_static_ip: false
 network_interface: "eno1"              # CHANGE: run `ip link show` on the server
 network_static_ip: "192.168.178.94"
@@ -443,18 +304,6 @@ network_dns:
   - "8.8.8.8"
 
 # ---- nightly_worker_wake: n8n-Trigger-Key ------------------
-# Public Key des SSH-Keys, mit dem der n8n-Workflow
-# nightly-worker-wake-trigger.json den 01:00-Uhr-Zyklus auslöst — siehe
-# docs/2-betrieb-hardware/20030-nightly-worker-update.md. Auf dem
-# Homeserver ausschließlich per forced-command auf
-# "sudo systemctl start nightly-worker-wake.service" autorisiert
-# (ansible/roles/nightly_worker_wake/tasks/main.yml). Ein Public Key ist
-# für sich genommen unsensibel (er autorisiert nichts ohne den
-# zugehörigen privaten Schlüssel) — hier trotzdem vault-verschlüsselt,
-# damit nicht auf den ersten Blick aus dem Repo ablesbar ist, welcher
-# konkrete Key aktuell zum Auslösen berechtigt ist. Der private Schlüssel
-# liegt NUR in einer n8n-SSH-Credential, nie im Repo oder auf dem
-# Homeserver.
 nightly_worker_wake_n8n_trigger_public_key: !vault |
           $ANSIBLE_VAULT;1.1;AES256
           33306233323036643337636437636164303436396266356330356633356165633437376230656633

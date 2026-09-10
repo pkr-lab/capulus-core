@@ -39,6 +39,12 @@ power_agent_bl_power_path: /sys/class/backlight/intel_backlight/bl_power
 
 power_agent_poweroff_bin: /usr/sbin/poweroff
 
+# k3s-Node-Name des Homeservers selbst — für `kubectl cordon`/`drain` vor
+# dem eigenen Poweroff (siehe poweroff_self() in power-agent.py). Der
+# k3s-Node-Name entspricht dem OS-Hostname, der wiederum dem
+# inventory_hostname entspricht (wie bei worker-0/worker-1 auch).
+power_agent_node_name: "{{ inventory_hostname }}"
+
 # ---- Wiederverwendet von cluster_power_manager -------------------------
 power_agent_ssh_user: "{{ cluster_power_manager_ssh_user }}"
 power_agent_ssh_key: "{{ cluster_power_manager_ssh_key_path }}"

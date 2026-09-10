@@ -34,6 +34,21 @@ entries:
       sync_users: true
       sync_users_password: false
       sync_groups: true
+      # user_/group_property_mappings sind seit dieser Authentik-Version
+      # Pflicht, sobald sync_users/sync_groups aktiv sind (sonst schlägt die
+      # Blueprint-Validierung mit "... property mappings cannot be empty"
+      # fehl und die LDAP Source wird NIE angelegt — kein Sync, keine
+      # Nutzer, jeder Login scheitert mit "Invalid password", weil der
+      # Nutzer schlicht nicht existiert). "default-name" passt NICHT, das
+      # erwartet ein AD-typisches "name"-Attribut, das lldap nicht liefert;
+      # stattdessen "openldap-cn" (name aus cn), s. openldap-Mappings.
+      user_property_mappings:
+        - !Find [authentik_core.propertymapping, [managed, "goauthentik.io/sources/ldap/openldap-uid"]]
+        - !Find [authentik_core.propertymapping, [managed, "goauthentik.io/sources/ldap/openldap-cn"]]
+        - !Find [authentik_core.propertymapping, [managed, "goauthentik.io/sources/ldap/default-mail"]]
+        - !Find [authentik_core.propertymapping, [managed, "goauthentik.io/sources/ldap/default-dn-path"]]
+      group_property_mappings:
+        - !Find [authentik_core.propertymapping, [managed, "goauthentik.io/sources/ldap/openldap-cn"]]
 
   # Korrektur (nach Live-Rollout): Nutzer landeten zwar per Sync in
   # Authentik, aber jeder Login schlug mit "Invalid credentials" fehl,
