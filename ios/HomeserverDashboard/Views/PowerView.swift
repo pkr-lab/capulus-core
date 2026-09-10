@@ -364,7 +364,7 @@ private struct HomeserverShutdownSheet: View {
                             Text("Achtung")
                                 .font(.system(size: 22, weight: .bold))
                                 .foregroundStyle(Theme.textPrimary)
-                            Text("Das schaltet den gesamten Homeserver aus — damit auch Kubernetes, ArgoCD, diese API und alle darauf laufenden Dienste. Ein Wiedereinschalten ist nur vor Ort möglich, es gibt keinen Wake-on-LAN-Weg für den Homeserver.")
+                            Text("Das schaltet den gesamten Homeserver aus — damit auch Kubernetes, ArgoCD, diese API und alle darauf laufenden Dienste. Kein harter Stopp: der Node wird erst cordoned und gedrained, jeder Dienst bekommt Zeit zum sauberen Beenden, danach stoppt k3s und erst dann folgt der Poweroff. Das dauert dadurch etwas länger als ein sofortiger Shutdown. Ein Wiedereinschalten ist nur vor Ort möglich, es gibt keinen Wake-on-LAN-Weg für den Homeserver.")
                                 .font(.system(size: 14))
                                 .foregroundStyle(Theme.textMuted)
                         }
