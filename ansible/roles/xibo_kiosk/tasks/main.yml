@@ -44,7 +44,12 @@
     owner: root
     group: root
     mode: "0755"
-  when: xibo_kiosk_enabled | bool
+  # Nur anfassen, solange dort noch nichts gemountet ist — ist der NFS-Mount
+  # (von einem vorherigen Lauf oder seit dem letzten Boot) bereits aktiv,
+  # würde chown/chmod auf die read-only NFS-Freigabe selbst durchschlagen
+  # statt auf das darunterliegende lokale Verzeichnis ("Dateisystem ist nur
+  # lesbar").
+  when: xibo_kiosk_enabled | bool and xibo_kiosk_mount_point not in (ansible_mounts | map(attribute='mount') | list)
 
 - name: xibosignage-display per NFS mounten (read-only)
   ansible.posix.mount:
