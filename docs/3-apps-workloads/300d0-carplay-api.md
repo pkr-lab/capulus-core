@@ -69,8 +69,17 @@ im Cluster) und:
 - worker-0/worker-1 über denselben SSH-Key wie `cluster_power_manager`
   herunterfährt (forced command, nur `sudo poweroff` möglich — siehe
   [docs/2-betrieb-hardware/20020-cluster-power-manager.md](../2-betrieb-hardware/20020-cluster-power-manager.md)), und
-- den Homeserver selbst herunterfährt (`sudo poweroff`, lokal, da der
-  Agent als root läuft).
+- den Homeserver selbst herunterfährt — kein harter `poweroff`, sondern
+  dieselbe geordnete Sequenz wie bei worker-0/worker-1: `kubectl cordon`
+  + `kubectl drain` (jeder Pod bekommt seine `terminationGracePeriod` zum
+  sauberen Beenden/Flushen, statt beim Stoppen von `k3s.service`
+  gemeinsam gekillt zu werden), danach `systemctl stop k3s`, erst dann
+  `poweroff` (lokal, da der Agent als root läuft). Läuft asynchron in
+  einem Background-Thread, damit die HTTP-Antwort an carplay-api noch
+  rausgeht, bevor dessen eigener Pod durchs Drain evictet wird. Jeder
+  Schritt ist Best-Effort mit Timeout (`_run_best_effort()`) — ein
+  hängendes `kubectl` blockiert den Poweroff nicht, da es für den
+  Homeserver keinen Wake-on-LAN-Weg zurück gibt.
 
 Manuelle Wake-/Shutdown-Aktionen aus der App schreiben/löschen dieselben
 `STATE_DIR/<name>.woke_at`-Dateien wie der automatische
@@ -276,5 +285,7 @@ Die wichtigsten:
 | App bekommt `401` auf `/api/dashboard` | Token in der App (Keychain) ≠ `secrets.apiToken`-Klartext beim Erzeugen des SealedSecret |
 | App bekommt `401` beim Homeserver-Shutdown | Eingegebener Code ≠ `secrets.shutdownConfirmationCode`-Klartext — meist nach einer ArgoCD-Passwort-Rotation, die hier noch nicht nachgezogen wurde |
 | App bekommt `502` auf Helligkeit/Wake/Shutdown | `secrets.powerAgentToken` stimmt nicht mit `/etc/power-agent/token` auf dem Homeserver überein, oder power-agent läuft nicht (`systemctl status power-agent` auf dem Homeserver) — siehe [power-agent](#power-agent) |
+| App meldet Erfolg beim Homeserver-Shutdown, aber der Host läuft noch minutenlang weiter | Erwartet — `kubectl drain` läuft im Hintergrund (bis zu 180s Timeout) bevor `k3s` gestoppt und `poweroff` ausgeführt wird, siehe [power-agent](#power-agent). `journalctl -u power-agent -f` auf dem Homeserver zeigt den Fortschritt |
+| `kubectl cordon`/`drain` in den power-agent-Logs schlägt sofort fehl | `NODE_NAME` in `/etc/power-agent/config.env` ≠ tatsächlicher k3s-Node-Name (`kubectl get nodes`) — Poweroff läuft trotzdem weiter (Best-Effort), nur ohne sauberes Draining |
 | App bekommt `403` nach Aktivieren der IP-Allowlist | `config.trustedProxies` fehlt/falsch — App sieht Traefik-Pod-IP statt Tailscale-IP, siehe [Absicherung](#absicherung) |
 | `carplay-api.homeserver` löst nicht auf | Wildcard-DNS prüfen: `nslookup carplay-api.homeserver` (siehe [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md)) |
