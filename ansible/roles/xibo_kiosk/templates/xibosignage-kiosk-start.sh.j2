@@ -13,10 +13,13 @@ xset s off || true
 xset s noblank || true
 xset -dpms || true
 
-# Kurze Wartezeit, falls der Webserver-Unit-Start dem Kiosk-Start
-# nachhinkt (z.B. direkt nach einem Reboot).
-for _ in $(seq 1 30); do
-  curl --fail --silent --max-time 2 "http://127.0.0.1:{{ xibo_kiosk_http_port }}/" >/dev/null 2>&1 && break
+# Warten, bis der Webserver wirklich antwortet, statt Chromium blind zu
+# starten — sonst landet Chromium auf Chromiums eigener "nicht erreichbar"-
+# Fehlerseite, die sich nie von selbst neu lädt (nur per manuellem F5).
+# Bewusst unbegrenzt: dank Restart=always/RestartSec=5 im systemd-Unit holt
+# ein Neustart des Skripts das ohnehin nach, ein Timeout hier würde also nur
+# denselben kaputten Zustand (Chromium gegen einen toten Webserver) erzeugen.
+until curl --fail --silent --max-time 2 "http://127.0.0.1:{{ xibo_kiosk_http_port }}/" >/dev/null 2>&1; do
   sleep 1
 done
 
