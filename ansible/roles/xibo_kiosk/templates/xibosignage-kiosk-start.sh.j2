@@ -23,7 +23,21 @@ until curl --fail --silent --max-time 2 "http://127.0.0.1:{{ xibo_kiosk_http_por
   sleep 1
 done
 
-exec chromium-browser \
+# Debian Bookworm (aktuelles Raspberry Pi OS) hat das Binary von
+# "chromium-browser" auf "chromium" umbenannt — das APT-Paket
+# "chromium-browser" existiert zwar weiterhin (Transitional-Paket), liefert
+# aber kein Binary mit diesem Namen mehr. Beide Namen unterstützen, damit
+# das Skript auf Bullseye- wie Bookworm-basierten Pis funktioniert.
+if command -v chromium-browser >/dev/null 2>&1; then
+  CHROMIUM_BIN=chromium-browser
+elif command -v chromium >/dev/null 2>&1; then
+  CHROMIUM_BIN=chromium
+else
+  echo "Weder chromium-browser noch chromium gefunden." >&2
+  exit 1
+fi
+
+exec "$CHROMIUM_BIN" \
   --kiosk \
   --incognito \
   --noerrdialogs \
