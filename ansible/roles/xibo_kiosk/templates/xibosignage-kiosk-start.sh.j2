@@ -13,19 +13,29 @@ xset s off || true
 xset s noblank || true
 xset -dpms || true
 
-# Kurze Wartezeit, falls der Webserver-Unit-Start dem Kiosk-Start
-# nachhinkt (z.B. direkt nach einem Reboot).
-for _ in $(seq 1 30); do
-  curl --fail --silent --max-time 2 "http://127.0.0.1:{{ xibo_kiosk_http_port }}/" >/dev/null 2>&1 && break
+# Warten, bis der Webserver wirklich antwortet, statt Chromium blind zu
+# starten — sonst landet Chromium auf Chromiums eigener "nicht erreichbar"-
+# Fehlerseite, die sich nie von selbst neu lädt (nur per manuellem F5).
+# Bewusst unbegrenzt: dank Restart=always/RestartSec=5 im systemd-Unit holt
+# ein Neustart des Skripts das ohnehin nach, ein Timeout hier würde also nur
+# denselben kaputten Zustand (Chromium gegen einen toten Webserver) erzeugen.
+until curl --fail --silent --max-time 2 "http://127.0.0.1:{{ xibo_kiosk_http_port }}/" >/dev/null 2>&1; do
   sleep 1
 done
 
-# Paketname/Binary-Name ist je nach Raspberry-Pi-OS-Version unterschiedlich:
-# auf aktuellen (Debian-trixie-basierten) Images ist "chromium-browser" nur
-# noch ein leeres transitionales Dummy-Paket, das Binary heisst "chromium"
-# -- auf aelteren Images ist es umgekehrt. Beide pruefen statt fest zu
-# verdrahten.
-CHROMIUM_BIN="$(command -v chromium || command -v chromium-browser)"
+# Debian Bookworm (aktuelles Raspberry Pi OS) hat das Binary von
+# "chromium-browser" auf "chromium" umbenannt — das APT-Paket
+# "chromium-browser" existiert zwar weiterhin (Transitional-Paket), liefert
+# aber kein Binary mit diesem Namen mehr. Beide Namen unterstützen, damit
+# das Skript auf Bullseye- wie Bookworm-basierten Pis funktioniert.
+if command -v chromium-browser >/dev/null 2>&1; then
+  CHROMIUM_BIN=chromium-browser
+elif command -v chromium >/dev/null 2>&1; then
+  CHROMIUM_BIN=chromium
+else
+  echo "Weder chromium-browser noch chromium gefunden." >&2
+  exit 1
+fi
 
 exec "$CHROMIUM_BIN" \
   --kiosk \
