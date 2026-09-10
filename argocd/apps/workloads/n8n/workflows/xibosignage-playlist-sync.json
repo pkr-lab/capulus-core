@@ -7,14 +7,14 @@
         "rule": {
           "interval": [
             {
-              "field": "minutes",
-              "minutesInterval": 5
+              "field": "cronExpression",
+              "expression": "0 0 16 * * 4"
             }
           ]
         }
       },
       "id": "b2b2b2b2-0001-4000-8000-000000000001",
-      "name": "Alle 5 Minuten",
+      "name": "Jeden Donnerstag 16 Uhr",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
       "position": [260, 300]
@@ -139,17 +139,27 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Loescht alte xibo-playlist-*-Dateien aus dem Display-Ordner, die in\n// diesem Lauf NICHT (mehr) aus der Playlist synchronisiert wurden --\n// z.B. weil ein Bild aus der Xibo-Playlist entfernt wurde. Nutzt direkten\n// fs-Zugriff auf den bereits im n8n-Pod gemounteten Ordner (siehe\n// argocd/apps/workloads/n8n/values.yaml -> xibosignage.display), analog\n// zum bereits vorhandenen require('path') im Inbox-Workflow --\n// Node-Builtins sind in diesem n8n Code-Node bereits erlaubt.\nconst fs = require('fs');\nconst path = require('path');\nconst dir = '/data/xibosignage-display';\n\nconst expected = new Set($input.all().map((item) => item.json.expectedFileName));\n\nconst existing = fs.readdirSync(dir).filter((f) => f.startsWith('xibo-playlist-'));\nconst removed = [];\nfor (const f of existing) {\n  if (!expected.has(f)) {\n    fs.unlinkSync(path.join(dir, f));\n    removed.push(f);\n  }\n}\n\nreturn [{ json: { synced: [...expected], removed } }];"
+        "jsCode": "// require('fs') ist im Code-Node gesperrt (anders als require('path')) --\n// Loeschen laeuft deshalb ueber den Execute-Command-Knoten danach, der ist\n// bereits per NODES_EXCLUDE freigeschaltet. Hier nur die erwartete\n// Dateiliste dieses Laufs einsammeln (ein Item -> ein String, sicher fuer\n// Shell-Interpolation, da Dateinamen nur aus [a-zA-Z0-9.-] bestehen).\nconst expected = $input.all().map((item) => item.json.expectedFileName);\nreturn [{ json: { expected } }];"
       },
       "id": "b2b2b2b2-0009-4000-8000-000000000009",
-      "name": "Alte Playlist-Bilder aufräumen",
+      "name": "Erwartete Dateien sammeln",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [2340, 300]
+    },
+    {
+      "parameters": {
+        "command": "=cd /data/xibosignage-display && for f in xibo-playlist-*; do\n  case \" {{ $json.expected.join(' ') }} \" in\n    *\" $f \"*) ;;\n    *) rm -f -- \"$f\" ;;\n  esac\ndone"
+      },
+      "id": "b2b2b2b2-0010-4000-8000-000000000010",
+      "name": "Alte Playlist-Bilder aufräumen",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [2600, 300]
     }
   ],
   "connections": {
-    "Alle 5 Minuten": {
+    "Jeden Donnerstag 16 Uhr": {
       "main": [[{ "node": "Playlist von Xibo CMS holen", "type": "main", "index": 0 }]]
     },
     "Playlist von Xibo CMS holen": {
@@ -171,6 +181,9 @@
       "main": [[{ "node": "In Display-Ordner schreiben", "type": "main", "index": 0 }]]
     },
     "In Display-Ordner schreiben": {
+      "main": [[{ "node": "Erwartete Dateien sammeln", "type": "main", "index": 0 }]]
+    },
+    "Erwartete Dateien sammeln": {
       "main": [[{ "node": "Alte Playlist-Bilder aufräumen", "type": "main", "index": 0 }]]
     }
   },
