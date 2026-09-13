@@ -1,0 +1,16 @@
+---
+# Interface name for the standalone WireGuard backup tunnel. Deliberately a
+# plain kernel WireGuard interface managed by wg-quick — independent of
+# Tailscale (userspace "tailscale0" + Tailscale's own coordination/DERP
+# servers), so this keeps working even during a Tailscale outage.
+wireguard_backup_interface: wg-backup
+
+# Tunnel subnet for the server <-> peer link. /24 leaves room to add more
+# trusted devices later; each peer still gets its own /32 in AllowedIPs so
+# peers can't reach each other, only the server.
+wireguard_backup_server_tunnel_ip: "10.99.99.1/24"
+wireguard_backup_peer_tunnel_ip: "10.99.99.2/32"
+
+# Human-readable label for the one trusted peer, shown as a comment in the
+# generated server config.
+wireguard_backup_peer_name: "admin-backup-device"

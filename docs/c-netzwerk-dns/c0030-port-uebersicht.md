@@ -94,6 +94,7 @@ alles unverändert an Traefik weiter (`argocd/apps/platform/cloudflared/values.y
 | MediaMTX API | 9997 | Nur ClusterIP intern | Kein externer Zugriff |
 | ArgoCD | 443 | NodePort `homeserver:30443` (HTTPS) | Kein Ingress-Host, direkter NodePort-Zugriff. HTTP-NodePort (30080) bewusst nicht in UFW freigegeben |
 | Tailscale (SSH/Admin) | — | Tailnet-IP des Nodes | Siehe [docs/c-netzwerk-dns/c0010-tailscale.md](c0010-tailscale.md) |
+| WireGuard Backup-VPN | UDP, `wireguard_backup_port` (Default 51888) | Router-Portforward → Homeserver-LAN-IP | Notfall-Fallback falls Tailscale ausfällt, genau 1 Peer, kein LAN-Routing. Siehe [docs/c-netzwerk-dns/c0011-wireguard-backup.md](c0011-wireguard-backup.md) |
 
 NodePorts sind laut bestehenden UFW-Regeln bereits auf LAN/Tailnet beschränkt
 (siehe README.md#networking--security) — keine zusätzliche Firewall-Änderung
