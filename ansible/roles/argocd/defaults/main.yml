@@ -50,36 +50,14 @@ argocd_workloads_apps:
   - xibosignage
   - zammad
 
-# Phase 3 der Security-Härtung (docs/d-sicherheit/d0010-security-hardening-roadmap.md,
-# docs/d-sicherheit/d0030-network-policies.md). War default false, damit ein normaler
-# `make argocd`-Lauf nicht ungefragt cluster-weite NetworkPolicies
-# ausrollt — nach Backup, Pilotlauf auf example-whoami/tinyteller und
-# vollständig verifiziertem Rollout (13.08.2026, siehe docs/d-sicherheit/d0030-network-policies.md) auf true
-# gesetzt, damit künftige `make argocd`-Läufe den Zustand halten.
 argocd_apply_network_policies: true
 
-# Phase 3, Schritt 2 (docs/d-sicherheit/d0010-security-hardening-roadmap.md, docs/d-sicherheit/d0030-network-policies.md → "Schrittweise pro Namespace
-# verfeinern"): Namespaces in dieser Liste bekommen die STRIKTE Policy
-# (nur eigener Namespace + kube-system + monitoring, KEIN pauschaler
-# Tier-weiter Zugriff mehr) statt der groben Tier-Default-Policy aus
-# Schritt 1. Wächst schrittweise, einer nach dem anderen, mit Validierung
-# dazwischen — nie alle 36 auf einmal. Reihenfolge laut Roadmap:
-# unkritische Apps zuerst, dann Apps mit eigener DB, zuletzt Plattform.
 argocd_network_policy_refined_namespaces:
   - example-whoami
   - tinyteller
-  # Batch 2 (13.08.2026): Apps mit eigener DB, komplett im selben Namespace
-  # (Postgres/State läuft dort, keine Cross-Namespace-Abhängigkeit für den
-  # Normalbetrieb geprüft — siehe docs/d-sicherheit/d0030-network-policies.md für den n8n-Sonderfall, ein
-  # inaktiver Workflow, der VictoriaMetrics in `monitoring` direkt abfragt).
   - wikijs
   - mealie
   - n8n
-  # Batch 3 (13.08.2026): alle restlichen Workload-Apps. Geprüft per
-  # `grep -rln "\.<ns>\.svc\|<ns>\.svc\.cluster" argocd/apps/` — keine
-  # eingehenden Cross-Namespace-Aufrufe außer den bereits generell
-  # abgedeckten (cloudflared) und carplay-api -> uptime-kuma (siehe
-  # extra_ingress unten).
   - alamos-apager
   - carplay-api
   - github-release-watcher
@@ -92,21 +70,7 @@ argocd_network_policy_refined_namespaces:
   - wiki-docs-sync
   - xibosignage
   - zammad
-  # Batch 4 (13.08.2026): alle 19 Plattform-Namespaces, letzter Batch —
-  # damit sind alle 36 App-Namespaces verfeinert. Selbe Prüfung wie bei
-  # Batch 3 (`grep -rln "\.<ns>\.svc\|<ns>\.svc\.cluster" argocd/apps/`),
-  # diesmal mit mehreren echten Platform-zu-Platform-Abhängigkeiten
-  # (siehe extra_ingress unten) — coredns-custom/traefik-config haben
-  # keine eigenen Pods (deployen nach kube-system), Policy dort ist ein
-  # wirkungsloses No-Op, aber der Vollständigkeit halber trotzdem gesetzt.
-  # authentik (Ablösung von Authelia, docs/4-planung/40070-authentik-sso-iac.md):
-  # eigener Namespace + kube-system reicht — Traefik ruft von dort per
-  # ForwardAuth /outpost.goauthentik.io/auth/traefik auf, Authentik selbst
-  # ruft keine andere App direkt an (nur sein eigenes Postgres, s.u.).
   - authentik
-  # lldap: eigener Namespace + kube-system (Web-UI-Ingress) reicht NICHT
-  # allein — Authentik ruft lldap zusätzlich per ClusterIP auf Port 3890 an
-  # (LDAP-Bind für die LDAP Source), siehe extra_ingress unten.
   - lldap
   - sealed-secrets
   - kubeseal-webgui
@@ -127,75 +91,24 @@ argocd_network_policy_refined_namespaces:
   - headlamp
   - traefik-config
 
-# Gezielte Zusatz-Ausnahmen, wenn ein anderer Namespace legitim per
-# ClusterIP direkt reinruft (nicht über Traefik) — unabhängig davon, ob
-# das Ziel schon in argocd_network_policy_refined_namespaces steht: bei
-# einer groben Tier-Policy braucht es das nur für CROSS-TIER-Aufrufe (die
-# blockiert die Tier-Regel ja gerade), bei einer verfeinerten Policy für
-# JEDEN fremden Namespace, auch innerhalb desselben Tiers.
-#
-# Gefunden per `grep -rn "svc.cluster.local" argocd/apps/` (13.08.2026,
-# nach dem Cloudflared-Beinahe-Incident aus Vorsicht komplett durchsucht,
-# siehe docs/d-sicherheit/d0030-network-policies.md) — das sind alle im Repo sichtbaren Cross-Namespace-
-# ClusterIP-Aufrufe, die nicht schon durch security-tier (Intra-Tier) oder
-# die generellen kube-system/monitoring/cloudflared-Ausnahmen abgedeckt
-# waren:
-# Apps, die ihre eigenen, vollstaendigen NetworkPolicies mitbringen (siehe
-# argocd/apps/workloads/<app>/templates/networkpolicy-*.yaml) und deshalb
-# NICHT zusaetzlich die generische tier-default-ingress-Policy bekommen
-# duerfen: die tier-default-Policy wuerde per Ingress-Union zusaetzliche
-# Quellen (kube-system/monitoring/cloudflared, ggf. der ganze Tier)
-# erlauben und damit eine bewusst engere Policy wieder aufweichen.
-# - ollama: einzige erlaubte Quelle ist n8n, siehe
-#   argocd/apps/workloads/ollama/templates/networkpolicy-*.yaml und
-#   docs/3-apps-workloads/300g0-ollama.md, Abschnitt "Netzwerk-Isolation".
 argocd_network_policy_excluded_apps:
   - ollama
 
 argocd_network_policy_extra_ingress:
-  # lldap (docs/4-planung/40070-authentik-sso-iac.md): Authentik bindet per
-  # ClusterIP direkt gegen lldaps LDAP-Port (3890), nicht über Traefik —
-  # ohne diese Ausnahme scheitert jede LDAP-Source-Synchronisierung
-  # (Bind-Timeout).
   lldap:
     - authentik
-  # wiki-docs-sync (eigener CronJob-Namespace) ruft wikijs per ClusterIP
-  # direkt an, nicht über Traefik. wikijs ist verfeinert (Schritt 2).
   wikijs:
     - wiki-docs-sync
-  # ntfy (platform, noch grobe Policy): carplay-api und alamos-apager
-  # (beide workload) senden Push-Benachrichtigungen per ClusterIP direkt
-  # an ntfy — Cross-Tier, von der groben Policy sonst blockiert. Nur
-  # bedarfsgesteuert (bei einem echten Alarm/einer echten Anfrage), daher
-  # nicht in den bisherigen Logs sichtbar — proaktiv gefixt statt
-  # abgewartet, ob es im Ernstfall lautlos fehlschlägt.
   ntfy:
     - carplay-api
     - alamos-apager
     - ntfy-bridge   # Batch 4: ntfy-bridge/values.yaml
-  # monitoring (platform, noch grobe Policy): carplay-api fragt
-  # VictoriaMetrics direkt per ClusterIP ab (Cross-Tier, aktiv genutzt).
-  # n8n hat einen Workflow mit demselben Zugriffsmuster
-  # (workflows/banana-pi-down-to-zammad.json) — aktuell "active": false,
-  # aber die Ausnahme schadet nicht und erspart eine Überraschung, falls
-  # der Workflow mal aktiviert wird.
   monitoring:
     - carplay-api
     - n8n
-    # Batch 4: argo-workflows meldet Alerts an vmalertmanager
-    # (maintenance-workflowtemplate.yaml), platform-intern, aber ab jetzt
-    # verfeinert nicht mehr automatisch durch Intra-Tier gedeckt.
     - argo-workflows
-  # uptime-kuma (workload, Batch 3, jetzt verfeinert): carplay-api fragt
-  # den Status per ClusterIP direkt ab, selbe Tier, aber verfeinert heißt
-  # "nur eigener Namespace" — ohne diese Ausnahme bricht das jetzt, wo es
-  # unter Schritt 1 (Intra-Tier) noch durchgelassen wurde.
   uptime-kuma:
     - carplay-api
-  # Batch 4 (13.08.2026), alle Platform-zu-Platform-ClusterIP-Aufrufe aus
-  # dem Repo-Scan — dieselbe Logik wie oben, nur diesmal Intra-Tier statt
-  # Cross-Tier (macht unter der groben Policy keinen Unterschied, war
-  # bisher durchgelassen; verfeinert braucht jeder einzelne eine Ausnahme):
   gotify:
     - gotify-bridge   # gotify-bridge/values.yaml
   gotify-bridge:
