@@ -15,33 +15,14 @@ cups_print_server_printer_name: "Samsung_M2026"
 cups_print_server_printer_description: "Samsung Xpress M2026 (USB, homeserver)"
 cups_print_server_printer_location: "2.OG Homeserver"
 
-# Device-URI und PPD/Treiber MÜSSEN nach dem ersten Rollen-Lauf einmalig
-# manuell ermittelt werden: Drucker per USB anschließen, dann auf dem
-# Homeserver `lpinfo -v` (Device-URI) bzw. `lpinfo -m | grep -i samsung`
-# (PPD) ausführen — beide Ausgaben zeigt der Rollen-Lauf bereits als Debug
-# an. Solange einer der beiden Werte hier leer ist, installiert die Rolle
-# nur Pakete + Sharing und überspringt das Anlegen der Warteschlange.
-# Siehe docs/2-betrieb-hardware/20040-printer.md.
 cups_print_server_device_uri: ""
 cups_print_server_ppd: ""
 
-# Papiergröße als Queue-Default (PPD-*PageSize*-Choice-Name, z.B.
-# "Letter", "A4", "Legal" — siehe *PageSize-Zeilen in der jeweiligen PPD)
-# — bei manchen PPDs/Filtern (u.a. dem QPDL-Treiber, siehe
-# docs/2-betrieb-hardware/20040-printer.md) reicht der PPD-eigene *DefaultPageSize* nicht aus,
-# ein explizit als Queue-Default gesetztes PageSize verhindert leere
-# Ausdrucke bei Clients, die die Seitengröße nicht selbst mitgeben.
 cups_print_server_media_size: "A4"
 
-# Neu angelegte Warteschlange als System-Default setzen.
 cups_print_server_set_default: true
 
 # ---- Sharing / Remote-Zugriff --------------------------------
-# cupsctl-Flags — erlauben Admin-UI + Drucken von LAN- und Tailscale-
-# Clients. Die Firewall schränkt trotzdem ein: die `common`-Rolle erlaubt
-# bereits jeglichen Traffic aus local_subnet und dem Tailscale-Netz
-# (100.64.0.0/10), Port 631/mDNS sind darüber also schon abgedeckt — diese
-# Rolle legt deshalb bewusst KEINE eigenen UFW-Regeln an.
 cups_print_server_remote_admin: true
 cups_print_server_remote_any: true
 cups_print_server_share_printers: true
@@ -56,39 +37,14 @@ cups_print_server_packages:
   - avahi-daemon
   - usbutils
 
-# Nutzer, die ohne root Warteschlangen verwalten dürfen (lpadmin-Gruppe).
 cups_print_server_admin_users:
   - ubuntu
 
 # ---- Optional: QPDL-Community-Treiber für die M2020/M2026-Serie -------
-# Die Samsung Xpress M2020/M2021/M2022/M2026-Serie spricht ein neueres
-# "QPDL"-Protokoll, das im offiziellen printer-driver-splix-Paket fehlt.
-# Existiert nur als inoffizieller Patch, der nie ins offizielle
-# OpenPrinting/splix-Repo gemergt wurde. Standardmäßig AUS — bewusst
-# opt-in, da hier Fremdcode aus einem gepinnten Commit kompiliert und
-# als root installiert wird (Review-Notizen: docs/2-betrieb-hardware/20040-printer.md).
 cups_print_server_build_qpdl_driver: false
 cups_print_server_qpdl_repo: "https://gitlab.com/ScumCoder/splix.git"
-# Gepinnter Commit (patches-Branch, Stand 2024-03-31: "Fix m2020 being
-# excluded from built artifacts") — bewusst NICHT der Branch-HEAD, damit
-# ein späterer Push auf den Branch nicht unbemerkt anderen Code einschleust.
 cups_print_server_qpdl_repo_version: "f97086c367d926dc4b6f84facabc9c3029729cba"
 cups_print_server_qpdl_build_dir: "/usr/local/src/splix-qpdl"
 
 # ---- Weitere Warteschlangen (Netzwerkdrucker) -------------------------
-# Generische Liste zusätzlicher CUPS-Warteschlangen, unabhängig vom
-# obigen M2026-Einzeldrucker-Codepfad (kein QPDL-Build, keine PageSize-
-# Patches). Gedacht für Netzwerkdrucker, die bereits per socket://-URI
-# (Raw-TCP, z.B. Port 9100) erreichbar sind — z.B. ein per USB an einer
-# FritzBox hängender Drucker, den diese als Netzwerkdrucker teilt. Siehe
-# docs/2-betrieb-hardware/20040-printer.md.
-#
-# Schema je Eintrag:
-#   name:          Warteschlangenname (keine Leerzeichen/Sonderzeichen)
-#   device_uri:    z.B. "socket://192.168.178.57:9100"
-#   ppd:           lpinfo -m-Treffer (z.B. aus dem printer-driver-splix-Katalog)
-#   description:   Freitext für "-D"
-#   location:      Freitext für "-L"
-#   media_size:    PPD-*PageSize*-Choice-Name, Default "A4"
-#   set_default:   diese Queue als System-Default setzen (Default: false)
 cups_print_server_extra_queues: []
