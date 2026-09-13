@@ -245,7 +245,8 @@ Authentik (siehe Abschnitt 1). Sauber rückbauen:
 | `authentik_core.application` | Verknüpft einen Provider mit einem sichtbaren "App"-Eintrag (Slug, Name) |
 | `authentik_policies_expression.expressionpolicy` | Python-Ausdruck, der `True`/`False` zurückgibt — steuert, wer darf |
 | `authentik_policies.policybinding` | Verknüpft eine Policy mit einem Ziel (App, Flow-Stage, ...) |
-| `authentik_stages_authenticator_totp.authenticatortotpstage` | TOTP-Setup-Stage (bereits vorhanden, `01-admin-2fa-policy.yaml`) |
+| `authentik_stages_authenticator_totp.authenticatortotpstage` | TOTP-Setup/Enrollment-Stage — legt bei jedem Durchlauf ein NEUES Geräte-Objekt an, deshalb **nicht** direkt in einen Flow binden (bereits vorhanden, `01-admin-2fa-policy.yaml`) |
+| `authentik_stages_authenticator_validate.authenticatorvalidatestage` | Validierungs-Stage für ein bereits konfiguriertes Gerät — das ist die Stage, die tatsächlich im Login-Flow gebunden wird; per `not_configured_action: configure` + `configuration_stages` verweist sie einmalig auf die Setup-Stage, falls (noch) kein Gerät existiert (bereits vorhanden, `01-admin-2fa-policy.yaml`) |
 | `authentik_flows.flowstagebinding` | Hängt eine Stage in einen bestehenden Flow (z. B. den Authentication-Flow) |
 | `authentik_outposts.outpost` | Registriert einen Provider am (eingebetteten) Outpost — ohne das greift ForwardAuth nicht |
 
@@ -265,3 +266,4 @@ Vollständige Modell-/Feld-Referenz:
 | App erscheint, ForwardAuth liefert 401 statt Redirect zum Login | Provider ist zwar am Outpost registriert, aber `policy_engine_mode`/Policy-Bindings verweigern generell — Gruppenzugehörigkeit in lldap prüfen. |
 | Falscher Nutzer kommt trotzdem rein | `policy_engine_mode: any` + mehrere Policy-Bindings verhalten sich wie ODER — bei mehreren Regeln ggf. auf `all` (UND) umstellen oder Policies zusammenfassen. |
 | Neuer lldap-Nutzer taucht in Authentik nicht auf | LDAP-Source-Sync-Intervall abwarten oder manuell anstoßen (Abschnitt 2, Schritt 4). |
+| Admin muss TOTP bei **jedem** Login neu einrichten (neuer QR-Code statt Code-Abfrage) | Die rohe `authenticatortotpstage` (Setup/Enrollment, legt IMMER ein neues Geräte-Objekt an) ist direkt im Flow gebunden, statt einer `authenticatorvalidatestage` (prüft ein vorhandenes Gerät und delegiert nur bei fehlendem Gerät per `configuration_stages` einmalig an die Setup-Stage). Genau dieser Fehler steckte in `01-admin-2fa-policy.yaml`, siehe Korrektur-Kommentar dort. |

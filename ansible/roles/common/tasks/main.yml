@@ -166,8 +166,6 @@
   notify: Reload sysctl
 
 # ---- UFW Firewall -------------------------------------------
-# NOTE: we never call `state: reset` — that would wipe SSH access mid-playbook.
-# Allow SSH FIRST so enabling UFW later cannot lock us out.
 - name: Allow SSH (port 22) before any other firewall changes
   community.general.ufw:
     rule: allow
@@ -272,9 +270,6 @@
     var: common_ufw_status.stdout_lines
 
 # ---- Static IP via Netplan ----------------------------------
-# Configures /etc/netplan/99-static.yaml and applies it. The SSH session will
-# move to the new IP, so make sure `ansible_host` matches `network_static_ip`
-# (or update the inventory after the first run).
 - name: Configure static IP via Netplan
   when: network_configure_static_ip | bool
   block:
@@ -349,9 +344,6 @@
     - not (auto_reboot_if_required | bool)
     - lookup('env', 'SEMAPHORE_TASK_ID') | length == 0
 
-# Semaphore runs as a Pod on this very host — rebooting kills the Pod that's
-# executing the playbook, so the task hangs forever. Skip the reboot and tell
-# the operator to do it manually after the run finishes.
 - name: Reboot required but Semaphore is running this task — warn instead of self-killing
   ansible.builtin.debug:
     msg: >

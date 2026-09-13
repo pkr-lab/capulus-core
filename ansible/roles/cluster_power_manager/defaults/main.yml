@@ -11,56 +11,32 @@
 # für "poweroff").
 # ============================================================
 
-# Kill-switch: auf false setzen, um die automatische Skalierung
-# abzuschalten, ohne die Rolle aus dem Playbook zu entfernen.
 cluster_power_manager_enabled: true
 
 # Abtastintervall (Sekunden).
 cluster_power_manager_poll_seconds: 30
 
 # ---- Hochskalieren (Homeserver überlastet -> Worker aufwecken) --------
-# Sobald CPU ODER RAM auf dem Homeserver >= Schwelle ist, beginnt die
-# Sustain-Uhr zu laufen.
 cluster_power_manager_cpu_scale_up_threshold: 60
 cluster_power_manager_ram_scale_up_threshold: 60
-# Wie lange die Last am/über der Schwelle bleiben muss, bevor der ERSTE
-# Worker (worker-0) geweckt wird.
 cluster_power_manager_scale_up_sustain_seconds: 60
-# Zusätzliche Zeit (addiert auf obige Sustain-Dauer), die die Last WEITER
-# am/über der Schwelle bleiben muss, bevor auch der ZWEITE Worker
-# (worker-1) geweckt wird — worker-0 ist zu diesem Zeitpunkt bereits wach.
 cluster_power_manager_scale_up_sustain_seconds_stage2: 200
 
 # ---- Herunterskalieren (Last wieder niedrig -> Worker ausschalten) ----
-# CPU UND RAM müssen BEIDE <= Schwelle sein (bewusst niedriger als die
-# Scale-up-Schwelle — Hysterese, verhindert Flapping direkt an einer
-# einzelnen Schwelle).
 cluster_power_manager_cpu_scale_down_threshold: 30
 cluster_power_manager_ram_scale_down_threshold: 30
-# Wie lange die Last am/unter der Schwelle bleiben muss, bevor EIN Worker
-# heruntergefahren wird (zuletzt geweckter zuerst). Deutlich länger als
-# die Poll-Intervalle, damit ein kurzzeitiges Tal nicht sofort einen
-# gerade erst hochgefahrenen Worker wieder abschaltet.
 cluster_power_manager_scale_down_sustain_seconds: 900
 
-# Mindest-Laufzeit eines Workers nach dem Aufwecken, bevor er überhaupt
-# für einen automatischen Shutdown in Frage kommt — zusätzliche
-# Anti-Flapping-Bremse unabhängig von der Scale-down-Sustain-Dauer.
 cluster_power_manager_min_uptime_seconds: 300
 
 # ---- Wie lange auf "Ready" gewartet wird, nachdem WoL gesendet wurde --
 cluster_power_manager_ready_timeout_seconds: 120
 
 # ---- SSH-Zugang zum ferngesteuerten Poweroff --------------------------
-# Eigenes, hier generiertes Schlüsselpaar (NICHT der Semaphore-Key) —
-# wird von cluster_power_manager_target auf worker-0/worker-1 autorisiert,
-# dort aber per forced-command auf "sudo poweroff" beschränkt.
 cluster_power_manager_ssh_user: ubuntu
 cluster_power_manager_ssh_key_path: /etc/cluster-power-manager/id_ed25519
 cluster_power_manager_state_dir: /var/lib/cluster-power-manager
 
-# kubeconfig, mit dem das Skript lokal auf dem Homeserver kubectl
-# cordon/drain/uncordon ausführt.
 cluster_power_manager_kubeconfig: /etc/rancher/k3s/k3s.yaml
 
 # ---- ntfy-Benachrichtigungen -------------------------------------------
@@ -69,20 +45,6 @@ cluster_power_manager_ntfy_ip: "{{ network_static_ip }}"
 cluster_power_manager_ntfy_topic: "Home-Lab-System"
 
 # ---- Worker, in Weck-Reihenfolge (Shutdown erfolgt in umgekehrter
-# Reihenfolge: zuletzt geweckt, zuerst wieder ausgeschaltet) ------------
-# mac_address kommt aus host_vars/<host>/vars.yml
-# (wake_on_lan_mac_address) — dort mit `ip link show` auf dem jeweiligen
-# Worker ermitteln und CHANGE-Platzhalter ersetzen.
-#
-# hostvars.get(...) statt hostvars['...']: läuft dieses Playbook (site.yml)
-# über ein Inventory, das worker-0/worker-1 gar nicht kennt -- z.B. das
-# minimale Semaphore-Inventory des "home-server"-Projekts, siehe
-# group_vars/all.yml -- bricht hostvars['worker-0'] hart mit "Task failed:
-# hostvars['worker-0']" ab und reißt den kompletten Playbook-Lauf mit sich
-# (siehe docs/2-betrieb-hardware/20030-nightly-worker-update.md, Abschnitt Fehlerbehebung).
-# hostvars.get() liefert stattdessen einfach {} und damit unten leere
-# Defaults -- die Warnung weiter unten greift dann korrekt, statt den Lauf
-# abzubrechen.
 cluster_power_manager_workers:
   - name: worker-0
     ansible_host: "{{ hostvars.get('worker-0', {}).ansible_host | default('') }}"
