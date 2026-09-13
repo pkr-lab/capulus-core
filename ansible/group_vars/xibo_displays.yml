@@ -5,25 +5,10 @@
 # docs/3-apps-workloads/300e0-xibosignage.md und ansible/xibo-kiosks.yml)
 # ============================================================
 
-# Eigener Tailscale-Hostname pro Pi statt des globalen "hostname"
-# (group_vars/all.yml, dort auf den Home-Server bezogen) — sonst würde jeder
-# Pi versuchen, sich als "homeserver" ins Tailnet einzutragen.
 tailscale_hostname: "{{ inventory_hostname }}"
 
-# Reiner Tailnet-Client: die Displays sollen NICHT das Heim-LAN als Subnetz
-# advertisen — das übernimmt bereits der Home-Server (group_vars/all.yml).
-# Mehrere Subnet-Router für dasselbe Netz unterstützt Tailscale zwar, das
-# wäre hier aber unnötige Komplexität.
 tailscale_advertise_routes: ""
 
-# Eigener Tailscale-Auth-Key für diese Geräte-Gruppe — NICHT den Key des
-# Home-Servers (group_vars/all.yml) wiederverwenden, der ist typischerweise
-# Single-Use und bereits verbraucht. Bei mehreren Displays empfiehlt sich ein
-# WIEDERVERWENDBARER Key mit eigenem Tag (z.B. "tag:xibo-display"), siehe
-# docs/c-netzwerk-dns/c0010-tailscale.md und docs/3-apps-workloads/300e0-xibosignage.md.
-#
-#   ansible-vault encrypt_string 'tskey-auth-...' --name 'tailscale_auth_key'
-#
 tailscale_auth_key: !vault |
           $ANSIBLE_VAULT;1.1;AES256
           64376231643862333031386535303335323463373832346232633066396235663631326231663938
@@ -34,7 +19,5 @@ tailscale_auth_key: !vault |
           66336632616362653134393432353137633237633437343966373563613064643339616464613038
           336132326330396362666537323965626538
 
-# NFS-Server + Pfad des "xibosignage-display"-Ordners. MUSS identisch zu
-# argocd/apps/workloads/n8n values.yaml -> xibosignage.display sein.
 xibo_kiosk_nfs_server: "192.168.178.97"
 xibo_kiosk_nfs_path: "/volume1/k8s-storage/xibosignage-display"

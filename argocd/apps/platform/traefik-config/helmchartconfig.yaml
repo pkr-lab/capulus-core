@@ -15,6 +15,21 @@
 # clusterintern für den VMServiceScrape (siehe vmservicescrape.yaml)
 # erreichbar.
 #
+# ports.web.http.redirections: erzwingt HTTP(80)->HTTPS(443) global für JEDEN Ingress-
+# Host, ohne die ~36 Ingress-Objekte einzeln anzufassen (gleiche Begründung
+# wie beim TLSStore in tlsstore.yaml: ein zentraler Ort statt 36 Dateien).
+# Ohne das beantwortet Traefik Port 80 für jeden Host weiterhin unverschlüsselt
+# — das global konfigurierte homeserver-wildcard-tls-Zertifikat (tlsstore.yaml)
+# greift nur, wenn der Client tatsächlich :443/https anfragt. Sichtbar wurde
+# das über Authentik: dessen ForwardAuth-Middleware berechnet die Rückkehr-
+# URL dynamisch aus dem tatsächlichen Request-Schema (middleware.yaml,
+# trustForwardHeader: true) — kam der Request über Port 80 rein, blieb der
+# komplette Login-Flow (inkl. Auth-Cookie) auf Klartext-HTTP, statt auf
+# https hochgestuft zu werden. cloudflared zeigt für externe Hosts ohnehin
+# schon auf Traefiks HTTPS-Entrypoint (siehe
+# docs/d-sicherheit/d0073-authentik-sso.md), ist von diesem Redirect also
+# nicht betroffen.
+#
 # Vor dem Mergen prüfen (kann hier nicht gegen den echten Cluster
 # verifiziert werden):
 #   kubectl get helmchart traefik -n kube-system -o yaml   # Chart-Version
@@ -38,3 +53,10 @@ spec:
         expose:
           default: false
         protocol: TCP
+      web:
+        http:
+          redirections:
+            entryPoint:
+              to: websecure
+              scheme: https
+              permanent: true

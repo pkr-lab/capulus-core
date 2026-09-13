@@ -1,101 +1,31 @@
 ---
-# Kill-switch: auf false setzen (z.B. in host_vars) um Kiosk/Heartbeat auf
-# einem bestimmten Host zu deaktivieren, ohne die Rolle aus dem Playbook zu
-# entfernen (gleiches Prinzip wie alamos_kiosk_enabled).
 banana_pi_kiosk_enabled: true
 
-# Basis-URL des alamos-apager Helm Charts (argocd/apps/workloads/alamos-apager).
-# Normalbetrieb: der Pi zeigt "{{ banana_pi_kiosk_base_url }}/start?station=
-# {{ banana_pi_kiosk_station }}", der Cluster loest serverseitig zur echten
-# ALAMOS-AMweb-URL auf (siehe docs/3-apps-workloads/30010-alamos-apager.md).
 banana_pi_kiosk_base_url: "https://alamos-apager.prod.homeserver"
 
-# Stationsname dieses Pi. MUSS pro Host gesetzt werden (siehe
-# ansible/inventory/hosts.yml, Gruppe banana_pis) und muss zu einem Key im
-# SealedSecret alamos-apager-stations passen — kein Default, damit ein
-# fehlender Wert laut auffaellt statt eine falsche Station anzuzeigen.
-# banana_pi_kiosk_station: "1002011_Fahrzeughalle"  # Beispiel -- reale Alamos-Stationskennung, NICHT der Monitoring-Instance-Name
+banana_pi_kiosk_user: "pela"
 
-# Echte ALAMOS-AMweb-URL als lokaler Fallback, falls
-# {{ banana_pi_kiosk_base_url }} nicht erreichbar ist (Server/Cluster down).
-# MUSS pro Host in host_vars/<name>/vault.yml (Ansible-Vault-verschluesselt)
-# gesetzt werden — kein Default, bewusster Bruch mit der sonstigen Alamos-
-# Regel "Secret bleibt im Cluster", nur fuer diese Geraeteklasse. Siehe
-# docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md.
-# banana_pi_kiosk_fallback_url: "{{ vault_vereinsheim_alarmmonitor_fallback_url }}"
-
-# Linux-User, unter dessen grafischer Session (startx via Autologin auf
-# tty1) der Kiosk-Browser laeuft. Anders als bei alamos_kiosk (Raspberry Pi
-# Imager "Enable autologin") richtet DIESE Rolle den Autologin selbst ein,
-# da Armbian keinen vergleichbaren Imaging-Schalter hat — der User muss nur
-# bereits existieren (beim ersten Armbian-Boot angelegt).
-banana_pi_kiosk_user: "pi"
-
-# Wie oft der Pi ein Lebenszeichen an den Cluster sendet (Sekunden, gleiches
-# Prinzip wie bei alamos_kiosk — steuert NUR den ntfy-Ausfall-Alarm in
-# argocd/apps/workloads/alamos-apager, nicht die Fallback-Umschaltung unten).
 banana_pi_kiosk_heartbeat_interval: 60
 
 # ---- Server-Fallback (lokaler Supervisor, nicht der Cluster-Heartbeat) --
-# Wie oft der Kiosk-Supervisor die Erreichbarkeit von
-# {{ banana_pi_kiosk_base_url }} prueft (Sekunden).
 banana_pi_kiosk_failover_poll_seconds: 30
 
-# Nach wie vielen AUFEINANDERFOLGENDEN fehlgeschlagenen Pruefungen auf die
-# lokale Fallback-URL umgeschaltet wird (3 x 30s = 90s, bewusst traege, damit
-# ein einzelner kurzer Netz-Hickser noch nicht umschaltet).
 banana_pi_kiosk_failover_fail_threshold: 3
 
-# Nach wie vielen aufeinanderfolgenden ERFOLGREICHEN Pruefungen wieder auf
-# die normale Cluster-URL zurueckgeschaltet wird (bewusst schnell — 1x
-# reicht, damit der Monitor moeglichst schnell wieder auf dem zentral
-# verwalteten Pfad laeuft).
 banana_pi_kiosk_failover_recover_threshold: 1
 
 # ---- Taeglicher Kiosk-Session-Neustart ------------------------------------
-# Unbeaufsichtigtes Kiosk-Geraet — ein taeglicher Neustart der tty1-Session
-# (getty@tty1 -> startx -> X/openbox/Chromium) raeumt Chromium-Prozess-
-# zustand/Speicher auf, unabhaengig von der Absturzschleifen-Ursache. Bewusst
-# KEIN Kernel-/Firmware-Reboot (systemctl reboot / /usr/sbin/reboot) — auf
-# diesem Board (Armbian "Community Supported") ist der Warm-Reset-Pfad
-# unzuverlaessig, siehe Kommentar in
-# templates/banana-pi-daily-reboot.service.j2. Kill-switch: auf false setzen,
-# um den Timer zu deaktivieren.
 banana_pi_kiosk_daily_reboot_enabled: true
 
-# Uhrzeit (systemd OnCalendar-Zeitformat, lokale Zeit des Pi) fuer den
-# taeglichen Kiosk-Session-Neustart.
 banana_pi_kiosk_daily_reboot_time: "00:00:00"
 
 # ---- Wake-on-LAN-Relay (andere Geraete im selben Standort-LAN wecken) ----
-# Der Pi haengt am selben lokalen Netz wie z.B. ein per LAN am Router
-# angeschlossener PC und kann daher stellvertretend Magic Packets dorthin
-# broadcasten (Semaphore/n8n haben keinen Pfad zu Tailscale-Peers, koennen
-# das also nicht selbst). Kill-switch: auf false setzen, um das WoL-Skript
-# auf einem bestimmten Host zu deaktivieren. Siehe
-# docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md, "Wake-on-LAN
-# fuer den Windows-PC".
 banana_pi_kiosk_wol_enabled: true
 
-# Alias -> MAC-Adresse der Geraete, die dieser Pi per Wake-on-LAN wecken
-# koennen soll. Kein Default-Eintrag hier -- pro Host in host_vars/<name>/
-# vars.yml setzen (MACs sind kein Geheimnis, daher unverschluesselt).
 banana_pi_kiosk_wol_devices: {}
 
 # ---- Wake-on-LAN-HTTP-Agent (direkter Zugriff aus der iOS-App) ----------
-# Kleiner HTTP-Wrapper um banana-pi-wol.sh, damit die App den Pi direkt
-# ueber dessen Tailscale-IP anspricht statt per SSH -- carplay-api (im
-# Cluster) hat keinen Pfad zu Tailscale-Peers, kann das also nicht
-# stellvertretend tun. Bewusster Kompromiss mit dem sonst geltenden
-# Prinzip "kein dauerhaft offener Port" auf diesem Pi, identisches Modell
-# wie power-agent auf dem Homeserver (Bearer-Token statt Netzwerk-
-# Isolation). Kill-switch: auf false setzen, um NUR den SSH-Weg zu
-# behalten. Siehe docs/4-planung/40020-vereinsheim-wol-router-vpn.md.
 banana_pi_kiosk_wol_agent_enabled: true
 banana_pi_kiosk_wol_agent_port: 9102
 
-# Bearer-Token wird beim ersten Rollout einmalig mit `openssl rand -hex 32`
-# erzeugt und lokal unter diesem Pfad abgelegt (siehe tasks/main.yml) --
-# nicht hier als Variable gesetzt, weil derselbe Wert danach manuell in
-# die iOS-App-Keychain (Einstellungen) uebertragen werden muss.
 banana_pi_kiosk_wol_agent_token_path: /etc/banana-pi-wol-agent/token
