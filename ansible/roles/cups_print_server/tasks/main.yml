@@ -63,14 +63,6 @@
       or ('_share_printers=' ~ (1 if cups_print_server_share_printers | bool else 0) not in cups_print_server_current_settings.stdout)
 
 # ---- Optional: QPDL-Community-Treiber für die M2020/M2026-Serie bauen --
-# Die Samsung Xpress M2020/M2021/M2022/M2026-Serie spricht ein neueres
-# "QPDL"-Protokoll, das im offiziellen printer-driver-splix-Paket fehlt.
-# Existiert nur als inoffizieller, nie ins offizielle OpenPrinting/splix
-# gemergter Patch — Quellcode wurde vor dem Einbau geprüft (siehe
-# docs/2-betrieb-hardware/20040-printer.md, Abschnitt "Warum dieser Fremdcode"). Bewusst
-# opt-in (cups_print_server_build_qpdl_driver) und auf einen festen
-# Commit gepinnt, damit ein späterer Push auf den Branch nicht unbemerkt
-# anderen Code einschleust.
 - name: Build-Abhängigkeiten für den QPDL-Treiber installieren
   ansible.builtin.apt:
     name:
@@ -84,13 +76,6 @@
     - cups_print_server_build_qpdl_driver | bool
 
 - name: QPDL-Treiber-Quellcode klonen (gepinnter Commit)
-  # force: true, weil die PageSize-Fallback-Patches unten den Checkout bei
-  # jedem Lauf uncommitted verändern — ohne force lehnt das git-Modul ab
-  # zweiten Lauf mit "Local modifications exist" ab, obwohl der Tree schon
-  # auf dem richtigen (gepinnten) Commit steht. Unbedenklich: die
-  # verworfenen lokalen Änderungen sind exakt die Patches, die direkt im
-  # Anschluss deterministisch erneut angewendet werden (idempotenter
-  # Endzustand).
   ansible.builtin.git:
     repo: "{{ cups_print_server_qpdl_repo }}"
     dest: "{{ cups_print_server_qpdl_build_dir }}"
@@ -101,16 +86,6 @@
     - cups_print_server_build_qpdl_driver | bool
 
 # ---- Eigener Patch: PageSize-Fallback ----------------------------------
-# Printer::loadInformation() bricht mit "Cannot get paper size
-# information" ab, wenn cupsd der Legacy-PPD-Filterkette keine per Job
-# aufgelöste PageSize/media-Option mitgibt — beobachtet auf CUPS 2.4 /
-# cups-filters 2.x, selbst mit `lpadmin -o PageSize=...` als Queue-
-# Default (der Wert landet nachweislich nicht in /etc/cups/printers.conf).
-# Statt uns auf dieses brüchige Verhalten zu verlassen, patchen wir hier
-# selbst — anders als der QPDL-Treiber-Patch selbst ist das kein
-# Fremdcode, sondern ein von uns geschriebener, verstandener ~10-Zeilen-
-# Fix auf Basis der öffentlichen CUPS-PPD-API (ppdFindOption). Details:
-# docs/2-betrieb-hardware/20040-printer.md, Abschnitt "Warum dieser Fremdcode".
 - name: "Patch: PPDFile::getDefaultChoice() deklarieren (ppdfile.h)"
   ansible.builtin.blockinfile:
     path: "{{ cups_print_server_qpdl_build_dir }}/splix/include/ppdfile.h"
@@ -162,10 +137,6 @@
     - cups_print_server_build_qpdl_driver | bool
 
 - name: QPDL-Filter kompilieren
-  # Bewusst OHNE `creates`-Guard (wie beim Install-Schritt): `make` ist
-  # selbst inkrementell (kompiliert nur geänderte Objektdateien neu) — ein
-  # externer Guard auf die fertige Binary hätte einen Rebuild nach obigem
-  # Patch verhindert.
   ansible.builtin.command:
     cmd: make DISABLE_JBIG=1
     chdir: "{{ cups_print_server_qpdl_build_dir }}/splix"
@@ -175,12 +146,6 @@
     - cups_print_server_build_qpdl_driver | bool
 
 - name: QPDL-Filter + PPDs installieren
-  # Bewusst OHNE `creates`-Guard: /usr/lib/cups/filter/rastertoqpdl wird
-  # bereits vom Basispaket printer-driver-splix mitgeliefert (der Patch
-  # behebt nur, dass die m2020-PPD beim ppd/-Unterbuild fehlte) — ein
-  # Guard auf diesen Pfad hätte den kompletten `make install`-Schritt
-  # (und damit genau den PPD-Rebuild) übersprungen. `make install` ist
-  # idempotent, ein Re-Run bei jedem Rollen-Lauf ist unproblematisch.
   ansible.builtin.command:
     cmd: make install DISABLE_JBIG=1
     chdir: "{{ cups_print_server_qpdl_build_dir }}/splix"
@@ -202,11 +167,6 @@
   ansible.builtin.meta: flush_handlers
 
 # ---- Debug-Hilfen: Device-URI + passende PPD ermitteln --------
-# lpinfo durchsucht auch den dnssd-Backend (mDNS-Browse via Avahi) und kann
-# kurz nach einem cupsd-/avahi-Neustart oder einem cupsctl-Reload mit
-# "Internal Server Error" antworten, bis der Scheduler wieder voll bereit
-# ist — daher retries UND failed_when: false (reine Debug-Hilfe, darf den
-# Rollen-Lauf nicht zum Scheitern bringen).
 - name: Verfügbare Drucker-Device-URIs ermitteln
   ansible.builtin.command: lpinfo -v
   register: cups_print_server_detected_devices
@@ -255,17 +215,6 @@
     - (cups_print_server_device_uri | length == 0) or (cups_print_server_ppd | length == 0)
 
 # ---- Warteschlange ---------------------------------------------
-# -o PageSize=... setzt die Papiergröße als Queue-Default: der QPDL-Filter
-# (Printer::loadInformation() in printer.cpp) verlangt eine per Job
-# aufgelöste PageSize/MediaSize-Option und bricht sonst mit "Cannot get
-# paper size information" ab — der PPD-*DefaultPageSize* allein reicht
-# unter dem modernen cups-filters-2.x-Kompatibilitäts-Layer (ppdFilterEmitJCL)
-# nicht mehr aus, ein Client, der media/PageSize nicht explizit mitgibt,
-# lieferte sonst leere Seiten. Bewusst "PageSize" (der literale
-# PPD-Options-Name aus *OpenUI *PageSize) statt des IPP-Alias "media" —
-# `lpadmin -o media=...` markiert die PPD-Option beim Anlegen der
-# Warteschlange NICHT (das übersetzt nur die Job-Verarbeitung bei `lp`),
-# `lpadmin -o PageSize=...` schon. Siehe docs/2-betrieb-hardware/20040-printer.md.
 - name: Druckerwarteschlange anlegen/aktualisieren
   ansible.builtin.command:
     argv:
@@ -320,11 +269,6 @@
     - cups_print_server_ppd | length > 0
 
 # ---- Weitere Warteschlangen (Netzwerkdrucker, generisch) -------------
-# Unabhängig vom M2026-Einzeldrucker-Codepfad oben: legt für jeden
-# Eintrag in cups_print_server_extra_queues eine Warteschlange an. Kein
-# QPDL-Build, kein PageSize-Patch — gedacht für Drucker, die bereits
-# fertig gerastert per socket://-URI (Raw-TCP) ansprechbar sind. Siehe
-# docs/2-betrieb-hardware/20040-printer.md.
 - name: "Extra-Queues: Splix-Katalog nach passenden PPDs durchsuchen (Debug)"
   ansible.builtin.debug:
     msg: >-

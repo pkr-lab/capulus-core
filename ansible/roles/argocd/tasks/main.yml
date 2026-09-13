@@ -43,8 +43,6 @@
     mode: '0644'
 
 # ---- Install ArgoCD -----------------------------------------
-# When `argocd_version` is set, that exact chart is installed; when empty,
-# Helm pulls the latest chart from the repo (already refreshed above).
 - name: Install or upgrade ArgoCD via Helm
   ansible.builtin.command: >
     helm upgrade --install argocd argo/argo-cd
@@ -114,9 +112,6 @@
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   when: argocd_secret_check.stdout | length > 0
 
-# Don't print the password by default — it lands in terminal scrollback, -v
-# output and any CI/Semaphore job log that captures stdout. Show the retrieval
-# command instead; pass `-e argocd_show_initial_password=true` to reveal it.
 - name: Display ArgoCD initial credentials (password redacted)
   ansible.builtin.debug:
     msg:
@@ -148,8 +143,6 @@
   when: argocd_show_initial_password | default(false) | bool
 
 # ---- Bootstrap AppProjects (must exist before the ApplicationSet syncs) ----
-# Applications referencing a project that doesn't exist yet fail sync, so
-# these are applied before the ApplicationSet below.
 - name: Template bootstrap AppProjects
   ansible.builtin.template:
     src: bootstrap-appprojects.yaml.j2
@@ -217,11 +210,6 @@
     msg: "{{ argocd_apps_list.stdout_lines | default(['No applications found yet — ArgoCD is polling Git']) }}"
 
 # ---- Namespace security-tier labels -------------------------
-# Best-effort: on a brand-new namespace, ArgoCD only creates it once the
-# ApplicationSet has actually synced that Application (can lag behind this
-# playbook run, see docs/b-kubernetes-gitops/b0020-argocd-projects.md). `failed_when: false` so a
-# not-yet-existing namespace doesn't fail the whole play — re-running
-# `make argocd` later catches up on any it missed.
 - name: Label platform-tier namespaces with security-tier=platform
   ansible.builtin.command: >
     kubectl label namespace {{ item }} security-tier=platform --overwrite
@@ -243,18 +231,6 @@
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
 
 # ---- Phase 3 Security-Härtung: tier-default-ingress NetworkPolicies ------
-# Off by default (argocd_apply_network_policies), see defaults/main.yml and
-# docs/d-sicherheit/d0030-network-policies.md — deliberately not part of the unconditional
-# bootstrap path, this is a cluster-wide behavioural change that needs a
-# backup + staged pilot rollout, not something a routine `make argocd` run
-# should silently (re-)apply.
-#
-# Same lag as the labeling tasks above: a brand-new app's namespace may not
-# exist yet if ArgoCD hasn't synced it (this file is applied as one
-# `kubectl apply -f`, so a single missing namespace would otherwise fail the
-# whole batch even though every other namespace's policy is fine). Fetch the
-# namespaces that currently exist and only template policies for those; a
-# not-yet-existing one is picked up on the next `make argocd` run.
 - name: Get existing namespaces
   ansible.builtin.command: >
     kubectl get namespaces -o jsonpath={.items[*].metadata.name}
