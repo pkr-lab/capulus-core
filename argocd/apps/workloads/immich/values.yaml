@@ -75,7 +75,7 @@ server:
     library:
       enabled: true
       storageClassName: immich-nas
-      size: 500Gi
+      size: 1100Gi
       accessMode: ReadWriteOnce
 
   # Externe Bibliothek (optional, standardmäßig deaktiviert): direkter,
