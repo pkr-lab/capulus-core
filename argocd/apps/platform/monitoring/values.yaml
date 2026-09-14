@@ -255,6 +255,14 @@ victoria-metrics-k8s-stack:
     # Sidecar picks up any ConfigMap labelled `grafana_dashboard=1` —
     # `defaultDashboards` above ships its dashboards this way, and you
     # can drop extra ConfigMaps in the `monitoring` namespace to add more.
+    #
+    # folderAnnotation + provider.foldersFromFilesStructure together turn a
+    # ConfigMap's `grafana_folder` annotation (see templates/_dashboard-app.tpl
+    # and templates/dashboards-apps.yaml) into a real Grafana folder — that's
+    # how dashboards end up under "Platform" / "Workloads" instead of the
+    # root folder. Unverified against the live sidecar (kiwigrid/k8s-sidecar):
+    # check in the Grafana UI after deploy that dashboards actually land in
+    # the expected folder, not flat in root.
     sidecar:
       datasources:
         enabled: true
@@ -265,6 +273,7 @@ victoria-metrics-k8s-stack:
         label: grafana_dashboard
         labelValue: "1"
         folder: /var/lib/grafana/dashboards
+        folderAnnotation: grafana_folder
         searchNamespace: ALL
         provider:
           name: default
@@ -359,3 +368,70 @@ victoria-metrics-k8s-stack:
   # k3s ships an embedded SQLite datastore by default; no etcd to scrape.
   kubeEtcd:
     enabled: false
+
+# ============================================================
+# dashboardApps — drives templates/dashboards-apps.yaml (own chart
+# template, NOT part of the victoria-metrics-k8s-stack subchart values
+# above, so it lives at the document root here). One entry generates one
+# Grafana dashboard (CPU/RAM/pod-restarts, plus HTTP request rate/error
+# rate/latency when hasIngress) into the `folder` Grafana folder.
+#
+# - namespace == directory basename for every argocd/apps/{platform,
+#   workloads}/<name> app (see argocd/bootstrap/root-applicationset.yaml
+#   destination.namespace, "{{.path.basename}}") — no per-app overrides
+#   needed except the two apps commented out below.
+# - hasIngress: true only if the app defines a k8s Ingress/IngressRoute —
+#   drives the Traefik-metrics "User Requests/s" panel
+#   (traefik_service_requests_total{service=~"^<namespace>-.*"}). Verify
+#   that regex against the live cluster after deploy
+#   (curl :9100/metrics on the k3s Traefik pod, or query in Grafana) —
+#   built from Traefik's Kubernetes-Ingress-provider naming convention,
+#   not confirmed against this cluster.
+#
+# Intentionally excluded:
+#   - github-release-watcher, wiki-docs-sync: CronJob-only, no
+#     long-running pod to chart.
+#   - zammad: already has a hand-built dashboard
+#     (templates/dashboard-zammad.yaml), not duplicated here.
+#   - monitoring: covered by the chart's own defaultDashboards
+#     (node-exporter-full, victoriametrics-vmalert/-operator above).
+#   - coredns-custom, traefik-config: config-only (ConfigMap /
+#     HelmChartConfig in kube-system), no workload of their own.
+dashboardApps:
+  # ---- Workloads (argocd/apps/workloads/*) ----
+  - { name: alamos-apager, namespace: alamos-apager, folder: Workloads, hasIngress: true }
+  - { name: carplay-api, namespace: carplay-api, folder: Workloads, hasIngress: true }
+  - { name: demo-app, namespace: demo-app, folder: Workloads, hasIngress: true }
+  - { name: example-whoami, namespace: example-whoami, folder: Workloads, hasIngress: true }
+  - { name: immich, namespace: immich, folder: Workloads, hasIngress: true }
+  - { name: mealie, namespace: mealie, folder: Workloads, hasIngress: true }
+  - { name: mediamtx, namespace: mediamtx, folder: Workloads, hasIngress: true }
+  - { name: n8n, namespace: n8n, folder: Workloads, hasIngress: true }
+  - { name: nextcloud, namespace: nextcloud, folder: Workloads, hasIngress: true }
+  - { name: ollama, namespace: ollama, folder: Workloads, hasIngress: false }
+  - { name: pacman, namespace: pacman, folder: Workloads, hasIngress: true }
+  - { name: paperless-ngx, namespace: paperless-ngx, folder: Workloads, hasIngress: true }
+  - { name: tinyteller, namespace: tinyteller, folder: Workloads, hasIngress: true }
+  - { name: uptime-kuma, namespace: uptime-kuma, folder: Workloads, hasIngress: true }
+  - { name: vaultwarden, namespace: vaultwarden, folder: Workloads, hasIngress: true }
+  - { name: wikijs, namespace: wikijs, folder: Workloads, hasIngress: true }
+  - { name: xibosignage, namespace: xibosignage, folder: Workloads, hasIngress: true }
+  # ---- Platform (argocd/apps/platform/*) ----
+  - { name: argo-workflows, namespace: argo-workflows, folder: Platform, hasIngress: false }
+  - { name: authentik, namespace: authentik, folder: Platform, hasIngress: true }
+  - { name: cert-manager, namespace: cert-manager, folder: Platform, hasIngress: false }
+  - { name: cloudflared, namespace: cloudflared, folder: Platform, hasIngress: false }
+  - { name: gotify, namespace: gotify, folder: Platform, hasIngress: true }
+  - { name: gotify-bridge, namespace: gotify-bridge, folder: Platform, hasIngress: false }
+  - { name: headlamp, namespace: headlamp, folder: Platform, hasIngress: false }
+  - { name: immich-storage, namespace: immich-storage, folder: Platform, hasIngress: false }
+  - { name: kubeseal-webgui, namespace: kubeseal-webgui, folder: Platform, hasIngress: false }
+  - { name: lldap, namespace: lldap, folder: Platform, hasIngress: true }
+  - { name: logging, namespace: logging, folder: Platform, hasIngress: false }
+  - { name: minio, namespace: minio, folder: Platform, hasIngress: false }
+  - { name: nas-storage, namespace: nas-storage, folder: Platform, hasIngress: false }
+  - { name: ntfy, namespace: ntfy, folder: Platform, hasIngress: true }
+  - { name: ntfy-bridge, namespace: ntfy-bridge, folder: Platform, hasIngress: false }
+  - { name: pihole, namespace: pihole, folder: Platform, hasIngress: true }
+  - { name: sealed-secrets, namespace: sealed-secrets, folder: Platform, hasIngress: false }
+  - { name: semaphore, namespace: semaphore, folder: Platform, hasIngress: true }

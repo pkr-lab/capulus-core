@@ -1,0 +1,20 @@
+# One Grafana dashboard ConfigMap per entry in values.yaml `dashboardApps`
+# (see that file for the list and why each app is in/excluded). The
+# `grafana_folder` annotation + sidecar.dashboards.folderAnnotation
+# (monitoring/values.yaml) sorts these into the "Platform" / "Workloads"
+# Grafana folders instead of the flat root folder.
+{{- range .Values.dashboardApps }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-app-{{ .name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: {{ .folder | quote }}
+data:
+  {{ .name }}.json: |
+    {{- include "monitoring.appDashboardJSON" . | nindent 4 }}
+{{- end }}
