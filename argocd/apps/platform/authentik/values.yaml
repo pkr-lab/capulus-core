@@ -16,7 +16,7 @@ image:
   # TODO vor erstem Sync: aktuellste stabile Version prüfen
   # (https://github.com/goauthentik/authentik/releases) — dieser Tag ist ein
   # zum Planungszeitpunkt bekannter Startwert, kein garantiert aktueller.
-  tag: "2025.8.3"
+  tag: "2025.12.6"
   pullPolicy: IfNotPresent
 
 logLevel: info
