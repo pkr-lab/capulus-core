@@ -13,10 +13,17 @@
 
 image:
   repository: ghcr.io/goauthentik/server
-  # TODO vor erstem Sync: aktuellste stabile Version prüfen
-  # (https://github.com/goauthentik/authentik/releases) — dieser Tag ist ein
-  # zum Planungszeitpunkt bekannter Startwert, kein garantiert aktueller.
-  tag: "2026.8.2"
+  # Zurückgesetzt auf 2025.8.3 (15.09.2026): ein Renovate-Major-Bump hatte
+  # postgresql.image.tag versehentlich auf 18-bookworm gesetzt (nicht
+  # kompatibel mit der bestehenden v17-Datenbank) UND dieser Tag wurde
+  # separat auf 2026.8.2 gesetzt — Authentik verweigert bei App-Versionen
+  # den direkten Sprung ("Major version skips are not allowed"). Echte
+  # Release-Kette lt. GitHub: 2025.8 → 2025.10 → 2025.12 → 2026.2 → 2026.5
+  # → 2026.8, jeder Schritt einzeln mit DB-Migration. Postgres wurde bereits
+  # per Dump/Restore auf 18-bookworm migriert (siehe
+  # docs/d-sicherheit/d0073-authentik-sso.md) — dieser Tag hier bleibt
+  # bewusst auf 2025.8.3, bis die App-Version schrittweise nachgezogen wird.
+  tag: "2025.8.3"
   pullPolicy: IfNotPresent
 
 logLevel: info
