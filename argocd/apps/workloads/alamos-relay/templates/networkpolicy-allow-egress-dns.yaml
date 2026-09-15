@@ -1,0 +1,27 @@
+# Ohne diese Ausnahme würde networkpolicy-default-deny-egress.yaml auch die
+# DNS-Aufloesung von N8N_TARGET_URL blockieren (klassischer Fehler bei
+# Egress-Policies, siehe docs/d-sicherheit/d0030-network-policies.md,
+# Abschnitt "Warum Ingress-only, kein Egress" -- dort bewusst vermieden,
+# hier brauchen wir es aber, weil dieser Pod als einziger im Cluster
+# tatsaechlich selbst Egress einschraenkt).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "alamos-relay.fullname" . }}-allow-egress-dns
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "alamos-relay.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
