@@ -232,7 +232,8 @@ capulus-core/
 │   │   ├── 300c0-immich.md                  # Foto-/Video-Backup vom Handy
 │   │   ├── 300d0-carplay-api.md             # Homeserver-Dashboard-API (iOS-App, inkl. power-agent)
 │   │   ├── 300e0-xibosignage.md             # Xibo CMS + Bilder-Slideshow auf Raspberry Pi 3B+
-│   │   └── 300f0-pacman-visitor-tracking.md # IP/GeoIP-Besucher-Tracking-Demo für die Schulung
+│   │   ├── 300f0-pacman-visitor-tracking.md # IP/GeoIP-Besucher-Tracking-Demo für die Schulung
+│   │   └── 300i0-alamos-relay.md            # Öffentlicher Proxy vor n8n für den ALAMOS-Einsatzalarm-Webhook
 │   ├── assets/banner.svg
 │   └── superpowers/                  # Datierte Plan-/Spec-Docs, eigenes Namensschema
 │       ├── plans/
@@ -556,6 +557,7 @@ und Konventionen für neue Docs: **[docs/TEMPLATE.md](docs/TEMPLATE.md)**.
 | [Homeserver-Dashboard-API](docs/3-apps-workloads/300d0-carplay-api.md) | Go/Gin-API + power-agent für die reine iOS-App Homeserver Dashboard (Metriken, Alerts, Status, Helligkeit, Wake/Shutdown) |
 | [xibosignage](docs/3-apps-workloads/300e0-xibosignage.md) | Xibo CMS + Bilder-Slideshow auf Raspberry Pi 3B+, n8n-Workflow für automatisches Einspielen |
 | [pacman — Besuchertracking](docs/3-apps-workloads/300f0-pacman-visitor-tracking.md) | IP/GeoIP-Besucher-Tracking-Demo für die IT-Security-Schulung |
+| [ALAMOS-Webhook-Relay](docs/3-apps-workloads/300i0-alamos-relay.md) | Öffentlicher Mini-Proxy vor n8n, damit ALAMOS den Einsatzalarm-Webhook erreicht, ohne n8n selbst öffentlich zu machen |
 
 ---
 
