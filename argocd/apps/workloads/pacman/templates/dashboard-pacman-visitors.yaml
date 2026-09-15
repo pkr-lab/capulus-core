@@ -27,6 +27,12 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     grafana_dashboard: "1"
+  annotations:
+    # Ohne das landet das Dashboard im General-Ordner statt bei den
+    # anderen Workloads-Dashboards (Grafana-Sidecar sortiert per
+    # grafana_folder-Annotation ein, siehe monitoring/values.yaml
+    # sidecar.dashboards).
+    grafana_folder: Workloads
 data:
   pacman-visitors.json: |
     {
