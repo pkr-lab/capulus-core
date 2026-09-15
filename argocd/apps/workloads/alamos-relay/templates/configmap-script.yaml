@@ -35,7 +35,12 @@ data:
     from http.server import BaseHTTPRequestHandler, HTTPServer
     from urllib.parse import urlsplit
 
-    RELAY_TOKEN = os.environ.get("RELAY_TOKEN", "")
+    # .strip() faengt ein versehentlich mitversiegeltes Newline ab (z. B.
+    # "openssl rand -hex 24 | kubeseal ..." ohne "tr -d '\n'", siehe
+    # values.yaml-Kommentar bei secrets.encryptedToken) -- ohne das wuerde
+    # EXPECTED_PATH unten ein "\n" enthalten und nie mehr zu einem echten
+    # URL-Pfad passen, unabhaengig vom Token in der Request-URL.
+    RELAY_TOKEN = os.environ.get("RELAY_TOKEN", "").strip()
     N8N_TARGET_URL = os.environ.get("N8N_TARGET_URL", "").rstrip("/")
     EXPECTED_PATH = f"/relay/{RELAY_TOKEN}"
     TIMEOUT_SECONDS = 10
