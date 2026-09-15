@@ -1,0 +1,20 @@
+---
+apiVersion: v2
+name: alamos-relay
+description: >
+  Öffentlich erreichbarer Mini-Proxy für den ALAMOS-Einsatzalarm-Webhook:
+  nimmt den Call unter einem geheimen, zufälligen Pfad entgegen und reicht
+  ihn Server-zu-Server an den internen n8n-Webhook weiter. n8n selbst bleibt
+  dadurch weiterhin komplett unerreichbar aus dem Internet — siehe
+  docs/3-apps-workloads/300i0-alamos-relay.md. Reiner Python-stdlib-HTTP-
+  Server, keine externen Abhängigkeiten (gleiches Muster wie alamos-apager).
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - alamos
+  - alarmmonitor
+  - n8n
+  - webhook-relay
+maintainers:
+  - name: home-server-admin
