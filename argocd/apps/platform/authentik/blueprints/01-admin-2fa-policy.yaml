@@ -7,16 +7,46 @@
 # und .../policies/ für die Ziel-Version prüfen, siehe Hinweis in
 # 00-ldap-source.yaml.
 #
-# Korrektur (nach Live-Betrieb): Admins mussten TOTP bei JEDEM Login neu
+# Korrektur 1 (nach Live-Betrieb): Admins mussten TOTP bei JEDEM Login neu
 # einrichten (neuer QR-Code statt Code-Abfrage), weil hier ursprünglich die
 # rohe "authenticatortotpstage" (Setup/Enrollment-Stage, legt IMMER ein
 # neues Geräte-Objekt an) direkt im Login-Flow gebunden war — ganz ohne
-# Prüfung, ob der Nutzer schon ein TOTP-Gerät hat. Fix: stattdessen eine
-# eigene "authenticatorvalidatestage" binden (prüft ein vorhandenes Gerät
-# und verweist per configuration_stages nur bei fehlendem Gerät EINMALIG
-# auf die Setup-Stage). Die zwei "state: absent"-Einträge am Ende räumen
-# die alte, fehlerhafte Bindung aus dem Cluster; sobald sie synced sind,
-# können auch diese zwei Einträge aus der Datei entfernt werden.
+# Prüfung, ob der Nutzer schon ein TOTP-Gerät hat.
+#
+# Korrektur 2 (nach Korrektur 1): der naheliegende Fix — eine EIGENE
+# "authenticatorvalidatestage" an derselben Order (30) binden — erzeugte
+# einen neuen Bug: Authentiks EINGEBAUTE Default-Stage
+# "default-authentication-mfa-validation" (aus dem system-eigenen
+# Blueprint "Default - Authentication flow", `ak shell -c
+# "from authentik.blueprints.models import BlueprintInstance;
+# BlueprintInstance.objects.filter(name__startswith='Default')"`) hängt
+# schon SEIT JEHER an genau derselben Order 30 im selben Flow — ganz ohne
+# Policy-Bindung, läuft also für JEDEN Login. Mit zwei TOTP-Stages
+# hintereinander wurde der gerade akzeptierte Code ein zweites Mal
+# eingefordert, was Authentiks Replay-Schutz (derselbe Zeitschritt darf nur
+# einmal validiert werden) korrekterweise mit "Invalid Token" ablehnt.
+#
+# Fix: keine zweite Stage mehr — stattdessen die EINGEBAUTE Stage direkt
+# konfigurieren (identisches Muster wie die Erweiterung der ebenfalls
+# eingebauten "default-authentication-password"-Stage in
+# 00-ldap-source.yaml: nur `attrs`/zusätzliche Policy-Bindings ergänzen,
+# das System-Blueprint deklariert für dieses Objekt keine `attrs` und
+# überschreibt unsere Ergänzungen bei seiner periodischen Neuanwendung
+# deshalb nicht).
+#
+# Die Artefakte aus Korrektur 1 (rohe Setup-Stage direkt gebunden) und
+# Korrektur 2 (eigene, zur eingebauten Stage doppelte Validierungs-Stage
+# "admin-totp-validation") wurden manuell per `ak shell`/ORM aus dem
+# Cluster entfernt statt per `state: absent` — der Blueprint-Importer
+# trifft in Authentik 2025.8.3 beim Löschen von
+# authentik_flows.flowstagebinding (Multi-Table-Inheritance von
+# PolicyBindingModel) einen eigenen Bug
+# ("FlowStageBinding.policybindingmodel_ptr.RelatedObjectDoesNotExist"
+# im Collector), sobald ein `state: absent`-Eintrag diesen Modelltyp
+# löschen soll — unabhängig davon, ob das Ziel via `!Find` aufgelöst
+# werden konnte. Deshalb bewusst KEINE `state: absent`-Einträge für
+# flowstagebinding/darauf zeigende policybinding-Objekte mehr in diesem
+# Blueprint.
 version: 1
 metadata:
   name: admin-2fa-enforcement
@@ -28,10 +58,12 @@ entries:
     attrs:
       digits: 6
 
+  # Die eingebaute Validierungs-Stage direkt konfigurieren, statt eine
+  # zweite eigene Stage zu betreiben (siehe Korrektur 2 oben).
   - model: authentik_stages_authenticator_validate.authenticatorvalidatestage
-    id: totp-validation-stage
+    id: mfa-validation-stage
     identifiers:
-      name: admin-totp-validation
+      name: default-authentication-mfa-validation
     attrs:
       device_classes:
         - totp
@@ -46,38 +78,20 @@ entries:
     attrs:
       expression: |
         # Nur Mitglieder der lldap-Gruppe "admins" müssen TOTP einrichten —
-        # alle anderen überspringen diese Stage.
+        # alle anderen überspringen diese Stage komplett (keine andere
+        # Policy auf dieser Bindung, siehe Korrektur 2 oben).
         return ak_is_group_member(request.user, name="admins")
 
-  - model: authentik_flows.flowstagebinding
-    id: totp-validation-binding
-    identifiers:
-      target: !Find [authentik_flows.flow, [slug, default-authentication-flow]]
-      stage: !KeyOf totp-validation-stage
-      order: 30
-    attrs:
-      evaluate_on_plan: false
-      re_evaluate_policies: true
-
+  # Policy-Bindung auf die BESTEHENDE Flow-Stage-Bindung der eingebauten
+  # Stage (die legt das System-Blueprint an, nicht wir — deshalb `!Find`
+  # statt `!KeyOf`). WICHTIG: `!Find` erwartet für mehrere Bedingungen
+  # separate `[key, value]`-Paare, KEINE abgeflachte Liste — sonst wird nur
+  # die erste Bedingung ausgewertet und der Rest stillschweigend ignoriert
+  # (traf hier live zu: `[target, X, stage, Y, order, Z]` filterte nur nach
+  # `target`, wodurch `.first()` auf die falsche Bindung — Order 10, die
+  # Identification-Stage — statt Order 30 zurückfiel).
   - model: authentik_policies.policybinding
     identifiers:
-      target: !KeyOf totp-validation-binding
+      target: !Find [authentik_flows.flowstagebinding, [target, !Find [authentik_flows.flow, [slug, default-authentication-flow]]], [stage, !KeyOf mfa-validation-stage], [order, 30]]
       policy: !KeyOf require-2fa-admins-policy
       order: 0
-
-  # Aufräumen der alten, fehlerhaften Direkt-Bindung der Setup-Stage
-  # (siehe Korrektur-Hinweis oben). Policy-Binding zuerst, dann die
-  # Flow-Stage-Binding selbst.
-  - model: authentik_policies.policybinding
-    identifiers:
-      target: !Find [authentik_flows.flowstagebinding, [target, !Find [authentik_flows.flow, [slug, default-authentication-flow]], stage, !Find [authentik_stages_authenticator_totp.authenticatortotpstage, [name, totp-setup]], order, 30]]
-      policy: !KeyOf require-2fa-admins-policy
-      order: 0
-    state: absent
-
-  - model: authentik_flows.flowstagebinding
-    identifiers:
-      target: !Find [authentik_flows.flow, [slug, default-authentication-flow]]
-      stage: !KeyOf totp-setup-stage
-      order: 30
-    state: absent

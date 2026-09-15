@@ -11,9 +11,27 @@
 # findet, weil der nur nach HelmChartConfig mit demselben Namen UND
 # Namespace wie das zugehörige HelmChart sucht.
 #
-# Port 9100 ist NICHT über Ingress exponiert (expose.default: false) — nur
-# clusterintern für den VMServiceScrape (siehe vmservicescrape.yaml)
-# erreichbar.
+# Port 9100 ist NICHT über Ingress exponiert (expose.default: false).
+#
+# KORREKTUR (2026-09-15, live gegen den echten Cluster verifiziert — siehe
+# unten "Vor dem Mergen prüfen"): expose.default: false nimmt den Port
+# nicht nur aus dem Ingress, sondern komplett aus dem generierten
+# `traefik`-Service raus (`kubectl get svc traefik -n kube-system` zeigte
+# nur web/websecure, kein metrics-Port). Der VMServiceScrape (siehe
+# vmservicescrape.yaml) referenziert einen Service-Port NAMENS "metrics" —
+# ohne den lief der Scrape ins Leere, VictoriaMetrics hatte dadurch NULL
+# traefik_*-Metriken, was wiederum alle "User Requests"-Panels in den
+# automatisch generierten Pro-App-Dashboards (Grafana-Ordner Platform/
+# Workloads) dauerhaft auf "No data" stehen ließ.
+# Fix: metrics.prometheus.service.enabled: true lässt den Traefik-Chart
+# einen ZUSÄTZLICHEN, rein clusterinternen ClusterIP-Service
+# "traefik-metrics" mit einem Port namens "metrics" rendern (Selector
+# gleich wie der Haupt-Service + app.kubernetes.io/component: metrics) —
+# genau das, was der VMServiceScrape braucht, ohne Port 9100 auf den
+# externen LoadBalancer-Service zu legen. Verifiziert per
+# `helm show values traefik/traefik --version 40.1.0` (Chart-Version
+# entspricht dem k3s-Addon `traefik-40.1.4+up40.1.0`) und
+# `templates/service-metrics.yaml` im Chart.
 #
 # ports.web.http.redirections: erzwingt HTTP(80)->HTTPS(443) global für JEDEN Ingress-
 # Host, ohne die ~36 Ingress-Objekte einzeln anzufassen (gleiche Begründung
@@ -30,11 +48,6 @@
 # docs/d-sicherheit/d0073-authentik-sso.md), ist von diesem Redirect also
 # nicht betroffen.
 #
-# Vor dem Mergen prüfen (kann hier nicht gegen den echten Cluster
-# verifiziert werden):
-#   kubectl get helmchart traefik -n kube-system -o yaml   # Chart-Version
-#   kubectl get svc traefik -n kube-system --show-labels   # Service-Labels
-#     für den Selector in vmservicescrape.yaml
 apiVersion: helm.cattle.io/v1
 kind: HelmChartConfig
 metadata:
@@ -47,6 +60,8 @@ spec:
         entryPoint: metrics
         addRoutersLabels: true
         addServicesLabels: true
+        service:
+          enabled: true
     ports:
       metrics:
         port: 9100

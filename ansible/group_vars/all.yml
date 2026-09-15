@@ -57,6 +57,19 @@ tailscale_auth_key: !vault |
           303533333538643561386233336163313838
 tailscale_hostname: "{{ hostname }}"
 
+# ---- WireGuard backup tunnel (Tailscale-Ausfallsicherung) --
+# Port 443 wurde probiert, scheitert aber am AppArmor-Profil von wg-quick
+# (/etc/apparmor.d/wg-quick, Ubuntu-Standard-Hardening): dessen "ip"-
+# Sub-Profil bekommt nur capability net_admin/sys_module, nicht
+# net_bind_service — Binden an Ports <1024 schlägt daher mit
+# "RTNETLINK answers: Permission denied" fehl. Absichtlich NICHT per
+# lokalem Override gelockert (würde Canonicals Sandboxing für wg-quick
+# aufweichen), stattdessen unprivilegierter Port.
+wireguard_backup_port: 51888
+wireguard_backup_peer_public_key: "5Y75EMmEd0SeLweGCTD6V26FxHIrEte3LSEdvtQsT38="
+#   optional, aber empfohlen (zusätzliche symmetrische Schicht):
+#   ansible-vault encrypt_string 'DEIN_PSK' --name 'wireguard_backup_peer_preshared_key'
+
 # ---- Local network ----------------------------------------
 local_subnet: "192.168.178.0/24"
 
