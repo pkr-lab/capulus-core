@@ -4,3 +4,37 @@ hostname: worker-1
 k3s_agent_hostname: worker-1
 
 wake_on_lan_mac_address: "b8:97:5a:ea:a4:fa"
+
+# worker-1 bekommt (anders als worker-0) per DHCPv6 vom Fritz!Box-Router
+# zuverlaessig DNS -- der Fallback ist hier nur zusaetzliche Absicherung
+# (Konsistenz mit worker-0), nicht Voraussetzung fuer funktionierendes apt.
+# Siehe worker_apt_update_dns_fallback_enabled in
+# ansible/roles/worker_apt_update/defaults/main.yml und
+# docs/2-betrieb-hardware/20030-nightly-worker-update.md.
+worker_apt_update_dns_fallback_enabled: true
+worker_apt_update_dns_fallback_interface: "enp2s0"  # anderer NIC-Name als worker-0 (eno1) -- mit `ip -br addr` pruefen
+
+# ---- Tailscale ------------------------------------------------
+# worker-1 ist reiner Tailnet-Client, kein Subnet-Router (das übernimmt
+# bereits der homeserver für das ganze LAN) -- deshalb KEIN
+# --advertise-routes.
+tailscale_advertise_routes: ""
+
+# Braucht einen EIGENEN Auth-Key -- der globale Default-Key in
+# group_vars/all.yml ist bereits vom homeserver verbraucht, und der fuer
+# worker-0 generierte Key ist (Single-Use-Policy) ebenfalls nicht
+# wiederverwendbar. Einmalig einrichten (siehe host_vars/worker-0/vars.yml
+# fuer den identischen Ablauf inkl. "Disable key expiry"):
+#   1. https://login.tailscale.com/admin/keys -> Generate auth key
+#   2. ansible-vault encrypt_string 'tskey-auth-...' --name 'tailscale_auth_key'
+#      Ergebnis hier einsetzen oder nach
+#      ansible/host_vars/worker-1/vault.yml verschieben.
+tailscale_auth_key: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          64343537326531643438646662656263343831396463633066373336306166326430666563383666
+          3565336235333133666464356633306162323532323136620a326131323961306330333931386364
+          65333530383434386566323332303938303339666630613965326131636536636131343739346664
+          6535313663313132630a363836353830333939386439333737353866386130343236623737336431
+          64353162353539663462646337643963383763613233333665346563303837643430303538393330
+          66636266313161326339663638373365366261336163366234333432623333366631323430353563
+          383634343136613838353938616535323434

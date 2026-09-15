@@ -40,7 +40,7 @@ server:
     repository: ghcr.io/immich-app/immich-server
     pullPolicy: IfNotPresent
     # Pinned für Reproduzierbarkeit. Releases: https://github.com/immich-app/immich/releases
-    tag: "v3.1.0"
+    tag: "v3.2.1"
 
   # Offizielles Image — kein erzwungenes runAsNonRoot, analog zu
   # Nextcloud (siehe dortige Kommentare). "immich-nas" ist mit
@@ -75,7 +75,7 @@ server:
     library:
       enabled: true
       storageClassName: immich-nas
-      size: 1100Gi
+      size: 500Gi
       accessMode: ReadWriteOnce
 
   # Externe Bibliothek (optional, standardmäßig deaktiviert): direkter,
@@ -140,7 +140,7 @@ machineLearning:
   image:
     repository: ghcr.io/immich-app/immich-machine-learning
     pullPolicy: IfNotPresent
-    tag: "v3.1.0"
+    tag: "v3.2.1"
 
   podSecurityContext: {}
   securityContext:

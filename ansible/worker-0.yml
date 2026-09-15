@@ -14,22 +14,33 @@
 #      nie ein OS-Update, da es keine common-Rolle nutzt). Läuft
 #      normalerweise nachts um 01:00 über nightly_worker_wake auf
 #      homeserver, das dieses Playbook per Semaphore-API triggert, siehe
-#      docs/2-betrieb-hardware/20030-nightly-worker-update.md.
-#   2. k3s_agent  — tritt dem k3s-Cluster als Worker-Node bei
+#      docs/2-betrieb-hardware/20030-nightly-worker-update.md. Setzt bei
+#      Bedarf auch statische Fallback-Nameserver (worker-0 haengt an einem
+#      Fritz-WLAN-Repeater ohne nutzbares DHCPv6-DNS) -- muss deshalb VOR
+#      tailscale laufen, das fuer die eigene Paketinstallation selbst
+#      funktionierendes DNS braucht.
+#   2. tailscale — Ansible-verwaltete Tailscale-Verbindung (vorher manuell/
+#      unmanaged installiert, siehe "Fehlerbehebung" in
+#      docs/2-betrieb-hardware/20030-nightly-worker-update.md für den
+#      Vorfall, der zu dieser Umstellung führte). Erfordert einen eigenen,
+#      vault-verschlüsselten tailscale_auth_key in
+#      ansible/host_vars/worker-0/vault.yml (der globale Default-Key in
+#      group_vars/all.yml ist bereits vom homeserver verbraucht).
+#   3. k3s_agent  — tritt dem k3s-Cluster als Worker-Node bei
 #      (benötigt laufenden k3s-Server auf homeserver/.94)
-#   3. disable_eee — deaktiviert Energy Efficient Ethernet dauerhaft
+#   4. disable_eee — deaktiviert Energy Efficient Ethernet dauerhaft
 #      (Vorfall 2026-09-02 auf homeserver: EEE verursachte einen
 #      Link-Drop ohne Selbstheilung, siehe ansible/roles/disable_eee)
-#   4. thermal_watchdog / resource_watchdog — automatischer Shutdown bei
+#   5. thermal_watchdog / resource_watchdog — automatischer Shutdown bei
 #      Übertemperatur bzw. anhaltend hoher CPU/RAM-Last
-#   5. wake_on_lan — WoL-Empfangsbereitschaft, damit cluster_power_manager
+#   6. wake_on_lan — WoL-Empfangsbereitschaft, damit cluster_power_manager
 #      (läuft auf homeserver, siehe ansible/site.yml) diesen Node aus dem
 #      ausgeschalteten Zustand aufwecken kann
-#   6. cluster_power_manager_target — autorisiert den auf homeserver
+#   7. cluster_power_manager_target — autorisiert den auf homeserver
 #      erzeugten Shutdown-Key hier, beschränkt auf "poweroff" (setzt
 #      voraus, dass site.yml bereits gegen homeserver gelaufen ist, sonst
 #      existiert der Public Key dort noch nicht)
-#   7. Uncordon — stellt sicher dass worker-0 schedulable bleibt
+#   8. Uncordon — stellt sicher dass worker-0 schedulable bleibt
 #      (kubectl drain/cordon durch Maintenance-Schritte rückgängig machen)
 #
 # Run with:
@@ -46,6 +57,8 @@
   roles:
     - role: worker_apt_update
       tags: [apt-update, updates]
+    - role: tailscale
+      tags: [tailscale, vpn]
     - role: k3s_agent
       tags: [k3s-agent, kubernetes]
     - role: disable_eee

@@ -16,7 +16,7 @@ image:
   # TODO vor erstem Sync: aktuellste stabile Version prüfen
   # (https://github.com/goauthentik/authentik/releases) — dieser Tag ist ein
   # zum Planungszeitpunkt bekannter Startwert, kein garantiert aktueller.
-  tag: "2025.12.6"
+  tag: "2026.8.2"
   pullPolicy: IfNotPresent
 
 logLevel: info
@@ -105,7 +105,7 @@ postgresql:
   username: authentik
   image:
     repository: postgres
-    tag: "17-bookworm"
+    tag: "18-bookworm"
   resources:
     requests:
       cpu: 50m
