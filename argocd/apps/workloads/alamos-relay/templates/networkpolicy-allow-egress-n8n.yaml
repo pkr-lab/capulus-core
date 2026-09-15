@@ -1,0 +1,29 @@
+# Einzige erlaubte Ziel-Verbindung neben DNS: die n8n-Pods (nicht "irgendwas
+# im n8n-Namespace") auf ihrem Webhook-Port. Muss auf der n8n-Seite durch
+# eine passende Ingress-Ausnahme gespiegelt werden -- siehe
+# argocd_network_policy_extra_ingress -> n8n in
+# ansible/roles/argocd/defaults/main.yml (sonst blockt n8ns eigene,
+# verfeinerte tier-default-ingress-Policy diesen Namespace weiterhin ab,
+# siehe docs/d-sicherheit/d0030-network-policies.md, Schritt 2).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "alamos-relay.fullname" . }}-allow-egress-n8n
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "alamos-relay.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.n8nNamespace }}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: n8n
+      ports:
+        - protocol: TCP
+          port: {{ .Values.n8nTargetPort }}

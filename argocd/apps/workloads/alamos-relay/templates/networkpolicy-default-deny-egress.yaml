@@ -1,0 +1,23 @@
+# Diese App macht genau einen ausgehenden Call: den Forward an n8n (siehe
+# networkpolicy-allow-egress-n8n.yaml + networkpolicy-allow-egress-dns.yaml).
+# Ohne dieses Deny würde die generelle, ansible-verwaltete
+# tier-default-ingress-Policy (siehe docs/d-sicherheit/d0030-network-policies.md)
+# Egress komplett offen lassen -- absichtlich nicht ausreichend fuer einen
+# Pod, der öffentlich erreichbar ist: selbst wenn jemand den geheimen
+# Pfad/Token errät oder der Python-Prozess kompromittiert wird, kommt er
+# damit an nichts anderes im Cluster heran als an n8ns Webhook-Port.
+# Ingress bleibt bewusst unangetastet (kein policyTypes: Ingress hier) --
+# das übernimmt weiterhin die ansible-verwaltete Policy (kube-system +
+# cloudflared muessen den Pod erreichen koennen, siehe values.yaml
+# ingress.hosts).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "alamos-relay.fullname" . }}-default-deny-egress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "alamos-relay.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress

@@ -128,6 +128,7 @@ dieser Migration):
 | Vaultwarden | `vault-tech.pke-lab.de` | tech |
 | Nextcloud | `nextcloud-prod.pke-lab.de` | prod |
 | Immich | `immich-prod.pke-lab.de` | prod |
+| alamos-relay | `alamos-relay-prod.pke-lab.de` | prod (kein Endnutzer, aber Sibling von alamos-apager — einziger Zweck ist die externe Erreichbarkeit selbst, siehe [docs/3-apps-workloads/300i0-alamos-relay.md](../3-apps-workloads/300i0-alamos-relay.md)) |
 
 Alle anderen Apps (Semaphore, Pi-hole, MinIO, Gotify, Headlamp,
 Paperless-ngx, n8n, ...) bleiben ausschließlich LAN/Tailscale-erreichbar —
