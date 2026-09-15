@@ -12,6 +12,27 @@
 # herunter — siehe docs/2-betrieb-hardware/20030-nightly-worker-update.md.
 # ============================================================
 
+# Muss VOR "Update apt cache" laufen -- ohne funktionierendes DNS schlaegt
+# apt sonst mit einer leeren Fehlermeldung fehl ("Failed to update apt
+# cache after 5 retries: "), siehe worker_apt_update_dns_fallback_enabled
+# in defaults/main.yml fuer den Hintergrund.
+- name: Statische Fallback-Nameserver setzen (Netplan-Drop-in)
+  when: worker_apt_update_dns_fallback_enabled | bool
+  block:
+    - name: Fallback-Nameserver-Konfiguration deployen
+      ansible.builtin.template:
+        src: dns-fallback.yaml.j2
+        dest: /etc/netplan/90-dns-fallback.yaml
+        owner: root
+        group: root
+        mode: '0600'
+      register: worker_apt_update_dns_fallback_file
+
+    - name: Netplan-Konfiguration anwenden
+      ansible.builtin.command: netplan apply
+      when: worker_apt_update_dns_fallback_file.changed
+      changed_when: true
+
 - name: Update apt cache
   ansible.builtin.apt:
     update_cache: true

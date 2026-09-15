@@ -1,0 +1,5 @@
+---
+- name: Restart wireguard backup tunnel
+  ansible.builtin.systemd:
+    name: "wg-quick@{{ wireguard_backup_interface }}"
+    state: restarted
