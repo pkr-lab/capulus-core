@@ -92,8 +92,11 @@ Browser ──▶ Traefik (kube-system) ──▶ Middleware "authentik-authenti
 - [ ] `authentik-bind`-Account in lldaps Web-UI anlegen (d0072 → 2.3).
 - [ ] `kubectl describe node homeserver` gegen das aktuelle
       Ressourcenbudget prüfen (40070 → Baustein 2).
-- [ ] Aktuellste stabile Authentik-Version gegen
-      `Chart.yaml`/`values.yaml` → `image.tag` prüfen (TODO-Kommentar dort).
+- [x] Aktuellste stabile Authentik-Version gegen `Chart.yaml`/`values.yaml`
+      → `image.tag` geprüft (2026-09-15): `Chart.yaml`s `appVersion` war
+      bereits auf `2026.8.2` aktualisiert, `values.yaml` → `image.tag` hing
+      dabei noch auf `2025.8.3` fest — Deployment lief also weiterhin auf
+      der alten Version. `image.tag` auf `2026.8.2` nachgezogen.
 - [ ] Blueprints (`blueprints/*.yaml`) gegen die tatsächlich deployte
       Authentik-Version validieren — Feldnamen/Modelle wurden recherchiert,
       aber nicht gegen eine echte Instanz getestet (siehe Hinweis in jeder
