@@ -13,6 +13,14 @@ statt nur eine feste Auswahl. Die unten stehende Recherche und die offenen
 Punkte gelten weiterhin — insbesondere die Rückmeldungen-API ist noch
 **nicht** angebunden.
 
+**Nachtrag:** Der direkte Aufruf von `n8n.prod.homeserver` aus AMweb heraus
+hat sich in der Praxis als nicht zuverlässig erwiesen (vermutlich Private
+Network Access im Browser, siehe
+[300h0, Architektur](../3-apps-workloads/300h0-alamos-einsatz-zammad.md#architektur)).
+Fix: [alamos-relay](../3-apps-workloads/300i0-alamos-relay.md), ein
+minimaler öffentlicher Proxy, der den Call Server-zu-Server an n8n
+weiterreicht, ohne n8n selbst öffentlich zu machen.
+
 ---
 
 Ursprüngliches Ziel: Kommt über ALAMOS AMweb ein echter Einsatz (Alarm)
