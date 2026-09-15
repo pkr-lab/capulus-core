@@ -139,7 +139,8 @@ rebooteten Worker mit `"rebooted": true`.
 
 | Rolle | Läuft auf | Zweck |
 |---|---|---|
-| [`worker_apt_update`](../../ansible/roles/worker_apt_update) | worker-0, worker-1 | `apt update && apt dist-upgrade`; bei `/var/run/reboot-required` automatisch cordon+drain (delegiert auf homeserver) + Reboot |
+| [`worker_apt_update`](../../ansible/roles/worker_apt_update) | worker-0, worker-1 | `apt update && apt dist-upgrade`; bei `/var/run/reboot-required` automatisch cordon+drain (delegiert auf homeserver) + Reboot. Deployt auf beiden zusätzlich statische Fallback-Nameserver (siehe [Fehlerbehebung](#fehlerbehebung) unten) — bei worker-0 notwendig (kein nutzbares DHCPv6-DNS), bei worker-1 nur zusätzliche Absicherung |
+| [`tailscale`](../../ansible/roles/tailscale) | worker-0, worker-1 | Seit 2026-09-15 Ansible-verwaltet statt manuell installiert, siehe [Fehlerbehebung](#fehlerbehebung) unten. Reiner Tailnet-Client (`tailscale_advertise_routes: ""`), kein Subnet-Router |
 | [`nightly_worker_wake`](../../ansible/roles/nightly_worker_wake) | homeserver | Skript + SSH-Forced-Command-Key für den n8n-Trigger: wecken, Semaphore-Template triggern, Zeitbudget überwachen, herunterfahren, Bericht an n8n |
 
 `worker_apt_update` ist der erste Schritt in `worker-0.yml`/`worker-1.yml`
@@ -390,6 +391,53 @@ heruntergefahren. Im schlimmsten Fall bleibt `dpkg` in einem
 Zwischenzustand — beim nächsten Wake mit
 `ssh ubuntu@<ip> sudo dpkg --configure -a` nachziehen. Falls das
 regelmäßig passiert: `nightly_worker_wake_max_runtime_seconds` erhöhen.
+
+**`Update apt cache`-Task schlägt mit leerer Fehlermeldung fehl:**
+
+```
+[ERROR]: Task failed: Module failed: Failed to update apt cache after 5 retries:
+fatal: [worker-0]: FAILED! => {"changed": false, "msg": "Failed to update apt cache after 5 retries: "}
+```
+
+Die leere Meldung ist ein klassisches Symptom für **kaputtes DNS** auf dem
+Worker, nicht für ein Semaphore-/Netzwerkproblem. worker-0 hängt (Stand
+2026-09) an einem Fritz-WLAN-Repeater statt direkt an der Fritz!Box und
+bekommt darüber kein nutzbares DHCPv6-DNS — sein `/etc/netplan` (Subiquity-
+Installer-Default) hat `nameservers: []`. Das lief bis 2026-09-15 nur,
+weil ein **manuell installiertes, nicht Ansible-verwaltetes** Tailscale
+per `--accept-dns` als Resolver eingesprungen ist; dessen Login blieb
+irgendwann (Node-Key-Ablauf/Entzug in der Tailscale-Konsole — genauer
+Zeitpunkt/Grund nicht mehr feststellbar, im `tailscaled`-Journal seit
+mindestens 2026-09-07 bei jedem nächtlichen Boot "Needs login") hängen,
+ohne automatisches Re-Auth, da außerhalb von Ansible. Seit 2026-09-15 ist
+das behoben: statische Fallback-Nameserver machen `apt` unabhängig von
+Tailscale (`worker_apt_update_dns_fallback_enabled`, siehe oben), UND
+Tailscale selbst läuft jetzt über die Ansible-`tailscale`-Rolle
+(`worker-0.yml`) mit eigenem, vault-verschlüsseltem Auth-Key statt einer
+manuellen, unbeaufsichtigten Installation. Prüfen (falls das Problem
+erneut auftritt):
+
+```bash
+ssh ubuntu@192.168.178.95 'resolvectl status; getent hosts archive.ubuntu.com; sudo tailscale status'
+```
+
+Zeigt `resolvectl status` für jedes Link `Current Scopes: none`, ist das
+der Fall. Fix: `worker_apt_update_dns_fallback_enabled: true` (in
+[`host_vars/worker-0/vars.yml`](../../ansible/host_vars/worker-0/vars.yml)
+und, aus Konsistenzgründen, auch in
+[`host_vars/worker-1/vars.yml`](../../ansible/host_vars/worker-1/vars.yml)
+gesetzt) lässt `worker_apt_update` vor dem `apt update` einen
+Netplan-Drop-in (`/etc/netplan/90-dns-fallback.yaml`, statische
+Nameserver `1.1.1.1`/`8.8.8.8`) deployen — siehe
+[`ansible/roles/worker_apt_update/defaults/main.yml`](../../ansible/roles/worker_apt_update/defaults/main.yml).
+Das läuft bei jedem `worker-0.yml`/`worker-1.yml`-Durchlauf idempotent
+mit, macht DNS also unabhängig vom Tailscale-Login. Bei worker-1 ist das
+nur zusätzliche Absicherung — es bekommt per DHCPv6 vom Router ohnehin
+zuverlässig DNS; nötig ist der Fallback nur auf worker-0 (Fritz-WLAN-
+Repeater). Beide Worker haben jetzt außerdem ein Ansible-verwaltetes
+Tailscale (`tailscale`-Rolle statt manueller Installation) — siehe
+[Beteiligte Rollen](#beteiligte-rollen) oben; auf jedem Worker wird dafür
+ein eigener, vault-verschlüsselter `tailscale_auth_key` benötigt.
 
 **Reboot nach Kernel-/libc-Update:**
 

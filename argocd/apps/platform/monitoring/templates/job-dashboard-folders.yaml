@@ -1,0 +1,112 @@
+# Sortiert die von victoria-metrics-k8s-stack automatisch gezogenen
+# Standard-Dashboards ("Kubernetes / ...", "Node Exporter / ...",
+# "VictoriaMetrics - ...", "Prometheus / ...", "Alertmanager / Overview",
+# "Grafana Overview") in eigene Grafana-Ordner ein, statt sie im
+# General-Ordner zu sammeln.
+#
+# Warum ein eigener Job statt einer values.yaml-Einstellung: der
+# eingebaute Sync-Job der Chart (siehe unten, Hook post-install/
+# post-upgrade, Image ghcr.io/victoriametrics/sync-job) unterstützt KEINE
+# Ordner-Zuweisung pro Dashboard — geprüft gegen die deployte Chart-Version
+# 0.91.2 UND die aktuelle Upstream-Version 0.92.1 (`helm show values
+# vm/victoria-metrics-k8s-stack`, Abschnitt `defaultDashboards.dashboards`
+# kennt nur `enabled`/`clusterMetric`, `defaultDashboards.annotations`
+# gilt nur global für ALLE Dashboards gleichzeitig). Eine echte Aufteilung
+# nach Thema braucht daher zwingend einen Nachbearbeitungsschritt.
+#
+# Ablauf: Grafana-Sidecar (searchNamespace: ALL, siehe values.yaml
+# sidecar.dashboards) liest die `grafana_folder`-Annotation auf jeder
+# ConfigMap und legt die Datei entsprechend in einem Unterordner ab
+# (foldersFromFilesStructure: true baut daraus die Grafana-Ordnerstruktur).
+# Dieser Job trägt die Annotation nachträglich anhand des JSON-Feldes
+# `.title` ein (robuster als Namens-/Key-Matching, da sich Upstream-Keys
+# zwischen Chart-Versionen ändern können, das Titel-Präfix aber stabil
+# bleibt) — jede neue "Kubernetes / ..." o.ä. Dashboard landet dadurch
+# automatisch im richtigen Ordner, auch nach einem Chart-Upgrade mit neuen
+# Dashboards.
+#
+# Hook-Weight 5 (> Default-Weight 0 des Sync-Jobs) stellt sicher, dass
+# dieser Job erst NACH dem Sync-Job läuft, der die ConfigMaps überhaupt
+# erst (neu) erzeugt — sonst würde jeder Sync-Job-Lauf (bei jedem
+# Helm-Upgrade dieses Charts, nicht nur beim ersten Install) unsere
+# Annotationen wieder zurücksetzen.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: monitoring-dashboard-folders
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "4"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: monitoring-dashboard-folders
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "4"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: monitoring-dashboard-folders
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "4"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: monitoring-dashboard-folders
+subjects:
+  - kind: ServiceAccount
+    name: monitoring-dashboard-folders
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: monitoring-dashboard-folders
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: monitoring-dashboard-folders
+      containers:
+        - name: dashboard-folders
+          # Bündelt kubectl + jq, sonst nichts Exotisches nötig — exakte
+          # Version unkritisch, es werden nur get/patch auf ConfigMaps
+          # gebraucht.
+          image: alpine/k8s:1.30.1
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              PREFIX="{{ .Release.Name }}-victoria-metrics-k8s-stack-dashboard-"
+              for cm in $(kubectl -n {{ .Release.Namespace }} get configmap -l grafana_dashboard=1 -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | grep "^${PREFIX}" || true); do
+                title=$(kubectl -n {{ .Release.Namespace }} get configmap "$cm" -o json | jq -r '.data | to_entries[0].value | fromjson | .title // empty')
+                case "$title" in
+                  Kubernetes*|"Node Exporter"*) folder="Kubernetes" ;;
+                  VictoriaMetrics*|Prometheus*|Alertmanager*) folder="VictoriaMetrics" ;;
+                  Grafana*) folder="Grafana" ;;
+                  *) echo "skip $cm (title='$title', kein bekanntes Präfix)"; continue ;;
+                esac
+                echo "$cm -> $folder (title='$title')"
+                kubectl -n {{ .Release.Namespace }} annotate configmap "$cm" grafana_folder="$folder" --overwrite
+              done
