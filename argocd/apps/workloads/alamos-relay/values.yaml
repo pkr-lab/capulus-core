@@ -19,13 +19,19 @@ n8nNamespace: n8n
 n8nTargetPort: 5678
 
 # SealedSecret mit dem geheimen Pfad-Token, siehe templates/sealedsecret.yaml.
-# Erzeugen/rotieren:
-#   openssl rand -hex 24 | kubeseal --raw --namespace alamos-relay \
+# Erzeugen/rotieren -- WICHTIG: "openssl rand -hex 24" haengt selbst ein
+# Newline an, "| kubeseal" wuerde das als Teil des Tokens mitversiegeln.
+# Der Relay-Pfad-Vergleich in configmap-script.yaml ist exakt (kein trim),
+# ein mitversiegeltes "\n" macht den Pfad dauerhaft unmatchbar -> 404 fuer
+# jeden Request, auch mit korrektem Token in der URL (siehe
+# docs/3-apps-workloads/300i0-alamos-relay.md, Fehlerbehebung). Deshalb
+# "tr -d '\n'" nicht vergessen:
+#   openssl rand -hex 24 | tr -d '\n' | kubeseal --raw --namespace alamos-relay \
 #     --name alamos-relay-secrets --controller-namespace sealed-secrets \
 #     --controller-name sealed-secrets-controller --from-file=/dev/stdin
 secrets:
   name: alamos-relay-secrets
-  encryptedToken: "AgAWZI82WyJNnt4jjd3OXqIiltNDqa8ctgTS0EtcuMCA4jHqtcJO5MPaTIoWhpLTnC5Dct0Oy2qTRMAEUl4ceqClCpqKB/V+DkEgx8r8ksMJcO8BsqZbW18260M5fE3sXqKCFL3A7eGAbVtIf6S9jPjUi9JG0V8bT8OcsFteFTR1zz1psYR9IzXKtuh+QqO07t7T6MyvaLdV53hrhYHpdaZTg1k59pTdrTjrjbY8E3WqpMpnOimfB2UMTFAIN3b8RkTMnRZqhMSdmJ4EJ44MWqJuUXzV+mlfG82fyiGXvG/pNSdMjA+wXEycIob65QMtGx6Gw6c9jrIxE09eb5nH97MbywyUg4pvMhBBtLNfTOFYcW+/Ddohcm0wtp/h196nDJaps/BVy6qt7qr1pWxZXv0k3iV9t6N5e3iroOaAu4gijIHhGz8Vl2sp4HK2AodMj8jxxICWspZsJeDp431sXBEMbXGbztWWfcdNqvAgeqSdCKOYAA3E2riwZuqHBrxYDa3FInfva6vwblYRmYvAGXdTxVTW+iRvePtfuWkmaXLoRagX7cP11OHvVam0ANeWVL91wRlUXqURm7jORJubfKPys6DA/HTlxWtWGBd78d/u4MseY00sdT4iAd6nkaB4I0toXPF3oXE6XnpGU2hTtL1nlOygpAYBjdv0beWLl6TtIhfDP9Gb3z6PegHk/fKRGFu+Tgd4PyDFdGAFTALPuFjBoKcqAqRa2zE3G+43l2lumbTqBMyWuwMshdxCAiALf3yv"
+  encryptedToken: "AgA829YB+PiiBiM5ybKa1XYkxAsfgpcqzAvkBFkiXGN8kvN15ml05dm54gAGp2ODOfGP45zwI1Y97Y2qv+i9S5a6iLQzid9aroMOS2s/16KhSgzEwXK+5mMpynec2zeh1resSLQHJ/56JiEvUw3V2adsFuAO+ipA8hdFDFvpus5iZKPCBwzE47VjT9Q/bDJBdiMMFRU0N9q2G8w+UHhwUCY+mRHTBqL9S8mu6nigPB1xjGUCYiXq/IBHVA2/dANAKzQyqHN9iIGKyARpdYn2anR1jZ79JdSO1daniZKmoy1BlySszMCV7pivxhpP5uSC3bKcxJvMhJ8bl2kfxyFX7erSOu6QFvsEAp/Yb85KHxJ2WXdmC6dq4CpKsKqDhcFwGc7ED/zl37QA8YGXU7Ihk/st7rR3/m48lvC8wT72BWzi/dqRVlgVe6ndq3Zj0SdcJLCajWeaTp6lGvKUmr9LRcu+QQ4oVXGWI+kL9vjPTdILLB/E4KDbDh0Ak86FSqv+Az6jpV3MJG6tFgtG9Ltey98bxq84AFxMaCeefJllf7NjH6zA/6gQiz2qH6NV13dJEpzMYoyqH4HrdYtjIP3G+bKRLFfjqz6cMsyNYOat6bKVAyiEjtRwtAMv9h63CHgiMezkyj57zwICBmRIEhdYHFLylxk5Ia77BNZrYZsZ1ZQVPrvPKbkXseFv6cTAbezzQR3FJorWyrxHjLyLauHOuuLwEKcs0ulAqmNauWrVOuw423HxJ5CJq8dgguapBq2a1D8="
 
 service:
   type: ClusterIP
