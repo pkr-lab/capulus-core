@@ -8,6 +8,13 @@
 # `kubectl get svc traefik -n kube-system --show-labels` prüfen und bei
 # Bedarf präzisieren, falls der Name-Selector in eurem Cluster nicht
 # eindeutig auf den Traefik-Service trifft.
+#
+# Trifft auf ZWEI Services: den Haupt-Service "traefik" (kein Port namens
+# "metrics", da helmchartconfig.yaml Port 9100 bewusst mit
+# expose.default: false vom Haupt-Service fernhält) und den seit
+# metrics.prometheus.service.enabled: true (siehe helmchartconfig.yaml)
+# zusätzlich gerenderten ClusterIP-Service "traefik-metrics", der den
+# Port tatsächlich "metrics" nennt — nur dort greift dieser Endpoint.
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMServiceScrape
 metadata:
