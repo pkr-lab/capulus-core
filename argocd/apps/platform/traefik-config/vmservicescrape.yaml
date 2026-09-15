@@ -31,3 +31,14 @@ spec:
     - port: metrics
       path: /metrics
       interval: 30s
+      # OHNE das: VMAgent schreibt beim Scrapen sein eigenes "service"-Label
+      # (= Name des gescrapten k8s-Service, hier "traefik-metrics") über
+      # Traefiks eigenes "service"-Label (= der eigentliche Router-Service,
+      # z.B. "pacman-pacman-80@kubernetes", per addServicesLabels: true aus
+      # helmchartconfig.yaml). Traefiks Original-Label landet dann nur noch
+      # unter "exported_service" — live verifiziert 2026-09-15: alle
+      # traefik_service_requests_total-Serien trugen service="traefik-metrics",
+      # wodurch JEDE Dashboard-Query mit service=~"^<namespace>-.*" leer
+      # blieb ("No Data"), obwohl die Metriken längst ankamen. honorLabels
+      # kehrt die Priorität um und behält Traefiks Original-Label.
+      honorLabels: true
