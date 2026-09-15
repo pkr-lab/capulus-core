@@ -14,6 +14,13 @@ spec:
     metadata:
       annotations:
         checksum/script: {{ include (print $.Template.BasePath "/configmap-script.yaml") . | sha256sum }}
+        # RELAY_TOKEN kommt als env-Var aus dem Secret (nicht als gemountetes
+        # Volume) -- ohne diesen Checksum-Trick wuerde eine Token-Rotation
+        # (neuer encryptedToken-Wert) zwar das Secret-Objekt aktualisieren,
+        # der schon laufende Pod würde aber weiter mit dem alten Token-Wert
+        # laufen, bis er aus anderem Grund neu startet. Aenderung von
+        # encryptedToken aendert diesen Hash -> neues Pod-Template -> Rollout.
+        checksum/secret: {{ .Values.secrets.encryptedToken | sha256sum }}
       labels:
         {{- include "alamos-relay.selectorLabels" . | nindent 8 }}
     spec:
