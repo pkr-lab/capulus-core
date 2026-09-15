@@ -349,9 +349,17 @@ kubectl describe sealedsecret -n immich immich-secrets
 | **Gesamt (1 Replica je Komponente)** | ~975m | ~2,1Gi | ~10,25Gi | 530Gi auf `immich-nas` |
 | **Worst Case (volle Autoskalierung, siehe unten)** | — | — | **~22,25Gi** | — |
 
-`server.persistence.library.size` bei Bedarf erhöhen — wie bei Nextcloud
-wirkt sich das nur auf die Kubernetes-Quota aus, nicht auf den
-tatsächlich belegten NAS-Speicher.
+`server.persistence.library.size` NICHT nachträglich erhöhen: die
+`immich-nas`-StorageClass hat `allowVolumeExpansion: false` (siehe
+argocd/apps/platform/immich-storage/storageclass.yaml), der
+`nfs-subdir-external-provisioner` unterstützt kein PVC-Resize. Ein
+höherer Wert bleibt dauerhaft `OutOfSync` in ArgoCD (Fehler
+"only dynamically provisioned pvc can be resized ..."), ohne dass sich
+am tatsächlich belegten NAS-Speicher etwas ändert — die Größe ist hier
+reine Kubernetes-Quota, aber eben einmalig bei PVC-Erstellung fix. Für
+mehr Platz die PVC löschen (Daten bleiben dank `reclaimPolicy: Retain`
+auf dem NAS erhalten) und mit neuem `size`-Wert neu anlegen lassen.
+So auch bei Nextcloud (`nas`-StorageClass, dieselbe Einschränkung).
 
 Das RAM-Limit für `immich-server` wurde am 2026-07-27 bewusst von 2Gi auf
 4Gi angehoben (Absturz bei großen Uploads, siehe
