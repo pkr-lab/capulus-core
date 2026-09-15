@@ -113,6 +113,24 @@ Trigger-Nodes registrieren denselben Pfad `alamos-einsatz`, aber
 unterschiedliche HTTP-Methoden — dadurch funktioniert der Workflow mit
 beiden Varianten, ohne dass vorher geklärt sein muss, welche ihr nutzt.
 
+### Leere Test-Calls werden übersprungen, nicht geticketet
+
+Fehlen sowohl `keyword` als auch `unit` im zusammengeführten Payload,
+bricht der Code-Node **ohne Ticket** ab (`return []`, kein Fehler) — nur
+eine `console.log`-Zeile mit den Rohdaten landet im Execution-Log. Das
+deckt Verbindungstests ab, die keine echten Einsatzdaten mitschicken (z. B.
+ein reiner `curl` gegen [alamos-relay](300i0-alamos-relay.md) ohne
+Query-Parameter, oder eine Alamos-"Webhook Test"-Funktion ohne konkrete
+Alarmauswahl) — genau das ist beim ersten Verbindungstest des Relays
+passiert (leerer GET-Call, `alamos-relay` antwortete `200`, aber ohne
+diesen Guard hätte der Code-Node trotzdem ein Ticket mit leerem Titel
+erzeugt). **Bewusst kein Error/Exception:** ein `console.log` statt eines
+harten Fehlers, damit ein Test-Call nicht wie ein defekter Workflow
+aussieht, aber trotzdem im Execution-Log nachvollziehbar bleibt — falls
+ein echter Alarm aus unerwarteten Gründen (z. B. andere Feldnamen als
+`keyword`/`unit`) denselben Weg nimmt, ist das damit nicht komplett
+unsichtbar, sondern zumindest im Log sichtbar, nur eben nicht per Ticket.
+
 ### Duplikat-Schutz
 
 Falls der Webhook **pro geöffnetem Kiosk-Tab** feuert (statt zentral einmal
@@ -186,8 +204,8 @@ Sekunden eintreffen, nicht nach einem Neustart).
 
 | Symptom | Check |
 |---|---|
-| Kein Zammad-Ticket bei echtem Einsatz | Workflow in n8n aktiv? `kubectl -n n8n logs deploy/n8n` (bzw. n8n-UI → Executions) — kommt der Webhook überhaupt an? |
-| n8n-Execution zeigt Fehler "Webhook ohne jegliche Query-/Body-Daten empfangen" | Alamos-Webhook-Konfiguration prüfen — Ziel-URL korrekt, Platzhalter im Body/in der Query wirklich gesetzt? |
+| Kein Zammad-Ticket bei echtem Einsatz | Workflow in n8n aktiv? `kubectl -n n8n logs deploy/n8n` (bzw. n8n-UI → Executions) — kommt der Webhook überhaupt an? Execution-Log der "Einsatzdaten aufbereiten"-Node ansehen: falls dort `Kein keyword/unit im Payload` geloggt wird, obwohl es ein echter Alarm war, liefert eure Alamos-Instanz die Daten unter anderen Feldnamen als `keyword`/`unit` — Rohdaten aus dem Log in [Anpassungen](#anpassungen) berücksichtigen |
+| Test-Call (z. B. `curl` gegen alamos-relay ohne Query-Parameter) erzeugt kein Ticket | **Erwartetes Verhalten**, siehe [Leere Test-Calls werden übersprungen](#leere-test-calls-werden-übersprungen-nicht-geticketet) — kein Fehler, nur ein Log-Eintrag |
 | Ticket wird unterdrückt, obwohl es ein neuer Einsatz war | `DEDUP_WINDOW_MS` zu großzügig, oder `keyword`/`unit` fehlen und der Fallback-Payload-Vergleich trifft zufällig — Rohdaten in der n8n-Execution ansehen |
 | Ticket erstellt, aber keine Mail | Zammad-Agenten-Mitgliedschaft/Benachrichtigung prüfen (siehe oben), ausgehender E-Mail-Kanal in Zammad konfiguriert? |
 | n8n-Workflow schlägt am Zammad-Node fehl | Credential vom Typ "Zammad Token Auth API" zugewiesen (nicht die Header-Auth-Credential aus `banana-pi-down-to-zammad.json`)? Base URL korrekt (`http://zammad.tech.homeserver`)? Token gültig/`ticket.agent`-Berechtigung? |
