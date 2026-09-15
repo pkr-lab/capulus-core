@@ -1,0 +1,123 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "alamos-relay.fullname" . }}-script
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "alamos-relay.labels" . | nindent 4 }}
+data:
+  # Öffentlich per Cloudflare-Tunnel erreichbar (siehe values.yaml,
+  # ingress.hosts) — n8n selbst bleibt dadurch weiterhin komplett
+  # unerreichbar aus dem Internet, siehe
+  # docs/3-apps-workloads/300i0-alamos-relay.md.
+  #
+  # Einziger Endpunkt: GET/POST /relay/<TOKEN> — TOKEN kommt aus dem
+  # SealedSecret (env RELAY_TOKEN), Pfad-Vergleich per hmac.compare_digest
+  # (konstante Laufzeit, kein Timing-Seitenkanal). Jede andere
+  # Pfad/Methode-Kombination bekommt exakt dieselbe 404-Antwort wie ein
+  # falsches Token — ein Angreifer kann so nicht unterscheiden, ob der Pfad
+  # oder das Token falsch war.
+  #
+  # Bei Treffer: Request 1:1 (Methode, Query-String, Body, Content-Type)
+  # an N8N_TARGET_URL weitergereicht -- ein normaler Server-zu-Server-Call
+  # innerhalb des Clusters, kein Browser involviert (das war der vermutete
+  # Grund, warum der direkte Aufruf von AMweb aus nicht funktioniert hat --
+  # siehe docs/3-apps-workloads/300h0-alamos-einsatz-zammad.md, Abschnitt
+  # "Private Network Access"). n8ns Antwort (Status + Body) wird 1:1
+  # zurückgegeben, damit ALAMOS dieselbe Rückmeldung sieht wie bei einem
+  # direkten Aufruf.
+  app.py: |
+    #!/usr/bin/env python3
+    import hmac
+    import os
+    import urllib.error
+    import urllib.request
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    from urllib.parse import urlsplit
+
+    RELAY_TOKEN = os.environ.get("RELAY_TOKEN", "")
+    N8N_TARGET_URL = os.environ.get("N8N_TARGET_URL", "").rstrip("/")
+    EXPECTED_PATH = f"/relay/{RELAY_TOKEN}"
+    TIMEOUT_SECONDS = 10
+
+    ALLOWED_METHODS = ("GET", "POST")
+
+
+    class Handler(BaseHTTPRequestHandler):
+        def _respond(self, status, body=b"", headers=None):
+            self.send_response(status)
+            for key, value in (headers or {}).items():
+                self.send_header(key, value)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            if body:
+                self.wfile.write(body)
+
+        def _path_matches(self):
+            path = urlsplit(self.path).path
+            if not RELAY_TOKEN:
+                return False
+            return hmac.compare_digest(path, EXPECTED_PATH)
+
+        def _forward(self, method):
+            if not self._path_matches():
+                self._respond(404, b"not found")
+                return
+
+            query = urlsplit(self.path).query
+            target_url = N8N_TARGET_URL + (f"?{query}" if query else "")
+
+            body = None
+            content_length = int(self.headers.get("Content-Length", 0) or 0)
+            if content_length:
+                body = self.rfile.read(content_length)
+
+            headers = {}
+            content_type = self.headers.get("Content-Type")
+            if content_type:
+                headers["Content-Type"] = content_type
+
+            req = urllib.request.Request(
+                target_url, data=body, headers=headers, method=method
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:
+                    resp_body = resp.read()
+                    resp_headers = {}
+                    resp_content_type = resp.headers.get("Content-Type")
+                    if resp_content_type:
+                        resp_headers["Content-Type"] = resp_content_type
+                    self._respond(resp.status, resp_body, resp_headers)
+            except urllib.error.HTTPError as exc:
+                # n8n selbst hat geantwortet, nur mit Fehlerstatus (z. B.
+                # Workflow inaktiv) -- 1:1 durchreichen, nicht verschlucken.
+                self._respond(exc.code, exc.read())
+            except (urllib.error.URLError, TimeoutError) as exc:
+                print(f"Weiterleitung an n8n fehlgeschlagen: {exc}")
+                self._respond(502, b"upstream unavailable")
+
+        def do_GET(self):
+            self._forward("GET")
+
+        def do_POST(self):
+            self._forward("POST")
+
+        def do_HEAD(self):
+            self._respond(404, b"")
+
+        def do_PUT(self):
+            self._respond(405, b"method not allowed")
+
+        def do_DELETE(self):
+            self._respond(405, b"method not allowed")
+
+        def log_message(self, fmt, *args):
+            print(fmt % args)
+
+
+    if __name__ == "__main__":
+        if not RELAY_TOKEN or not N8N_TARGET_URL:
+            raise SystemExit("RELAY_TOKEN und N8N_TARGET_URL muessen gesetzt sein")
+        port = int(os.environ.get("PORT", 8080))
+        print(f"alamos-relay listening on :{port}")
+        HTTPServer(("0.0.0.0", port), Handler).serve_forever()

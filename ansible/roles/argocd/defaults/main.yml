@@ -30,6 +30,7 @@ argocd_platform_apps:
 
 argocd_workloads_apps:
   - alamos-apager
+  - alamos-relay
   - carplay-api
   - demo-app
   - example-whoami
@@ -59,6 +60,7 @@ argocd_network_policy_refined_namespaces:
   - mealie
   - n8n
   - alamos-apager
+  - alamos-relay
   - carplay-api
   - github-release-watcher
   - immich
@@ -99,6 +101,8 @@ argocd_network_policy_extra_ingress:
     - authentik
   wikijs:
     - wiki-docs-sync
+  n8n:
+    - alamos-relay   # alamos-relay/values.yaml, Server-zu-Server-Forward des ALAMOS-Webhooks
   ntfy:
     - carplay-api
     - alamos-apager

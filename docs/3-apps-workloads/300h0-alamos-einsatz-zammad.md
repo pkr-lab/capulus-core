@@ -25,24 +25,33 @@ kein Polling.** Ohne die Ziel-URL im Alamos-Account einzutragen (siehe
 [Einrichtung](#einrichtung), Schritt 5) läuft der Workflow nie an und es
 entsteht nie ein Ticket, egal wie viele echte Einsätze reinkommen.
 
+**Update — direkter Aufruf hat sich als nicht zuverlässig erwiesen, Fix:
+[alamos-relay](300i0-alamos-relay.md).** Der ursprünglich hier
+empfohlene direkte Aufruf von `n8n.prod.homeserver` aus AMweb heraus hat in
+der Praxis nicht funktioniert (vermutlich genau das unten beschriebene
+Private-Network-Access-Problem, ggf. auch weil "Allgemeine Webhooks"
+serverseitig von Alamos' Cloud statt aus dem Browser-Tab feuert). Statt n8n
+selbst öffentlich zu machen — was die bewusste Entscheidung aus dem
+`N8N_HOST`-Kommentar in `argocd/apps/workloads/n8n/values.yaml` aufheben
+würde — steht jetzt ein eigener, minimaler Proxy dazwischen:
+[alamos-relay](300i0-alamos-relay.md). Die **Ziel-URL in der
+Alamos-Webhook-Konfiguration zeigt seitdem auf das Relay, nicht mehr auf
+`n8n.prod.homeserver` direkt** (siehe [Einrichtung](#einrichtung) unten,
+Schritt 4). Der Rest dieses Abschnitts (welche Webhook-Variante, warum,
+das PNA-Risiko) bleibt als Hintergrund stehen — er erklärt, *warum* das
+Relay überhaupt nötig wurde.
+
 **Empfehlung: AMweb-Seiteneinstellung-Webhook nutzen, nicht "Allgemeine
 Webhooks"** — nur für Ersteren ist öffentlich dokumentiert, dass der Aufruf
 **aus dem Browser-Tab heraus** feuert, also von der Kiosk-Chromium-Session
 selbst, die ohnehin schon im LAN/Tailscale hängt und `*.homeserver`
-auflöst (identisch dazu, wie der Kiosk die echte AMweb-Seite lädt). Die
-interne URL `n8n.prod.homeserver` reicht dafür aus, **keine öffentliche
-Erreichbarkeit nötig**. Bei "Allgemeine Webhooks" (Account-Ebene) war
-öffentlich nicht zu klären, ob der Call stattdessen von Alamos'
-Cloud-Servern selbst kommt (also wirklich aus dem öffentlichen Internet) —
-falls ja, würde `n8n.prod.homeserver` **nicht** funktionieren: n8n wurde
-bewusst aus dem Cloudflare-Tunnel entfernt (siehe
-`argocd/apps/workloads/n8n/values.yaml`, Kommentar bei `env.N8N_HOST`) und
-ist absichtlich nur intern erreichbar. Öffentliche Freigabe (und sei es nur
-dieses eine Webhook-Pfads über einen neuen Cloudflare-Tunnel-Eintrag, siehe
-[e0000-cloudflare-tunnel.md](../e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md))
-wäre eine bewusste Sicherheitsentscheidung, die hier nicht vorweggenommen
-wird — falls "Allgemeine Webhooks" gewünscht ist, das bitte vorher
-absprechen.
+auflöst (identisch dazu, wie der Kiosk die echte AMweb-Seite lädt). Bei
+"Allgemeine Webhooks" (Account-Ebene) war öffentlich nicht zu klären, ob
+der Call stattdessen von Alamos' Cloud-Servern selbst kommt (also wirklich
+aus dem öffentlichen Internet) — seit dem Umweg über
+[alamos-relay](300i0-alamos-relay.md) ist das allerdings für beide
+Varianten egal: die Ziel-URL ist so oder so öffentlich erreichbar, ohne
+dass n8n selbst öffentlich wird.
 
 **Zusätzliches Risiko, unabhängig von der Webhook-Variante — Private
 Network Access:** Die AMweb-Seite selbst wird von einer öffentlichen
@@ -52,19 +61,21 @@ blockieren per **Private Network Access** standardmäßig JS-Requests
 Netzwerk-Adresse — und `n8n.prod.homeserver` löst intern auf eine private
 IP auf. Das deckt sich vermutlich mit der Handbuch-Warnung "Aufruf lokaler
 URLs... wird i. d. R. vom Browser aus Sicherheitsgründen blockiert" (die
-könnte mehr meinen als nur `localhost`). Ob die konkrete
-Chromium-Version auf den Kiosk-Pis (`chromium-browser`-Paket, Raspberry Pi
-OS bzw. Armbian) das tatsächlich blockt, lässt sich nur durch einen
-Testlauf klären (siehe Fehlerbehebung, "Webhook kommt gar nicht in n8n
-an"). Blockt der Browser den Call, hilft nur eine öffentlich erreichbare
-Ziel-URL — dieselbe Sicherheitsabwägung wie oben bei "Allgemeine
-Webhooks".
+könnte mehr meinen als nur `localhost`). **Genau dieses Problem löst
+[alamos-relay](300i0-alamos-relay.md):** dessen öffentlicher Hostname
+löst auf eine Cloudflare-IP auf, PNA greift also nicht mehr, unabhängig
+davon, ob der Call aus dem Kiosk-Browser-Tab oder direkt von Alamos'
+Cloud-Servern kommt.
 
 ```
 ALAMOS AMweb (Cloud-Dienst)
    │  Webhook, GET oder POST, nur bei echten Alarmen
    │  (AMweb-Seiteneinstellung ODER "Allgemeine Webhooks" im Alamos-Admin)
-   │  Ziel-URL MUSS dort eingetragen sein, siehe Einrichtung Schritt 5
+   │  Ziel-URL MUSS dort eingetragen sein, siehe Einrichtung Schritt 4-5
+   ▼
+https://alamos-relay-prod.pke-lab.de/relay/<TOKEN>
+   │  alamos-relay (öffentlich erreichbarer Proxy, siehe 300i0) —
+   │  Server-zu-Server-Forward, kein Browser/PNA mehr im Spiel
    ▼
 http://n8n.prod.homeserver/webhook/alamos-einsatz
    │
@@ -137,15 +148,18 @@ Sekunden eintreffen, nicht nach einem Neustart).
    Credential-IDs werden beim Import nicht übernommen, normaler
    Post-Import-Schritt.
 3. Workflow in n8n **aktivieren** (Import allein reicht nicht).
-4. Webhook-URL kopieren: `http://n8n.prod.homeserver/webhook/alamos-einsatz`.
+4. [alamos-relay](300i0-alamos-relay.md) ausrollen (eigener Chart, eigenes
+   Token) und die öffentliche Relay-URL zusammensetzen:
+   `https://alamos-relay-prod.pke-lab.de/relay/<TOKEN>` — **nicht** mehr
+   `http://n8n.prod.homeserver/webhook/alamos-einsatz` direkt, siehe
+   [Architektur](#architektur) oben.
 5. **Im Alamos-Account** (mit eurem bestehenden Login) — **dieser Schritt
    ist zwingend, ohne ihn feuert der Workflow nie**: Webhook-Konfiguration
    **der AMweb-Seiteneinstellung** öffnen (nicht "Allgemeine Webhooks",
-   siehe Begründung oben unter Architektur — sonst evtl. öffentliche
-   Erreichbarkeit nötig), obige URL als Ziel eintragen. Dabei gleich in der
-   Vorschau/"Webhook Test" nachsehen, welche Platzhalter tatsächlich
-   angeboten werden — das beantwortet die im Planungsdokument offene Frage
-   nach den exakten Feldnamen.
+   siehe Begründung oben unter Architektur), obige Relay-URL als Ziel
+   eintragen. Dabei gleich in der Vorschau/"Webhook Test" nachsehen, welche
+   Platzhalter tatsächlich angeboten werden — das beantwortet die im
+   Planungsdokument offene Frage nach den exakten Feldnamen.
 6. **Zammad:** Sicherstellen, dass `info@edv-kretzer.de` (oder die
    gewünschte Zieladresse) Agent in der Gruppe `Support::Administration`
    ist und unter **Profil → Benachrichtigungen** die Mail-Benachrichtigung
@@ -177,10 +191,11 @@ Sekunden eintreffen, nicht nach einem Neustart).
 | Ticket wird unterdrückt, obwohl es ein neuer Einsatz war | `DEDUP_WINDOW_MS` zu großzügig, oder `keyword`/`unit` fehlen und der Fallback-Payload-Vergleich trifft zufällig — Rohdaten in der n8n-Execution ansehen |
 | Ticket erstellt, aber keine Mail | Zammad-Agenten-Mitgliedschaft/Benachrichtigung prüfen (siehe oben), ausgehender E-Mail-Kanal in Zammad konfiguriert? |
 | n8n-Workflow schlägt am Zammad-Node fehl | Credential vom Typ "Zammad Token Auth API" zugewiesen (nicht die Header-Auth-Credential aus `banana-pi-down-to-zammad.json`)? Base URL korrekt (`http://zammad.tech.homeserver`)? Token gültig/`ticket.agent`-Berechtigung? |
-| Webhook kommt gar nicht in n8n an | `alamos-einsatz-get`/`alamos-einsatz-post` — läuft der Kiosk/AMweb-Zugriff über dieselbe `*.homeserver`-Route wie sonst? (Tailscale Split-DNS bei `vereinsheim-alarmmonitor`, siehe [30020](30020-vereinsheim-alarmmonitor.md#netzwerk-tailscale-only)) |
+| Webhook kommt gar nicht in n8n an | Erst [alamos-relay](300i0-alamos-relay.md#fehlerbehebung) prüfen (`kubectl -n alamos-relay logs deploy/alamos-relay`, korrektes Token in der Alamos-Konfiguration?) — kommt der Call dort schon nicht an, liegt es an Alamos/DNS, nicht an n8n. Kommt er beim Relay an, aber nicht bei n8n: NetworkPolicy-Rollout aus [300i0, Rollout](300i0-alamos-relay.md#rollout-nach-dem-ersten-push) vollständig durchgelaufen? |
 
 ## Relevante Links
 
+- [docs/3-apps-workloads/300i0-alamos-relay.md](300i0-alamos-relay.md) — öffentlicher Proxy vor n8n, Fix für den direkten Aufruf
 - [docs/4-planung/40060-alamos-einsatz-email-benachrichtigung.md](../4-planung/40060-alamos-einsatz-email-benachrichtigung.md) — Recherche zu ALAMOS-Schnittstellen, offene Fragen
 - [docs/3-apps-workloads/30010-alamos-apager.md](30010-alamos-apager.md) — Basis-Architektur (Kiosk-Anzeige)
 - [docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md, Zammad-Ticket via n8n](30020-vereinsheim-alarmmonitor.md#zammad-ticket-via-n8n) — analoges Vorbild-Muster (Ausfall statt Einsatz)
