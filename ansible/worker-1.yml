@@ -29,14 +29,18 @@
 #      Link-Drop ohne Selbstheilung, siehe ansible/roles/disable_eee)
 #   5. thermal_watchdog / resource_watchdog — automatischer Shutdown bei
 #      Uebertemperatur bzw. anhaltend hoher CPU/RAM-Last
-#   6. wake_on_lan — WoL-Empfangsbereitschaft, damit cluster_power_manager
+#   6. journal_upload — pusht das Host-journald an VictoriaLogs (der
+#      bestehende victoria-logs-collector-DaemonSet liest nur
+#      Container-Logs, nicht das journald des Nodes selbst), siehe
+#      docs/3-apps-workloads/300j0-logging.md
+#   7. wake_on_lan — WoL-Empfangsbereitschaft, damit cluster_power_manager
 #      (laeuft auf homeserver, siehe ansible/site.yml) diesen Node aus dem
 #      ausgeschalteten Zustand aufwecken kann
-#   7. cluster_power_manager_target — autorisiert den auf homeserver
+#   8. cluster_power_manager_target — autorisiert den auf homeserver
 #      erzeugten Shutdown-Key hier, beschraenkt auf "poweroff" (setzt
 #      voraus, dass site.yml bereits gegen homeserver gelaufen ist, sonst
 #      existiert der Public Key dort noch nicht)
-#   8. Uncordon — stellt sicher dass worker-1 schedulable bleibt
+#   9. Uncordon — stellt sicher dass worker-1 schedulable bleibt
 #      (kubectl drain/cordon durch Maintenance-Schritte rueckgaengig machen)
 # ============================================================
 #
@@ -62,6 +66,8 @@
       tags: [thermal-watchdog, thermal]
     - role: resource_watchdog
       tags: [resource-watchdog, thermal]
+    - role: journal_upload
+      tags: [journal-upload, logging]
     - role: wake_on_lan
       tags: [wake-on-lan, power-management]
     - role: cluster_power_manager_target
