@@ -1,7 +1,5 @@
 # Ideas to Deploy at a Later Point
 
-Loki (+ Promtail) – ihr habt VictoriaMetrics/Grafana nur für Metriken, aber keine zentrale Log-Aggregation; passt direkt in den bestehenden Grafana-Stack.
-
 ## Alltag / Produktivität
 
 Firefly III – persönliche Finanzverwaltung/Budgetierung, gut wenn ihr Ausgaben/Abos im Blick behalten wollt.
