@@ -33,6 +33,8 @@
       tags: [argocd, gitops]
     - role: semaphore_secrets
       tags: [semaphore, semaphore-secrets]
+    - role: journal_upload
+      tags: [journal-upload, logging]
     - role: thermal_watchdog
       tags: [thermal-watchdog, thermal]
     - role: resource_watchdog
@@ -47,14 +49,6 @@
       tags: [cups-print-server, printer]
 
   post_tasks:
-    # UFW's nftables backend can silently drop its own default
-    # "-i lo -j ACCEPT" rule when its tables are rebuilt while k3s/kube-router
-    # hold their own nftables/iptables state on the same host (observed
-    # 2026-09-05: broke systemd-resolved's DNS stub, Tailscale check-ins, and
-    # local k3s API traffic on port 6444 for ~2 days, while inbound HTTPS kept
-    # working fine). Tagged `always` so this safeguard runs on every
-    # invocation of this play, even with `--tags` limiting which roles run —
-    # see docs/c-netzwerk-dns/c0000-dns-architecture.md → "Nachtrag 2026-09-06".
     - name: Check whether UFW is dropping loopback traffic (known nftables bug)
       ansible.builtin.command: iptables -C ufw-before-input -i lo -j ACCEPT
       register: common_ufw_loopback_check

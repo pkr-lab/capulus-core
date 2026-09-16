@@ -1,0 +1,39 @@
+---
+# ============================================================
+# journal_upload role — journald an VictoriaLogs pushen (alle
+# Ansible-Hosts, siehe docs/3-apps-workloads/300j0-logging.md)
+# ============================================================
+
+- name: systemd-journal-remote installieren (liefert systemd-journal-upload)
+  ansible.builtin.apt:
+    name: systemd-journal-remote
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: journal_upload_enabled | bool
+
+- name: journal-upload.conf deployen
+  ansible.builtin.template:
+    src: journal-upload.conf.j2
+    dest: /etc/systemd/journal-upload.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: journal_upload_enabled | bool
+  notify: Restart systemd-journal-upload
+
+- name: systemd-journal-upload aktivieren und starten
+  ansible.builtin.systemd:
+    name: systemd-journal-upload.service
+    daemon_reload: true
+    enabled: true
+    state: started
+  when: journal_upload_enabled | bool
+
+- name: systemd-journal-upload deaktivieren (journal_upload_enabled false)
+  ansible.builtin.systemd:
+    name: systemd-journal-upload.service
+    enabled: false
+    state: stopped
+  when: not (journal_upload_enabled | bool)
+  failed_when: false

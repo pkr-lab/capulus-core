@@ -409,6 +409,7 @@ Online-Status prüfen und den PC wieder herunterfahren: siehe
 | `banana-pi-wol.sh` läuft durch, PC wacht trotzdem nicht auf | WoL im BIOS/NIC des PCs aktiv? Windows-Schnellstart deaktiviert? Client-/AP-Isolation im Router/Repeater aktiv? Pi und PC wirklich im selben Subnetz (`ip a`)? |
 | iOS-App: "Aufwecken" bei Windows-PC schlägt fehl (401) | Token in der App aktuell? Neu auslesen: `ssh pela@vereinsheim-alarmmonitor sudo cat /etc/banana-pi-wol-agent/token` |
 | iOS-App: "Aufwecken" bei Windows-PC ohne Antwort/Timeout | Tailscale auf dem Handy aktiv? `systemctl status banana-pi-wol-agent` auf dem Pi — läuft der Dienst? `curl -X POST http://100.123.214.4:9102/wol -H "Authorization: Bearer <token>" -d '{"target":"windows-pc"}'` von einer Tailnet-Maschine zum Gegenchecken |
+| Nachträgliche Analyse eines Vorfalls (z. B. "Alarm wurde nicht angezeigt") — lokales `journalctl` reicht nicht mehr zurück | Journal auf dem Pi ist auf ~3,5 Tage begrenzt (täglicher Reboot + 20-MB-Limit) — stattdessen Grafana/VictoriaLogs abfragen (Retention 14 Tage), siehe [docs/3-apps-workloads/300j0-logging.md](300j0-logging.md) |
 
 ## Relevante Links
 
@@ -422,5 +423,6 @@ Online-Status prüfen und den PC wieder herunterfahren: siehe
 - [docs/3-apps-workloads/30070-n8n.md](30070-n8n.md) — n8n-Setup
 - [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md) — VMStaticScrape-Muster (ugreen-nas, Pull-Vergleichsfall)
 - [docs/4-planung/40020-vereinsheim-wol-router-vpn.md](../4-planung/40020-vereinsheim-wol-router-vpn.md) — Architektur-Plan Wake-on-LAN + Router-VPN-Fallback
+- [docs/3-apps-workloads/300j0-logging.md](300j0-logging.md) — zentrales Logging (VictoriaLogs), löst die kurze lokale Journal-Retention dieses Pi ab
 - [Armbian — Banana Pi M2 Ultra](https://armbian.com/boards/bananapim2ultra)
 - [VictoriaMetrics vmagent](https://docs.victoriametrics.com/victoriametrics/vmagent/)
