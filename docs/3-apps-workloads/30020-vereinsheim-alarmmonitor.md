@@ -222,18 +222,24 @@ erreichbar (kein Fallback-Trigger), der Heartbeat-Timer läuft unabhängig
 vom Seiteninhalt weiter (kein Down-Alarm), und es gibt keinen Login-Screen
 (keine abgelaufene Session).
 
-**Mitigation:** Der Supervisor
+**Mitigation (Feature vorhanden, aktuell deaktiviert):** Der Supervisor
 (`ansible/roles/banana_pi_kiosk/templates/banana-pi-kiosk-supervisor.sh.j2`)
-startet Chromium seit diesem Fix zusätzlich alle
-`banana_pi_kiosk_periodic_refresh_seconds` (Default 7200s / 120 Minuten,
-Rollen-Default in `ansible/roles/banana_pi_kiosk/defaults/main.yml`) neu —
-unabhängig von Fallback-Zustand und Crash-Erkennung, per `stop_chromium`/
-`start_chromium` (gleiche Funktionen wie beim Fallback-Wechsel, also
-gleiches Profil/gleiche Session, kein erneuter Login nötig). Der Timer
-wird bei jedem Chromium-(Neu-)Start zurückgesetzt (auch bei
-Fallback-Wechsel oder Crash-Recovery), es gibt also nie einen Neustart
-kurz nach einem anderen. `banana_pi_kiosk_periodic_refresh_seconds: 0`
-deaktiviert das Feature vollständig.
+kann Chromium zusätzlich alle `banana_pi_kiosk_periodic_refresh_seconds`
+Sekunden neu starten (Rollen-Default in
+`ansible/roles/banana_pi_kiosk/defaults/main.yml`) — unabhängig von
+Fallback-Zustand und Crash-Erkennung, per `stop_chromium`/`start_chromium`
+(gleiche Funktionen wie beim Fallback-Wechsel, also gleiches
+Profil/gleiche Session, kein erneuter Login nötig). Der Timer wird bei
+jedem Chromium-(Neu-)Start zurückgesetzt (auch bei Fallback-Wechsel oder
+Crash-Recovery), es gibt also nie einen Neustart kurz nach einem anderen.
+
+`banana_pi_kiosk_periodic_refresh_seconds: 0` deaktiviert das Feature
+vollständig — das ist seit 2026-09-16 der Rollen-Default. Damit ist die
+oben beschriebene Hypothese (stiller Hänger der In-Page-Live-Aktualisierung)
+**wieder ungemindert**; bewusste Entscheidung gegen die störenden
+periodischen Neustarts. Zum Reaktivieren einen Wert > 0 setzen, z. B.
+`banana_pi_kiosk_periodic_refresh_seconds: 7200` (120 Minuten, der frühere
+Default) in `ansible/host_vars/vereinsheim-alarmmonitor/`.
 
 Loggt bei jedem periodischen Neustart eine Zeile über
 `logger -t banana-pi-kiosk` (siehe
@@ -455,7 +461,7 @@ Online-Status prüfen und den PC wieder herunterfahren: siehe
 | iOS-App: "Aufwecken" bei Windows-PC schlägt fehl (401) | Token in der App aktuell? Neu auslesen: `ssh pela@vereinsheim-alarmmonitor sudo cat /etc/banana-pi-wol-agent/token` |
 | iOS-App: "Aufwecken" bei Windows-PC ohne Antwort/Timeout | Tailscale auf dem Handy aktiv? `systemctl status banana-pi-wol-agent` auf dem Pi — läuft der Dienst? `curl -X POST http://100.123.214.4:9102/wol -H "Authorization: Bearer <token>" -d '{"target":"windows-pc"}'` von einer Tailnet-Maschine zum Gegenchecken |
 | Nachträgliche Analyse eines Vorfalls (z. B. "Alarm wurde nicht angezeigt") — lokales `journalctl` reicht nicht mehr zurück | Journal auf dem Pi ist auf ~3,5 Tage begrenzt (täglicher Reboot + 20-MB-Limit) — stattdessen Grafana/VictoriaLogs abfragen (Retention 14 Tage), siehe [docs/3-apps-workloads/300j0-logging.md](300j0-logging.md) |
-| Prüfen, ob der periodische Chromium-Neustart tatsächlich läuft | `journalctl -t banana-pi-kiosk` auf dem Pi bzw. in VictoriaLogs nach `periodischer Neustart` filtern (siehe [Periodischer Seiten-Neustart](#periodischer-seiten-neustart)) |
+| Prüfen, ob der periodische Chromium-Neustart läuft (nur relevant, falls wieder aktiviert) | `journalctl -t banana-pi-kiosk` auf dem Pi bzw. in VictoriaLogs nach `periodischer Neustart` filtern (siehe [Periodischer Seiten-Neustart](#periodischer-seiten-neustart)) |
 
 ## Relevante Links
 
