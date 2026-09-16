@@ -225,7 +225,7 @@ vom Seiteninhalt weiter (kein Down-Alarm), und es gibt keinen Login-Screen
 **Mitigation:** Der Supervisor
 (`ansible/roles/banana_pi_kiosk/templates/banana-pi-kiosk-supervisor.sh.j2`)
 startet Chromium seit diesem Fix zusätzlich alle
-`banana_pi_kiosk_periodic_refresh_seconds` (Default 1800s / 30 Minuten,
+`banana_pi_kiosk_periodic_refresh_seconds` (Default 7200s / 120 Minuten,
 Rollen-Default in `ansible/roles/banana_pi_kiosk/defaults/main.yml`) neu —
 unabhängig von Fallback-Zustand und Crash-Erkennung, per `stop_chromium`/
 `start_chromium` (gleiche Funktionen wie beim Fallback-Wechsel, also
