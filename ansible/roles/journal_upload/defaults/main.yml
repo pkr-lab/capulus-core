@@ -1,0 +1,4 @@
+---
+journal_upload_enabled: true
+
+journal_upload_push_url: "http://logs-write.tech.homeserver/insert/journald"

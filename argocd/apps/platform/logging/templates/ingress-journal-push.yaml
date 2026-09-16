@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: logs-write
+  namespace: {{ .Release.Namespace }}
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: logs-write.tech.homeserver
+      http:
+        paths:
+          - path: /insert/journald
+            pathType: Prefix
+            backend:
+              service:
+                name: logging-victoria-logs-single-server
+                port:
+                  number: 9428
