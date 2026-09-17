@@ -144,11 +144,11 @@ flowchart TB
         T3["k3s server<br/>Control-Plane"]
     end
 
-    subgraph PROD["PROD-Cluster — VM auf homeserver ODER 4. Node"]
+    subgraph PROD["PROD-Cluster — zweite k3s-Instanz, bare metal auf homeserver"]
         direction LR
         P1["ArgoCD-Agent<br/>vom TECH-Hub registriert"]
         P2["Nextcloud · Immich · Paperless<br/>Wiki.js · Mealie · n8n · …"]
-        P3["k3s server<br/>eigener Control-Plane"]
+        P3["k3s server<br/>eigener Control-Plane, eigene IP"]
     end
 
     subgraph ENTW["ENTW-Cluster — worker-0/1, WoL, ephemer"]
@@ -170,6 +170,16 @@ sind zentral in TECH). ENTW ist bewusst **nicht** Teil dieses
 Vertrauensraums — eigene ArgoCD-Instanz, eigene SealedSecrets-Schlüssel,
 keine Standard-Netzroute zu TECH/PROD. Das ist genau die
 Blast-Radius-Eigenschaft, die 40030 Trigger 1 gefordert hat.
+
+**Daraus folgt auch: TECH und PROD brauchen keine VM-Grenze
+zueinander.** Der einzige Grund für eine separate Maschine/VM wäre eine
+Sicherheitsgrenze — die besteht hier per Design nicht (ein Hub verwaltet
+beide, siehe oben). Der eigentliche Zweck von PROD als **eigenem
+Cluster** ist nicht Isolation von TECH, sondern zwei unabhängige
+Control-Planes für gefahrloses Testen struktureller Änderungen und eine
+klare Betriebsgrenze (Baustein 5 unten) — das lässt sich mit zwei
+bare-metal k3s-Instanzen auf demselben Host genauso erreichen wie mit
+einer VM, nur ohne Hypervisor-Overhead.
 
 ---
 
@@ -282,26 +292,61 @@ migrierte/tier-lose Namen bestehen.
 
 | Phase | Was | Wo | Risiko |
 |---|---|---|---|
-| 1 | ENTW als leichtgewichtiger, ephemer Cluster (k3d/Nested-k3s-in-Docker **oder** eine schlanke KVM/libvirt-VM — **nicht** volles Proxmox) | `worker-0`, weiterhin per WoL geweckt, `cluster_power_manager`-Rolle um einen expliziten "ENTW-Session"-Trigger erweitert statt nur lastbasiert | gering — reversibel, keine bestehende Infrastruktur angefasst |
-| 2 | TECH/PROD-Split | `homeserver` bleibt TECH (Control-Plane, Identity, Monitoring, ArgoCD-Hub) bare metal wie heute; PROD **entweder** als KVM/libvirt-VM auf `homeserver` (nutzt die ~38 GiB freien RAM) **oder** auf neuer, dedizierter 4. Hardware (Trigger 2 aus 40030) | mittel/hoch — betrifft laufende Familien-/Vereins-Apps, braucht Wartungsfenster + Rollback-Plan |
+| 1 | ENTW als leichtgewichtiger, ephemer Cluster (k3d/Nested-k3s-in-Docker **oder** eine schlanke KVM/libvirt-VM — hier **ist** eine VM/Container-Grenze sinnvoll, s. u.) | `worker-0`, weiterhin per WoL geweckt, `cluster_power_manager`-Rolle um einen expliziten "ENTW-Session"-Trigger erweitert statt nur lastbasiert | gering — reversibel, keine bestehende Infrastruktur angefasst |
+| 2 | TECH/PROD-Split | `homeserver` bleibt TECH bare metal wie heute; PROD als **zweite, unabhängige k3s-Instanz direkt auf `homeserver`** (kein Hypervisor) — Details unten | mittel/hoch — betrifft laufende Familien-/Vereins-Apps, braucht Wartungsfenster + Rollback-Plan |
 
-**Bewusst kein Proxmox als Hypervisor-Betriebssystem-Wechsel** — das
-würde alle drei Nodes neu aufsetzen (40030, Punkt 2.2, Migrationsrisiko)
-und den bestehenden, minimalen `cluster_power_manager`-SSH-Mechanismus
-(`command="poweroff"`-beschränkter Key) durch einen mächtigeren
-Proxmox-API-Zugriff ersetzen. Schlankes KVM/libvirt **auf** dem
-bestehenden Ubuntu Server erreicht dieselbe VM-Isolation ohne diesen
-Tausch.
+**Kein Proxmox, keine VM für PROD** — Begründung siehe
+["Kernentscheidung" oben](#zielarchitektur): TECH/PROD brauchen keine
+Sicherheitsgrenze zueinander, also lohnt sich der Hypervisor-Overhead aus
+40030 Punkt 2.2 hier nicht. Stattdessen ein zweiter k3s-Server-Prozess
+direkt auf demselben Ubuntu-Host wie TECH — dieselbe Bare-Metal-Philosophie
+wie heute schon ("ein Ansible-Lauf, keine offenen Ports",
+[a0010-overview.md](../a-betriebssystem/a0010-overview.md)), nur zweimal
+parametrisiert statt einmal.
 
-**Empfehlung zur Node-Zuordnung, falls kein 4. Gerät angeschafft wird:**
+**Praktisch nötig, damit sich die zwei Instanzen nicht in die Quere
+kommen:**
+
+- **Eigene zweite IP für PROD auf `homeserver`** (z. B. `192.168.178.98`
+  als sekundäre Adresse auf demselben NIC, per Ansible/`ip addr add`
+  verwaltet) — dann kann PROD-Traefik ganz normal auf Port 80/443 dieser
+  IP binden, ohne mit TECH-Traefik auf `.94:80/443` zu kollidieren. Ohne
+  zweite IP müssten stattdessen alle Standardports manuell auseinander
+  gezogen werden (API-Server `6443`→`6444`, kubelet `10250`→`10251`, …) —
+  deutlich fehleranfälliger als eine zusätzliche IP.
+- **Getrennte `--data-dir` je k3s-Instanz** (`/var/lib/rancher/k3s-tech`,
+  `/var/lib/rancher/k3s-prod`) — Standard-k3s-Flag, kein Sonderbau nötig.
+- **`ansible/roles/k3s` parametrisierbar machen** (Instanzname, Ziel-IP,
+  Ziel-Ports, Ziel-Data-Dir als Variablen) statt eine zweite,
+  eigenständige Rolle zu schreiben — spiegelt den bestehenden
+  `k3s`/`k3s_agent`-Rollenzuschnitt.
+- **Ressourcengrenzen weiterhin über cgroups/systemd**
+  (`MemoryMax`/`CPUQuota` auf dem PROD-k3s-`systemd`-Unit) statt über
+  VM-Grenzen — weicher als eine VM, aber ausreichend, um zu verhindern,
+  dass ein PROD-Lastspitze TECH verdrängt.
+
+**Ehrlich benannter Rest-Unterschied zu einer VM:** Beide Instanzen teilen
+sich denselben Kernel — kein Hardware-Isolationslevel. Für die
+TECH/PROD-Trennung ist das im Rahmen dieses Plans akzeptiert (siehe
+Kernentscheidung oben); falls sich das je ändert (z. B. PROD wird
+irgendwann selbst als nicht mehr vertrauenswürdig genug für einen
+gemeinsamen Kernel mit TECH eingestuft), ist der Umstieg auf eine VM ein
+klar abgegrenzter Nachrüstschritt, kein Rewrite.
+
+**Empfehlung zur Node-Zuordnung:**
 
 ```
 homeserver (12 vCPU / 61 GiB, 24/7)
- ├─ TECH   — bare metal, wie heute
- └─ PROD   — KVM/libvirt-VM, z. B. 4 vCPU / 16 GiB fest zugewiesen
-              (lässt ~7 vCPU / 45 GiB Puffer für TECH + Hypervisor-Overhead)
+ ├─ TECH   — bare metal, wie heute, IP .94
+ └─ PROD   — zweite k3s-Instanz, bare metal, eigene IP .98
+              (Ressourcengrenze per systemd-cgroup, z. B. auf
+              6 vCPU / 24 GiB gedeckelt, Rest bleibt TECH-Puffer)
 
 worker-0 (4 vCPU / 7,3 GiB, WoL)  → ENTW, nested/VM, nur bei Bedarf wach
+                                     (hier lohnt sich die zusätzliche
+                                     VM/Container-Grenze, da ENTW als
+                                     einziger Cluster eine echte
+                                     Sicherheitsgrenze braucht)
 worker-1 (4 vCPU / 15 GiB, WoL)   → weiterhin freie Zusatzkapazität
                                      (z. B. zweiter ENTW-Node für
                                      Multi-Node-Trainingsszenarien,
@@ -382,8 +427,12 @@ heutigen Cluster erreichbar.
       PROD wandern (zwei neue Schlüsselkontexte).
 - [ ] **Wartungsfenster-Kommunikation** an Familie/Verein vor dem
       PROD-Cutover (Nextcloud/Immich/Vaultwarden-Downtime).
-- [ ] **KVM/libvirt vs. dediziertes 4. Gerät** für PROD final
-      entscheiden (Kostenfrage, nicht rein technisch).
+- [ ] **Zweite IP für PROD auf `homeserver`** festlegen und in
+      `ansible/host_vars`/`group_vars` eintragen, bevor Baustein 5 Phase 2
+      umgesetzt wird.
+- [ ] **`ansible/roles/k3s` parametrisieren** (Instanzname, IP, Ports,
+      Data-Dir), damit dieselbe Rolle TECH **und** PROD bedienen kann,
+      statt einer zweiten, dupliziert gepflegten Rolle.
 
 ---
 
