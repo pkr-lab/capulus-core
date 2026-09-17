@@ -36,11 +36,6 @@
       '{{ template_spec.inventory }}' in project '{{ project_spec.name }}'.
       Available inventories: {{ project_inventory_map.keys() | list }}.
 
-# Body is built as a single Jinja dict so Python-native types survive
-# into the JSON encoder. With YAML scalars the folded `>-` wrapper
-# stringifies the rendered value, and Semaphore's strict *int
-# unmarshaler silently leaves nullable int columns (vault_key_id) NULL
-# when it receives a JSON string. See git log for the bug history.
 - name: Create template {{ template_spec.name }}
   ansible.builtin.uri:
     url: "{{ semaphore_api_base }}/api/project/{{ project_id }}/templates"
@@ -78,9 +73,6 @@
     status_code: [200, 201, 204]
   when: not template_exists
 
-# Existing templates may pre-date the vault_key_id wiring (or other field
-# changes). PUT the full desired body so re-running the bootstrap is
-# self-healing — Semaphore replaces the row wholesale.
 - name: Update template {{ template_spec.name }}
   ansible.builtin.uri:
     url: "{{ semaphore_api_base }}/api/project/{{ project_id }}/templates/{{ template_id | int }}"
