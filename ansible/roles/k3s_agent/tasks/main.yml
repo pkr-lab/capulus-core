@@ -8,8 +8,6 @@
 # ============================================================
 
 # ---- NFS-Client (Voraussetzung für die "nas"-StorageClass) --
-# Kubelet muss auf JEDEM Node NFS-Mounts erstellen können, sonst bleiben
-# PVCs auf der "nas"-StorageClass hier Pending. Siehe docs/2-betrieb-hardware/20000-nas-storage.md.
 - name: nfs-common installieren
   ansible.builtin.apt:
     name: nfs-common
@@ -165,10 +163,6 @@
     INSTALL_K3S_VERSION: "{{ k3s_version }}"
     INSTALL_K3S_CHANNEL: "{{ k3s_channel | default('stable') }}"
   register: k3s_agent_install_result
-  # get-k3s.sh's own "systemctl enable --now" occasionally hits a dropped
-  # D-Bus connection ("D-Bus connection terminated while waiting for jobs")
-  # when dbus-daemon is busy with concurrent apt/snapd/PackageKit activity.
-  # The script is idempotent, so retry rather than failing the whole play.
   retries: 3
   delay: 10
   until: k3s_agent_install_result.rc == 0
