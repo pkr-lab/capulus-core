@@ -2,47 +2,22 @@
 # ============================================================
 # semaphore_bootstrap — defaults
 # ============================================================
-# After `semaphore_secrets` has produced the bootstrap material and
-# ArgoCD has rolled out the Semaphore Pod, this role talks to the
-# Semaphore REST API and provisions Projects / Keys / Repositories /
-# Inventories / Templates so the UI is ready to use without manual
-# clicks.
-
-# Base URL Ansible uses to call the Semaphore REST API. Uses the dedicated
-# `semaphore-api.tech.homeserver` ingress rather than `semaphore.tech.homeserver`
-# — separate hosts so API clients (this role) and browser UI traffic stay on
-# distinct ingress objects, independent of whatever auth layer sits in front
-# of the UI host at any given time.
-# Override to e.g. `http://semaphore.semaphore.svc.cluster.local:3000`
-# if the dnsmasq path is not yet up when the role runs.
 semaphore_api_base: "http://semaphore-api.tech.homeserver"
 
-# Kubernetes namespace where Semaphore runs (must match semaphore_secrets role).
 semaphore_namespace: semaphore
 
-# Where `semaphore_secrets` persisted the admin password.
 semaphore_admin_password_path: "/etc/semaphore-secrets/admin_password"
 semaphore_admin_username: admin
 
-# Path to the Semaphore-owned SSH private key on the home-server.
 semaphore_ssh_private_key_path: "/etc/semaphore-secrets/id_ed25519"
 
-# Readiness polling — start of the API may lag behind the rollout
-# because the initContainer must finish creating the admin user first.
 semaphore_api_ready_retries: 60   # 60 * 5s = 5 min
 semaphore_api_ready_delay: 5
 
-# Vault password Semaphore uses to decrypt ansible-vault secrets in triggered
-# playbooks. Must not be empty — the role fails early with a clear message if
-# it is. Set this in group_vars/all.yml (ansible-vault encrypted).
 semaphore_vault_password: ""
 
-# SSH login used by Semaphore when connecting to managed targets.
-# Must match ansible_user on all targets.
 semaphore_ssh_login: "ubuntu"
 
-# Three access keys are created in every project — name them once here.
-# `login` is only relevant for the ssh-type entry.
 semaphore_default_keys:
   - name: semaphore-ssh-key
     type: ssh
@@ -57,10 +32,6 @@ semaphore_default_keys:
 # Override in group_vars/all.yml to add more projects without
 # editing the role.
 # ============================================================
-# Semaphore v2.18+ strips the Pod's container env when spawning ansible
-# tasks. ANSIBLE_VAULT_PASSWORD_FILE only reaches the playbook process if
-# injected via a per-template environment — without this, vault-encrypted
-# vars cannot be decrypted during a Semaphore-triggered run.
 semaphore_default_environment:
   name: default-env
   env:
@@ -79,10 +50,6 @@ semaphore_projects:
       - name: homeservers
         type: static
         ssh_key: semaphore-ssh-key
-        # worker-0/worker-1 hier NICHT als Play-Ziel, nur damit
-        # hostvars['worker-0']/['worker-1'] existieren -- siehe
-        # group_vars/all.yml (effektive Konfiguration) für die volle
-        # Begründung.
         content: |
           [homeservers]
           homeserver ansible_host=192.168.178.94
@@ -125,10 +92,3 @@ semaphore_projects:
         environment: default-env
         vault_key: vault-password
         description: "apt-Update, k3s-Agent, thermal_watchdog, resource_watchdog auf worker-0."
-    # Bewusst KEIN Schedule hier: worker-0 ist meist per cluster_power_manager
-    # heruntergefahren, ein blinder täglicher Cron-Trigger würde nur an
-    # "Permission denied"/Timeout scheitern. Stattdessen weckt
-    # nightly_worker_wake (läuft auf homeserver, 01:00 Uhr) worker-0 per
-    # Wake-on-LAN und triggert dieses Template gezielt über die
-    # Semaphore-API, sobald der Node Ready ist — siehe
-    # docs/2-betrieb-hardware/20030-nightly-worker-update.md.
