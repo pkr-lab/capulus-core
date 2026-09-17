@@ -1,20 +1,4 @@
 #!/usr/bin/env python3
-# Managed by Ansible (power_agent role) — do not edit manually.
-#
-# Small privileged HTTP daemon that runs directly on the homeserver host
-# (NOT inside the k8s cluster) and does the handful of things carplay-api's
-# pod deliberately can't do for itself, because that pod runs unprivileged
-# (see argocd/apps/workloads/carplay-api/values.yaml podSecurityContext): read/write
-# the laptop's screen backlight over sysfs, send Wake-on-LAN magic packets,
-# and SSH-poweroff worker-0/worker-1 using the same forced-command key
-# cluster_power_manager already generates and worker-0/worker-1 already
-# authorize for "sudo poweroff" — see docs/2-betrieb-hardware/20020-cluster-power-manager.md.
-#
-# Manual wake/poweroff here stamp/clear the same STATE_DIR/<name>.woke_at
-# files cluster-power-manager.service reads for its own MIN_UPTIME_SECONDS
-# gate, so a button tap in the app and the automatic load-based watchdog
-# never fight each other (e.g. immediately shutting a worker back down
-# right after the app woke it).
 import hmac
 import json
 import os
@@ -36,9 +20,6 @@ STATE_DIR = os.environ["STATE_DIR"]
 POWEROFF_BIN = os.environ.get("POWEROFF_BIN", "/usr/sbin/poweroff")
 NODE_NAME = os.environ["NODE_NAME"]
 
-# TARGETS format: "name:ip:mac name:ip:mac ..." — same layout as
-# cluster_power_manager's WORKERS env var (config.env.j2), so both configs
-# can be eyeballed side by side.
 TARGETS = {}
 for entry in os.environ.get("TARGETS", "").split():
     name, ip, mac = entry.split(":", 2)
@@ -52,10 +33,6 @@ def log(msg):
 
 
 def read_brightness_percent():
-    # bl_power is the backlight rail's own on/off switch, separate from the
-    # brightness level — on this panel, a raw brightness of 0/1 out of
-    # max_brightness is still clearly visible, so a blanked screen only
-    # shows up here, not in the brightness ratio below.
     with open(BL_POWER_PATH) as f:
         if int(f.read().strip()) != 0:
             return 0
@@ -74,9 +51,6 @@ def write_brightness_percent(percent):
     raw = round(maximum * percent / 100)
     with open(BACKLIGHT_PATH, "w") as f:
         f.write(str(raw))
-    # 0% needs bl_power=4 (FB_BLANK_POWERDOWN) to actually blank the panel —
-    # brightness alone bottoms out well above black on this hardware. Any
-    # other value re-enables the rail (bl_power=0) in case it was left off.
     with open(BL_POWER_PATH, "w") as f:
         f.write("4" if percent == 0 else "0")
     return round(100 * raw / maximum) if maximum > 0 else 0
@@ -103,9 +77,6 @@ def poweroff_target(name):
         check=False,
         timeout=140,
     )
-    # Forced command on the target authorizes only "sudo poweroff" — the
-    # actual argument passed over ssh is irrelevant, see
-    # cluster_power_manager_target role.
     subprocess.run(
         [
             "ssh", "-i", SSH_KEY,
@@ -124,10 +95,6 @@ def poweroff_target(name):
 
 
 def _run_best_effort(cmd, timeout):
-    # Every step here is a courtesy, not a precondition for the poweroff
-    # that always follows — a hung/failed kubectl must never strand the
-    # homeserver mid-shutdown. There's no Wake-on-LAN path back to it, so
-    # someone would have to physically walk over and power-cycle it.
     try:
         subprocess.run(cmd, check=False, timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -137,13 +104,6 @@ def _run_best_effort(cmd, timeout):
 
 
 def _graceful_poweroff_self():
-    # Same cordon+drain the automatic watchdog and poweroff_target() already
-    # do for worker-0/worker-1 (see cluster-power-manager.sh), just applied
-    # to the node this agent itself runs on. Draining evicts every pod
-    # through the normal k8s eviction API instead of everything getting
-    # SIGKILLed at once when k3s.service is torn down by systemd shutdown —
-    # each workload gets its terminationGracePeriod to flush and exit
-    # cleanly, one at a time, before the node goes away.
     log(f"cordoning {NODE_NAME}")
     _run_best_effort(["kubectl", "cordon", NODE_NAME], timeout=30)
     log(f"draining {NODE_NAME} -- workloads get to shut down and flush before the node goes away")
@@ -158,13 +118,6 @@ def _graceful_poweroff_self():
 
 
 def poweroff_self():
-    # The confirmation-code check already happened in carplay-api before
-    # this endpoint was ever called (see internal/handlers/power.go) — this
-    # agent trusts its own bearer token as sufficient authorization at this
-    # point. Run the drain/poweroff sequence in a background thread so the
-    # HTTP response can still be written immediately — the draining below
-    # evicts the very carplay-api pod that proxied this request, so nothing
-    # would be left to receive a response once it starts.
     log("shutting down homeserver itself -- confirmed request via app, starting graceful drain")
     threading.Thread(target=_graceful_poweroff_self, daemon=True).start()
 
