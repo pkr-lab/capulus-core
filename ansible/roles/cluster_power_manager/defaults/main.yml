@@ -2,14 +2,6 @@
 # ============================================================
 # cluster_power_manager — Defaults
 # ============================================================
-# Weckt worker-0/worker-1 per Wake-on-LAN, wenn die Last auf dem
-# Homeserver zu hoch wird, und fährt sie wieder herunter, sobald die Last
-# lange genug wieder niedrig ist. Läuft NUR auf homeserver (Control-Plane
-# — hat kubeconfig und generiert den SSH-Key für den Shutdown-Weg).
-# Gegenstück auf den Workern: wake_on_lan (WoL-Empfangsbereitschaft) und
-# cluster_power_manager_target (autorisiert den hier erzeugten Key nur
-# für "poweroff").
-# ============================================================
 
 cluster_power_manager_enabled: true
 

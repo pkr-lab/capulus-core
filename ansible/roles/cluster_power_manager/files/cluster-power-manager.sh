@@ -1,20 +1,4 @@
 #!/usr/bin/env bash
-# Managed by Ansible (cluster_power_manager role) — do not edit manually.
-#
-# Läuft auf dem Homeserver. Pollt die LOKALE CPU/RAM-Last (gleiches
-# Prinzip wie resource-watchdog.sh, kein Prometheus/k8s in der Messkette)
-# und steuert worker-0/worker-1 gegenläufig zum Resource-Watchdog auf den
-# Workern: statt sich selbst abzuschalten, weckt/schaltet dieses Skript
-# die BEIDEN Worker-Nodes ab, damit deren Rechenlast bei Bedarf zur
-# Verfügung steht, aber nicht dauerhaft Strom zieht.
-#
-# Hochskalieren: Last (CPU ODER RAM) sustained über Schwelle ->
-#   1. worker-0 per Wake-on-LAN wecken
-#   2. bleibt die Last weiter sustained hoch -> worker-1 zusätzlich wecken
-#
-# Herunterskalieren: Last (CPU UND RAM) sustained unter (niedrigerer)
-# Schwelle -> jeweils EINEN Worker pro Sustain-Periode herunterfahren,
-# zuletzt geweckten zuerst (LIFO), erst nach kubectl cordon+drain.
 set -euo pipefail
 
 POLL_SECONDS="${POLL_SECONDS:?POLL_SECONDS not set}"
@@ -35,9 +19,6 @@ NTFY_HOST="${NTFY_HOST:?not set}"
 NTFY_IP="${NTFY_IP:?not set}"
 NTFY_TOPIC="${NTFY_TOPIC:?not set}"
 WORKERS="${WORKERS:?WORKERS not set (Format: name:ip:mac name:ip:mac ...)}"
-# Set DRY_RUN=1 (e.g. via `systemctl edit --runtime cluster-power-manager`)
-# to test the full detection -> WoL/shutdown path without actually waking
-# or shutting anything down.
 DRY_RUN="${DRY_RUN:-0}"
 
 export KUBECONFIG="$KUBECONFIG_PATH"

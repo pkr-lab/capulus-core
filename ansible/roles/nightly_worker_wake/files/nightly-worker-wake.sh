@@ -1,30 +1,4 @@
 #!/usr/bin/env bash
-# Managed by Ansible (nightly_worker_wake role) — do not edit manually.
-#
-# Läuft nachts um 01:00 auf dem Homeserver (systemd-Timer, siehe
-# nightly-worker-wake.timer). Weckt ALLE konfigurierten Worker
-# unabhängig von der aktuellen Last per Wake-on-LAN, lässt Semaphore das
-# jeweilige "Deploy <worker>"-Template laufen (enthält jetzt auch
-# worker_apt_update, siehe worker-0.yml/worker-1.yml) und fährt danach
-# alle geweckten Worker wieder herunter -- spätestens nach
-# MAX_RUNTIME_SECONDS, damit kein Worker die ganze Nacht durchläuft.
-#
-# Pausiert cluster-power-manager.service für die Dauer des Fensters,
-# damit der lastbasierte Watchdog nicht mitten in einem apt-Upgrade
-# gegenläufig einen Worker herunterfährt (siehe
-# docs/2-betrieb-hardware/20020-cluster-power-manager.md) -- beide teilen sich denselben
-# poweroff-Key und dieselbe woke_at-Buchführung in STATE_DIR.
-#
-# Sendet am Ende IMMER einen strukturierten Bericht (was wurde geupdated,
-# wo gab es Fehler) an den n8n-Webhook, der daraus ein Zammad-Ticket
-# baut -- siehe argocd/apps/workloads/n8n/workflows/
-# nightly-worker-update-to-zammad.json und docs/2-betrieb-hardware/20030-nightly-worker-update.md.
-# ntfy bleibt zusätzlich als schnelle Push-Benachrichtigung bestehen.
-#
-# Shutdown, Watchdog-Neustart und Bericht laufen zentral über einen
-# EXIT-Trap (cleanup_and_report) -- damit bleibt auch bei einem
-# unerwarteten Abbruch (z.B. Semaphore-API down mitten im Lauf) kein
-# geweckter Worker unbemerkt die ganze Nacht an.
 set -euo pipefail
 
 MAX_RUNTIME_SECONDS="${MAX_RUNTIME_SECONDS:?not set}"
@@ -43,11 +17,6 @@ NTFY_IP="${NTFY_IP:?not set}"
 NTFY_TOPIC="${NTFY_TOPIC:?not set}"
 N8N_WEBHOOK_URL="${N8N_WEBHOOK_URL:?not set}"
 WORKERS="${WORKERS:?WORKERS not set (Format: name:ip:mac name:ip:mac ...)}"
-# Set DRY_RUN=1 (z.B. via `systemctl edit --runtime nightly-worker-wake`)
-# um den vollen Ablauf zu testen, ohne echte Worker zu wecken, Semaphore
-# zu triggern oder herunterzufahren. Der Bericht wird trotzdem an n8n
-# geschickt (mit "[DRY RUN]"-Präfix), damit sich auch der Report-Pfad
-# testen lässt.
 DRY_RUN="${DRY_RUN:-0}"
 
 export KUBECONFIG="$KUBECONFIG_PATH"
@@ -72,7 +41,6 @@ START_ISO="$(date -u -Iseconds)"
 DEADLINE=$(( START + MAX_RUNTIME_SECONDS ))
 
 # ---- Report-Buchführung je Worker -----------------------------------
-# status: pending | not_ready | success | error | stopped | no_template
 declare -A wp_status wp_reason wp_changed wp_recap wp_rebooted
 for name in "${all_names[@]}"; do
   wp_status["$name"]="pending"
@@ -96,7 +64,6 @@ notify() {
     "http://${NTFY_HOST}/${NTFY_TOPIC}" || true
 }
 
-# Baut aus den wp_*-Arrays das JSON für den n8n-Webhook und sendet es.
 send_report() {
   local note="$1" finished_iso elapsed workers_json
   finished_iso="$(date -u -Iseconds)"
@@ -135,14 +102,6 @@ send_report() {
 wait_for_ready() {
   local name="$1" waited=0 ready
   while (( waited < READY_TIMEOUT_SECONDS )); do
-    # Auf die "Ready"-Condition direkt prüfen statt auf die STATUS-Spalte
-    # von `kubectl get node` zu grep'en: sobald der Node noch cordoned ist
-    # (z.B. weil ein vorheriger Lauf wegen dieses Bugs nie uncordon
-    # erreicht hat), liest die Spalte "Ready,SchedulingDisabled" -- OHNE
-    # Leerzeichen nach "Ready" -- wodurch \sReady\s NIE matcht, selbst
-    # wenn der Node laengst bereit ist. Das fuehrte zu einer sich selbst
-    # aufrechterhaltenden Falle: Node bleibt cordoned -> naechste Nacht
-    # wieder "not_ready" erkannt -> bleibt cordoned -> usw.
     ready="$(kubectl get node "$name" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)"
     [ "$ready" = "True" ] && return 0
     sleep 5
@@ -182,9 +141,6 @@ shutdown_worker() {
   fi
   kubectl cordon "$name" || true
   kubectl drain "$name" --ignore-daemonsets --delete-emptydir-data --timeout=120s || true
-  # Forced command auf dem Worker (cluster_power_manager_target) ignoriert
-  # das tatsächlich übergebene Kommando und führt immer "sudo poweroff"
-  # aus -- "true" ist hier nur ein Platzhalter.
   ssh -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=5 \
     "${SSH_USER}@${ip}" true || true
   rm -f "${STATE_DIR}/${name}.woke_at"
@@ -231,9 +187,6 @@ semaphore_stop_task() {
     "${SEMAPHORE_API_BASE}/api/project/$1/tasks/$2/stop" > /dev/null || true
 }
 
-# Holt das rohe Ansible-Log eines Semaphore-Tasks und befüllt daraus
-# wp_recap/wp_changed/wp_rebooted für den Bericht. Best-effort: bei
-# abgebrochenen (stopped) Tasks kann das Log unvollständig oder leer sein.
 semaphore_fill_report_from_output() {
   local name="$1" project_id="$2" task_id="$3" output recap
   output="$(curl --silent --show-error --max-time 15 -b "$COOKIE_JAR" \
@@ -241,11 +194,6 @@ semaphore_fill_report_from_output() {
     | jq -r '.[].output' 2>/dev/null || true)"
   [ -z "$output" ] && return 0
 
-  # Ansible faerbt die PLAY-RECAP-Zeile eines Hosts mit ANSI-Codes ein,
-  # sobald er unreachable/failed ist (z.B. "\e[1;31mworker-0\e[0m : ...") --
-  # ohne das Stripping matcht der Anker "^${name}" nie, und der dadurch
-  # leere grep laesst unter `pipefail` das nachfolgende `set -e` das ganze
-  # Skript abbrechen (recap=$(...) ist eine Zuweisung, kein `if`/`||`).
   recap="$(printf '%s\n' "$output" | sed -E 's/\x1b\[[0-9;]*m//g' | grep -E "^${name}[[:space:]]*:" | tail -1 | tr -d '\r' || true)"
   wp_recap["$name"]="$recap"
 
@@ -257,10 +205,6 @@ semaphore_fill_report_from_output() {
   fi
 }
 
-# Zentrales Aufräumen -- läuft bei JEDEM Skriptende (normaler Durchlauf,
-# frühes `exit 0`, oder Abbruch durch `set -e` bei einem unerwarteten
-# Fehler): fährt alle geweckten Worker herunter, reaktiviert
-# cluster-power-manager (falls gestoppt) und schickt den Bericht an n8n.
 cleanup_and_report() {
   local rc=$?
   if [ "$rc" -ne 0 ] && [ -z "$NOTE" ]; then
@@ -386,4 +330,3 @@ fi
 
 logger -t nightly-worker-wake "update phase done, shutting down"
 notify "Nightly Worker Update abgeschlossen" "Updates fertig, Worker fahren jetzt herunter."
-# Rest (Shutdown, Watchdog-Neustart, Bericht) übernimmt der EXIT-Trap.
