@@ -63,6 +63,7 @@
     --import
     --noautoconsole
     --autostart
+  changed_when: true # laeuft nur, wenn die Domain oben noch nicht existiert (siehe when)
   when: libvirt_host_vm_exists.rc != 0
 
 - name: Warten, bis die VM per SSH erreichbar ist (erster Boot + cloud-init dauert etwas)
