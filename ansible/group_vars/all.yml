@@ -73,6 +73,9 @@ wireguard_backup_peer_public_key: "5Y75EMmEd0SeLweGCTD6V26FxHIrEte3LSEdvtQsT38="
 # ---- Local network ----------------------------------------
 local_subnet: "192.168.178.0/24"
 
+# ENTW-VM auf worker-1 (siehe host_vars/worker-1/vars.yml, libvirt_host_vms)
+entw_vm_ip: "192.168.178.100"
+
 # ---- Pi-hole (network-wide ad blocking) --------------------
 pihole_dns_nodeport: 30053
 
