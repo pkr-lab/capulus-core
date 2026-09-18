@@ -115,8 +115,6 @@
   no_log: true
 
 # ---- k8s namespace ----------------------------------------
-# ArgoCD will create the namespace too (CreateNamespace=true) but we may
-# get here before ArgoCD's first sync — make sure it exists.
 - name: Ensure semaphore namespace exists
   ansible.builtin.shell:
     cmd: |
@@ -130,8 +128,6 @@
   changed_when: "'created' in semaphore_ns_apply.stdout"
 
 # ---- Bootstrap Secret -------------------------------------
-# Build the Secret with `kubectl create --dry-run | kubectl apply` so it
-# stays idempotent and we never log secret values.
 - name: Render bootstrap Secret manifest
   ansible.builtin.copy:
     dest: /tmp/semaphore-bootstrap-secret.yaml

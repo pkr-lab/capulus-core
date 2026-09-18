@@ -2,15 +2,6 @@
 # ============================================================
 # resource_watchdog role — CPU/RAM-Selbstschutz
 # ============================================================
-# Pollt CPU-Last und RAM-Belegung direkt auf dem Host (ohne Umweg über
-# Prometheus/k8s) und fährt den Host herunter, wenn ein Wert zu lange zu
-# hoch bleibt. Gleiches Prinzip wie thermal_watchdog, aber mit deutlich
-# längerer Sustain-Dauer (Minuten statt Sekunden), da CPU/RAM-Sättigung
-# anders als Übertemperatur keine unmittelbare Hardware-Gefahr ist. Die
-# reinen Warnschwellen (80% CPU, 70% RAM, 70% Disk) laufen separat über
-# VMRule/Alertmanager
-# (argocd/apps/platform/monitoring/templates/vmrule-resources.yaml).
-# ============================================================
 
 - name: Deploy resource watchdog script
   ansible.builtin.copy:

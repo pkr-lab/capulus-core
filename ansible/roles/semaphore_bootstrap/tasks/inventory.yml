@@ -55,9 +55,6 @@
     status_code: [200, 201, 204]
   when: not inventory_exists
 
-# Existing inventories may pre-date a content change in defaults/main.yml.
-# PUT the full desired body so re-running the bootstrap is self-healing —
-# same pattern as template.yml.
 - name: Update inventory {{ inventory_spec.name }}
   ansible.builtin.uri:
     url: "{{ semaphore_api_base }}/api/project/{{ project_id }}/inventory/{{ inventory_id | int }}"

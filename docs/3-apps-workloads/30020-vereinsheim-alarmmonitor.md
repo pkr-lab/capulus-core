@@ -36,11 +36,12 @@ die es bei den Raspberry Pis bewusst nicht gibt:
 3. [Ersteinrichtung (manuell)](#ersteinrichtung-manuell)
 4. [Ansible-Provisionierung](#ansible-provisionierung)
 5. [Server-Fallback](#server-fallback)
-6. [Grafana (Push statt Pull)](#grafana-push-statt-pull)
-7. [Zammad-Ticket via n8n](#zammad-ticket-via-n8n)
-8. [Sichtprüfung ohne physischen Zugriff](#sichtprüfung-ohne-physischen-zugriff)
-9. [Wake-on-LAN für den Windows-PC](#wake-on-lan-für-den-windows-pc)
-10. [Fehlerbehebung](#fehlerbehebung)
+6. [Periodischer Seiten-Neustart](#periodischer-seiten-neustart)
+7. [Grafana (Push statt Pull)](#grafana-push-statt-pull)
+8. [Zammad-Ticket via n8n](#zammad-ticket-via-n8n)
+9. [Sichtprüfung ohne physischen Zugriff](#sichtprüfung-ohne-physischen-zugriff)
+10. [Wake-on-LAN für den Windows-PC](#wake-on-lan-für-den-windows-pc)
+11. [Fehlerbehebung](#fehlerbehebung)
 
 ---
 
@@ -195,6 +196,56 @@ Der bestehende Heartbeat-Timer (→ ntfy-Ausfall-Alarm in
 `argocd/apps/workloads/alamos-apager`) läuft unverändert parallel und unabhängig
 davon weiter — er braucht denselben `*.homeserver`-Pfad wie der Kiosk
 selbst, ist also von derselben Split-DNS/Route-Voraussetzung abhängig.
+
+## Periodischer Seiten-Neustart
+
+**Hintergrund:** Am 2026-09-12 wurde ein echter Einsatzalarm auf diesem
+Monitor nicht angezeigt. Die Nachanalyse (~4 Tage später) konnte den
+Vorfall mangels Retention nicht mehr rekonstruieren (lokales `journalctl`
+nur ~3,5 Tage, ntfy-Topic-Cache nur ~12h — Anlass für
+[docs/3-apps-workloads/300j0-logging.md](300j0-logging.md)). Geprüft und
+**ausgeschlossen** wurde dabei, dass sich die Standort-URL pro Alarm
+ändert: `/start?station=...` löst serverseitig immer zur selben, fest im
+SealedSecret hinterlegten AMweb-URL auf (siehe
+[docs/3-apps-workloads/30010-alamos-apager.md](30010-alamos-apager.md)) —
+neue Alarme sollen live innerhalb derselben, dauerhaft offenen
+Chromium-Session erscheinen, nicht über einen neuen Redirect.
+
+**Verbleibende Hypothese (nicht abschließend bestätigt):** Chromium bleibt
+bis zu 24h ununterbrochen offen (bisher nur täglicher
+`getty@tty1`-Neustart um 00:00, siehe
+[Ansible-Provisionierung](#ansible-provisionierung)). Bleibt die Seite
+äußerlich normal sichtbar, während ihre eigene In-Page-Live-Aktualisierung
+(Websocket/Polling) lautlos hängen bleibt, greift **keiner** der
+bestehenden Sicherheitsmechanismen: `alamos-apager` selbst bleibt
+erreichbar (kein Fallback-Trigger), der Heartbeat-Timer läuft unabhängig
+vom Seiteninhalt weiter (kein Down-Alarm), und es gibt keinen Login-Screen
+(keine abgelaufene Session).
+
+**Mitigation (Feature vorhanden, aktuell deaktiviert):** Der Supervisor
+(`ansible/roles/banana_pi_kiosk/templates/banana-pi-kiosk-supervisor.sh.j2`)
+kann Chromium zusätzlich alle `banana_pi_kiosk_periodic_refresh_seconds`
+Sekunden neu starten (Rollen-Default in
+`ansible/roles/banana_pi_kiosk/defaults/main.yml`) — unabhängig von
+Fallback-Zustand und Crash-Erkennung, per `stop_chromium`/`start_chromium`
+(gleiche Funktionen wie beim Fallback-Wechsel, also gleiches
+Profil/gleiche Session, kein erneuter Login nötig). Der Timer wird bei
+jedem Chromium-(Neu-)Start zurückgesetzt (auch bei Fallback-Wechsel oder
+Crash-Recovery), es gibt also nie einen Neustart kurz nach einem anderen.
+
+`banana_pi_kiosk_periodic_refresh_seconds: 0` deaktiviert das Feature
+vollständig — das ist seit 2026-09-16 der Rollen-Default. Damit ist die
+oben beschriebene Hypothese (stiller Hänger der In-Page-Live-Aktualisierung)
+**wieder ungemindert**; bewusste Entscheidung gegen die störenden
+periodischen Neustarts. Zum Reaktivieren einen Wert > 0 setzen, z. B.
+`banana_pi_kiosk_periodic_refresh_seconds: 7200` (120 Minuten, der frühere
+Default) in `ansible/host_vars/vereinsheim-alarmmonitor/`.
+
+Loggt bei jedem periodischen Neustart eine Zeile über
+`logger -t banana-pi-kiosk` (siehe
+[docs/3-apps-workloads/300j0-logging.md](300j0-logging.md) für die
+zentrale Abfrage über VictoriaLogs statt des kurz laufenden lokalen
+Journals).
 
 ## Grafana (Push statt Pull)
 
@@ -410,6 +461,7 @@ Online-Status prüfen und den PC wieder herunterfahren: siehe
 | iOS-App: "Aufwecken" bei Windows-PC schlägt fehl (401) | Token in der App aktuell? Neu auslesen: `ssh pela@vereinsheim-alarmmonitor sudo cat /etc/banana-pi-wol-agent/token` |
 | iOS-App: "Aufwecken" bei Windows-PC ohne Antwort/Timeout | Tailscale auf dem Handy aktiv? `systemctl status banana-pi-wol-agent` auf dem Pi — läuft der Dienst? `curl -X POST http://100.123.214.4:9102/wol -H "Authorization: Bearer <token>" -d '{"target":"windows-pc"}'` von einer Tailnet-Maschine zum Gegenchecken |
 | Nachträgliche Analyse eines Vorfalls (z. B. "Alarm wurde nicht angezeigt") — lokales `journalctl` reicht nicht mehr zurück | Journal auf dem Pi ist auf ~3,5 Tage begrenzt (täglicher Reboot + 20-MB-Limit) — stattdessen Grafana/VictoriaLogs abfragen (Retention 14 Tage), siehe [docs/3-apps-workloads/300j0-logging.md](300j0-logging.md) |
+| Prüfen, ob der periodische Chromium-Neustart läuft (nur relevant, falls wieder aktiviert) | `journalctl -t banana-pi-kiosk` auf dem Pi bzw. in VictoriaLogs nach `periodischer Neustart` filtern (siehe [Periodischer Seiten-Neustart](#periodischer-seiten-neustart)) |
 
 ## Relevante Links
 

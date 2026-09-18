@@ -1,21 +1,5 @@
 #!/usr/bin/env bash
-# Managed by Ansible (banana_pi_kiosk role) — do not edit manually.
-#
-# X-Session-Client (gestartet ueber ~/.xinitrc): haelt die X-Session am
-# Leben und verwaltet Chromium selbst als Kindprozess, damit ein URL-Wechsel
-# (Normalbetrieb <-> Fallback) OHNE X-Neustart moeglich ist — xinit beendet
-# die Session sonst, sobald der Client-Prozess (dieses Skript) endet.
-#
-# Normalbetrieb: {{ banana_pi_kiosk_base_url }}/start?station={{ banana_pi_kiosk_station }}
-# (Cluster loest serverseitig zur echten AMweb-URL auf, siehe
-# docs/3-apps-workloads/30010-alamos-apager.md).
-#
-# Fallback (alamos-apager {{ banana_pi_kiosk_failover_fail_threshold }}x in
-# Folge nicht erreichbar): lokal hinterlegte echte AMweb-URL (siehe
-# host_vars/{{ inventory_hostname }}/vault.yml). Gleiches Chromium-Profil in
-# beiden Faellen (kein --incognito) — der einmalige manuelle AMweb-Login
-# (Passwort + Verschluesselungspasswort) deckt beide Pfade ab, da beide auf
-# dieselbe AMweb-Domain zeigen. Details: docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md.
+
 set -uo pipefail
 
 BASE_URL="{{ banana_pi_kiosk_base_url }}"
@@ -25,6 +9,7 @@ FALLBACK_URL="{{ banana_pi_kiosk_fallback_url }}"
 POLL_SECONDS={{ banana_pi_kiosk_failover_poll_seconds }}
 FAIL_THRESHOLD={{ banana_pi_kiosk_failover_fail_threshold }}
 RECOVER_THRESHOLD={{ banana_pi_kiosk_failover_recover_threshold }}
+REFRESH_SECONDS={{ banana_pi_kiosk_periodic_refresh_seconds }}
 
 xset s off || true
 xset s noblank || true
@@ -33,6 +18,7 @@ unclutter -idle 0.5 -root &
 
 chromium_pid=""
 current_mode=""  # "normal" oder "fallback"
+last_start_epoch=0
 
 start_chromium() {
   local url="$1"
@@ -48,6 +34,7 @@ start_chromium() {
     --no-sandbox \
     "${url}" &
   chromium_pid=$!
+  last_start_epoch=$(date +%s)
 }
 
 stop_chromium() {
@@ -98,6 +85,22 @@ while true; do
       start_chromium "${FALLBACK_URL}"
     else
       start_chromium "${NORMAL_URL}"
+    fi
+  fi
+
+  # Periodischer Neustart als Sicherheitsnetz gegen eine lautlos
+  # haengengebliebene In-Page-Live-Aktualisierung (siehe Kommentar am
+  # Dateianfang) — REFRESH_SECONDS=0 deaktiviert das.
+  if [ "${REFRESH_SECONDS}" -gt 0 ]; then
+    now_epoch=$(date +%s)
+    if [ $((now_epoch - last_start_epoch)) -ge "${REFRESH_SECONDS}" ]; then
+      logger -t banana-pi-kiosk "periodischer Neustart (${REFRESH_SECONDS}s) im Modus ${current_mode}"
+      stop_chromium
+      if [ "${current_mode}" = "fallback" ]; then
+        start_chromium "${FALLBACK_URL}"
+      else
+        start_chromium "${NORMAL_URL}"
+      fi
     fi
   fi
 done

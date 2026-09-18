@@ -215,6 +215,27 @@ postgresql:
   affinity: {}
 
 # ============================================================
+# Postgres-Backup — pg_dump-CronJob auf NAS-Storage, ergaenzt das
+# Datei-Level-Restic-Backup von immich-nas um einen transaktions-
+# konsistenten, einzeln rueckspielbaren Dump (docs/4-planung/40080).
+# ============================================================
+backup:
+  enabled: true
+  schedule: "50 1 * * *"
+  timezone: "Europe/Berlin"
+  suspend: false
+  storageClassName: immich-nas
+  size: 5Gi
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 3
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+# ============================================================
 # Valkey/Redis (Job-Queue) — kein PVC, Jobs werden bei Neustart aus der
 # DB neu eingeplant, kein dauerhafter Zustand nötig.
 # ============================================================
