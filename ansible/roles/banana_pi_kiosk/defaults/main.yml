@@ -14,8 +14,10 @@ banana_pi_kiosk_failover_fail_threshold: 3
 
 banana_pi_kiosk_failover_recover_threshold: 1
 
+banana_pi_kiosk_periodic_refresh_seconds: 0
+
 # ---- Taeglicher Kiosk-Session-Neustart ------------------------------------
-banana_pi_kiosk_daily_reboot_enabled: true
+banana_pi_kiosk_daily_reboot_enabled: false
 
 banana_pi_kiosk_daily_reboot_time: "00:00:00"
 

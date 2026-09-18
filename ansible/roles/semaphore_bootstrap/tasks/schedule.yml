@@ -42,8 +42,6 @@
       '{{ schedule_spec.template }}' in project '{{ project_spec.name }}'.
       Available templates: {{ project_template_map.keys() | list }}.
 
-# Jinja dict literal so project_id/template_id stay JSON integers —
-# Semaphore's Go decoder rejects stringified ints (see template.yml).
 - name: Create schedule '{{ schedule_spec.name }}'
   ansible.builtin.uri:
     url: "{{ semaphore_api_base }}/api/project/{{ project_id }}/schedules"

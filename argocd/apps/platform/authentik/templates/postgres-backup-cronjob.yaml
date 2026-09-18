@@ -39,6 +39,16 @@ spec:
                 - |
                   set -eu
                   DATE=$(date +%Y%m%d-%H%M%S)
+                  # Frisch gestartete Pods koennen die ersten Sekunden nach
+                  # dem Start noch keine Cross-Pod-Service-Verbindung
+                  # aufbauen (Netzwerk-Startup-Race, reproduzierbar
+                  # beobachtet am 2026-09-18 - Ursache fuer wochenlange
+                  # 0-Byte-Dumps, siehe docs/4-planung/40080). Auf
+                  # Erreichbarkeit warten statt sofort zu verbinden.
+                  for i in $(seq 1 15); do
+                    pg_isready -h {{ include "authentik.fullname" . }}-postgres -U {{ .Values.postgresql.username }} && break
+                    sleep 2
+                  done
                   pg_dump -h {{ include "authentik.fullname" . }}-postgres \
                     -U {{ .Values.postgresql.username }} \
                     -d {{ .Values.postgresql.database }} \
