@@ -56,7 +56,8 @@
 
 - name: Generate the access key encryption key (first run only)
   ansible.builtin.shell:
-    cmd: "head -c32 /dev/urandom | base64 > {{ semaphore_state_dir }}/access_key_encryption"
+    cmd: "set -o pipefail && head -c32 /dev/urandom | base64 > {{ semaphore_state_dir }}/access_key_encryption"
+    executable: /bin/bash
     creates: "{{ semaphore_state_dir }}/access_key_encryption"
 
 - name: Lock down the access key encryption file

@@ -91,6 +91,7 @@
     certutil -d sql:/home/{{ banana_pi_kiosk_user }}/.pki/nssdb
     -A -t "C,," -n homeserver-root-ca
     -i /usr/local/share/ca-certificates/homeserver-root-ca.crt
+  changed_when: true # importiert das Zertifikat, laeuft nur wenn oben noch nicht vorhanden (siehe when)
   when:
     - banana_pi_kiosk_enabled | bool
     - banana_pi_kiosk_nssdb_ca_check.rc != 0

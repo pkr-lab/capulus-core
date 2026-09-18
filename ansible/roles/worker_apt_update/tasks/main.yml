@@ -26,12 +26,10 @@
         owner: root
         group: root
         mode: '0600'
-      register: worker_apt_update_dns_fallback_file
+      notify: Netplan-Konfiguration anwenden
 
-    - name: Netplan-Konfiguration anwenden
-      ansible.builtin.command: netplan apply
-      when: worker_apt_update_dns_fallback_file.changed
-      changed_when: true
+    - name: Handler sofort ausfuehren (DNS muss vor dem apt-Update unten stehen)
+      ansible.builtin.meta: flush_handlers
 
 - name: Update apt cache
   ansible.builtin.apt:
