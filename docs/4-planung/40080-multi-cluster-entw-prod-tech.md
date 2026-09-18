@@ -717,7 +717,7 @@ hier ist reversibel.
       `make entw` | 0.2 |
 | 1.3 | **Tailscale-ACL scharf schalten** für `tag:entw-node` — keine
       Standardroute zu TECH/PROD, siehe Baustein 2 | 0.9, 1.2 |
-| 1.4 | **DNS**: `*.dev.homeserver` → neue ENTW-IP (Baustein 3) |1.2 |
+| 1.4 | **DNS**: `*.dev.homeserver` → neue ENTW-IP (Baustein 3) — **umgesetzt (2026-09-18)**: `address=/dev.homeserver/{{ entw_vm_ip }}` in der dnsmasq-Rolle, `entw_vm_ip` in `group_vars/all.yml`. Ausrollen: `make dnsmasq`. Test: `dig +short whoami.dev.homeserver @192.168.178.94` → `192.168.178.100`. Die Ingress-Hosts der Apps auf dem Branch `entw` müssen dazu auf `*.dev.homeserver` umgestellt werden (Hauptbranch bleibt `*.prod.homeserver`) |1.2 |
 | 1.5 | **`cluster_power_manager` um expliziten ENTW-Wach-Trigger
       erweitern** (statt nur lastbasiert) | 1.2 |
 | 1.6 | **Testweise Apps spiegeln** (`demo-app`, `example-whoami`) — Sync
