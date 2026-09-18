@@ -87,7 +87,7 @@ Der Plan unten löst das deshalb gestaffelt statt mit einem Rundumschlag.
 |---|---|---|
 | Ein ArgoCD für mehrere Cluster, oder pro Cluster eins? | **Technisch reicht eines** — ArgoCD unterstützt natives Multi-Cluster-Management (`argocd cluster add` legt pro Ziel-Cluster ein `Secret` vom Typ `cluster` mit API-Server-URL + Credentials in der `argocd`-Namespace des Hub-Clusters an; `Application`/`ApplicationSet` referenzieren den Ziel-Cluster dann über `destination.server`/`.name` statt immer `https://kubernetes.default.svc`). **Empfehlung für dieses Setup: trotzdem zwei Instanzen, nicht eine für alle drei** — Begründung siehe [Baustein 1](#1-argocd-modell-ein-hub-für-tech--prod-entw-bekommt-eine-eigene-instanz) unten, kurz: ENTW ist als Trainings-/Experimentierumgebung vorgesehen (Bezug zu 40030 Trigger 1) und darf keine Zugangsdaten tragen, die im Erfolgsfall eines Angriffs auf PROD zeigen. |
 | Können die Cluster eingeschränkt untereinander kommunizieren (Beispiel Immich-Server → Immich)? | **Ja, aber nicht über Kubernetes-Bordmittel** — jeder Cluster hat sein eigenes Pod-/Service-Netz (`10.42.0.0/16`/`10.43.0.0/16` sind pro Cluster unabhängig, keine gemeinsame Route). Cross-Cluster-Zugriff muss über die bestehende Traefik-Ingress-Ebene + Tailscale laufen, genau wie heute schon jeder LAN/Tailnet-Client auf `*.homeserver` zugreift — nur eben Cluster-zu-Cluster statt Client-zu-Cluster. Einschränkung auf **genau** die gewünschte Verbindung (z. B. nur Immich-Namespace in PROD darf einen bestimmten Port bei TECH erreichen) über drei kombinierte, bereits im Repo etablierte Mechanismen: Tailscale-ACL-Tags pro Cluster (`tag:entw-node`/`tag:prod-node`/`tag:tech-node`, siehe [docs/c-netzwerk-dns/c0010-tailscale.md](../c-netzwerk-dns/c0010-tailscale.md#acl-konfiguration), aktuell nur dokumentiert, nicht restriktiv konfiguriert), UFW-Regel auf dem Ziel-Node nur für die konkrete Quell-IP/-Tag+Port, und eine Kubernetes-`NetworkPolicy`/Ingress-Regel im Ziel-Namespace, die nur die Absender-Cluster-Gateway-IP zulässt — dieselbe Allow-List-Philosophie wie bei `argocd_network_policy_refined_namespaces` heute schon, nur eine Ebene höher angewendet. Ein echter Cluster-übergreifender Service-Mesh (Cilium ClusterMesh, Istio Multi-Cluster, Submariner) wäre die "richtige" Lösung für viele solcher Verbindungen, ist aber für eine Handvoll benannter Ausnahmen bei drei Nodes klarer Overkill — passt nicht zum sonstigen "kein Tool mehr als nötig"-Muster des Repos (vgl. Ablehnung des Bitnami-Postgres-Subcharts in 40070, Ablehnung von Proxmox in 40030). |
-| Gibt die aktuelle Hardware das her? | **Für drei komplett unabhängige, jeweils hochverfügbare physische Cluster: nein.** Es gibt nur **eine** 24/7-Maschine (`homeserver`). `worker-0`/`worker-1` sind bewusst nur bei Bedarf per WoL an — für einen Cluster, der wie PROD jederzeit für Familie/Verein erreichbar sein muss, ungeeignet als alleinige Nodes. Für das gestaffelte Zielbild (siehe Zielarchitektur unten) reicht die Hardware aber gut: TECH und PROD laufen beide bare metal auf `homeserver` (zweite k3s-Instanz, eigene IP, ~38 GiB RAM sind dort frei), ENTW läuft nested/VM auf `worker-1`. |
+| Gibt die aktuelle Hardware das her? | **Für drei komplett unabhängige, jeweils hochverfügbare physische Cluster: nein.** Es gibt nur **eine** 24/7-Maschine (`homeserver`). `worker-0`/`worker-1` sind bewusst nur bei Bedarf per WoL an — für einen Cluster, der wie PROD jederzeit für Familie/Verein erreichbar sein muss, ungeeignet als alleinige Nodes. Für das gestaffelte Zielbild (siehe Zielarchitektur unten) reicht die Hardware aber gut: TECH bleibt bare metal auf `homeserver` als vertrauenswürdiger Hypervisor-Host, PROD läuft dort in einer KVM/libvirt-VM (~38 GiB frei, VM bekommt z. B. 6 vCPU / 24 GiB), ENTW läuft in einer eigenen KVM/libvirt-VM auf `worker-1` (~15 GiB verfügbar). Beide VMs sind aus Ressourcensicht unkritisch, siehe Baustein 5. |
 | Welche Vorteile bringt das Setup? | Siehe [Vorteile](#vorteile-des-ziel-setups) unten — kurz: echte Blast-Radius-Trennung für die Trainingsumgebung, gefahrloses Testen von Cluster-weiten Änderungen (k3s-Upgrades, ArgoCD-Upgrades, CRD-Änderungen) vor PROD, klarere Sicherheitsgrenze zwischen Infrastruktur (TECH) und Nutzer-Apps (PROD). |
 | Ist die neueste Kubernetes-Version installiert? | **Ja, für den konfigurierten Update-Kanal** (`stable`) — siehe Tabelle oben. Wer bewusst näher an der absoluten Kubernetes-Spitze (`v1.37`) sein will, müsste auf `k3s_channel: latest` wechseln — das ist eine bewusste Stabilität-vs.-Aktualität-Entscheidung, kein Versäumnis. |
 
@@ -144,18 +144,18 @@ flowchart TB
         T3["k3s server<br/>Control-Plane"]
     end
 
-    subgraph PROD["PROD-Cluster — zweite k3s-Instanz, bare metal auf homeserver"]
+    subgraph PROD["PROD-Cluster — KVM/libvirt-VM auf homeserver"]
         direction LR
         P1["ArgoCD-Agent<br/>vom TECH-Hub registriert"]
         P2["Nextcloud · Immich · Paperless<br/>Wiki.js · Mealie · n8n · …"]
-        P3["k3s server<br/>eigener Control-Plane, eigene IP"]
+        P3["k3s server<br/>eigener Control-Plane, eigene VM"]
     end
 
     subgraph ENTW["ENTW-Cluster — worker-1, WoL, ephemer"]
         direction LR
         E1["EIGENE, isolierte ArgoCD-Instanz<br/>(kein Zugriff vom TECH-Hub)"]
         E2["Kopien zum Testen<br/>+ Trainings-/Pentest-Ziele (Pacman-Nachfolger)"]
-        E3["k3s server (k3d/nested oder VM)<br/>nur bei Bedarf wach"]
+        E3["k3s server in KVM/libvirt-VM<br/>nur bei Bedarf wach"]
     end
 
     TECH -.->|"Tailscale-ACL: nur Port 443,<br/>nur authentik/monitoring-Pfad"| PROD
@@ -171,15 +171,44 @@ Vertrauensraums — eigene ArgoCD-Instanz, eigene SealedSecrets-Schlüssel,
 keine Standard-Netzroute zu TECH/PROD. Das ist genau die
 Blast-Radius-Eigenschaft, die 40030 Trigger 1 gefordert hat.
 
-**Daraus folgt auch: TECH und PROD brauchen keine VM-Grenze
-zueinander.** Der einzige Grund für eine separate Maschine/VM wäre eine
-Sicherheitsgrenze — die besteht hier per Design nicht (ein Hub verwaltet
-beide, siehe oben). Der eigentliche Zweck von PROD als **eigenem
-Cluster** ist nicht Isolation von TECH, sondern zwei unabhängige
-Control-Planes für gefahrloses Testen struktureller Änderungen und eine
-klare Betriebsgrenze (Baustein 5 unten) — das lässt sich mit zwei
-bare-metal k3s-Instanzen auf demselben Host genauso erreichen wie mit
-einer VM, nur ohne Hypervisor-Overhead.
+**Revidierte Position zu TECH/PROD auf `homeserver`: PROD läuft doch in
+einer VM, nicht bare metal.** Eine frühere Version dieses Plans empfahl
+hier zwei bare-metal-k3s-Instanzen nebeneinander, mit der Begründung "TECH
+und PROD vertrauen sich ohnehin, da ein Hub beide verwaltet". Diese
+Begründung stimmt für die **GitOps-Vertrauensebene** (wer darf was
+deployen — das ist reine Betreiber-Entscheidung), verwechselt das aber mit
+der **Blast-Radius-Frage bei einem externen Angriff**, und die ist
+asymmetrisch:
+
+- **PROD ist der einzige Cluster mit echter Internet-Exposition** — mehrere
+  Apps hängen über den Cloudflare Tunnel am offenen Internet
+  (`nextcloud-prod.pke-lab.de`, `immich-prod.pke-lab.de`, `pacman`
+  öffentlich-unauthentifiziert, …). Ein RCE in einer dieser Apps ist ein
+  realistisches Angriffsszenario, kein theoretisches.
+- **TECH hält die wertvollsten Assets**: Authentik/lldap (Identity für
+  alles), Semaphore (SSH-Zugriff auf **alle** verwalteten Hosts), ArgoCD
+  selbst (Deploy-Kontrolle). Kein direkter Internet-Zugriff, aber der
+  lohnendste Sekundärschritt für einen Angreifer, der zuerst PROD
+  kompromittiert.
+- **Ohne VM-Grenze teilen sich beide k3s-Instanzen denselben Kernel.**
+  Ein Node-/Root-Level-Kompromiss auf der PROD-Instanz (z. B. über einen
+  Pod-Escape nach einem App-RCE) ist auf bare metal praktisch ein
+  Root-Kompromiss von `homeserver` selbst — von dort sind TECHs
+  Prozesse/Dateien direkt erreichbar, auch wenn sie in einer eigenen
+  k3s-Instanz laufen. Eine KVM/libvirt-VM macht daraus zwei Schritte statt
+  einen: erst Node-Kompromiss *innerhalb* der PROD-VM, dann zusätzlich
+  einen VM-Escape, um überhaupt an TECH heranzukommen — eine deutlich
+  seltenere, aufwändigere Angriffsklasse.
+
+Der Ressourcen-Einwand von früher trägt nicht mehr: wie schon bei ENTW
+gezeigt, liegt der KVM/libvirt-Overhead bei grob ~0,5–1 GB RAM +
+< 5–10 % CPU-Tax — auf `homeserver` (12 vCPU / 61 GiB, ~38 GiB aktuell
+frei) für eine z. B. 6 vCPU / 24 GiB dimensionierte PROD-VM unkritisch.
+**`homeserver` bleibt bare metal als vertrauenswürdiger Hypervisor-Host
+für TECH** (kein direkter Internet-Zugriff, keine deliberate
+Angriffsfläche wie ENTW) — nur PROD zieht in eine VM, weil PROD die
+einzige der drei Rollen ist, die routinemäßig echtem Internet-Traffic
+ausgesetzt ist.
 
 ---
 
@@ -292,57 +321,69 @@ migrierte/tier-lose Namen bestehen.
 
 | Phase | Was | Wo | Risiko |
 |---|---|---|---|
-| 1 | ENTW als leichtgewichtiger, ephemer Cluster (k3d/Nested-k3s-in-Docker **oder** eine schlanke KVM/libvirt-VM — hier **ist** eine VM/Container-Grenze sinnvoll, s. u.) | `worker-1` (mehr RAM als `worker-0`, ~15 GiB — passt besser zu einem Nested-Cluster mit mehreren Test-Apps gleichzeitig), weiterhin per WoL geweckt, `cluster_power_manager`-Rolle um einen expliziten "ENTW-Session"-Trigger erweitert statt nur lastbasiert | gering — reversibel, keine bestehende Infrastruktur angefasst |
-| 2 | TECH/PROD-Split | `homeserver` bleibt TECH bare metal wie heute; PROD als **zweite, unabhängige k3s-Instanz direkt auf `homeserver`** (kein Hypervisor) — Details unten | mittel/hoch — betrifft laufende Familien-/Vereins-Apps, braucht Wartungsfenster + Rollback-Plan |
+| 1 | ENTW als leichtgewichtiger, ephemer Cluster **in einer KVM/libvirt-VM** (bewusst **nicht** k3d/Nested-k3s-in-Docker — Begründung unten) | `worker-1` (mehr RAM als `worker-0`, ~15 GiB — passt gut zu einer VM mit mehreren Test-Apps gleichzeitig), weiterhin per WoL geweckt, `cluster_power_manager`-Rolle um einen expliziten "ENTW-Session"-Trigger erweitert statt nur lastbasiert | gering — reversibel, keine bestehende Infrastruktur angefasst |
 
-**Kein Proxmox, keine VM für PROD** — Begründung siehe
-["Kernentscheidung" oben](#zielarchitektur): TECH/PROD brauchen keine
-Sicherheitsgrenze zueinander, also lohnt sich der Hypervisor-Overhead aus
-40030 Punkt 2.2 hier nicht. Stattdessen ein zweiter k3s-Server-Prozess
-direkt auf demselben Ubuntu-Host wie TECH — dieselbe Bare-Metal-Philosophie
-wie heute schon ("ein Ansible-Lauf, keine offenen Ports",
-[a0010-overview.md](../a-betriebssystem/a0010-overview.md)), nur zweimal
-parametrisiert statt einmal.
+**Warum VM statt k3d für ENTW — anders als bei TECH/PROD:** Bei TECH/PROD
+fiel die Entscheidung gegen eine VM, weil sich beide ohnehin vertrauen
+(Kernentscheidung oben). ENTW ist der einzige Cluster in diesem Plan mit
+einem **echten** Sicherheitsgrenzen-Bedarf — laut 40030 Trigger 1 explizit
+als Trainings-/Pentest-Umgebung vorgesehen, die absichtlich verwundbar
+sein darf. k3d/Nested-k3s-in-Docker teilt sich den Kernel des Hosts —
+ein Container-Escape ist in einem Schulungskontext eine reale,
+geübte Angriffsklasse. Eine KVM/libvirt-VM (Hardware-Isolation über
+Intel VT-x/AMD-V, eigener Gast-Kernel) macht daraus eine deutlich
+seltenere, aufwändigere Angriffsklasse. Der Ressourcen-Mehrbedarf ist
+dabei gering (grobe Hausnummer: ~0,5–1 GB RAM Gast-Overhead, < 5–10 %
+CPU-Virtualisierungstax) und auf `worker-1` (4 vCPU / ~15 GiB, ohnehin
+nur per WoL aktiv) problemlos verkraftbar — kein Grund, an dieser Stelle
+am Overhead zu sparen.
+| 2 | TECH/PROD-Split | `homeserver` bleibt TECH bare metal wie heute (Hypervisor-Host); PROD als **KVM/libvirt-VM auf `homeserver`** — Details unten | mittel/hoch — betrifft laufende Familien-/Vereins-Apps, braucht Wartungsfenster + Rollback-Plan |
 
-**Praktisch nötig, damit sich die zwei Instanzen nicht in die Quere
-kommen:**
+**Weiterhin kein Proxmox, aber jetzt doch eine VM für PROD** —
+Begründung siehe die revidierte ["Kernentscheidung" oben](#zielarchitektur):
+PROD ist die einzige der drei Rollen mit echter Internet-Exposition
+(Cloudflare Tunnel), TECH hält die wertvollsten Assets (Identity,
+Semaphore-SSH-Zugriff auf alle Hosts, ArgoCD-Deploy-Kontrolle) — eine
+VM-Grenze macht aus einem PROD-Node-Kompromiss keinen automatischen
+TECH-Kompromiss mehr. Bewusst weiterhin **kein** volles Proxmox
+(40030 Punkt 2.2: Migrationsrisiko für alle drei Nodes, mächtigerer
+Proxmox-API-Zugriff statt des minimalen `poweroff`-SSH-Keys) — stattdessen
+schlankes KVM/libvirt **auf** dem bestehenden Ubuntu Server, nur für
+diese eine VM.
 
-- **Eigene zweite IP für PROD auf `homeserver`** (z. B. `192.168.178.98`
-  als sekundäre Adresse auf demselben NIC, per Ansible/`ip addr add`
-  verwaltet) — dann kann PROD-Traefik ganz normal auf Port 80/443 dieser
-  IP binden, ohne mit TECH-Traefik auf `.94:80/443` zu kollidieren. Ohne
-  zweite IP müssten stattdessen alle Standardports manuell auseinander
-  gezogen werden (API-Server `6443`→`6444`, kubelet `10250`→`10251`, …) —
-  deutlich fehleranfälliger als eine zusätzliche IP.
-- **Getrennte `--data-dir` je k3s-Instanz** (`/var/lib/rancher/k3s-tech`,
-  `/var/lib/rancher/k3s-prod`) — Standard-k3s-Flag, kein Sonderbau nötig.
-- **`ansible/roles/k3s` parametrisierbar machen** (Instanzname, Ziel-IP,
-  Ziel-Ports, Ziel-Data-Dir als Variablen) statt eine zweite,
-  eigenständige Rolle zu schreiben — spiegelt den bestehenden
-  `k3s`/`k3s_agent`-Rollenzuschnitt.
-- **Ressourcengrenzen weiterhin über cgroups/systemd**
-  (`MemoryMax`/`CPUQuota` auf dem PROD-k3s-`systemd`-Unit) statt über
-  VM-Grenzen — weicher als eine VM, aber ausreichend, um zu verhindern,
-  dass ein PROD-Lastspitze TECH verdrängt.
+**Praktisch nötig:**
 
-**Ehrlich benannter Rest-Unterschied zu einer VM:** Beide Instanzen teilen
-sich denselben Kernel — kein Hardware-Isolationslevel. Für die
-TECH/PROD-Trennung ist das im Rahmen dieses Plans akzeptiert (siehe
-Kernentscheidung oben); falls sich das je ändert (z. B. PROD wird
-irgendwann selbst als nicht mehr vertrauenswürdig genug für einen
-gemeinsamen Kernel mit TECH eingestuft), ist der Umstieg auf eine VM ein
-klar abgegrenzter Nachrüstschritt, kein Rewrite.
+- **libvirt/QEMU auf `homeserver` installieren**, per neuer Ansible-Rolle
+  (`libvirt_host` o. Ä.), Bridge-Netzwerk (`br0`) statt NAT, damit die
+  PROD-VM eine eigene, im LAN direkt erreichbare IP bekommt (z. B.
+  `192.168.178.98`) — kein manuelles Port-Splitting nötig, die VM hat
+  über die Bridge ihren eigenen vollständigen Netzwerkstack, PROD-Traefik
+  bindet ganz normal auf Port 80/443 dieser IP.
+- **VM-Sizing**: Start bei z. B. 6 vCPU / 24 GiB fest zugewiesen (lässt
+  ~6 vCPU / ~35 GiB Puffer für TECH + Hypervisor-Overhead auf 12 vCPU /
+  61 GiB) — Anpassung nach den ersten Betriebswochen anhand von
+  `virsh dommemstat`/`kubectl top nodes` in der VM.
+- **Ubuntu Server 26.04 LTS als Gast-OS**, identisches Ansible-Playbook
+  wie für die bare-metal-Nodes (`common`-Rolle, `k3s`-Rolle unverändert,
+  **kein** Parametrisieren auf mehrere Instanzen nötig — die VM ist aus
+  Ansible-Sicht einfach ein weiterer Host in `hosts.yml`, wie `worker-0`/
+  `worker-1` heute schon) — deutlich weniger Sonderbau als die vorher
+  geplante Bare-Metal-Parametrisierung.
+- **Snapshot vor riskanten Änderungen** (z. B. k3s-Minor-Upgrade auf PROD)
+  ist jetzt ein `virsh snapshot-create` statt gar keiner Option — ein
+  Nebenvorteil gegenüber bare metal, den 40030 Punkt 2.4 explizit als
+  Proxmox-Trigger 4 nannte, hier aber ohne vollen Hypervisor-Wechsel
+  mitgenommen wird.
 
 **Empfehlung zur Node-Zuordnung:**
 
 ```
 homeserver (12 vCPU / 61 GiB, 24/7)
- ├─ TECH   — bare metal, wie heute, IP .94
- └─ PROD   — zweite k3s-Instanz, bare metal, eigene IP .98
-              (Ressourcengrenze per systemd-cgroup, z. B. auf
-              6 vCPU / 24 GiB gedeckelt, Rest bleibt TECH-Puffer)
+ ├─ TECH   — bare metal, wie heute, IP .94 (Hypervisor-Host, vertrauenswürdig)
+ └─ PROD   — KVM/libvirt-VM, 6 vCPU / 24 GiB, eigene Bridge-IP .98
+              (VM-Grenze zu TECH — Begründung s. o.)
 
-worker-1 (4 vCPU / 15 GiB, WoL)   → ENTW, nested/VM, nur bei Bedarf wach
+worker-1 (4 vCPU / 15 GiB, WoL)   → ENTW, KVM/libvirt-VM, nur bei Bedarf wach
                                      (hier lohnt sich die zusätzliche
                                      VM/Container-Grenze, da ENTW als
                                      einziger Cluster eine echte
@@ -477,47 +518,113 @@ Quelle der Wahrheit (die bleibt die App-DB selbst).
 
 ---
 
-## Schritt-für-Schritt-Rollout
+## Umsetzungsreihenfolge — Gesamtplan über alle Bausteine
 
-Kein Big-Bang — TECH läuft während der gesamten Migration auf demselben
-physischen Node weiter, PROD bleibt bis zum bestätigten Cutover auf dem
-heutigen Cluster erreichbar.
+Fünf Phasen, streng nach Risiko sortiert: alles ohne Auswirkung auf den
+laufenden Betrieb zuerst, der einzige wirklich riskante Schritt (TECH/PROD-
+Split, Phase 2) erst, wenn alles davor steht und verifiziert ist. Kein
+Big-Bang — TECH/der heutige Cluster läuft während der gesamten Migration
+weiter, PROD bleibt bis zum bestätigten Cutover auf dem heutigen Cluster
+erreichbar.
 
-1. **Vorbereitung (kein Risiko für laufenden Betrieb):**
-   Namenskonflikt mit dem Nutzer klären (siehe
-   [Annahme oben](#ausgangslage-live-verifiziert) — ein oder zwei ArgoCD
-   gemeint?), Ordnerstruktur `argocd/apps/{tech,prod}/` vs.
-   `{platform,workloads}` entscheiden, Root-CA-Strategie für Baustein 4
-   festlegen.
-2. **ENTW aufsetzen** (Phase 1 aus Baustein 5) — k3d/nested-k3s auf
-   `worker-1`, eigene ArgoCD-Instanz, eigenes `sealed-secrets`. Damit das
-   riskanteste unbekannte Terrain (Multi-Cluster-ArgoCD-Mechanik,
-   eingeschränkte Cross-Cluster-Kommunikation) zuerst an einem
-   Wegwerf-Cluster ohne echte Nutzer verifizieren.
-3. **DNS-Tier-Auflösung umstellen** (Baustein 3) — `*.dev.homeserver` auf
-   die neue ENTW-IP, `*.tech.homeserver`/`*.prod.homeserver` bleiben
-   vorerst auf `.94` (noch ein Cluster).
-4. **Ausgewählte Apps testweise nach ENTW spiegeln** (`demo-app`,
-   `example-whoami`) — Applications im ENTW-ApplicationSet, Sync
-   verifizieren, Rollback-fähig löschen.
-5. **Erst danach TECH/PROD-Split angehen** (Phase 2 aus Baustein 5) —
-   eigener Freigabeschritt mit dem Nutzer, da produktiv wirksam
-   (Nextcloud/Immich/Vaultwarden-Downtime-Fenster nötig).
-6. **ArgoCD-Hub-Registrierung PROD** — `argocd cluster add`, neuer
-   `matrix`-Generator-Abschnitt im Bootstrap-ApplicationSet (Baustein 1),
-   Apps aus der [App-Zuordnung](#app-zuordnung-erster-entwurf-stand-argocd_platform_apps-argocd_workloads_apps)
-   Tabelle schrittweise umziehen, nicht alle 21 Workloads-Apps auf
-   einmal.
-7. **Alte In-Cluster-Applications erst nach vollständiger Verifikation
-   des neuen Ziels entfernen** — analog zum Vorgehen in
-   [b0020-argocd-projects.md](../b-kubernetes-gitops/b0020-argocd-projects.md#rollout-hinweis).
-8. **`ci.yml` (Lint-Gate) zuerst, unabhängig vom Rest** — kann schon vor
-   Schritt 2 umgesetzt werden, hat keine Abhängigkeit zum Multi-Cluster-Umbau.
-9. **`promote.yml` (Baustein 6) erst, wenn Schritt 6 abgeschlossen ist** —
-   die Promotion-Pipeline braucht alle drei Cluster inkl. funktionierender
-   Tailscale-Anbindung des GitHub-Actions-Runners; zuerst manuell/mit
-   festem Wartezeit-Merge testen, bevor der 24h-Health-Gate-Workflow
-   automatisiert PRs öffnet.
+```mermaid
+flowchart TD
+    P0["Phase 0 — Entscheidungen + Fundament<br/>(kein Betriebsrisiko, sofort startbar)"]
+    P1["Phase 1 — ENTW aufbauen<br/>(worker-1, reversibel, kein Prod-Bezug)"]
+    P2["Phase 2 — TECH/PROD-Split<br/>(der einzige riskante Schritt,<br/>braucht Freigabe + Wartungsfenster)"]
+    P3["Phase 3 — Hub-Verkabelung + App-Migration<br/>(schrittweise, pro App verifiziert)"]
+    P4["Phase 4 — Promotion-Pipeline scharf schalten<br/>(erst TECH-Stufe, dann PROD-Stufe)"]
+
+    P0 --> P1
+    P0 -.->|"ci.yml, Nutzerinventar,<br/>Tailscale-Runner-PoC<br/>laufen unabhängig, parallel zu P1"| P1
+    P1 --> P2
+    P2 --> P3
+    P3 --> P4
+```
+
+### Phase 0 — Entscheidungen + Fundament
+
+Kein Eingriff in laufende Systeme, kann sofort beginnen, nichts davon
+blockiert etwas anderes in dieser Phase.
+
+| Schritt | Was | Blockiert später |
+|---|---|---|
+| 0.1 | **Argo-Annahme klären** (siehe [Ausgangslage](#ausgangslage-live-verifiziert)) — ein oder zwei ArgoCD-Server gemeint? | Baustein 1, Phase 3 |
+| 0.2 | **Ordnerstruktur entscheiden**: `argocd/apps/{tech,prod,entw}/` vs. Beibehaltung von `{platform,workloads}` + neuem `entw`-Ordner | Baustein 1, Phase 1+3 |
+| 0.3 | **Root-CA-Strategie** (eine gemeinsame CA vs. drei getrennte, siehe Baustein 4) | Phase 2 |
+| 0.4 | **Merge-Gate PROD entscheiden** (manuelles Review vs. Automerge) | Phase 4 |
+| 0.5 | **Pacman-Doppelrolle** — bewusst *nicht* in dieser Migration entscheiden, nur festhalten, dass sie offen bleibt (siehe [App-Zuordnung](#app-zuordnung-erster-entwurf-stand-argocd_platform_apps-argocd_workloads_apps)) | nichts — expliziter Nicht-Blocker |
+| 0.6 | **Nutzer-/Daten-Inventar anlegen** (Baustein 7) — unabhängig vom Rest, je früher desto besser, da es auch jetzt schon als Dokumentation nützt | Phase 2 (Abgleich vor PROD-Rebuild) |
+| 0.7 | **`ci.yml` bauen** (Lint + `helm template \| kubeconform` + `gitleaks`, Baustein 6) — läuft gegen die *heutige* Repo-Struktur, keine Abhängigkeit zum Cluster-Umbau | Phase 4 (Voraussetzung für ein vertrauenswürdiges Promotion-Gate) |
+| 0.8 | **Tailscale-Runner-Machbarkeit vorab beweisen**: `tailscale/github-action` gegen das **heutige, einzelne** ArgoCD testen (`argocd app get` aus einem GitHub-Actions-Run heraus) — entkoppelt vom Multi-Cluster-Umbau, de-riskt das unbekannteste technische Detail der Promotion-Pipeline frühzeitig | Phase 4 |
+| 0.9 | **Tailscale-ACL-Tag-Schema entwerfen** (`tag:entw-node`/`tag:prod-node`/`tag:tech-node`) — nur die Policy im Admin-Panel vorbereiten, noch nicht scharf schalten (dafür gibt es noch keine getaggten Geräte) | Phase 1 |
+
+### Phase 1 — ENTW aufbauen (worker-1)
+
+Geringes Risiko: `worker-1` trägt heute keine produktiven Daten, alles
+hier ist reversibel.
+
+| Schritt | Was | Voraussetzung |
+|---|---|---|
+| 1.1 | **Headroom-Check**: `worker-1` wird `cluster_power_manager`s
+      lastbasiertem Reserve-Pool des heutigen Clusters entzogen — vorher
+      verifizieren, dass `homeserver` + `worker-0` allein für den
+      aktuellen Lastspitzenfall reichen | 0.6–0.9 nicht nötig |
+| 1.2 | **ENTW-Cluster aufsetzen** (KVM/libvirt-VM auf `worker-1`, eigene
+      ArgoCD-Instanz, eigenes `sealed-secrets`) | 0.2 |
+| 1.3 | **Tailscale-ACL scharf schalten** für `tag:entw-node` — keine
+      Standardroute zu TECH/PROD, siehe Baustein 2 | 0.9, 1.2 |
+| 1.4 | **DNS**: `*.dev.homeserver` → neue ENTW-IP (Baustein 3) |1.2 |
+| 1.5 | **`cluster_power_manager` um expliziten ENTW-Wach-Trigger
+      erweitern** (statt nur lastbasiert) | 1.2 |
+| 1.6 | **Testweise Apps spiegeln** (`demo-app`, `example-whoami`) — Sync
+      verifizieren, danach wieder rückbaubar | 1.2–1.4 |
+
+Damit ist das riskanteste *unbekannte* Terrain (Multi-Cluster-ArgoCD-
+Mechanik, eingeschränkte Cross-Cluster-Kommunikation) an einem
+Wegwerf-Cluster ohne echte Nutzer verifiziert, **bevor** Phase 2 anfängt.
+
+### Phase 2 — TECH/PROD-Split (der riskante Kern)
+
+**Eigener Freigabeschritt mit dem Nutzer nötig** — betrifft laufende
+Familien-/Vereins-Apps. Erst starten, wenn Phase 0 + 1 vollständig
+abgeschlossen und verifiziert sind.
+
+| Schritt | Was | Voraussetzung |
+|---|---|---|
+| 2.1 | **Nutzer-/Daten-Inventar (0.6) gegen Live-Stand abgleichen** — letzter Check vor dem Rebuild | 0.6 |
+| 2.2 | **Wartungsfenster kommunizieren** (Familie/Verein) | — |
+| 2.3 | **libvirt/QEMU + Bridge-Netzwerk auf `homeserver` einrichten** (neue Ansible-Rolle) | 0.3 |
+| 2.4 | **PROD-VM anlegen** (6 vCPU / 24 GiB, Ubuntu Server 26.04, eigene Bridge-IP `.98`), Ansible-Host wie `worker-0`/`worker-1` in `hosts.yml` aufnehmen | 2.3 |
+| 2.5 | **k3s in der PROD-VM installieren** — bestehende `k3s`-Rolle unverändert, kein Parametrisieren nötig (Baustein 5) | 2.4 |
+| 2.6 | **`nas-storage`/`immich-storage` in TECH *und* PROD-VM deployen** (Baustein 4) | 2.5 |
+| 2.7 | **Re-Sealing aller SealedSecrets** für TECH- und PROD-Kontext | 2.5 |
+| 2.8 | **Interne CA/cert-manager gemäß 0.3 auf beide Cluster anwenden** | 0.3, 2.5 |
+
+### Phase 3 — Hub-Verkabelung + App-Migration
+
+| Schritt | Was | Voraussetzung |
+|---|---|---|
+| 3.1 | **PROD im TECH-Hub registrieren** (`argocd cluster add`) | Phase 2 |
+| 3.2 | **`matrix`-Generator im Bootstrap-ApplicationSet ergänzen** (Baustein 1) | 3.1 |
+| 3.3 | **Apps batchweise umziehen**, nach [App-Zuordnung](#app-zuordnung-erster-entwurf-stand-argocd_platform_apps-argocd_workloads_apps) — Empfehlung: zuerst die unkritischen (`demo-app`, `ollama`→ENTW-Umzug bestätigen), dann `vaultwarden`/`zammad` (Tech-Ausnahme), erst zuletzt die Kern-Familien-Apps (`nextcloud`, `immich`, …), **nicht alle auf einmal** | 3.2 |
+| 3.4 | **DNS vollständig aufsplitten**: `*.tech.homeserver`/`*.prod.homeserver` zeigen jetzt auf unterschiedliche IPs | 3.3 (mind. ein Batch live) |
+| 3.5 | **Monitoring/Logging-Remote-Write von PROD nach TECH** einrichten (Baustein 4) | 2.5 |
+| 3.6 | **Alte In-Cluster-Applications erst nach vollständiger Verifikation entfernen** — analog [b0020-argocd-projects.md](../b-kubernetes-gitops/b0020-argocd-projects.md#rollout-hinweis) | 3.3 vollständig |
+
+### Phase 4 — Promotion-Pipeline scharf schalten
+
+Erst jetzt ergibt eine dreistufige Pipeline überhaupt einen Sinn — TECH
+und PROD existieren als eigene Sync-Ziele.
+
+| Schritt | Was | Voraussetzung |
+|---|---|---|
+| 4.1 | **`promote.yml` bauen** (Baustein 6), zunächst nur ENTW→TECH-Stufe, PROD-Stufe noch manuell | Phase 3, 0.7, 0.8 |
+| 4.2 | **Beobachtungszeitraum**: einige Promotion-Zyklen manuell begleiten, bevor Automerge (TECH) aktiv geschaltet wird | 4.1 |
+| 4.3 | **PROD-Stufe aktivieren** gemäß Entscheidung aus 0.4 | 4.2, 0.4 |
+| 4.4 | **Smoke-Test-Schritt** ins Health-Gate ergänzen | 4.1 |
+| 4.5 | **Renovate auf `argocd/apps/entw/*` scopen** | 3.2 |
+| 4.6 | **Wöchentlicher Chaos-/Upgrade-Proben-Workflow** gegen ENTW — niedrigste Priorität, kann jederzeit danach folgen | Phase 1 |
 
 ---
 
@@ -542,12 +649,12 @@ heutigen Cluster erreichbar.
       PROD wandern (zwei neue Schlüsselkontexte).
 - [ ] **Wartungsfenster-Kommunikation** an Familie/Verein vor dem
       PROD-Cutover (Nextcloud/Immich/Vaultwarden-Downtime).
-- [ ] **Zweite IP für PROD auf `homeserver`** festlegen und in
-      `ansible/host_vars`/`group_vars` eintragen, bevor Baustein 5 Phase 2
-      umgesetzt wird.
-- [ ] **`ansible/roles/k3s` parametrisieren** (Instanzname, IP, Ports,
-      Data-Dir), damit dieselbe Rolle TECH **und** PROD bedienen kann,
-      statt einer zweiten, dupliziert gepflegten Rolle.
+- [ ] **Neue Ansible-Rolle `libvirt_host`** (oder ähnlich) für
+      KVM/libvirt + Bridge-Netzwerk auf `homeserver` bauen, bevor Baustein 5
+      Phase 2 umgesetzt wird — inkl. Bridge-IP-Vergabe für die PROD-VM in
+      `ansible/host_vars`/`group_vars`.
+- [ ] **PROD-VM-Sizing final festlegen** (Startwert 6 vCPU / 24 GiB) und
+      als Ansible-Variable für die `libvirt_host`-Rolle hinterlegen.
 - [ ] **`ci.yml`-Lint-Workflow** anlegen (`make lint` auf jedem PR) —
       Lücke besteht unabhängig vom Multi-Cluster-Umbau, aber Voraussetzung
       für ein vertrauenswürdiges Promotion-Gate.
@@ -557,8 +664,8 @@ heutigen Cluster erreichbar.
 - [ ] **Entscheidung Merge-Gate PROD** — manuelles Review pflicht wie
       empfohlen, oder ebenfalls Automerge nach X Stunden grünem TECH-Status?
 - [ ] **`argocd/apps/entw/*`-Pfad in `renovate.json` ergänzen**, sobald
-      die Ordnerstruktur aus Schritt 1 steht, damit Renovate-PRs zuerst
-      dort statt direkt in `tech`/`prod` landen.
+      die Ordnerstruktur aus Phase 0, Schritt 0.2 steht, damit
+      Renovate-PRs zuerst dort statt direkt in `tech`/`prod` landen.
 - [ ] **Manifest-Validierung** (`helm template | kubeconform`) als
       Pflichtschritt in `ci.yml` ergänzen.
 - [ ] **Secret-Scanning** (`gitleaks`) als Pflichtschritt in `ci.yml`
