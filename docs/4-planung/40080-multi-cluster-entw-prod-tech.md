@@ -694,7 +694,15 @@ hier ist reversibel.
       verifizieren, dass `homeserver` + `worker-0` allein für den
       aktuellen Lastspitzenfall reichen | 0.6–0.9 nicht nötig |
 | 1.2 | **ENTW-Cluster aufsetzen** (KVM/libvirt-VM auf `worker-1`, eigene
-      ArgoCD-Instanz, eigenes `sealed-secrets`) | 0.2 |
+      ArgoCD-Instanz, eigenes `sealed-secrets`) — `libvirt_host`-Rolle
+      **verallgemeinert und für `worker-1` fertig konfiguriert**
+      (2026-09-18: Facts-basiert statt homeserver-spezifischer
+      Variablen, `entw-vm`-Eintrag in
+      `host_vars/worker-1/vars.yml`, `libvirt_host_enabled: false`
+      bewusst separat von homeserver gegated). Noch offen: `worker-1`s
+      tatsächliche lokale Diskkapazität gegen die geplanten 60 GiB
+      prüfen (nicht verifiziert), dann `libvirt_host_enabled: true` +
+      `make worker-1-libvirt-host` | 0.2 |
 | 1.3 | **Tailscale-ACL scharf schalten** für `tag:entw-node` — keine
       Standardroute zu TECH/PROD, siehe Baustein 2 | 0.9, 1.2 |
 | 1.4 | **DNS**: `*.dev.homeserver` → neue ENTW-IP (Baustein 3) |1.2 |
@@ -788,12 +796,39 @@ und PROD existieren als eigene Sync-Ziele.
       Fallback-Zugriff), deshalb bewusst nicht automatisch scharf.
       IP-Konflikt korrigiert: `.98` war schon `infotafel` belegt, PROD-VM
       bekommt `.99`.
-- [x] **PROD-VM-Sizing festgelegt** (6 vCPU / 24 GiB, als
-      `libvirt_host_vms`-Default in der Rolle hinterlegt).
-- [ ] **`libvirt_host_admin_ssh_public_key` setzen** (Platzhalter `""` in
-      `group_vars/all.yml`) und `libvirt_host_base_image_url` gegen die
-      tatsächlich verfügbare Ubuntu-26.04-Cloud-Image-URL prüfen, bevor
-      `make libvirt-host` das erste Mal läuft.
+- [x] **PROD-VM-Sizing festgelegt** (6 vCPU / 24 GiB, jetzt in
+      `host_vars/homeserver/vars.yml`, nicht mehr in den Rollen-Defaults
+      — die Rolle ist seit 2026-09-18 host-generisch).
+- [x] **`libvirt_host`-Rolle für `worker-1` verallgemeinert** (2026-09-18)
+      — Netzwerk-Variablen Facts-basiert (`ansible_default_ipv4.*`)
+      statt an homeserver-spezifische `network_*`-Variablen gekoppelt,
+      ENTW-VM-Sizing 3 vCPU / 12 GiB / 60 GiB Disk in
+      `host_vars/worker-1/vars.yml`, Rolle in `worker-1.yml` eingehängt,
+      `make worker-1-libvirt-host`/`make worker-1-libvirt-bridge`.
+- [ ] **Achtung — Entdeckt beim Umbau:** `libvirt_host_enabled` steht
+      inzwischen auf `true` in `group_vars/all.yml` (nicht von mir
+      gesetzt). Gilt nur für `homeserver`/PROD-VM (worker-1 hat einen
+      expliziten `false`-Override) — bitte bestätigen, dass das
+      beabsichtigt ist, bevor `make libvirt-host` unbeaufsichtigt läuft.
+- [x] **`worker-1`s lokale Diskkapazität geprüft** (2026-09-18, live via
+      SSH) — Root-Partition hat nur **31 GiB frei** (57 GiB gesamt).
+      `entw-vm`-Disk-Größe auf **20 GiB** festgelegt (bleibt so).
+      **Zweite Platte (`/dev/sda`, 465 GiB) geprüft und verworfen:**
+      Nutzer bestätigte "unbenutzt", beim Formatierungsversuch aber
+      wiederholte `Input/output error` + `hostbyte=DID_BAD_TARGET` im
+      Kernel-Log — Bus-/Verbindungsebene, nicht nur einzelne kaputte
+      Sektoren, `smartctl` kann die Platte nicht mal auslesen. Sieht nach
+      sterbender Elektronik oder lockerem SATA-/Stromkabel aus.
+      **Bewusst nicht weiterverfolgt** — zu unzuverlässig für VM-Storage,
+      egal was die eigentliche Ursache ist. `entw-vm` bleibt dauerhaft
+      auf den 20 GiB der Root-Partition, `libvirt_host_pool_dir` bleibt
+      Default.
+- [x] **`libvirt_host_base_image_url` verifiziert** (2026-09-18, HTTP
+      200, ~863 MB) — URL zeigt auf den Ubuntu-26.04-Codename-Pfad
+      (`resolute`), Rollen-Default direkt auf die nicht-umgeleitete URL
+      aktualisiert.
+- [x] **`libvirt_host_admin_ssh_public_key` gesetzt** (2026-09-18,
+      eigener dedizierter Key `prod-vm-admin`, geprüft/valide).
 - [x] **`ci.yml`-Lint-Workflow** anlegen (`make lint` auf jedem PR) —
       erledigt 2026-09-18 ([f0070-ci-lint.md](../f-cicd-automatisierung/f0070-ci-lint.md)),
       inkl. fehlender `.yamllint`-Config, die `make lint` referenzierte,

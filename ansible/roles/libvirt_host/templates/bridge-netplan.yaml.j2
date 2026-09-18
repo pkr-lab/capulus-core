@@ -18,13 +18,13 @@ network:
       interfaces: [{{ libvirt_host_bridge_interface }}]
       dhcp4: false
       addresses:
-        - {{ network_static_ip }}/{{ network_prefix_length }}
+        - {{ libvirt_host_static_ip }}/{{ libvirt_host_prefix_length }}
       routes:
         - to: default
-          via: {{ network_gateway }}
+          via: {{ libvirt_host_gateway }}
       nameservers:
         addresses:
-{% for dns in network_dns %}
+{% for dns in libvirt_host_dns %}
           - {{ dns }}
 {% endfor %}
       parameters:

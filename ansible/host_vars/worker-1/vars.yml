@@ -38,3 +38,29 @@ tailscale_auth_key: !vault |
           64353162353539663462646337643963383763613233333665346563303837643430303538393330
           66636266313161326339663638373365366261336163366234333432623333366631323430353563
           383634343136613838353938616535323434
+
+# ---- libvirt_host: ENTW-VM (docs/4-planung/40080 Baustein 5, Phase 1) ----
+# Bewusst NICHT vom globalen libvirt_host_enabled aus group_vars/all.yml
+# geerbt - der ist inzwischen dort auf true gesetzt (fuer die PROD-VM
+# auf homeserver), das soll aber NICHT automatisch auch die ENTW-VM auf
+# worker-1 mitbauen. Explizit hier auf false, bis bewusst entschieden.
+libvirt_host_enabled: false
+libvirt_host_configure_bridge: false
+
+libvirt_host_vms:
+  - name: entw-vm
+    vcpus: 3 # von 4 vCPU gesamt - Rest fuer Host-OS + Hypervisor-Overhead
+    memory_mb: 12288 # 12 GiB von ~15 GiB gesamt, siehe Baustein 5 Sizing-Begruendung (PROD-VM)
+    # Dauerhaft 20 GiB: Root-Partition von worker-1 hat nur 31 GiB frei
+    # (57 GiB gesamt, siehe df -h vom 2026-09-18). Eine zweite, 465 GiB
+    # grosse Platte (/dev/sda) wurde geprueft und verworfen - beim
+    # Formatieren wiederholte "Input/output error" +
+    # "hostbyte=DID_BAD_TARGET" im Kernel-Log (Bus-/Verbindungsebene,
+    # smartctl kann die Platte nicht mal auslesen) - zu unzuverlaessig
+    # fuer VM-Storage, siehe docs/4-planung/40080, Checkliste.
+    disk_gb: 20
+    ip: "192.168.178.100"
+    prefix_length: "{{ network_prefix_length }}"
+    gateway: "{{ network_gateway }}"
+    # CHANGE: eigene, im LAN eindeutige MAC waehlen, falls diese kollidiert.
+    mac: "52:54:00:00:01:00"
