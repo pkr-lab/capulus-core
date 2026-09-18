@@ -246,6 +246,44 @@ unterwegs würde die App nur zuhause im WLAN synchronisieren.
 
 ---
 
+## Postgres-Backup
+
+Ergänzend zum nächtlichen Datei-Level-restic-Backup von `immich-nas`
+([docs/2-betrieb-hardware/20010-nas-backup.md](../2-betrieb-hardware/20010-nas-backup.md) —
+das ist **kein** transaktions-konsistenter Snapshot, siehe dort
+"Hinweis: Konsistenz laufender Datenbanken") läuft täglich um 01:50 Uhr
+ein eigener `pg_dump`-CronJob (`immich-postgres-backup`, Muster wie
+[Authentik](../d-sicherheit/d0073-authentik-sso.md)), der einen
+transaktions-konsistenten Dump auf eine separate NAS-gestützte PVC
+(`immich-postgres-backup`, StorageClass `immich-nas`) schreibt — die
+letzten 7 Dumps bleiben erhalten, ältere werden automatisch entfernt.
+
+**Bekannte Falle, die genau diesen CronJob betraf (behoben
+2026-09-18):** Frisch gestartete Pods können in diesem Cluster die
+ersten paar Sekunden nach dem Start noch keine Cross-Pod-Service-
+Verbindung aufbauen (Netzwerk-Startup-Race) — ein `pg_dump`, der sofort
+beim Container-Start verbindet, bekommt `Connection refused` und
+`pg_dump -f` hat die Ziel-Datei da schon (leer) angelegt, was ohne
+genaues Hinsehen wie ein erfolgreicher, aber leerer Dump aussieht.
+Der CronJob wartet deshalb per `pg_isready`-Schleife (bis zu 30s) auf
+Erreichbarkeit, bevor er `pg_dump` startet — siehe
+[docs/4-planung/40080-multi-cluster-entw-prod-tech.md](../4-planung/40080-multi-cluster-entw-prod-tech.md)
+für den vollen Befund (derselbe Bug betraf auch Authentiks Backup-CronJob).
+
+**Manueller Dump/Restore** (z. B. vor einer riskanten Änderung, siehe
+auch den Major-Upgrade-Ablauf unten):
+
+```bash
+kubectl -n immich exec deploy/immich-postgresql -- \
+  pg_dump -U immich -Fc immich > immich-$(date +%F).dump
+
+kubectl -n immich cp immich-*.dump immich-postgresql-<pod>:/tmp/restore.dump
+kubectl -n immich exec deploy/immich-postgresql -- \
+  pg_restore -U immich -d immich /tmp/restore.dump
+```
+
+---
+
 ## Datenbank-Major-Upgrade (Postgres 14 → 16)
 
 Gleiches Grundprinzip wie bei [Nextcloud](300b0-nextcloud.md#datenbank-major-upgrade-postgres-16--18)
