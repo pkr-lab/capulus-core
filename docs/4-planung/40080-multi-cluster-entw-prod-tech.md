@@ -698,11 +698,23 @@ hier ist reversibel.
       **verallgemeinert und für `worker-1` fertig konfiguriert**
       (2026-09-18: Facts-basiert statt homeserver-spezifischer
       Variablen, `entw-vm`-Eintrag in
-      `host_vars/worker-1/vars.yml`, `libvirt_host_enabled: false`
-      bewusst separat von homeserver gegated). Noch offen: `worker-1`s
-      tatsächliche lokale Diskkapazität gegen die geplanten 60 GiB
-      prüfen (nicht verifiziert), dann `libvirt_host_enabled: true` +
-      `make worker-1-libvirt-host` | 0.2 |
+      `host_vars/worker-1/vars.yml`, bewusst separat von homeserver
+      gegated). Disk geprüft (2026-09-18): Root-LV hatte nur 31 GiB frei,
+      VG `ubuntu-vg-1` aber 58 GiB unbelegt — per `lvextend -r` auf 87 GiB
+      vergrößert (58 GiB frei), VM-Disk bleibt bei 20 GiB (Copy-on-Write,
+      bei Bedarf später vergrößerbar). `libvirt_host_enabled: true` +
+      `libvirt_host_configure_bridge: true` gesetzt. Bridge + `entw-vm`
+      (192.168.178.100, 3 vCPU / 12 GiB / 20 GiB) laufen. **k3s + ArgoCD
+      in der VM:** `ansible/entw.yml` / `make entw` (Rollen `common`,
+      `k3s`, `argocd`), Vars in `host_vars/entw-vm/vars.yml`: eigenständiger
+      k3s-Server, eigene CIDRs `10.44.0.0/16` / `10.45.0.0/16`, ArgoCD folgt
+      dem Branch `entw` und synchronisiert nur `sealed-secrets`, `demo-app`,
+      `example-whoami` (neue Variable `argocd_apps_from_lists`, Default
+      `false` = Hauptcluster unverändert). Die VM ist bewusst **nicht** im
+      Tailnet (verwundbare Trainingsumgebung, kein Tailscale-Schlüssel in
+      der VM); von außen erreichbar über den bestehenden Subnet-Router
+      `homeserver` (192.168.178.0/24). Offen: Branch `entw` pushen, dann
+      `make entw` | 0.2 |
 | 1.3 | **Tailscale-ACL scharf schalten** für `tag:entw-node` — keine
       Standardroute zu TECH/PROD, siehe Baustein 2 | 0.9, 1.2 |
 | 1.4 | **DNS**: `*.dev.homeserver` → neue ENTW-IP (Baustein 3) |1.2 |
@@ -819,7 +831,7 @@ und PROD existieren als eigene Sync-Ziele.
 - [x] **`libvirt_host`-Rolle für `worker-1` verallgemeinert** (2026-09-18)
       — Netzwerk-Variablen Facts-basiert (`ansible_default_ipv4.*`)
       statt an homeserver-spezifische `network_*`-Variablen gekoppelt,
-      ENTW-VM-Sizing 3 vCPU / 12 GiB / 60 GiB Disk in
+      ENTW-VM-Sizing 3 vCPU / 12 GiB / 20 GiB Disk in
       `host_vars/worker-1/vars.yml`, Rolle in `worker-1.yml` eingehängt,
       `make worker-1-libvirt-host`/`make worker-1-libvirt-bridge`.
 - [ ] **Achtung — Entdeckt beim Umbau:** `libvirt_host_enabled` steht
