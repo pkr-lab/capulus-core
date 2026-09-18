@@ -28,6 +28,38 @@
     update_cache: true
   when: libvirt_host_enabled | bool
 
+# libvirt-daemon-system legt beim Installieren automatisch
+# /etc/dnsmasq.d/libvirt-daemon an ("bind-interfaces") - kollidiert mit
+# einem eigenen, bewusst auf "bind-dynamic" gestellten System-dnsmasq
+# (siehe ansible/roles/dnsmasq/templates, Kommentar zu automatischem
+# Tailscale-IP-Pickup). Live entdeckt am 2026-09-18: kollabierte den
+# System-dnsmasq auf homeserver komplett ("cannot set --bind-interfaces
+# and --bind-dynamic"), echter DNS-Ausfall fuers ganze LAN, nicht nur
+# ein Lint-/Rollen-Problem. libvirts EIGENES dnsmasq fuer virbr0 braucht
+# diesen System-weiten Snippet nicht - der Ausschluss von virbr0 passiert
+# bei "bind-dynamic" ohnehin implizit ueber die vorhandene
+# interface=/listen-address-Allowlist im System-dnsmasq.
+- name: Konfliktenden dnsmasq-Snippet von libvirt-daemon-system entschaerfen
+  when: libvirt_host_enabled | bool
+  block:
+    - name: Pruefen, ob der Snippet existiert
+      ansible.builtin.stat:
+        path: /etc/dnsmasq.d/libvirt-daemon
+      register: libvirt_host_dnsmasq_snippet
+
+    - name: Snippet entfernen, falls vorhanden
+      ansible.builtin.file:
+        path: /etc/dnsmasq.d/libvirt-daemon
+        state: absent
+      when: libvirt_host_dnsmasq_snippet.stat.exists
+
+    - name: System-dnsmasq neu starten, falls der Snippet ihn zuvor zum Absturz gebracht haben koennte
+      ansible.builtin.systemd:
+        name: dnsmasq
+        state: restarted
+      when: libvirt_host_dnsmasq_snippet.stat.exists
+      failed_when: false # dnsmasq laeuft nicht auf jedem Host (z. B. worker-1) - dann harmlos
+
 - name: libvirtd aktivieren und starten
   ansible.builtin.systemd:
     name: libvirtd

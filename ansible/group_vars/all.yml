@@ -317,11 +317,11 @@ network_dns:
   - "8.8.8.8"
 
 # ---- Optional: libvirt_host (PROD-VM, docs/4-planung/40080 Baustein 5) ----
-# Beides bewusst false, bis Phase 2 (Wartungsfenster + Rollback-Plan)
-# tatsaechlich beginnt - siehe Kommentare in
-# ansible/roles/libvirt_host/defaults/main.yml.
+# libvirt_host_configure_bridge auf true (2026-09-18, mit Nutzer
+# abgestimmt) - baut eno1 in br0 um, Host-IP wandert um. Siehe Warnung
+# in ansible/roles/libvirt_host/defaults/main.yml.
 libvirt_host_enabled: true
-libvirt_host_configure_bridge: false
+libvirt_host_configure_bridge: true
 libvirt_host_admin_ssh_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG2BaTIJcMiQa57dCCYxt2TpdFevrFVVpjfkOXSwfGaK prod-vm-admin" # CHANGE: euer SSH-Public-Key für den "ubuntu"-User der VM
 
 # ---- nightly_worker_wake: n8n-Trigger-Key ------------------
