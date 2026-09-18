@@ -1,0 +1,38 @@
+name: Tailscale Runner PoC
+
+# Machbarkeitsnachweis fuer Phase 0, Schritt 0.8 aus
+# docs/4-planung/40080-multi-cluster-entw-prod-tech.md: kann ein
+# GitHub-Actions-Cloud-Runner ueber Tailscale das interne, nicht
+# oeffentlich erreichbare ArgoCD ansprechen? Voraussetzung fuer den
+# spaeteren promote.yml-Workflow (Baustein 6). Nur manuell startbar -
+# kein Dauerbetrieb, reiner Beweis, dass der Ansatz funktioniert.
+#
+# Setup: Tailscale-Auth-Key (Reusable empfohlen, siehe
+# docs/c-netzwerk-dns/c0010-tailscale.md#acl-konfiguration) als
+# Repo-Secret TAILSCALE_AUTHKEY hinterlegen.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  tailscale-connect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Connect runner to tailnet
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ""
+          oauth-secret: ""
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          version: latest
+
+      - name: Reach ArgoCD over the tailnet
+        run: |
+          set -eu
+          echo "== tailscale status =="
+          tailscale status
+          echo "== curl gegen ArgoCD (homeserver:30443) =="
+          curl -sk -o /dev/null -w "HTTP %{http_code}\n" https://homeserver:30443 \
+            || { echo "FEHLGESCHLAGEN - siehe Troubleshooting in f0070/40080"; exit 1; }
