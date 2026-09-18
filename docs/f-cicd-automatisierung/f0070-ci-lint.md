@@ -44,9 +44,23 @@ werden übersprungen statt fälschlich als Fehler gemeldet.
 
 `.yamllint` (Repo-Root) existierte vorher nicht, obwohl `make lint` es
 referenziert (`yamllint -c .yamllint ...`) — wurde zusammen mit diesem
-Workflow ergänzt (entspannte Regeln: `line-length`/`document-start`/
-`truthy` aus, da Helm-Templates mit Go-Template-Syntax und gemischten
-Datei-Stilen sonst viele Fehlalarme erzeugen). Noch nicht gegen einen
-echten CI-Lauf verifiziert — der erste PR gegen diesen Workflow zeigt,
-ob die Regeln für den vorhandenen Datenbestand ausreichend entspannt
-sind oder nachjustiert werden müssen.
+Workflow ergänzt.
+
+**Erster echter CI-Lauf (2026-09-18) ist prompt fehlgeschlagen** — und
+hat damit genau den Zweck erfüllt, für den `ci.yml` gebaut wurde: einen
+echten, vorher nie aufgefallenen Bug in `make lint` selbst aufgedeckt.
+`yamllint` versuchte, **gerenderte Helm-Templates als rohes YAML zu
+parsen** — Go-Template-Ausdrücke wie `{{- include "x.labels" . | nindent
+4 }}` sind aber kein gültiges YAML, bevor Helm sie rendert
+(`argocd/apps/*/*/templates/**/*.yaml`, ausnahmslos alle Charts
+betroffen). Das ist kein neuer Fehler durch `ci.yml` — `make lint` konnte
+das nie vorher testen, weil `.yamllint` schlicht fehlte. Fix: `.yamllint`
+ignoriert jetzt `argocd/apps/*/*/templates/` komplett — die Go-Template-
+Syntax dort wird stattdessen weiterhin korrekt von `helm lint`/
+`helm template` geprüft (Job `manifest-validate`), das kann mit
+Templating umgehen, `yamllint` nicht.
+
+**Noch offen:** ein weiterer CI-Lauf mit dem gefixten `.yamllint`, um zu
+bestätigen, dass jetzt wirklich alles grün ist (`ansible-lint` und
+`helm lint` selbst wurden durch diesen ersten Fehlschlag noch gar nicht
+erreicht).
