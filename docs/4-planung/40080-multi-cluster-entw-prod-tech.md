@@ -595,8 +595,11 @@ den Restore selbst gebraucht wird:
   aber nur auf Dateien, die **komplett** ein Vault-Blob sind. Deshalb
   eine neue, eigene, **vollständig** verschlüsselte Datei.
   **Offen (braucht das Vault-Passwort, das hier nicht vorliegt):**
-  einmalig `ansible-vault create ansible/group_vars/user_inventory_vault.yml`
-  ausführen, dann `make user-inventory-edit` zum Befüllen. Inhalt:
+  Vorlage ist als Klartext-Datei bereits angelegt
+  (`ansible/group_vars/user_inventory_vault.yml`) — einmalig
+  `ansible-vault encrypt ansible/group_vars/user_inventory_vault.yml`
+  ausführen (**nicht** `create`, die Datei existiert schon), dann
+  `make user-inventory-edit` zum weiteren Befüllen. Inhalt:
   **kein Passwort** (das bleibt beim jeweiligen Nutzer/in der App-DB),
   sondern nur Name/E-Mail, App (`immich`/`vaultwarden`), Rolle
   (Admin/Mitglied), bei Immich zusätzlich der Name der zugehörigen
@@ -675,7 +678,7 @@ blockiert etwas anderes in dieser Phase.
 | 0.4 | ~~Merge-Gate PROD entscheiden~~ **✅ Bestätigt (2026-09-18): TECH-Promotion automatisch, PROD-Promotion manuelles Review** (siehe Baustein 6) | Phase 4 |
 | 0.5 | **Pacman-Doppelrolle** — bewusst *nicht* in dieser Migration entscheiden, nur festhalten, dass sie offen bleibt (siehe [App-Zuordnung](#app-zuordnung-erster-entwurf-stand-argocd_platform_apps-argocd_workloads_apps)) | nichts — expliziter Nicht-Blocker |
 | 0.6 | **Nutzer-/Daten-Inventar anlegen** (Baustein 7) — **Vorlage fertig** (`ansible/group_vars/user_inventory_vault.yml`, noch Klartext-Platzhalter), **Verschlüsseln + Befüllen offen** (braucht dein Vault-Passwort — Befehle wurden dir gegeben) | Phase 2 (Abgleich vor PROD-Rebuild) |
-| 0.7 | ~~`ci.yml` bauen~~ **✅ Erledigt (2026-09-18)** — Lint + `helm template \| kubeconform` + `gitleaks`, siehe [f0070-ci-lint.md](../f-cicd-automatisierung/f0070-ci-lint.md). Noch nicht gegen einen echten CI-Lauf verifiziert (erster PR zeigt, ob die `.yamllint`-Regeln ausreichen) | Phase 4 (Voraussetzung für ein vertrauenswürdiges Promotion-Gate) |
+| 0.7 | ~~`ci.yml` bauen~~ **✅ Gebaut, erster Lauf schlug fehl + gefixt (2026-09-18)** — Lint + `helm template \| kubeconform` + `gitleaks`, siehe [f0070-ci-lint.md](../f-cicd-automatisierung/f0070-ci-lint.md). Erster echter Lauf deckte einen echten, vorher unbekannten `make lint`-Bug auf: `yamllint` parste gerenderte Helm-Templates als rohes YAML und scheiterte an der Go-Template-Syntax, ausnahmslos in allen Charts. `.yamllint` ignoriert `templates/`-Ordner jetzt. **Offen:** erneuten Lauf abwarten, ob jetzt wirklich alles grün ist | Phase 4 (Voraussetzung für ein vertrauenswürdiges Promotion-Gate) |
 | 0.8 | **Tailscale-Runner-Machbarkeit vorab beweisen** — Workflow [`tailscale-poc.yml`](../../.github/workflows/tailscale-poc.yml) angelegt (2026-09-18, `workflow_dispatch`, verbindet den Runner per `tailscale/github-action` und prüft `https://homeserver:30443`). **Offen:** `TAILSCALE_AUTHKEY`-Repo-Secret setzen (kein `gh`/Token in dieser Umgebung verfügbar, musste der Nutzer selbst tun) und den Workflow einmal manuell auslösen | Phase 4 |
 | 0.9 | ~~Tailscale-ACL-Tag-Schema entwerfen~~ **✅ Geräte getaggt + finale Policy übergeben (2026-09-18)**, siehe [Baustein 2](#2-cluster-zu-cluster-kommunikation--immich-beispiel-konkret) — `homeserver`=tech+prod, `worker-1`=entw, Konnektivität nach dem Taggen verifiziert. **Offen:** Policy-Speichern im Panel von hier aus nicht prüfbar, danach nochmal testen | Phase 1 |
 
@@ -794,8 +797,9 @@ und PROD existieren als eigene Sync-Ziele.
 - [x] **`ci.yml`-Lint-Workflow** anlegen (`make lint` auf jedem PR) —
       erledigt 2026-09-18 ([f0070-ci-lint.md](../f-cicd-automatisierung/f0070-ci-lint.md)),
       inkl. fehlender `.yamllint`-Config, die `make lint` referenzierte,
-      aber nie existierte. Noch nicht gegen einen echten CI-Lauf
-      verifiziert.
+      aber nie existierte. **Erster Lauf schlug fehl** (yamllint vs.
+      Helm-Go-Templates, siehe Baustein 6/0.7 oben) — gefixt, erneuter
+      Lauf noch offen.
 - [x] **Tailscale-Anbindung des GitHub-Actions-Runners** — PoC-Workflow
       [`tailscale-poc.yml`](../../.github/workflows/tailscale-poc.yml)
       angelegt, `TAILSCALE_AUTHKEY`-Repo-Secret gesetzt (2026-09-18).
