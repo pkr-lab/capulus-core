@@ -466,6 +466,33 @@ abgesichert, unabhängig von diesem Plan:**
 | Immich | Postgres-PVC (`postgresql.persistence.storageClassName: immich-nas`, `argocd/apps/workloads/immich/values.yaml:201`) — enthält Accounts, Alben, Freigaben, Gesichtserkennung | Läuft auf `immich-nas` (NFS `/volume2`) → wird vom bestehenden restic-Backup auf die externe USB-Platte mit erfasst, genau wie die Fotobibliothek selbst ([20010-nas-backup.md](../2-betrieb-hardware/20010-nas-backup.md)) — **kein zusätzlicher Schritt nötig** |
 | Vaultwarden | Haupt-PVC bewusst auf `local-path` (SQLite, NFS-Locking-Probleme vermieden, siehe [300a0-vaultwarden.md](../3-apps-workloads/300a0-vaultwarden.md#7-warum-kein-nas-storage-für-die-haupt-pvc)), aber ein **eigener nächtlicher `backup`-CronJob** kopiert per `sqlite3 .backup` auf eine zweite, NAS-gestützte PVC | Über dieselbe restic-Kette abgedeckt **plus** ein bereits fertiger, getesteter Restore-Weg: `make vaultwarden-restore FORCE_RESTORE=true` (Ansible-Rolle `vaultwarden_restore`). Laut Doc selbst: *"Vaultwarden kennt keinen 'User per API/Ansible anlegen'-Mechanismus, der über die SQLite-DB hinausgeht — ein separater Schritt, um den Nutzer neu anzulegen, ist nicht nötig"* — die Nutzer kommen mit der DB zurück |
 
+**Update 2026-09-18 — zwei echte Befunde beim ersten Backup-Anstoß vor
+Migrationsbeginn:**
+
+1. **Authentiks `pg_dump`-CronJob war seit mindestens 12 Tagen kaputt**
+   (alle Dumps 0 Byte, `Connection refused`) — nicht durch diese Migration
+   verursacht, aber genau hier aufgefallen, weil "einmal alles frisch
+   sichern" der erste praktische Schritt war. Sofortmaßnahme: manueller
+   Dump direkt aus dem Postgres-Pod gezogen und auf die NAS-PVC gelegt.
+2. **Root Cause gefunden und behoben:** frisch gestartete Pods können in
+   diesem Cluster die ersten Sekunden nach dem Start noch keine
+   Cross-Pod-Service-Verbindung aufbauen (Netzwerk-Startup-Race,
+   reproduzierbar getestet: 1. Versuch sofort nach Pod-Start scheitert,
+   2. Versuch 10s später im selben Pod klappt sofort). Betraf nicht nur
+   Authentik, sondern reproduzierbar auch Immich. Fix: `pg_isready`-Warte-
+   schleife (bis 30s) vor dem eigentlichen `pg_dump`, jetzt in
+   `argocd/apps/platform/authentik/templates/postgres-backup-cronjob.yaml`
+   ergänzt. **Immich hatte bisher gar keinen `pg_dump`-CronJob** (nur das
+   Datei-Level-restic-Backup, siehe Tabelle oben) — analog zu Authentik
+   neu angelegt, inkl. desselben Fixes von Anfang an
+   (`argocd/apps/workloads/immich/templates/postgres-backup-{cronjob,pvc}.yaml`,
+   täglich 01:50 Uhr, siehe [300c0-immich.md → Postgres-Backup](../3-apps-workloads/300c0-immich.md#postgres-backup)).
+3. **Offen:** derselbe Netzwerk-Startup-Race könnte auch andere,
+   zeitkritische CronJobs/Init-Container im Cluster treffen
+   (`github-release-watcher`, `wiki-docs-sync`, `zammad-cronjob-reindex`,
+   künftige Promotion-Pipeline-Health-Checks aus Baustein 6) — noch nicht
+   systematisch geprüft, siehe Checkliste.
+
 **Was trotzdem fehlt und hier ergänzt wird — nicht Daten**sicherung**,
 sondern Daten**dokumentation**:** Aktuell steht "wer hat einen Account
 und was gehört ihm" nirgends lesbar im Repo, sondern ausschließlich
@@ -680,6 +707,20 @@ und PROD existieren als eigene Sync-Ziele.
       [Baustein 7](#7-nutzer--daten-inventar-für-immich--vaultwarden))
       vor dem PROD-Rebuild in Baustein 5 Phase 2 anlegen und mit dem
       tatsächlichen Nutzerstand beider Apps abgleichen.
+- [x] **Immich `pg_dump`-Backup-CronJob anlegen** — erledigt 2026-09-18
+      (`argocd/apps/workloads/immich/templates/postgres-backup-{cronjob,pvc}.yaml`).
+- [x] **Authentik-Backup-CronJob-Bug fixen** (Netzwerk-Startup-Race,
+      `pg_isready`-Warteschleife) — erledigt 2026-09-18.
+- [ ] **Andere CronJobs/Init-Container auf denselben Netzwerk-Startup-
+      Race prüfen** (`github-release-watcher`, `wiki-docs-sync`,
+      `zammad-cronjob-reindex`) — noch nicht systematisch getestet, siehe
+      Baustein 7 Update 2026-09-18.
+- [ ] **Zammad/Nextcloud/Wiki.js/Paperless-ngx/Mealie/n8n**: gleiche
+      Frage wie bei Immich/Vaultwarden — eigener `pg_dump`/`mysqldump`-
+      CronJob sinnvoll, oder reicht das Datei-Level-restic-Backup?
+      Aktuell hat außer Authentik/Vaultwarden/Immich **keine** dieser
+      Apps einen dedizierten Logical-Backup-CronJob — noch nicht
+      priorisiert, gleiches Muster wäre übertragbar.
 
 ---
 
