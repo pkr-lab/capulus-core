@@ -1,0 +1,17 @@
+---
+extends: default
+
+rules:
+  line-length: disable
+  document-start: disable
+  # Helm-Templates enthalten Go-Template-Ausdrücke ({{ ... }}), die
+  # yamllint teils als "truthy"/"comments"-Verstoß werten - hier bewusst
+  # entspannt, echte Fehler fängt trotzdem `helm lint`/`helm template`.
+  truthy: disable
+  comments:
+    min-spaces-from-content: 1
+  braces:
+    max-spaces-inside: 1
+
+ignore: |
+  argocd/apps/*/*/charts/

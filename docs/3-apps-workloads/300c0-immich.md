@@ -163,6 +163,13 @@ danach ist der Cache persistent und Neustarts sind schnell.
 3. In der App unter **Backup** die zu sichernden Alben/den gesamten
    Kamera-Roll auswählen.
 
+**Nutzer-Inventar:** Wer einen Account hat und welche Library/welches
+Album ihm zugeordnet ist, wird zusätzlich (verschlüsselt, außerhalb der
+App-DB) in `ansible/group_vars/user_inventory_vault.yml` festgehalten —
+`make user-inventory-edit` zum Bearbeiten, siehe
+[docs/4-planung/40080-multi-cluster-entw-prod-tech.md → Baustein 7](../4-planung/40080-multi-cluster-entw-prod-tech.md#7-nutzer--daten-inventar-für-immich--vaultwarden)
+für den Zweck (Dokumentation, kein Ersatz für die eigentliche DB).
+
 ---
 
 ## Externe Bibliothek: Bestehende Fotoordner importieren (z. B. OneDrive-Export)

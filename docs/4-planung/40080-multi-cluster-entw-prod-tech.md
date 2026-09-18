@@ -49,12 +49,11 @@ ausschließlich `destination.server: https://kubernetes.default.svc`
 verwenden (In-Cluster-only) — es gibt aktuell **keine**
 Multi-Cluster-Registrierung (`argocd cluster add`, Cluster-Secrets o. Ä.).
 
-**Annahme für diesen Plan:** "die bereits zwei vorhandenen Argo" bezieht
+**Bestätigt (2026-09-18):** "die bereits zwei vorhandenen Argo" bezog
 sich auf genau diese zwei `ApplicationSet`s/`AppProject`s
-(`platform`/`workloads`) — nicht auf zwei separate ArgoCD-Server
-irgendwo außerhalb dieses Repos. Falls das nicht stimmt, bitte
-korrigieren, bevor Baustein 1 unten umgesetzt wird — es ändert das
-Zielbild spürbar.
+(`platform`/`workloads`) — nicht auf zwei separate ArgoCD-Server. Es
+existiert **ein** ArgoCD-Server, Baustein 1 (Hub für TECH+PROD, eigene
+Instanz für ENTW) steht damit wie geplant.
 
 Aktuelle App-Zuordnung (`ansible/roles/argocd/defaults/main.yml`, Stand
 dieses Docs — 19 Platform-Apps, 21 Workloads-Apps, 40 Applications
@@ -290,6 +289,89 @@ Ausnahme wirklich gebraucht wird:
    [c0040-domain-tiers.md](../c-netzwerk-dns/c0040-domain-tiers.md)) — nur die IP, auf die
    `*.prod.homeserver` zeigt, ändert sich (siehe Baustein 3).
 
+**ACL-Policy — Stand 2026-09-18:**
+
+- **Geräte-Tags gesetzt** (über Tailscale-Admin-Panel → Machines → Edit
+  ACL tags, ohne CLI-Befehl auf den Geräten selbst): `homeserver` trägt
+  **beide** `tag:tech-node` **und** `tag:prod-node` (TECH/PROD sind
+  physisch noch derselbe Node, bis Baustein 5 Phase 2 die PROD-VM
+  aufsetzt — kein Widerspruch, die Regeln greifen dann einfach doppelt
+  auf denselben Node), `worker-1` trägt `tag:entw-node`.
+- **Policy-Format korrigiert:** Das Tailnet nutzt bereits das neuere
+  `"grants"`-Format (nicht das ältere `"acls"`/`"action"/"src"/"dst"`
+  aus meinem ersten Entwurf) — unten die an das tatsächliche Tailnet-
+  Template angepasste Version, inkl. einer Ergänzung gegenüber dem
+  ersten Entwurf: **alle Tailnet-Mitglieder** (Familie/Verein-Geräte wie
+  `iphone-ruth`, `pk-handy-1`) brauchen weiterhin App-Zugriff auf Port
+  443 zu TECH/PROD, sonst bricht der bestehende Nextcloud-/Immich-/
+  Vaultwarden-Zugriff über Tailscale weg.
+- **Verifiziert nach dem Taggen:** `kubectl get nodes` und `ssh
+  homeserver` funktionieren weiterhin einwandfrei — Tagging allein hat
+  nichts kaputt gemacht (die Policy war zu dem Zeitpunkt noch der
+  Tailscale-Default mit offenem `{"src": ["*"], "dst": ["*"], "ip":
+  ["*"]}`-Grant).
+- **Offen:** ob die Policy unten inzwischen im Panel gespeichert wurde,
+  ist von hier aus nicht prüfbar (kein Tailscale-API-Zugriff) — nach dem
+  Speichern bitte nochmal `ssh homeserver`/`kubectl get nodes`/ArgoCD im
+  Browser testen.
+
+```json
+{
+	"ssh": [
+		{
+			"action": "check",
+			"src":    ["autogroup:member"],
+			"dst":    ["autogroup:self"],
+			"users":  ["autogroup:nonroot", "root"],
+		},
+	],
+
+	"tagOwners": {
+		"tag:tech-node": ["autogroup:admin"],
+		"tag:prod-node": ["autogroup:admin"],
+		"tag:entw-node": ["autogroup:admin"],
+	},
+
+	"grants": [
+		// Admin: voller Zugriff auf alle drei Cluster-Tags (SSH, k3s-API,
+		// ArgoCD, Traefik, ...) - wie heute, nur jetzt explizit.
+		{
+			"src": ["autogroup:admin"],
+			"dst": ["tag:tech-node", "tag:prod-node", "tag:entw-node"],
+			"ip":  ["*"],
+		},
+
+		// Alle Tailnet-Mitglieder (Familie/Verein): App-Zugriff auf TECH+PROD
+		// ueber Traefik (Port 443) bleibt wie bisher moeglich. Bewusst OHNE
+		// entw-node - Trainings-/Pentest-Cluster ist kein Endnutzer-Ziel.
+		{
+			"src": ["autogroup:member"],
+			"dst": ["tag:tech-node", "tag:prod-node"],
+			"ip":  ["tcp:443"],
+		},
+
+		// PROD -> TECH: nur Port 443 (vmagent remote_write, siehe Baustein 4).
+		{
+			"src": ["tag:prod-node"],
+			"dst": ["tag:tech-node"],
+			"ip":  ["tcp:443"],
+		},
+
+		// TECH -> PROD: nur Port 443 (z. B. Authentik-ForwardAuth-Callback).
+		{
+			"src": ["tag:tech-node"],
+			"dst": ["tag:prod-node"],
+			"ip":  ["tcp:443"],
+		},
+
+		// ENTW bewusst OHNE eigene Regel zu TECH/PROD - grants sind implizit
+		// deny, sobald grants existieren. Jede kuenftige, benannte Ausnahme
+		// (siehe Immich-Beispiel oben) kommt als eigene, eng gefasste Regel
+		// dazu - nicht vorab.
+	],
+}
+```
+
 ### 3. DNS: Tier-Konvention existiert schon, IPs müssen jetzt auseinanderfallen
 
 `c0040-domain-tiers.md` definiert `tech`/`prod`/`dev` bereits — heute
@@ -354,10 +436,12 @@ diese eine VM.
 **Praktisch nötig:**
 
 - **libvirt/QEMU auf `homeserver` installieren**, per neuer Ansible-Rolle
-  (`libvirt_host` o. Ä.), Bridge-Netzwerk (`br0`) statt NAT, damit die
-  PROD-VM eine eigene, im LAN direkt erreichbare IP bekommt (z. B.
-  `192.168.178.98`) — kein manuelles Port-Splitting nötig, die VM hat
-  über die Bridge ihren eigenen vollständigen Netzwerkstack, PROD-Traefik
+  (`libvirt_host`), Bridge-Netzwerk (`br0`) statt NAT, damit die
+  PROD-VM eine eigene, im LAN direkt erreichbare IP bekommt
+  (`192.168.178.99` — **korrigiert 2026-09-18**: `.98` ist bereits
+  `infotafel`/Xibo-Display, siehe `ansible/inventory/hosts.yml`) — kein
+  manuelles Port-Splitting nötig, die VM hat über die Bridge ihren
+  eigenen vollständigen Netzwerkstack, PROD-Traefik
   bindet ganz normal auf Port 80/443 dieser IP.
 - **VM-Sizing**: Start bei z. B. 6 vCPU / 24 GiB fest zugewiesen (lässt
   ~6 vCPU / ~35 GiB Puffer für TECH + Hypervisor-Overhead auf 12 vCPU /
@@ -380,7 +464,7 @@ diese eine VM.
 ```
 homeserver (12 vCPU / 61 GiB, 24/7)
  ├─ TECH   — bare metal, wie heute, IP .94 (Hypervisor-Host, vertrauenswürdig)
- └─ PROD   — KVM/libvirt-VM, 6 vCPU / 24 GiB, eigene Bridge-IP .98
+ └─ PROD   — KVM/libvirt-VM, 6 vCPU / 24 GiB, eigene Bridge-IP .99
               (VM-Grenze zu TECH — Begründung s. o.)
 
 worker-1 (4 vCPU / 15 GiB, WoL)   → ENTW, KVM/libvirt-VM, nur bei Bedarf wach
@@ -502,12 +586,21 @@ verborgen in einem Postgres-/SQLite-Blob. Für den PROD-Rebuild (Baustein
 E-Mail-Adressen von Familie/Verein enthält, nicht weil es technisch für
 den Restore selbst gebraucht wird:
 
-- Neue Ansible-Vault-Datei, z. B. `ansible/group_vars/user_inventory_vault.yml`,
-  editierbar über einen neuen `make user-inventory-edit`-Target (analog zu
-  `make vault-edit`) — **kein Passwort** darin (das bleibt beim jeweiligen
-  Nutzer/in der App-DB), sondern nur: Name/E-Mail, App (`immich`/
-  `vaultwarden`), Rolle (Admin/Mitglied), und bei Immich zusätzlich der
-  Name der zugehörigen Library/des Albums, falls nicht 1:1 pro Person.
+- **Mechanismus fertig (2026-09-18):** `make user-inventory-edit`
+  (`ansible-vault edit ansible/group_vars/user_inventory_vault.yml`) ist
+  im Makefile angelegt. **Bewusst nicht** wie `make vault-edit` auf
+  `group_vars/all.yml` gezielt — diese Datei mischt Klartext-Config mit
+  einzelnen inline `!vault`-verschlüsselten Werten
+  (`ansible-vault encrypt_string`), `ansible-vault edit` funktioniert
+  aber nur auf Dateien, die **komplett** ein Vault-Blob sind. Deshalb
+  eine neue, eigene, **vollständig** verschlüsselte Datei.
+  **Offen (braucht das Vault-Passwort, das hier nicht vorliegt):**
+  einmalig `ansible-vault create ansible/group_vars/user_inventory_vault.yml`
+  ausführen, dann `make user-inventory-edit` zum Befüllen. Inhalt:
+  **kein Passwort** (das bleibt beim jeweiligen Nutzer/in der App-DB),
+  sondern nur Name/E-Mail, App (`immich`/`vaultwarden`), Rolle
+  (Admin/Mitglied), bei Immich zusätzlich der Name der zugehörigen
+  Library/des Albums, falls nicht 1:1 pro Person.
 - Referenziert von einem neuen, kurzen Abschnitt in
   [300c0-immich.md](../3-apps-workloads/300c0-immich.md) und
   [300a0-vaultwarden.md](../3-apps-workloads/300a0-vaultwarden.md) ("Nutzer-Inventar
@@ -576,15 +669,15 @@ blockiert etwas anderes in dieser Phase.
 
 | Schritt | Was | Blockiert später |
 |---|---|---|
-| 0.1 | **Argo-Annahme klären** (siehe [Ausgangslage](#ausgangslage-live-verifiziert)) — ein oder zwei ArgoCD-Server gemeint? | Baustein 1, Phase 3 |
-| 0.2 | **Ordnerstruktur entscheiden**: `argocd/apps/{tech,prod,entw}/` vs. Beibehaltung von `{platform,workloads}` + neuem `entw`-Ordner | Baustein 1, Phase 1+3 |
-| 0.3 | **Root-CA-Strategie** (eine gemeinsame CA vs. drei getrennte, siehe Baustein 4) | Phase 2 |
-| 0.4 | **Merge-Gate PROD entscheiden** (manuelles Review vs. Automerge) | Phase 4 |
+| 0.1 | ~~Argo-Annahme klären~~ **Entschieden (2026-09-18): ein ArgoCD-Server** — Annahme aus der Ausgangslage bestätigt, Baustein 1 (Hub für TECH+PROD, eigene Instanz für ENTW) steht wie geplant | ✅ erledigt |
+| 0.2 | ~~Ordnerstruktur entscheiden~~ **Entschieden (2026-09-18): neue Struktur** `argocd/apps/{tech,prod,entw}/` statt Beibehaltung von `{platform,workloads}` — Umsetzung selbst folgt erst in Phase 1/3 (Baustein 1), nicht schon hier, sonst würde ArgoCD die alten Pfade als gelöscht werten und live prunen | ✅ erledigt |
+| 0.3 | ~~Root-CA-Strategie~~ **✅ Bestätigt (2026-09-18): eine gemeinsame Root-CA** (siehe Baustein 4) | Phase 2 |
+| 0.4 | ~~Merge-Gate PROD entscheiden~~ **✅ Bestätigt (2026-09-18): TECH-Promotion automatisch, PROD-Promotion manuelles Review** (siehe Baustein 6) | Phase 4 |
 | 0.5 | **Pacman-Doppelrolle** — bewusst *nicht* in dieser Migration entscheiden, nur festhalten, dass sie offen bleibt (siehe [App-Zuordnung](#app-zuordnung-erster-entwurf-stand-argocd_platform_apps-argocd_workloads_apps)) | nichts — expliziter Nicht-Blocker |
-| 0.6 | **Nutzer-/Daten-Inventar anlegen** (Baustein 7) — unabhängig vom Rest, je früher desto besser, da es auch jetzt schon als Dokumentation nützt | Phase 2 (Abgleich vor PROD-Rebuild) |
-| 0.7 | **`ci.yml` bauen** (Lint + `helm template \| kubeconform` + `gitleaks`, Baustein 6) — läuft gegen die *heutige* Repo-Struktur, keine Abhängigkeit zum Cluster-Umbau | Phase 4 (Voraussetzung für ein vertrauenswürdiges Promotion-Gate) |
-| 0.8 | **Tailscale-Runner-Machbarkeit vorab beweisen**: `tailscale/github-action` gegen das **heutige, einzelne** ArgoCD testen (`argocd app get` aus einem GitHub-Actions-Run heraus) — entkoppelt vom Multi-Cluster-Umbau, de-riskt das unbekannteste technische Detail der Promotion-Pipeline frühzeitig | Phase 4 |
-| 0.9 | **Tailscale-ACL-Tag-Schema entwerfen** (`tag:entw-node`/`tag:prod-node`/`tag:tech-node`) — nur die Policy im Admin-Panel vorbereiten, noch nicht scharf schalten (dafür gibt es noch keine getaggten Geräte) | Phase 1 |
+| 0.6 | **Nutzer-/Daten-Inventar anlegen** (Baustein 7) — **Vorlage fertig** (`ansible/group_vars/user_inventory_vault.yml`, noch Klartext-Platzhalter), **Verschlüsseln + Befüllen offen** (braucht dein Vault-Passwort — Befehle wurden dir gegeben) | Phase 2 (Abgleich vor PROD-Rebuild) |
+| 0.7 | ~~`ci.yml` bauen~~ **✅ Erledigt (2026-09-18)** — Lint + `helm template \| kubeconform` + `gitleaks`, siehe [f0070-ci-lint.md](../f-cicd-automatisierung/f0070-ci-lint.md). Noch nicht gegen einen echten CI-Lauf verifiziert (erster PR zeigt, ob die `.yamllint`-Regeln ausreichen) | Phase 4 (Voraussetzung für ein vertrauenswürdiges Promotion-Gate) |
+| 0.8 | **Tailscale-Runner-Machbarkeit vorab beweisen** — Workflow [`tailscale-poc.yml`](../../.github/workflows/tailscale-poc.yml) angelegt (2026-09-18, `workflow_dispatch`, verbindet den Runner per `tailscale/github-action` und prüft `https://homeserver:30443`). **Offen:** `TAILSCALE_AUTHKEY`-Repo-Secret setzen (kein `gh`/Token in dieser Umgebung verfügbar, musste der Nutzer selbst tun) und den Workflow einmal manuell auslösen | Phase 4 |
+| 0.9 | ~~Tailscale-ACL-Tag-Schema entwerfen~~ **✅ Geräte getaggt + finale Policy übergeben (2026-09-18)**, siehe [Baustein 2](#2-cluster-zu-cluster-kommunikation--immich-beispiel-konkret) — `homeserver`=tech+prod, `worker-1`=entw, Konnektivität nach dem Taggen verifiziert. **Offen:** Policy-Speichern im Panel von hier aus nicht prüfbar, danach nochmal testen | Phase 1 |
 
 ### Phase 1 — ENTW aufbauen (worker-1)
 
@@ -622,7 +715,7 @@ abgeschlossen und verifiziert sind.
 | 2.1 | **Nutzer-/Daten-Inventar (0.6) gegen Live-Stand abgleichen** — letzter Check vor dem Rebuild | 0.6 |
 | 2.2 | **Wartungsfenster kommunizieren** (Familie/Verein) | — |
 | 2.3 | **libvirt/QEMU + Bridge-Netzwerk auf `homeserver` einrichten** (neue Ansible-Rolle) | 0.3 |
-| 2.4 | **PROD-VM anlegen** (6 vCPU / 24 GiB, Ubuntu Server 26.04, eigene Bridge-IP `.98`), Ansible-Host wie `worker-0`/`worker-1` in `hosts.yml` aufnehmen | 2.3 |
+| 2.4 | **PROD-VM anlegen** (6 vCPU / 24 GiB, Ubuntu Server 26.04, eigene Bridge-IP `.99`), Ansible-Host wie `worker-0`/`worker-1` in `hosts.yml` aufnehmen | 2.3 |
 | 2.5 | **k3s in der PROD-VM installieren** — bestehende `k3s`-Rolle unverändert, kein Parametrisieren nötig (Baustein 5) | 2.4 |
 | 2.6 | **`nas-storage`/`immich-storage` in TECH *und* PROD-VM deployen** (Baustein 4) | 2.5 |
 | 2.7 | **Re-Sealing aller SealedSecrets** für TECH- und PROD-Kontext | 2.5 |
@@ -657,17 +750,21 @@ und PROD existieren als eigene Sync-Ziele.
 
 ## Checkliste fehlender Komponenten
 
-- [ ] **Nutzer-Bestätigung der Annahme** zu "zwei vorhandene Argo" (siehe
-      oben) — ändert Baustein 1, falls falsch.
+- [x] **Nutzer-Bestätigung der Annahme** zu "zwei vorhandene Argo" —
+      bestätigt 2026-09-18: ein ArgoCD-Server, Baustein 1 bleibt wie
+      geplant.
+- [x] **Ordnerstruktur entschieden** (2026-09-18): neue Struktur
+      `argocd/apps/{tech,prod,entw}/` — Umsetzung folgt in Phase 1/3.
 - [ ] **Entscheidung Pacman-Doppelrolle** — bleibt vorerst unverändert in
       PROD, oder wird die Trainingsseite explizit nach ENTW ausgelagert
       (eigenes Folgevorhaben, nicht Teil dieser Migration)?
-- [ ] **Root-CA-Strategie** für Cross-Cluster-TLS (eine gemeinsame CA vs.
-      drei getrennte) vor Baustein 4 festlegen.
-- [ ] **Tailscale-ACL-Policy** von aktuell "all-to-all" auf tag-basierte
-      Einschränkung umstellen, bevor TECH/PROD-Split live geht — sonst
-      ist die Cluster-Trennung nur k8s-intern, nicht netzwerkseitig
-      wirksam.
+- [x] **Root-CA-Strategie bestätigt** (2026-09-18): eine gemeinsame CA
+      (siehe Baustein 4).
+- [x] **Tailscale-ACL-Policy entworfen + Geräte getaggt** (2026-09-18,
+      siehe Baustein 2) — `homeserver`=tech+prod, `worker-1`=entw,
+      finale `"grants"`-Policy übergeben. **Offen:** Speichern im Panel
+      bestätigen + danach `ssh homeserver`/`kubectl get nodes`/ArgoCD
+      nochmal verifizieren.
 - [ ] **`cluster_power_manager`-Erweiterung** um einen expliziten
       ENTW-Wach-Trigger (aktuell nur lastbasiert für `worker-0`/`worker-1`
       als Kapazitätsreserve desselben Clusters gedacht, nicht als
@@ -676,27 +773,44 @@ und PROD existieren als eigene Sync-Ziele.
       PROD wandern (zwei neue Schlüsselkontexte).
 - [ ] **Wartungsfenster-Kommunikation** an Familie/Verein vor dem
       PROD-Cutover (Nextcloud/Immich/Vaultwarden-Downtime).
-- [ ] **Neue Ansible-Rolle `libvirt_host`** (oder ähnlich) für
-      KVM/libvirt + Bridge-Netzwerk auf `homeserver` bauen, bevor Baustein 5
-      Phase 2 umgesetzt wird — inkl. Bridge-IP-Vergabe für die PROD-VM in
-      `ansible/host_vars`/`group_vars`.
-- [ ] **PROD-VM-Sizing final festlegen** (Startwert 6 vCPU / 24 GiB) und
-      als Ansible-Variable für die `libvirt_host`-Rolle hinterlegen.
-- [ ] **`ci.yml`-Lint-Workflow** anlegen (`make lint` auf jedem PR) —
-      Lücke besteht unabhängig vom Multi-Cluster-Umbau, aber Voraussetzung
-      für ein vertrauenswürdiges Promotion-Gate.
-- [ ] **Tailscale-Anbindung des GitHub-Actions-Runners** (`tailscale/github-action`)
-      einrichten, bevor `promote.yml` gebaut wird — ohne Tailnet-Zugriff
-      kann der Cloud-Runner die interne ArgoCD-API nicht erreichen.
-- [ ] **Entscheidung Merge-Gate PROD** — manuelles Review pflicht wie
-      empfohlen, oder ebenfalls Automerge nach X Stunden grünem TECH-Status?
+- [x] **Ansible-Rolle `libvirt_host` gebaut** (2026-09-18,
+      `ansible/roles/libvirt_host/`) — Pakete, Storage-Pool, Cloud-Image,
+      Bridge-Netplan (per Default **deaktiviert**,
+      `libvirt_host_configure_bridge: false`), Pro-VM-Provisionierung via
+      `virt-install` + cloud-init. Master-Schalter
+      `libvirt_host_enabled: false` in `group_vars/all.yml`, dazu
+      `make libvirt-host`/`make libvirt-bridge`-Targets. **Noch nicht
+      gegen echte Hardware getestet** — Bridge-Task ist der riskanteste
+      Teil (kann `homeserver` bei einem Fehler vom Netz trennen, kein
+      Fallback-Zugriff), deshalb bewusst nicht automatisch scharf.
+      IP-Konflikt korrigiert: `.98` war schon `infotafel` belegt, PROD-VM
+      bekommt `.99`.
+- [x] **PROD-VM-Sizing festgelegt** (6 vCPU / 24 GiB, als
+      `libvirt_host_vms`-Default in der Rolle hinterlegt).
+- [ ] **`libvirt_host_admin_ssh_public_key` setzen** (Platzhalter `""` in
+      `group_vars/all.yml`) und `libvirt_host_base_image_url` gegen die
+      tatsächlich verfügbare Ubuntu-26.04-Cloud-Image-URL prüfen, bevor
+      `make libvirt-host` das erste Mal läuft.
+- [x] **`ci.yml`-Lint-Workflow** anlegen (`make lint` auf jedem PR) —
+      erledigt 2026-09-18 ([f0070-ci-lint.md](../f-cicd-automatisierung/f0070-ci-lint.md)),
+      inkl. fehlender `.yamllint`-Config, die `make lint` referenzierte,
+      aber nie existierte. Noch nicht gegen einen echten CI-Lauf
+      verifiziert.
+- [x] **Tailscale-Anbindung des GitHub-Actions-Runners** — PoC-Workflow
+      [`tailscale-poc.yml`](../../.github/workflows/tailscale-poc.yml)
+      angelegt, `TAILSCALE_AUTHKEY`-Repo-Secret gesetzt (2026-09-18).
+      **Offen:** Workflow einmal manuell auslösen, um es wirklich zu
+      verifizieren, bevor `promote.yml` darauf aufbaut.
+- [x] **Entscheidung Merge-Gate PROD bestätigt** (2026-09-18): manuelles
+      Review Pflicht für PROD, Automerge für TECH.
 - [ ] **`argocd/apps/entw/*`-Pfad in `renovate.json` ergänzen**, sobald
       die Ordnerstruktur aus Phase 0, Schritt 0.2 steht, damit
       Renovate-PRs zuerst dort statt direkt in `tech`/`prod` landen.
-- [ ] **Manifest-Validierung** (`helm template | kubeconform`) als
-      Pflichtschritt in `ci.yml` ergänzen.
-- [ ] **Secret-Scanning** (`gitleaks`) als Pflichtschritt in `ci.yml`
-      ergänzen.
+- [x] **Manifest-Validierung** (`helm template | kubeconform`) als
+      Pflichtschritt in `ci.yml` ergänzen — erledigt 2026-09-18 (Job
+      `manifest-validate`).
+- [x] **Secret-Scanning** (`gitleaks`) als Pflichtschritt in `ci.yml`
+      ergänzen — erledigt 2026-09-18 (Job `secret-scan`).
 - [ ] **Smoke-Test-Schritt** im `promote.yml`-Health-Gate ergänzen
       (`curl` gegen `https://<app>.dev.homeserver` über denselben
       Tailscale-Runner, nicht nur ArgoCD-Health abfragen).
