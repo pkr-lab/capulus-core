@@ -10,7 +10,14 @@
 - name: QEMU/KVM + libvirt-Pakete installieren
   ansible.builtin.apt:
     name:
-      - qemu-kvm
+      # "qemu-kvm" ist auf Ubuntu 26.04 ("resolute") ein virtuelles Paket
+      # geworden (aufgeteilt in qemu-system-x86 / qemu-system-x86-hwe),
+      # kein direkt installierbares Paket mehr - apt kann bei einem
+      # virtuellen Paketnamen in einer expliziten Liste nicht selbst
+      # entscheiden, welche der beiden Varianten gemeint ist. Die
+      # normale (nicht-HWE) Variante passt zum generic-Kernel, der hier
+      # laeuft (siehe "uname -r": *-generic, keine *-hwe-Kernel-Variante).
+      - qemu-system-x86
       - libvirt-daemon-system
       - libvirt-clients
       - bridge-utils
