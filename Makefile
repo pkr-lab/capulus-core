@@ -88,6 +88,14 @@ power-agent: ## Re-deploy only the power_agent role on homeserver (brightness + 
 cups-print-server: ## Re-deploy only the cups_print_server role on homeserver (USB-Drucker per IPP/AirPrint).
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags cups-print-server $(VAULT_OPTS)
 
+.PHONY: libvirt-host
+libvirt-host: ## Re-deploy only the libvirt_host role (PROD-VM, docs/4-planung/40080 Baustein 5). Braucht libvirt_host_enabled: true in group_vars/all.yml.
+	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags libvirt-host $(VAULT_OPTS)
+
+.PHONY: libvirt-bridge
+libvirt-bridge: ## NUR das Bridge-Netzwerk (libvirt_host, riskant - siehe Rollenkommentar). Erst mit Wartungsfenster + Rollback-Plan.
+	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags libvirt-bridge $(VAULT_OPTS)
+
 nightly-worker-wake: ## Re-deploy only the nightly_worker_wake role on homeserver (01:00 Uhr WoL+Update+Poweroff-Zyklus).
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags nightly-worker-wake $(VAULT_OPTS)
 
@@ -178,6 +186,11 @@ render-bootstrap: ## Regenerate argocd/bootstrap/root-applicationset.yaml from t
 .PHONY: vault-edit
 vault-edit: ## Edit the vault-encrypted vars file.
 	ansible-vault edit $(ANSIBLE_DIR)/group_vars/all.yml
+
+.PHONY: user-inventory-edit
+USER_INVENTORY_FILE := $(ANSIBLE_DIR)/group_vars/user_inventory_vault.yml
+user-inventory-edit: ## Edit the encrypted Immich/Vaultwarden user inventory (docs/4-planung/40080, Baustein 7). First run: ansible-vault create $(USER_INVENTORY_FILE).
+	ansible-vault edit $(USER_INVENTORY_FILE)
 
 .PHONY: vaultwarden-restore
 VAULTWARDEN_RESTORE_PLAYBOOK := $(ANSIBLE_DIR)/vaultwarden-restore.yml

@@ -55,6 +55,7 @@
       - "{{ '--remote-admin' if cups_print_server_remote_admin | bool else '--no-remote-admin' }}"
       - "{{ '--remote-any' if cups_print_server_remote_any | bool else '--no-remote-any' }}"
       - "{{ '--share-printers' if cups_print_server_share_printers | bool else '--no-share-printers' }}"
+  changed_when: true # laeuft nur, wenn der when-Vergleich unten eine echte Abweichung findet
   when:
     - cups_print_server_enabled | bool
     - >-

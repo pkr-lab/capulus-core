@@ -1,0 +1,126 @@
+---
+# ============================================================
+# libvirt_host role — KVM/libvirt fuer die PROD-VM auf homeserver
+# ============================================================
+# Siehe docs/4-planung/40080-multi-cluster-entw-prod-tech.md, Baustein 5.
+# Bewusst virt-install/virsh statt der community.libvirt-Collection -
+# keine neue Galaxy-Abhaengigkeit fuer eine einzelne Rolle, passt zum
+# sonstigen "kein Tool mehr als noetig"-Muster des Repos.
+
+- name: QEMU/KVM + libvirt-Pakete installieren
+  ansible.builtin.apt:
+    name:
+      - qemu-kvm
+      - libvirt-daemon-system
+      - libvirt-clients
+      - bridge-utils
+      - virtinst
+      - cloud-image-utils # liefert cloud-localds fuer die Seed-ISO
+      - genisoimage
+    state: present
+    update_cache: true
+  when: libvirt_host_enabled | bool
+
+- name: libvirtd aktivieren und starten
+  ansible.builtin.systemd:
+    name: libvirtd
+    enabled: true
+    state: started
+  when: libvirt_host_enabled | bool
+
+# ---- Bridge-Netzwerk (HOHES RISIKO — siehe defaults/main.yml) --------
+# Standardmaessig deaktiviert (libvirt_host_configure_bridge: false).
+# Eigener Tag, damit dieser Task NIE versehentlich als Teil eines
+# generischen "make install"-Laufs mitgezogen wird.
+- name: Bridge-Netzwerk einrichten (nur wenn explizit aktiviert)
+  when:
+    - libvirt_host_enabled | bool
+    - libvirt_host_configure_bridge | bool
+  tags: [libvirt-bridge]
+  block:
+    - name: Vorhandene Netplan-Configs finden
+      ansible.builtin.find:
+        paths: /etc/netplan
+        patterns: ["*.yaml", "*.yml"]
+      register: libvirt_host_netplan_existing
+
+    - name: Alte Netplan-Configs entfernen
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ libvirt_host_netplan_existing.files }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: Bridge-Netplan-Konfiguration deployen
+      ansible.builtin.template:
+        src: bridge-netplan.yaml.j2
+        dest: /etc/netplan/99-libvirt-bridge.yaml
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Netplan anwenden (Verbindung kann kurz abreissen)
+      ansible.builtin.command: netplan apply
+      async: 15
+      poll: 0
+      changed_when: true
+
+    - name: Warten, bis der Host wieder erreichbar ist (jetzt ueber die Bridge)
+      ansible.builtin.wait_for:
+        host: "{{ network_static_ip }}"
+        port: 22
+        delay: 5
+        timeout: 60
+      delegate_to: localhost
+      become: false
+
+# ---- Storage-Pool + Basis-Image ---------------------------------------
+- name: Storage-Pool-Verzeichnis anlegen
+  ansible.builtin.file:
+    path: "{{ libvirt_host_pool_dir }}"
+    state: directory
+    owner: libvirt-qemu
+    group: kvm
+    mode: "0751"
+  when: libvirt_host_enabled | bool
+
+- name: default-Storage-Pool definieren, falls noch nicht vorhanden
+  ansible.builtin.command: >
+    virsh pool-define-as default dir --target {{ libvirt_host_pool_dir }}
+  register: libvirt_host_pool_define
+  changed_when: "'already exists' not in libvirt_host_pool_define.stderr"
+  failed_when:
+    - libvirt_host_pool_define.rc != 0
+    - "'already exists' not in libvirt_host_pool_define.stderr"
+  when: libvirt_host_enabled | bool
+
+- name: default-Storage-Pool starten + autostart aktivieren
+  ansible.builtin.command: "{{ item }}"
+  loop:
+    - virsh pool-start default
+    - virsh pool-autostart default
+  register: libvirt_host_pool_start
+  changed_when: "'already active' not in libvirt_host_pool_start.stderr"
+  failed_when:
+    - libvirt_host_pool_start.rc != 0
+    - "'already active' not in libvirt_host_pool_start.stderr"
+  when: libvirt_host_enabled | bool
+
+- name: Basis-Cloud-Image herunterladen (einmalig, VMs nutzen es als Backing-File)
+  ansible.builtin.get_url:
+    url: "{{ libvirt_host_base_image_url }}"
+    dest: "{{ libvirt_host_pool_dir }}/{{ libvirt_host_base_image_name }}"
+    mode: "0644"
+  when: libvirt_host_enabled | bool
+
+# ---- Pro VM: Disk + Cloud-Init-Seed + Domain ---------------------------
+# "loop" auf einem "block" existiert in Ansible nicht - deshalb per
+# include_tasks auf eine separate Datei geloopt (tasks/vm.yml).
+- name: Pro VM aus libvirt_host_vms
+  ansible.builtin.include_tasks: vm.yml
+  loop: "{{ libvirt_host_vms }}"
+  loop_control:
+    loop_var: vm
+    label: "{{ vm.name }}"
+  when: libvirt_host_enabled | bool

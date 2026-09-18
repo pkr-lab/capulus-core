@@ -1,0 +1,25 @@
+#cloud-config
+# Managed by Ansible (libvirt_host role) — do not edit manually.
+# Einmaliges Bootstrap der VM "{{ vm.name }}" — danach uebernimmt
+# dasselbe Ansible-Playbook wie fuer die bare-metal-Nodes (common-Rolle
+# etc.), die VM ist ab hier ein ganz normaler Host in inventory/hosts.yml.
+hostname: {{ vm.name }}
+manage_etc_hosts: true
+
+users:
+  - name: ubuntu
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - {{ libvirt_host_admin_ssh_public_key }}
+
+package_update: true
+package_upgrade: false
+
+# Cloud-Images bringen standardmaessig einen "ubuntu"-User ohne
+# Passwort-Login mit - Passwort-Auth hier explizit aus, nur Key-Login,
+# gleiche Haltung wie bei den bare-metal-Nodes.
+ssh_pwauth: false
+
+runcmd:
+  - [systemctl, disable, --now, snapd.seeded.service]
