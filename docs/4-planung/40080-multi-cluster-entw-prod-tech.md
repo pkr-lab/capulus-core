@@ -790,10 +790,27 @@ und PROD existieren als eigene Sync-Ziele.
       `libvirt_host_configure_bridge: false`), Pro-VM-Provisionierung via
       `virt-install` + cloud-init. Master-Schalter
       `libvirt_host_enabled: false` in `group_vars/all.yml`, dazu
-      `make libvirt-host`/`make libvirt-bridge`-Targets. **Noch nicht
-      gegen echte Hardware getestet** — Bridge-Task ist der riskanteste
-      Teil (kann `homeserver` bei einem Fehler vom Netz trennen, kein
-      Fallback-Zugriff), deshalb bewusst nicht automatisch scharf.
+      `make libvirt-host`/`make libvirt-bridge`-Targets.
+- [x] **Gegen echte Hardware getestet (2026-09-18), zwei echte Bugs
+      gefunden + gefixt:**
+      1. `qemu-kvm` ist auf Ubuntu 26.04 ("resolute") ein virtuelles
+         Paket geworden (aufgeteilt in `qemu-system-x86`/`-hwe`) — apt
+         konnte es nicht mehr direkt installieren. Auf
+         `qemu-system-x86` (passend zum generic-Kernel) umgestellt.
+      2. **Echter, ungeplanter DNS-Ausfall fürs ganze LAN:**
+         `libvirt-daemon-system` legt beim Installieren automatisch
+         `/etc/dnsmasq.d/libvirt-daemon` (`bind-interfaces`) an — das
+         kollidierte mit dem bewusst auf `bind-dynamic` gestellten
+         System-`dnsmasq` (für automatisches Tailscale-IP-Pickup) und
+         brachte den Dienst komplett zum Absturz
+         ("cannot set --bind-interfaces and --bind-dynamic"). Live auf
+         `homeserver` behoben (Snippet entfernt, Dienst neu gestartet)
+         **und** als eigener, idempotenter Task in die Rolle eingebaut,
+         damit das bei jedem künftigen Lauf automatisch mit entschärft
+         wird, nicht nur einmalig manuell gefixt bleibt.
+      Bridge-Task selbst (`libvirt_host_configure_bridge`) weiterhin
+      nicht scharf getestet — bleibt der riskanteste, bewusst separat
+      gegatete Teil.
       IP-Konflikt korrigiert: `.98` war schon `infotafel` belegt, PROD-VM
       bekommt `.99`.
 - [x] **PROD-VM-Sizing festgelegt** (6 vCPU / 24 GiB, jetzt in
