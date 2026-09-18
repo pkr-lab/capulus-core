@@ -96,6 +96,14 @@ libvirt-host: ## Re-deploy only the libvirt_host role (PROD-VM, docs/4-planung/4
 libvirt-bridge: ## NUR das Bridge-Netzwerk (libvirt_host, riskant - siehe Rollenkommentar). Erst mit Wartungsfenster + Rollback-Plan.
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags libvirt-bridge $(VAULT_OPTS)
 
+.PHONY: worker-1-libvirt-host
+worker-1-libvirt-host: ## Re-deploy only the libvirt_host role auf worker-1 (ENTW-VM, docs/4-planung/40080 Phase 1). Braucht libvirt_host_enabled: true in host_vars/worker-1/vars.yml.
+	ansible-playbook -i $(INVENTORY) $(HS3_PLAYBOOK) --tags libvirt-host $(VAULT_OPTS)
+
+.PHONY: worker-1-libvirt-bridge
+worker-1-libvirt-bridge: ## NUR das Bridge-Netzwerk auf worker-1 (weniger kritisch als homeserver, aber trotzdem bewusster Schritt).
+	ansible-playbook -i $(INVENTORY) $(HS3_PLAYBOOK) --tags libvirt-bridge $(VAULT_OPTS)
+
 nightly-worker-wake: ## Re-deploy only the nightly_worker_wake role on homeserver (01:00 Uhr WoL+Update+Poweroff-Zyklus).
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags nightly-worker-wake $(VAULT_OPTS)
 
