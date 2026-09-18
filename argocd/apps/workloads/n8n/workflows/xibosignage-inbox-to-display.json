@@ -1,84 +1,153 @@
 {
-  "id": "LcOVp2lnqHL89Tae",
-  "name": "xibosignage: Inbox -> Display",
+  "name": "xibosignage: Playlist -> Display (infotafel)",
   "nodes": [
     {
       "parameters": {
-        "triggerOn": "folder",
-        "path": "/data/xibosignage-inbox",
-        "events": ["add"],
-        "options": {}
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 0 16 * * 4"
+            }
+          ]
+        }
       },
-      "id": "a1a1a1a1-0001-4000-8000-000000000001",
-      "name": "Watch Inbox",
-      "type": "n8n-nodes-base.localFileTrigger",
-      "typeVersion": 1,
-      "position": [260, 300]
+      "id": "b2b2b2b2-0001-4000-8000-000000000001",
+      "name": "Jeden Donnerstag 16 Uhr",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        272,
+        304
+      ]
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": false,
-            "leftValue": "",
-            "typeValidation": "loose"
-          },
-          "conditions": [
+        "url": "http://xibosignage-cms.xibosignage.svc.cluster.local/api/playlist",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
             {
-              "leftValue": "={{$json.path}}",
-              "rightValue": "\\.(jpe?g|png|gif|webp)$",
-              "operator": {
-                "type": "string",
-                "operation": "regex"
-              }
+              "name": "name",
+              "value": "infotafel"
+            },
+            {
+              "name": "embed",
+              "value": "widgets"
             }
-          ],
-          "combinator": "and"
+          ]
         },
         "options": {}
       },
-      "id": "a1a1a1a1-0002-4000-8000-000000000002",
-      "name": "Nur Bilddateien",
-      "type": "n8n-nodes-base.filter",
-      "typeVersion": 2,
-      "position": [520, 300]
+      "id": "b2b2b2b2-0002-4000-8000-000000000002",
+      "name": "Playlist von Xibo CMS holen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        528,
+        304
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "9adysjzRypuQCEi8",
+          "name": "Xibo CMS (OAuth2 Client Credentials)"
+        }
+      }
     },
     {
       "parameters": {
-        "operation": "read",
-        "fileSelector": "={{$json.path}}",
+        "jsCode": "// Playlist-Antwort kann als einzelnes Objekt oder als Array mit einem\n// Eintrag zurueckkommen, je nach n8n-/API-Verhalten -- beides abfangen.\nconst items = $input.all();\nlet playlist = null;\nfor (const item of items) {\n  if (item.json && Array.isArray(item.json.widgets)) {\n    playlist = item.json;\n    break;\n  }\n}\nif (!playlist && items.length > 0 && Array.isArray(items[0].json)) {\n  playlist = items[0].json.find((p) => Array.isArray(p.widgets));\n}\nif (!playlist) {\n  throw new Error('Playlist \"infotafel\" nicht gefunden oder ohne widgets -- embed=widgets und Playlist-Name/Permissions pruefen.');\n}\n\nconst images = (playlist.widgets || [])\n  .filter((w) => w.type === 'image')\n  .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))\n  .map((w, idx) => ({\n    mediaId: Array.isArray(w.mediaIds) ? w.mediaIds[0] : w.mediaId,\n    order: String(idx + 1).padStart(3, '0'),\n  }));\n\nif (images.length === 0) {\n  return [];\n}\n\nreturn images.map((img) => ({ json: img }));"
+      },
+      "id": "b2b2b2b2-0003-4000-8000-000000000003",
+      "name": "Bild-Widgets extrahieren & sortieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=http://xibosignage-cms.xibosignage.svc.cluster.local/api/library/{{$json.mediaId}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
         "options": {}
       },
-      "id": "a1a1a1a1-0003-4000-8000-000000000003",
-      "name": "Originaldatei lesen",
-      "type": "n8n-nodes-base.readWriteFile",
-      "typeVersion": 1,
-      "position": [780, 300]
+      "id": "b2b2b2b2-0004-4000-8000-000000000004",
+      "name": "Medien-Metadaten holen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        304
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "9adysjzRypuQCEi8",
+          "name": "Xibo CMS (OAuth2 Client Credentials)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=http://xibosignage-cms.xibosignage.svc.cluster.local/api/library/download/{{ $('Bild-Widgets extrahieren & sortieren').item.json.mediaId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "b2b2b2b2-0005-4000-8000-000000000005",
+      "name": "Mediendatei herunterladen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1312,
+        304
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "9adysjzRypuQCEi8",
+          "name": "Xibo CMS (OAuth2 Client Credentials)"
+        }
+      }
     },
     {
       "parameters": {
         "operation": "resize",
         "width": 1920,
         "height": 1080,
-        "options": {
-          "resizeOption": "onlyIfLarger"
-        }
+        "options": {}
       },
-      "id": "a1a1a1a1-0004-4000-8000-000000000004",
+      "id": "b2b2b2b2-0006-4000-8000-000000000006",
       "name": "Auf Pi-Auflösung skalieren",
       "type": "n8n-nodes-base.editImage",
       "typeVersion": 1,
-      "position": [1040, 300]
+      "position": [
+        1568,
+        304
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const path = require('path');\nconst originalPath = $('Watch Inbox').item.json.path;\nconst base = path.basename(originalPath, path.extname(originalPath));\nconst safeBase = base.replace(/[^a-zA-Z0-9_-]/g, '_');\nconst timestamp = Date.now();\n\n$input.item.json.originalPath = originalPath;\n$input.item.json.outputPath = `/data/xibosignage-display/${safeBase}-${timestamp}.jpg`;\n\nreturn $input.item;"
+        "mode": "runOnceForEachItem",
+        "jsCode": "const order = $('Bild-Widgets extrahieren & sortieren').item.json.order;\nconst mediaId = $('Bild-Widgets extrahieren & sortieren').item.json.mediaId;\nconst meta = $('Medien-Metadaten holen').item.json;\nconst metaObj = Array.isArray(meta) ? meta[0] : meta;\nconst originalName = (metaObj && metaObj.fileName) || `${mediaId}.jpg`;\nconst extMatch = originalName.match(/\\.[a-zA-Z0-9]+$/);\nconst ext = extMatch ? extMatch[0].toLowerCase() : '.jpg';\nconst fileName = `xibo-playlist-${order}-${mediaId}${ext}`;\n\n$input.item.json.outputPath = `/data/xibosignage-display/${fileName}`;\n$input.item.json.expectedFileName = fileName;\n\nreturn $input.item;"
       },
-      "id": "a1a1a1a1-0005-4000-8000-000000000005",
+      "id": "b2b2b2b2-0007-4000-8000-000000000007",
       "name": "Zieldateiname bestimmen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1300, 300]
+      "position": [
+        1824,
+        304
+      ]
     },
     {
       "parameters": {
@@ -86,48 +155,155 @@
         "fileName": "={{$json.outputPath}}",
         "options": {}
       },
-      "id": "a1a1a1a1-0006-4000-8000-000000000006",
+      "id": "b2b2b2b2-0008-4000-8000-000000000008",
       "name": "In Display-Ordner schreiben",
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1,
-      "position": [1560, 300]
+      "position": [
+        2080,
+        304
+      ]
     },
     {
       "parameters": {
-        "command": "=mkdir -p /data/xibosignage-inbox/processed && mv \"{{$('Zieldateiname bestimmen').item.json.originalPath}}\" /data/xibosignage-inbox/processed/"
+        "jsCode": "// require('fs') ist im Code-Node gesperrt (anders als require('path')) --\n// Loeschen laeuft deshalb ueber den Execute-Command-Knoten danach, der ist\n// bereits per NODES_EXCLUDE freigeschaltet. Hier nur die erwartete\n// Dateiliste dieses Laufs einsammeln (ein Item -> ein String, sicher fuer\n// Shell-Interpolation, da Dateinamen nur aus [a-zA-Z0-9.-] bestehen).\nconst expected = $input.all().map((item) => item.json.expectedFileName);\nreturn [{ json: { expected } }];"
       },
-      "id": "a1a1a1a1-0007-4000-8000-000000000007",
-      "name": "Original archivieren",
+      "id": "b2b2b2b2-0009-4000-8000-000000000009",
+      "name": "Erwartete Dateien sammeln",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2352,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "command": "=cd /data/xibosignage-display && for f in xibo-playlist-*; do\n  case \" {{ $json.expected.join(' ') }} \" in\n    *\" $f \"*) ;;\n    *) rm -f -- \"$f\" ;;\n  esac\ndone"
+      },
+      "id": "b2b2b2b2-0010-4000-8000-000000000010",
+      "name": "Alte Playlist-Bilder aufräumen",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
-      "position": [1820, 300]
+      "position": [
+        2608,
+        304
+      ]
     }
   ],
+  "pinData": {},
   "connections": {
-    "Watch Inbox": {
-      "main": [[{ "node": "Nur Bilddateien", "type": "main", "index": 0 }]]
+    "Jeden Donnerstag 16 Uhr": {
+      "main": [
+        [
+          {
+            "node": "Playlist von Xibo CMS holen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
-    "Nur Bilddateien": {
-      "main": [[{ "node": "Originaldatei lesen", "type": "main", "index": 0 }]]
+    "Playlist von Xibo CMS holen": {
+      "main": [
+        [
+          {
+            "node": "Bild-Widgets extrahieren & sortieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
-    "Originaldatei lesen": {
-      "main": [[{ "node": "Auf Pi-Auflösung skalieren", "type": "main", "index": 0 }]]
+    "Bild-Widgets extrahieren & sortieren": {
+      "main": [
+        [
+          {
+            "node": "Medien-Metadaten holen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Medien-Metadaten holen": {
+      "main": [
+        [
+          {
+            "node": "Mediendatei herunterladen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mediendatei herunterladen": {
+      "main": [
+        [
+          {
+            "node": "Auf Pi-Auflösung skalieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Auf Pi-Auflösung skalieren": {
-      "main": [[{ "node": "Zieldateiname bestimmen", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Zieldateiname bestimmen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Zieldateiname bestimmen": {
-      "main": [[{ "node": "In Display-Ordner schreiben", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "In Display-Ordner schreiben",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "In Display-Ordner schreiben": {
-      "main": [[{ "node": "Original archivieren", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Erwartete Dateien sammeln",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Erwartete Dateien sammeln": {
+      "main": [
+        [
+          {
+            "node": "Alte Playlist-Bilder aufräumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate"
   },
+  "versionId": "a5928c02-fe2b-4986-84b5-d6aebd2cc9d3",
   "meta": {
-    "description": "Beobachtet /data/xibosignage-inbox (NFS-Mount, siehe argocd/apps/workloads/n8n/values.yaml -> xibosignage), skaliert neue Bilder auf Pi-3B+-taugliche Aufloesung und schreibt sie nach /data/xibosignage-display, von wo der Raspberry-Pi-Kiosk (ansible/roles/xibo_kiosk) sie per NFS liest und als Slideshow zeigt. Details: docs/3-apps-workloads/300e0-xibosignage.md."
-  }
+    "description": "Ersetzt xibosignage-inbox-to-display.json (bitte im n8n-UI deaktivieren): holt periodisch alle Bild-Widgets der Xibo-CMS-Playlist \"infotafel\" ueber die REST-API (OAuth2 Client Credentials), skaliert sie auf Pi-3B+-taugliche Aufloesung und schreibt sie mit einem Reihenfolge-Praefix (xibo-playlist-<order>-<mediaId>) nach /data/xibosignage-display -- der Raspberry-Pi-Kiosk (ansible/roles/xibo_kiosk) liest von dort per NFS und zeigt sie sortiert per Dateiname. Entfernt zusaetzlich Dateien, die nicht mehr in der Playlist sind. Details: docs/3-apps-workloads/300e0-xibosignage.md.",
+    "instanceId": "d3f71021076be8bdc8614296f3c7749ae0813e877410d7e61391b83252e612f7"
+  },
+  "nodeGroups": [],
+  "id": "FSAfduekP7Eii1Zi",
+  "tags": []
 }
