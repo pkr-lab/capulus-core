@@ -1,0 +1,76 @@
+---
+# ============================================================
+# Pro VM aus libvirt_host_vms — per include_tasks geloopt aus main.yml
+# (ein "loop" direkt auf einem "block" existiert in Ansible nicht).
+# ============================================================
+
+- name: Pruefen, ob die VM-Domain bereits existiert
+  ansible.builtin.command: "virsh dominfo {{ vm.name }}"
+  register: libvirt_host_vm_exists
+  changed_when: false
+  failed_when: false
+
+- name: Copy-on-Write-Disk fuer die VM anlegen (ueberspringt, falls Domain schon existiert)
+  ansible.builtin.command: >
+    qemu-img create -f qcow2
+    -F qcow2
+    -b {{ libvirt_host_pool_dir }}/{{ libvirt_host_base_image_name }}
+    {{ libvirt_host_pool_dir }}/{{ vm.name }}.qcow2
+    {{ vm.disk_gb }}G
+  args:
+    creates: "{{ libvirt_host_pool_dir }}/{{ vm.name }}.qcow2"
+  when: libvirt_host_vm_exists.rc != 0
+
+- name: cloud-init user-data + meta-data + network-config rendern
+  ansible.builtin.template:
+    src: "cloud-init-{{ item }}.yaml.j2"
+    dest: "/tmp/{{ vm.name }}-{{ item }}.yaml"
+    mode: "0600"
+  loop:
+    - user-data
+    - meta-data
+    - network-config
+  when: libvirt_host_vm_exists.rc != 0
+
+- name: cloud-init Seed-ISO erzeugen
+  ansible.builtin.command: >
+    cloud-localds
+    --network-config=/tmp/{{ vm.name }}-network-config.yaml
+    {{ libvirt_host_pool_dir }}/{{ vm.name }}-seed.iso
+    /tmp/{{ vm.name }}-user-data.yaml
+    /tmp/{{ vm.name }}-meta-data.yaml
+  args:
+    creates: "{{ libvirt_host_pool_dir }}/{{ vm.name }}-seed.iso"
+  when: libvirt_host_vm_exists.rc != 0
+
+- name: cloud-init-Temp-Dateien aufraeumen
+  ansible.builtin.file:
+    path: "/tmp/{{ vm.name }}-{{ item }}.yaml"
+    state: absent
+  loop: [user-data, meta-data, network-config]
+  when: libvirt_host_vm_exists.rc != 0
+
+- name: VM-Domain per virt-install definieren + starten
+  ansible.builtin.command: >
+    virt-install
+    --name {{ vm.name }}
+    --memory {{ vm.memory_mb }}
+    --vcpus {{ vm.vcpus }}
+    --disk path={{ libvirt_host_pool_dir }}/{{ vm.name }}.qcow2,format=qcow2,bus=virtio
+    --disk path={{ libvirt_host_pool_dir }}/{{ vm.name }}-seed.iso,device=cdrom
+    --network bridge={{ libvirt_host_bridge_name }},mac={{ vm.mac }},model=virtio
+    --os-variant ubuntu24.04
+    --import
+    --noautoconsole
+    --autostart
+  when: libvirt_host_vm_exists.rc != 0
+
+- name: Warten, bis die VM per SSH erreichbar ist (erster Boot + cloud-init dauert etwas)
+  ansible.builtin.wait_for:
+    host: "{{ vm.ip }}"
+    port: 22
+    delay: 20
+    timeout: 300
+  delegate_to: localhost
+  become: false
+  when: libvirt_host_vm_exists.rc != 0
