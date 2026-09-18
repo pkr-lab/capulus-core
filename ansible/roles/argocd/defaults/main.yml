@@ -6,6 +6,11 @@
 # argocd/apps/workloads/ — each entry here is also the app's namespace name
 # (destination.namespace == the app's folder basename, see
 # bootstrap-applicationset.yaml.j2).
+# false (Default): ApplicationSet-Generator nimmt alle Ordner unter
+# argocd/apps/<tier>/*. true: nur die Apps aus argocd_platform_apps /
+# argocd_workloads_apps unten (ENTW-Cluster, siehe host_vars/entw-vm).
+argocd_apps_from_lists: false
+
 argocd_platform_apps:
   - sealed-secrets
   - kubeseal-webgui
