@@ -42,6 +42,12 @@
 #      existiert der Public Key dort noch nicht)
 #   9. Uncordon — stellt sicher dass worker-1 schedulable bleibt
 #      (kubectl drain/cordon durch Maintenance-Schritte rueckgaengig machen)
+#   10. libvirt_host — KVM/libvirt fuer die ENTW-VM
+#       (docs/4-planung/40080-multi-cluster-entw-prod-tech.md, Phase 1).
+#       Per host_vars/worker-1/vars.yml bewusst deaktiviert
+#       (libvirt_host_enabled: false), bis Phase 1 explizit startet -
+#       erbt NICHT automatisch das globale libvirt_host_enabled aus
+#       group_vars/all.yml (das gilt nur fuer die PROD-VM auf homeserver).
 # ============================================================
 #
 # Run with:
@@ -72,6 +78,8 @@
       tags: [wake-on-lan, power-management]
     - role: cluster_power_manager_target
       tags: [cluster-power-manager-target, power-management]
+    - role: libvirt_host
+      tags: [libvirt-host, virtualization]
 
 - name: Uncordon worker-1 nach Provisioning
   hosts: homeservers
