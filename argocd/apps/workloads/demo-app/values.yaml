@@ -19,11 +19,7 @@ ingress:
   className: traefik
   annotations: {}
   hosts:
-    - host: demo.prod.homeserver
-      paths:
-        - path: /
-          pathType: Prefix
-    - host: demo-prod.pke-lab.de
+    - host: demo.dev.homeserver
       paths:
         - path: /
           pathType: Prefix
