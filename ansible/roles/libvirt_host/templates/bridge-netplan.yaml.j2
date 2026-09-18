@@ -1,0 +1,32 @@
+# Managed by Ansible (libvirt_host role) — do not edit manually.
+#
+# Ersetzt die bisherige direkte IP-Konfiguration auf
+# {{ libvirt_host_bridge_interface }} durch eine Linux-Bridge
+# ({{ libvirt_host_bridge_name }}), an die libvirt-VMs mit eigener,
+# im LAN direkt erreichbarer IP angeschlossen werden koennen
+# (docs/4-planung/40080-multi-cluster-entw-prod-tech.md, Baustein 5).
+# Die Host-IP selbst wandert von der physischen NIC auf die Bridge -
+# nach aussen unveraendert erreichbar (gleiche IP), aber ueber ein
+# anderes Interface.
+network:
+  version: 2
+  ethernets:
+    {{ libvirt_host_bridge_interface }}:
+      dhcp4: false
+  bridges:
+    {{ libvirt_host_bridge_name }}:
+      interfaces: [{{ libvirt_host_bridge_interface }}]
+      dhcp4: false
+      addresses:
+        - {{ network_static_ip }}/{{ network_prefix_length }}
+      routes:
+        - to: default
+          via: {{ network_gateway }}
+      nameservers:
+        addresses:
+{% for dns in network_dns %}
+          - {{ dns }}
+{% endfor %}
+      parameters:
+        stp: false
+        forward-delay: 0

@@ -63,7 +63,7 @@
       (_opencode_local_source_revision.stdout | trim))
   register: _opencode_local_source_archive
 
-- name: Archive local OpenCode source on the control host
+- name: Archive local OpenCode source on the control host  # noqa: command-instead-of-module (git archive has no ansible.builtin.git equivalent)
   ansible.builtin.command:
     cmd: "git archive --format=tar.gz --output={{ _opencode_local_source_archive.path }} HEAD"
     chdir: "{{ opencode_local_source_dir }}"

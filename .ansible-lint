@@ -1,0 +1,25 @@
+---
+# ansible-lint-Config — passt den Linter an bestehende, absichtliche
+# Repo-Konventionen an, statt hunderte etablierte Tasks/Variablen
+# umzuschreiben. Siehe docs/f-cicd-automatisierung/f0070-ci-lint.md.
+
+skip_list:
+  # Tasknamen sind durchgehend deutsch, kleingeschrieben
+  # ("ethtool installieren" statt "Install ethtool") - etablierter Stil
+  # im ganzen Repo, keine versehentliche Inkonsistenz.
+  - name[casing]
+  # Mehrere zusammengehoerige Rollen teilen sich bewusst denselben
+  # Variablen-Praefix statt je einen eigenen Rollen-Praefix zu tragen
+  # (z. B. semaphore_bootstrap + semaphore_secrets + semaphore_targets
+  # teilen sich "semaphore_*", weil sie dieselben Werte querlesen) -
+  # ansible-lints Default erwartet einen Praefix pro Rolle, das passt
+  # hier nicht zum tatsaechlichen Design.
+  - var-naming[no-role-prefix]
+  # Einzelne Tasknamen haben ein Jinja-Fragment in der Mitte statt am
+  # Ende (z. B. "Assert inventory '{{ x }}' exists in project {{ y }}")
+  # - lesbarer so, kein Fehler.
+  - name[template]
+
+# Echte (wenn auch kleine) Findings wurden direkt behoben statt
+# geskippt: no-changed-when (banana_pi_kiosk, cups_print_server),
+# risky-shell-pipe (semaphore_secrets), no-handler (worker_apt_update).

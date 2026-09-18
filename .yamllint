@@ -1,0 +1,25 @@
+---
+extends: default
+
+rules:
+  line-length: disable
+  document-start: disable
+  # Helm-Templates enthalten Go-Template-Ausdrücke ({{ ... }}), die
+  # yamllint teils als "truthy"/"comments"-Verstoß werten - hier bewusst
+  # entspannt, echte Fehler fängt trotzdem `helm lint`/`helm template`.
+  truthy: disable
+  comments:
+    min-spaces-from-content: 1
+  # ansible-lint verlangt diese Mindesteinstellungen von jeder eigenen
+  # yamllint-Config, sonst verweigert es die eigene YAML-Prüfung
+  # komplett (siehe "Found incompatible custom yamllint configuration").
+  comments-indentation: false
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true
+  braces:
+    max-spaces-inside: 1
+
+ignore: |
+  argocd/apps/*/*/charts/
+  argocd/apps/*/*/templates/

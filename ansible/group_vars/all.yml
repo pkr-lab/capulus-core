@@ -316,6 +316,14 @@ network_dns:
   - "1.1.1.1"
   - "8.8.8.8"
 
+# ---- Optional: libvirt_host (PROD-VM, docs/4-planung/40080 Baustein 5) ----
+# Beides bewusst false, bis Phase 2 (Wartungsfenster + Rollback-Plan)
+# tatsaechlich beginnt - siehe Kommentare in
+# ansible/roles/libvirt_host/defaults/main.yml.
+libvirt_host_enabled: true
+libvirt_host_configure_bridge: false
+libvirt_host_admin_ssh_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG2BaTIJcMiQa57dCCYxt2TpdFevrFVVpjfkOXSwfGaK prod-vm-admin" # CHANGE: euer SSH-Public-Key für den "ubuntu"-User der VM
+
 # ---- nightly_worker_wake: n8n-Trigger-Key ------------------
 nightly_worker_wake_n8n_trigger_public_key: !vault |
           $ANSIBLE_VAULT;1.1;AES256
