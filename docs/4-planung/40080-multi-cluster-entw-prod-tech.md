@@ -87,7 +87,7 @@ Der Plan unten löst das deshalb gestaffelt statt mit einem Rundumschlag.
 |---|---|---|
 | Ein ArgoCD für mehrere Cluster, oder pro Cluster eins? | **Technisch reicht eines** — ArgoCD unterstützt natives Multi-Cluster-Management (`argocd cluster add` legt pro Ziel-Cluster ein `Secret` vom Typ `cluster` mit API-Server-URL + Credentials in der `argocd`-Namespace des Hub-Clusters an; `Application`/`ApplicationSet` referenzieren den Ziel-Cluster dann über `destination.server`/`.name` statt immer `https://kubernetes.default.svc`). **Empfehlung für dieses Setup: trotzdem zwei Instanzen, nicht eine für alle drei** — Begründung siehe [Baustein 1](#1-argocd-modell-ein-hub-für-tech--prod-entw-bekommt-eine-eigene-instanz) unten, kurz: ENTW ist als Trainings-/Experimentierumgebung vorgesehen (Bezug zu 40030 Trigger 1) und darf keine Zugangsdaten tragen, die im Erfolgsfall eines Angriffs auf PROD zeigen. |
 | Können die Cluster eingeschränkt untereinander kommunizieren (Beispiel Immich-Server → Immich)? | **Ja, aber nicht über Kubernetes-Bordmittel** — jeder Cluster hat sein eigenes Pod-/Service-Netz (`10.42.0.0/16`/`10.43.0.0/16` sind pro Cluster unabhängig, keine gemeinsame Route). Cross-Cluster-Zugriff muss über die bestehende Traefik-Ingress-Ebene + Tailscale laufen, genau wie heute schon jeder LAN/Tailnet-Client auf `*.homeserver` zugreift — nur eben Cluster-zu-Cluster statt Client-zu-Cluster. Einschränkung auf **genau** die gewünschte Verbindung (z. B. nur Immich-Namespace in PROD darf einen bestimmten Port bei TECH erreichen) über drei kombinierte, bereits im Repo etablierte Mechanismen: Tailscale-ACL-Tags pro Cluster (`tag:entw-node`/`tag:prod-node`/`tag:tech-node`, siehe [docs/c-netzwerk-dns/c0010-tailscale.md](../c-netzwerk-dns/c0010-tailscale.md#acl-konfiguration), aktuell nur dokumentiert, nicht restriktiv konfiguriert), UFW-Regel auf dem Ziel-Node nur für die konkrete Quell-IP/-Tag+Port, und eine Kubernetes-`NetworkPolicy`/Ingress-Regel im Ziel-Namespace, die nur die Absender-Cluster-Gateway-IP zulässt — dieselbe Allow-List-Philosophie wie bei `argocd_network_policy_refined_namespaces` heute schon, nur eine Ebene höher angewendet. Ein echter Cluster-übergreifender Service-Mesh (Cilium ClusterMesh, Istio Multi-Cluster, Submariner) wäre die "richtige" Lösung für viele solcher Verbindungen, ist aber für eine Handvoll benannter Ausnahmen bei drei Nodes klarer Overkill — passt nicht zum sonstigen "kein Tool mehr als nötig"-Muster des Repos (vgl. Ablehnung des Bitnami-Postgres-Subcharts in 40070, Ablehnung von Proxmox in 40030). |
-| Gibt die aktuelle Hardware das her? | **Für drei komplett unabhängige, jeweils hochverfügbare physische Cluster: nein.** Es gibt nur **eine** 24/7-Maschine (`homeserver`). `worker-0`/`worker-1` sind bewusst nur bei Bedarf per WoL an — für einen Cluster, der wie PROD jederzeit für Familie/Verein erreichbar sein muss, ungeeignet als alleinige Nodes. Für eine **virtualisierte** Aufteilung (siehe Zielarchitektur unten) reicht die Hardware aber gut: ~38 GiB RAM sind auf `homeserver` frei, genug für 1–2 schlanke Zusatz-VMs/Nested-Cluster, ohne bestehende Workloads zu verdrängen. |
+| Gibt die aktuelle Hardware das her? | **Für drei komplett unabhängige, jeweils hochverfügbare physische Cluster: nein.** Es gibt nur **eine** 24/7-Maschine (`homeserver`). `worker-0`/`worker-1` sind bewusst nur bei Bedarf per WoL an — für einen Cluster, der wie PROD jederzeit für Familie/Verein erreichbar sein muss, ungeeignet als alleinige Nodes. Für das gestaffelte Zielbild (siehe Zielarchitektur unten) reicht die Hardware aber gut: TECH und PROD laufen beide bare metal auf `homeserver` (zweite k3s-Instanz, eigene IP, ~38 GiB RAM sind dort frei), ENTW läuft nested/VM auf `worker-1`. |
 | Welche Vorteile bringt das Setup? | Siehe [Vorteile](#vorteile-des-ziel-setups) unten — kurz: echte Blast-Radius-Trennung für die Trainingsumgebung, gefahrloses Testen von Cluster-weiten Änderungen (k3s-Upgrades, ArgoCD-Upgrades, CRD-Änderungen) vor PROD, klarere Sicherheitsgrenze zwischen Infrastruktur (TECH) und Nutzer-Apps (PROD). |
 | Ist die neueste Kubernetes-Version installiert? | **Ja, für den konfigurierten Update-Kanal** (`stable`) — siehe Tabelle oben. Wer bewusst näher an der absoluten Kubernetes-Spitze (`v1.37`) sein will, müsste auf `k3s_channel: latest` wechseln — das ist eine bewusste Stabilität-vs.-Aktualität-Entscheidung, kein Versäumnis. |
 
@@ -151,7 +151,7 @@ flowchart TB
         P3["k3s server<br/>eigener Control-Plane, eigene IP"]
     end
 
-    subgraph ENTW["ENTW-Cluster — worker-0/1, WoL, ephemer"]
+    subgraph ENTW["ENTW-Cluster — worker-1, WoL, ephemer"]
         direction LR
         E1["EIGENE, isolierte ArgoCD-Instanz<br/>(kein Zugriff vom TECH-Hub)"]
         E2["Kopien zum Testen<br/>+ Trainings-/Pentest-Ziele (Pacman-Nachfolger)"]
@@ -292,7 +292,7 @@ migrierte/tier-lose Namen bestehen.
 
 | Phase | Was | Wo | Risiko |
 |---|---|---|---|
-| 1 | ENTW als leichtgewichtiger, ephemer Cluster (k3d/Nested-k3s-in-Docker **oder** eine schlanke KVM/libvirt-VM — hier **ist** eine VM/Container-Grenze sinnvoll, s. u.) | `worker-0`, weiterhin per WoL geweckt, `cluster_power_manager`-Rolle um einen expliziten "ENTW-Session"-Trigger erweitert statt nur lastbasiert | gering — reversibel, keine bestehende Infrastruktur angefasst |
+| 1 | ENTW als leichtgewichtiger, ephemer Cluster (k3d/Nested-k3s-in-Docker **oder** eine schlanke KVM/libvirt-VM — hier **ist** eine VM/Container-Grenze sinnvoll, s. u.) | `worker-1` (mehr RAM als `worker-0`, ~15 GiB — passt besser zu einem Nested-Cluster mit mehreren Test-Apps gleichzeitig), weiterhin per WoL geweckt, `cluster_power_manager`-Rolle um einen expliziten "ENTW-Session"-Trigger erweitert statt nur lastbasiert | gering — reversibel, keine bestehende Infrastruktur angefasst |
 | 2 | TECH/PROD-Split | `homeserver` bleibt TECH bare metal wie heute; PROD als **zweite, unabhängige k3s-Instanz direkt auf `homeserver`** (kein Hypervisor) — Details unten | mittel/hoch — betrifft laufende Familien-/Vereins-Apps, braucht Wartungsfenster + Rollback-Plan |
 
 **Kein Proxmox, keine VM für PROD** — Begründung siehe
@@ -342,16 +342,124 @@ homeserver (12 vCPU / 61 GiB, 24/7)
               (Ressourcengrenze per systemd-cgroup, z. B. auf
               6 vCPU / 24 GiB gedeckelt, Rest bleibt TECH-Puffer)
 
-worker-0 (4 vCPU / 7,3 GiB, WoL)  → ENTW, nested/VM, nur bei Bedarf wach
+worker-1 (4 vCPU / 15 GiB, WoL)   → ENTW, nested/VM, nur bei Bedarf wach
                                      (hier lohnt sich die zusätzliche
                                      VM/Container-Grenze, da ENTW als
                                      einziger Cluster eine echte
-                                     Sicherheitsgrenze braucht)
-worker-1 (4 vCPU / 15 GiB, WoL)   → weiterhin freie Zusatzkapazität
+                                     Sicherheitsgrenze braucht; mehr RAM
+                                     als worker-0, passt besser zu
+                                     mehreren gleichzeitigen Test-Apps)
+worker-0 (4 vCPU / 7,3 GiB, WoL)  → weiterhin freie Zusatzkapazität
                                      (z. B. zweiter ENTW-Node für
                                      Multi-Node-Trainingsszenarien,
                                      oder PROD-Skalierungsreserve)
 ```
+
+### 6. CI/CD-Pipeline: automatisierte Promotion ENTW → TECH → PROD
+
+**Gewünschtes Verhalten:** Jede neue Software-Version landet automatisch
+zuerst auf ENTW, läuft dort einen definierten Zeitraum (Vorschlag: 24 h)
+gesund, und wird erst danach automatisiert Richtung TECH/PROD
+weitergereicht — kein manuelles "jetzt auf drei Cluster gleichzeitig
+deployen" mehr.
+
+**Reihenfolge bewusst linear, nicht als Fan-Out ENTW → {TECH, PROD}
+gleichzeitig:** TECH trägt Identity/DNS/Monitoring, von denen PROD laut
+[Baustein 4](#4-was-pro-cluster-existieren-muss-vs-was-zentral-bleibt)
+abhängt. Eine fehlerhafte TECH-Änderung, die zeitgleich mit einer
+PROD-Änderung durchläuft, könnte PROD indirekt mit reißen, ohne dass die
+Promotion-Pipeline das als PROD-Fehler erkennt. Reihenfolge deshalb
+**ENTW → TECH → PROD**, mit eigenem (kürzerem) Beobachtungsfenster
+zwischen TECH und PROD.
+
+```mermaid
+flowchart LR
+    Dev["git push<br/>argocd/apps/entw/*"] --> Sync1["ArgoCD (ENTW)<br/>auto-sync, wie heute"]
+    Sync1 --> Watch["24h-Health-Gate<br/>(neuer GitHub-Actions-Workflow,<br/>läuft per Cron)"]
+    Watch -->|"Healthy + Synced<br/>seit ≥ 24h"| PR1["Auto-PR:<br/>argocd/apps/tech/* aktualisieren"]
+    Watch -->|"Degraded / Unhealthy"| Alert1["ntfy/gotify-Alert,<br/>Promotion blockiert"]
+    PR1 -->|"Merge (Empfehlung: automatisch,<br/>reines Betreiber-Risiko)"| Sync2["ArgoCD (TECH)<br/>auto-sync"]
+    Sync2 --> Watch2["kürzeres Health-Gate<br/>(z. B. 2h)"]
+    Watch2 -->|"Healthy"| PR2["Auto-PR:<br/>argocd/apps/prod/* aktualisieren"]
+    Watch2 -->|"Degraded"| Alert2["ntfy/gotify-Alert,<br/>Promotion blockiert,<br/>ggf. Auto-Revert der TECH-PR"]
+    PR2 -->|"Merge (Empfehlung: manuell,<br/>echte Nutzer betroffen)"| Sync3["ArgoCD (PROD)<br/>auto-sync"]
+```
+
+**Konkrete Bausteine dafür, eingepasst in das, was schon existiert:**
+
+| Baustein | Umsetzung | Warum so |
+|---|---|---|
+| Neuer GitHub-Actions-Workflow `promote.yml` | Cron (z. B. stündlich) + `workflow_dispatch`, Stil wie `release.yml`/`build-images.yml` (`concurrency`-Gruppe, `permissions: contents write, pull-requests write`) | passt sich in die bestehenden vier Workflows (`build-images.yml`, `mirror-gitlab.yml`, `release.yml`, `renovate.yml`) ein, kein neues CI-System |
+| ArgoCD-API-Zugriff aus der Cloud-Runner heraus | `tailscale/github-action`-Step, der den GitHub-Actions-Runner temporär ins Tailnet holt, dann `argocd app get <app> -o json` gegen die interne ArgoCD-URL | ArgoCD ist bewusst nicht öffentlich erreichbar (nur LAN/Tailnet, `docs/c-netzwerk-dns/c0010-tailscale.md`) — Tailscale-GitHub-Action ist der Standardweg, ohne einen offenen Port aufzumachen, passt zum "keine offenen Ports"-Grundsatz aus `a0010-overview.md` |
+| "seit ≥ 24h gesund"-Kriterium | Health-Status aus ArgoCD **plus** Alter des letzten Commits unter `argocd/apps/entw/<app>/` (`git log -1 --format=%ct -- <pfad>`) — beides muss stimmen | ArgoCD zeigt nur den aktuellen Zustand, nicht seit wann er stabil ist — Commit-Alter ist der einfachste verlässliche Zeitanker, ohne einen zusätzlichen Zustandsspeicher einzuführen |
+| Promotion-PR-Inhalt | Kopiert nur `image.tag`/Chart-Version-Felder aus `argocd/apps/entw/<app>/values.yaml` nach `argocd/apps/tech/<app>/` bzw. `.../prod/<app>/` — kein Full-Diff-Merge | gleiches Prinzip wie Renovates bestehendes Feld-Update, minimiert das Risiko einer versehentlichen Konfigurationsänderung beim Promoten |
+| Merge-Gate TECH vs. PROD | TECH-Promotion-PRs: Auto-Merge nach grünem CI (nur Betreiber betroffen). PROD-Promotion-PRs: **manuelles Review** verlangt (Branch-Protection-Rule), auch wenn ENTW+TECH schon grün sind | Familie/Verein sind echte Nutzer auf PROD — ein Mensch bestätigt den letzten Schritt, alles davor ist voll automatisiert |
+| Alerting | Promotion-Start/-Erfolg/-Block über die bereits vorhandenen `gotify-bridge`/`ntfy-bridge` (dieselbe Alertmanager-Route wie heute) | kein neuer Notification-Kanal nötig |
+| Auto-Rollback (optional, Phase 2) | Wird eine frisch promotete App innerhalb eines kurzen Nachbeobachtungsfensters `Degraded`, öffnet derselbe Workflow automatisch einen Revert-PR | verhindert, dass ein automatisiert promotetes, aber doch fehlerhaftes Update unbemerkt auf PROD hängen bleibt |
+
+**Weitere sinnvolle Pipeline-Ergänzungen** (unabhängig von der
+Promotion-Kette, schließen echte Lücken im aktuellen Setup):
+
+| Vorschlag | Lücke, die es schließt |
+|---|---|
+| **`ci.yml`: `make lint` auf jedem PR** | `make lint` (yamllint, ansible-lint, `helm lint` je Chart) existiert bereits lokal, läuft aber aktuell in **keinem** der vier GitHub-Actions-Workflows — ein kaputtes Manifest fällt erst beim ArgoCD-Sync auf, nicht beim PR |
+| **Manifest-Validierung vor dem Merge** (`helm template \| kubeconform`) | geht über `helm lint` hinaus — prüft gegen echte Kubernetes-API-Schemas, hätte z. B. das `spec.generators[0].template`-Problem aus [b0020-argocd-projects.md](../b-kubernetes-gitops/b0020-argocd-projects.md) schon vor dem `kubectl apply` gegen den Live-Cluster gefunden |
+| **Secret-Scanning auf jedem PR** (`gitleaks`) | defense-in-depth zusätzlich zu SealedSecrets/Ansible Vault — verhindert, dass ein Plaintext-Secret versehentlich in einer PR landet, bevor es überhaupt zum Versiegeln kommt |
+| **Renovate zuerst nur gegen `argocd/apps/entw/*`** | `renovate.json` ist aktuell pfadmäßig undifferenziert (`argocd/apps/**`) — Image-/Chart-Bumps sollten künftig zuerst in ENTW landen (ggf. mit Automerge, da ENTW ohnehin wegwerfbar ist) und von dort über die neue Promotion-Pipeline weiterlaufen, statt direkt in `tech`/`prod` einzuschlagen |
+| **Smoke-Tests als Teil des Health-Gates** | "Pod läuft" ist kein Beweis, dass die App funktioniert — ein einfacher `curl`-Check gegen `https://<app>.dev.homeserver` (über denselben Tailscale-Runner) als Zusatzbedingung fürs 24h-Gate fängt Fälle, in denen der Pod zwar `Running`, die App aber kaputt ist |
+| **Chaos-/Upgrade-Proben ausschließlich gegen ENTW** | k3s-Minor-Upgrades, ArgoCD-Upgrades, gezielte Pod-Kills — bisher nirgends geprobt, weil es nur einen Cluster gibt. Mit ENTW als Wegwerf-Ziel lässt sich das gefahrlos automatisieren (z. B. wöchentlicher Workflow, der ein Upgrade zuerst nur gegen ENTW fährt) |
+| **Dependency Dashboard als Sichtbarkeits-Fläche** | Renovate hat `:dependencyDashboard` bereits aktiviert (`renovate.json`) — als zentrale Übersicht nutzen, welche Updates aktuell auf ENTW "einlaufen" und welche schon promotet wurden, statt eine zusätzliche Status-Seite zu bauen |
+
+### 7. Nutzer-/Daten-Inventar für Immich & Vaultwarden
+
+**Anforderung:** Die Nutzer unter Immich und Vaultwarden sollen im Repo
+zu den Daten hinterlegt werden, die ihnen gehören — damit bei einem
+Rebuild (hier konkret: der PROD-Rebuild aus Baustein 5 Phase 2) weder
+Daten verloren gehen noch der Überblick fehlt, wer welche Daten hat.
+
+**Erst mal die gute Nachricht — technisch ist der Rebuild bereits
+abgesichert, unabhängig von diesem Plan:**
+
+| App | Wo die Nutzerdaten liegen | Backup-Abdeckung (live geprüft) |
+|---|---|---|
+| Immich | Postgres-PVC (`postgresql.persistence.storageClassName: immich-nas`, `argocd/apps/workloads/immich/values.yaml:201`) — enthält Accounts, Alben, Freigaben, Gesichtserkennung | Läuft auf `immich-nas` (NFS `/volume2`) → wird vom bestehenden restic-Backup auf die externe USB-Platte mit erfasst, genau wie die Fotobibliothek selbst ([20010-nas-backup.md](../2-betrieb-hardware/20010-nas-backup.md)) — **kein zusätzlicher Schritt nötig** |
+| Vaultwarden | Haupt-PVC bewusst auf `local-path` (SQLite, NFS-Locking-Probleme vermieden, siehe [300a0-vaultwarden.md](../3-apps-workloads/300a0-vaultwarden.md#7-warum-kein-nas-storage-für-die-haupt-pvc)), aber ein **eigener nächtlicher `backup`-CronJob** kopiert per `sqlite3 .backup` auf eine zweite, NAS-gestützte PVC | Über dieselbe restic-Kette abgedeckt **plus** ein bereits fertiger, getesteter Restore-Weg: `make vaultwarden-restore FORCE_RESTORE=true` (Ansible-Rolle `vaultwarden_restore`). Laut Doc selbst: *"Vaultwarden kennt keinen 'User per API/Ansible anlegen'-Mechanismus, der über die SQLite-DB hinausgeht — ein separater Schritt, um den Nutzer neu anzulegen, ist nicht nötig"* — die Nutzer kommen mit der DB zurück |
+
+**Was trotzdem fehlt und hier ergänzt wird — nicht Daten**sicherung**,
+sondern Daten**dokumentation**:** Aktuell steht "wer hat einen Account
+und was gehört ihm" nirgends lesbar im Repo, sondern ausschließlich
+verborgen in einem Postgres-/SQLite-Blob. Für den PROD-Rebuild (Baustein
+5 Phase 2) und generell als Diagnose-/Auditier-Hilfe kommt ein neues,
+**verschlüsseltes** Inventar dazu — verschlüsselt, weil es echte Namen/
+E-Mail-Adressen von Familie/Verein enthält, nicht weil es technisch für
+den Restore selbst gebraucht wird:
+
+- Neue Ansible-Vault-Datei, z. B. `ansible/group_vars/user_inventory_vault.yml`,
+  editierbar über einen neuen `make user-inventory-edit`-Target (analog zu
+  `make vault-edit`) — **kein Passwort** darin (das bleibt beim jeweiligen
+  Nutzer/in der App-DB), sondern nur: Name/E-Mail, App (`immich`/
+  `vaultwarden`), Rolle (Admin/Mitglied), und bei Immich zusätzlich der
+  Name der zugehörigen Library/des Albums, falls nicht 1:1 pro Person.
+- Referenziert von einem neuen, kurzen Abschnitt in
+  [300c0-immich.md](../3-apps-workloads/300c0-immich.md) und
+  [300a0-vaultwarden.md](../3-apps-workloads/300a0-vaultwarden.md) ("Nutzer-Inventar
+  siehe `ansible/group_vars/user_inventory_vault.yml`, `make
+  user-inventory-edit`"), statt das Inventar nur an dieser
+  Migrationsseite hängen zu lassen — sonst findet es niemand mehr, sobald
+  dieser Plan als historischer Kontext gilt (Konvention wie in
+  [40070](40070-authentik-sso-iac.md)).
+- **Vor dem PROD-Rebuild** (Baustein 5 Phase 2) einmal gegen den
+  tatsächlichen Live-Stand beider Apps abgeglichen (`/admin`-Oberfläche
+  Immich bzw. Vaultwarden) — danach bei jeder Account-Änderung
+  (neues Familienmitglied, neues Vereinsmitglied) mitgepflegt, nicht nur
+  einmalig angelegt und vergessen.
+
+**Bewusst nicht vorgesehen:** ein automatisierter Abgleich/Sync
+zwischen diesem Inventar und den echten App-Datenbanken (z. B. ein
+CronJob, der bei Abweichung Alarm schlägt) — für zwei Apps mit
+gelegentlichen, von Menschen ausgelösten Account-Änderungen ist das
+Overkill; das Inventar ist eine Dokumentations-Hilfe, keine
+Quelle der Wahrheit (die bleibt die App-DB selbst).
 
 ---
 
@@ -382,7 +490,7 @@ heutigen Cluster erreichbar.
    `{platform,workloads}` entscheiden, Root-CA-Strategie für Baustein 4
    festlegen.
 2. **ENTW aufsetzen** (Phase 1 aus Baustein 5) — k3d/nested-k3s auf
-   `worker-0`, eigene ArgoCD-Instanz, eigenes `sealed-secrets`. Damit das
+   `worker-1`, eigene ArgoCD-Instanz, eigenes `sealed-secrets`. Damit das
    riskanteste unbekannte Terrain (Multi-Cluster-ArgoCD-Mechanik,
    eingeschränkte Cross-Cluster-Kommunikation) zuerst an einem
    Wegwerf-Cluster ohne echte Nutzer verifizieren.
@@ -403,6 +511,13 @@ heutigen Cluster erreichbar.
 7. **Alte In-Cluster-Applications erst nach vollständiger Verifikation
    des neuen Ziels entfernen** — analog zum Vorgehen in
    [b0020-argocd-projects.md](../b-kubernetes-gitops/b0020-argocd-projects.md#rollout-hinweis).
+8. **`ci.yml` (Lint-Gate) zuerst, unabhängig vom Rest** — kann schon vor
+   Schritt 2 umgesetzt werden, hat keine Abhängigkeit zum Multi-Cluster-Umbau.
+9. **`promote.yml` (Baustein 6) erst, wenn Schritt 6 abgeschlossen ist** —
+   die Promotion-Pipeline braucht alle drei Cluster inkl. funktionierender
+   Tailscale-Anbindung des GitHub-Actions-Runners; zuerst manuell/mit
+   festem Wartezeit-Merge testen, bevor der 24h-Health-Gate-Workflow
+   automatisiert PRs öffnet.
 
 ---
 
@@ -433,6 +548,31 @@ heutigen Cluster erreichbar.
 - [ ] **`ansible/roles/k3s` parametrisieren** (Instanzname, IP, Ports,
       Data-Dir), damit dieselbe Rolle TECH **und** PROD bedienen kann,
       statt einer zweiten, dupliziert gepflegten Rolle.
+- [ ] **`ci.yml`-Lint-Workflow** anlegen (`make lint` auf jedem PR) —
+      Lücke besteht unabhängig vom Multi-Cluster-Umbau, aber Voraussetzung
+      für ein vertrauenswürdiges Promotion-Gate.
+- [ ] **Tailscale-Anbindung des GitHub-Actions-Runners** (`tailscale/github-action`)
+      einrichten, bevor `promote.yml` gebaut wird — ohne Tailnet-Zugriff
+      kann der Cloud-Runner die interne ArgoCD-API nicht erreichen.
+- [ ] **Entscheidung Merge-Gate PROD** — manuelles Review pflicht wie
+      empfohlen, oder ebenfalls Automerge nach X Stunden grünem TECH-Status?
+- [ ] **`argocd/apps/entw/*`-Pfad in `renovate.json` ergänzen**, sobald
+      die Ordnerstruktur aus Schritt 1 steht, damit Renovate-PRs zuerst
+      dort statt direkt in `tech`/`prod` landen.
+- [ ] **Manifest-Validierung** (`helm template | kubeconform`) als
+      Pflichtschritt in `ci.yml` ergänzen.
+- [ ] **Secret-Scanning** (`gitleaks`) als Pflichtschritt in `ci.yml`
+      ergänzen.
+- [ ] **Smoke-Test-Schritt** im `promote.yml`-Health-Gate ergänzen
+      (`curl` gegen `https://<app>.dev.homeserver` über denselben
+      Tailscale-Runner, nicht nur ArgoCD-Health abfragen).
+- [ ] **Wöchentlicher Chaos-/Upgrade-Proben-Workflow** gegen ENTW
+      anlegen (k3s-/ArgoCD-Upgrade-Rehearsal, gezielte Pod-Kills) —
+      niedrige Priorität, nach der Promotion-Pipeline.
+- [ ] **Nutzer-/Daten-Inventar Immich & Vaultwarden** (siehe
+      [Baustein 7](#7-nutzer--daten-inventar-für-immich--vaultwarden))
+      vor dem PROD-Rebuild in Baustein 5 Phase 2 anlegen und mit dem
+      tatsächlichen Nutzerstand beider Apps abgleichen.
 
 ---
 
@@ -455,3 +595,8 @@ heutigen Cluster erreichbar.
   **nicht** im PROD- oder ENTW-Cluster entschlüsseln (`kubectl apply`
   bleibt im `Pending`/Fehler-Status hängen) — bestätigt echte
   Schlüsseltrennung.
+- Nach dem PROD-Rebuild: `make vaultwarden-restore FORCE_RESTORE=true`
+  liefert alle bisherigen Vaultwarden-Accounts zurück, Immich-Login
+  funktioniert für alle im Inventar gelisteten Personen — beides gegen
+  `ansible/group_vars/user_inventory_vault.yml` abgeglichen, keine
+  fehlenden/verwaisten Accounts.
