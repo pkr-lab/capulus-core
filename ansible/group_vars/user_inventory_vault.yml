@@ -1,0 +1,24 @@
+---
+# Nutzer-/Daten-Inventar für Immich & Vaultwarden.
+# Siehe docs/4-planung/40080-multi-cluster-entw-prod-tech.md, Baustein 7.
+#
+# Zweck: Dokumentation/DR-Referenz, WER einen Account hat und WAS ihm
+# gehört - keine Quelle der Wahrheit (das bleibt die App-DB selbst) und
+# KEIN Passwort hier (das bleibt beim jeweiligen Nutzer/in der App-DB).
+#
+# Bearbeiten nach der Erstverschlüsselung (siehe Befehle, die euch dazu
+# gegeben wurden): make user-inventory-edit
+#
+# Platzhalter unten durch echte Daten ersetzen, nicht-benötigte Zeilen
+# löschen, neue Personen als weiteren Listeneintrag ergänzen.
+
+immich_users:
+  - name: "Vorname Nachname"
+    email: "vorname@example.com"
+    role: admin # admin | member
+    library: "" # nur ausfüllen, falls nicht 1:1 die Standard-Library/kein eigenes Album
+
+vaultwarden_users:
+  - name: "Vorname Nachname"
+    email: "vorname@example.com"
+    role: admin # admin | member
