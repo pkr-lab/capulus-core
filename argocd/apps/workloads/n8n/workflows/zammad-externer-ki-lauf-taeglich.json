@@ -1,5 +1,4 @@
 {
-  "id": "eavJtybObMXc3Qpa",
   "name": "Zammad Externer KI-Lauf (taeglich)",
   "nodes": [
     {
@@ -7,27 +6,26 @@
         "rule": {
           "interval": [
             {
-              "field": "days",
-              "daysInterval": 1,
-              "triggerAtHour": 7,
-              "triggerAtMinute": 0
+              "triggerAtHour": 7
             }
           ]
         }
       },
-      "id": "f6f6f6f6-0001-4000-8000-000000000001",
+      "id": "8dd5c40f-aad3-4b83-9d50-4976b21660f7",
       "name": "Einmal taeglich",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
       "position": [
-        260,
-        300
+        528,
+        112
       ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "https://carplay-api.prod.homeserver/api/power/wake",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -40,19 +38,17 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ target: 'worker-0' }) }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
         "options": {
           "allowUnauthorizedCerts": true
         }
       },
-      "id": "f6f6f6f6-0002-4000-8000-000000000002",
+      "id": "291b52f9-f8b3-421f-bc2d-696de6318aed",
       "name": "Worker-0 wecken",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        520,
-        300
+        800,
+        112
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -60,20 +56,6 @@
           "name": "carplay-api API Token"
         }
       }
-    },
-    {
-      "parameters": {
-        "executeOnce": true,
-        "command": "cat /var/run/secrets/kubernetes.io/serviceaccount/token"
-      },
-      "id": "f6f6f6f6-0003-4000-8000-000000000003",
-      "name": "K8s-Token lesen (Scale-up)",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        780,
-        300
-      ]
     },
     {
       "parameters": {
@@ -99,61 +81,68 @@
           "allowUnauthorizedCerts": true
         }
       },
-      "id": "f6f6f6f6-0004-4000-8000-000000000004",
+      "id": "51be598b-118a-4cf7-8d78-6a6accc5593b",
       "name": "Ollama hochskalieren (1)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1040,
-        300
+        1312,
+        112
       ]
     },
     {
       "parameters": {
-        "amount": 150,
-        "unit": "seconds"
+        "amount": 150
       },
-      "id": "f6f6f6f6-0005-4000-8000-000000000005",
+      "id": "1538cd38-1648-4602-a4bf-21e0e49f4fff",
       "name": "Warten auf Node-Boot + Ollama-Start",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        1300,
-        300
-      ]
+        1568,
+        112
+      ],
+      "webhookId": "2e738bc9-e9b3-4025-a05c-96e996b82379"
     },
     {
       "parameters": {
-        "source": "database",
         "workflowId": {
           "__rl": true,
           "value": "LMcJQDnN9zK5n9mN",
           "mode": "list",
+          "cachedResultUrl": "/workflow/LMcJQDnN9zK5n9mN",
           "cachedResultName": "Zammad Tickets verarbeiten"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
         },
         "options": {}
       },
-      "id": "f6f6f6f6-0006-4000-8000-000000000006",
+      "id": "7884bd1e-10d9-40ab-8359-89b760901bf5",
       "name": "Zammad Tickets verarbeiten",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        1560,
-        300
+        1840,
+        112
       ]
     },
     {
       "parameters": {
-        "executeOnce": true,
         "command": "cat /var/run/secrets/kubernetes.io/serviceaccount/token"
       },
-      "id": "f6f6f6f6-0007-4000-8000-000000000007",
+      "id": "bf900dfa-c50c-4abb-a218-641d313ad8d4",
       "name": "K8s-Token lesen (Scale-down)",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        1820,
-        300
+        2096,
+        112
       ]
     },
     {
@@ -180,16 +169,41 @@
           "allowUnauthorizedCerts": true
         }
       },
-      "id": "f6f6f6f6-0008-4000-8000-000000000008",
+      "id": "8041dcea-8a5a-4129-8d07-3e543058241b",
       "name": "Ollama herunterskalieren (0)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2080,
-        300
+        2352,
+        112
       ]
+    },
+    {
+      "parameters": {
+        "command": "cat /var/run/secrets/kubernetes.io/serviceaccount/token"
+      },
+      "id": "1cc8f264-3c93-41d0-bf12-ca60c4dbcfb9",
+      "name": "K8s-Token lesen (Scale-up)1",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        112
+      ]
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        528,
+        288
+      ],
+      "id": "8fd451c3-a911-4d35-b45d-3cd410c5b1a6",
+      "name": "When clicking ‘Execute workflow’"
     }
   ],
+  "pinData": {},
   "connections": {
     "Einmal taeglich": {
       "main": [
@@ -206,18 +220,7 @@
       "main": [
         [
           {
-            "node": "K8s-Token lesen (Scale-up)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "K8s-Token lesen (Scale-up)": {
-      "main": [
-        [
-          {
-            "node": "Ollama hochskalieren (1)",
+            "node": "K8s-Token lesen (Scale-up)1",
             "type": "main",
             "index": 0
           }
@@ -267,13 +270,41 @@
           }
         ]
       ]
+    },
+    "K8s-Token lesen (Scale-up)1": {
+      "main": [
+        [
+          {
+            "node": "Ollama hochskalieren (1)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Worker-0 wecken",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate"
   },
+  "versionId": "ff371da5-143b-4916-91d8-96fa5ea91c14",
   "meta": {
-    "description": "Haupt-Workflow, laeuft 1x taeglich (Default 07:00 Uhr, im Schedule-Trigger anpassbar). Lebenszyklus-Orchestrierung fuer das lokale LLM (Ollama, siehe argocd/apps/workloads/ollama/ und docs/3-apps-workloads/300xx-ollama.md), das mit replicas:0 im Ruhezustand laeuft und NUR fuer die Dauer dieses Laufs hochgefahren wird: (1) weckt worker-0 (Lenovo M90q) explizit ueber den power-agent-Wake-Endpoint (proxied durch carplay-api, POST /api/power/wake -- der bestehende cluster_power_manager wuerde NICHT reagieren, der beobachtet nur die Last auf homeserver, keine Pending-Pods), (2) skaliert das ollama-Deployment per direktem Kubernetes-API-Call (PATCH auf die Scale-Subresource, Auth ueber das automatisch gemountete ServiceAccount-Token des n8n-Pods selbst, RBAC dafuer in argocd/apps/workloads/ollama/templates/role-n8n-scaler.yaml) von 0 auf 1 hoch, (3) wartet pauschal 150s auf Node-Boot+Pod-Start+Ollama-Bereitschaft (Startwert, nach echten Laeufen justieren), (4) ruft den Sub-Workflow 'Zammad Tickets verarbeiten' (zammad-tickets-verarbeiten.json) auf und wartet auf dessen Abschluss -- dieser liefert GARANTIERT genau ein Ergebnis-Item zurueck, auch bei 0 gefundenen Tickets, damit dieser Haupt-Workflow zuverlaessig weiterlaeuft, (5) skaliert ollama wieder auf 0 herunter. TLS-Pruefung gegen die Kubernetes-API bewusst per 'allowUnauthorizedCerts' uebersprungen (Traffic bleibt intern; sauberer waere das Mounten von ca.crt, aber kein Blocker fuer den ersten Wurf). Stand 19.08.2026: Credential 'carplay-api API Token' (Header-Auth, Header 'Authorization', Wert aus dem bereits in argocd/apps/workloads/carplay-api/values.yaml versiegelten apiToken, siehe docs/3-apps-workloads/300d0-carplay-api.md) angelegt (n8n-Credential-ID qw2XzzCvd5uEKb0e) und dem Node 'Worker-0 wecken' zugewiesen -- vorher war dort GAR KEIN Credential verknuepft (Import setzt einen unbekannten Platzhalter-Wert automatisch auf null), der Wake-Call lief also ohne Authorization-Header und schlug mit 401 fehl. Im Node 'Zammad Tickets verarbeiten' (Execute Workflow) ist die echte Workflow-ID des Sub-Workflows (LMcJQDnN9zK5n9mN) eingetragen. Node 'Worker-0 wecken' hat zusaetzlich 'allowUnauthorizedCerts: true' (analog zu den beiden Kubernetes-API-Calls) -- https://carplay-api.prod.homeserver liefert kein Zertifikat einer oeffentlichen CA (Traefik-Default-Cert fuer diesen internen Host, kein eigener tls-Block im Ingress), Node.js/n8n hat den Call sonst mit 'unable to verify the first certificate' abgelehnt; Traffic bleibt intern, daher kein Blocker. Die URL selbst war ausserdem falsch (carplay-api.homeserver statt carplay-api.prod.homeserver, Traefik lieferte '404 page not found') -- die Domain-Umstellung in Commit abba966 hatte den echten iOS-App-Code (Constants.swift) korrekt auf .prod. umgestellt, mehrere Doku-Stellen und dieser Workflow blieben aber beim alten Namen. Die beiden Nodes 'K8s-Token lesen (Scale-up/-down)' sind KEIN Code-Node mehr (require('fs') ist in der Code-Node-Sandbox grundsaetzlich verboten, 'Module fs is disallowed'), sondern 'Execute Command' (cat auf die Token-Datei, Ausgabe in $json.stdout statt $json.token) -- dieser Node ist per NODES_EXCLUDE:'[]' in argocd/apps/workloads/n8n/values.yaml bereits deployt-seitig freigeschaltet (zusammen mit Local File Trigger fuer xibosignage), daher kein zusaetzlicher Redeploy noetig. Beide HTTP-Nodes 'Ollama hoch-/herunterskalieren' lesen den Token entsprechend aus '{{ $json.stdout }}'. NOCH OFFEN (bewusst nicht von Claude gesetzt): (1) Uhrzeit im Schedule-Trigger nach Bedarf anpassen. (2) Diesen Workflow AKTIVIEREN. (3) Vor dem produktiven Einsatz: einmal manuell ausloesen (nicht auf den Trigger warten), pruefen dass Wake/Scale-up/Wait/Sub-Workflow/Scale-down komplett durchlaufen, Wait-Dauer ggf. nachjustieren."
-  }
+    "description": "Haupt-Workflow, laeuft 1x taeglich (Default 07:00 Uhr, im Schedule-Trigger anpassbar). Lebenszyklus-Orchestrierung fuer das lokale LLM (Ollama, siehe argocd/apps/workloads/ollama/ und docs/3-apps-workloads/300xx-ollama.md), das mit replicas:0 im Ruhezustand laeuft und NUR fuer die Dauer dieses Laufs hochgefahren wird: (1) weckt worker-0 (Lenovo M90q) explizit ueber den power-agent-Wake-Endpoint (proxied durch carplay-api, POST /api/power/wake -- der bestehende cluster_power_manager wuerde NICHT reagieren, der beobachtet nur die Last auf homeserver, keine Pending-Pods), (2) skaliert das ollama-Deployment per direktem Kubernetes-API-Call (PATCH auf die Scale-Subresource, Auth ueber das automatisch gemountete ServiceAccount-Token des n8n-Pods selbst, RBAC dafuer in argocd/apps/workloads/ollama/templates/role-n8n-scaler.yaml) von 0 auf 1 hoch, (3) wartet pauschal 150s auf Node-Boot+Pod-Start+Ollama-Bereitschaft (Startwert, nach echten Laeufen justieren), (4) ruft den Sub-Workflow 'Zammad Tickets verarbeiten' (zammad-tickets-verarbeiten.json) auf und wartet auf dessen Abschluss -- dieser liefert GARANTIERT genau ein Ergebnis-Item zurueck, auch bei 0 gefundenen Tickets, damit dieser Haupt-Workflow zuverlaessig weiterlaeuft, (5) skaliert ollama wieder auf 0 herunter. TLS-Pruefung gegen die Kubernetes-API bewusst per 'allowUnauthorizedCerts' uebersprungen (Traffic bleibt intern; sauberer waere das Mounten von ca.crt, aber kein Blocker fuer den ersten Wurf). Stand 19.08.2026: Credential 'carplay-api API Token' (Header-Auth, Header 'Authorization', Wert aus dem bereits in argocd/apps/workloads/carplay-api/values.yaml versiegelten apiToken, siehe docs/3-apps-workloads/300d0-carplay-api.md) angelegt (n8n-Credential-ID qw2XzzCvd5uEKb0e) und dem Node 'Worker-0 wecken' zugewiesen -- vorher war dort GAR KEIN Credential verknuepft (Import setzt einen unbekannten Platzhalter-Wert automatisch auf null), der Wake-Call lief also ohne Authorization-Header und schlug mit 401 fehl. Im Node 'Zammad Tickets verarbeiten' (Execute Workflow) ist die echte Workflow-ID des Sub-Workflows (LMcJQDnN9zK5n9mN) eingetragen. NOCH OFFEN (bewusst nicht von Claude gesetzt): (1) Uhrzeit im Schedule-Trigger nach Bedarf anpassen. (2) Diesen Workflow AKTIVIEREN. (3) Vor dem produktiven Einsatz: einmal manuell ausloesen (nicht auf den Trigger warten), pruefen dass Wake/Scale-up/Wait/Sub-Workflow/Scale-down komplett durchlaufen, Wait-Dauer ggf. nachjustieren.",
+    "instanceId": "d3f71021076be8bdc8614296f3c7749ae0813e877410d7e61391b83252e612f7"
+  },
+  "nodeGroups": [],
+  "id": "eavJtybObMXc3Qpa",
+  "tags": []
 }

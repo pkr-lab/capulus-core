@@ -1,27 +1,58 @@
 {
-  "id": "rSPOpj5iI4kxKvBi",
   "name": "Banana-Pi-Down -> Zammad-Ticket",
   "nodes": [
     {
       "parameters": {
+        "authentication": "basicAuth",
+        "resource": "ticket",
+        "title": "={{ $json.article.subject }}",
+        "group": "Support / Administration",
+        "customer": "=",
+        "article": {
+          "articleDetails": {
+            "subject": "={{ $json.article.subject }}",
+            "body": "={{ $json.article.body }}",
+            "visibility": "external",
+            "type": "email",
+            "to": "alamos@andernach.dlrg.de",
+            "reply_to": "info@edv-kretzer.de"
+          }
+        },
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.zammad",
+      "typeVersion": 1,
+      "position": [
+        5216,
+        464
+      ],
+      "id": "cfa31398-a8fb-429d-ab24-0fd00a5e06bf",
+      "name": "Create a ticket",
+      "credentials": {
+        "zammadBasicAuthApi": {
+          "id": "phUAvB04RmbLalky",
+          "name": "Zammad EDV-Kretzer"
+        }
+      }
+    },
+    {
+      "parameters": {
         "httpMethod": "POST",
         "path": "banana-pi-down",
-        "responseMode": "onReceived",
         "options": {}
       },
-      "id": "b1b1b1b1-0001-4000-8000-000000000001",
+      "id": "8379fd5c-e1cc-4389-aff3-7a26968dccfc",
       "name": "Alertmanager Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        260,
-        300
+        3872,
+        464
       ],
       "webhookId": "banana-pi-down"
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428/api/v1/query",
         "sendQuery": true,
         "queryParameters": {
@@ -34,18 +65,17 @@
         },
         "options": {}
       },
-      "id": "b1b1b1b1-0002-4000-8000-000000000002",
+      "id": "3cf40b78-3b99-4497-9033-6ec7f0b4e675",
       "name": "CPU abfragen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        520,
-        300
+        4096,
+        464
       ]
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428/api/v1/query",
         "sendQuery": true,
         "queryParameters": {
@@ -58,18 +88,17 @@
         },
         "options": {}
       },
-      "id": "b1b1b1b1-0003-4000-8000-000000000003",
+      "id": "ac18f72a-be95-4568-b2e6-73455d48a8ee",
       "name": "RAM abfragen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        780,
-        300
+        4320,
+        464
       ]
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428/api/v1/query",
         "sendQuery": true,
         "queryParameters": {
@@ -82,18 +111,17 @@
         },
         "options": {}
       },
-      "id": "b1b1b1b1-0004-4000-8000-000000000004",
+      "id": "4798e615-6452-465c-997f-5e8a51fce6f5",
       "name": "Temperatur abfragen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1040,
-        300
+        4544,
+        464
       ]
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428/api/v1/query",
         "sendQuery": true,
         "queryParameters": {
@@ -106,64 +134,30 @@
         },
         "options": {}
       },
-      "id": "b1b1b1b1-0007-4000-8000-000000000007",
+      "id": "18f37796-76b9-4b35-8d19-590fb41bcdb7",
       "name": "Letzte AMweb-Anfrage abfragen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1300,
-        300
+        4768,
+        464
       ]
     },
     {
       "parameters": {
-        "jsCode": "// CHANGE-ME: Zammad-Gruppe + Requester ggf. anpassen (siehe docs/f-cicd-automatisierung/f0040-github-release-watcher.md fuer die Regeln dazu -- ZAMMAD_REQUESTER_EMAIL muss ein bereits existierender Zammad-User sein). Gruppe 'Support / Administration' angenommen als Unterguppe 'Administration' von 'Support' -> Zammad-API erwartet dafuer '::' als Trenner (siehe docs/f-cicd-automatisierung/f0040-github-release-watcher.md); falls es stattdessen eine einzelne Gruppe mit genau diesem Namen ist, hier auf 'Support / Administration' aendern.\nconst ZAMMAD_GROUP = 'Support::Administration';\nconst ZAMMAD_REQUESTER_EMAIL = 'info@edv-kretzer.de';\nconst GRAFANA_DASHBOARD_URL = 'https://grafana-tech.pke-lab.de/d/1002011-pis/1002011-pis';\n\nconst cpuRes = $('CPU abfragen').item.json;\nconst ramRes = $('RAM abfragen').item.json;\nconst tempRes = $('Temperatur abfragen').item.json;\nconst lastStartRes = $('Letzte AMweb-Anfrage abfragen').item.json;\nconst webhookBody = $('Alertmanager Webhook').item.json.body || {};\n\nfunction firstValue(res) {\n  const result = res && res.data && res.data.result;\n  if (!result || result.length === 0) return null;\n  return parseFloat(result[0].value[1]);\n}\n\nconst cpu = firstValue(cpuRes);\nconst ram = firstValue(ramRes);\nconst temp = firstValue(tempRes);\nconst lastStartEpoch = firstValue(lastStartRes);\nconst lastStartText = (lastStartEpoch === null || Number.isNaN(lastStartEpoch))\n  ? 'nie / unbekannt (alamos-apager hat noch keine /start-Anfrage fuer diese Station verzeichnet)'\n  : new Date(lastStartEpoch * 1000).toISOString();\n\nfunction fmt(v, unit) {\n  return (v === null || Number.isNaN(v)) ? 'unbekannt' : `${v.toFixed(1)} ${unit}`;\n}\n\nconst alert = (webhookBody.alerts && webhookBody.alerts[0]) || {};\nconst description = (alert.annotations && alert.annotations.description)\n  || 'Vereinsheim-Alarmmonitor antwortet nicht mehr.';\nconst startsAt = alert.startsAt || new Date().toISOString();\n\nconst bodyText = [\n  description,\n  '',\n  `Letzte erfolgreiche Anfrage der Alarmmonitor-Adresse (Kiosk hat zuletzt die echte AMweb-URL ueber alamos-apager angefragt): ${lastStartText}`,\n  '',\n  'Letzte bekannte Metriken vor dem Ausfall (nicht live -- der Pi ist ja gerade nicht erreichbar):',\n  `- CPU: ${fmt(cpu, '%')}`,\n  `- RAM: ${fmt(ram, '%')}`,\n  `- Temperatur: ${fmt(temp, '°C')}`,\n  '',\n  `Alarm seit: ${startsAt}`,\n  '',\n  `Grafana-Dashboard (1002011-pis): ${GRAFANA_DASHBOARD_URL}`,\n  '',\n  'Das Problem wird so schnell es geht behoben, dies gilt lediglich als Information fuer dich.',\n  '',\n  '--',\n  'Mit freundlichen Gruessen',\n  'Peter Kretzer',\n  '',\n  'E-Mail: info@edv-kretzer.de',\n  'Website: https://edv-kretzer.de/',\n].join('\\n');\n\nreturn [{\n  json: {\n    title: 'Vereinsheim-Alarmmonitor nicht erreichbar',\n    group: ZAMMAD_GROUP,\n    customer: ZAMMAD_REQUESTER_EMAIL,\n    article: {\n      subject: 'Vereinsheim-Alarmmonitor nicht erreichbar',\n      body: bodyText,\n      content_type: 'text/plain',\n      type: 'note',\n      internal: false,\n    },\n  },\n}];"
+        "jsCode": "// CHANGE-ME: Zammad-Gruppe + Requester ggf. anpassen (siehe docs/25-github-release-watcher.md fuer die Regeln dazu -- ZAMMAD_REQUESTER_EMAIL muss ein bereits existierender Zammad-User sein). Gruppe 'Support / Administration' angenommen als Unterguppe 'Administration' von 'Support' -> Zammad-API erwartet dafuer '::' als Trenner (siehe docs/25); falls es stattdessen eine einzelne Gruppe mit genau diesem Namen ist, hier auf 'Support / Administration' aendern.\nconst ZAMMAD_GROUP = 'Support::Administration';\nconst ZAMMAD_REQUESTER_EMAIL = 'info@edv-kretzer.de';\nconst GRAFANA_DASHBOARD_URL = 'https://grafana-tech.pke-lab.de/d/vereinsheim-alarmmonitor/vereinsheim-alarmmonitor';\n\nconst cpuRes = $('CPU abfragen').item.json;\nconst ramRes = $('RAM abfragen').item.json;\nconst tempRes = $('Temperatur abfragen').item.json;\nconst lastStartRes = $('Letzte AMweb-Anfrage abfragen').item.json;\nconst webhookBody = $('Alertmanager Webhook').item.json.body || {};\n\nfunction firstValue(res) {\n  const result = res && res.data && res.data.result;\n  if (!result || result.length === 0) return null;\n  return parseFloat(result[0].value[1]);\n}\n\nconst cpu = firstValue(cpuRes);\nconst ram = firstValue(ramRes);\nconst temp = firstValue(tempRes);\nconst lastStartEpoch = firstValue(lastStartRes);\nconst lastStartText = (lastStartEpoch === null || Number.isNaN(lastStartEpoch))\n  ? 'nie / unbekannt (alamos-apager hat noch keine /start-Anfrage fuer diese Station verzeichnet)'\n  : new Date(lastStartEpoch * 1000).toISOString();\n\nfunction fmt(v, unit) {\n  return (v === null || Number.isNaN(v)) ? 'unbekannt' : `${v.toFixed(1)} ${unit}`;\n}\n\nconst alert = (webhookBody.alerts && webhookBody.alerts[0]) || {};\nconst description = (alert.annotations && alert.annotations.description)\n  || 'Vereinsheim-Alarmmonitor antwortet nicht mehr.';\nconst startsAt = alert.startsAt || new Date().toISOString();\n\nconst bodyText = [\n  description,\n  '',\n  `Letzte erfolgreiche Anfrage der Alarmmonitor-Adresse (Kiosk hat zuletzt die echte AMweb-URL ueber alamos-apager angefragt): ${lastStartText}`,\n  '',\n  'Letzte bekannte Metriken vor dem Ausfall (nicht live -- der Pi ist ja gerade nicht erreichbar):',\n  `- CPU: ${fmt(cpu, '%')}`,\n  `- RAM: ${fmt(ram, '%')}`,\n  `- Temperatur: ${fmt(temp, '°C')}`,\n  '',\n  `Alarm seit: ${startsAt}`,\n  '',\n  `Grafana-Dashboard (Vereinsheim-Alarmmonitor): ${GRAFANA_DASHBOARD_URL}`,\n  '',\n  'Das Problem wird so schnell es geht behoben, dies gilt lediglich als Information fuer dich.',\n  '',\n  '--',\n  'Mit freundlichen Gruessen',\n  'Peter Kretzer',\n  '',\n  'E-Mail: info@edv-kretzer.de',\n  'Website: https://edv-kretzer.de/',\n].join('\\n');\n\nreturn [{\n  json: {\n    title: 'Vereinsheim-Alarmmonitor nicht erreichbar',\n    group: ZAMMAD_GROUP,\n    customer: ZAMMAD_REQUESTER_EMAIL,\n    article: {\n      subject: 'Vereinsheim-Alarmmonitor nicht erreichbar',\n      body: bodyText,\n      content_type: 'text/plain',\n      type: 'note',\n      internal: false,\n    },\n  },\n}];"
       },
-      "id": "b1b1b1b1-0005-4000-8000-000000000005",
+      "id": "2bec59c2-3315-4288-a32c-adb8bdd276d2",
       "name": "Ticket-Payload bauen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1560,
-        300
+        4992,
+        464
       ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://zammad.tech.homeserver/api/v1/tickets",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "options": {}
-      },
-      "id": "b1b1b1b1-0006-4000-8000-000000000006",
-      "name": "Zammad-Ticket erstellen",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1820,
-        300
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "REPLACE_ME_NACH_IMPORT",
-          "name": "Zammad API Token"
-        }
-      }
     }
   ],
+  "pinData": {},
   "connections": {
     "Alertmanager Webhook": {
       "main": [
@@ -224,7 +218,7 @@
       "main": [
         [
           {
-            "node": "Zammad-Ticket erstellen",
+            "node": "Create a ticket",
             "type": "main",
             "index": 0
           }
@@ -234,9 +228,16 @@
   },
   "active": false,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
   },
+  "versionId": "7d629c6f-c290-4aff-87e6-a83654dfefed",
   "meta": {
-    "description": "Webhook-Ziel fuer die neue Alertmanager-Route 'n8n-banana-pi-down' (nur alertname=BananaPiAlarmmonitorDown, siehe argocd/apps/platform/monitoring/values.yaml). Fragt bei Ausloesung die letzten bekannten CPU/RAM/Temperatur-Werte sowie den Zeitstempel der letzten erfolgreichen /start-Anfrage (= Kiosk hat die echte AMweb-URL zuletzt tatsaechlich angefragt, exportiert von alamos-apager selbst -- siehe argocd/apps/workloads/alamos-apager/templates/configmap-script.yaml und vmservicescrape.yaml) aus VictoriaMetrics ab und erstellt darueber ein Zammad-Ticket; die Mail-Benachrichtigung an info@edv-kretzer.de laeuft ueber Zammads eigene Agenten-Benachrichtigung, nicht ueber einen eigenen E-Mail-Node. NACH DEM IMPORT: Node 'Zammad-Ticket erstellen' -> Credential 'Zammad API Token' (Header-Auth, Header-Name 'Authorization', Value 'Token token=<ZAMMAD_TOKEN>') neu zuweisen -- Credential-IDs werden beim Workflow-Import nicht mit uebernommen. Details: docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md."
-  }
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d3f71021076be8bdc8614296f3c7749ae0813e877410d7e61391b83252e612f7"
+  },
+  "nodeGroups": [],
+  "id": "rSPOpj5iI4kxKvBi",
+  "tags": []
 }
