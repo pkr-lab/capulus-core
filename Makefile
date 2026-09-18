@@ -7,6 +7,7 @@ PLAYBOOK    := $(ANSIBLE_DIR)/site.yml
 VAULT_OPTS  ?= --ask-vault-pass
 HS2_PLAYBOOK := $(ANSIBLE_DIR)/worker-0.yml
 HS3_PLAYBOOK := $(ANSIBLE_DIR)/worker-1.yml
+ENTW_PLAYBOOK := $(ANSIBLE_DIR)/entw.yml
 
 .DEFAULT_GOAL := help
 
@@ -78,6 +79,13 @@ worker-1: ## Deploy k3s agent + watchdogs on worker-1 (192.168.178.96).
 
 worker-1-check: ## Dry-run the worker-1 playbook (no changes applied).
 	ansible-playbook -i $(INVENTORY) $(HS3_PLAYBOOK) --check --diff $(VAULT_OPTS)
+
+.PHONY: entw entw-check
+entw: ## Deploy ENTW-Cluster (k3s + ArgoCD) in der KVM-VM auf worker-1 (192.168.178.100, docs/4-planung/40080 Phase 1.2). VM muss laufen (make worker-1-libvirt-host).
+	ansible-playbook -i $(INVENTORY) $(ENTW_PLAYBOOK) $(VAULT_OPTS)
+
+entw-check: ## Dry-run des ENTW-Playbooks.
+	ansible-playbook -i $(INVENTORY) $(ENTW_PLAYBOOK) --check --diff $(VAULT_OPTS)
 
 cluster-power-manager: ## Re-deploy only the cluster_power_manager role on homeserver (WoL scale-up/down).
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags cluster-power-manager $(VAULT_OPTS)
