@@ -27,8 +27,6 @@
     update_cache: true
 
 # ---- Install Tailscale --------------------------------------
-# `state: latest` when auto_upgrade is on so we always run the most recent
-# Tailscale client; `state: present` otherwise to honour any local pin.
 - name: Install (or upgrade) tailscale package
   ansible.builtin.apt:
     name: tailscale
@@ -70,12 +68,6 @@
     msg: "Tailscale connected: {{ tailscale_connected }}"
 
 # ---- Connect to Tailscale -----------------------------------
-# `tailscale up` does NOT read TS_AUTHKEY from the environment — that's a
-# Docker-entrypoint convention, not something the CLI itself understands.
-# It only accepts the key via --authkey. To keep the secret out of the
-# process list (`ps aux`) we write it to a root-only tempfile and pass
-# --authkey=file:<path>, which `tailscale up --help` documents as reading
-# the key from disk.
 - name: Authenticate with Tailscale using auth key
   when: not tailscale_connected
   block:
@@ -93,17 +85,6 @@
       no_log: true
 
     - name: Connect to Tailscale and advertise the local subnet
-      # --advertise-routes wird nur angehängt, wenn tailscale_advertise_routes
-      # gesetzt ist (Default: local_subnet). Für Hosts, die NICHT als
-      # Subnet-Router dienen sollen (z.B. die xibosignage-Pis, siehe
-      # ansible/xibo-kiosks.yml), auf "" setzen — dann bleibt der Host ein
-      # reiner Tailnet-Client ohne LAN-Weiterleitung.
-      #
-      # --accept-routes ist per Default false (Hosts sollen fremde Subnetz-
-      # Routen nicht blind uebernehmen). Hosts, die selbst KEIN LAN haben und
-      # ueber die vom Homeserver beworbene Route ins LAN muessen (z.B. die
-      # Banana-Pi-Alarmmonitore, siehe ansible/group_vars/banana_pis.yml),
-      # setzen tailscale_accept_routes: true.
       ansible.builtin.command: >
         tailscale up
         --authkey=file:{{ tailscale_authkey_file.path }}
@@ -135,10 +116,6 @@
   when: tailscale_connected
 
 # ---- IP Forwarding for Subnet Routing -----------------------
-# net.ipv4.ip_forward and net.ipv6.conf.all.forwarding (required for subnet
-# routing) are owned by the `common` role (/etc/sysctl.d/99-k3s.conf), which
-# runs before this role. Do not re-declare them here — a second sysctl file
-# would create two sources of truth for the same kernel parameters.
 
 # ---- Verify Connection --------------------------------------
 - name: Get final Tailscale status

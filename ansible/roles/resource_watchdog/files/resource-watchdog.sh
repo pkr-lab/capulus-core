@@ -1,20 +1,4 @@
 #!/usr/bin/env bash
-# Managed by Ansible (resource_watchdog role) — do not edit manually.
-#
-# Generic threshold watchdog: polls CPU load or RAM usage directly on the
-# host (no Prometheus/k8s in the loop) for the metric named in $METRIC. If
-# the value stays at/above THRESHOLD for SUSTAIN_SECONDS, sends an ntfy
-# notification and powers the host off. Mirrors thermal-watchdog.sh so the
-# safety cutoff also works if the cluster itself is struggling under load.
-#
-# Optional early-warning stage (WARN_THRESHOLD): fires a single ntfy
-# notification, no shutdown, once the value stays at/above WARN_THRESHOLD
-# for WARN_SUSTAIN_SECONDS. Runs independently of Prometheus/Alertmanager
-# (argocd/apps/platform/monitoring/templates/vmrule-resources.yaml already
-# warns at lower thresholds) so a warning still reaches the user even if
-# the cluster's own monitoring stack is the thing struggling under the
-# load — see docs/2-betrieb-hardware/20020-cluster-power-manager.md →
-# "Mehrschichtiger RAM-Schutz".
 set -euo pipefail
 
 METRIC="${METRIC:?METRIC not set (cpu|ram)}"
@@ -27,8 +11,6 @@ NTFY_TOPIC="${NTFY_TOPIC:?NTFY_TOPIC not set}"
 # Optional: leave WARN_THRESHOLD empty to disable the early-warning stage.
 WARN_THRESHOLD="${WARN_THRESHOLD:-}"
 WARN_SUSTAIN_SECONDS="${WARN_SUSTAIN_SECONDS:-60}"
-# Set DRY_RUN=1 (e.g. via `systemctl edit --runtime resource-watchdog@<metric>`)
-# to test the full detection -> notify path without actually powering off.
 DRY_RUN="${DRY_RUN:-0}"
 
 over_since=0
