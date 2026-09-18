@@ -68,7 +68,7 @@
 
     - name: Warten, bis der Host wieder erreichbar ist (jetzt ueber die Bridge)
       ansible.builtin.wait_for:
-        host: "{{ network_static_ip }}"
+        host: "{{ libvirt_host_static_ip }}"
         port: 22
         delay: 5
         timeout: 60
