@@ -1,0 +1,17 @@
+# Managed by Ansible (libvirt_host role) — do not edit manually.
+# Statische IP innerhalb der VM, ueber dieselbe Bridge des Hosts
+# erreichbar (kein NAT, echte LAN-IP).
+version: 2
+ethernets:
+  enp1s0:
+    dhcp4: false
+    addresses:
+      - {{ vm.ip }}/{{ vm.prefix_length }}
+    routes:
+      - to: default
+        via: {{ vm.gateway }}
+    nameservers:
+      addresses:
+{% for dns in network_dns %}
+        - {{ dns }}
+{% endfor %}

@@ -1,0 +1,90 @@
+name: CI
+
+# Lint-/Validierungs-Gate auf jedem PR gegen main — schließt eine Lücke,
+# die vorher bestand: `make lint` existierte bereits lokal, lief aber in
+# keinem der bisherigen vier Workflows (build-images.yml, mirror-gitlab.yml,
+# release.yml, renovate.yml). Ein kaputtes Manifest fiel dadurch erst beim
+# ArgoCD-Sync gegen den Live-Cluster auf, nicht schon im PR.
+# Siehe docs/4-planung/40080-multi-cluster-entw-prod-tech.md, Baustein 6.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: make lint (yamllint, ansible-lint, helm lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install yamllint + ansible-lint
+        run: pip install --disable-pip-version-check yamllint ansible-lint
+
+      - name: Install Ansible Galaxy collections (ansible-lint braucht sie zur Modul-Aufloesung)
+        run: ansible-galaxy collection install -r ansible/requirements.yml
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: make lint
+        run: make lint
+
+  manifest-validate:
+    name: helm template | kubeconform
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Install kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz \
+            | tar -xz -C /usr/local/bin kubeconform
+
+      - name: Render + validate every chart
+        run: |
+          set -eu
+          fail=0
+          for chart in argocd/apps/*/*/; do
+            [ -f "${chart}Chart.yaml" ] || continue
+            echo "==> $chart"
+            if grep -q '^dependencies:' "${chart}Chart.yaml"; then
+              helm dependency build "$chart" >/dev/null 2>&1 || helm dependency update "$chart" >/dev/null 2>&1
+            fi
+            # -ignore-missing-schemas: viele hier genutzte CRDs (SealedSecret,
+            # VictoriaMetrics-Typen, cert-manager Certificate, ...) haben kein
+            # öffentliches JSON-Schema - Strukturprüfung bleibt für alles mit
+            # bekanntem Schema (Deployment, Service, Ingress, PVC, ...) aktiv.
+            helm template "$chart" 2>&1 | kubeconform -strict -ignore-missing-schemas -summary || fail=1
+          done
+          exit $fail
+
+  secret-scan:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

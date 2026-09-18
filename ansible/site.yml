@@ -47,6 +47,8 @@
       tags: [nightly-worker-wake, power-management]
     - role: cups_print_server
       tags: [cups-print-server, printer]
+    - role: libvirt_host
+      tags: [libvirt-host, virtualization]
 
   post_tasks:
     - name: Check whether UFW is dropping loopback traffic (known nftables bug)
