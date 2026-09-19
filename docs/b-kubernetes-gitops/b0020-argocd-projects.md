@@ -1,7 +1,14 @@
 # ArgoCD-Projects — Platform/Workloads-Trennung
 
-Apps liegen seit diesem Schnitt nicht mehr flach unter `argocd/apps/<app>/`,
-sondern unter `argocd/apps/tech/<app>/` oder `argocd/apps/tech/<app>/`.
+> **Stand 2026-09-19 (aktuelles Layout):** Der Hub kennt nur noch ein AppProject `tech` und ein
+> ApplicationSet `home-server-apps-tech`; alle TECH-Apps liegen unter `argocd/apps/tech/<app>/`, die
+> PROD-Apps unter `argocd/apps/prod/<app>/` (eigenes Projekt `prod`, siehe
+> [40080](../4-planung/40080-multi-cluster-entw-prod-tech.md)). Die Trennung `platform`/`workloads`
+> unten beschreibt den frueheren Schnitt und gilt weiter fuer den ENTW-Cluster (Role-Variable
+> `argocd_tech_layout: false`); die NetworkPolicy-Stufen (`security-tier`) blieben erhalten.
+
+Apps liegen seit diesem (frueheren) Schnitt nicht mehr flach unter `argocd/apps/<app>/`,
+sondern unter `argocd/apps/platform/<app>/` oder `argocd/apps/workloads/<app>/`.
 Jede App bekommt zusätzlich ein passendes ArgoCD-`AppProject` zugewiesen
 (`platform` bzw. `workloads`), statt wie bisher pauschal im `default`-Project
 zu laufen.
