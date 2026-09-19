@@ -1,3 +1,6 @@
+# PROD-Kopie: alles gestoppt bis Postgres-Daten, Bibliothek und Backup aus TECH kopiert sind.
+# Danach server/machineLearning autoscaling.enabled=true + replicaCount=1, postgresql.replicaCount=1.
+# Nie mit LEEREN Volumes starten.
 ---
 # ============================================================
 # Immich — wrapper values
@@ -21,7 +24,7 @@ secrets:
 server:
   # Nur wirksam solange autoscaling.enabled=false ist (siehe unten) —
   # danach übernimmt der HPA die Replica-Anzahl.
-  replicaCount: 1
+  replicaCount: 0
 
   # Hilft gegen Absturz durch VIELE gleichzeitige Uploads (mehr Pods =
   # mehr parallele Job-Verarbeitung). Löst NICHT das Problem, dass EIN
@@ -31,7 +34,7 @@ server:
   # demselben Node wie bereits vorhandene Server-Pods, da die
   # "library"-PVC ReadWriteOnce ist.
   autoscaling:
-    enabled: true
+    enabled: false
     minReplicas: 1
     maxReplicas: 3
     targetCPUUtilizationPercentage: 75
@@ -124,14 +127,14 @@ server:
 machineLearning:
   # Nur wirksam solange autoscaling.enabled=false ist (siehe unten) —
   # danach übernimmt der HPA die Replica-Anzahl.
-  replicaCount: 1
+  replicaCount: 0
 
   # maxReplicas bewusst niedriger als beim Server: jede Inferenz-Instanz
   # ist mit bis zu 4 CPU-Kernen/4Gi RAM (siehe resources unten) schon für
   # sich genommen teuer. Co-location per podAffinity analog zum Server,
   # da model-cache ebenfalls ReadWriteOnce ist.
   autoscaling:
-    enabled: true
+    enabled: false
     minReplicas: 1
     maxReplicas: 2
     targetCPUUtilizationPercentage: 75
@@ -177,7 +180,7 @@ machineLearning:
 # ============================================================
 postgresql:
   # 0 = Postgres gestoppt (Umzug/Wartung).
-  replicaCount: 1
+  replicaCount: 0
   image:
     repository: ghcr.io/immich-app/postgres
     pullPolicy: IfNotPresent

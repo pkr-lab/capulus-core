@@ -1,0 +1,30 @@
+{{- if .Values.server.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "immich.server.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "immich.server.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "immich.server.fullname" . }}
+  minReplicas: {{ .Values.server.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.server.autoscaling.maxReplicas }}
+  # Nur CPU als Scaling-Signal — Memory-Utilization triggerte hier ständig
+  # auf maxReplicas hoch, obwohl die CPU-Last einstellig blieb: der Server
+  # pendelt sich einfach dauerhaft > 80% von request ein (normales
+  # RAM-Verhalten des Node-Prozesses), das ist kein echtes Lastsignal.
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.server.autoscaling.targetCPUUtilizationPercentage }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+{{- end }}
