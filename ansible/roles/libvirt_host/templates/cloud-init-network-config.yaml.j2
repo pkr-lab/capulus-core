@@ -12,6 +12,6 @@ ethernets:
         via: {{ vm.gateway }}
     nameservers:
       addresses:
-{% for dns in network_dns %}
+{% for dns in vm.dns | default(network_dns) %}
         - {{ dns }}
 {% endfor %}
