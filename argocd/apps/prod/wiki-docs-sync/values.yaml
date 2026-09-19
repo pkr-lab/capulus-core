@@ -33,7 +33,7 @@ github:
   # von 60 req/h, aber mit wenig Puffer für weitere Kategorie-Unterordner.
   # Name/Key eines VORHANDENEN Secrets im Namespace — wird NICHT von diesem
   # Chart angelegt.
-  tokenSecretName: ""
+  tokenSecretName: "github-api-token"
   tokenSecretKey: token
 
 wikijs:
