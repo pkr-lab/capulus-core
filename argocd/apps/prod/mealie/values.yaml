@@ -2,7 +2,7 @@
 # Umschalten (argocd/bootstrap-prod/migrations/README.md, Teil B): waehrend der
 # Endkopie auf 0 (der Kopier-Job leert das Zielvolume), danach auf 1.
 # Nie mit LEEREM Volume starten - das legt eine neue DB und neue Secrets an.
-replicaCount: 0
+replicaCount: 1
 
 image:
   repository: ghcr.io/mealie-recipes/mealie
