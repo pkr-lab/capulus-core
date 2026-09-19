@@ -35,4 +35,4 @@ jobs:
           tailscale status
           echo "== curl gegen ArgoCD (homeserver:30443) =="
           curl -sk -o /dev/null -w "HTTP %{http_code}\n" https://homeserver:30443 \
-            || { echo "FEHLGESCHLAGEN - siehe Troubleshooting in f0070/40080"; exit 1; }
+            || { echo "FEHLGESCHLAGEN - siehe Troubleshooting in docs/f-cicd-automatisierung/f00a0-tailscale-runner-poc.md"; exit 1; }
