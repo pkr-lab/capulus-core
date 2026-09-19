@@ -72,6 +72,8 @@ data:
     ZAMMAD_TOKEN = os.environ["ZAMMAD_TOKEN"]
     ZAMMAD_GROUP = os.environ["ZAMMAD_GROUP"]
     ZAMMAD_REQUESTER_EMAIL = os.environ["ZAMMAD_REQUESTER_EMAIL"]
+    # Interne Root-CA fuer https-Aufrufe gegen Zammad (Chart: ca-configmap.yaml).
+    ZAMMAD_CA_FILE = os.environ.get("ZAMMAD_CA_FILE", "")
 
     NAMESPACE = os.environ["NAMESPACE"]
     STATE_CONFIGMAP = os.environ["STATE_CONFIGMAP_NAME"]
@@ -193,7 +195,12 @@ data:
             },
         )
         try:
-            with urllib.request.urlopen(req, timeout=10):
+            zammad_ctx = (
+                ssl.create_default_context(cafile=ZAMMAD_CA_FILE)
+                if ZAMMAD_URL.startswith("https://") and ZAMMAD_CA_FILE
+                else None
+            )
+            with urllib.request.urlopen(req, context=zammad_ctx, timeout=10):
                 print(f"[OK] Zammad-Ticket erstellt für {repo} {tag}")
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode(errors="replace")
