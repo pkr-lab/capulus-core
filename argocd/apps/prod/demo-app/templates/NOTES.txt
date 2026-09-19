@@ -1,0 +1,14 @@
+demo-app wurde ausgerollt.
+
+App ansehen (lokal):
+  kubectl port-forward svc/{{ include "demo-app.fullname" . }} 8080:{{ .Values.service.port }}
+  Browser: http://localhost:8080
+
+Aktueller Soll-Text (aus Git / values.yaml):
+  "{{ .Values.message }}"
+
+LIVE-EINGRIFF (loest Rollout aus, ArgoCD wird "OutOfSync"):
+  kubectl set env deployment/{{ include "demo-app.fullname" . }} \
+    MESSAGE="Beispiel: hier stand eben noch etwas anderes"
+
+Danach in ArgoCD "Sync" klicken -> Text wird auf den Git-Stand zurueckgesetzt.
