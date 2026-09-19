@@ -6,7 +6,7 @@ metadata:
   labels:
     {{- include "xibosignage.mysql.labels" . | nindent 4 }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.mysql.replicaCount }}
   # Pflicht bei RWO-PVCs: kein zweiter Pod darf parallel auf dasselbe
   # Volume zugreifen, während der alte noch terminiert (siehe wikijs/immich).
   strategy:
