@@ -46,8 +46,6 @@ spec:
     - name: prod
       namespace: xibosignage
     - name: prod
-      namespace: github-release-watcher
-    - name: prod
       namespace: example-whoami
     - name: prod
       namespace: tinyteller
