@@ -21,7 +21,7 @@ korrigieren.
 
 ## 1. Wie Blueprints funktionieren (kurz)
 
-- Jede Datei unter `argocd/apps/platform/authentik/blueprints/*.yaml` (und
+- Jede Datei unter `argocd/apps/tech/authentik/blueprints/*.yaml` (und
   Unterordnern wie `blueprints/apps/`) wird per Helm in eine ConfigMap
   gepackt und in Server + Worker unter `/blueprints/custom` gemountet.
 - Der **Worker**-Prozess wendet beim Start (und danach regelmäßig) jede
@@ -66,7 +66,7 @@ Ausführliches Setup (Gruppen, Basis-Identitäten): siehe
 > (unterschiedliche `slug`s), beide mit derselben Policy und beide am
 > Embedded Outpost registriert — siehe `blueprints/apps/mealie.yaml` als
 > Referenzbeispiel. Ein extern erreichbarer Host muss außerdem selbst in
-> `argocd/apps/platform/authentik/values.yaml` → `server.ingress.hosts`
+> `argocd/apps/tech/authentik/values.yaml` → `server.ingress.hosts`
 > stehen (Authentiks eigenes Portal muss von dort aus erreichbar sein,
 > sonst läuft der Redirect ins Leere) — Naming-Konvention:
 > [c0040-domain-tiers.md](../c-netzwerk-dns/c0040-domain-tiers.md).
@@ -84,12 +84,12 @@ einzelne Usernamen fest ins Blueprint zu schreiben. Vorteil: eine weitere
 Person bekommt Zugriff, indem sie in lldap der Gruppe zugewiesen wird
 (Abschnitt 2) — **kein Blueprint-Edit, kein Commit nötig.** `admins`
 kommt zusätzlich immer überall rein (Vollzugriff, siehe
-[01-admin-2fa-policy.yaml](../../argocd/apps/platform/authentik/blueprints/01-admin-2fa-policy.yaml)).
+[01-admin-2fa-policy.yaml](../../argocd/apps/tech/authentik/blueprints/01-admin-2fa-policy.yaml)).
 Referenzbeispiele: `blueprints/apps/{mealie,uptime-kuma}.yaml`.
 
 ### 3.1 Blueprint-Datei anlegen
 
-Neue Datei `argocd/apps/platform/authentik/blueprints/apps/beispiel-app.yaml`,
+Neue Datei `argocd/apps/tech/authentik/blueprints/apps/beispiel-app.yaml`,
 als Vorlage dient `blueprints/apps/uptime-kuma.yaml`:
 
 ```yaml
@@ -171,7 +171,7 @@ SSO-Ebene.
 
 ### 3.2 App-eigenen Ingress auf die Middleware zeigen lassen
 
-In `argocd/apps/workloads/<app>/values.yaml` (oder `platform/<app>` bei
+In `argocd/apps/tech/<app>/values.yaml` (oder `platform/<app>` bei
 Plattform-Apps), Analog zu `mealie`/`uptime-kuma`:
 
 ```yaml
@@ -187,14 +187,14 @@ nötig (siehe [d0073](d0073-authentik-sso.md) → Architektur).
 
 Falls `beispiel.tech.homeserver` noch nicht im internen Wildcard-Zertifikat
 steht: in
-`argocd/apps/platform/cert-manager/templates/certificate-homeserver-wildcard.yaml`
+`argocd/apps/tech/cert-manager/templates/certificate-homeserver-wildcard.yaml`
 → `dnsNames` ergänzen.
 
 ### 3.4 Committen und synchronisieren
 
 ```bash
-git add argocd/apps/platform/authentik/blueprints/apps/beispiel-app.yaml \
-        argocd/apps/workloads/beispiel-app/values.yaml
+git add argocd/apps/tech/authentik/blueprints/apps/beispiel-app.yaml \
+        argocd/apps/tech/beispiel-app/values.yaml
 git commit -m "feat(authentik): beispiel-app hinter SSO stellen"
 git push
 ```

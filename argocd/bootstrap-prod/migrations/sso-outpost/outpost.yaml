@@ -6,7 +6,7 @@
 # Token kommt als SealedSecret `authentik-outpost-token` (Schluessel `token`)
 # nach outpost-token-sealedsecret.yaml - siehe migrations/README.md.
 #
-# Version muss zur Authentik-Version in TECH passen (argocd/apps/platform/
+# Version muss zur Authentik-Version in TECH passen (argocd/apps/tech/
 # authentik/values.yaml, image.tag).
 apiVersion: apps/v1
 kind: Deployment

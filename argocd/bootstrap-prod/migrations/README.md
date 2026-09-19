@@ -82,7 +82,7 @@ bei Authentik in TECH an. Einmalig einzurichten:
 ### B. Umschalten (kurze Pause fuer die Nutzer)
 
 5. TECH-mealie stoppen **per Git**: `replicaCount: 0` in
-   `argocd/apps/workloads/mealie/values.yaml`, pushen (ein `kubectl scale`
+   `argocd/apps/prod/mealie/values.yaml`, pushen (ein `kubectl scale`
    wuerde von selfHeal zurueckgesetzt). Warten bis der Pod weg ist.
 6. Endkopie (PROD-mealie muss dabei auf 0 stehen): Job erneut anwenden (leert das Ziel und kopiert neu). In den
    Logs muss `mealie.db` stehen; danach Job loeschen.
@@ -105,5 +105,5 @@ die seit dem Umschalten in PROD entstanden sind, fehlen dann in TECH.
 
 ### D. Aufraeumen (erst nach einigen Tagen Betrieb)
 
-TECH-Ordner `argocd/apps/workloads/mealie/` entfernen. Die alten PVs bleiben
+TECH-Ordner `argocd/apps/prod/mealie/` entfernen. Die alten PVs bleiben
 wegen `Retain` erhalten; das NAS-Verzeichnis erst spaeter von Hand loeschen.

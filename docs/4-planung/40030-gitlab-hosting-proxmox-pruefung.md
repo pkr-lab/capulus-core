@@ -46,7 +46,7 @@ Zwei Deployment-Wege stehen zur Wahl:
 |---|---|---|
 | Aufbau | Ein Container/eine VM bündelt nginx, Puma, Sidekiq, Gitaly, Redis, Postgres | ~15+ getrennte Pods (eigener Postgres-/Redis-Operator, Gitaly, Webservice, Sidekiq, Registry, KAS, …) |
 | Für Homelab-Größe | passend — geringerer Overhead | von GitLab selbst für **größere** Installationen empfohlen; bei kleiner Nutzerzahl **mehr** Ressourcenbedarf als Omnibus, nicht weniger |
-| Passt zum bestehenden Muster (`argocd/apps/workloads/`)? | als einzelner Helm-Chart mit einem Pod ja | nein — würde ~15 zusätzliche Pods in den ohnehin knappen Cluster bringen |
+| Passt zum bestehenden Muster (`argocd/apps/tech/`)? | als einzelner Helm-Chart mit einem Pod ja | nein — würde ~15 zusätzliche Pods in den ohnehin knappen Cluster bringen |
 
 **Für dieses Setup ist Omnibus die einzig sinnvolle Option** — der
 Cloud-Native-Chart ist für diese Cluster-Größe eine Fehlpassung.
@@ -180,7 +180,7 @@ GitOps-Reschedule/Node-Drain ausliefern) lässt sich günstiger lösen:
 - **`nodeSelector`/Taint auf `homeserver` für stateful Workloads.**
   `homeserver` läuft laut `cluster-power-manager` ohnehin dauerhaft —
   DB-Pods (die 5 Workloads mit eigener Postgres/Redis-Instanz laut
-  `argocd/apps/workloads/*/values.yaml`, plus GitLab selbst, falls
+  `argocd/apps/tech/*/values.yaml`, plus GitLab selbst, falls
   umgesetzt) explizit dorthin pinnen schließt aus, dass
   `cluster-power-manager` sie beim Worker-Drain anfasst. Kostet keine
   neue Infrastruktur, nur Values-Änderungen.
@@ -226,7 +226,7 @@ Lösung.
 
 - **Teil 1 (GitLab vs. Forgejo):** Zweck festlegen (1.4). Reicht
   Git-Hosting + einfache CI, Forgejo als normale Helm-App unter
-  `argocd/apps/workloads/` deployen (~200–300 MB, unproblematisch). Wird
+  `argocd/apps/tech/` deployen (~200–300 MB, unproblematisch). Wird
   der volle DevOps-Funktionsumfang als Lehrobjekt gebraucht, GitLab CE
   Omnibus mit reduzierter Worker-Konfiguration (1.5) und
   `nodeSelector` auf `homeserver` deployen — dann aber bewusst als

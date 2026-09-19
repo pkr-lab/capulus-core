@@ -2,7 +2,7 @@
 
 Bündelt zwei unabhängig gewachsene Teile zu einem Gesamtbild:
 
-1. **Container-Logs** (bereits länger im Einsatz): `argocd/apps/platform/logging`
+1. **Container-Logs** (bereits länger im Einsatz): `argocd/apps/tech/logging`
    deployt VictoriaLogs (single-node, Filesystem-Storage) plus
    `victoria-logs-collector` (DaemonSet), der auf jedem k3s-Node
    Container-/Pod-Logs einsammelt und weiterleitet.
@@ -72,7 +72,7 @@ k3s-Node (homeserver, worker-0, worker-1)
 
 ## Cluster-Komponente: Helm Chart `logging`
 
-Liegt unter `argocd/apps/platform/logging/`, automatisch von ArgoCD erkannt
+Liegt unter `argocd/apps/tech/logging/`, automatisch von ArgoCD erkannt
 (siehe [docs/b-kubernetes-gitops/b0010-argocd.md](../b-kubernetes-gitops/b0010-argocd.md)).
 
 | Datei | Zweck |

@@ -148,7 +148,7 @@ cms:
           - path: /
             pathType: Prefix
       # Extern über Cloudflare Tunnel erreichbar (Wildcard "*.pke-lab.de" ->
-      # Traefik, siehe argocd/apps/platform/cloudflared/values.yaml), bewusst
+      # Traefik, siehe argocd/apps/tech/cloudflared/values.yaml), bewusst
       # OHNE zusaetzliche Authentik-ForwardAuth-Middleware (anders als
       # mealie/uptime-kuma) -- nur das Xibo-eigene CMS-Login schuetzt diesen
       # Host, analog zum frueheren n8n-Setup. Siehe
@@ -189,7 +189,7 @@ cms:
   persistence:
     # Xibo verwaltet diesen Ordner exklusiv selbst (Medien-Bibliothek,
     # interne Dateinamen/Hashes) — NICHT der Ordner, in den n8n/OnlineSync
-    # Rohdateien legt (das ist argocd/apps/workloads/n8n xibosignage-inbox/-display,
+    # Rohdateien legt (das ist argocd/apps/tech/n8n xibosignage-inbox/-display,
     # siehe docs/3-apps-workloads/300e0-xibosignage.md).
     library:
       enabled: true

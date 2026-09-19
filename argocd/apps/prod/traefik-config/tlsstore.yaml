@@ -1,7 +1,7 @@
 # Security-Härtung Phase 5 (docs/d-sicherheit/d0010-security-hardening-roadmap.md,
 # docs/d-sicherheit/d0040-internal-tls.md): hinterlegt das *.homeserver-Zertifikat (Secret
 # wird von cert-manager verwaltet — siehe
-# argocd/apps/platform/cert-manager/templates/certificate-homeserver-wildcard.yaml,
+# argocd/apps/tech/cert-manager/templates/certificate-homeserver-wildcard.yaml,
 # selber Namespace/Secret-Name, kein SealedSecret mehr) als
 # Traefik-Default-Zertifikat. Der Name "default" ist kein Freitext — das
 # ist die von Traefik selbst reservierte Sonder-Ressource, die automatisch

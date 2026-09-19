@@ -1,0 +1,127 @@
+---
+replicaCount: 1
+
+image:
+  # Custom image with n8n-nodes-imap baked in, see ./image/Dockerfile.
+  # Gebaut/gepusht über .github/workflows/build-images.yml bei jeder
+  # Änderung an image/Dockerfile (siehe argocd/apps/tech/pacman/README.md,
+  # Abschnitt "Image bauen"). Tag manuell aus dem Workflow-Run-Summary
+  # übernehmen.
+  repository: ghcr.io/pkr-lab/n8n-custom
+  pullPolicy: IfNotPresent
+  tag: "sha-53eb4d5"
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 5678
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations: {}
+  hosts:
+    - host: n8n.prod.homeserver
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+persistence:
+  enabled: true
+  storageClassName: nas
+  size: 5Gi
+  accessMode: ReadWriteOnce
+  mountPath: /home/node/.n8n
+
+env:
+  # n8n.pke-lab.de wurde aus dem Cloudflare Tunnel entfernt (Security-Gründen,
+  # siehe argocd/apps/tech/cloudflared/values.yaml) — n8n ist jetzt nur noch intern
+  # über n8n.prod.homeserver (Traefik-Ingress ohne TLS) erreichbar. host/protocol
+  # spiegeln das wider.
+  N8N_HOST: "n8n.prod.homeserver"
+  N8N_PORT: "5678"
+  N8N_PROTOCOL: "http"
+  WEBHOOK_URL: "http://n8n.prod.homeserver/"
+  # N8N_SECURE_COOKIE ist ein von N8N_PROTOCOL unabhängiger Schalter und
+  # defaultet auf true — muss explizit auf false, sonst setzt n8n weiterhin
+  # ein Secure-Cookie, das der Browser über die Klartext-HTTP-Verbindung
+  # nicht akzeptiert (führt zum "secure cookie"-Fehler beim Login).
+  N8N_SECURE_COOKIE: "false"
+  TZ: Europe/Berlin
+  # SQLite als Datenbank (keine externe DB nötig im Home Lab)
+  DB_TYPE: sqlite
+  # Basis-Auth wird hier aktiviert (kein zentraler Identity-Provider im Cluster)
+  N8N_BASIC_AUTH_ACTIVE: "true"
+  # n8n blockt Execute Command / Local File Trigger standardmäßig (OS-/
+  # Dateisystem-Zugriff, Sicherheitsrisiko bei Multi-Tenant-Instanzen) —
+  # in diesem Home-Lab hinter Basic-Auth bewusst wieder freigeschaltet,
+  # da der xibosignage-Workflow (docs/3-apps-workloads/300e0-xibosignage.md) genau diese
+  # beiden Nodes braucht (Watch Inbox, Original archivieren).
+  NODES_EXCLUDE: "[]"
+  # Seit n8n 1.123.5 beschraenkt der "Read/Write Files from Disk"-Node den
+  # Dateizugriff standardmaessig auf /home/node/.n8n-files, sofern hier nicht
+  # explizit erlaubte Pfade eingetragen sind ("Access to the file is not
+  # allowed") -- betrifft beide xibosignage-Workflows (Playlist-Sync und die
+  # deaktivierte OnlineSync-Alternative), siehe
+  # docs/3-apps-workloads/300e0-xibosignage.md.
+  # Separator ist ein Semikolon, KEIN Komma (n8n-Doku widerspricht sich hier,
+  # im Code wird auf ";" gesplittet, siehe
+  # https://community.n8n.io/t/possible-issue-with-n8n-restrict-file-access-to-using-works-but-does-not-tested-in-docker/233555).
+  N8N_RESTRICT_FILE_ACCESS_TO: "/data/xibosignage-inbox;/data/xibosignage-display"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+affinity: {}
+
+nodeSelector: {}
+tolerations: []
+
+# ============================================================
+# xibosignage-Inbox/Display-Ordner (siehe docs/3-apps-workloads/300e0-xibosignage.md)
+#
+# Zwei statische NFS-PVs mit festem Pfad auf dem UGREEN NAS (nicht über die
+# dynamische "nas"-StorageClass, siehe templates/xibosignage-pv.yaml) werden
+# hier in den n8n-Pod gemountet, damit ein "Local File Trigger"-Workflow den
+# Inbox-Ordner beobachten und verarbeitete Bilder in den Display-Ordner
+# schreiben kann, den wiederum der Raspberry-Pi-Kiosk per rohem NFS-Mount
+# liest (ansible/roles/xibo_kiosk).
+xibosignage:
+  enabled: true
+  nfsServer: "192.168.178.97"
+  inbox:
+    nfsPath: "/volume1/k8s-storage/xibosignage-inbox"
+    mountPath: /data/xibosignage-inbox
+    size: 20Gi
+  display:
+    nfsPath: "/volume1/k8s-storage/xibosignage-display"
+    mountPath: /data/xibosignage-display
+    size: 20Gi
