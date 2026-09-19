@@ -110,7 +110,7 @@ github:
   # — mit jetzt 10 Repos bei 120-Minuten-Takt knapp, ein PAT hebt das auf
   # 5000 req/h). Name/Key eines VORHANDENEN Secrets im Namespace — wird
   # NICHT von diesem Chart angelegt.
-  tokenSecretName: ""
+  tokenSecretName: "github-api-token"
   tokenSecretKey: token
 
 # ServiceAccount-Name von carplay-api (siehe argocd/apps/tech/carplay-api/
