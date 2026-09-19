@@ -54,6 +54,18 @@ stringData:
 YAML
 ```
 
+## Zwei ApplicationSets
+
+`applicationset.yaml` enthaelt zwei Sets, weil `helm.releaseName` ArgoCD in den
+Helm-Modus zwingt und bei Ordnern ohne `Chart.yaml` scheitert:
+
+- `home-server-apps-prod`: reine Manifest-Ordner, **explizit gelistet**. Ein neuer
+  Manifest-Ordner unter `argocd/apps/prod/` braucht dort einen `path`-Eintrag.
+- `home-server-apps-prod-charts`: jeder Ordner mit `Chart.yaml`, automatisch;
+  Helm-Release-Name = Ordnername (wie in TECH).
+
+Ordner mit `Chart.yaml` nicht im ersten Set listen (doppelte Applications).
+
 ## 2. Projekt + ApplicationSet anwenden
 
 ```bash

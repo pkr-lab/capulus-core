@@ -28,6 +28,8 @@ spec:
     - name: prod
       namespace: demo-app
     - name: prod
+      namespace: cloudflared
+    - name: prod
       namespace: example-whoami
     - name: prod
       namespace: tinyteller
