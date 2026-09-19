@@ -28,8 +28,8 @@ secrets:
 # Persistenz auf der "nas"-StorageClass (docs/2-betrieb-hardware/20000-nas-storage.md)
 # ============================================================
 mysql:
-  # 0 = MySQL gestoppt (Umzug/Wartung).
-  replicaCount: 1
+  # 0 = MySQL gestoppt (Umzug/Wartung). UMZUG NACH PROD: gestoppt, Rueckweg wieder 1.
+  replicaCount: 0
   image:
     repository: mysql
     pullPolicy: IfNotPresent
@@ -125,7 +125,8 @@ quickchart:
 # Xibo CMS (cms-web)
 # ============================================================
 cms:
-  replicaCount: 1
+  # UMZUG NACH PROD (argocd/bootstrap-prod/migrations/README.md): gestoppt, Rueckweg wieder 1.
+  replicaCount: 0
 
   image:
     repository: ghcr.io/xibosignage/xibo-cms
