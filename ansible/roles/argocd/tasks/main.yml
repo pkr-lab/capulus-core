@@ -259,7 +259,15 @@
     kubectl apply -f /tmp/argocd-bootstrap-networkpolicies.yaml
   register: argocd_netpol_apply
   changed_when: "'created' in argocd_netpol_apply.stdout or 'configured' in argocd_netpol_apply.stdout"
-  when: argocd_apply_network_policies | bool
+  # Auf einem frischen Cluster existiert beim ersten Lauf noch kein
+  # App-Namespace (ArgoCD-Sync hinkt hinterher) -> Datei waere leer und
+  # `kubectl apply` bricht mit "no objects passed to apply" ab.
+  when:
+    - argocd_apply_network_policies | bool
+    - (argocd_platform_apps + argocd_workloads_apps)
+      | intersect(argocd_existing_namespaces)
+      | difference(argocd_network_policy_excluded_apps)
+      | length > 0
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
 
