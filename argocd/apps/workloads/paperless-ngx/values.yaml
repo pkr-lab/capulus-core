@@ -91,6 +91,10 @@ env:
   PAPERLESS_REDIS: "redis://localhost:6379"
   PAPERLESS_DBENGINE: "sqlite"
   PAPERLESS_TIME_ZONE: "Europe/Berlin"
+  # Oeffentliche Adresse hinter dem Reverse-Proxy: setzt CSRF_TRUSTED_ORIGINS und
+  # ALLOWED_HOSTS. Ohne diese Variable scheitert das Login mit "CSRF verification
+  # failed / Origin checking failed" (TLS endet im Traefik, Django sieht http).
+  PAPERLESS_URL: "https://paperless.prod.homeserver"
   # OCR: Deutsch + Englisch — weitere Sprachen per "deu+eng+fra" ergänzen
   PAPERLESS_OCR_LANGUAGE: "deu+eng"
   PAPERLESS_OCR_LANGUAGES: "deu eng"
