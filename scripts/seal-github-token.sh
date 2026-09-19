@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Versiegelt ein GitHub-Lese-Token fuer wiki-docs-sync und github-release-watcher und traegt es in die
+# Versiegelt ein GitHub-Lese-Token fuer wiki-docs-sync (PROD) und github-release-watcher (TECH) und traegt es in die
 # Charts ein (hebt das Limit der unangemeldeten GitHub-API von 60 auf 5000 Anfragen pro Stunde).
 #
 # Das Token wird aus einer Datei gelesen (nie als Argument, nie ausgegeben):
@@ -10,9 +10,8 @@
 #
 # Ergebnis (je ein statisches SealedSecret `github-api-token`, Schluessel `token`):
 #   argocd/apps/workloads/github-release-watcher/templates/sealedsecret-github-token.yaml  (TECH-Schluessel)
-#   argocd/apps/prod/github-release-watcher/templates/sealedsecret-github-token.yaml       (PROD-Schluessel)
 #   argocd/apps/prod/wiki-docs-sync/templates/sealedsecret-github-token.yaml               (PROD-Schluessel)
-# und setzt in den drei values.yaml `github.tokenSecretName: github-api-token`.
+# und setzt in den beiden values.yaml `github.tokenSecretName: github-api-token`.
 # Voraussetzung: kubectl-Kontext = TECH (fuer das TECH-Zertifikat), ~/prod-sealed-secrets.pem (PROD).
 # Test ohne Repo-Aenderung: OUT_ROOT=/tmp/x TOKEN_FILE=/tmp/dummy scripts/seal-github-token.sh
 set -euo pipefail
@@ -47,11 +46,9 @@ seal() { # <cert> <namespace> <ausgabedatei> <header>
 }
 
 seal "$tech_cert" github-release-watcher "$out_root/argocd/apps/workloads/github-release-watcher/templates/sealedsecret-github-token.yaml" "Mit dem TECH-Schluessel versiegelt."
-seal "$prod_cert" github-release-watcher "$out_root/argocd/apps/prod/github-release-watcher/templates/sealedsecret-github-token.yaml" "Mit dem PROD-Schluessel versiegelt."
 seal "$prod_cert" wiki-docs-sync         "$out_root/argocd/apps/prod/wiki-docs-sync/templates/sealedsecret-github-token.yaml"        "Mit dem PROD-Schluessel versiegelt."
 
 for v in "$out_root/argocd/apps/workloads/github-release-watcher/values.yaml" \
-         "$out_root/argocd/apps/prod/github-release-watcher/values.yaml" \
          "$out_root/argocd/apps/prod/wiki-docs-sync/values.yaml"; do
   [[ -f "$v" ]] || { echo "(uebersprungen, keine values.yaml: ${v#"$out_root"/})"; continue; }
   if grep -q '^  tokenSecretName: ""' "$v"; then
