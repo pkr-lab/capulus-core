@@ -12,7 +12,8 @@ dieselben Daten schreiben lassen.
 
 Je App ein eigener Kopier-Job in diesem Ordner (`<app>-data-copy-job.yaml`), gleicher
 Ablauf wie bei mealie (unten). Bisher: `mealie-data-copy-job.yaml` (umgezogen),
-`paperless-ngx-data-copy-job.yaml` (4 Volumes). Push 1 = TECH und PROD auf
+`paperless-ngx-data-copy-job.yaml` (4 Volumes, umgezogen),
+`wikijs-postgres-copy-job.yaml` (Postgres-Datenverzeichnis, eigener uid/Modus 0700). Push 1 = TECH und PROD auf
 `replicaCount: 0`, Endkopie, Push 2 = PROD auf `1` plus Hosts in `dnsmasq_prod_vm_hosts`.
 
 ## mealie (Vorlage fuer weitere `nas`-Apps)

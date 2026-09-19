@@ -36,6 +36,10 @@ spec:
     - name: prod
       namespace: paperless-ngx
     - name: prod
+      namespace: wikijs
+    - name: prod
+      namespace: wiki-docs-sync
+    - name: prod
       namespace: github-release-watcher
     - name: prod
       namespace: example-whoami
