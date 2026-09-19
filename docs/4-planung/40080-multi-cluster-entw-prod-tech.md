@@ -482,6 +482,15 @@ worker-0 (4 vCPU / 7,3 GiB, WoL)  → weiterhin freie Zusatzkapazität
 
 ### 6. CI/CD-Pipeline: automatisierte Promotion ENTW → TECH → PROD
 
+> **Stand (2026-09-19):** Umgesetzt sind die „weiteren Pipeline-Ergänzungen“
+> `ci.yml`, kubeconform und gitleaks ([f0070](../f-cicd-automatisierung/f0070-ci-lint.md)),
+> dazu PR-Pflicht für `main` ([f0090](../f-cicd-automatisierung/f0090-branch-schutz-main.md))
+> und eine **vereinfachte Promotion** `entw` → PR an `main` nach grüner CI
+> ([f0080](../f-cicd-automatisierung/f0080-entw-promotion.md)). Anders als unten
+> skizziert läuft sie als Cron auf `main` (nicht auf Push), nutzt die CI statt
+> eines ArgoCD-Health-Gates und mergt nie automatisch. Die zweistufige Kette mit
+> 24-h-Gate bleibt Ziel für Phase 4.
+
 **Gewünschtes Verhalten:** Jede neue Software-Version landet automatisch
 zuerst auf ENTW, läuft dort einen definierten Zeitraum (Vorschlag: 24 h)
 gesund, und wird erst danach automatisiert Richtung TECH/PROD
@@ -687,7 +696,7 @@ blockiert etwas anderes in dieser Phase.
 | 0.4 | ~~Merge-Gate PROD entscheiden~~ **✅ Bestätigt (2026-09-18): TECH-Promotion automatisch, PROD-Promotion manuelles Review** (siehe Baustein 6) | Phase 4 |
 | 0.5 | **Pacman-Doppelrolle** — bewusst *nicht* in dieser Migration entscheiden, nur festhalten, dass sie offen bleibt (siehe [App-Zuordnung](#app-zuordnung-erster-entwurf-stand-argocd_platform_apps-argocd_workloads_apps)) | nichts — expliziter Nicht-Blocker |
 | 0.6 | **Nutzer-/Daten-Inventar anlegen** (Baustein 7) — **Vorlage fertig** (`ansible/group_vars/user_inventory_vault.yml`, noch Klartext-Platzhalter), **Verschlüsseln + Befüllen offen** (braucht dein Vault-Passwort — Befehle wurden dir gegeben) | Phase 2 (Abgleich vor PROD-Rebuild) |
-| 0.7 | ~~`ci.yml` bauen~~ **✅ Gebaut, erster Lauf schlug fehl + gefixt (2026-09-18)** — Lint + `helm template \| kubeconform` + `gitleaks`, siehe [f0070-ci-lint.md](../f-cicd-automatisierung/f0070-ci-lint.md). Erster echter Lauf deckte einen echten, vorher unbekannten `make lint`-Bug auf: `yamllint` parste gerenderte Helm-Templates als rohes YAML und scheiterte an der Go-Template-Syntax, ausnahmslos in allen Charts. `.yamllint` ignoriert `templates/`-Ordner jetzt. **Offen:** erneuten Lauf abwarten, ob jetzt wirklich alles grün ist | Phase 4 (Voraussetzung für ein vertrauenswürdiges Promotion-Gate) |
+| 0.7 | ~~`ci.yml` bauen~~ **✅ Gebaut, erster Lauf schlug fehl + gefixt (2026-09-18)** — Lint + `helm template \| kubeconform` + `gitleaks`, siehe [f0070-ci-lint.md](../f-cicd-automatisierung/f0070-ci-lint.md). Erster echter Lauf deckte einen echten, vorher unbekannten `make lint`-Bug auf: `yamllint` parste gerenderte Helm-Templates als rohes YAML und scheiterte an der Go-Template-Syntax, ausnahmslos in allen Charts. `.yamllint` ignoriert `templates/`-Ordner jetzt. **Bestätigt grün (2026-09-19)**, seither erweitert um einen Go-Check, CRD-Schemas für kubeconform und PR-Pflicht ([f0070](../f-cicd-automatisierung/f0070-ci-lint.md), [f0090](../f-cicd-automatisierung/f0090-branch-schutz-main.md)) | Phase 4 (Voraussetzung für ein vertrauenswürdiges Promotion-Gate) |
 | 0.8 | **Tailscale-Runner-Machbarkeit vorab beweisen** — Workflow [`tailscale-poc.yml`](../../.github/workflows/tailscale-poc.yml) angelegt (2026-09-18, `workflow_dispatch`, verbindet den Runner per `tailscale/github-action` und prüft `https://homeserver:30443`). **Offen:** `TAILSCALE_AUTHKEY`-Repo-Secret setzen (kein `gh`/Token in dieser Umgebung verfügbar, musste der Nutzer selbst tun) und den Workflow einmal manuell auslösen | Phase 4 |
 | 0.9 | ~~Tailscale-ACL-Tag-Schema entwerfen~~ **✅ Geräte getaggt + finale Policy übergeben (2026-09-18)**, siehe [Baustein 2](#2-cluster-zu-cluster-kommunikation--immich-beispiel-konkret) — `homeserver`=tech+prod, `worker-1`=entw, Konnektivität nach dem Taggen verifiziert. **Offen:** Policy-Speichern im Panel von hier aus nicht prüfbar, danach nochmal testen | Phase 1 |
 
@@ -783,7 +792,7 @@ und PROD existieren als eigene Sync-Ziele.
 
 | Schritt | Was | Voraussetzung |
 |---|---|---|
-| 4.1 | **`promote.yml` bauen** (Baustein 6), zunächst nur ENTW→TECH-Stufe, PROD-Stufe noch manuell | Phase 3, 0.7, 0.8 |
+| 4.1 | **`promote.yml` bauen** (Baustein 6), zunächst nur ENTW→TECH-Stufe, PROD-Stufe noch manuell. **In vereinfachter Form umgesetzt (2026-09-19, noch nicht auf GitHub gelaufen):** [`promote-entw.yml`](../../.github/workflows/promote-entw.yml) übergibt neue Commits des Branches `entw` nach grüner CI als PR an `main` (Cherry-Pick, Tag `entw-promoted`, kein Auto-Merge), siehe [f0080](../f-cicd-automatisierung/f0080-entw-promotion.md). Die Kette ENTW→TECH→PROD, das 24-h-Health-Gate und die Smoke-Tests (4.4) bleiben offen | Phase 3, 0.7, 0.8 |
 | 4.2 | **Beobachtungszeitraum**: einige Promotion-Zyklen manuell begleiten, bevor Automerge (TECH) aktiv geschaltet wird | 4.1 |
 | 4.3 | **PROD-Stufe aktivieren** gemäß Entscheidung aus 0.4 | 4.2, 0.4 |
 | 4.4 | **Smoke-Test-Schritt** ins Health-Gate ergänzen | 4.1 |
@@ -883,8 +892,8 @@ und PROD existieren als eigene Sync-Ziele.
       erledigt 2026-09-18 ([f0070-ci-lint.md](../f-cicd-automatisierung/f0070-ci-lint.md)),
       inkl. fehlender `.yamllint`-Config, die `make lint` referenzierte,
       aber nie existierte. **Erster Lauf schlug fehl** (yamllint vs.
-      Helm-Go-Templates, siehe Baustein 6/0.7 oben) — gefixt, erneuter
-      Lauf noch offen.
+      Helm-Go-Templates, siehe Baustein 6/0.7 oben) — gefixt, seither
+      grün (bestätigt 2026-09-19).
 - [x] **Tailscale-Anbindung des GitHub-Actions-Runners** — PoC-Workflow
       [`tailscale-poc.yml`](../../.github/workflows/tailscale-poc.yml)
       angelegt, `TAILSCALE_AUTHKEY`-Repo-Secret gesetzt (2026-09-18).
@@ -900,6 +909,15 @@ und PROD existieren als eigene Sync-Ziele.
       `manifest-validate`).
 - [x] **Secret-Scanning** (`gitleaks`) als Pflichtschritt in `ci.yml`
       ergänzen — erledigt 2026-09-18 (Job `secret-scan`).
+- [x] **Go-Check** (`go build`/`vet`/`test`/`tidy`) als Pflichtschritt in
+      `ci.yml` — erledigt 2026-09-19, Anlass war der seit 2026-09-03
+      unbemerkt kaputte pacman-Build ([f0070](../f-cicd-automatisierung/f0070-ci-lint.md)).
+- [ ] **PR-Pflicht für `main` scharf schalten** — Ruleset „main: PR + CI“ per
+      `scripts/setup-main-ruleset.sh` (vorbereitet 2026-09-19, [f0090](../f-cicd-automatisierung/f0090-branch-schutz-main.md));
+      erst ausführen, wenn die neue `ci.yml` auf `main` liegt.
+- [ ] **ENTW→main-Promotion: erster Lauf auf GitHub** beobachten
+      ([f0080](../f-cicd-automatisierung/f0080-entw-promotion.md)); braucht das
+      PAT-Secret `PROMOTE_TOKEN` (ersatzweise `RENOVATE_TOKEN`).
 - [ ] **Smoke-Test-Schritt** im `promote.yml`-Health-Gate ergänzen
       (`curl` gegen `https://<app>.dev.homeserver` über denselben
       Tailscale-Runner, nicht nur ArgoCD-Health abfragen).

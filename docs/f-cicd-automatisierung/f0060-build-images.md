@@ -17,6 +17,7 @@ das bei jeder Code-Änderung leicht vergessen wurde.
 | Trigger | Bedingung |
 |---|---|
 | `push` auf `main` | Pfad-Filter pro App (`Dockerfile`, Source-Verzeichnis, `.dockerignore`) — siehe `on.push.paths` im Workflow |
+| `pull_request` gegen `main` | **Probebuild ohne Push**: dieselben Pfad-Filter und dasselbe Gate pro App, aber `push: false` und kein GHCR-Login. Ein kaputtes Dockerfile oder ein Go-Fehler fällt so vor dem Merge auf. Kein Pflicht-Check (siehe [f0090](f0090-branch-schutz-main.md)); die Go-Module prüft zusätzlich der Pflicht-Job `go-check` in [f0070](f0070-ci-lint.md). |
 | `workflow_dispatch` | Manuell über GitHub → Actions → "Build Workload Images" → "Run workflow", App wählbar (`all` oder einzeln) — für einen Rebuild ohne Datei-Änderung, z. B. um ein neues Base-Image einzufangen |
 
 Ein Matrix-Job pro App:
@@ -35,6 +36,19 @@ Ein Matrix-Job pro App:
    Standard-`GITHUB_TOKEN` (Job-Permission `packages: write`) — kein PAT,
    kein Sealed-Secret nötig, anders als beim Kaniko-Weg.
 4. **Job-Summary** listet den gepushten `repository:tag`-String.
+
+## Chronik: pacman-Build rot vom 2026-09-03 bis 2026-09-19
+
+Ein Renovate-Merge (`geoip2-golang` v1 → v2) beschädigte am 2026-09-03 pacmans
+`go.mod` (die v1-Zeile wurde überschrieben, der Code importiert weiter den v1-Pfad).
+Der Push-Build lief drei Minuten später rot (`no required module provides package
+github.com/oschwald/geoip2-golang`), aber nach dem Merge und ohne Benachrichtigung;
+das laufende Image `v8` war nicht betroffen. Beim nächsten Lauf, der pacman baute
+(2026-09-19), fiel es auf. Behoben durch Zurücksetzen auf `geoip2-golang v1.13.0`
+und Entfernen der ungenutzten v2-Zeile; der Probebuild auf PRs und der Job `go-check`
+verhindern eine Wiederholung. Am selben Tag waren Läufe zusätzlich rot, weil der
+Layout-Umzug (`workloads/` → `tech/`) die Pfade im Workflow überholt hatte
+(`path "argocd/apps/workloads/pacman" not found`), behoben mit dem Umzug selbst.
 
 ## Was der Workflow NICHT tut
 

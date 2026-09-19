@@ -1,0 +1,101 @@
+name: Promote ENTW to main
+
+# Uebergibt Aenderungen, die auf dem Branch `entw` (Quelle des ENTW-Clusters)
+# gelandet sind, als PR an `main` - aber erst, wenn die CI auf `entw` gruen ist.
+# Ablauf und Entscheidungen: docs/f-cicd-automatisierung/f0080-entw-promotion.md
+#
+#   detect   -> gibt es entw-Commits, die seit dem Tag `entw-promoted` noch nicht
+#               an main uebergeben wurden?
+#   ci       -> dieselben Pruefungen wie auf PRs (ci.yml), aber gegen ref=entw
+#   promote  -> Cherry-Pick der neuen Commits auf promote/entw-<sha> (ab main), PR
+#               oeffnen, Tag `entw-promoted` auf den geprueften entw-Stand umlegen
+#
+# Als Cron statt `on: push: entw`, weil ein push-Workflow mit der Workflow-Datei des
+# gepushten Branches laeuft - `entw` hat ein eigenes (aelteres) Layout mit eigener
+# ci.yml. Der Cron auf main ist davon unabhaengig.
+#
+# Braucht ein PAT (Repo-Secret PROMOTE_TOKEN, ersatzweise RENOVATE_TOKEN mit
+# Contents/Pull requests/Issues/Workflows = Read and write): PRs und Pushes mit dem
+# Standard-GITHUB_TOKEN loesen keine weiteren Workflows aus, die CI auf dem PR
+# bliebe sonst aus und der Pflicht-Check wuerde ewig auf "pending" stehen.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: promote-entw
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    name: neue entw-Commits?
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      changed: ${{ steps.detect.outputs.changed }}
+      head: ${{ steps.detect.outputs.head }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect
+        id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/promote-entw.sh detect
+
+  ci:
+    name: CI auf entw
+    needs: detect
+    if: needs.detect.outputs.changed == 'true'
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.detect.outputs.head }}
+
+  ci-failed:
+    name: Issue bei rotem CI
+    needs: [detect, ci]
+    if: always() && needs.ci.result == 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROMOTE_HEAD: ${{ needs.detect.outputs.head }}
+        run: bash scripts/promote-entw.sh report-ci-failure
+
+  promote:
+    name: PR nach main
+    needs: [detect, ci]
+    if: needs.detect.outputs.changed == 'true' && needs.ci.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PROMOTE_TOKEN || secrets.RENOVATE_TOKEN }}
+
+      - name: Promote
+        env:
+          GH_TOKEN: ${{ secrets.PROMOTE_TOKEN || secrets.RENOVATE_TOKEN }}
+          PROMOTE_HEAD: ${{ needs.detect.outputs.head }}
+        run: bash scripts/promote-entw.sh promote
