@@ -206,7 +206,12 @@ capulus-core/
 │   │   ├── f0020-renovate.md                # Automatische Update-PRs für Helm-Charts/Images
 │   │   ├── f0030-release-automation.md      # GitHub Release bei jedem Merge auf main
 │   │   ├── f0040-github-release-watcher.md  # GitHub-Release → Zammad-E-Mail-Benachrichtigung
-│   │   └── f0050-gitlab-mirror.md           # Vollspiegelung zu GitLab als Redundanz für GitHub-Ausfall
+│   │   ├── f0050-gitlab-mirror.md           # Vollspiegelung zu GitLab als Redundanz für GitHub-Ausfall
+│   │   ├── f0060-build-images.md            # Workload-Images (pacman, carplay-api, n8n) nach GHCR bauen
+│   │   ├── f0070-ci-lint.md                 # CI-Pflicht-Gate: lint, kubeconform, Go, gitleaks
+│   │   ├── f0080-entw-promotion.md          # Automatischer PR entw → main nach grüner CI
+│   │   ├── f0090-branch-schutz-main.md      # Ruleset: main nur per PR + grüne Checks
+│   │   └── f00a0-tailscale-runner-poc.md    # PoC: GitHub-Runner erreicht ArgoCD über Tailscale
 │   ├── 1-benachrichtigungen/         # Benachrichtigungen
 │   │   ├── 10000-gotify.md                  # Push-Notifications via Gotify
 │   │   └── 10010-ntfy.md                    # iOS Push-Notifications via ntfy
@@ -242,7 +247,12 @@ capulus-core/
 ├── .releaserc.json                   # semantic-release-Konfiguration (siehe docs/f-cicd-automatisierung/f0030-release-automation.md)
 ├── .github/
 │   └── workflows/
+│       ├── ci.yml                    # Pflicht-Gate auf PRs: lint, kubeconform, Go, gitleaks (siehe docs/f-cicd-automatisierung/f0070-ci-lint.md)
+│       ├── build-images.yml          # Workload-Images bauen (auf PRs ohne Push, siehe f0060-build-images.md)
+│       ├── promote-entw.yml          # Cron: entw nach grüner CI als PR an main (siehe f0080-entw-promotion.md)
 │       ├── release.yml               # semantic-release bei jedem Push auf main
+│       ├── renovate.yml              # Self-hosted Renovate als Fallback (siehe f0020-renovate.md)
+│       ├── tailscale-poc.yml         # Manueller PoC: Runner im Tailnet (siehe f00a0-tailscale-runner-poc.md)
 │       └── mirror-gitlab.yml         # Vollspiegelung zu GitLab (siehe docs/f-cicd-automatisierung/f0050-gitlab-mirror.md)
 ├── ansible/
 │   ├── site.yml                      # Entry-Point
@@ -519,6 +529,11 @@ und Konventionen für neue Docs: **[docs/TEMPLATE.md](docs/TEMPLATE.md)**.
 | [Release-Automatisierung](docs/f-cicd-automatisierung/f0030-release-automation.md) | GitHub Release + Changelog bei jedem Merge auf `main` via semantic-release |
 | [GitHub Release Watcher](docs/f-cicd-automatisierung/f0040-github-release-watcher.md) | Neue GitHub-Releases erkennen und per Zammad-Ticket eine E-Mail-Benachrichtigung auslösen |
 | [GitLab-Mirror](docs/f-cicd-automatisierung/f0050-gitlab-mirror.md) | Vollspiegelung (alle Branches + Tags) zu GitLab als Redundanz für den Fall eines GitHub-Ausfalls |
+| [Workload-Images bauen](docs/f-cicd-automatisierung/f0060-build-images.md) | `pacman`, `carplay-api` und `n8n` per GitHub Actions nach GHCR bauen (auf PRs als Probebuild) |
+| [CI-Pflicht-Gate](docs/f-cicd-automatisierung/f0070-ci-lint.md) | `make lint`, kubeconform (Charts, Manifeste, Bootstrap), Go-Check und gitleaks auf jedem PR |
+| [ENTW → main Promotion](docs/f-cicd-automatisierung/f0080-entw-promotion.md) | Cron-Workflow: neue `entw`-Commits nach grüner CI als PR an `main`, Tag `entw-promoted` |
+| [Branch-Schutz `main`](docs/f-cicd-automatisierung/f0090-branch-schutz-main.md) | Ruleset: `main` nur per Pull Request, vier CI-Jobs als Pflicht-Checks, Admin-Notausgang |
+| [Tailscale-Runner-PoC](docs/f-cicd-automatisierung/f00a0-tailscale-runner-poc.md) | Machbarkeitsnachweis: GitHub-Runner erreicht das interne ArgoCD über Tailscale |
 
 ### Benachrichtigungen (`1-benachrichtigungen/`)
 
