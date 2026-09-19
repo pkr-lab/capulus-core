@@ -1,3 +1,5 @@
+# PROD-Kopie: CMS und MySQL gestoppt bis die Daten aus TECH kopiert sind (migrations/README.md).
+# Danach cms.replicaCount=1 und mysql.replicaCount=1. Nie mit LEEREN Volumes starten.
 ---
 # ============================================================
 # Xibo CMS — wrapper values
@@ -29,7 +31,7 @@ secrets:
 # ============================================================
 mysql:
   # 0 = MySQL gestoppt (Umzug/Wartung).
-  replicaCount: 1
+  replicaCount: 0
   image:
     repository: mysql
     pullPolicy: IfNotPresent
@@ -125,7 +127,7 @@ quickchart:
 # Xibo CMS (cms-web)
 # ============================================================
 cms:
-  replicaCount: 1
+  replicaCount: 0
 
   image:
     repository: ghcr.io/xibosignage/xibo-cms
