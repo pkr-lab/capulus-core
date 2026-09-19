@@ -84,6 +84,8 @@ dnsmasq_prod_vm_hosts:
   - demo.prod.homeserver
   - tinyteller.prod.homeserver
   - whoami.prod.homeserver
+  - mealie-native.prod.homeserver
+  - mealie.prod.homeserver
 
 # ---- Pi-hole (network-wide ad blocking) --------------------
 pihole_dns_nodeport: 30053
