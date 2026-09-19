@@ -25,6 +25,8 @@ spec:
       namespace: nas-storage
     - name: prod
       namespace: immich-storage
+    - name: prod
+      namespace: demo-app
     # cert-manager + Traefik-TLSStore (Phase 2.8): Certificate/TLSStore liegen
     # in kube-system, die Apps selbst in eigenen Namespaces.
     - name: prod
