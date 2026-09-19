@@ -22,6 +22,13 @@ libvirt_host_vms:
     ip: "192.168.178.99" # .98 ist bereits infotafel/Xibo, siehe inventory/hosts.yml
     prefix_length: "{{ network_prefix_length }}"
     gateway: "{{ network_gateway }}"
+    # Nur dnsmasq auf dem homeserver als Resolver: der loest *.homeserver auf
+    # (tech/prod/dev) und leitet den Rest an Pi-hole weiter. Mit 1.1.1.1 als
+    # Zweitserver wuerde CoreDNS in PROD zufaellig gegen einen Resolver
+    # fragen, der *.homeserver nicht kennt. Abhaengigkeit: faellt dnsmasq/
+    # Pi-hole aus, verliert die PROD-VM ihr DNS.
+    dns:
+      - "{{ network_static_ip }}"
     # CHANGE: eigene, im LAN eindeutige MAC waehlen (z. B. per
     # "openssl rand -hex 5 | sed 's/\(..\)/\1:/g; s/.$//'" unter dem
     # QEMU/KVM-Praefix 52:54:00), falls diese kollidiert.

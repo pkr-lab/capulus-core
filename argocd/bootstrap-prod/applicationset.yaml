@@ -1,5 +1,10 @@
-# ApplicationSet fuer den PROD-Cluster: liest ausschliesslich
-# argocd/apps/prod/* und deployt auf den im Hub registrierten Cluster "prod".
+# ApplicationSets fuer den PROD-Cluster: lesen ausschliesslich
+# argocd/apps/prod/* und deployen auf den im Hub registrierten Cluster "prod".
+# ZWEI Sets, weil helm.releaseName ArgoCD in den Helm-Modus zwingt und bei
+# reinen Manifest-Ordnern (ohne Chart.yaml) scheitert:
+#   1. home-server-apps-prod         - reine Manifest-Ordner, EXPLIZIT gelistet
+#                                      (neuer Manifest-Ordner = Pfad ergaenzen)
+#   2. home-server-apps-prod-charts  - jeder Ordner MIT Chart.yaml, automatisch
 # Handgeschrieben, unabhaengig von home-server-apps-platform/-workloads
 # (die unveraendert auf TECH zeigen). Einmalig im TECH-Cluster anwenden,
 # NACHDEM der Cluster "prod" registriert ist (bootstrap-prod/README.md):
@@ -23,7 +28,10 @@ spec:
         repoURL: "https://github.com/pkr-lab/capulus-core.git"
         revision: "main"
         directories:
-          - path: "argocd/apps/prod/*"
+          # Reine Manifest-Ordner (kein Chart.yaml) - hier explizit eintragen.
+          - path: "argocd/apps/prod/nas-storage"
+          - path: "argocd/apps/prod/immich-storage"
+          - path: "argocd/apps/prod/traefik-config"
   template:
     metadata:
       name: "prod-{{.path.basename}}"
@@ -33,6 +41,58 @@ spec:
         repoURL: "https://github.com/pkr-lab/capulus-core.git"
         targetRevision: "main"
         path: "{{.path.path}}"
+      destination:
+        name: prod
+        namespace: "{{.path.basename}}"
+      ignoreDifferences:
+        - group: bitnami.com
+          kind: SealedSecret
+          jsonPointers:
+            - /status
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        retry:
+          limit: 5
+          backoff:
+            duration: 10s
+            factor: 2
+            maxDuration: 5m
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+          - SkipDryRunOnMissingResource=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: home-server-apps-prod-charts
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: "https://github.com/pkr-lab/capulus-core.git"
+        revision: "main"
+        files:
+          # Bei "files" ist .path.path der Ordner, der die Chart.yaml enthaelt.
+          - path: "argocd/apps/prod/*/Chart.yaml"
+  template:
+    metadata:
+      name: "prod-{{.path.basename}}"
+    spec:
+      project: prod
+      source:
+        repoURL: "https://github.com/pkr-lab/capulus-core.git"
+        targetRevision: "main"
+        path: "{{.path.path}}"
+        # Release-Name = Ordnername (wie in TECH), NICHT "prod-<app>": sonst
+        # heissen Secrets/PVCs/Deployments in PROD anders als in TECH, was
+        # SealedSecrets (namensgebunden) und die Datenmigration erschwert.
+        helm:
+          releaseName: "{{.path.basename}}"
       destination:
         name: prod
         namespace: "{{.path.basename}}"
