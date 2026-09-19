@@ -9,7 +9,7 @@ schedule: "*/15 * * * *"
 timezone: "Europe/Berlin"
 # Sync wurde manuell verifiziert (Pfad, README/DEPLOY, nummerierte Titel) —
 # CronJob läuft ab jetzt automatisch alle 15 Minuten.
-# UMZUG NACH PROD: pausiert, solange das Wiki in TECH gestoppt ist. Rueckweg: false.
+# Erst auf false, wenn Wiki.js in PROD laeuft (wikijs.wikijs.svc.cluster.local).
 suspend: true
 concurrencyPolicy: Forbid
 failedJobsHistoryLimit: 3
