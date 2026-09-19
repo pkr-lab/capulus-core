@@ -1,5 +1,7 @@
 ---
-replicaCount: 1
+# UMZUG NACH PROD (argocd/bootstrap-prod/migrations/README.md): TECH gestoppt, damit die
+# Endkopie konsistent ist. Rueckweg: wieder auf 1.
+replicaCount: 0
 
 image:
   repository: ghcr.io/mealie-recipes/mealie
