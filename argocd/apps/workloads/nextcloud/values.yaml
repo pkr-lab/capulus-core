@@ -22,10 +22,12 @@ secrets:
 # ============================================================
 # Nextcloud App
 # ============================================================
+# UMZUG NACH PROD (argocd/bootstrap-prod/migrations/README.md): Nextcloud-App gestoppt (Postgres laeuft
+# weiter fuer den Dump). Rueckweg: nextcloud.autoscaling.enabled=true, nextcloud.replicaCount=1.
 nextcloud:
   # Nur wirksam solange autoscaling.enabled=false ist (siehe unten) —
   # danach übernimmt der HPA die Replica-Anzahl.
-  replicaCount: 1
+  replicaCount: 0
 
   # Mehrere App-Pods sind hier — trotz ReadWriteOnce html/data-PVCs (siehe
   # persistence unten) — sicher: Nextcloud nutzt das eigene Redis (siehe
@@ -36,7 +38,7 @@ nextcloud:
   # daher zusätzlich podAffinity (siehe templates/nextcloud-deployment.yaml),
   # damit alle Replicas auf demselben Node laufen.
   autoscaling:
-    enabled: true
+    enabled: false
     minReplicas: 1
     maxReplicas: 2
     targetCPUUtilizationPercentage: 75
@@ -166,6 +168,8 @@ nextcloud:
 # Persistenz auf der "nas"-StorageClass (docs/2-betrieb-hardware/20000-nas-storage.md)
 # ============================================================
 postgresql:
+  # 0 = Postgres gestoppt (Wartung/Umzug).
+  replicaCount: 1
   image:
     repository: postgres
     pullPolicy: IfNotPresent
