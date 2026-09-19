@@ -1,0 +1,6 @@
+apiVersion: v2
+name: demo-app
+description: Beispiel-App für eine ArgoCD Self-Heal Demo (GitOps). Der angezeigte Text kommt aus einer Environment-Variable und lässt sich live per kubectl überschreiben.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

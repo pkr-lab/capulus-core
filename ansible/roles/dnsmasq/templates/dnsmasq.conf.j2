@@ -19,6 +19,13 @@ address=/homeserver/{{ network_static_ip }}
 # unveraendert auf dem Hauptcluster.
 address=/dev.homeserver/{{ entw_vm_ip }}
 
+# PROD-VM (KVM-VM auf homeserver, Phase 3.3): einzeln umgezogene Hosts.
+# Exakter Host gewinnt gegenueber address=/homeserver/ - alle anderen
+# *.prod.homeserver-Namen bleiben bis zu ihrem Umzug auf dem Hauptcluster.
+{% for host in dnsmasq_prod_vm_hosts | default([]) %}
+address=/{{ host }}/{{ prod_vm_ip }}
+{% endfor %}
+
 # worker-0 (worker-0) → statische IP
 address=/worker-0/192.168.178.95
 
