@@ -32,7 +32,6 @@ spec:
           - path: "argocd/apps/prod/nas-storage"
           - path: "argocd/apps/prod/immich-storage"
           - path: "argocd/apps/prod/traefik-config"
-          - path: "argocd/apps/prod/authentik"
   template:
     metadata:
       name: "prod-{{.path.basename}}"
