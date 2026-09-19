@@ -27,6 +27,12 @@ network:
 {% for dns in libvirt_host_dns %}
           - {{ dns }}
 {% endfor %}
+      # Der Router kuendigt per RA zwei zusaetzliche IPv6-DNS-Server an. Zusammen mit den festen Servern
+      # oben waeren das vier, das kubelet erlaubt drei (Meldung "Nameserver limits were exceeded",
+      # jede Minute). Auf den Hosts zusaetzlich als systemd-Drop-in gesetzt:
+      # /etc/systemd/network/10-netplan-br0.network.d/no-ra-dns.conf
+      ra-overrides:
+        use-dns: false
       parameters:
         stp: false
         forward-delay: 0
