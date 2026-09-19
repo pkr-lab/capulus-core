@@ -1,0 +1,17 @@
+apiVersion: v2
+name: github-release-watcher
+description: >
+  Pollt die GitHub-Releases-API für konfigurierte Repos und legt bei einem
+  neuen Release ein Zammad-Ticket an (löst Zammads Agenten-Benachrichtigung
+  per E-Mail aus). Läuft als CronJob mit einem Python-stdlib-Skript — keine
+  externen Abhängigkeiten.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - github
+  - releases
+  - zammad
+  - notifications
+maintainers:
+  - name: home-server-admin
