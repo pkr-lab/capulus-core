@@ -1,0 +1,83 @@
+# Kopiert die paperless-ngx-Daten aus den TECH-Verzeichnissen auf dem NAS in die neuen
+# PROD-Volumes (PVCs paperless-ngx-data/-media/-consume/-export). Manuell in PROD
+# anwenden, NICHT per ArgoCD (siehe README.md in diesem Ordner):
+#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl apply -f -' < argocd/bootstrap-prod/migrations/paperless-ngx-data-copy-job.yaml
+#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl -n paperless-ngx logs job/paperless-ngx-data-copy'
+#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl -n paperless-ngx delete job paperless-ngx-data-copy'
+#
+# Nur mit GESTOPPTEM TECH-paperless und PROD-paperless auf 0 ausfuehren: die SQLite-DB
+# (db.sqlite3 + -wal/-shm) muss konsistent sein, und das Zielvolume wird vor dem
+# Kopieren geleert. Der Redis-Speicher wird bewusst NICHT kopiert (nur Task-Queue).
+# Laeuft als uid 1000 wie die paperless-Dateien (Besitzer/Rechte auch bei NFS-Squash).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: paperless-ngx-data-copy
+  namespace: paperless-ngx
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: copy
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              for v in data media consume export; do
+                echo "== $v: Quelle"; ls -la /old/$v | head -12
+                find /new/$v -mindepth 1 -delete
+                (cd /old/$v && tar cf - .) | (cd /new/$v && tar xpf -)
+                echo "== $v: Ziel"; ls -la /new/$v | head -12
+              done
+              du -sh /old/* /new/*
+          volumeMounts:
+            - {name: old-data, mountPath: /old/data, readOnly: true}
+            - {name: new-data, mountPath: /new/data}
+            - {name: old-media, mountPath: /old/media, readOnly: true}
+            - {name: new-media, mountPath: /new/media}
+            - {name: old-consume, mountPath: /old/consume, readOnly: true}
+            - {name: new-consume, mountPath: /new/consume}
+            - {name: old-export, mountPath: /old/export, readOnly: true}
+            - {name: new-export, mountPath: /new/export}
+      volumes:
+        - name: old-data
+          nfs:
+            server: 192.168.178.97
+            path: /volume1/k8s-storage/paperless-ngx-paperless-ngx-data-pvc-939e56f3-6fe2-496e-827e-67a194254c5a
+            readOnly: true
+        - name: new-data
+          persistentVolumeClaim:
+            claimName: paperless-ngx-data
+        - name: old-media
+          nfs:
+            server: 192.168.178.97
+            path: /volume1/k8s-storage/paperless-ngx-paperless-ngx-media-pvc-69575600-7e7b-4d17-b5d9-ae12c228f3b9
+            readOnly: true
+        - name: new-media
+          persistentVolumeClaim:
+            claimName: paperless-ngx-media
+        - name: old-consume
+          nfs:
+            server: 192.168.178.97
+            path: /volume1/k8s-storage/paperless-ngx-paperless-ngx-consume-pvc-c80bdd1e-a3be-47e3-b621-8ed581b91dbe
+            readOnly: true
+        - name: new-consume
+          persistentVolumeClaim:
+            claimName: paperless-ngx-consume
+        - name: old-export
+          nfs:
+            server: 192.168.178.97
+            path: /volume1/k8s-storage/paperless-ngx-paperless-ngx-export-pvc-d5b0fcdd-82b2-4e8f-9da1-bf7e7603ff6a
+            readOnly: true
+        - name: new-export
+          persistentVolumeClaim:
+            claimName: paperless-ngx-export
