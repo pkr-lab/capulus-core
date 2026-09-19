@@ -28,6 +28,8 @@ secrets:
 # Persistenz auf der "nas"-StorageClass (docs/2-betrieb-hardware/20000-nas-storage.md)
 # ============================================================
 mysql:
+  # 0 = MySQL gestoppt (Umzug/Wartung).
+  replicaCount: 1
   image:
     repository: mysql
     pullPolicy: IfNotPresent
