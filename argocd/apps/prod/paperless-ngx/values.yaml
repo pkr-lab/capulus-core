@@ -1,7 +1,7 @@
 ---
-# Umzug (argocd/bootstrap-prod/migrations/README.md): 0 bis die Daten aus TECH kopiert sind,
-# dann 1. Nie mit LEEREN Volumes starten (legt eine neue DB und neue Konten an).
-replicaCount: 0
+# Daten am 2026-09-19 aus TECH kopiert (argocd/bootstrap-prod/migrations/README.md).
+# Nie mit LEEREN Volumes starten (legt eine neue DB und neue Konten an).
+replicaCount: 1
 
 image:
   repository: ghcr.io/paperless-ngx/paperless-ngx
