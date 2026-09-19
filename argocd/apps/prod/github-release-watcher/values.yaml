@@ -120,7 +120,10 @@ github:
 carplayApiServiceAccountName: "carplay-api"
 
 zammad:
-  url: "http://zammad.tech.homeserver"
+  # https, nicht http: der Traefik leitet HTTP global per 308 auf HTTPS um, und
+  # urllib folgt einer 308 bei POST nicht (Ticketanlage schluege fehl). Die
+  # interne Root-CA kommt aus templates/ca-configmap.yaml.
+  url: "https://zammad.tech.homeserver"
   # Zammad-Gruppe, in der das Ticket angelegt wird. Agenten dieser Gruppe
   # erhalten eine E-Mail, sofern ihre Profil-Benachrichtigungen für
   # "Neues Ticket" aktiviert sind (Zammad-Standardverhalten).
