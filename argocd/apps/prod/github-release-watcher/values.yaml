@@ -15,7 +15,10 @@ timezone: "Europe/Berlin"
 # geprüft; die 9 neu hinzugekommenen Self-Hosted-Apps haben notifyZammad:
 # false, erzeugen also KEINE Tickets, nur die App-Update-Liste (siehe
 # docs/f-cicd-automatisierung/f0040-github-release-watcher.md).
-suspend: false
+# PAUSIERT: carplay-api (noch in TECH) liest die Update-Status-ConfigMap dieses Namespace ueber die
+# Kubernetes-API; bis carplay-api mit umzieht, laeuft der Watcher weiter in TECH (sonst doppelte
+# Zammad-Tickets und veraltete Anzeige). Danach hier auf false und den TECH-Ordner entfernen.
+suspend: true
 concurrencyPolicy: Forbid
 failedJobsHistoryLimit: 3
 successfulJobsHistoryLimit: 3
