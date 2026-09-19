@@ -9,7 +9,7 @@
 #   read -rs T; printf %s "$T" > ~/.github_readonly_token; chmod 600 ~/.github_readonly_token; unset T
 #
 # Ergebnis (je ein statisches SealedSecret `github-api-token`, Schluessel `token`):
-#   argocd/apps/workloads/github-release-watcher/templates/sealedsecret-github-token.yaml  (TECH-Schluessel)
+#   argocd/apps/tech/github-release-watcher/templates/sealedsecret-github-token.yaml  (TECH-Schluessel)
 #   argocd/apps/prod/wiki-docs-sync/templates/sealedsecret-github-token.yaml               (PROD-Schluessel)
 # und setzt in den beiden values.yaml `github.tokenSecretName: github-api-token`.
 # Voraussetzung: kubectl-Kontext = TECH (fuer das TECH-Zertifikat), ~/prod-sealed-secrets.pem (PROD).
@@ -45,10 +45,10 @@ seal() { # <cert> <namespace> <ausgabedatei> <header>
   echo "versiegelt: ${out#"$out_root"/}"
 }
 
-seal "$tech_cert" github-release-watcher "$out_root/argocd/apps/workloads/github-release-watcher/templates/sealedsecret-github-token.yaml" "Mit dem TECH-Schluessel versiegelt."
+seal "$tech_cert" github-release-watcher "$out_root/argocd/apps/tech/github-release-watcher/templates/sealedsecret-github-token.yaml" "Mit dem TECH-Schluessel versiegelt."
 seal "$prod_cert" wiki-docs-sync         "$out_root/argocd/apps/prod/wiki-docs-sync/templates/sealedsecret-github-token.yaml"        "Mit dem PROD-Schluessel versiegelt."
 
-for v in "$out_root/argocd/apps/workloads/github-release-watcher/values.yaml" \
+for v in "$out_root/argocd/apps/tech/github-release-watcher/values.yaml" \
          "$out_root/argocd/apps/prod/wiki-docs-sync/values.yaml"; do
   [[ -f "$v" ]] || { echo "(uebersprungen, keine values.yaml: ${v#"$out_root"/})"; continue; }
   if grep -q '^  tokenSecretName: ""' "$v"; then

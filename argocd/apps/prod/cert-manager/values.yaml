@@ -1,6 +1,6 @@
 # Values passed through to the cert-manager sub-chart.
 # All keys live under `cert-manager:` because that is the dependency name
-# (gleiches Muster wie argocd/apps/platform/sealed-secrets/values.yaml).
+# (gleiches Muster wie argocd/apps/tech/sealed-secrets/values.yaml).
 cert-manager:
   # CRDs als Teil des Helm-Release (statt separatem `kubectl apply -f`
   # crds.yaml vor dem Chart-Install) — ArgoCD wendet dann alles in einem

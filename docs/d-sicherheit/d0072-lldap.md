@@ -38,7 +38,7 @@ Du ──▶ https://lldap.tech.homeserver (Web-UI, Port 17170, Tailscale/LAN-on
 
 Erzeugt am 22.08.2026 per `openssl rand` und mit
 `kubeseal --raw --namespace lldap --name lldap-secrets` versiegelt
-(`argocd/apps/platform/lldap/templates/sealedsecret.yaml`):
+(`argocd/apps/tech/lldap/templates/sealedsecret.yaml`):
 
 | Key | Zweck |
 |---|---|
@@ -104,7 +104,7 @@ LDAP-Source-Sync fehl (Symptom siehe Troubleshooting unten).
 Ablösung, siehe [40070-authentik-sso-iac.md](../4-planung/40070-authentik-sso-iac.md)
 → Rollout, Batch 7): alten Service-Account `authelia-bind` löschen
 (**User Management** → `authelia-bind` → **Delete**) und den verwaisten Key
-`bind-password` aus `argocd/apps/platform/lldap/values.yaml` +
+`bind-password` aus `argocd/apps/tech/lldap/values.yaml` +
 `templates/sealedsecret.yaml` entfernen.
 
 ### 2.4 Die 5 App-Identitäten anlegen
@@ -128,7 +128,7 @@ nötig**, die Gruppen-Synchronisierung + Policy greift automatisch.
 ### 2.5 2FA für `pke` einrichten
 
 `pke` braucht TOTP, weil er/sie Mitglied der `admins`-Gruppe ist (siehe
-[01-admin-2fa-policy.yaml](../../argocd/apps/platform/authentik/blueprints/01-admin-2fa-policy.yaml))
+[01-admin-2fa-policy.yaml](../../argocd/apps/tech/authentik/blueprints/01-admin-2fa-policy.yaml))
 — das passiert **nicht** in lldap, sondern beim ersten Login über Authentiks
 eigenes Portal (`https://authentik.tech.homeserver`, QR-Code-Enrollment).
 

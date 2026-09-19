@@ -32,7 +32,7 @@ der Praxis nicht funktioniert (vermutlich genau das unten beschriebene
 Private-Network-Access-Problem, ggf. auch weil "Allgemeine Webhooks"
 serverseitig von Alamos' Cloud statt aus dem Browser-Tab feuert). Statt n8n
 selbst öffentlich zu machen — was die bewusste Entscheidung aus dem
-`N8N_HOST`-Kommentar in `argocd/apps/workloads/n8n/values.yaml` aufheben
+`N8N_HOST`-Kommentar in `argocd/apps/tech/n8n/values.yaml` aufheben
 würde — steht jetzt ein eigener, minimaler Proxy dazwischen:
 [alamos-relay](300i0-alamos-relay.md). Die **Ziel-URL in der
 Alamos-Webhook-Konfiguration zeigt seitdem auf das Relay, nicht mehr auf
@@ -97,7 +97,7 @@ Zammads Agenten-Benachrichtigung → Mail an info@edv-kretzer.de
 ```
 
 Workflow-Datei:
-`argocd/apps/workloads/n8n/workflows/alamos-einsatz-to-zammad.json`.
+`argocd/apps/tech/n8n/workflows/alamos-einsatz-to-zammad.json`.
 Nutzt bewusst den **nativen `n8n-nodes-base.zammad`-Node** (wie
 `nightly-worker-update-to-zammad.json`/`yearly-secrets-rotation-reminder.json`),
 nicht den rohen HTTP-Request-Node wie im älteren

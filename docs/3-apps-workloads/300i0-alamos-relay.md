@@ -6,7 +6,7 @@ Server-zu-Server an den internen n8n-Webhook weiter (siehe
 [300h0-alamos-einsatz-zammad.md](300h0-alamos-einsatz-zammad.md)). **n8n
 selbst bleibt dabei komplett unerreichbar aus dem Internet** — genau die
 Entscheidung, die für `n8n.prod.homeserver` schon einmal bewusst getroffen
-wurde (Kommentar bei `N8N_HOST` in `argocd/apps/workloads/n8n/values.yaml`).
+wurde (Kommentar bei `N8N_HOST` in `argocd/apps/tech/n8n/values.yaml`).
 
 ## Warum dieser Umweg nötig ist
 
@@ -69,7 +69,7 @@ selbst im Worst Case.
 
 ## Cluster-Komponente: Helm Chart `alamos-relay`
 
-Liegt unter `argocd/apps/workloads/alamos-relay/`, wird wie jede andere App
+Liegt unter `argocd/apps/tech/alamos-relay/`, wird wie jede andere App
 automatisch von ArgoCD erkannt und ausgerollt (siehe
 [docs/b-kubernetes-gitops/b0010-argocd.md](../b-kubernetes-gitops/b0010-argocd.md)) — keine manuelle
 Registrierung im ArgoCD-Sinn nötig. **Aber:** die NetworkPolicy-Verfeinerung
@@ -100,7 +100,7 @@ openssl rand -hex 24 | kubeseal --raw \
   --from-file=/dev/stdin
 ```
 
-Ausgabe in `argocd/apps/workloads/alamos-relay/values.yaml` unter
+Ausgabe in `argocd/apps/tech/alamos-relay/values.yaml` unter
 `secrets.encryptedToken` eintragen, committen, pushen. Das Klartext-Token
 selbst **nicht** committen — es steht ausschließlich in der Alamos-
 Webhook-Konfiguration (siehe [Einrichtung](#einrichtung) unten) und lokal

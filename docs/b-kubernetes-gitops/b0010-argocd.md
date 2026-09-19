@@ -133,7 +133,7 @@ spec:
         repoURL: https://github.com/pkr-lab/capulus-core.git
         revision: main
         directories:
-          - path: "argocd/apps/platform/*"
+          - path: "argocd/apps/tech/*"
   template:
     spec:
       project: platform   # fest codiert, kein Templating
@@ -147,7 +147,7 @@ spec:
   generators:
     - git:
         directories:
-          - path: "argocd/apps/workloads/*"
+          - path: "argocd/apps/tech/*"
   template:
     spec:
       project: workloads   # fest codiert, kein Templating
@@ -161,7 +161,7 @@ spec:
 
 **Funktionsweise:**
 
-- ArgoCD scannt `argocd/apps/platform/` und `argocd/apps/workloads/` im
+- ArgoCD scannt `argocd/apps/tech/` und `argocd/apps/tech/` im
   Git-Repo (getrennt, je eigenes ApplicationSet).
 - Jedes Unterverzeichnis wird zu einer ArgoCD-**Application**.
 - Application-Name = Verzeichnisname der App (nicht des Tiers).
@@ -195,7 +195,7 @@ argocd/apps/
 
 Jedes Verzeichnis wird zu einer `Application` mit gleichem Namen und Namespace.
 Eine neue App ist vier Schritte entfernt: Tier entscheiden, Verzeichnis unter
-`argocd/apps/platform/<name>/` oder `argocd/apps/workloads/<name>/` anlegen
+`argocd/apps/tech/<name>/` oder `argocd/apps/tech/<name>/` anlegen
 (plain Manifests, `kustomization.yaml` **oder** Helm-Chart mit `Chart.yaml` +
 `values.yaml`), Namen in `argocd_platform_apps`/`argocd_workloads_apps`
 (`ansible/roles/argocd/defaults/main.yml`) ergänzen, committen, pushen —
@@ -210,8 +210,8 @@ Der GitOps-Workflow für neue Apps:
 1. Tier entscheiden: **Platform** (Infrastruktur/Admin-Charakter) oder
    **Workloads** (echter Nutzerkreis) — siehe
    [docs/b-kubernetes-gitops/b0020-argocd-projects.md](b0020-argocd-projects.md#die-zwei-tiers).
-2. Verzeichnis `argocd/apps/platform/<app-name>/` oder
-   `argocd/apps/workloads/<app-name>/` anlegen.
+2. Verzeichnis `argocd/apps/tech/<app-name>/` oder
+   `argocd/apps/tech/<app-name>/` anlegen.
 3. Kubernetes-Manifests oder Helm-Chart hineinlegen.
 4. `<app-name>` in `argocd_platform_apps` bzw. `argocd_workloads_apps`
    (`ansible/roles/argocd/defaults/main.yml`) ergänzen — sonst fehlt der
@@ -227,8 +227,8 @@ Der GitOps-Workflow für neue Apps:
 **Beispiel: App mit Plain-Manifest** (hier als Workload-App)
 
 ```bash
-mkdir -p argocd/apps/workloads/my-app
-cat > argocd/apps/workloads/my-app/deployment.yaml << 'EOF'
+mkdir -p argocd/apps/tech/my-app
+cat > argocd/apps/tech/my-app/deployment.yaml << 'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -254,7 +254,7 @@ EOF
 # my-app in argocd_workloads_apps (ansible/roles/argocd/defaults/main.yml) ergänzen,
 # dann: make render-bootstrap
 
-git add argocd/apps/workloads/my-app/ ansible/roles/argocd/defaults/main.yml argocd/bootstrap/
+git add argocd/apps/tech/my-app/ ansible/roles/argocd/defaults/main.yml argocd/bootstrap/
 git commit -m "feat: add my-app"
 git push
 ```
@@ -262,7 +262,7 @@ git push
 **Beispiel: App als Helm-Chart**
 
 ```bash
-mkdir -p argocd/apps/workloads/my-helm-app/templates
+mkdir -p argocd/apps/tech/my-helm-app/templates
 
 # Chart.yaml, values.yaml, templates/ — standard Helm-Chart-Struktur
 # ArgoCD erkennt Chart.yaml und behandelt das Verzeichnis als Helm-Chart
@@ -300,7 +300,7 @@ Für eine App, die manuell kontrolliert werden soll, ein eigenes
 `Application`-Manifest hinterlegen, das die Sync-Policy überschreibt:
 
 ```yaml
-# argocd/apps/workloads/my-careful-app/argocd-application.yaml
+# argocd/apps/tech/my-careful-app/argocd-application.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

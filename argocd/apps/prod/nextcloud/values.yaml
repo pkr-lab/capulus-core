@@ -127,7 +127,7 @@ nextcloud:
     tls: []
 
   # Trusted Domains: intern (*.homeserver, Traefik) + extern (Cloudflare
-  # Tunnel, siehe argocd/apps/platform/cloudflared/values.yaml). Ohne beide Einträge
+  # Tunnel, siehe argocd/apps/tech/cloudflared/values.yaml). Ohne beide Einträge
   # weist Nextcloud Requests mit "Access through untrusted domain" ab.
   trustedDomains: "nextcloud.prod.homeserver nextcloud-prod.pke-lab.de"
 

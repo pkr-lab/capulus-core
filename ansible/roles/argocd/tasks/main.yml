@@ -185,7 +185,7 @@
     kubectl get applicationsets home-server-apps-{{ item }}
     --namespace {{ argocd_namespace }}
     -o jsonpath='{.status.conditions[?(@.type=="ErrorOccurred")].status}'
-  loop: ["platform", "workloads"]
+  loop: "{{ ['tech'] if argocd_tech_layout | bool else ['platform', 'workloads'] }}"
   register: argocd_appset_status
   changed_when: false
   failed_when: false

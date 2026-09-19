@@ -145,7 +145,7 @@ gefordert — deshalb hier verworfen.
 ## Baustein 4 — n8n-Workflow
 
 Empfohlener Dateiname (passend zum bestehenden Muster importierbarer
-Workflows unter `argocd/apps/workloads/n8n/workflows/`, siehe
+Workflows unter `argocd/apps/tech/n8n/workflows/`, siehe
 [30070-n8n.md](../3-apps-workloads/30070-n8n.md)):
 `zammad-termin-zu-nextcloud.json`
 

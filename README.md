@@ -63,7 +63,7 @@ make install
 <tbody>
 <tr><td>Betriebssystem</td><td><strong>Ubuntu Server 26.04 LTS</strong></td><td>Gehärtet, UFW-Firewall, NTP-synced, Swap off</td></tr>
 <tr><td>Kubernetes</td><td><strong>k3s</strong> (latest stable)</td><td>Single-Node, Traefik, CoreDNS, local-path, metrics-server</td></tr>
-<tr><td>GitOps</td><td><strong>ArgoCD</strong> + ApplicationSets</td><td>Verzeichnis unter <code>argocd/apps/platform/</code> oder <code>argocd/apps/workloads/</code> anlegen → pushen → deployed</td></tr>
+<tr><td>GitOps</td><td><strong>ArgoCD</strong> + ApplicationSets</td><td>Verzeichnis unter <code>argocd/apps/tech/</code> oder <code>argocd/apps/tech/</code> anlegen → pushen → deployed</td></tr>
 <tr><td>Split-DNS</td><td><strong>dnsmasq</strong> auf <code>tailscale0</code></td><td><code>*.homeserver</code> aus LAN und Tailnet auflösbar</td></tr>
 <tr><td>Werbeblocking</td><td><strong>Pi-hole</strong></td><td>Filtert DNS-Anfragen für alle Geräte, die dnsmasq bereits als DNS nutzen — kein Router-Eingriff nötig</td></tr>
 <tr><td>Web-Ansible</td><td><strong>Semaphore UI</strong></td><td>Ein-Klick-<code>git pull &amp;&amp; ansible-playbook</code> gegen das eigene LAN</td></tr>
@@ -322,7 +322,7 @@ capulus-core/
 
 ## Monitoring
 
-Ein schlanker VictoriaMetrics-+-Grafana-Stack lebt unter `argocd/apps/platform/monitoring/` und wird automatisch von ArgoCD ausgerollt.
+Ein schlanker VictoriaMetrics-+-Grafana-Stack lebt unter `argocd/apps/tech/monitoring/` und wird automatisch von ArgoCD ausgerollt.
 
 <details>
 <summary><strong>Stack-Details</strong></summary>
@@ -354,14 +354,14 @@ Erst entscheiden: **Platform** (Infrastruktur/Admin-Charakter) oder
 [docs/b-kubernetes-gitops/b0020-argocd-projects.md](docs/b-kubernetes-gitops/b0020-argocd-projects.md).
 
 ```bash
-mkdir -p argocd/apps/workloads/my-app
+mkdir -p argocd/apps/tech/my-app
 # Plain Kubernetes-YAML, kustomization.yaml oder ein Helm-Chart hineinlegen.
 
 # my-app in argocd_workloads_apps (ansible/roles/argocd/defaults/main.yml) ergänzen,
 # dann:
 make render-bootstrap
 
-git add argocd/apps/workloads/my-app/ ansible/roles/argocd/defaults/main.yml argocd/bootstrap/
+git add argocd/apps/tech/my-app/ ansible/roles/argocd/defaults/main.yml argocd/bootstrap/
 git commit -m "feat(apps): add my-app"
 git push
 ```
@@ -428,7 +428,7 @@ Apps mit echtem Nutzerkreis) — Details und Begründung:
 <tbody>
 <tr><td>Keine öffentlichen Ports</td><td>Zugriff ausschließlich über LAN, Tailscale-VPN oder gezielt per Cloudflare Tunnel (ausgehende Verbindung, kein Port-Forwarding)</td></tr>
 <tr><td>UFW-Firewall</td><td>Erlaubt nur SSH, HTTP/HTTPS, k3s-API, ArgoCD-NodePort (HTTPS-only), Flannel, Tailscale-UDP</td></tr>
-<tr><td>Opt-in externe Erreichbarkeit</td><td>Nur explizit in <code>argocd/apps/platform/cloudflared/values.yaml</code> eingetragene Dienste sind öffentlich erreichbar, alles andere bleibt intern</td></tr>
+<tr><td>Opt-in externe Erreichbarkeit</td><td>Nur explizit in <code>argocd/apps/tech/cloudflared/values.yaml</code> eingetragene Dienste sind öffentlich erreichbar, alles andere bleibt intern</td></tr>
 <tr><td>Brute-Force-Schutz</td><td>CrowdSec beobachtet SSH- und Traefik-Logs und lässt einen Firewall-Bouncer auffällige IPs sperren, siehe <a href="docs/d-sicherheit/d0020-crowdsec.md">docs/d-sicherheit/d0020-crowdsec.md</a></td></tr>
 <tr><td>Ansible-Vault</td><td>Sensitive Secrets verschlüsselt at rest</td></tr>
 <tr><td>ArgoCD Read-only</td><td>Hat ausschließlich Read-Access auf das Git-Repo</td></tr>

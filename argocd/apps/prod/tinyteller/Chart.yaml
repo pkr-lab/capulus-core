@@ -9,6 +9,6 @@ keywords:
   - tinyteller
 home: https://github.com/pkr-lab/capulus-core
 sources:
-  - https://github.com/pkr-lab/capulus-core/tree/main/argocd/apps/workloads/tinyteller
+  - https://github.com/pkr-lab/capulus-core/tree/main/argocd/apps/prod/tinyteller
 maintainers:
   - name: home-server-admin

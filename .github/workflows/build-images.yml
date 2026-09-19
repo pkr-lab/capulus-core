@@ -3,7 +3,7 @@ name: Build Workload Images
 # Builds/pushes the three custom-built workload images (pacman, carplay-api,
 # n8n) to GHCR whenever their build context changes on main. Replaces the
 # previous manual `argo submit --from workflowtemplate/kaniko-build-push`
-# step — see argocd/apps/workloads/pacman/README.md#image-bauen.
+# step — see argocd/apps/tech/pacman/README.md#image-bauen.
 #
 # Does NOT touch values.yaml: the resulting tag is printed to the run's job
 # summary, `image.tag` still gets set by hand and committed by whoever ran
@@ -12,14 +12,14 @@ on:
   push:
     branches: [main]
     paths:
-      - "argocd/apps/workloads/pacman/Dockerfile"
-      - "argocd/apps/workloads/pacman/server/**"
-      - "argocd/apps/workloads/pacman/src/**"
-      - "argocd/apps/workloads/pacman/.dockerignore"
-      - "argocd/apps/workloads/carplay-api/Dockerfile"
-      - "argocd/apps/workloads/carplay-api/src/**"
-      - "argocd/apps/workloads/carplay-api/.dockerignore"
-      - "argocd/apps/workloads/n8n/image/Dockerfile"
+      - "argocd/apps/tech/pacman/Dockerfile"
+      - "argocd/apps/tech/pacman/server/**"
+      - "argocd/apps/tech/pacman/src/**"
+      - "argocd/apps/tech/pacman/.dockerignore"
+      - "argocd/apps/tech/carplay-api/Dockerfile"
+      - "argocd/apps/tech/carplay-api/src/**"
+      - "argocd/apps/tech/carplay-api/.dockerignore"
+      - "argocd/apps/tech/n8n/image/Dockerfile"
   workflow_dispatch:
     inputs:
       app:
@@ -43,16 +43,16 @@ jobs:
       matrix:
         include:
           - app: pacman
-            path: argocd/apps/workloads/pacman
-            dockerfile: argocd/apps/workloads/pacman/Dockerfile
+            path: argocd/apps/tech/pacman
+            dockerfile: argocd/apps/tech/pacman/Dockerfile
             image: ghcr.io/pkr-lab/pacman
           - app: carplay-api
-            path: argocd/apps/workloads/carplay-api
-            dockerfile: argocd/apps/workloads/carplay-api/Dockerfile
+            path: argocd/apps/tech/carplay-api
+            dockerfile: argocd/apps/tech/carplay-api/Dockerfile
             image: ghcr.io/pkr-lab/carplay-api
           - app: n8n
-            path: argocd/apps/workloads/n8n/image
-            dockerfile: argocd/apps/workloads/n8n/image/Dockerfile
+            path: argocd/apps/tech/n8n/image
+            dockerfile: argocd/apps/tech/n8n/image/Dockerfile
             image: ghcr.io/pkr-lab/n8n-custom
     runs-on: ubuntu-latest
     steps:
@@ -118,5 +118,5 @@ jobs:
             echo "${{ matrix.image }}:${{ steps.tag.outputs.tag }}"
             echo '```'
             echo
-            echo "Manuell in \`argocd/apps/workloads/${{ matrix.app }}/values.yaml\` (\`image.tag\`) eintragen und committen/pushen."
+            echo "Manuell in \`argocd/apps/tech/${{ matrix.app }}/values.yaml\` (\`image.tag\`) eintragen und committen/pushen."
           } >> "$GITHUB_STEP_SUMMARY"

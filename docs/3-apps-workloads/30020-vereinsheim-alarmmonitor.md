@@ -193,7 +193,7 @@ beendet) und:
   selbst neu zu starten.
 
 Der bestehende Heartbeat-Timer (→ ntfy-Ausfall-Alarm in
-`argocd/apps/workloads/alamos-apager`) läuft unverändert parallel und unabhängig
+`argocd/apps/tech/alamos-apager`) läuft unverändert parallel und unabhängig
 davon weiter — er braucht denselben `*.homeserver`-Pfad wie der Kiosk
 selbst, ist also von derselben Split-DNS/Route-Voraussetzung abhängig.
 
@@ -261,7 +261,7 @@ Stattdessen **pusht der Pi seine Metriken selbst**:
 node_exporter (Port 9100, nur localhost)
   → vmagent (ansible/roles/vmagent, scraped lokal)
   → remote_write über https://vm-write.homeserver/api/v1/write
-    (argocd/apps/platform/monitoring/templates/ingress-vm-write.yaml,
+    (argocd/apps/tech/monitoring/templates/ingress-vm-write.yaml,
      nur /api/v1/write freigegeben, nicht die volle VM-API)
   → VictoriaMetrics im Cluster
 ```
@@ -278,7 +278,7 @@ Kein Dashboard-Change nötig — "Home Server Auslastung"
 `$instance`; der Pi taucht automatisch auf, sobald seine Metriken ankommen.
 Zusätzlich hat der Pi (fest verdrahtet, nicht über `$instance`) eigene
 Detail-Panels im Standort-Dashboard **"1002011-pis"**
-(`argocd/apps/platform/monitoring/templates/dashboard-1002011-pis.yaml`,
+(`argocd/apps/tech/monitoring/templates/dashboard-1002011-pis.yaml`,
 ehemals "Vereinsheim-Alarmmonitor" — umbenannt, als die xibosignage-
 Infotafel `infotafel` als zweites Gerät am selben Standort dazukam, siehe
 [docs/3-apps-workloads/300e0-xibosignage.md, "Monitoring (Grafana)"](300e0-xibosignage.md#monitoring-grafana)).
@@ -304,10 +304,10 @@ Ablauf:
 absent_over_time(up{...}[10m]) für vereinsheim-alarmmonitor
   → VMRule "BananaPiAlarmmonitorDown" (vmrule-banana-pi.yaml, severity=critical)
   → Alertmanager, zusätzliche Route NUR für diesen Alertnamen
-    (argocd/apps/platform/monitoring/values.yaml)
+    (argocd/apps/tech/monitoring/values.yaml)
   → n8n-Webhook https://n8n.homeserver/webhook/banana-pi-down
   → Workflow "Banana-Pi-Down -> Zammad-Ticket"
-    (argocd/apps/workloads/n8n/workflows/banana-pi-down-to-zammad.json):
+    (argocd/apps/tech/n8n/workflows/banana-pi-down-to-zammad.json):
       1. letzte bekannte CPU/RAM/Temperatur-Werte aus VictoriaMetrics holen
          (der Pi selbst ist ja gerade nicht erreichbar — das sind KEINE
          Live-Daten, sondern der letzte Stand vor dem Ausfall)
@@ -318,7 +318,7 @@ absent_over_time(up{...}[10m]) für vereinsheim-alarmmonitor
          Cluster läuft und daher unabhängig vom Tailscale-Status des Pi
          abfragbar ist
       3. Zammad-Ticket erstellen (POST /api/v1/tickets, gleiches Muster
-         wie argocd/apps/workloads/github-release-watcher)
+         wie argocd/apps/tech/github-release-watcher)
   → Zammads eigene Agenten-Benachrichtigung verschickt die Mail an
     info@edv-kretzer.de (kein separater E-Mail-Node in n8n nötig)
 ```
@@ -333,7 +333,7 @@ merkt sich jetzt zusätzlich zum Heartbeat auch den Zeitstempel jeder
 erfolgreichen `/start`-Anfrage (also wann der Kiosk-Browser zuletzt
 tatsächlich die echte AMweb-URL angefragt hat) und exportiert das über
 einen eigenen `/metrics`-Endpunkt (`alamos_apager_last_start_timestamp_seconds`,
-siehe `argocd/apps/workloads/alamos-apager/templates/configmap-script.yaml` +
+siehe `argocd/apps/tech/alamos-apager/templates/configmap-script.yaml` +
 `vmservicescrape.yaml`). Das läuft cluster-intern und ist damit — anders
 als die node_exporter-Metriken des Pi selbst — auch dann abfragbar, wenn
 der Pi/Tailscale gerade down ist. Betrifft alle Alamos-Standorte

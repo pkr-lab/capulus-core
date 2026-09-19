@@ -2,8 +2,8 @@
 
 [`.github/workflows/build-images.yml`](../../.github/workflows/build-images.yml)
 baut und pusht die drei selbst gebauten Workload-Images —
-[`pacman`](../../argocd/apps/workloads/pacman/), [`carplay-api`](../../argocd/apps/workloads/carplay-api/)
-und [`n8n`](../../argocd/apps/workloads/n8n/) (dessen `image/Dockerfile`) —
+[`pacman`](../../argocd/apps/tech/pacman/), [`carplay-api`](../../argocd/apps/tech/carplay-api/)
+und [`n8n`](../../argocd/apps/tech/n8n/) (dessen `image/Dockerfile`) —
 automatisch nach GHCR, sobald der jeweilige Build-Kontext auf `main`
 geändert wird. Vorher musste dafür manuell das `kaniko-build-push`
 Argo-WorkflowTemplate gegen den Cluster angestoßen werden (siehe
@@ -54,12 +54,12 @@ Ein Matrix-Job pro App:
 
 ## Ablauf nach einer Code-Änderung
 
-1. Dockerfile/Source unter `argocd/apps/workloads/<app>/` ändern, committen,
+1. Dockerfile/Source unter `argocd/apps/tech/<app>/` ändern, committen,
    nach `main` pushen.
 2. GitHub → Actions → "Build Workload Images" abwarten (baut nur die App(s),
    deren Pfad sich geändert hat), Job-Summary öffnen → gepushten Tag
    kopieren.
-3. `image.tag` in `argocd/apps/workloads/<app>/values.yaml` auf diesen Tag
+3. `image.tag` in `argocd/apps/tech/<app>/values.yaml` auf diesen Tag
    setzen, committen, pushen.
 4. ArgoCD synct wie gewohnt (siehe [b0010-argocd.md](../b-kubernetes-gitops/b0010-argocd.md)).
 
@@ -68,7 +68,7 @@ Ein Matrix-Job pro App:
 Frisch gepushte GHCR-Packages sind standardmäßig **privat** — ohne
 `imagePullSecrets` scheitert der Pod dann mit `ImagePullBackOff`. Gleiche
 Falle/Lösung wie beim alten Kaniko-Weg, siehe
-[pacman/README.md](../../argocd/apps/workloads/pacman/README.md#image-bauen).
+[pacman/README.md](../../argocd/apps/tech/pacman/README.md#image-bauen).
 
 ## Verhältnis zu `kaniko-build-push`
 

@@ -11,6 +11,10 @@
 # argocd_workloads_apps unten (ENTW-Cluster, siehe host_vars/entw-vm).
 argocd_apps_from_lists: false
 
+# true = ein Projekt "tech" und ein ApplicationSet fuer alle Apps unter argocd/apps/tech/ (Hub).
+# false = altes Layout platform/workloads (ENTW-Cluster, siehe host_vars/entw-vm).
+argocd_tech_layout: false
+
 argocd_platform_apps:
   - sealed-secrets
   - kubeseal-webgui
@@ -37,45 +41,26 @@ argocd_workloads_apps:
   - alamos-apager
   - alamos-relay
   - carplay-api
-  - demo-app
-  - example-whoami
   - github-release-watcher
-  - immich
-  - mealie
   - mediamtx
   - n8n
-  - nextcloud
   - ollama
   - pacman
-  - paperless-ngx
-  - tinyteller
   - uptime-kuma
   - vaultwarden
-  - wiki-docs-sync
-  - wikijs
-  - xibosignage
   - zammad
 
 argocd_apply_network_policies: true
 
 argocd_network_policy_refined_namespaces:
-  - example-whoami
-  - tinyteller
-  - wikijs
-  - mealie
   - n8n
   - alamos-apager
   - alamos-relay
   - carplay-api
   - github-release-watcher
-  - immich
   - mediamtx
-  - nextcloud
-  - paperless-ngx
   - uptime-kuma
   - vaultwarden
-  - wiki-docs-sync
-  - xibosignage
   - zammad
   - authentik
   - lldap

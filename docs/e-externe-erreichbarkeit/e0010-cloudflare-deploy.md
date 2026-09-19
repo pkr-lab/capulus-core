@@ -30,12 +30,12 @@ freigeben, Secrets rotieren, Troubleshooting.
 
 - Tunnel via `cloudflared tunnel create` angelegt (docs/e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md, Schritt 2).
 - `tunnel.id` und `tunnel.encryptedCredentialsJson` in
-  `argocd/apps/platform/cloudflared/values.yaml` eingetragen.
+  `argocd/apps/tech/cloudflared/values.yaml` eingetragen.
 - Mindestens ein DNS-Route-Eintrag via `cloudflared tunnel route dns`
   angelegt (docs/e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md, Schritt 4).
 - ArgoCD läuft und das Root-ApplicationSet ist aktiv
   (`argocd/bootstrap/root-applicationset.yaml`).
-- Sealed-Secrets-Controller ist deployt (`argocd/apps/platform/sealed-secrets/`).
+- Sealed-Secrets-Controller ist deployt (`argocd/apps/tech/sealed-secrets/`).
 
 ---
 
@@ -45,12 +45,12 @@ Wie jede andere App in diesem Repo läuft das Deployment rein über Git —
 kein zusätzlicher Ansible- oder Helm-Befehl nötig:
 
 ```bash
-git add argocd/apps/platform/cloudflared
+git add argocd/apps/tech/cloudflared
 git commit -m "feat(cloudflared): add Cloudflare Tunnel for external access"
 git push
 ```
 
-ArgoCD erkennt das neue Verzeichnis `argocd/apps/platform/cloudflared/` innerhalb
+ArgoCD erkennt das neue Verzeichnis `argocd/apps/tech/cloudflared/` innerhalb
 von ca. 3 Minuten, legt die `Application` **cloudflared** im gleichnamigen
 Namespace an und synct sie automatisch (`syncPolicy.automated` im
 Root-ApplicationSet).
@@ -112,7 +112,7 @@ falls Option B aus docs/e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md akti
 
 ## Neuen Dienst freigeben
 
-`argocd/apps/platform/cloudflared/values.yaml` selbst bleibt dabei
+`argocd/apps/tech/cloudflared/values.yaml` selbst bleibt dabei
 **unangetastet** — sie enthält nur noch **eine einzige** Wildcard-Regel
 (`*.deine-domain.de`), die pauschal an Traefik weiterreicht, unabhängig
 vom Tier (siehe [docs/c-netzwerk-dns/c0040-domain-tiers.md](../c-netzwerk-dns/c0040-domain-tiers.md), warum eine
@@ -127,7 +127,7 @@ ist dafür **kein DNS-Schritt** mehr nötig — `grafana-tech.deine-domain.de`
 löst durch den bestehenden `*`-Record bereits zum Tunnel auf.
 
 ```yaml
-# argocd/apps/platform/monitoring/values.yaml (Beispiel Grafana, Tier "tech")
+# argocd/apps/tech/monitoring/values.yaml (Beispiel Grafana, Tier "tech")
 grafana:
   ingress:
     hosts:
@@ -141,7 +141,7 @@ grafana:
 > ausführen.
 
 ```bash
-git add argocd/apps/platform/monitoring/values.yaml
+git add argocd/apps/tech/monitoring/values.yaml
 git commit -m "feat(monitoring): expose grafana externally"
 git push
 ```
@@ -169,7 +169,7 @@ Wildcard-Regel matcht zwar weiterhin, liefert aber (über Traefiks eigenen
 
 ```bash
 # grafana-tech.deine-domain.de aus ingress.hosts in monitoring/values.yaml löschen, dann
-git add argocd/apps/platform/monitoring/values.yaml
+git add argocd/apps/tech/monitoring/values.yaml
 git commit -m "feat(monitoring): remove grafana from external access"
 git push
 ```
@@ -204,7 +204,7 @@ cloudflared tunnel route dns homeserver "*.deine-domain.de"
 #      cloudflared tunnel route dns homeserver wiki.deine-domain.de
 #      cloudflared tunnel route dns homeserver ntfy.deine-domain.de
 
-git add argocd/apps/platform/cloudflared/values.yaml
+git add argocd/apps/tech/cloudflared/values.yaml
 git commit -m "fix(cloudflared): rotate tunnel credentials"
 git push
 ```
@@ -280,7 +280,7 @@ Ciphertext neu erzeugen und `values.yaml` korrigieren.
 Wie jede andere App per Git-Revert:
 
 ```bash
-git log --oneline -- argocd/apps/platform/cloudflared
+git log --oneline -- argocd/apps/tech/cloudflared
 git revert <commit-hash>
 git push
 ```

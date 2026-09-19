@@ -31,7 +31,7 @@ if [[ "${1:-}" == "--list" ]]; then
 fi
 app="${1:?Aufruf: $0 [--list] <app>}"
 
-src="$repo_root/argocd/apps/workloads/$app"
+src="$repo_root/argocd/apps/tech/$app"
 dst="$repo_root/argocd/apps/prod/$app"
 [[ -d "$src" ]] || { echo "Fehler: $src existiert nicht (TECH-App?)" >&2; exit 1; }
 

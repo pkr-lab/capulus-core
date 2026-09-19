@@ -29,12 +29,12 @@ DNS-Naming).
 
 | Tier | Bedeutung | Beispiele |
 |---|---|---|
-| **tech** | Infrastruktur/Admin-Dienste — alles unter `argocd/apps/platform/`, auf dem andere Apps aufbauen (DNS, Monitoring, Secrets-Tooling, ...) | `grafana.tech.homeserver`, `semaphore.tech.homeserver`, `minio.tech.homeserver` |
-| **prod** | Apps mit echtem Nutzerkreis (Familie, Vereinsmitglieder) — alles unter `argocd/apps/workloads/`, mit zwei Ausnahmen (s. u.) | `nextcloud.prod.homeserver`, `mealie.prod.homeserver`, `immich.prod.homeserver` |
+| **tech** | Infrastruktur/Admin-Dienste — alles unter `argocd/apps/tech/`, auf dem andere Apps aufbauen (DNS, Monitoring, Secrets-Tooling, ...) | `grafana.tech.homeserver`, `semaphore.tech.homeserver`, `minio.tech.homeserver` |
+| **prod** | Apps mit echtem Nutzerkreis (Familie, Vereinsmitglieder) — alles unter `argocd/apps/tech/`, mit zwei Ausnahmen (s. u.) | `nextcloud.prod.homeserver`, `mealie.prod.homeserver`, `immich.prod.homeserver` |
 | **dev** | Reserviert für künftige Test-/Staging-Deployments. Aktuell läuft keine App unter diesem Tier — die Konvention steht, sobald der erste Bedarf da ist (z. B. eine App vor dem Produktiv-Rollout separat testen) | — (noch keine) |
 
 Die Zuordnung folgt **nicht 1:1** dem `platform`/`workloads`-Ordner — zwei
-Apps liegen zwar unter `argocd/apps/workloads/`, sind aber Infrastruktur
+Apps liegen zwar unter `argocd/apps/tech/`, sind aber Infrastruktur
 und laufen deshalb bewusst unter **tech**:
 
 | App | Ordner | Tier | Warum die Ausnahme |
@@ -76,7 +76,7 @@ Tier, s. u.). Betroffene Stellen pro App:
 DNS-Auflösung selbst brauchte **keine** Änderung: sowohl dnsmasq
 (`address=/homeserver/<ip>`, siehe
 [docs/c-netzwerk-dns/c0000-dns-architecture.md](c0000-dns-architecture.md)) als auch der
-CoreDNS-Forward im Cluster (`argocd/apps/platform/coredns-custom/`)
+CoreDNS-Forward im Cluster (`argocd/apps/tech/coredns-custom/`)
 matchen auf die komplette `homeserver`-Zone inklusive aller
 Subdomain-Ebenen — `app.tech.homeserver` wird also automatisch mit
 aufgelöst, ganz ohne Anpassung an dnsmasq/CoreDNS.
@@ -85,7 +85,7 @@ aufgelöst, ganz ohne Anpassung an dnsmasq/CoreDNS.
 
 ## Externe Erreichbarkeit: Wildcard-Routing über Traefik
 
-`argocd/apps/platform/cloudflared/values.yaml` enthält **nicht** mehr eine
+`argocd/apps/tech/cloudflared/values.yaml` enthält **nicht** mehr eine
 Ingress-Regel pro extern freigegebener App, sondern nur noch **eine
 einzige** Wildcard-Regel für die ganze Zone (`*.pke-lab.de`), die auf
 `http://traefik.kube-system.svc.cluster.local:80` zeigt, also auf Traefik
@@ -188,10 +188,10 @@ angepasst wurden:
 
 | Wer referenziert | Wen | Datei |
 |---|---|---|
-| `github-release-watcher` | Zammad-API | `argocd/apps/workloads/github-release-watcher/values.yaml` |
-| n8n-Workflow (Banana-Pi-Alarm → Zammad-Ticket) | Zammad-API + Grafana-Dashboard-Link | `argocd/apps/workloads/n8n/workflows/banana-pi-down-to-zammad.json` |
-| `carplay-api` (Kommentar) | kubeseal-webgui | `argocd/apps/workloads/carplay-api/values.yaml` |
-| Grafana selbst (`grafana.ini` `domain`/`root_url`) | eigener externer Hostname | `argocd/apps/platform/monitoring/values.yaml` |
+| `github-release-watcher` | Zammad-API | `argocd/apps/tech/github-release-watcher/values.yaml` |
+| n8n-Workflow (Banana-Pi-Alarm → Zammad-Ticket) | Zammad-API + Grafana-Dashboard-Link | `argocd/apps/tech/n8n/workflows/banana-pi-down-to-zammad.json` |
+| `carplay-api` (Kommentar) | kubeseal-webgui | `argocd/apps/tech/carplay-api/values.yaml` |
+| Grafana selbst (`grafana.ini` `domain`/`root_url`) | eigener externer Hostname | `argocd/apps/tech/monitoring/values.yaml` |
 | ntfy-Watchdogs (Cluster-Power-Manager, Resource-/Thermal-Watchdog) | ntfy | `ansible/roles/{cluster_power_manager,resource_watchdog,thermal_watchdog}/defaults/main.yml` |
 | Semaphore-Ansible-Rollen (`semaphore_bootstrap`, `semaphore_secrets`) | Semaphore-REST-API | `ansible/roles/semaphore_bootstrap/defaults/main.yml`, `ansible/roles/semaphore_secrets/tasks/main.yml` |
 | vmagent auf den Banana-Pis | VictoriaMetrics remote-write (`vm-write`) | `ansible/group_vars/banana_pis.yml` |
