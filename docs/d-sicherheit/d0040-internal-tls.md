@@ -83,7 +83,7 @@ TLS-Stacks genutzt), das Wildcards unter einem Suffix mit nur **einem**
 DNS-Label ablehnt — dieselbe Schutzregel, die ein `*.com`-Zertifikat
 verhindert. Das ist eine Eigenschaft von `.homeserver` als Zone, keine
 Tool-Einschränkung — auch cert-manager kann daran nichts ändern. Die
-[`Certificate`-Ressource](../../argocd/apps/platform/cert-manager/templates/certificate-homeserver-wildcard.yaml)
+[`Certificate`-Ressource](../../argocd/apps/tech/cert-manager/templates/certificate-homeserver-wildcard.yaml)
 trägt deshalb weiterhin eine explizite, jetzt tier-behaftete `dnsNames`-
 Liste. Ein neuer `*.homeserver`-Host braucht weiterhin einen Eintrag dort
 + Commit — was sich geändert hat, ist nur, dass danach niemand mehr
@@ -95,7 +95,7 @@ Zertifikat automatisch, sobald der geänderte Manifest gesynct ist.
 - **Subject Alternative Names:** alle aktuellen `*.homeserver`-Hosts
   (tier-behaftet, `<app>.tech.homeserver`/`<app>.prod.homeserver`) plus
   der nackte Apex `homeserver` — siehe
-  [certificate-homeserver-wildcard.yaml](../../argocd/apps/platform/cert-manager/templates/certificate-homeserver-wildcard.yaml).
+  [certificate-homeserver-wildcard.yaml](../../argocd/apps/tech/cert-manager/templates/certificate-homeserver-wildcard.yaml).
 - **Gültigkeit:** 90 Tage (`duration: 2160h`), automatische Erneuerung 30
   Tage vor Ablauf (`renewBefore: 720h`) — bewusst kurz, weil das jetzt
   nichts mehr kostet (keine ACME-Rate-Limits wie bei einer öffentlichen
@@ -105,7 +105,7 @@ Zertifikat automatisch, sobald der geänderte Manifest gesynct ist.
 ### Ablage im Cluster: TLSStore statt pro-App-Ingress
 
 Unverändert: ein einziges `TLSStore`-Objekt namens `default`
-([argocd/apps/platform/traefik-config/tlsstore.yaml](../../argocd/apps/platform/traefik-config/tlsstore.yaml))
+([argocd/apps/tech/traefik-config/tlsstore.yaml](../../argocd/apps/tech/traefik-config/tlsstore.yaml))
 verweist auf das von cert-manager verwaltete Secret — `default` ist dabei
 kein Freitext, sondern der von Traefik selbst reservierte Name, der
 automatisch für jeden Router greift, der nicht explizit ein anderes
@@ -131,8 +131,8 @@ Namespace ein `tier-default-ingress`-NetworkPolicy und ein
 ## Rollout
 
 **1. Committen + pushen** (macht der Nutzer selbst) — sobald
-`argocd/apps/platform/cert-manager/`,
-`argocd/apps/platform/traefik-config/tlsstore.yaml` und
+`argocd/apps/tech/cert-manager/`,
+`argocd/apps/tech/traefik-config/tlsstore.yaml` und
 `ansible/roles/argocd/templates/bootstrap-appprojects.yaml.j2` +
 `argocd/bootstrap/projects.yaml` im Repo sind, holt sich ArgoCD die
 Änderung automatisch (`automated: {prune: true, selfHeal: true}`, kein
@@ -248,7 +248,7 @@ Browser-Zugriff auf `*.homeserver`).
 ## Neuen Host hinzufügen / Zertifikat erneuern
 
 **Neuer Host:** Eintrag in `dnsNames` in
-[certificate-homeserver-wildcard.yaml](../../argocd/apps/platform/cert-manager/templates/certificate-homeserver-wildcard.yaml)
+[certificate-homeserver-wildcard.yaml](../../argocd/apps/tech/cert-manager/templates/certificate-homeserver-wildcard.yaml)
 ergänzen, committen, pushen — cert-manager erstellt automatisch ein neues
 Zertifikat mit der erweiterten SAN-Liste, kein `openssl`/`kubeseal` mehr
 nötig.

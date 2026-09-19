@@ -42,7 +42,7 @@ ingress:
   # Authentik-SSO (docs/d-sicherheit/d0073-authentik-sso.md, Ablösung von
   # Authelia siehe docs/4-planung/40070-authentik-sso-iac.md) — gilt für
   # beide Hosts unten. Nur der Nutzer "rdn" hat Zugriff (Policy-Blueprint
-  # argocd/apps/platform/authentik/blueprints/apps/mealie.yaml).
+  # argocd/apps/tech/authentik/blueprints/apps/mealie.yaml).
   #
   # PROD-KOPIE: die Authentik-Middleware ist hier BEWUSST ausgebaut - PROD hat
   # noch keinen Authentik-Outpost (argocd/bootstrap-prod/migrations/sso-outpost/).

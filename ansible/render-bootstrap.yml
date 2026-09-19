@@ -9,6 +9,11 @@
   vars_files:
     - "{{ playbook_dir }}/roles/argocd/defaults/main.yml"
   tasks:
+    # set_fact statt play-vars: vars_files (Role-Defaults) haetten sonst Vorrang und das Layout auf false zurueckstellen.
+    - name: Hub-Layout rendern (argocd_tech_layout=true wie in host_vars/homeserver, ENTW rendert auf seinem Host mit false)
+      ansible.builtin.set_fact:
+        argocd_tech_layout: true
+
     - name: Render argocd/bootstrap/root-applicationset.yaml from the role template
       ansible.builtin.template:
         src: "{{ playbook_dir }}/roles/argocd/templates/bootstrap-applicationset.yaml.j2"

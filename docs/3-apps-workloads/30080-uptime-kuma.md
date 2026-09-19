@@ -70,7 +70,7 @@ anlegen (erscheint beim ersten Besuch automatisch).
 
 ## Öffentliche Status-Page
 
-`argocd/apps/workloads/uptime-kuma/values.yaml` legt zusätzlich zum
+`argocd/apps/tech/uptime-kuma/values.yaml` legt zusätzlich zum
 internen Host einen externen Ingress-Host an (`status-prod.pke-lab.de` —
 bewusst ohne "uptime-kuma" im Namen, damit die eingesetzte Software nicht
 schon aus der URL erkennbar ist), erreichbar über die bestehende

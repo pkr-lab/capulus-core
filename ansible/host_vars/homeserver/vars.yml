@@ -33,3 +33,6 @@ libvirt_host_vms:
     # "openssl rand -hex 5 | sed 's/\(..\)/\1:/g; s/.$//'" unter dem
     # QEMU/KVM-Praefix 52:54:00), falls diese kollidiert.
     mac: "52:54:00:00:00:99"
+
+# ---- ArgoCD-Hub: ein Projekt/ApplicationSet "tech" fuer alle TECH-Apps (argocd/apps/tech/) ----
+argocd_tech_layout: true
