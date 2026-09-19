@@ -1,14 +1,14 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "tinyteller.name" -}}
+{{- define "cloudflared.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Create a default fully qualified app name.
 */}}
-{{- define "tinyteller.fullname" -}}
+{{- define "cloudflared.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -24,16 +24,16 @@ Create a default fully qualified app name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "tinyteller.chart" -}}
+{{- define "cloudflared.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "tinyteller.labels" -}}
-helm.sh/chart: {{ include "tinyteller.chart" . }}
-{{ include "tinyteller.selectorLabels" . }}
+{{- define "cloudflared.labels" -}}
+helm.sh/chart: {{ include "cloudflared.chart" . }}
+{{ include "cloudflared.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -43,17 +43,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "tinyteller.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "tinyteller.name" . }}
+{{- define "cloudflared.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "cloudflared.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "tinyteller.serviceAccountName" -}}
+{{- define "cloudflared.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "tinyteller.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "cloudflared.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
