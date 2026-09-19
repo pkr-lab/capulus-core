@@ -42,6 +42,8 @@ spec:
     - name: prod
       namespace: nextcloud
     - name: prod
+      namespace: immich
+    - name: prod
       namespace: github-release-watcher
     - name: prod
       namespace: example-whoami

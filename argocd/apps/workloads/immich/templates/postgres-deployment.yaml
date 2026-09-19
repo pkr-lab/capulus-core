@@ -6,7 +6,7 @@ metadata:
   labels:
     {{- include "immich.postgresql.labels" . | nindent 4 }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.postgresql.replicaCount }}
   strategy:
     type: Recreate
   selector:

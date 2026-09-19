@@ -176,6 +176,8 @@ machineLearning:
 # eine Extension braucht, die Immich selbst mitliefert)
 # ============================================================
 postgresql:
+  # 0 = Postgres gestoppt (Umzug/Wartung).
+  replicaCount: 1
   image:
     repository: ghcr.io/immich-app/postgres
     pullPolicy: IfNotPresent
