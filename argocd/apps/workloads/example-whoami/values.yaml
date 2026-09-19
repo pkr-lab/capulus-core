@@ -41,7 +41,7 @@ ingress:
   className: traefik
   annotations: {}
   hosts:
-    - host: whoami.dev.homeserver
+    - host: whoami.prod.homeserver
       paths:
         - path: /
           pathType: Prefix
