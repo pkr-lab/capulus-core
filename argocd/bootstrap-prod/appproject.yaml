@@ -25,6 +25,14 @@ spec:
       namespace: nas-storage
     - name: prod
       namespace: immich-storage
+    # cert-manager + Traefik-TLSStore (Phase 2.8): Certificate/TLSStore liegen
+    # in kube-system, die Apps selbst in eigenen Namespaces.
+    - name: prod
+      namespace: cert-manager
+    - name: prod
+      namespace: traefik-config
+    - name: prod
+      namespace: kube-system
     # Neue PROD-Apps hier ergaenzen (Namespace = Ordnername unter
     # argocd/apps/prod/).
   clusterResourceWhitelist:
