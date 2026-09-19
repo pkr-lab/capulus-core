@@ -102,6 +102,8 @@ spec:
     - server: https://kubernetes.default.svc
       namespace: alamos-apager
     - server: https://kubernetes.default.svc
+      namespace: alamos-relay
+    - server: https://kubernetes.default.svc
       namespace: carplay-api
     - server: https://kubernetes.default.svc
       namespace: demo-app
