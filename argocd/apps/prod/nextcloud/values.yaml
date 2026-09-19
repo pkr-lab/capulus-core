@@ -22,9 +22,13 @@ secrets:
 # ============================================================
 # Nextcloud App
 # ============================================================
-# UMZUG NACH PROD (argocd/bootstrap-prod/migrations/README.md): Nextcloud-App gestoppt (Postgres laeuft
-# weiter fuer den Dump). Rueckweg: nextcloud.autoscaling.enabled=true, nextcloud.replicaCount=1.
+# PROD-Kopie: App gestoppt bis Dateien (nas) und Datenbank (Dump) uebernommen sind, dann
+# nextcloud.autoscaling.enabled=true, nextcloud.replicaCount=1. Nie mit LEEREN Volumes/DB starten.
 nextcloud:
+  # PostSync-Reparatur-Job (trusted_domains/overwrite*): in PROD aus, config.php kommt aus TECH und ist
+  # schon korrekt; auf leerem Volume wuerde er scheitern.
+  fixConfigJob:
+    enabled: false
   # Nur wirksam solange autoscaling.enabled=false ist (siehe unten) —
   # danach übernimmt der HPA die Replica-Anzahl.
   replicaCount: 0
