@@ -82,6 +82,8 @@ entw_vm_ip: "192.168.178.100"
 prod_vm_ip: "192.168.178.99"
 dnsmasq_prod_vm_hosts:
   - demo.prod.homeserver
+  - tinyteller.prod.homeserver
+  - whoami.prod.homeserver
 
 # ---- Pi-hole (network-wide ad blocking) --------------------
 pihole_dns_nodeport: 30053
