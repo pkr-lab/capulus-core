@@ -244,13 +244,15 @@ victoria-metrics-k8s-stack:
         - ReadWriteOnce
       size: 2Gi
 
+    # Speicher: 512Mi war zu knapp (OOMKilled am 2026-09-19, RSS 488 MB beim Kill). Grafana 12 baut
+    # Suchindizes (bleve) im Speicher auf und startet vier Plugin-Prozesse (gpx_*), die im selben cgroup zaehlen.
     resources:
       requests:
         cpu: 50m
-        memory: 256Mi
+        memory: 512Mi
       limits:
         cpu: 500m
-        memory: 512Mi
+        memory: 1Gi
 
     # Sidecar picks up any ConfigMap labelled `grafana_dashboard=1` —
     # `defaultDashboards` above ships its dashboards this way, and you
