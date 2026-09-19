@@ -210,15 +210,9 @@ postgresql:
 
   # local-path bindet den Pod an den Node, auf dem die PVC zuerst provisioniert
   # wird — fest auf homeserver (aktuell ohnehin der einzige Ready-Node).
-  affinity:
-    nodeAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        nodeSelectorTerms:
-          - matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values:
-                  - homeserver
+  # PROD-Kopie: keine Node-Vorgabe (TECH pinnt auf den Node `homeserver` wegen local-path;
+  # in PROD gibt es nur prod-vm).
+  affinity: {}
 
 # ============================================================
 # Redis (Datei-Locking + Transactional-Cache, kein PVC nötig —
