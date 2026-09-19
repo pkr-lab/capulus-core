@@ -1,0 +1,56 @@
+# Kopiert die mealie-Daten aus dem TECH-Verzeichnis auf dem NAS in das
+# neue PROD-Volume (PVC mealie-data). Manuell in PROD anwenden, NICHT per
+# ArgoCD (Ordner argocd/bootstrap-prod/migrations wird von keinem Set gelesen):
+#   kubectl apply -f argocd/bootstrap-prod/migrations/mealie-data-copy-job.yaml   (Kontext PROD / per ssh)
+#   kubectl -n mealie logs job/mealie-data-copy
+#   kubectl -n mealie delete job mealie-data-copy
+# Ablauf siehe README.md in diesem Ordner.
+#
+# Lesen aus dem alten TECH-Verzeichnis nur lesend (readOnly). Laeuft als
+# uid 1000 wie die mealie-Dateien, damit Besitzer/Rechte auch bei NFS-Root-
+# Squash stimmen. Das Zielvolume wird vor dem Kopieren geleert, damit ein
+# wiederholter Lauf exakt den TECH-Stand ergibt (SQLite: nur mit gestopptem
+# TECH-mealie kopieren, sonst ist die DB evtl. inkonsistent).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mealie-data-copy
+  namespace: mealie
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: copy
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              echo "Quelle:"; ls -la /old | head -20
+              find /new -mindepth 1 -delete
+              (cd /old && tar cf - .) | (cd /new && tar xpf -)
+              echo "Ziel:"; ls -la /new | head -20
+              du -sh /old /new
+          volumeMounts:
+            - name: old
+              mountPath: /old
+              readOnly: true
+            - name: new
+              mountPath: /new
+      volumes:
+        - name: old
+          nfs:
+            server: 192.168.178.97
+            path: /volume1/k8s-storage/mealie-mealie-data-pvc-1227f51e-55d0-43a3-a2af-87394b1db648
+            readOnly: true
+        - name: new
+          persistentVolumeClaim:
+            claimName: mealie-data
