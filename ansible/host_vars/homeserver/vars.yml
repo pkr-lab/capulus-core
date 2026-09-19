@@ -9,6 +9,11 @@
 # - diese VM-Liste ist der host-spezifische Teil, der vorher in den
 # Rollen-Defaults lag und jetzt hierher gehoert, weil worker-1 (ENTW)
 # eine eigene, andere Liste braucht.
+# Bridge-Parameter explizit gepinnt statt aus den Default-Route-Facts: bei
+# einem Re-Run nach Teil-Setup liefern die Facts br0 bzw. eine andere IP
+# (Vorfall worker-1, 2026-09-19, siehe docs/4-planung/40080).
+libvirt_host_bridge_interface: "{{ network_interface }}"
+libvirt_host_static_ip: "{{ network_static_ip }}"
 libvirt_host_vms:
   - name: prod-vm
     vcpus: 6
