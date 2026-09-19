@@ -6,7 +6,7 @@ metadata:
   labels:
     {{- include "wikijs.postgresql.labels" . | nindent 4 }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.postgresql.replicaCount }}
   # Pflicht bei RWO-PVCs: kein zweiter Pod darf parallel auf dasselbe
   # Volume zugreifen, während der alte noch terminiert.
   strategy:
