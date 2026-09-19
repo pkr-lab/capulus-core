@@ -146,7 +146,7 @@ flowchart TB
     subgraph PROD["PROD-Cluster — KVM/libvirt-VM auf homeserver"]
         direction LR
         P1["ArgoCD-Agent<br/>vom TECH-Hub registriert"]
-        P2["Nextcloud · Immich · Paperless<br/>Wiki.js · Mealie · n8n · …"]
+        P2["Nextcloud · Immich · Paperless<br/>Wiki.js · Mealie · …"]
         P3["k3s server<br/>eigener Control-Plane, eigene VM"]
     end
 
@@ -635,9 +635,12 @@ Quelle der Wahrheit (die bleibt die App-DB selbst).
 | `cloudflared`, `pihole` | platform | **TECH + PROD** (je eine Instanz) | folgt den extern erreichbaren Apps — die meisten `-pke-lab.de`-Hosts sind PROD-Apps (Nextcloud, Immich, Wiki.js, …), ein paar TECH (Grafana, ntfy, Vaultwarden/Zammad, s. u.) |
 | `nas-storage`, `immich-storage` | platform | **TECH + PROD** (je eine Instanz) | folgt den PVC-Konsumenten, nicht der bisherigen Ordnerzuordnung |
 | `vaultwarden`, `zammad` | workloads (Ordner), aber `tech`-Tier laut [c0040](../c-netzwerk-dns/c0040-domain-tiers.md) | **TECH** | Ausnahme bereits heute dokumentiert und begründet, wandert 1:1 mit |
-| `nextcloud`, `immich`, `paperless-ngx`, `wikijs`, `mealie`, `n8n`, `uptime-kuma`, `mediamtx`, `tinyteller`, `alamos-apager`, `alamos-relay`, `xibosignage`, `carplay-api`, `github-release-watcher`, `wiki-docs-sync`, `example-whoami` | workloads | **PROD** | echter Nutzerkreis, wie heute |
+| `n8n` | workloads | **TECH** (Entscheidung 2026-09-19, ändert den ersten Entwurf) | n8n ist die Automatisierungs-Drehscheibe für TECH-Dienste: seine Workflows sprechen Zammad, VictoriaMetrics, ntfy, den Kubernetes-API des eigenen Clusters (skaliert `ollama`), das Xibo-CMS und die Wake-on-LAN-Steuerung an. Ein n8n in PROD bräuchte Zugangsdaten zu all diesen TECH-Diensten, genau das soll die TECH/PROD-Trennung verhindern. Der öffentliche Webhook-Host bleibt über den TECH-Tunnel erreichbar wie bisher |
+| `nextcloud`, `immich`, `paperless-ngx`, `wikijs`, `mealie`, `uptime-kuma`, `mediamtx`, `tinyteller`, `alamos-apager`, `alamos-relay`, `xibosignage`, `carplay-api`, `github-release-watcher`, `wiki-docs-sync`, `example-whoami` | workloads | **PROD** | echter Nutzerkreis, wie heute |
 | `demo-app`, `ollama` | workloads | **ENTW** (Empfehlung) | keine Endnutzer-Bindung, gute Testkandidaten ohne Rückwirkung auf PROD |
 | `pacman` | workloads, aktuell **gleichzeitig** öffentlich-produktiv **und** IT-Unterrichtsobjekt (eine App, ein Flag) | **Offene Entscheidung — nicht Teil dieses Plans** | 40030 nennt genau diesen Fall als Proxmox-Trigger-Beispiel ("Fortführung des Pacman-Musters, aber als komplett getrenntes Cluster statt einer Flag innerhalb derselben App"). Pacmans Doppelrolle (siehe [Pacman-Memory-Kontext](../3-apps-workloads/300f0-pacman-visitor-tracking.md)) bedeutet: der öffentliche Produktivbetrieb muss so oder so in PROD bleiben, ein etwaiger Trainings-/Pentest-Zwilling in ENTW wäre ein **eigenes** Vorhaben nach dieser Migration, nicht automatisch mitgezogen. |
+
+**Folge der n8n-Entscheidung (2026-09-19):** Apps, die im Cluster fest an n8n oder an TECH-Dienste (ntfy, Monitoring, Zammad) gekoppelt sind, bleiben **vorerst in TECH** und werden nicht umgezogen: `xibosignage` (n8n ruft das CMS im Cluster auf, Displays lesen einen von n8n befüllten NAS-Ordner), `alamos-relay` (n8n-Webhook), `alamos-apager` (ntfy, Monitoring-Scrape, Fehlalarm-Risiko bei frischer Instanz), `carplay-api` und `github-release-watcher` (gekoppelt über die Update-Status-ConfigMap, dazu ntfy/`uptime-kuma`/Monitoring), `mediamtx` (Einspeisung über NodePorts auf `.94`). `uptime-kuma` bleibt vorerst wegen SSO (Authentik-Outpost in PROD fehlt) und `local-path`-Daten. In PROD liegen damit die Nutzer-Apps (Nextcloud, Immich, Paperless, Mealie, Wiki.js) und die Testapps; TECH behält Automatisierung und Betrieb.
 
 ---
 
