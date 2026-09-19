@@ -18,14 +18,14 @@ secrets:
   encryptedDbPassword: "AgCLGVPqsZ/s1d8rdVlRLCP+QvBhtkSRHUFX93VKRqhkKLuuh0jLs1cX7AQQGC7eE9Ey4brLPKCBI/UlhUWLVH7B/yZnuBo42XcWv3Mm8iw51qG6KDcBqf5CaMC37pNai9GPHwPWhQOwYnbyyoXjJQY+5Z6VT33+qWp2IHl7/wpaX+7JR22d1a9TIBtie/X9XgvjUb+ERgmJM+a4FBhRPfug+ehRv/XpGE+2QdLcPjs7tEJZai0/e28o/U8ob+4CJZPXM5yqrsKO0zZvUUxLM05I1Ov1nH5+Sxo0n1vXru+ki9xarRqcKKuNaXfro0oaK7F1c2jhRhCbGd5sD+ggtL2l7YSssfqoRxpL1U9ootruHd2nz+joQTxuGtISmzWc0DQxdVnxpv6ZwZ/PDdqn4TWX7q144Kz9ODBNsADRzZxfCMJTUqkZjb3zLvdgqMVWykbWnIkYmOIPdAL0X3C3w2RjtTjGQIYf682uXZ0wZyd0bCkYOK1BRWCOS/tw4MGpjDWjF6RclTQ0Z1WfeI7MgNC+re1lCFX2uKZ4zziF8zTR0w8qGnzUL5bSD/fclK+5pDYjuYZaegvEgUM7AHqdlnKgjGfb+HwWitn3bLk/ctR/k5ZdUQaGmvCGdwDzgWTkrk2zI6emLuJCloDM4y5JXYSVuJYBs7BxgX+AoPLZVYz9tuFnaxp/M3VpT4t4EzHriJQRzfJrFp9Yb1Ek/FeVgcKzcZ50kd1Jg8t/KSiVlFYkew=="
 
 # ============================================================
-# PROD-Kopie: gestoppt bis die Daten aus TECH kopiert sind, dann autoscaling.enabled=true,
-# wikijs.replicaCount=1, postgresql.replicaCount=1. Nie mit LEEREM Postgres-Volume starten.
+# PROD-Kopie: Postgres-Daten am 2026-09-19 aus TECH kopiert (migrations/README.md).
+# Nie mit LEEREM Postgres-Volume starten.
 # Wiki.js App
 # ============================================================
 wikijs:
   # Nur wirksam solange autoscaling.enabled=false ist (siehe unten) —
   # danach übernimmt der HPA die Replica-Anzahl.
-  replicaCount: 0
+  replicaCount: 1
 
   # Seiten/Assets liegen zwar vollständig in PostgreSQL, aber Wiki.js
   # cached API-Enable-Status/Key-Validierung offenbar pro Pod-Instanz ohne
@@ -33,7 +33,7 @@ wikijs:
   # Pods führten zu inkonsistenten "API Key invalid"/"API disabled"-Fehlern
   # beim wiki-docs-sync. maxReplicas daher vorerst auf 1 gedeckelt.
   autoscaling:
-    enabled: false
+    enabled: true
     minReplicas: 1
     maxReplicas: 1
     targetCPUUtilizationPercentage: 75
@@ -89,7 +89,7 @@ wikijs:
 postgresql:
   # 0 = Postgres gestoppt (Umzug/Wartung). Das Wiki selbst stoppt man mit
   # wikijs.autoscaling.enabled=false + wikijs.replicaCount=0.
-  replicaCount: 0
+  replicaCount: 1
   image:
     repository: postgres
     pullPolicy: IfNotPresent
