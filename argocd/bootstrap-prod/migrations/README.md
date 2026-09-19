@@ -25,27 +25,35 @@ ca. 43 MB.
 3. Probekopie (TECH laeuft, die DB kann dabei inkonsistent sein, es geht nur
    um den Test des Kopierwegs): Job anwenden, Logs lesen, Job loeschen.
 
+4. Generalprobe: `replicaCount: 1` in `argocd/apps/prod/mealie/values.yaml`
+   pushen. PROD-mealie laeuft auf der Probekopie, TECH und DNS bleiben
+   unveraendert (kein Nutzer merkt etwas). Testen ueber `--resolve`:
+   `curl -skI --resolve mealie-native.prod.homeserver:443:192.168.178.99 https://mealie-native.prod.homeserver`
+   (muss antworten) und `--resolve mealie.prod.homeserver:...` (muss mit `302`
+   nach `https://authentik.tech.homeserver/...` umleiten = SSO-Kette steht).
+   Danach vor der Endkopie wieder `replicaCount: 0` pushen.
+
 ### B. Umschalten (kurze Pause fuer die Nutzer)
 
-4. TECH-mealie stoppen **per Git**: `replicaCount: 0` in
+5. TECH-mealie stoppen **per Git**: `replicaCount: 0` in
    `argocd/apps/workloads/mealie/values.yaml`, pushen (ein `kubectl scale`
    wuerde von selfHeal zurueckgesetzt). Warten bis der Pod weg ist.
-5. Endkopie: Job erneut anwenden (leert das Ziel und kopiert neu). In den
+6. Endkopie (PROD-mealie muss dabei auf 0 stehen): Job erneut anwenden (leert das Ziel und kopiert neu). In den
    Logs muss `mealie.db` stehen; danach Job loeschen.
-6. PROD starten: `replicaCount: 1` in `argocd/apps/prod/mealie/values.yaml`,
+7. PROD starten: `replicaCount: 1` in `argocd/apps/prod/mealie/values.yaml`,
    pushen. Test ohne SSO ueber den Bypass-Host:
    `curl -skI --resolve mealie-native.prod.homeserver:443:192.168.178.99 https://mealie-native.prod.homeserver`
    und mit SSO: `--resolve mealie.prod.homeserver:...` muss auf Authentik
    umleiten (`302`, `Location: https://authentik.tech.homeserver/...`).
-7. DNS intern: `mealie.prod.homeserver` und `mealie-native.prod.homeserver` in
+8. DNS intern: `mealie.prod.homeserver` und `mealie-native.prod.homeserver` in
    `dnsmasq_prod_vm_hosts` (ansible/group_vars/all.yml), `make dnsmasq`.
-8. Oeffentlich (nur der eine Host der App): `cloudflared tunnel route dns
+9. Oeffentlich (nur der eine Host der App): `cloudflared tunnel route dns
    homeserver-prod <oeffentlicher-host>`. NIE einen anderen Host als den der
    gerade umgezogenen App eintragen.
 
 ### C. Rueckweg
 
-DNS-Eintraege (Schritte 8 und 7) zuruecknehmen (Cloudflare-Dashboard bzw.
+DNS-Eintraege (Schritte 9 und 8) zuruecknehmen (Cloudflare-Dashboard bzw.
 `dnsmasq_prod_vm_hosts` + `make dnsmasq`), in TECH `replicaCount: 1`. Aenderungen,
 die seit dem Umschalten in PROD entstanden sind, fehlen dann in TECH.
 

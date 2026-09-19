@@ -1,7 +1,9 @@
 ---
-# 0 bis die Daten aus TECH kopiert sind (argocd/bootstrap-prod/migrations/README.md).
-# Ein Start mit leerem Volume wuerde eine neue DB und neue Secrets anlegen.
-replicaCount: 0
+# Generalprobe (argocd/bootstrap-prod/migrations/README.md, Schritt A4): laeuft auf
+# der Probekopie der TECH-Daten, TECH und DNS bleiben unveraendert. Vor der
+# Endkopie wieder auf 0 stellen (der Kopier-Job leert das Zielvolume).
+# Nie mit LEEREM Volume starten - das legt eine neue DB und neue Secrets an.
+replicaCount: 1
 
 image:
   repository: ghcr.io/mealie-recipes/mealie
