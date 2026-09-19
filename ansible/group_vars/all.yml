@@ -87,6 +87,7 @@ dnsmasq_prod_vm_hosts:
   - mealie-native.prod.homeserver
   - mealie.prod.homeserver
   - paperless.prod.homeserver
+  - wiki.prod.homeserver
 
 # ---- Pi-hole (network-wide ad blocking) --------------------
 pihole_dns_nodeport: 30053
