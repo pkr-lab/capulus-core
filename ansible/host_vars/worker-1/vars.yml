@@ -45,7 +45,13 @@ tailscale_auth_key: !vault |
 # auf homeserver), das soll aber NICHT automatisch auch die ENTW-VM auf
 # worker-1 mitbauen. Explizit hier auf false, bis bewusst entschieden.
 libvirt_host_enabled: true
-libvirt_host_configure_bridge: true 
+libvirt_host_configure_bridge: true
+# Explizit gepinnt statt aus den Default-Route-Facts: Bei einem Re-Run nach
+# fehlgeschlagenem/teilweisem Bridge-Setup liefern die Facts br0 bzw. die
+# DHCP-Adresse (.67) - dann wuerde die Bridge sich selbst enslaven bzw. die
+# falsche IP bekommen (Vorfall 2026-09-19).
+libvirt_host_bridge_interface: "enp2s0"
+libvirt_host_static_ip: "192.168.178.96"
 
 libvirt_host_vms:
   - name: entw-vm
