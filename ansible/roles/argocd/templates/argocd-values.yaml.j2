@@ -9,6 +9,48 @@ server:
     nodePortHttps: 30443
 
 configs:
+  cm:
+    # Eigene DaemonSet-Gesundheitspruefung (siehe Kommentar im Skript): node-exporter ausgenommen.
+    resource.customizations.health.apps_DaemonSet: |
+      local hs = {}
+      -- node-exporter laeuft absichtlich auch auf den per Wake-on-LAN geschalteten Workern (oft aus):
+      -- der DaemonSet ist dauerhaft "nicht vollstaendig bereit" und blockierte damit jeden Sync von `monitoring`
+      -- (Operation lief 4 Tage lang, 2026-09-15 bis 2026-09-19). Gesundheit hier ignorieren.
+      if obj.metadata.name == "monitoring-prometheus-node-exporter" then
+        hs.status = "Healthy"
+        hs.message = "Gesundheit ignoriert: laeuft absichtlich auch auf ausgeschalteten Workern"
+        return hs
+      end
+      -- Standardverhalten von ArgoCD fuer alle anderen DaemonSets
+      if obj.status == nil then
+        hs.status = "Progressing"
+        hs.message = "Waiting for status"
+        return hs
+      end
+      if obj.metadata.generation ~= nil and obj.status.observedGeneration ~= nil and obj.metadata.generation > obj.status.observedGeneration then
+        hs.status = "Progressing"
+        hs.message = "Waiting for rollout to finish: observed daemon set generation less than desired generation"
+        return hs
+      end
+      local desired = obj.status.desiredNumberScheduled or 0
+      if obj.spec ~= nil and obj.spec.updateStrategy ~= nil and obj.spec.updateStrategy.type == "OnDelete" then
+        hs.status = "Healthy"
+        hs.message = string.format("%d of %d updated pods are available", obj.status.numberAvailable or 0, desired)
+        return hs
+      end
+      if (obj.status.updatedNumberScheduled or 0) < desired then
+        hs.status = "Progressing"
+        hs.message = string.format("Waiting for daemon set %s rollout to finish: %d out of %d new pods have been updated...", obj.metadata.name, obj.status.updatedNumberScheduled or 0, desired)
+        return hs
+      end
+      if (obj.status.numberAvailable or 0) < desired then
+        hs.status = "Progressing"
+        hs.message = string.format("Waiting for daemon set %s rollout to finish: %d of %d updated pods are available...", obj.metadata.name, obj.status.numberAvailable or 0, desired)
+        return hs
+      end
+      hs.status = "Healthy"
+      hs.message = string.format("%d of %d updated pods are available", obj.status.numberAvailable or 0, desired)
+      return hs
   params:
     server.insecure: "{{ argocd_server_insecure | lower }}"
 
