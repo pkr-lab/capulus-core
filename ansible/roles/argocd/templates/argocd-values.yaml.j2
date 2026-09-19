@@ -21,7 +21,7 @@ configs:
         hs.message = "Gesundheit ignoriert: laeuft absichtlich auch auf ausgeschalteten Workern"
         return hs
       end
-      -- Standardverhalten von ArgoCD fuer alle anderen DaemonSets
+      -- Standardverhalten von ArgoCD fuer alle anderen DaemonSets (kein string.format: die Lua-Sandbox von ArgoCD hat keine string-Bibliothek)
       if obj.status == nil then
         hs.status = "Progressing"
         hs.message = "Waiting for status"
@@ -35,21 +35,21 @@ configs:
       local desired = obj.status.desiredNumberScheduled or 0
       if obj.spec ~= nil and obj.spec.updateStrategy ~= nil and obj.spec.updateStrategy.type == "OnDelete" then
         hs.status = "Healthy"
-        hs.message = string.format("%d of %d updated pods are available", obj.status.numberAvailable or 0, desired)
+        hs.message = tostring(obj.status.numberAvailable or 0) .. " of " .. tostring(desired) .. " updated pods are available"
         return hs
       end
       if (obj.status.updatedNumberScheduled or 0) < desired then
         hs.status = "Progressing"
-        hs.message = string.format("Waiting for daemon set %s rollout to finish: %d out of %d new pods have been updated...", obj.metadata.name, obj.status.updatedNumberScheduled or 0, desired)
+        hs.message = "Waiting for daemon set " .. obj.metadata.name .. " rollout to finish: " .. tostring(obj.status.updatedNumberScheduled or 0) .. " out of " .. tostring(desired) .. " new pods have been updated..."
         return hs
       end
       if (obj.status.numberAvailable or 0) < desired then
         hs.status = "Progressing"
-        hs.message = string.format("Waiting for daemon set %s rollout to finish: %d of %d updated pods are available...", obj.metadata.name, obj.status.numberAvailable or 0, desired)
+        hs.message = "Waiting for daemon set " .. obj.metadata.name .. " rollout to finish: " .. tostring(obj.status.numberAvailable or 0) .. " of " .. tostring(desired) .. " updated pods are available..."
         return hs
       end
       hs.status = "Healthy"
-      hs.message = string.format("%d of %d updated pods are available", obj.status.numberAvailable or 0, desired)
+      hs.message = tostring(obj.status.numberAvailable or 0) .. " of " .. tostring(desired) .. " updated pods are available"
       return hs
   params:
     server.insecure: "{{ argocd_server_insecure | lower }}"
