@@ -698,14 +698,38 @@ hier ist reversibel.
       **verallgemeinert und für `worker-1` fertig konfiguriert**
       (2026-09-18: Facts-basiert statt homeserver-spezifischer
       Variablen, `entw-vm`-Eintrag in
-      `host_vars/worker-1/vars.yml`, `libvirt_host_enabled: false`
-      bewusst separat von homeserver gegated). Noch offen: `worker-1`s
-      tatsächliche lokale Diskkapazität gegen die geplanten 60 GiB
-      prüfen (nicht verifiziert), dann `libvirt_host_enabled: true` +
-      `make worker-1-libvirt-host` | 0.2 |
+      `host_vars/worker-1/vars.yml`, bewusst separat von homeserver
+      gegated). Disk geprüft (2026-09-18): Root-LV hatte nur 31 GiB frei,
+      VG `ubuntu-vg-1` aber 58 GiB unbelegt — per `lvextend -r` auf 87 GiB
+      vergrößert (58 GiB frei), VM-Disk bleibt bei 20 GiB (Copy-on-Write,
+      bei Bedarf später vergrößerbar). `libvirt_host_enabled: true` +
+      `libvirt_host_configure_bridge: true` gesetzt. Bridge + `entw-vm`
+      (192.168.178.100, 3 vCPU / 12 GiB / 20 GiB) laufen. **Stolperfalle
+      (2026-09-19):** `libvirt_host_bridge_interface` /
+      `libvirt_host_static_ip` kommen standardmäßig aus den
+      Default-Route-Facts. Bei einem Re-Run nach Teil-Setup lieferten sie
+      `br0` bzw. die DHCP-Adresse (.67) → Netplan mit `br0` als eigenem
+      Port, Bridge kam nie hoch, worker-1 war nur per DHCP erreichbar. Für
+      worker-1 jetzt in `host_vars` auf `enp2s0` / `192.168.178.96`
+      gepinnt, die Rolle bricht per `assert` ab, wenn Interface = Bridge.
+      Recovery: Konsole/SSH auf die DHCP-IP, `/etc/netplan/99-libvirt-bridge.yaml`
+      korrigieren, `sudo netplan try`. **k3s + ArgoCD
+      in der VM:** `ansible/entw.yml` / `make entw` (Rollen `common`,
+      `k3s`, `argocd`), Vars in `host_vars/entw-vm/vars.yml`: eigenständiger
+      k3s-Server, eigene CIDRs `10.44.0.0/16` / `10.45.0.0/16`, ArgoCD folgt
+      dem Branch `entw` und synchronisiert nur `sealed-secrets`, `demo-app`,
+      `example-whoami` (neue Variable `argocd_apps_from_lists`, Default
+      `false` = Hauptcluster unverändert). Die VM ist bewusst **nicht** im
+      Tailnet (verwundbare Trainingsumgebung, kein Tailscale-Schlüssel in
+      der VM); von außen erreichbar über den bestehenden Subnet-Router
+      `homeserver` (192.168.178.0/24). **Erledigt (2026-09-19):** Branch `entw` gepusht, `make entw`
+      lief durch — `entw-vm` ist `Ready`, `demo-app`, `example-whoami` und
+      `sealed-secrets` sind `Synced`/`Healthy`. Die VM selbst löst
+      `*.dev.homeserver` nicht auf (Resolver 1.1.1.1/8.8.8.8, kennt den
+      dnsmasq nicht) — für Tests `curl --resolve` nutzen | 0.2 |
 | 1.3 | **Tailscale-ACL scharf schalten** für `tag:entw-node` — keine
       Standardroute zu TECH/PROD, siehe Baustein 2 | 0.9, 1.2 |
-| 1.4 | **DNS**: `*.dev.homeserver` → neue ENTW-IP (Baustein 3) |1.2 |
+| 1.4 | **DNS**: `*.dev.homeserver` → neue ENTW-IP (Baustein 3) — **umgesetzt (2026-09-18)**: `address=/dev.homeserver/{{ entw_vm_ip }}` in der dnsmasq-Rolle, `entw_vm_ip` in `group_vars/all.yml`. Ausrollen: `make dnsmasq`. Test: `dig +short whoami.dev.homeserver @192.168.178.94` → `192.168.178.100`. Die Ingress-Hosts der Apps auf dem Branch `entw` müssen dazu auf `*.dev.homeserver` umgestellt werden (Hauptbranch bleibt `*.prod.homeserver`). **Verifiziert (2026-09-19):** `dig` gegen `.94` liefert `.100`, Ingress-Hosts `demo.dev.homeserver` / `whoami.dev.homeserver` stehen, `curl --resolve` gegen `.100` liefert HTTP 200 über Traefik (Standardzertifikat, bis Phase 2 / 0.3) |1.2 |
 | 1.5 | **`cluster_power_manager` um expliziten ENTW-Wach-Trigger
       erweitern** (statt nur lastbasiert) | 1.2 |
 | 1.6 | **Testweise Apps spiegeln** (`demo-app`, `example-whoami`) — Sync
@@ -725,10 +749,10 @@ abgeschlossen und verifiziert sind.
 |---|---|---|
 | 2.1 | **Nutzer-/Daten-Inventar (0.6) gegen Live-Stand abgleichen** — letzter Check vor dem Rebuild | 0.6 |
 | 2.2 | **Wartungsfenster kommunizieren** (Familie/Verein) | — |
-| 2.3 | **libvirt/QEMU + Bridge-Netzwerk auf `homeserver` einrichten** (neue Ansible-Rolle) | 0.3 |
-| 2.4 | **PROD-VM anlegen** (6 vCPU / 24 GiB, Ubuntu Server 26.04, eigene Bridge-IP `.99`), Ansible-Host wie `worker-0`/`worker-1` in `hosts.yml` aufnehmen | 2.3 |
-| 2.5 | **k3s in der PROD-VM installieren** — bestehende `k3s`-Rolle unverändert, kein Parametrisieren nötig (Baustein 5) | 2.4 |
-| 2.6 | **`nas-storage`/`immich-storage` in TECH *und* PROD-VM deployen** (Baustein 4) | 2.5 |
+| 2.3 | **libvirt/QEMU + Bridge-Netzwerk auf `homeserver` einrichten** (neue Ansible-Rolle) — **✅ erledigt (2026-09-19)**: `br0` trägt `.94`, `eno1` ohne IP, Default-Route über `br0`, `homeserver` `Ready`. Bridge-Interface/IP in `host_vars/homeserver` gepinnt (siehe Stolperfalle bei 1.2) | 0.3 |
+| 2.4 | **PROD-VM anlegen** (6 vCPU / 24 GiB, Ubuntu Server 26.04, eigene Bridge-IP `.99`), Ansible-Host wie `worker-0`/`worker-1` in `hosts.yml` aufnehmen — **✅ erledigt (2026-09-19)**: `prod-vm` läuft (`virsh`, Autostart an, Ping `.99` ok), Gruppe `prod` in `hosts.yml` | 2.3 |
+| 2.5 | **k3s in der PROD-VM installieren** — bestehende `k3s`-Rolle unverändert, kein Parametrisieren nötig (Baustein 5). **Stolperfalle (2026-09-19):** LAN → `prod-vm` lief bei TCP/22 ins Timeout, Ping ging. Ursache: UFW auf `homeserver` hat `deny (routed)`, und mit `br_netfilter` (k3s) laufen Bridge-Pakete durch die FORWARD-Kette. Fix: `ufw route allow in on br0 out on br0`, jetzt als Task in der `libvirt_host`-Rolle. **Vorbereitet (2026-09-19):** `ansible/prod.yml` (`common` + `k3s`, kein ArgoCD — der TECH-Hub registriert PROD in 3.1), `host_vars/prod-vm/vars.yml` mit eigenen CIDRs `10.46.0.0/16` / `10.47.0.0/16`, `make prod` / `make prod-check`. **Erledigt (2026-09-19):** `make prod` lief durch, `prod-vm` ist `Ready` (k3s v1.36.4, control-plane). Tailscale/CrowdSec in der VM sind bewusst noch nicht enthalten | 2.4 |
+| 2.6 | **`nas-storage`/`immich-storage` in TECH *und* PROD-VM deployen** (Baustein 4) — **Vorbereitet (2026-09-19):** NFS von der PROD-VM aus erreichbar (`showmount -e 192.168.178.97`). Statt des Ordner-Umbaus auf `argocd/apps/{tech,prod}/` (würde alte Pfade prunen, siehe 0.2) ein **zusätzliches, handgeschriebenes ApplicationSet** `home-server-apps-prod` in `argocd/bootstrap-prod/` (liest nur `argocd/apps/prod/*`, Ziel-Cluster `prod`, Application-Namen `prod-<app>`), plus AppProject `prod`. Apps in `argocd/apps/prod/`: `sealed-secrets`, `nas-storage`, `immich-storage` (Kopien der TECH-Manifeste). Die bestehenden ApplicationSets bleiben unverändert. **Offen:** Cluster `prod` im Hub registrieren (Anleitung in `argocd/bootstrap-prod/README.md`, zieht 3.1 vor), Push, dann `kubectl apply` von AppProject + ApplicationSet | 2.5 |
 | 2.7 | **Re-Sealing aller SealedSecrets** für TECH- und PROD-Kontext | 2.5 |
 | 2.8 | **Interne CA/cert-manager gemäß 0.3 auf beide Cluster anwenden** | 0.3, 2.5 |
 
@@ -790,10 +814,27 @@ und PROD existieren als eigene Sync-Ziele.
       `libvirt_host_configure_bridge: false`), Pro-VM-Provisionierung via
       `virt-install` + cloud-init. Master-Schalter
       `libvirt_host_enabled: false` in `group_vars/all.yml`, dazu
-      `make libvirt-host`/`make libvirt-bridge`-Targets. **Noch nicht
-      gegen echte Hardware getestet** — Bridge-Task ist der riskanteste
-      Teil (kann `homeserver` bei einem Fehler vom Netz trennen, kein
-      Fallback-Zugriff), deshalb bewusst nicht automatisch scharf.
+      `make libvirt-host`/`make libvirt-bridge`-Targets.
+- [x] **Gegen echte Hardware getestet (2026-09-18), zwei echte Bugs
+      gefunden + gefixt:**
+      1. `qemu-kvm` ist auf Ubuntu 26.04 ("resolute") ein virtuelles
+         Paket geworden (aufgeteilt in `qemu-system-x86`/`-hwe`) — apt
+         konnte es nicht mehr direkt installieren. Auf
+         `qemu-system-x86` (passend zum generic-Kernel) umgestellt.
+      2. **Echter, ungeplanter DNS-Ausfall fürs ganze LAN:**
+         `libvirt-daemon-system` legt beim Installieren automatisch
+         `/etc/dnsmasq.d/libvirt-daemon` (`bind-interfaces`) an — das
+         kollidierte mit dem bewusst auf `bind-dynamic` gestellten
+         System-`dnsmasq` (für automatisches Tailscale-IP-Pickup) und
+         brachte den Dienst komplett zum Absturz
+         ("cannot set --bind-interfaces and --bind-dynamic"). Live auf
+         `homeserver` behoben (Snippet entfernt, Dienst neu gestartet)
+         **und** als eigener, idempotenter Task in die Rolle eingebaut,
+         damit das bei jedem künftigen Lauf automatisch mit entschärft
+         wird, nicht nur einmalig manuell gefixt bleibt.
+      Bridge-Task selbst (`libvirt_host_configure_bridge`) weiterhin
+      nicht scharf getestet — bleibt der riskanteste, bewusst separat
+      gegatete Teil.
       IP-Konflikt korrigiert: `.98` war schon `infotafel` belegt, PROD-VM
       bekommt `.99`.
 - [x] **PROD-VM-Sizing festgelegt** (6 vCPU / 24 GiB, jetzt in
@@ -802,7 +843,7 @@ und PROD existieren als eigene Sync-Ziele.
 - [x] **`libvirt_host`-Rolle für `worker-1` verallgemeinert** (2026-09-18)
       — Netzwerk-Variablen Facts-basiert (`ansible_default_ipv4.*`)
       statt an homeserver-spezifische `network_*`-Variablen gekoppelt,
-      ENTW-VM-Sizing 3 vCPU / 12 GiB / 60 GiB Disk in
+      ENTW-VM-Sizing 3 vCPU / 12 GiB / 20 GiB Disk in
       `host_vars/worker-1/vars.yml`, Rolle in `worker-1.yml` eingehängt,
       `make worker-1-libvirt-host`/`make worker-1-libvirt-bridge`.
 - [ ] **Achtung — Entdeckt beim Umbau:** `libvirt_host_enabled` steht

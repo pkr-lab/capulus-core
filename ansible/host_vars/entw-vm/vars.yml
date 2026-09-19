@@ -1,0 +1,36 @@
+---
+# ENTW-Cluster: eigenstaendiger k3s-Server in der KVM-VM auf worker-1
+# (docs/4-planung/40080 Baustein 5, Phase 1.2). Bewusst NICHT im Tailnet
+# (Entscheidung 2026-09-18): die VM ist absichtlich verwundbar (Trainings-/
+# Pentest-Umgebung) und soll keinen Tailscale-Schluessel tragen. Von
+# aussen erreichbar ueber den bestehenden Subnet-Router homeserver
+# (192.168.178.0/24) - ACL kann auf dst 192.168.178.100 beschraenkt werden.
+hostname: entw-vm
+timezone: Europe/Berlin
+
+# cloud-init hat die statische IP bereits gesetzt (libvirt_host-Rolle).
+network_configure_static_ip: false
+
+# ---- k3s: eigene CIDRs, kein Overlap mit dem Hauptcluster (10.42/10.43) --
+k3s_pod_cidr: "10.44.0.0/16"
+k3s_service_cidr: "10.45.0.0/16"
+k3s_server_ip: "192.168.178.100"
+# Kein Audit-Log / kein RAM-Schutz-Overhead fuer den Wegwerf-Cluster; die
+# VM hat 12 GiB, das Hauptcluster-Tuning (system-reserved 1Gi etc.) passt nicht.
+k3s_audit_log_enabled: false
+k3s_kubelet_memory_protection_enabled: false
+k3s_secrets_encryption_enabled: false
+
+# ---- ArgoCD: eigene Instanz, Quelle = Branch `entw` ----------------------
+argocd_repo_revision: entw
+argocd_apps_from_lists: true
+argocd_platform_apps:
+  - sealed-secrets
+argocd_workloads_apps:
+  - demo-app
+  - example-whoami
+argocd_network_policy_refined_namespaces:
+  - example-whoami
+  - sealed-secrets
+argocd_network_policy_excluded_apps: []
+argocd_network_policy_extra_ingress: {}

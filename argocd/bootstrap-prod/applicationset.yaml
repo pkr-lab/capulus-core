@@ -1,0 +1,57 @@
+# ApplicationSet fuer den PROD-Cluster: liest ausschliesslich
+# argocd/apps/prod/* und deployt auf den im Hub registrierten Cluster "prod".
+# Handgeschrieben, unabhaengig von home-server-apps-platform/-workloads
+# (die unveraendert auf TECH zeigen). Einmalig im TECH-Cluster anwenden,
+# NACHDEM der Cluster "prod" registriert ist (bootstrap-prod/README.md):
+#   kubectl apply -f argocd/bootstrap-prod/appproject.yaml
+#   kubectl apply -f argocd/bootstrap-prod/applicationset.yaml
+#
+# Application-Namen tragen das Praefix "prod-", damit sie nicht mit den
+# gleichnamigen TECH-Applications (nas-storage, sealed-secrets, ...)
+# kollidieren.
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: home-server-apps-prod
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: "https://github.com/pkr-lab/capulus-core.git"
+        revision: "main"
+        directories:
+          - path: "argocd/apps/prod/*"
+  template:
+    metadata:
+      name: "prod-{{.path.basename}}"
+    spec:
+      project: prod
+      source:
+        repoURL: "https://github.com/pkr-lab/capulus-core.git"
+        targetRevision: "main"
+        path: "{{.path.path}}"
+      destination:
+        name: prod
+        namespace: "{{.path.basename}}"
+      ignoreDifferences:
+        - group: bitnami.com
+          kind: SealedSecret
+          jsonPointers:
+            - /status
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        retry:
+          limit: 5
+          backoff:
+            duration: 10s
+            factor: 2
+            maxDuration: 5m
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+          - SkipDryRunOnMissingResource=true
