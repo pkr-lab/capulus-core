@@ -1,0 +1,26 @@
+---
+# ============================================================
+# PROD-Playbook — provisioniert die PROD-VM (192.168.178.99), die per
+# `make libvirt-host` auf homeserver angelegt wurde
+# (docs/4-planung/40080-multi-cluster-entw-prod-tech.md, Phase 2.5).
+#
+# Eigenstaendiger k3s-Server (KEIN Beitritt zum Hauptcluster/TECH). Kein
+# ArgoCD in der VM: der Hub in TECH registriert PROD spaeter (Phase 3.1).
+#
+# Noch NICHT enthalten (eigene Schritte, siehe Plan): tailscale/crowdsec,
+# nas-storage/immich-storage (2.6), Re-Sealing (2.7), CA/cert-manager (2.8).
+#
+# Run with:
+#   make prod
+# Dry-run:
+#   make prod-check
+# ============================================================
+
+- name: Deploy PROD cluster (k3s) in the homeserver KVM VM
+  hosts: prod-vm
+  become: true
+  roles:
+    - role: common
+      tags: [common, base]
+    - role: k3s
+      tags: [k3s, kubernetes]

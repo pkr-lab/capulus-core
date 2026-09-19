@@ -722,11 +722,14 @@ hier ist reversibel.
       `false` = Hauptcluster unverändert). Die VM ist bewusst **nicht** im
       Tailnet (verwundbare Trainingsumgebung, kein Tailscale-Schlüssel in
       der VM); von außen erreichbar über den bestehenden Subnet-Router
-      `homeserver` (192.168.178.0/24). Offen: Branch `entw` pushen, dann
-      `make entw` | 0.2 |
+      `homeserver` (192.168.178.0/24). **Erledigt (2026-09-19):** Branch `entw` gepusht, `make entw`
+      lief durch — `entw-vm` ist `Ready`, `demo-app`, `example-whoami` und
+      `sealed-secrets` sind `Synced`/`Healthy`. Die VM selbst löst
+      `*.dev.homeserver` nicht auf (Resolver 1.1.1.1/8.8.8.8, kennt den
+      dnsmasq nicht) — für Tests `curl --resolve` nutzen | 0.2 |
 | 1.3 | **Tailscale-ACL scharf schalten** für `tag:entw-node` — keine
       Standardroute zu TECH/PROD, siehe Baustein 2 | 0.9, 1.2 |
-| 1.4 | **DNS**: `*.dev.homeserver` → neue ENTW-IP (Baustein 3) — **umgesetzt (2026-09-18)**: `address=/dev.homeserver/{{ entw_vm_ip }}` in der dnsmasq-Rolle, `entw_vm_ip` in `group_vars/all.yml`. Ausrollen: `make dnsmasq`. Test: `dig +short whoami.dev.homeserver @192.168.178.94` → `192.168.178.100`. Die Ingress-Hosts der Apps auf dem Branch `entw` müssen dazu auf `*.dev.homeserver` umgestellt werden (Hauptbranch bleibt `*.prod.homeserver`) |1.2 |
+| 1.4 | **DNS**: `*.dev.homeserver` → neue ENTW-IP (Baustein 3) — **umgesetzt (2026-09-18)**: `address=/dev.homeserver/{{ entw_vm_ip }}` in der dnsmasq-Rolle, `entw_vm_ip` in `group_vars/all.yml`. Ausrollen: `make dnsmasq`. Test: `dig +short whoami.dev.homeserver @192.168.178.94` → `192.168.178.100`. Die Ingress-Hosts der Apps auf dem Branch `entw` müssen dazu auf `*.dev.homeserver` umgestellt werden (Hauptbranch bleibt `*.prod.homeserver`). **Verifiziert (2026-09-19):** `dig` gegen `.94` liefert `.100`, Ingress-Hosts `demo.dev.homeserver` / `whoami.dev.homeserver` stehen, `curl --resolve` gegen `.100` liefert HTTP 200 über Traefik (Standardzertifikat, bis Phase 2 / 0.3) |1.2 |
 | 1.5 | **`cluster_power_manager` um expliziten ENTW-Wach-Trigger
       erweitern** (statt nur lastbasiert) | 1.2 |
 | 1.6 | **Testweise Apps spiegeln** (`demo-app`, `example-whoami`) — Sync
@@ -746,10 +749,10 @@ abgeschlossen und verifiziert sind.
 |---|---|---|
 | 2.1 | **Nutzer-/Daten-Inventar (0.6) gegen Live-Stand abgleichen** — letzter Check vor dem Rebuild | 0.6 |
 | 2.2 | **Wartungsfenster kommunizieren** (Familie/Verein) | — |
-| 2.3 | **libvirt/QEMU + Bridge-Netzwerk auf `homeserver` einrichten** (neue Ansible-Rolle) | 0.3 |
-| 2.4 | **PROD-VM anlegen** (6 vCPU / 24 GiB, Ubuntu Server 26.04, eigene Bridge-IP `.99`), Ansible-Host wie `worker-0`/`worker-1` in `hosts.yml` aufnehmen | 2.3 |
-| 2.5 | **k3s in der PROD-VM installieren** — bestehende `k3s`-Rolle unverändert, kein Parametrisieren nötig (Baustein 5) | 2.4 |
-| 2.6 | **`nas-storage`/`immich-storage` in TECH *und* PROD-VM deployen** (Baustein 4) | 2.5 |
+| 2.3 | **libvirt/QEMU + Bridge-Netzwerk auf `homeserver` einrichten** (neue Ansible-Rolle) — **✅ erledigt (2026-09-19)**: `br0` trägt `.94`, `eno1` ohne IP, Default-Route über `br0`, `homeserver` `Ready`. Bridge-Interface/IP in `host_vars/homeserver` gepinnt (siehe Stolperfalle bei 1.2) | 0.3 |
+| 2.4 | **PROD-VM anlegen** (6 vCPU / 24 GiB, Ubuntu Server 26.04, eigene Bridge-IP `.99`), Ansible-Host wie `worker-0`/`worker-1` in `hosts.yml` aufnehmen — **✅ erledigt (2026-09-19)**: `prod-vm` läuft (`virsh`, Autostart an, Ping `.99` ok), Gruppe `prod` in `hosts.yml` | 2.3 |
+| 2.5 | **k3s in der PROD-VM installieren** — bestehende `k3s`-Rolle unverändert, kein Parametrisieren nötig (Baustein 5). **Stolperfalle (2026-09-19):** LAN → `prod-vm` lief bei TCP/22 ins Timeout, Ping ging. Ursache: UFW auf `homeserver` hat `deny (routed)`, und mit `br_netfilter` (k3s) laufen Bridge-Pakete durch die FORWARD-Kette. Fix: `ufw route allow in on br0 out on br0`, jetzt als Task in der `libvirt_host`-Rolle. **Vorbereitet (2026-09-19):** `ansible/prod.yml` (`common` + `k3s`, kein ArgoCD — der TECH-Hub registriert PROD in 3.1), `host_vars/prod-vm/vars.yml` mit eigenen CIDRs `10.46.0.0/16` / `10.47.0.0/16`, `make prod` / `make prod-check`. **Erledigt (2026-09-19):** `make prod` lief durch, `prod-vm` ist `Ready` (k3s v1.36.4, control-plane). Tailscale/CrowdSec in der VM sind bewusst noch nicht enthalten | 2.4 |
+| 2.6 | **`nas-storage`/`immich-storage` in TECH *und* PROD-VM deployen** (Baustein 4) — **Vorbereitet (2026-09-19):** NFS von der PROD-VM aus erreichbar (`showmount -e 192.168.178.97`). Statt des Ordner-Umbaus auf `argocd/apps/{tech,prod}/` (würde alte Pfade prunen, siehe 0.2) ein **zusätzliches, handgeschriebenes ApplicationSet** `home-server-apps-prod` in `argocd/bootstrap-prod/` (liest nur `argocd/apps/prod/*`, Ziel-Cluster `prod`, Application-Namen `prod-<app>`), plus AppProject `prod`. Apps in `argocd/apps/prod/`: `sealed-secrets`, `nas-storage`, `immich-storage` (Kopien der TECH-Manifeste). Die bestehenden ApplicationSets bleiben unverändert. **Offen:** Cluster `prod` im Hub registrieren (Anleitung in `argocd/bootstrap-prod/README.md`, zieht 3.1 vor), Push, dann `kubectl apply` von AppProject + ApplicationSet | 2.5 |
 | 2.7 | **Re-Sealing aller SealedSecrets** für TECH- und PROD-Kontext | 2.5 |
 | 2.8 | **Interne CA/cert-manager gemäß 0.3 auf beide Cluster anwenden** | 0.3, 2.5 |
 

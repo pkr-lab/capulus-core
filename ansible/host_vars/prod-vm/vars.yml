@@ -1,0 +1,17 @@
+---
+# PROD-Cluster: eigenstaendiger k3s-Server in der KVM-VM auf homeserver
+# (docs/4-planung/40080 Baustein 5, Phase 2.4/2.5). Die VM-Definition
+# (6 vCPU / 24 GiB / 100 GiB, IP .99) steht in host_vars/homeserver/vars.yml.
+hostname: prod-vm
+timezone: Europe/Berlin
+
+# cloud-init hat die statische IP bereits gesetzt (libvirt_host-Rolle).
+network_configure_static_ip: false
+
+# ---- k3s: eigene CIDRs, kein Overlap mit TECH (10.42/10.43) und ENTW
+# (10.44/10.45). ---------------------------------------------------------
+k3s_pod_cidr: "10.46.0.0/16"
+k3s_service_cidr: "10.47.0.0/16"
+k3s_server_ip: "192.168.178.99"
+# Audit-Log und Secrets-Verschluesselung bleiben auf den Rollen-Defaults
+# (PROD traegt die echten Familien-/Vereinsdaten).

@@ -135,6 +135,24 @@
     - name: SSH-Verbindung zuruecksetzen
       ansible.builtin.meta: reset_connection
 
+    # Mit geladenem br_netfilter (k3s/Flannel) laufen Bridge-Pakete durch
+    # iptables. UFW verwirft geroutete Pakete standardmaessig ("deny
+    # (routed)") - dann erreicht das LAN die VM nur per ICMP, TCP laeuft
+    # ins Timeout (Vorfall prod-vm, 2026-09-19).
+    - name: UFW installiert?
+      ansible.builtin.stat:
+        path: /usr/sbin/ufw
+      register: libvirt_host_ufw_binary
+
+    - name: UFW - Verkehr innerhalb der Bridge (LAN <-> VMs) erlauben
+      community.general.ufw:
+        rule: allow
+        route: true
+        interface_in: "{{ libvirt_host_bridge_name }}"
+        interface_out: "{{ libvirt_host_bridge_name }}"
+        comment: "libvirt bridge LAN <-> VM"
+      when: libvirt_host_ufw_binary.stat.exists
+
 # ---- Storage-Pool + Basis-Image ---------------------------------------
 - name: Storage-Pool-Verzeichnis anlegen
   ansible.builtin.file:
