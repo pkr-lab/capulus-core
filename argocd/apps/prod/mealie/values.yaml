@@ -44,8 +44,14 @@ ingress:
   # Authelia siehe docs/4-planung/40070-authentik-sso-iac.md) — gilt für
   # beide Hosts unten. Nur der Nutzer "rdn" hat Zugriff (Policy-Blueprint
   # argocd/apps/platform/authentik/blueprints/apps/mealie.yaml).
-  annotations:
-    traefik.ingress.kubernetes.io/router.middlewares: "authentik-authentik@kubernetescrd"
+  #
+  # PROD-KOPIE: die Authentik-Middleware ist hier BEWUSST ausgebaut - PROD hat
+  # noch keinen Authentik-Outpost (argocd/bootstrap-prod/migrations/sso-outpost/).
+  # Ohne SSO schuetzt nur Mealies eigene Anmeldung (ALLOW_SIGNUP=false), die
+  # Zugriffsbeschraenkung ueber die Authentik-Policy (admins / mealie-user)
+  # entfaellt. Zum Wiedereinbau die Zeile unten zurueck in `annotations` setzen:
+  #   traefik.ingress.kubernetes.io/router.middlewares: "authentik-authentik@kubernetescrd"
+  annotations: {}
   hosts:
     - host: mealie.prod.homeserver
       paths:
