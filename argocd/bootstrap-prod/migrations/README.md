@@ -8,6 +8,13 @@ gelesen, das alte NFS-Verzeichnis (StorageClass `nas`, `reclaimPolicy: Retain`)
 bleibt unangetastet und ist der Rueckfall. Nie TECH und PROD gleichzeitig auf
 dieselben Daten schreiben lassen.
 
+## Weitere Apps
+
+Je App ein eigener Kopier-Job in diesem Ordner (`<app>-data-copy-job.yaml`), gleicher
+Ablauf wie bei mealie (unten). Bisher: `mealie-data-copy-job.yaml` (umgezogen),
+`paperless-ngx-data-copy-job.yaml` (4 Volumes). Push 1 = TECH und PROD auf
+`replicaCount: 0`, Endkopie, Push 2 = PROD auf `1` plus Hosts in `dnsmasq_prod_vm_hosts`.
+
 ## mealie (Vorlage fuer weitere `nas`-Apps)
 
 Alte Daten: `192.168.178.97:/volume1/k8s-storage/mealie-mealie-data-pvc-<uid>`
