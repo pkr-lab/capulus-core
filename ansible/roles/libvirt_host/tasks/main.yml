@@ -77,6 +77,18 @@
     - libvirt_host_configure_bridge | bool
   tags: [libvirt-bridge]
   block:
+    # Vor dem Loeschen der alten Netplan-Configs abbrechen: Auto-erkannte
+    # Facts zeigen nach einem Teil-Setup auf br0 (Bridge enslavet sich selbst).
+    - name: Sicherstellen, dass die Bridge-Parameter plausibel sind
+      ansible.builtin.assert:
+        that:
+          - libvirt_host_bridge_interface != libvirt_host_bridge_name
+        fail_msg: >-
+          libvirt_host_bridge_interface ({{ libvirt_host_bridge_interface }})
+          darf nicht die Bridge ({{ libvirt_host_bridge_name }}) selbst sein.
+          In host_vars/<host>/vars.yml libvirt_host_bridge_interface und
+          libvirt_host_static_ip explizit setzen.
+
     - name: Vorhandene Netplan-Configs finden
       ansible.builtin.find:
         paths: /etc/netplan
