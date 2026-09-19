@@ -27,6 +27,10 @@ spec:
       namespace: immich-storage
     - name: prod
       namespace: demo-app
+    - name: prod
+      namespace: example-whoami
+    - name: prod
+      namespace: tinyteller
     # cert-manager + Traefik-TLSStore (Phase 2.8): Certificate/TLSStore liegen
     # in kube-system, die Apps selbst in eigenen Namespaces.
     - name: prod
