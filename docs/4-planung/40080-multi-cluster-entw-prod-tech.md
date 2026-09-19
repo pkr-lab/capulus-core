@@ -704,7 +704,16 @@ hier ist reversibel.
       vergrößert (58 GiB frei), VM-Disk bleibt bei 20 GiB (Copy-on-Write,
       bei Bedarf später vergrößerbar). `libvirt_host_enabled: true` +
       `libvirt_host_configure_bridge: true` gesetzt. Bridge + `entw-vm`
-      (192.168.178.100, 3 vCPU / 12 GiB / 20 GiB) laufen. **k3s + ArgoCD
+      (192.168.178.100, 3 vCPU / 12 GiB / 20 GiB) laufen. **Stolperfalle
+      (2026-09-19):** `libvirt_host_bridge_interface` /
+      `libvirt_host_static_ip` kommen standardmäßig aus den
+      Default-Route-Facts. Bei einem Re-Run nach Teil-Setup lieferten sie
+      `br0` bzw. die DHCP-Adresse (.67) → Netplan mit `br0` als eigenem
+      Port, Bridge kam nie hoch, worker-1 war nur per DHCP erreichbar. Für
+      worker-1 jetzt in `host_vars` auf `enp2s0` / `192.168.178.96`
+      gepinnt, die Rolle bricht per `assert` ab, wenn Interface = Bridge.
+      Recovery: Konsole/SSH auf die DHCP-IP, `/etc/netplan/99-libvirt-bridge.yaml`
+      korrigieren, `sudo netplan try`. **k3s + ArgoCD
       in der VM:** `ansible/entw.yml` / `make entw` (Rollen `common`,
       `k3s`, `argocd`), Vars in `host_vars/entw-vm/vars.yml`: eigenständiger
       k3s-Server, eigene CIDRs `10.44.0.0/16` / `10.45.0.0/16`, ArgoCD folgt
