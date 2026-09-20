@@ -2,7 +2,7 @@
 
 [Nextcloud](https://nextcloud.com) ist eine selbst gehostete
 Datei-Sync-, Kalender- und Kontakte-Plattform (Google-Drive-/-Workspace-
-Ersatz). Die Deployment-Konfiguration liegt unter `argocd/apps/workloads/nextcloud/`.
+Ersatz). Die Deployment-Konfiguration liegt unter `argocd/apps/prod/nextcloud/`.
 
 ---
 
@@ -33,15 +33,15 @@ von der App-Installation wachsen können.
 ## Voraussetzungen
 
 - ArgoCD läuft und das Root-ApplicationSet ist aktiv (`argocd/bootstrap/root-applicationset.yaml`)
-- Sealed-Secrets Controller ist installiert (`argocd/apps/platform/sealed-secrets/`)
-- **`nas-storage`-App ist deployt** (`argocd/apps/platform/nas-storage/`) und die
+- Sealed-Secrets Controller ist installiert (`argocd/apps/tech/sealed-secrets/`)
+- **`nas-storage`-App ist deployt** (`argocd/apps/tech/nas-storage/`) und die
   StorageClass `nas` existiert: `kubectl get storageclass nas`
 - **NAS ist online und der NFS-Export erreichbar** (siehe
   [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md)) — sonst bleiben die PVCs
   auf `Pending`
 - `kubeseal` CLI ist lokal installiert
 - `kubectl` ist mit dem Cluster verbunden
-- (Optional, für externen Zugriff) `argocd/apps/platform/cloudflared/` ist bereits
+- (Optional, für externen Zugriff) `argocd/apps/tech/cloudflared/` ist bereits
   deployt — die Ingress-Regel für `nextcloud.pke-lab.de` ist schon
   eingetragen (siehe [docs/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md](../e-externe-erreichbarkeit/e0010-cloudflare-deploy.md))
 
@@ -70,7 +70,7 @@ echo -n "$ADMIN_PASS" | kubeseal --raw \
 # → Ausgabe als encryptedAdminPassword eintragen
 ```
 
-Beide Ausgaben in `argocd/apps/workloads/nextcloud/values.yaml` eintragen:
+Beide Ausgaben in `argocd/apps/prod/nextcloud/values.yaml` eintragen:
 
 ```yaml
 secrets:
@@ -90,7 +90,7 @@ secrets:
 ## Schritt 2 — Deployment via ArgoCD
 
 Nach dem Commit erkennt das Root-ApplicationSet den neuen Ordner
-`argocd/apps/workloads/nextcloud/` automatisch:
+`argocd/apps/prod/nextcloud/` automatisch:
 
 ```bash
 kubectl get pods -n nextcloud -w
@@ -121,7 +121,7 @@ gegen `/status.php`).
 ## Externe Erreichbarkeit (Cloudflare Tunnel)
 
 `nextcloud-prod.pke-lab.de` ist bereits in
-`argocd/apps/platform/cloudflared/values.yaml` eingetragen (zeigt auf den
+`argocd/apps/tech/cloudflared/values.yaml` eingetragen (zeigt auf den
 internen `nextcloud.nextcloud.svc.cluster.local:80`-Service). Für
 Mobile-/Desktop-Sync-Clients außerhalb von LAN/Tailscale:
 
@@ -166,7 +166,7 @@ der [offiziellen Nextcloud-Doku](https://docs.nextcloud.com/server/latest/admin_
 
 ## Datenbank-Major-Upgrade (Postgres 16 → 18)
 
-Renovate schlägt für `argocd/apps/workloads/nextcloud/values.yaml` irgendwann
+Renovate schlägt für `argocd/apps/prod/nextcloud/values.yaml` irgendwann
 den Sprung von `postgresql.image.tag: "16-alpine"` auf `18-alpine` vor. Ein
 reiner Tag-Bump reicht dafür **nicht** — Postgres verweigert den Start, wenn
 das vorhandene Datenverzeichnis von einer älteren Major-Version stammt
@@ -348,7 +348,7 @@ Weiteres auf lokalen Storage verschieben) — Workarounds wie der
 Repair-`Job` oben (fester `runAsUser`) umgehen das UID-Problem gezielt pro
 Anwendungsfall, statt eine NAS-Funktion vorauszusetzen, die es auf diesem
 Gerät nicht gibt. Eine grundsätzlichere Alternative (Nextcloud-Primärspeicher
-auf S3/MinIO statt Dateisystem, siehe `argocd/apps/platform/minio/`) würde
+auf S3/MinIO statt Dateisystem, siehe `argocd/apps/tech/minio/`) würde
 das UID/GID-Modell komplett umgehen, ist aber eine größere
 Architekturentscheidung mit eigener Datenmigration — bewusst nicht Teil
 dieses Fixes.

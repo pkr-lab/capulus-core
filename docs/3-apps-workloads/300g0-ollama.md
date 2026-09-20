@@ -95,7 +95,7 @@ HPA-gesteuerten `zammad-railsserver`/`zammad-nginx`-Deployments.
 
 ## RBAC: n8n darf NUR dieses eine Deployment skalieren
 
-`argocd/apps/workloads/ollama/templates/role-n8n-scaler.yaml` gibt der
+`argocd/apps/tech/ollama/templates/role-n8n-scaler.yaml` gibt der
 n8n-ServiceAccount (Namespace `n8n`) eine `Role` im Namespace `ollama`,
 beschränkt auf:
 

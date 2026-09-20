@@ -2,8 +2,8 @@
 
 [`.github/workflows/build-images.yml`](../../.github/workflows/build-images.yml)
 baut und pusht die drei selbst gebauten Workload-Images —
-[`pacman`](../../argocd/apps/workloads/pacman/), [`carplay-api`](../../argocd/apps/workloads/carplay-api/)
-und [`n8n`](../../argocd/apps/workloads/n8n/) (dessen `image/Dockerfile`) —
+[`pacman`](../../argocd/apps/tech/pacman/), [`carplay-api`](../../argocd/apps/tech/carplay-api/)
+und [`n8n`](../../argocd/apps/tech/n8n/) (dessen `image/Dockerfile`) —
 automatisch nach GHCR, sobald der jeweilige Build-Kontext auf `main`
 geändert wird. Vorher musste dafür manuell das `kaniko-build-push`
 Argo-WorkflowTemplate gegen den Cluster angestoßen werden (siehe
@@ -17,6 +17,7 @@ das bei jeder Code-Änderung leicht vergessen wurde.
 | Trigger | Bedingung |
 |---|---|
 | `push` auf `main` | Pfad-Filter pro App (`Dockerfile`, Source-Verzeichnis, `.dockerignore`) — siehe `on.push.paths` im Workflow |
+| `pull_request` gegen `main` | **Probebuild ohne Push**: dieselben Pfad-Filter und dasselbe Gate pro App, aber `push: false` und kein GHCR-Login. Ein kaputtes Dockerfile oder ein Go-Fehler fällt so vor dem Merge auf. Kein Pflicht-Check (siehe [f0090](f0090-branch-schutz-main.md)); die Go-Module prüft zusätzlich der Pflicht-Job `go-check` in [f0070](f0070-ci-lint.md). |
 | `workflow_dispatch` | Manuell über GitHub → Actions → "Build Workload Images" → "Run workflow", App wählbar (`all` oder einzeln) — für einen Rebuild ohne Datei-Änderung, z. B. um ein neues Base-Image einzufangen |
 
 Ein Matrix-Job pro App:
@@ -36,6 +37,19 @@ Ein Matrix-Job pro App:
    kein Sealed-Secret nötig, anders als beim Kaniko-Weg.
 4. **Job-Summary** listet den gepushten `repository:tag`-String.
 
+## Chronik: pacman-Build rot vom 2026-09-03 bis 2026-09-19
+
+Ein Renovate-Merge (`geoip2-golang` v1 → v2) beschädigte am 2026-09-03 pacmans
+`go.mod` (die v1-Zeile wurde überschrieben, der Code importiert weiter den v1-Pfad).
+Der Push-Build lief drei Minuten später rot (`no required module provides package
+github.com/oschwald/geoip2-golang`), aber nach dem Merge und ohne Benachrichtigung;
+das laufende Image `v8` war nicht betroffen. Beim nächsten Lauf, der pacman baute
+(2026-09-19), fiel es auf. Behoben durch Zurücksetzen auf `geoip2-golang v1.13.0`
+und Entfernen der ungenutzten v2-Zeile; der Probebuild auf PRs und der Job `go-check`
+verhindern eine Wiederholung. Am selben Tag waren Läufe zusätzlich rot, weil der
+Layout-Umzug (`workloads/` → `tech/`) die Pfade im Workflow überholt hatte
+(`path "argocd/apps/workloads/pacman" not found`), behoben mit dem Umzug selbst.
+
 ## Was der Workflow NICHT tut
 
 - **Kein Auto-Commit.** `image.tag` in der jeweiligen `values.yaml` wird
@@ -54,12 +68,12 @@ Ein Matrix-Job pro App:
 
 ## Ablauf nach einer Code-Änderung
 
-1. Dockerfile/Source unter `argocd/apps/workloads/<app>/` ändern, committen,
+1. Dockerfile/Source unter `argocd/apps/tech/<app>/` ändern, committen,
    nach `main` pushen.
 2. GitHub → Actions → "Build Workload Images" abwarten (baut nur die App(s),
    deren Pfad sich geändert hat), Job-Summary öffnen → gepushten Tag
    kopieren.
-3. `image.tag` in `argocd/apps/workloads/<app>/values.yaml` auf diesen Tag
+3. `image.tag` in `argocd/apps/tech/<app>/values.yaml` auf diesen Tag
    setzen, committen, pushen.
 4. ArgoCD synct wie gewohnt (siehe [b0010-argocd.md](../b-kubernetes-gitops/b0010-argocd.md)).
 
@@ -68,7 +82,7 @@ Ein Matrix-Job pro App:
 Frisch gepushte GHCR-Packages sind standardmäßig **privat** — ohne
 `imagePullSecrets` scheitert der Pod dann mit `ImagePullBackOff`. Gleiche
 Falle/Lösung wie beim alten Kaniko-Weg, siehe
-[pacman/README.md](../../argocd/apps/workloads/pacman/README.md#image-bauen).
+[pacman/README.md](../../argocd/apps/tech/pacman/README.md#image-bauen).
 
 ## Verhältnis zu `kaniko-build-push`
 

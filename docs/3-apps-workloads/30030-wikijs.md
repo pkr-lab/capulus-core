@@ -2,7 +2,7 @@
 
 Wiki.js ist ein Open-Source-Wiki/Knowledge-Base-System mit Markdown-Editor,
 eingebauten Benutzergruppen und pfadbasierten Zugriffsregeln (Page Rules).
-Die Deployment-Konfiguration liegt unter `argocd/apps/workloads/wikijs/`.
+Die Deployment-Konfiguration liegt unter `argocd/apps/prod/wikijs/`.
 
 ---
 
@@ -36,8 +36,8 @@ Homeserver-System-SSD.
 ## Voraussetzungen
 
 - ArgoCD läuft und das Root-ApplicationSet ist aktiv (`argocd/bootstrap/root-applicationset.yaml`)
-- Sealed-Secrets Controller ist installiert (`argocd/apps/platform/sealed-secrets/`)
-- **`nas-storage`-App ist deployt** (`argocd/apps/platform/nas-storage/`) und die
+- Sealed-Secrets Controller ist installiert (`argocd/apps/tech/sealed-secrets/`)
+- **`nas-storage`-App ist deployt** (`argocd/apps/tech/nas-storage/`) und die
   StorageClass `nas` existiert: `kubectl get storageclass nas`
 - **NAS ist online und der NFS-Export erreichbar** (siehe
   [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md)) — sonst bleibt die
@@ -67,7 +67,7 @@ echo -n "$DB_PASS" | kubeseal --raw \
   --controller-name sealed-secrets-controller
 ```
 
-Die Ausgabe in `argocd/apps/workloads/wikijs/values.yaml` eintragen:
+Die Ausgabe in `argocd/apps/prod/wikijs/values.yaml` eintragen:
 
 ```yaml
 secrets:
@@ -83,7 +83,7 @@ secrets:
 ## Schritt 2 — Deployment via ArgoCD
 
 Nach dem Commit der Änderungen erkennt das Root-ApplicationSet den neuen Ordner
-`argocd/apps/workloads/wikijs/` automatisch und erstellt die ArgoCD-Application.
+`argocd/apps/prod/wikijs/` automatisch und erstellt die ArgoCD-Application.
 
 ```
 ArgoCD → Home → wikijs
@@ -244,7 +244,7 @@ Details: [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20
 | **Gesamt**    | ~150m       | ~512Mi       | ~1Gi      | 20Gi auf dem NAS         |
 
 Die 20Gi für PostgreSQL sind ein Startwert (Seiten + Assets liegen beide in
-der DB) — bei Bedarf in `argocd/apps/workloads/wikijs/values.yaml` unter
+der DB) — bei Bedarf in `argocd/apps/prod/wikijs/values.yaml` unter
 `postgresql.persistence.size` erhöhen.
 
 ---

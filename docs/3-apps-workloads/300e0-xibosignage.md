@@ -29,7 +29,7 @@ periodisch über die Xibo-REST-API in einen festen NAS-Ordner, und ein
 ## Inhaltsverzeichnis
 
 1. [Architektur](#architektur)
-2. [Xibo CMS deployen (argocd/apps/workloads/xibosignage)](#xibo-cms-deployen-argocdappsxibosignage)
+2. [Xibo CMS deployen (argocd/apps/prod/xibosignage)](#xibo-cms-deployen-argocdappsxibosignage)
 3. [NAS-Ordner einrichten (Display)](#nas-ordner-einrichten-display)
 4. [n8n-Workflow: Xibo-CMS-Playlist → Display (primär)](#n8n-workflow-xibo-cms-playlist--display-primär)
 5. [Alternative (deaktiviert): OnlineSync → Inbox → Display](#alternative-deaktiviert-onlinesync--inbox--display)
@@ -89,9 +89,9 @@ Playlist-Inhalte, der eigentliche Transport zum Pi läuft komplett über den
 
 ---
 
-## Xibo CMS deployen (argocd/apps/workloads/xibosignage)
+## Xibo CMS deployen (argocd/apps/prod/xibosignage)
 
-Liegt unter `argocd/apps/workloads/xibosignage/`, wird wie jede andere App in
+Liegt unter `argocd/apps/prod/xibosignage/`, wird wie jede andere App in
 `argocd/apps/*` automatisch von ArgoCD erkannt und ausgerollt (siehe
 [docs/b-kubernetes-gitops/b0010-argocd.md](../b-kubernetes-gitops/b0010-argocd.md)) — keine manuelle Registrierung nötig.
 
@@ -117,7 +117,7 @@ echo -n 'EIN-STARKES-PASSWORT' | kubeseal --raw --namespace xibosignage \
   --controller-name sealed-secrets-controller
 ```
 
-Den Output in `argocd/apps/workloads/xibosignage/values.yaml` unter
+Den Output in `argocd/apps/prod/xibosignage/values.yaml` unter
 `secrets.encryptedDbPassword` eintragen (ersetzt den Platzhalter
 `REPLACE_ME_WITH_KUBESEAL_OUTPUT`), committen, pushen.
 
@@ -178,7 +178,7 @@ sudo mkdir -p /mnt/xibosignage-tmp/xibosignage-display
 sudo umount /mnt/xibosignage-tmp
 ```
 
-Danach `argocd/apps/workloads/n8n` syncen lassen (siehe unten) — die beiden
+Danach `argocd/apps/tech/n8n` syncen lassen (siehe unten) — die beiden
 `PersistentVolume`/`PersistentVolumeClaim`-Paare
 (`templates/xibosignage-pv.yaml`, `templates/xibosignage-pvc.yaml`) binden
 an genau diese Pfade.
@@ -187,7 +187,7 @@ an genau diese Pfade.
 
 ## n8n-Workflow: Xibo-CMS-Playlist → Display (primär)
 
-`argocd/apps/workloads/n8n/values.yaml` mountet den Display-Ordner in den
+`argocd/apps/tech/n8n/values.yaml` mountet den Display-Ordner in den
 n8n-Pod (`xibosignage.display.mountPath`, Default `/data/xibosignage-display`)
 — keine weitere Konfiguration nötig.
 
@@ -223,10 +223,10 @@ Präfix übernommen und bestimmt damit auch die Anzeige-Reihenfolge auf dem Pi.
 ### 4. Workflow importieren
 
 Eine fertige Workflow-Definition liegt unter
-`argocd/apps/workloads/n8n/workflows/xibosignage-playlist-sync.json`:
+`argocd/apps/tech/n8n/workflows/xibosignage-playlist-sync.json`:
 
 1. n8n → **Workflows** → **Import from File** →
-   `argocd/apps/workloads/n8n/workflows/xibosignage-playlist-sync.json`.
+   `argocd/apps/tech/n8n/workflows/xibosignage-playlist-sync.json`.
 2. Beim Import nach der Credential aus Schritt 2 gefragt werden (an jedem
    HTTP-Request-Knoten) — zuweisen.
 3. Workflow öffnen, Knoten-Parameter prüfen (Node-Schemas können sich
@@ -305,12 +305,12 @@ stabiles Ziel dafür existiert:
 ### Workflow importieren
 
 Eine fertige Workflow-Definition liegt unter
-`argocd/apps/workloads/n8n/workflows/xibosignage-inbox-to-display.json`
+`argocd/apps/tech/n8n/workflows/xibosignage-inbox-to-display.json`
 (bleibt nach Import **deaktiviert**, solange der Playlist-Sync-Workflow
 läuft):
 
 1. n8n öffnen (https://n8n.homeserver) → **Workflows** → **Import from File**.
-2. `argocd/apps/workloads/n8n/workflows/xibosignage-inbox-to-display.json` auswählen.
+2. `argocd/apps/tech/n8n/workflows/xibosignage-inbox-to-display.json` auswählen.
 3. Workflow öffnen, Knoten-Parameter prüfen (Node-Schemas können sich
    zwischen n8n-Versionen leicht unterscheiden — insbesondere beim
    **Edit Image**-Knoten die Resize-Optionen einmal in der UI bestätigen).
@@ -420,7 +420,7 @@ wie bei `ugreen-nas`
 ```
 node_exporter (Port 9100, ansible/roles/node_exporter)
   → VMStaticScrape "infotafel-node-exporter"
-    (argocd/apps/platform/monitoring/templates/vmstaticscrape-infotafel.yaml,
+    (argocd/apps/tech/monitoring/templates/vmstaticscrape-infotafel.yaml,
      Ziel 192.168.178.98:9100, label instance=infotafel)
   → VictoriaMetrics im Cluster
 ```
@@ -435,7 +435,7 @@ Da `infotafel` physisch am selben Standort (Vereinsheim, ALAMOS-Standortcode
 `1002011`) wie `vereinsheim-alarmmonitor` steht, hat es zusätzlich eigene
 Detail-Panels (Erreichbarkeit, Uptime, CPU, RAM, Temperatur, Disk) im
 gemeinsamen Standort-Dashboard **"1002011-pis"**
-(`argocd/apps/platform/monitoring/templates/dashboard-1002011-pis.yaml`,
+(`argocd/apps/tech/monitoring/templates/dashboard-1002011-pis.yaml`,
 ehemals "Vereinsheim-Alarmmonitor" — umbenannt, als `infotafel` als zweites
 Geraet dazukam, siehe
 [docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md](30020-vereinsheim-alarmmonitor.md)).
@@ -497,8 +497,8 @@ erreichen (neuer, leerer Unterordner derselben PVC):
 | Symptom | Check |
 |---|---|
 | Xibo-CMS-Pod bleibt `CrashLoopBackOff` beim allerersten Start | `kubectl -n xibosignage logs deploy/xibosignage-cms` — meist DB noch nicht bereit, Pod startet automatisch neu; bei anhaltenden Fehlern MySQL-Pod-Status prüfen (`kubectl -n xibosignage get pods`) |
-| MySQL-Pod: `Permission denied` auf `/var/lib/mysql` | NFS-Squash-Identität auf dem UGREEN NAS hat sich geändert (siehe [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md) und die identische Problemlösung bei wikijs/immich) — `mysql.securityContext.runAsUser`/`runAsGroup` in `argocd/apps/workloads/xibosignage/values.yaml` an die aktuelle Squash-Identität anpassen. **Nicht** auf `cms.securityContext` übertragen — das offizielle xibo-cms-Image braucht beim ersten Start Root (schreibt `/root/.my.cnf`, konfiguriert Apache/PHP/cron unter `/etc`), analog zu wikijs/immich bleibt `cms.securityContext` deshalb bewusst leer |
-| CMS-Pod: `CrashLoopBackOff`, Logs voller `Permission denied` (`/root/.my.cnf`, `/etc/apache2`, `/etc/php`, `settings.php`) und `ERROR 1045 ... UNKNOWN_USER` | `cms.securityContext` in `argocd/apps/workloads/xibosignage/values.yaml` wurde (versehentlich) auf `runAsUser: 1000` o.ä. gesetzt — muss leer (`{}`) sein, da das CMS-Image root für sein Setup braucht |
+| MySQL-Pod: `Permission denied` auf `/var/lib/mysql` | NFS-Squash-Identität auf dem UGREEN NAS hat sich geändert (siehe [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md) und die identische Problemlösung bei wikijs/immich) — `mysql.securityContext.runAsUser`/`runAsGroup` in `argocd/apps/prod/xibosignage/values.yaml` an die aktuelle Squash-Identität anpassen. **Nicht** auf `cms.securityContext` übertragen — das offizielle xibo-cms-Image braucht beim ersten Start Root (schreibt `/root/.my.cnf`, konfiguriert Apache/PHP/cron unter `/etc`), analog zu wikijs/immich bleibt `cms.securityContext` deshalb bewusst leer |
+| CMS-Pod: `CrashLoopBackOff`, Logs voller `Permission denied` (`/root/.my.cnf`, `/etc/apache2`, `/etc/php`, `settings.php`) und `ERROR 1045 ... UNKNOWN_USER` | `cms.securityContext` in `argocd/apps/prod/xibosignage/values.yaml` wurde (versehentlich) auf `runAsUser: 1000` o.ä. gesetzt — muss leer (`{}`) sein, da das CMS-Image root für sein Setup braucht |
 | `xibo.homeserver` löst nicht auf | Wildcard-DNS prüfen: `nslookup xibo.homeserver` (siehe [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md)) |
 | Playlist-Sync-Workflow: `Failed to acquire OAuth2 access token: Client authentication failed` (`invalid_client`) | Fast immer: **"Confidential Client"** in der Xibo-Application (Administration → Applications → General) ist nicht angehakt — ohne dieses Häkchen lehnt Xibo jede Secret-basierte Client-Auth ab, unabhängig davon, ob Client-ID/Secret korrekt sind. Anhaken, speichern, erneut versuchen |
 | Playlist-Sync-Workflow: jeder API-Call liefert `403` (auch `/api/display`, `/api/library`, nicht nur `/api/playlist`) | OAuth2-Token hat leere `scopes` (im JWT-Payload prüfbar) — in der Xibo-Application unter dem Tab **"Sharing"** fehlen die Scopes. Mindestens **"Access to Library, Layouts, Playlists, Widgets and Resolutions"** anhaken und speichern |
@@ -506,7 +506,7 @@ erreichen (neuer, leerer Unterordner derselben PVC):
 | Playlist-Sync-Workflow: `Error: Playlist "infotafel" nicht gefunden oder ohne widgets` (Playlist ist statisch, aber leer) | Playlist-Name im CMS muss exakt `infotafel` heißen (Design → Playlists); der Application-User braucht View-Recht auf die Playlist und ihre Bild-Widgets (Xibo-Objektberechtigungen, siehe [Playlist-Sync-Setup](#n8n-workflow-xibo-cms-playlist--display-primär)) |
 | Playlist-Sync-Workflow: `Mediendatei herunterladen` liefert `403` | Application-User hat kein View-Recht auf das konkrete Library-Medium — Berechtigung im CMS auf dem Medium bzw. dessen Ordner prüfen |
 | Playlist-Sync-Workflow: nach Beheben eines Credential-Fehlers (z.B. Confidential Client/Scopes nachträglich gesetzt) weiterhin derselbe alte Fehler | n8n cacht den einmal geholten OAuth2-Access-Token in der Credential (bis zu 1h, kein automatischer Refresh bei `403`) — ein einfaches erneutes Speichern der Credential löscht den Cache **nicht** zuverlässig. Credential löschen und **neu anlegen**, danach in allen betroffenen HTTP-Request-Knoten neu zuweisen (verwaiste Credential-IDs erzeugen `Credential with ID "..." does not exist`) |
-| Playlist-Sync-Workflow: `In Display-Ordner schreiben` liefert `Access to the file is not allowed` | Seit n8n 1.123.5 beschränkt der "Read/Write Files from Disk"-Node den Dateizugriff standardmäßig auf `/home/node/.n8n-files`. `N8N_RESTRICT_FILE_ACCESS_TO` in `argocd/apps/workloads/n8n/values.yaml` muss die erlaubten Pfade enthalten — **Separator ist ein Semikolon `;`, kein Komma** (n8n-Doku ist hier widersprüchlich) |
+| Playlist-Sync-Workflow: `In Display-Ordner schreiben` liefert `Access to the file is not allowed` | Seit n8n 1.123.5 beschränkt der "Read/Write Files from Disk"-Node den Dateizugriff standardmäßig auf `/home/node/.n8n-files`. `N8N_RESTRICT_FILE_ACCESS_TO` in `argocd/apps/tech/n8n/values.yaml` muss die erlaubten Pfade enthalten — **Separator ist ein Semikolon `;`, kein Komma** (n8n-Doku ist hier widersprüchlich) |
 | Playlist-Sync-Workflow: letzter Knoten `Alte Playlist-Bilder aufräumen` liefert `Module 'fs' is disallowed` | `require('fs')` ist im Code-Node gesperrt (anders als `require('path')`) — Cleanup läuft deshalb über einen **Execute Command**-Knoten (bereits per `NODES_EXCLUDE: "[]"` freigeschaltet), nicht über direkten `fs`-Zugriff im Code-Node. Bei einer älteren Workflow-Version ggf. `xibosignage-playlist-sync.json` neu importieren |
 | `infotafel` zeigt Bilder, die längst aus der Playlist entfernt wurden | `kubectl -n n8n exec deploy/n8n -- ls -la /data/xibosignage-display` — liegen noch `xibo-playlist-*`-Dateien ohne aktuelles Playlist-Gegenstück? Workflow-Ausführungshistorie in n8n prüfen, ob der letzte Lauf fehlgeschlagen ist (Cleanup-Schritt läuft nur bei erfolgreichem Durchlauf) |
 | n8n "Local File Trigger" feuert nicht (nur relevant für den [deaktivierten Alternativ-Pfad](#alternative-deaktiviert-onlinesync--inbox--display)) | `kubectl -n n8n exec deploy/n8n -- ls -la /data/xibosignage-inbox` — Mount vorhanden? PVC `xibosignage-inbox-data` im Status `Bound`? (`kubectl -n n8n get pvc`) |
@@ -516,7 +516,7 @@ erreichen (neuer, leerer Unterordner derselben PVC):
 | Chromium startet nicht / schwarzer Bildschirm | Autologin auf dem Pi aktiv? `systemctl status xibosignage-kiosk xibosignage-webserver` auf dem Pi |
 | `xibosignage-kiosk.service` im Crash-Loop, `journalctl -u xibosignage-kiosk` zeigt `exec: chromium-browser: Nicht gefunden` (exit 127) | Auf aktuellen (Debian-trixie-basierten) Raspberry-Pi-OS-Images ist `chromium-browser` nur noch ein leeres transitionales Dummy-Paket, das Binary heißt `chromium` (`/usr/bin/chromium`). `xibosignage-kiosk-start.sh.j2` löst das Binary zur Laufzeit dynamisch auf (`command -v chromium \|\| command -v chromium-browser`) — bei älterem Rollenstand `make xibo-kiosks` erneut laufen lassen, um das aktualisierte Skript auszurollen |
 | `Permission denied (publickey)` bei `make xibo-kiosks` | `make semaphore-targets` lief nicht für den neuen Pi (siehe [docs/b-kubernetes-gitops/b0030-semaphore.md](../b-kubernetes-gitops/b0030-semaphore.md)) |
-| Nach Workflow-Import in n8n: "Watch Inbox" und/oder "Original archivieren" zeigen "Install this node to use it" | n8n blockt Local File Trigger/Execute Command standardmäßig (Sicherheitsfeature) — `env.NODES_EXCLUDE: "[]"` in `argocd/apps/workloads/n8n/values.yaml` setzt das für diese Instanz zurück, danach n8n-Pod neu starten und Workflow neu öffnen |
+| Nach Workflow-Import in n8n: "Watch Inbox" und/oder "Original archivieren" zeigen "Install this node to use it" | n8n blockt Local File Trigger/Execute Command standardmäßig (Sicherheitsfeature) — `env.NODES_EXCLUDE: "[]"` in `argocd/apps/tech/n8n/values.yaml` setzt das für diese Instanz zurück, danach n8n-Pod neu starten und Workflow neu öffnen |
 | Pi advertised ungewollt das Heim-Subnetz im Tailscale-Adminpanel | `tailscale_advertise_routes: ""` fehlt in `ansible/group_vars/xibo_displays.yml` — sollte nach dem nächsten Rollout verschwinden (`tailscale set --advertise-routes=` ohne Wert entfernt bestehende Routes nicht automatisch, ggf. einmalig `sudo tailscale set --advertise-routes=` manuell auf dem Pi nachziehen) |
 | `infotafel` taucht nicht in Grafana auf | `systemctl status prometheus-node-exporter` auf dem Pi — läuft der Dienst (Port 9100)? `curl -s 192.168.178.98:9100/metrics` von einem k3s-Node aus erreichbar? `kubectl -n monitoring get vmstaticscrape infotafel-node-exporter` |
 | `make xibo-kiosks` bricht bei "Gathering Facts"/erstem `become`-Task mit `sudo: Ein Passwort ist notwendig` ab | Nur relevant, wenn `ansible_user` **nicht** `pi` ist (siehe Kommentar in `ansible/inventory/hosts.yml`) — Raspberry Pi OS legt nur für den Default-User `pi` automatisch einen `NOPASSWD`-Sudoers-Eintrag an. Einmalig direkt am Gerät (Henne-Ei-Problem, nicht per Ansible automatisierbar): `sudo visudo -f /etc/sudoers.d/010-<user>-nopasswd` mit Inhalt `<user> ALL=(ALL) NOPASSWD:ALL`. Alternative: Ansible-Vault-verschlüsseltes `ansible_become_password` in `ansible/host_vars/<host>/vault.yml`, gleiches Muster wie `vault_worker-0_become_password` in `ansible/group_vars/all.yml` |

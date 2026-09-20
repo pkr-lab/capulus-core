@@ -1,20 +1,20 @@
 # pacman — Besucher-Tracking (IP/GeoIP) für die Schulung
 
-`argocd/apps/workloads/pacman/` liefert neben dem eigentlichen Spiel
-(siehe [dessen README](../../argocd/apps/workloads/pacman/README.md)) auch
+`argocd/apps/tech/pacman/` liefert neben dem eigentlichen Spiel
+(siehe [dessen README](../../argocd/apps/tech/pacman/README.md)) auch
 eine bewusst sichtbare Demonstration dessen, was ein gewöhnlicher
 Webserver über einen Besucher herausfindet — Client-IP (v4 **und** v6),
 User-Agent und (optional) der aus der IP abgeleitete GeoIP-Standort. Zweck
 ist eine IT-Security-Schulung mit informierten, einverstandenen
 Teilnehmenden (vgl. den bewussten Seitenhieb "IT-Security kennen wir
-nicht!" in `argocd/apps/workloads/demo-app/`) — **kein** heimliches
+nicht!" in `argocd/apps/prod/demo-app/`) — **kein** heimliches
 Tracking von Endnutzern.
 
 > **Datenschutz-Hinweis:** IP-Adressen sind personenbezogene Daten. Dieses
 > Setup ist nur für einen abgegrenzten Schulungskontext mit informierten
 > Teilnehmenden gedacht, nicht für den produktiven Betrieb einer
 > öffentlichen Seite ohne Hinweis. Aufbewahrung ist an die
-> VictoriaLogs-Retention gekoppelt (`argocd/apps/platform/logging/values.yaml`,
+> VictoriaLogs-Retention gekoppelt (`argocd/apps/tech/logging/values.yaml`,
 > aktuell 14 Tage) — es gibt keine zusätzliche, längerfristige Speicherung.
 
 ---
@@ -31,7 +31,7 @@ Besucher (IPv4/IPv6)
       - optional: GeoIP-Lookup gegen lokale DB-IP-City-Lite-DB
       - loggt eine JSON-Zeile pro Request nach stdout
   → victoria-logs-collector (DaemonSet, liest Container-stdout)
-  → VictoriaLogs (argocd/apps/platform/logging/)
+  → VictoriaLogs (argocd/apps/tech/logging/)
   → Grafana-Dashboard "pacman — Besucher (IP/GeoIP)"
 ```
 
@@ -63,7 +63,7 @@ liest beide unverändert.
 
 Standardmäßig aktiv (`geoip.enabled: true`), da das der eigentliche Zweck
 dieser App ist — bei Bedarf abschaltbar, siehe
-[Chart-README](../../argocd/apps/workloads/pacman/README.md#geoip-anreicherung).
+[Chart-README](../../argocd/apps/tech/pacman/README.md#geoip-anreicherung).
 
 Ein `initContainer` (`curlimages/curl`) lädt bei **jedem Pod-Start** die
 aktuelle DB-IP-City-Lite-DB neu in ein gemeinsames `emptyDir` — kein
@@ -79,7 +79,7 @@ und loggt dann nur die rohe IP ohne Standort (siehe `openGeoIP()` in
 
 `templates/dashboard-pacman-visitors.yaml` (nur gerendert, wenn
 `geoip.enabled: true`) liefert vier Panels gegen die vorhandene
-`VictoriaLogs`-Datasource (`argocd/apps/platform/logging/`):
+`VictoriaLogs`-Datasource (`argocd/apps/tech/logging/`):
 
 - **Requests** / **Eindeutige Besucher-IPs** im gewählten Zeitraum (Stat-Panels).
 - **Besucher-Standorte** — Geomap-Panel, Marker aus `geo_lat`/`geo_lon`.
@@ -106,7 +106,7 @@ Zusätzlich zu `fingerprint.js`'s eigenem Ecken-Widget (oben beschrieben,
 läuft unconditional) gibt es einen zweiten, expliziten Schalter
 `trainingMode.enabled` (Chart-Value, Env `TRAINING_MODE`) — koppelt das
 Namensfeld der Bestenliste (`src/nickname.js`, siehe
-[Chart-README](../../argocd/apps/workloads/pacman/README.md#bestenliste-nickname--leaderboard))
+[Chart-README](../../argocd/apps/tech/pacman/README.md#bestenliste-nickname--leaderboard))
 an dieselbe versteckte E-Mail/Tel/Adresse/PLZ-Ernte. Anders als das
 Ecken-Widget ist dieser Weg **standardmäßig aus** und muss bewusst über
 ein Chart-Release aktiviert werden.

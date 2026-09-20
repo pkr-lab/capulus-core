@@ -3,7 +3,12 @@ name: Build Workload Images
 # Builds/pushes the three custom-built workload images (pacman, carplay-api,
 # n8n) to GHCR whenever their build context changes on main. Replaces the
 # previous manual `argo submit --from workflowtemplate/kaniko-build-push`
-# step — see argocd/apps/workloads/pacman/README.md#image-bauen.
+# step — see argocd/apps/tech/pacman/README.md#image-bauen.
+#
+# On pull requests the same build runs WITHOUT pushing (Dockerfile/Go-Code
+# muss vor dem Merge bauen; ein kaputter Renovate-Bump fiel sonst erst nach dem
+# Merge im Image-Build auf). Kein Required-Check: der Pfadfilter unten laesst den
+# Workflow bei PRs ohne Image-Aenderung gar nicht erst laufen.
 #
 # Does NOT touch values.yaml: the resulting tag is printed to the run's job
 # summary, `image.tag` still gets set by hand and committed by whoever ran
@@ -12,14 +17,25 @@ on:
   push:
     branches: [main]
     paths:
-      - "argocd/apps/workloads/pacman/Dockerfile"
-      - "argocd/apps/workloads/pacman/server/**"
-      - "argocd/apps/workloads/pacman/src/**"
-      - "argocd/apps/workloads/pacman/.dockerignore"
-      - "argocd/apps/workloads/carplay-api/Dockerfile"
-      - "argocd/apps/workloads/carplay-api/src/**"
-      - "argocd/apps/workloads/carplay-api/.dockerignore"
-      - "argocd/apps/workloads/n8n/image/Dockerfile"
+      - "argocd/apps/tech/pacman/Dockerfile"
+      - "argocd/apps/tech/pacman/server/**"
+      - "argocd/apps/tech/pacman/src/**"
+      - "argocd/apps/tech/pacman/.dockerignore"
+      - "argocd/apps/tech/carplay-api/Dockerfile"
+      - "argocd/apps/tech/carplay-api/src/**"
+      - "argocd/apps/tech/carplay-api/.dockerignore"
+      - "argocd/apps/tech/n8n/image/Dockerfile"
+  pull_request:
+    branches: [main]
+    paths:
+      - "argocd/apps/tech/pacman/Dockerfile"
+      - "argocd/apps/tech/pacman/server/**"
+      - "argocd/apps/tech/pacman/src/**"
+      - "argocd/apps/tech/pacman/.dockerignore"
+      - "argocd/apps/tech/carplay-api/Dockerfile"
+      - "argocd/apps/tech/carplay-api/src/**"
+      - "argocd/apps/tech/carplay-api/.dockerignore"
+      - "argocd/apps/tech/n8n/image/Dockerfile"
   workflow_dispatch:
     inputs:
       app:
@@ -34,25 +50,28 @@ permissions:
 
 concurrency:
   group: build-images-${{ github.ref }}
-  cancel-in-progress: false
+  # Push auf main: nie abbrechen (ein halb gepushtes Image waere schlimmer).
+  # PR: ein neuer Push macht den alten Probebuild ueberfluessig.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
+    name: build ${{ matrix.app }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - app: pacman
-            path: argocd/apps/workloads/pacman
-            dockerfile: argocd/apps/workloads/pacman/Dockerfile
+            path: argocd/apps/tech/pacman
+            dockerfile: argocd/apps/tech/pacman/Dockerfile
             image: ghcr.io/pkr-lab/pacman
           - app: carplay-api
-            path: argocd/apps/workloads/carplay-api
-            dockerfile: argocd/apps/workloads/carplay-api/Dockerfile
+            path: argocd/apps/tech/carplay-api
+            dockerfile: argocd/apps/tech/carplay-api/Dockerfile
             image: ghcr.io/pkr-lab/carplay-api
           - app: n8n
-            path: argocd/apps/workloads/n8n/image
-            dockerfile: argocd/apps/workloads/n8n/image/Dockerfile
+            path: argocd/apps/tech/n8n/image
+            dockerfile: argocd/apps/tech/n8n/image/Dockerfile
             image: ghcr.io/pkr-lab/n8n-custom
     runs-on: ubuntu-latest
     steps:
@@ -68,8 +87,19 @@ jobs:
         id: gate
         env:
           BEFORE: ${{ github.event.before }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
           DISPATCH_APP: ${{ github.event.inputs.app }}
         run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # PR-Checkout ist der Merge-Commit; Diff gegen den Base-Stand zeigt
+            # genau die Aenderungen des PRs.
+            if git diff --name-only "$PR_BASE" HEAD -- "${{ matrix.path }}" | grep -q .; then
+              echo "build=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "build=false" >> "$GITHUB_OUTPUT"
+            fi
+            exit 0
+          fi
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             if [ "$DISPATCH_APP" = "all" ] || [ "$DISPATCH_APP" = "${{ matrix.app }}" ]; then
               echo "build=true" >> "$GITHUB_OUTPUT"
@@ -92,7 +122,7 @@ jobs:
         run: echo "tag=sha-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
-        if: steps.gate.outputs.build == 'true'
+        if: steps.gate.outputs.build == 'true' && github.event_name != 'pull_request'
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -105,11 +135,11 @@ jobs:
         with:
           context: ${{ matrix.path }}
           file: ${{ matrix.dockerfile }}
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ matrix.image }}:${{ steps.tag.outputs.tag }}
 
       - name: Report new tag
-        if: steps.gate.outputs.build == 'true'
+        if: steps.gate.outputs.build == 'true' && github.event_name != 'pull_request'
         run: |
           {
             echo "### ${{ matrix.app }}: neues Image gepusht"
@@ -118,5 +148,5 @@ jobs:
             echo "${{ matrix.image }}:${{ steps.tag.outputs.tag }}"
             echo '```'
             echo
-            echo "Manuell in \`argocd/apps/workloads/${{ matrix.app }}/values.yaml\` (\`image.tag\`) eintragen und committen/pushen."
+            echo "Manuell in \`argocd/apps/tech/${{ matrix.app }}/values.yaml\` (\`image.tag\`) eintragen und committen/pushen."
           } >> "$GITHUB_STEP_SUMMARY"

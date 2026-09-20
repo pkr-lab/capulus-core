@@ -75,7 +75,7 @@ Weitere Leitentscheidungen:
 **Explizite Abkehr vom historischen Setup:** Kein Bitnami-PostgreSQL-Subchart
 mehr. Stattdessen ein handgerolltes, leichtgewichtiges Postgres-Deployment
 nach dem im Repo bereits etablierten Muster für App-eigene Datenbanken
-(`argocd/apps/workloads/{wikijs,nextcloud,immich}/templates/postgres-
+(`argocd/apps/tech/{wikijs,nextcloud,immich}/templates/postgres-
 {deployment,service,pvc}.yaml`) — ein Pod, eine PVC, keine
 Replikations-/Backup-Automatik der Subchart, dafür ein eigener, einfacher
 `pg_dump`-CronJob (siehe Baustein 6).
@@ -138,8 +138,8 @@ lldap (bestehend) ──▶ Authentik LDAP Source
 
 ### 1. Authentik als neue Platform-App
 
-Neuer Chart-Ordner `argocd/apps/platform/authentik/` (Struktur analog zu
-`argocd/apps/platform/authelia/`: `Chart.yaml`, `values.yaml`,
+Neuer Chart-Ordner `argocd/apps/tech/authentik/` (Struktur analog zu
+`argocd/apps/tech/authelia/`: `Chart.yaml`, `values.yaml`,
 `templates/{deployment,service,ingress,sealedsecret,vmservicescrape}.yaml`
 plus eigene `templates/postgres-{deployment,service,pvc}.yaml`).
 
@@ -178,7 +178,7 @@ wiederholen.
   ist in diesem Cluster nicht installiert, nur VictoriaMetrics-CRDs
   (identische Lehre wie historisch bereits in der alten `values.yaml`
   dokumentiert, hier von Anfang an richtig statt nachträglich gefixt).
-- Grafana-Dashboard unter `argocd/apps/platform/monitoring/templates/`.
+- Grafana-Dashboard unter `argocd/apps/tech/monitoring/templates/`.
 - **Neu gegenüber der ersten Runde:** `VMRule`-Alert, der auf Worker-
   Memory-Nutzung nahe dem Limit anschlägt, *bevor* ein OOMKill passiert —
   aktive Vorbeugung statt reaktivem Fix wie bei `983e338`.
@@ -186,7 +186,7 @@ wiederholen.
 ### 4. IaC-Beispiel A — Helm-Wrapper `values.yaml` (Skelett)
 
 ```yaml
-# argocd/apps/platform/authentik/values.yaml
+# argocd/apps/tech/authentik/values.yaml
 credentials:
   enabled: true
   secretName: authentik-credentials
@@ -254,13 +254,13 @@ authentik:
 ```
 
 Das eigene Postgres-Deployment (`templates/postgres-{deployment,service,
-pvc}.yaml`) folgt 1:1 dem Muster aus `argocd/apps/workloads/wikijs/
+pvc}.yaml`) folgt 1:1 dem Muster aus `argocd/apps/prod/wikijs/
 templates/postgres-deployment.yaml`.
 
 ### 5. IaC-Beispiel B — Blueprint: TOTP-Pflicht + OIDC-Provider
 
 ```yaml
-# argocd/apps/platform/authentik/blueprints/admin-2fa-and-grafana.yaml
+# argocd/apps/tech/authentik/blueprints/admin-2fa-and-grafana.yaml
 version: 1
 metadata:
   name: admin-2fa-and-grafana

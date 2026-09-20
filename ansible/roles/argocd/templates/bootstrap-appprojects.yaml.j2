@@ -15,6 +15,55 @@
 # namespaces) — resource-kind whitelisting is a deliberate later refinement,
 # not an oversight.
 ---
+{% if argocd_entw_layout | bool %}
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: entw
+  namespace: {{ argocd_namespace }}
+spec:
+  description: >-
+    ENTW (eigene ArgoCD-Instanz): alle Apps unter argocd/apps/entw/, beliebige Namespaces.
+  sourceRepos:
+    - "{{ argocd_repo_url }}"
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: "*"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+{% elif argocd_tech_layout | bool %}
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: tech
+  namespace: {{ argocd_namespace }}
+spec:
+  description: >-
+    TECH-Cluster (homeserver): Plattform- und Betriebs-Apps (frueher platform + workloads). NetworkPolicy-Stufen haengen an den Listen argocd_platform_apps / argocd_workloads_apps.
+  sourceRepos:
+    - "{{ argocd_repo_url }}"
+  destinations:
+{% for app in (argocd_platform_apps + argocd_workloads_apps) | unique %}
+    - server: https://kubernetes.default.svc
+      namespace: {{ app }}
+{% endfor %}
+    # traefik-config und coredns-custom deployen nach kube-system, cert-manager hat einen eigenen
+    # Namespace, ist aber bewusst NICHT in argocd_platform_apps (Cluster-Infrastruktur).
+    - server: https://kubernetes.default.svc
+      namespace: kube-system
+    - server: https://kubernetes.default.svc
+      namespace: cert-manager
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+{% else %}
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
@@ -73,3 +122,4 @@ spec:
   namespaceResourceWhitelist:
     - group: "*"
       kind: "*"
+{% endif %}

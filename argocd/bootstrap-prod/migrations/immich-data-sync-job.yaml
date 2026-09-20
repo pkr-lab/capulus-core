@@ -1,0 +1,82 @@
+# Synchronisiert die Immich-Daten aus den TECH-Verzeichnissen auf dem NAS in die neuen PROD-Volumes
+# (PVCs immich-postgresql-data / immich-server-library / immich-postgres-backup) per rsync.
+# Manuell in PROD anwenden, NICHT per ArgoCD (siehe README.md in diesem Ordner):
+#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl apply -f -' < argocd/bootstrap-prod/migrations/immich-data-sync-job.yaml
+#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl -n immich logs -f job/immich-data-sync'
+#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl -n immich delete job immich-data-sync'
+#
+# ZWEI Laeufe mit demselben Manifest:
+#  1. Vorlauf bei LAUFENDEM TECH (Bibliothek ~74 GB, aendert sich kaum): kann lange dauern, Nutzer merken nichts.
+#     Die dabei kopierten Postgres-Dateien sind inkonsistent und werden im 2. Lauf ueberschrieben.
+#  2. Endsync mit GESTOPPTEM TECH (server, machineLearning, postgresql auf 0): nur noch das Delta.
+# --delete gleicht das Ziel exakt an. Kopiert von Postgres nur pgdata_fixed_pg16 (PG 16); das alte
+# pgdata_fixed (PG 14, Upgrade-Rueckfall) bleibt in TECH. ML-Modell-Cache wird nicht kopiert (laedt neu).
+# Laeuft als root im Container, das NAS macht all_squash (Dateien gehoeren danach uid 1000/gid 10);
+# rsync ohne Besitzer-/Gruppenuebernahme (--no-o --no-g), Modus 0700 fuer PGDATA wird danach gesetzt.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: immich-data-sync
+  namespace: immich
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 21600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: sync
+          image: alpine:3.20
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              apk add --no-cache rsync >/dev/null
+              # rsync-Code 24 = Dateien sind waehrend des Laufs verschwunden (Vorlauf bei laufendem Postgres): ok.
+              rs() { rsync "$@" || { c=$?; if [ "$c" -eq 24 ]; then echo "(Code 24: Quelle hat sich waehrend des Laufs geaendert, ok)"; else exit "$c"; fi; }; }
+              echo "== Postgres (pgdata_fixed_pg16)"
+              cat /old/pg/pgdata_fixed_pg16/PG_VERSION
+              mkdir -p /new/pg/pgdata_fixed_pg16
+              rs -rlpt --no-o --no-g --delete --info=stats1 /old/pg/pgdata_fixed_pg16/ /new/pg/pgdata_fixed_pg16/
+              chmod 700 /new/pg/pgdata_fixed_pg16
+              ls -ld /new/pg/pgdata_fixed_pg16
+              echo "== Backup"
+              rs -rlpt --no-o --no-g --delete --info=stats1 /old/backup/ /new/backup/
+              echo "== Bibliothek (library)"
+              rs -rlpt --no-o --no-g --delete --info=stats1 /old/library/ /new/library/
+              echo "== Groessen"
+              du -sh /old/pg/pgdata_fixed_pg16 /new/pg/pgdata_fixed_pg16 /old/backup /new/backup /old/library /new/library
+              echo "FERTIG"
+          volumeMounts:
+            - {name: old-pg, mountPath: /old/pg, readOnly: true}
+            - {name: new-pg, mountPath: /new/pg}
+            - {name: old-backup, mountPath: /old/backup, readOnly: true}
+            - {name: new-backup, mountPath: /new/backup}
+            - {name: old-library, mountPath: /old/library, readOnly: true}
+            - {name: new-library, mountPath: /new/library}
+      volumes:
+        - name: old-pg
+          nfs:
+            server: 192.168.178.97
+            path: /volume2/immich-storage/immich-immich-postgresql-data-pvc-7b515ca3-34d8-41ef-a10f-f72de778221f
+            readOnly: true
+        - name: new-pg
+          persistentVolumeClaim:
+            claimName: immich-postgresql-data
+        - name: old-backup
+          nfs:
+            server: 192.168.178.97
+            path: /volume2/immich-storage/immich-immich-postgres-backup-pvc-280b236f-2bb6-42be-9342-f331b0988e27
+            readOnly: true
+        - name: new-backup
+          persistentVolumeClaim:
+            claimName: immich-postgres-backup
+        - name: old-library
+          nfs:
+            server: 192.168.178.97
+            path: /volume2/immich-storage/immich-immich-server-library-pvc-183785f7-ce65-47f3-95ae-1bfb6b156e0f
+            readOnly: true
+        - name: new-library
+          persistentVolumeClaim:
+            claimName: immich-server-library
