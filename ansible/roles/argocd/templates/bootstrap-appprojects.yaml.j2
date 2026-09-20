@@ -15,7 +15,27 @@
 # namespaces) — resource-kind whitelisting is a deliberate later refinement,
 # not an oversight.
 ---
-{% if argocd_tech_layout | bool %}
+{% if argocd_entw_layout | bool %}
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: entw
+  namespace: {{ argocd_namespace }}
+spec:
+  description: >-
+    ENTW (eigene ArgoCD-Instanz): alle Apps unter argocd/apps/entw/, beliebige Namespaces.
+  sourceRepos:
+    - "{{ argocd_repo_url }}"
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: "*"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+{% elif argocd_tech_layout | bool %}
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:

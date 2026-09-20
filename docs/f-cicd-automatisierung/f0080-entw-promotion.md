@@ -12,8 +12,9 @@ du den Merge bestätigst.
 Das ist die erste, bewusst schlanke Stufe der Promotion-Pipeline aus
 [40080, Baustein 6](../4-planung/40080-multi-cluster-entw-prod-tech.md#6-cicd-pipeline-automatisierte-promotion-entw--tech--prod)
 (Phase 4). Die dortige Kette ENTW → TECH → PROD mit 24-Stunden-Health-Gate
-setzt einen eigenen `argocd/apps/entw/`-Pfad voraus, den es noch nicht gibt;
-hier reicht die CI als Freigabe.
+setzt den eigenen Pfad `argocd/apps/entw/` voraus (existiert seit 2026-09-20 auf dem
+Branch `entw`, siehe [b0050](../b-kubernetes-gitops/b0050-entw-argocd.md)); hier reicht die CI als
+Freigabe.
 
 ---
 
