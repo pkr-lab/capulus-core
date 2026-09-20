@@ -159,6 +159,22 @@
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
 
+# ---- Legacy-Layout abloesen (nur ENTW-Layout) -----------------
+# Vor dem neuen ApplicationSet loeschen, damit die alten Generatoren (Branch entw, platform/workloads)
+# keine Applications mehr erzeugen. Das Template setzt keinen resources-finalizer: die Workloads bleiben
+# stehen und werden von den gleichnamigen Applications aus argocd/apps/entw/ uebernommen.
+- name: Remove legacy platform/workloads ApplicationSets (ENTW layout)
+  ansible.builtin.command: >
+    kubectl delete applicationset
+    home-server-apps-platform home-server-apps-workloads
+    --namespace {{ argocd_namespace }}
+    --ignore-not-found
+  register: argocd_legacy_appset_delete
+  changed_when: "'deleted' in argocd_legacy_appset_delete.stdout"
+  when: argocd_entw_layout | bool
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
 # ---- Bootstrap ApplicationSet ------------------------------
 - name: Template bootstrap ApplicationSet
   ansible.builtin.template:
@@ -176,6 +192,20 @@
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
 
+- name: Remove legacy platform/workloads AppProjects (ENTW layout)
+  ansible.builtin.command: >
+    kubectl delete appproject platform workloads
+    --namespace {{ argocd_namespace }}
+    --ignore-not-found
+  register: argocd_legacy_project_delete
+  changed_when: "'deleted' in argocd_legacy_project_delete.stdout"
+  # Schlaegt fehl, solange noch Applications das Projekt nutzen (ArgoCD verweigert das Loeschen); der
+  # naechste Lauf holt es nach, sobald die neuen Applications uebernommen haben.
+  failed_when: false
+  when: argocd_entw_layout | bool
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
 - name: Display ApplicationSet status
   ansible.builtin.debug:
     var: argocd_appset_apply.stdout
@@ -185,7 +215,7 @@
     kubectl get applicationsets home-server-apps-{{ item }}
     --namespace {{ argocd_namespace }}
     -o jsonpath='{.status.conditions[?(@.type=="ErrorOccurred")].status}'
-  loop: "{{ ['tech'] if argocd_tech_layout | bool else ['platform', 'workloads'] }}"
+  loop: "{{ ['entw'] if argocd_entw_layout | bool else (['tech'] if argocd_tech_layout | bool else ['platform', 'workloads']) }}"
   register: argocd_appset_status
   changed_when: false
   failed_when: false

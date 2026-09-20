@@ -183,7 +183,8 @@ capulus-core/
 │   │   ├── b0010-argocd.md                  # GitOps-Nutzung
 │   │   ├── b0020-argocd-projects.md         # Platform/Workloads-AppProject-Trennung
 │   │   ├── b0030-semaphore.md               # Semaphore-Web-UI für Ansible
-│   │   └── b0040-hpa-autoscaling.md         # Horizontale Autoskalierung (HPA)
+│   │   ├── b0040-hpa-autoscaling.md         # Horizontale Autoskalierung (HPA)
+│   │   └── b0050-entw-argocd.md             # ENTW-ArgoCD: eigener Ordner argocd/apps/entw/
 │   ├── c-netzwerk-dns/               # Netzwerk & DNS
 │   │   ├── c0000-dns-architecture.md        # Split-DNS-Design & Ausfallsicherheit
 │   │   ├── c0010-tailscale.md               # VPN-Setup
@@ -287,6 +288,7 @@ capulus-core/
     │   ├── root-applicationset.yaml  # Zwei Git-Generatoren: platform/* und workloads/*
     │   └── projects.yaml             # AppProjects "platform" und "workloads"
     └── apps/                         # Ein Ordner pro ArgoCD-Application, je Tier
+        ├── entw/                     # Nur die ArgoCD-Instanz auf ENTW liest das — siehe docs/b-kubernetes-gitops/b0050-entw-argocd.md
         ├── platform/                 # AppProject "platform" — Schicht 3, siehe docs/b-kubernetes-gitops/b0020-argocd-projects.md
         │   ├── sealed-secrets/       # SealedSecrets-Controller
         │   ├── kubeseal-webgui/      # Sealed-Secrets-Verschlüsselungs-UI
@@ -490,6 +492,7 @@ und Konventionen für neue Docs: **[docs/TEMPLATE.md](docs/TEMPLATE.md)**.
 | [ArgoCD-Projects](docs/b-kubernetes-gitops/b0020-argocd-projects.md) | Platform/Workloads-AppProject-Trennung, Ordnerstruktur, neue App hinzufügen |
 | [Semaphore-UI](docs/b-kubernetes-gitops/b0030-semaphore.md) | Web-UI zum Ausführen von Playbooks |
 | [Autoskalierung (HPA)](docs/b-kubernetes-gitops/b0040-hpa-autoscaling.md) | Welche Apps per HorizontalPodAutoscaler mitskalieren, welche bewusst nicht, und mit welchen Schwellenwerten |
+| [ENTW-ArgoCD](docs/b-kubernetes-gitops/b0050-entw-argocd.md) | Eigene ArgoCD-Instanz für ENTW, liest nur `argocd/apps/entw/`; neue App deployen, Rollout, Zugriff |
 
 ### Netzwerk & DNS (`c-netzwerk-dns/`)
 
