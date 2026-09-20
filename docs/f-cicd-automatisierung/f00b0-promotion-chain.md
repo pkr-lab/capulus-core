@@ -121,8 +121,8 @@ enthält die Tabelle der Änderungen und die Belege des Gates.
 
 ## Netzweg und Zugriff
 
-GitHub-Runner erreichen ArgoCD nur über Tailscale. Der Workflow tritt dem Tailnet mit
-`--accept-routes` bei und nutzt die **Subnet-Route** `192.168.178.0/24`, die der Homeserver bereits ins
+GitHub-Runner erreichen ArgoCD nur über Tailscale. Der Workflow tritt dem Tailnet bei (die Action nimmt
+Subnet-Routen selbst an, ein Schritt prüft die Verbindung) und nutzt die **Subnet-Route** `192.168.178.0/24`, die der Homeserver bereits ins
 Tailnet bewirbt. Damit kommen beide ArgoCD-Instanzen über ihre LAN-Adresse, ohne Änderung an worker-1:
 
 | Ziel | Adresse | Zweck |
@@ -164,7 +164,9 @@ Reihenfolge (nach dem Merge der Änderungen, die diese Pipeline einführen):
 3. **Tokens erzeugen und als Secret hinterlegen** (nichts wird ausgegeben):
    `scripts/create-argocd-ci-token.sh hub` und `scripts/create-argocd-ci-token.sh entw`
    → Secrets `ARGOCD_HUB_TOKEN`, `ARGOCD_ENTW_TOKEN` (365 Tage gültig).
-4. **Tailscale:** ACL-Grant (oben) speichern, ggf. neuen Auth-Key mit `tag:ci` als `TAILSCALE_AUTHKEY` ablegen.
+4. **Tailscale:** ACL-Grant (oben) speichern, neuen Auth-Key mit `tag:ci` erzeugen und als `TAILSCALE_AUTHKEY` ablegen.
+   **Auth-Keys laufen nach höchstens 90 Tagen ab** (Voreinstellung 90): den Key spätestens vierteljährlich ersetzen, sonst
+   scheitert im Workflow der Schritt „Connect runner to tailnet“ und die Kette läuft nicht mehr.
 5. **PoC ausführen** (*Actions → Tailscale Runner PoC*): muss `OK` melden.
 6. **Trockenlauf:** *Promote chain → Run workflow*, `plan_only` aktivieren, Summary prüfen.
 7. **Beobachten:** einige echte Zyklen begleiten. Danach optional Repo-Variable `PROMOTE_AUTOMERGE_TECH=true`.

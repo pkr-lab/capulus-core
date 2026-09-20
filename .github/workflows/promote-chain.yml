@@ -74,9 +74,19 @@ jobs:
         uses: tailscale/github-action@v3
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
-          # --accept-routes: das LAN-Subnetz (192.168.178.0/24, u. a. ENTW-VM) kommt vom Homeserver.
-          args: --accept-routes
+          # Die Action nimmt Subnet-Routen selbst an (--accept-routes): das LAN-Subnetz
+          # 192.168.178.0/24 (u. a. ENTW-VM) kommt vom Homeserver. Kein zusaetzliches `args`
+          # dafuer setzen: ein doppeltes Flag bricht `tailscale up` ab, ohne dass die Action fehlschlaegt.
           version: latest
+
+      - name: Verify tailnet connection
+        if: steps.cfg.outputs.configured == 'true'
+        run: |
+          state=$(tailscale status --json | jq -r '.BackendState')
+          if [ "$state" != "Running" ]; then
+            echo "::error title=Tailscale nicht verbunden::BackendState=$state (erwartet: Running). Auth-Key pruefen: abgelaufen (max. 90 Tage), nicht reusable oder Tag nicht in tagOwners."
+            exit 1
+          fi
 
       - name: Run promotion chain
         if: steps.cfg.outputs.configured == 'true'
