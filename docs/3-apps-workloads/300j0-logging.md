@@ -119,12 +119,41 @@ Promtail/Grafana Alloy/Vector:**
 | Key | Bedeutung |
 |---|---|
 | `journal_upload_enabled` | Kill-switch, Default `true` |
-| `journal_upload_push_url` | Ziel-URL, Default `http://logs-write.tech.homeserver/insert/journald` — bewusst ein **globaler** Default für alle Hosts (anders als `vmagent_remote_write_url`, das nur für Tailscale-only-Hosts gilt, siehe [ansible/roles/vmagent](30020-vereinsheim-alarmmonitor.md)) |
+| `journal_upload_push_url` | Ziel-URL, Default `https://logs-write.tech.homeserver:443/insert/journald` (HTTPS **und** Port sind Pflicht, siehe unten) — bewusst ein **globaler** Default für alle Hosts (anders als `vmagent_remote_write_url`, das nur für Tailscale-only-Hosts gilt, siehe [ansible/roles/vmagent](30020-vereinsheim-alarmmonitor.md)) |
 
 Die Rolle installiert nur das Paket, templated `/etc/systemd/journal-upload.conf`
 (`[Upload]\nURL=...`) und aktiviert `systemd-journal-upload.service` — kein
 eigenes systemd-Unit, kein dedizierter Nutzer, das Paket bringt beides
 bereits mit.
+
+**TLS, CA und Namensauflösung (Stand 2026-09-20):** Der TECH-Traefik
+leitet HTTP global per `308` auf HTTPS um, und `systemd-journal-upload`
+folgt keiner Weiterleitung. Bis dahin stand die URL auf `http://` — der
+Dienst lief auf jedem Host in eine Fehlerschleife
+(`Upload … failed with code 308`), und **von keinem Host kam je ein Journal
+in VictoriaLogs an**. Die Rolle setzt jetzt:
+
+- `URL=https://logs-write.tech.homeserver:443/insert/journald` (der Port ist Pflicht: ohne Port hängt `systemd-journal-upload` selbst `:19532/upload` an den Pfad und trifft `/insert/journald:19532/upload`, den VictoriaLogs nicht kennt; mit Port wird `/insert/journald/upload` getroffen), `ServerKeyFile=-`/`ServerCertificateFile=-` (kein Client-Zertifikat; sonst bricht der Dienst mit `could not load PEM client certificate` ab) und
+  `TrustedCertificateFile=` auf die interne Root-CA
+  (`docs/assets/homeserver-root-ca.pem` → `/usr/local/share/ca-certificates/homeserver-root-ca.crt`,
+  gleiche Datei wie in den Kiosk-Rollen; `update-ca-certificates` läuft per Handler).
+- Das Zertifikat hat **keine Wildcard**, nur die feste SAN-Liste in
+  `argocd/apps/tech/cert-manager/templates/certificate-homeserver-wildcard.yaml`.
+  `logs-write.tech.homeserver` musste dort ergänzt werden, sonst schlägt
+  die Prüfung mit Hostname-Mismatch fehl. Ein neuer Endpunkt braucht immer
+  einen Eintrag dort (cert-manager stellt das Zertifikat danach selbst neu aus).
+- Einen festen `/etc/hosts`-Eintrag `192.168.178.94 logs-write.tech.homeserver`
+  (`journal_upload_hosts_entry_*`), weil `worker-0`/`worker-1` `*.homeserver`
+  nicht per DNS auflösen (kein dnsmasq als Resolver) und die Tailscale-only-Pis
+  sonst von Split-DNS abhängen.
+
+**Reihenfolge beim Ausrollen:** (1) Zertifikat-Änderung nach `main` mergen
+und in ArgoCD synchronisieren; prüfen:
+`echo | openssl s_client -connect 192.168.178.94:443 -servername logs-write.tech.homeserver 2>/dev/null | openssl x509 -noout -ext subjectAltName | grep logs-write`;
+(2) erst dann die Hosts provisionieren (`--tags journal-upload`, siehe
+Fehlerbehebung). Umgekehrt scheitert der Upload bis zum neuen Zertifikat
+an der Hostname-Prüfung (harmlos, der Dienst versucht es weiter).
+Nicht angebunden sind bewusst die PROD-VM und die ENTW-VM.
 
 ## Logs in Grafana abfragen
 
@@ -150,6 +179,10 @@ vorher bot.
 | Symptom | Check |
 |---|---|
 | Host taucht in Grafana/VictoriaLogs nicht auf | `systemctl status systemd-journal-upload` auf dem Host — läuft der Dienst? `journalctl -u systemd-journal-upload` — Verbindungsfehler zu `logs-write.tech.homeserver`? |
+| `journalctl -u systemd-journal-upload`: `failed with code 308: Permanent Redirect` | Die Upload-URL steht noch auf `http://` — Rolle neu ausrollen (`journal_upload_push_url` ist `https://`). |
+| `journalctl -u systemd-journal-upload`: Zertifikatsfehler / `SSL certificate problem` | (a) steht `logs-write.tech.homeserver` in der SAN-Liste des ausgelieferten Zertifikats (Befehl siehe Abschnitt Rolle)? Sonst `certificate-homeserver-wildcard.yaml` prüfen und ArgoCD syncen. (b) liegt `/usr/local/share/ca-certificates/homeserver-root-ca.crt` auf dem Host und zeigt `TrustedCertificateFile=` in `/etc/systemd/journal-upload.conf` darauf? |
+| Worker: `Could not resolve host: logs-write.tech.homeserver` | `/etc/hosts`-Eintrag fehlt — Rolle ausrollen (`journal_upload_hosts_entry_enabled: true`). Die Worker lösen `*.homeserver` nicht per DNS auf. |
+| Ausrollen auf einzelne Hosts | Homeserver: `ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --limit homeserver --tags journal-upload`; Pi: `ansible-playbook … ansible/banana-pi-kiosks.yml --tags journal-upload`; worker: `… worker-1.yml --tags journal-upload` (jeweils mit `--vault-password-file`). |
 | `logs-write.tech.homeserver` löst nicht auf / Timeout | Gleiche Checks wie bei `alamos-apager.homeserver` (Wildcard-DNS, bei Tailscale-only-Hosts zusätzlich Split-DNS + Subnetz-Route), siehe [docs/3-apps-workloads/30010-alamos-apager.md, Fehlerbehebung](30010-alamos-apager.md#fehlerbehebung) |
 | Dienst läuft, aber keine neuen Logs seit Neustart | `/var/lib/systemd/journal-upload/state` prüfen (Cursor) — bei sehr altem Cursor kann ein initialer Nachtrag laenger dauern, bis aktuelle Zeilen erscheinen |
 | VictoriaLogs selbst down | `kubectl -n logging get pods`, `kubectl -n logging logs -l app.kubernetes.io/name=victoria-logs-single` |

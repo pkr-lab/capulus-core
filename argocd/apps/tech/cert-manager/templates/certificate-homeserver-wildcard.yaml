@@ -53,6 +53,10 @@ spec:
     # lldap-Web-UI (Nutzer-/Gruppenverwaltung), Tailscale/LAN-only wie
     # andere Admin-Tools, siehe docs/d-sicherheit/d0072-lldap.md.
     - lldap.tech.homeserver
+    # Journal-Upload aller Hosts (ansible/roles/journal_upload) -> VictoriaLogs.
+    # Ohne diesen Eintrag scheitert die TLS-Pruefung (Hostname-Mismatch), und
+    # der Upload-Dienst laeuft in eine Fehlerschleife.
+    - logs-write.tech.homeserver
     - mealie.prod.homeserver
     - mealie-native.prod.homeserver
     - minio.tech.homeserver
