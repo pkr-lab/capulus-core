@@ -12,6 +12,29 @@
     cache_valid_time: 3600
   when: journal_upload_enabled | bool
 
+- name: Homeserver-Root-CA-Zertifikat deployen (TLS-Pruefung des Log-Endpunkts)
+  ansible.builtin.copy:
+    src: "{{ journal_upload_ca_src }}"
+    dest: "{{ journal_upload_ca_dest }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: journal_upload_enabled | bool and journal_upload_push_url.startswith('https://')
+  notify:
+    - Homeserver-CA-Vertrauensspeicher aktualisieren
+    - Restart systemd-journal-upload
+
+- name: Log-Endpunkt per /etc/hosts aufloesen (unabhaengig von DNS)
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^\S+\s+{{ journal_upload_hosts_entry_name | regex_escape }}(\s|$)'
+    line: "{{ journal_upload_hosts_entry_ip }} {{ journal_upload_hosts_entry_name }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: journal_upload_enabled | bool and journal_upload_hosts_entry_enabled | bool
+  notify: Restart systemd-journal-upload
+
 - name: journal-upload.conf deployen
   ansible.builtin.template:
     src: journal-upload.conf.j2
