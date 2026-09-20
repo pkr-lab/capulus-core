@@ -3,11 +3,11 @@
 Ziel: Nicht nur `capulus-core`, sondern **alle** eigenen GitHub-Repos sollen
 nachvollziehbare Versionen (Git-Tags + Changelog) bekommen — bisher ist das
 laut Repo-Historie nur hier über
-[semantic-release](f0030-release-automation.md) gelöst.
+[semantic-release](../f-cicd-automatisierung/f0030-release-automation.md) gelöst.
 
 **Ergebnis vorweg:** Der in `capulus-core` bereits produktive Ansatz
 (`.releaserc.json` + `.github/workflows/release.yml`, siehe
-[f0030-release-automation.md](f0030-release-automation.md)) ist ohne
+[f0030-release-automation.md](../f-cicd-automatisierung/f0030-release-automation.md)) ist ohne
 Änderung als Vorlage für jedes andere Repo wiederverwendbar — er braucht
 weder `package.json` noch eine bestimmte Sprache/Runtime, nur eine
 Commit-Historie in Conventional-Commits-Syntax. Der eigentliche Aufwand
@@ -38,7 +38,7 @@ Prüfung:
 | Kriterium | Versionierung sinnvoll? |
 |---|---|
 | **A. Hat das Repo "Konsumenten"** — wird irgendwo auf einen bestimmten Commit/Tag referenziert (Deployment zieht `targetRevision`, ein anderes Repo pinnt eine Version, ein Ansible-Playbook zieht eine Release-Version)? | Ja — genau dafür sind Tags da (Nachvollziehbarkeit: "welcher Stand läuft gerade produktiv") |
-| **B. Reines IaC-/GitOps-Repo wie `capulus-core` selbst**, wo ArgoCD ohnehin `targetRevision: main` direkt trackt (siehe [a0010-overview.md](../a-betriebssystem/a0010-overview.md)) | Ja, aber als **reine Versionshistorie/Nachvollziehbarkeit**, nicht als Deployment-Gate — deckt sich 1:1 mit der bestehenden Begründung in [f0030-release-automation.md](f0030-release-automation.md) |
+| **B. Reines IaC-/GitOps-Repo wie `capulus-core` selbst**, wo ArgoCD ohnehin `targetRevision: main` direkt trackt (siehe [a0010-overview.md](../a-betriebssystem/a0010-overview.md)) | Ja, aber als **reine Versionshistorie/Nachvollziehbarkeit**, nicht als Deployment-Gate — deckt sich 1:1 mit der bestehenden Begründung in [f0030-release-automation.md](../f-cicd-automatisierung/f0030-release-automation.md) |
 | **C. Archiviert / seit > 12 Monaten kein Commit / reines Experiment** | Nein — Aufwand für rückwirkende Versionierung lohnt sich nicht, es sei denn es wird reaktiviert |
 | **D. Reine Config-/Dotfiles-/Notiz-Repos ohne Release-Zyklus** | Nein — kein sinnvoller "Versionssprung"-Begriff, `git log` reicht als Historie |
 | **E. Node/npm-Pakete, die auf npm veröffentlicht werden** | Ja, plus zusätzlich `@semantic-release/npm` in die Plugin-Liste aufnehmen (im Unterschied zu `capulus-core`, das bewusst **kein** npm-Paket ist, siehe f0030) |
@@ -52,7 +52,7 @@ C und D bewusst auslassen, nicht "der Vollständigkeit halber" mitziehen.
 
 semantic-release bestimmt die nächste Version ausschließlich aus
 Commit-Präfixen (`fix:`, `feat:`, `BREAKING CHANGE:` — siehe Tabelle in
-[f0030-release-automation.md](f0030-release-automation.md)). Zwei Fälle:
+[f0030-release-automation.md](../f-cicd-automatisierung/f0030-release-automation.md)). Zwei Fälle:
 
 - **Repo folgt bereits Conventional Commits** (wie `capulus-core`): Setup
   kann direkt starten, semantic-release wertet die komplette Historie ab
@@ -84,7 +84,7 @@ Für jedes Repo aus Schritt 1 identisch zu `capulus-core`:
    **Actions → Release** beobachten — bei fehlenden Release-würdigen
    Commits seit dem letzten Tag läuft er als No-Op durch, das ist
    erwartetes Verhalten (siehe Troubleshooting in
-   [f0030-release-automation.md](f0030-release-automation.md)).
+   [f0030-release-automation.md](../f-cicd-automatisierung/f0030-release-automation.md)).
 5. Optional: README des jeweiligen Repos um einen Versions-Badge
    ergänzen (`img.shields.io/github/v/release/<owner>/<repo>`).
 
@@ -125,13 +125,13 @@ Ein-Personen-Repos (wie hier) reicht oft schon die Selbstdisziplin, die
 - **Kein automatisches `npm publish`/Registry-Push** für Repos, die
   keine Pakete sind — analog zur bewussten Auslassung in `capulus-core`
   selbst (siehe "Was das NICHT tut" in
-  [f0030-release-automation.md](f0030-release-automation.md)).
+  [f0030-release-automation.md](../f-cicd-automatisierung/f0030-release-automation.md)).
 
 ---
 
 ## Relevante Links
 
-- [f0030-release-automation.md](f0030-release-automation.md) — die hier
+- [f0030-release-automation.md](../f-cicd-automatisierung/f0030-release-automation.md) — die hier
   als Vorlage genutzte, bereits produktive Implementierung
 - [.releaserc.json](../../.releaserc.json) — zu kopierende Konfiguration
 - [.github/workflows/release.yml](../../.github/workflows/release.yml) —
