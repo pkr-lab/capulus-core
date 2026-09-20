@@ -1,15 +1,16 @@
 name: Tailscale Runner PoC
 
-# Machbarkeitsnachweis fuer Phase 0, Schritt 0.8 aus
-# docs/4-planung/40080-multi-cluster-entw-prod-tech.md: kann ein
-# GitHub-Actions-Cloud-Runner ueber Tailscale das interne, nicht
-# oeffentlich erreichbare ArgoCD ansprechen? Voraussetzung fuer den
-# spaeteren promote.yml-Workflow (Baustein 6). Nur manuell startbar -
-# kein Dauerbetrieb, reiner Beweis, dass der Ansatz funktioniert.
+# Diagnose fuer die Promotion-Kette (docs/f-cicd-automatisierung/f00a0-tailscale-runner-poc.md):
+# Erreicht ein GitHub-Runner ueber Tailscale die beiden ArgoCD-Instanzen und die ENTW-Apps?
+# Nur manuell startbar. Der Lauf testet jeden Weg einzeln, gibt eine Tabelle aus und schlaegt
+# erst am Ende fehl, wenn ein fuer die Promotion noetiger Weg nicht funktioniert.
 #
-# Setup: Tailscale-Auth-Key (Reusable empfohlen, siehe
-# docs/c-netzwerk-dns/c0010-tailscale.md#acl-konfiguration) als
-# Repo-Secret TAILSCALE_AUTHKEY hinterlegen.
+# Wege (ArgoCD lauscht per NodePort 30080 im Klartext, `server.insecure`; 30443 ist zurueckgesetzt):
+#   hub-lan  Hub-ArgoCD (TECH+PROD) ueber das LAN-Subnetz (Subnet-Route)      -> Grant auf 192.168.178.94:30080  [noetig]
+#   entw     ENTW-ArgoCD auf entw-vm (nur per Subnet-Route erreichbar)         -> Grant auf 192.168.178.100:30080 [noetig]
+#   smoke    ENTW-Ingress (Host whoami.dev.homeserver) fuer Smoke-Tests        -> Grant auf 192.168.178.100:80   [optional]
+#   hub      Hub-ArgoCD ueber die Tailnet-Adresse des Homeservers              -> Grant auf tag:tech-node:30080  [nur Diagnose]
+# Setup: Auth-Key als Repo-Secret TAILSCALE_AUTHKEY (docs/c-netzwerk-dns/c0010-tailscale.md#acl-konfiguration).
 on:
   workflow_dispatch: {}
 
@@ -23,16 +24,51 @@ jobs:
       - name: Connect runner to tailnet
         uses: tailscale/github-action@v3
         with:
-          oauth-client-id: ""
-          oauth-secret: ""
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          args: --accept-routes
           version: latest
 
-      - name: Reach ArgoCD over the tailnet
+      - name: Probe reachability of every path
         run: |
-          set -eu
           echo "== tailscale status =="
-          tailscale status
-          echo "== curl gegen ArgoCD (homeserver:30443) =="
-          curl -sk -o /dev/null -w "HTTP %{http_code}\n" https://homeserver:30443 \
-            || { echo "FEHLGESCHLAGEN - siehe Troubleshooting in docs/f-cicd-automatisierung/f00a0-tailscale-runner-poc.md"; exit 1; }
+          tailscale status || true
+          echo
+          hub_ip=$(tailscale ip -4 homeserver 2>/dev/null | head -1 || true)
+          echo "homeserver (Tailnet-IP): ${hub_ip:-nicht gefunden}"
+          echo
+
+          tcp() { timeout 6 bash -c "</dev/tcp/$1/$2" 2>/dev/null && echo offen || echo "zu/gefiltert"; }
+          http() { curl -s -m 8 -o /dev/null -w '%{http_code}' "$@" 2>/dev/null || true; }
+          version() { curl -s -m 8 "$1/api/version" 2>/dev/null | grep -o '"Version":"[^"]*"' | head -1 || true; }
+
+          fail=0
+          row() { printf '%-9s %-34s TCP %-13s HTTP %-4s %s\n' "$1" "$2" "$3" "$4" "$5"; }
+
+          echo "== Ergebnis =="
+          # hub: Tailnet-Adresse des Homeservers (Diagnose)
+          if [ -n "$hub_ip" ]; then
+            t=$(tcp "$hub_ip" 30080); h=$(http "http://$hub_ip:30080/api/version")
+            row hub "$hub_ip:30080" "$t" "$h" "(nur Diagnose)"
+          else
+            row hub "homeserver" "-" "-" "Peer nicht im Tailnet gefunden (nur Diagnose)"
+          fi
+          # hub-lan: Hub-ArgoCD ueber die Subnet-Route (so fragt promote-chain.yml ab)
+          t=$(tcp 192.168.178.94 30080); h=$(http "http://192.168.178.94:30080/api/version")
+          row hub-lan "192.168.178.94:30080" "$t" "$h" "$(version "http://192.168.178.94:30080")"
+          [ "$h" = 200 ] || fail=1
+          # entw: ENTW-ArgoCD
+          t=$(tcp 192.168.178.100 30080); h=$(http "http://192.168.178.100:30080/api/version")
+          row entw "192.168.178.100:30080" "$t" "$h" "$(version "http://192.168.178.100:30080")"
+          [ "$h" = 200 ] || fail=1
+          # smoke: ENTW-Ingress mit Host-Header (kein Heim-DNS auf dem Runner)
+          h=$(http -H 'Host: whoami.dev.homeserver' "http://192.168.178.100:80/")
+          row smoke "192.168.178.100:80 (whoami.dev)" "$(tcp 192.168.178.100 80)" "$h" "(Smoke-Tests, optional)"
+
+          echo
+          if [ "$fail" = 0 ]; then
+            echo "OK: hub-lan und entw erreichbar - die Promotion-Kette kann die Gates auswerten."
+          else
+            echo "FEHLGESCHLAGEN: siehe Troubleshooting in docs/f-cicd-automatisierung/f00a0-tailscale-runner-poc.md"
+            echo "Meist fehlt der Grant in der Tailscale-ACL (Timeout = gefiltert) oder --accept-routes/Route-Freigabe."
+          fi
+          exit $fail

@@ -167,7 +167,7 @@ danach ist der Cache persistent und Neustarts sind schnell.
 Album ihm zugeordnet ist, wird zusätzlich (verschlüsselt, außerhalb der
 App-DB) in `ansible/group_vars/user_inventory_vault.yml` festgehalten —
 `make user-inventory-edit` zum Bearbeiten, siehe
-[docs/4-planung/40080-multi-cluster-entw-prod-tech.md → Baustein 7](../4-planung/40080-multi-cluster-entw-prod-tech.md#7-nutzer--daten-inventar-für-immich--vaultwarden)
+[docs/4-planung/40080-multi-cluster-entw-prod-tech.md → Baustein 7](../4-planung/40080-multi-cluster-entw-prod-tech.md#7-nutzer-daten-inventar-für-immich--vaultwarden)
 für den Zweck (Dokumentation, kein Ersatz für die eigentliche DB).
 
 ---

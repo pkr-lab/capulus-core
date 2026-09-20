@@ -5,14 +5,14 @@ HTML5-Pacman-Spiel, self-hosted für den öffentlichen Zugriff. Ausgeliefert
 serviert **und** pro Request eine strukturierte JSON-Zugriffszeile loggt
 (Client-IP inkl. IPv6, User-Agent, optional GeoIP-Standort) — für die
 Schulung, die zeigt, was ein Webserver über einen Besucher herausfindet.
-Details/Setup der GeoIP-Anreicherung: [docs/3-apps-workloads/300f0-pacman-visitor-tracking.md](../../../docs/3-apps-workloads/300f0-pacman-visitor-tracking.md).
+Details/Setup der GeoIP-Anreicherung: [docs/3-apps-workloads/300f0-pacman-visitor-tracking.md](../../../../docs/3-apps-workloads/300f0-pacman-visitor-tracking.md).
 
 Das Spiel selbst (`src/`) ist vendored von
 [platzhersh/pacman-canvas](https://github.com/platzhersh/pacman-canvas)
 (CC0-1.0) — Google Analytics/AdSense sowie die
 AppsFuel/Google-Site-Verification-Artefakte des Originals wurden vor dem
 Vendoring entfernt, das Spiel selbst lädt zur Laufzeit nichts von Dritten
-nach (siehe [Bekannte Einschränkung](#bekannte-einschränkung) unten).
+nach (siehe „Bekannte Einschränkung“ unten).
 
 ## Ins Repo einbinden
 
@@ -82,7 +82,7 @@ docker run --rm --read-only --user 65532:65532 -p 8080:8080 pacman-local
 ## Extern erreichbar
 
 `values.yaml` trägt bereits einen zweiten Ingress-Host
-(`pacman-prod.pke-lab.de`) gemäß [docs/c-netzwerk-dns/c0040-domain-tiers.md](../../../docs/c-netzwerk-dns/c0040-domain-tiers.md)
+(`pacman-prod.pke-lab.de`) gemäß [docs/c-netzwerk-dns/c0040-domain-tiers.md](../../../../docs/c-netzwerk-dns/c0040-domain-tiers.md)
 — Tier **prod**, da Endnutzer-Content ohne eigenen Betriebs-/Admin-Zweck.
 `cloudflared/values.yaml` muss dafür **nicht** angepasst werden (siehe
 dortige Wildcard-Regel), Traefik matcht den Host direkt aus dieser
@@ -165,7 +165,7 @@ Namensfeld im Nickname-Overlay serverseitig (`window.PACMAN_TRAINING_MODE`,
 gerendert in `main.go`'s `serveIndexWithFingerprint()`) an dieselbe
 versteckte Autofill-Ernte, die `fingerprint.js`'s `harvestAutofill()`
 bereits für ihr eigenes Ecken-Widget nutzt (siehe
-[docs/3-apps-workloads/300f0-pacman-visitor-tracking.md](../../../docs/3-apps-workloads/300f0-pacman-visitor-tracking.md)): unsichtbare
+[docs/3-apps-workloads/300f0-pacman-visitor-tracking.md](../../../../docs/3-apps-workloads/300f0-pacman-visitor-tracking.md)): unsichtbare
 E-Mail-/Tel-/Adresse-/PLZ-Felder im **selben** `<form>` wie das sichtbare
 Namensfeld, siehe `addHiddenAutofillFields()` in `src/nickname.js`. Nimmt
 der Browser eine gespeicherte Autofill-Vorschlag für "Name" an, füllt er
@@ -225,4 +225,4 @@ den Hostnamen:
 RAM-lastiges Verhalten hat. Kein `ReadWriteOnce`-Storage im Spiel, also
 auch keine Notwendigkeit für erzwungene Node-Co-Location per
 `podAffinity` (anders als z. B. immich/nextcloud). Details/Konventionen:
-[docs/b-kubernetes-gitops/b0040-hpa-autoscaling.md](../../../docs/b-kubernetes-gitops/b0040-hpa-autoscaling.md).
+[docs/b-kubernetes-gitops/b0040-hpa-autoscaling.md](../../../../docs/b-kubernetes-gitops/b0040-hpa-autoscaling.md).
