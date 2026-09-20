@@ -2,7 +2,14 @@
 # Standard-Dashboards ("Kubernetes / ...", "Node Exporter / ...",
 # "VictoriaMetrics - ...", "Prometheus / ...", "Alertmanager / Overview",
 # "Grafana Overview") in eigene Grafana-Ordner ein, statt sie im
-# General-Ordner zu sammeln.
+# General-Ordner zu sammeln:
+#   Kubernetes*                                  -> "Kubernetes (TECH)"
+#   Node Exporter*                               -> "Hardware" (Host-Sicht, neben den
+#                                                   Hardware-Dashboards, siehe
+#                                                   dashboards-hardware.yaml)
+#   VictoriaMetrics*/Prometheus*/Alertmanager*/Grafana* -> "Monitoring-Stack"
+# Die Pro-App-Dashboards landen in "Plattform (TECH)" / "Anwendungen (TECH)"
+# (values.yaml `dashboardApps`).
 #
 # Warum ein eigener Job statt einer values.yaml-Einstellung: der
 # eingebaute Sync-Job der Chart (siehe unten, Hook post-install/
@@ -104,9 +111,9 @@ spec:
               for cm in $(kubectl -n {{ .Release.Namespace }} get configmap -l grafana_dashboard=1 -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | grep "^${PREFIX}" || true); do
                 title=$(kubectl -n {{ .Release.Namespace }} get configmap "$cm" -o json | jq -r '.data | to_entries[0].value | fromjson | .title // empty')
                 case "$title" in
-                  Kubernetes*|"Node Exporter"*) folder="Kubernetes" ;;
-                  VictoriaMetrics*|Prometheus*|Alertmanager*) folder="VictoriaMetrics" ;;
-                  Grafana*) folder="Grafana" ;;
+                  Kubernetes*) folder="Kubernetes (TECH)" ;;
+                  "Node Exporter"*) folder="Hardware" ;;
+                  VictoriaMetrics*|Prometheus*|Alertmanager*|Grafana*) folder="Monitoring-Stack" ;;
                   *) echo "skip $cm (title='$title', kein bekanntes Präfix)"; continue ;;
                 esac
                 echo "$cm -> $folder (title='$title')"
