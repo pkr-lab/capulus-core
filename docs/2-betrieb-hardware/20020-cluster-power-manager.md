@@ -224,7 +224,7 @@ Gegen einen daraus resultierenden RAM-Engpass greifen vier Schichten,
 von früh/sanft bis spät/hart:
 
 1. **VMRule/Alertmanager-Warnung** (RAM ≥ 70% / CPU ≥ 80%, 2 Minuten,
-   [vmrule-resources.yaml](../../argocd/apps/platform/monitoring/templates/vmrule-resources.yaml))
+   [vmrule-resources.yaml](../../argocd/apps/tech/monitoring/templates/vmrule-resources.yaml))
    — nur Gotify-Push, kein Eingriff. Läuft **im** Cluster und kann daher
    selbst betroffen sein, wenn genau der Ressourcendruck, vor dem sie
    warnen soll, den Monitoring-Stack mit ausbremst.

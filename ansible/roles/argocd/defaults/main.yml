@@ -6,6 +6,19 @@
 # argocd/apps/workloads/ — each entry here is also the app's namespace name
 # (destination.namespace == the app's folder basename, see
 # bootstrap-applicationset.yaml.j2).
+# false (Default): ApplicationSet-Generator nimmt alle Ordner unter
+# argocd/apps/<tier>/*. true: nur die Apps aus argocd_platform_apps /
+# argocd_workloads_apps unten (frueher ENTW; dort seit argocd_entw_layout ohne Wirkung).
+argocd_apps_from_lists: false
+
+# true = ein Projekt "entw" und ein ApplicationSet fuer alle Apps unter argocd/apps/entw/ (nur ENTW-Cluster,
+# siehe host_vars/entw-vm). Hat Vorrang vor argocd_tech_layout und argocd_apps_from_lists.
+argocd_entw_layout: false
+
+# true = ein Projekt "tech" und ein ApplicationSet fuer alle Apps unter argocd/apps/tech/ (Hub).
+# false = altes Layout platform/workloads (von keinem Cluster mehr genutzt, seit ENTW auf argocd_entw_layout ist).
+argocd_tech_layout: false
+
 argocd_platform_apps:
   - sealed-secrets
   - kubeseal-webgui
@@ -32,45 +45,26 @@ argocd_workloads_apps:
   - alamos-apager
   - alamos-relay
   - carplay-api
-  - demo-app
-  - example-whoami
   - github-release-watcher
-  - immich
-  - mealie
   - mediamtx
   - n8n
-  - nextcloud
   - ollama
   - pacman
-  - paperless-ngx
-  - tinyteller
   - uptime-kuma
   - vaultwarden
-  - wiki-docs-sync
-  - wikijs
-  - xibosignage
   - zammad
 
 argocd_apply_network_policies: true
 
 argocd_network_policy_refined_namespaces:
-  - example-whoami
-  - tinyteller
-  - wikijs
-  - mealie
   - n8n
   - alamos-apager
   - alamos-relay
   - carplay-api
   - github-release-watcher
-  - immich
   - mediamtx
-  - nextcloud
-  - paperless-ngx
   - uptime-kuma
   - vaultwarden
-  - wiki-docs-sync
-  - xibosignage
   - zammad
   - authentik
   - lldap

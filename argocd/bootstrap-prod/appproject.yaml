@@ -1,0 +1,64 @@
+# AppProject "prod": Apps, die der TECH-Hub im PROD-Cluster (prod-vm,
+# 192.168.178.99) verwaltet. Handgeschrieben, NICHT generiert und NICHT Teil
+# des argocd-Ansible-Rollenlaufs - einmalig im TECH-Cluster anwenden:
+#   kubectl apply -f argocd/bootstrap-prod/appproject.yaml
+# (docs/4-planung/40080 Phase 2.6 / 3.1)
+#
+# Bewusst weit bei den Ressourcentypen (wie platform/workloads), eng bei
+# sourceRepos und destinations: nur dieses Repo, nur der PROD-Cluster.
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: prod
+  namespace: argocd
+spec:
+  description: >-
+    PROD-Cluster (prod-vm): vom TECH-Hub verwaltet. Wird schrittweise um
+    Apps aus argocd/apps/prod/ erweitert.
+  sourceRepos:
+    - "https://github.com/pkr-lab/capulus-core.git"
+  destinations:
+    - name: prod
+      namespace: sealed-secrets
+    - name: prod
+      namespace: nas-storage
+    - name: prod
+      namespace: immich-storage
+    - name: prod
+      namespace: demo-app
+    - name: prod
+      namespace: cloudflared
+    - name: prod
+      namespace: authentik
+    - name: prod
+      namespace: mealie
+    - name: prod
+      namespace: paperless-ngx
+    - name: prod
+      namespace: wikijs
+    - name: prod
+      namespace: wiki-docs-sync
+    - name: prod
+      namespace: nextcloud
+    - name: prod
+      namespace: immich
+    - name: prod
+      namespace: xibosignage
+    - name: prod
+      namespace: example-whoami
+    - name: prod
+      namespace: tinyteller
+    # cert-manager + Traefik-TLSStore (Phase 2.8): Certificate/TLSStore liegen
+    # in kube-system, die Apps selbst in eigenen Namespaces.
+    - name: prod
+      namespace: cert-manager
+    - name: prod
+      namespace: traefik-config
+    - name: prod
+      namespace: kube-system
+    # Neue PROD-Apps hier ergaenzen (Namespace = Ordnername unter
+    # argocd/apps/prod/).
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"

@@ -17,7 +17,7 @@ unten. Diese Seite ist das Ziel, auf das das Ticket verlinkt.
 | **Ansible-Vault-Passwort** | Schützt alle `!vault \|`-Werte in `ansible/group_vars/`, `host_vars/` | Alle 1–2 Jahre, oder sofort bei Verdacht auf Kompromittierung | `ansible-vault rekey ansible/group_vars/all.yml` (+ alle weiteren vault-verschlüsselten Dateien im Repo) — neues Passwort danach auch in `semaphore_vault_password` (docs/b-kubernetes-gitops/b0030-semaphore.md) und bei allen, die lokal `--ask-vault-pass` nutzen, aktualisieren |
 | **restic-Passwort** (NAS-Backup) | Verschlüsselt das komplette Backup-Repository, siehe [docs/2-betrieb-hardware/20010-nas-backup.md](../2-betrieb-hardware/20010-nas-backup.md) | **Nicht routinemäßig rotieren** — ein Passwortwechsel macht alle bisherigen Snapshots unlesbar, außer man migriert das ganze Repository (`restic copy`/`init --repository2`, aufwendig). Nur bei tatsächlichem Verdacht auf Kompromittierung, dann mit vollständiger Repo-Migration | Bei Bedarf: neues Repo mit neuem Passwort anlegen, alte Snapshots per `restic copy` migrieren, siehe [restic-Doku](https://restic.readthedocs.io/en/stable/070_encryption.html) |
 | **ArgoCD-Admin-Passwort** | Login unter `https://<server-ip>:30443` | Alle 6–12 Monate | `argocd account update-password` (oder `kubectl -n argocd patch secret argocd-secret ...`, siehe [ArgoCD-Doku](https://argo-cd.readthedocs.io/en/stable/faq/#i-forgot-the-admin-password-how-do-i-reset-it)) |
-| **Sealed-Secrets-Schlüssel** | Verschlüsselt alle `SealedSecret`-Objekte im Repo | **Rotiert automatisch** — der Controller generiert standardmäßig alle 30 Tage einen neuen aktiven Schlüssel (`--key-renew-period`, hier auf Chart-Default belassen, siehe `argocd/apps/platform/sealed-secrets/values.yaml`). Alte Schlüssel bleiben für bereits versiegelte Secrets nötig und werden nicht automatisch gelöscht | Nichts zu tun für neue Secrets. Nur bei Verdacht auf Kompromittierung: `kubeseal --re-encrypt` auf alle bestehenden SealedSecrets im Repo anwenden, danach alte Controller-Keys manuell löschen (siehe [sealed-secrets-Doku](https://github.com/bitnami-labs/sealed-secrets#secret-rotation)) |
+| **Sealed-Secrets-Schlüssel** | Verschlüsselt alle `SealedSecret`-Objekte im Repo | **Rotiert automatisch** — der Controller generiert standardmäßig alle 30 Tage einen neuen aktiven Schlüssel (`--key-renew-period`, hier auf Chart-Default belassen, siehe `argocd/apps/tech/sealed-secrets/values.yaml`). Alte Schlüssel bleiben für bereits versiegelte Secrets nötig und werden nicht automatisch gelöscht | Nichts zu tun für neue Secrets. Nur bei Verdacht auf Kompromittierung: `kubeseal --re-encrypt` auf alle bestehenden SealedSecrets im Repo anwenden, danach alte Controller-Keys manuell löschen (siehe [sealed-secrets-Doku](https://github.com/bitnami-labs/sealed-secrets#secret-rotation)) |
 
 ---
 
@@ -25,7 +25,7 @@ unten. Diese Seite ist das Ziel, auf das das Ticket verlinkt.
 
 Eine reine Markdown-Checkliste wird erfahrungsgemäß nie von sich aus
 wieder aufgeschlagen. Deshalb: ein n8n-Workflow
-([argocd/apps/workloads/n8n/workflows/yearly-secrets-rotation-reminder.json](../../argocd/apps/workloads/n8n/workflows/yearly-secrets-rotation-reminder.json))
+([argocd/apps/tech/n8n/workflows/yearly-secrets-rotation-reminder.json](../../argocd/apps/tech/n8n/workflows/yearly-secrets-rotation-reminder.json))
 mit einem **jährlichen Schedule-Trigger**, der ein Zammad-Ticket in der
 Gruppe **`Support::Administration`** eröffnet — Titel, Fälligkeits-
 Charakter und ein Link auf diese Seite, nicht die volle Checkliste im

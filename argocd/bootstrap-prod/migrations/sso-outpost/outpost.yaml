@@ -1,0 +1,104 @@
+# Remote-Proxy-Outpost von Authentik in PROD (docs/4-planung/40080, Batch 4).
+# Meldet sich mit einem Token bei Authentik in TECH an, bekommt von dort die
+# zugeordneten Provider (mealie, ...) und beantwortet die ForwardAuth-Aufrufe
+# der PROD-Middleware lokal. Der Outpost-Eintrag und das Token entstehen in
+# Authentik (Outposts -> Erstellen, Typ "Proxy", Integration: keine); das
+# Token kommt als SealedSecret `authentik-outpost-token` (Schluessel `token`)
+# nach outpost-token-sealedsecret.yaml - siehe migrations/README.md.
+#
+# Version muss zur Authentik-Version in TECH passen (argocd/apps/tech/
+# authentik/values.yaml, image.tag).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authentik-outpost
+  namespace: authentik
+  labels:
+    app.kubernetes.io/name: authentik-outpost
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: authentik-outpost
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: authentik-outpost
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: proxy
+          image: ghcr.io/goauthentik/proxy:2025.8.3
+          ports:
+            - name: http
+              containerPort: 9000
+            - name: https
+              containerPort: 9443
+          env:
+            - name: AUTHENTIK_HOST
+              value: "https://authentik.tech.homeserver"
+            - name: AUTHENTIK_INSECURE
+              value: "false"
+            - name: AUTHENTIK_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: authentik-outpost-token
+                  key: token
+            # Interne Root-CA fuer die Verbindung zu authentik.tech.homeserver.
+            - name: SSL_CERT_FILE
+              value: /etc/homeserver-ca/ca.pem
+          readinessProbe:
+            httpGet:
+              path: /outpost.goauthentik.io/ping
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /outpost.goauthentik.io/ping
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: homeserver-ca
+              mountPath: /etc/homeserver-ca
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: homeserver-ca
+          configMap:
+            name: homeserver-root-ca
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authentik-outpost
+  namespace: authentik
+  labels:
+    app.kubernetes.io/name: authentik-outpost
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 9000
+      targetPort: http
+  selector:
+    app.kubernetes.io/name: authentik-outpost

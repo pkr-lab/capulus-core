@@ -83,7 +83,7 @@ TLS-Stacks genutzt), das Wildcards unter einem Suffix mit nur **einem**
 DNS-Label ablehnt — dieselbe Schutzregel, die ein `*.com`-Zertifikat
 verhindert. Das ist eine Eigenschaft von `.homeserver` als Zone, keine
 Tool-Einschränkung — auch cert-manager kann daran nichts ändern. Die
-[`Certificate`-Ressource](../../argocd/apps/platform/cert-manager/templates/certificate-homeserver-wildcard.yaml)
+[`Certificate`-Ressource](../../argocd/apps/tech/cert-manager/templates/certificate-homeserver-wildcard.yaml)
 trägt deshalb weiterhin eine explizite, jetzt tier-behaftete `dnsNames`-
 Liste. Ein neuer `*.homeserver`-Host braucht weiterhin einen Eintrag dort
 + Commit — was sich geändert hat, ist nur, dass danach niemand mehr
@@ -95,7 +95,7 @@ Zertifikat automatisch, sobald der geänderte Manifest gesynct ist.
 - **Subject Alternative Names:** alle aktuellen `*.homeserver`-Hosts
   (tier-behaftet, `<app>.tech.homeserver`/`<app>.prod.homeserver`) plus
   der nackte Apex `homeserver` — siehe
-  [certificate-homeserver-wildcard.yaml](../../argocd/apps/platform/cert-manager/templates/certificate-homeserver-wildcard.yaml).
+  [certificate-homeserver-wildcard.yaml](../../argocd/apps/tech/cert-manager/templates/certificate-homeserver-wildcard.yaml).
 - **Gültigkeit:** 90 Tage (`duration: 2160h`), automatische Erneuerung 30
   Tage vor Ablauf (`renewBefore: 720h`) — bewusst kurz, weil das jetzt
   nichts mehr kostet (keine ACME-Rate-Limits wie bei einer öffentlichen
@@ -105,7 +105,7 @@ Zertifikat automatisch, sobald der geänderte Manifest gesynct ist.
 ### Ablage im Cluster: TLSStore statt pro-App-Ingress
 
 Unverändert: ein einziges `TLSStore`-Objekt namens `default`
-([argocd/apps/platform/traefik-config/tlsstore.yaml](../../argocd/apps/platform/traefik-config/tlsstore.yaml))
+([argocd/apps/tech/traefik-config/tlsstore.yaml](../../argocd/apps/tech/traefik-config/tlsstore.yaml))
 verweist auf das von cert-manager verwaltete Secret — `default` ist dabei
 kein Freitext, sondern der von Traefik selbst reservierte Name, der
 automatisch für jeden Router greift, der nicht explizit ein anderes
@@ -131,8 +131,8 @@ Namespace ein `tier-default-ingress`-NetworkPolicy und ein
 ## Rollout
 
 **1. Committen + pushen** (macht der Nutzer selbst) — sobald
-`argocd/apps/platform/cert-manager/`,
-`argocd/apps/platform/traefik-config/tlsstore.yaml` und
+`argocd/apps/tech/cert-manager/`,
+`argocd/apps/tech/traefik-config/tlsstore.yaml` und
 `ansible/roles/argocd/templates/bootstrap-appprojects.yaml.j2` +
 `argocd/bootstrap/projects.yaml` im Repo sind, holt sich ArgoCD die
 Änderung automatisch (`automated: {prune: true, selfHeal: true}`, kein
@@ -248,7 +248,7 @@ Browser-Zugriff auf `*.homeserver`).
 ## Neuen Host hinzufügen / Zertifikat erneuern
 
 **Neuer Host:** Eintrag in `dnsNames` in
-[certificate-homeserver-wildcard.yaml](../../argocd/apps/platform/cert-manager/templates/certificate-homeserver-wildcard.yaml)
+[certificate-homeserver-wildcard.yaml](../../argocd/apps/tech/cert-manager/templates/certificate-homeserver-wildcard.yaml)
 ergänzen, committen, pushen — cert-manager erstellt automatisch ein neues
 Zertifikat mit der erweiterten SAN-Liste, kein `openssl`/`kubeseal` mehr
 nötig.
@@ -290,3 +290,66 @@ Erzeugung (`openssl req -x509 ...` mit neutralem Subject statt `mkcert`s
 `OU=user@host`, wegen des öffentlichen Repos) und die Argumentation dafür
 sind unverändert gültig — nur der Leaf-Signier-Schritt ist jetzt
 automatisiert, siehe [Design-Entscheidungen](#design-entscheidungen) oben.
+
+---
+
+## PROD-Cluster (Phase 2.8, Multi-Cluster-Plan)
+
+Der PROD-Cluster (`prod-vm`, vom TECH-Hub verwaltet) bekommt **kein** Abbild
+des Root-CA-Keys. Stattdessen stellt die gemeinsame Homeserver-Root-CA eine
+**PROD-eigene Intermediate-CA** aus, deren Key als einziger in PROD liegt
+(Entscheidung 0.3, [40080 Baustein 4](../4-planung/40080-multi-cluster-entw-prod-tech.md)).
+Clients vertrauen weiterhin nur der Root-CA — kein neuer Trust-Store-Rollout.
+Wird der PROD-Cluster kompromittiert, ist der Root-Key nicht betroffen; die
+Intermediate-CA lässt sich mit der Root-CA neu ausstellen.
+
+Im Repo: `argocd/apps/prod/cert-manager/` (Chart, `ClusterIssuer`,
+`Certificate` nur für `*.prod.homeserver`-Hosts) und
+`argocd/apps/prod/traefik-config/tlsstore.yaml`. Der ApplicationSet
+`home-server-apps-prod` erzeugt daraus `prod-cert-manager` und
+`prod-traefik-config`.
+
+**Einmaliger manueller Schritt** (nicht GitOps, Key nie ins Repo), auf dem
+Rechner, auf dem `rootCA.pem`/`rootCA-key.pem` liegen (Passwort-Manager, falls
+nicht mehr lokal):
+
+```bash
+mkdir -p ~/prod-ca && cd ~/prod-ca
+openssl genrsa -out prod-ca-key.pem 4096
+openssl req -new -key prod-ca-key.pem \
+  -subj "/O=Homeserver Internal CA/CN=Homeserver PROD Intermediate CA" -out prod-ca.csr
+cat > prod-ca-ext.cnf <<'EXT'
+basicConstraints=critical,CA:TRUE,pathlen:0
+keyUsage=critical,keyCertSign,cRLSign
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid,issuer
+EXT
+openssl x509 -req -in prod-ca.csr -CA /pfad/zu/rootCA.pem -CAkey /pfad/zu/rootCA-key.pem \
+  -CAcreateserial -days 1825 -sha256 -extfile prod-ca-ext.cnf -out prod-ca.pem
+openssl verify -CAfile /pfad/zu/rootCA.pem prod-ca.pem      # muss "OK" zeigen
+```
+
+Import erst, **nachdem** `prod-cert-manager` gesynct und der Namespace
+`cert-manager` in PROD existiert:
+
+```bash
+kubectl create secret tls homeserver-ca-keypair --cert=prod-ca.pem --key=prod-ca-key.pem \
+  --namespace=cert-manager --dry-run=client -o yaml \
+  | ssh ubuntu@192.168.178.99 'sudo k3s kubectl apply -f -'
+```
+
+Danach die Dateien in `~/prod-ca/` sichern (Key in den Passwort-Manager) und
+lokal löschen.
+
+**Prüfen** (auf `prod-vm` bzw. per `ssh ubuntu@192.168.178.99 'sudo k3s kubectl …'`):
+
+```bash
+kubectl get clusterissuer homeserver-ca-issuer -o wide      # Ready=True
+kubectl -n kube-system get certificate homeserver-wildcard-tls   # READY=True
+curl -v --resolve whoami.prod.homeserver:443:192.168.178.99 https://whoami.prod.homeserver/ 2>&1 | grep -E "issuer|verify"
+```
+
+Der Test mit `curl` funktioniert erst, wenn ein Host in PROD tatsächlich
+läuft (Phase 3) — bis dahin liefert Traefik in PROD sein Standardzertifikat
+bzw. einen 404, das Zertifikat selbst ist aber bereits prüfbar
+(`kubectl get secret homeserver-wildcard-tls -n kube-system`).

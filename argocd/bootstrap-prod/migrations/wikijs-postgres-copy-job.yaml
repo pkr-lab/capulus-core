@@ -1,0 +1,53 @@
+# Kopiert das aktuelle Postgres-18-Datenverzeichnis von Wiki.js aus dem TECH-Verzeichnis
+# auf dem NAS in das neue PROD-Volume (PVC wikijs-postgresql-data). Manuell in PROD
+# anwenden, NICHT per ArgoCD (siehe README.md in diesem Ordner):
+#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl apply -f -' < argocd/bootstrap-prod/migrations/wikijs-postgres-copy-job.yaml
+#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl -n wikijs logs job/wikijs-postgres-copy'
+#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl -n wikijs delete job wikijs-postgres-copy'
+#
+# NUR mit gestopptem TECH-Postgres (sauber heruntergefahren) und gestopptem PROD-Postgres.
+# Kopiert nur pgdata_fixed_pg18 (PG 18, ~1,8 GB); das alte pgdata_fixed (PG 16, Rueckfall
+# des Major-Upgrades) bleibt in TECH und wird nicht mitgenommen. Laeuft als uid 1000 wie
+# Postgres in diesem Chart (Besitzer/Modus muessen stimmen, PGDATA verlangt 0700).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: wikijs-postgres-copy
+  namespace: wikijs
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 10
+        fsGroup: 10
+      containers:
+        - name: copy
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              echo "Quelle:"; ls -la /old; cat /old/pgdata_fixed_pg18/PG_VERSION
+              find /new -mindepth 1 -delete
+              mkdir /new/pgdata_fixed_pg18
+              (cd /old/pgdata_fixed_pg18 && tar cf - .) | (cd /new/pgdata_fixed_pg18 && tar xpf -)
+              chmod 700 /new/pgdata_fixed_pg18
+              echo "Ziel:"; ls -la /new; ls -ld /new/pgdata_fixed_pg18; cat /new/pgdata_fixed_pg18/PG_VERSION
+              du -sh /old/pgdata_fixed_pg18 /new/pgdata_fixed_pg18
+          volumeMounts:
+            - {name: old, mountPath: /old, readOnly: true}
+            - {name: new, mountPath: /new}
+      volumes:
+        - name: old
+          nfs:
+            server: 192.168.178.97
+            path: /volume1/k8s-storage/wikijs-wikijs-postgresql-data-pvc-01906f97-d61c-4a39-a1c9-4b908c460daf
+            readOnly: true
+        - name: new
+          persistentVolumeClaim:
+            claimName: wikijs-postgresql-data

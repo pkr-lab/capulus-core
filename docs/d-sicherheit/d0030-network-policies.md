@@ -25,7 +25,7 @@ nur aus demselben `security-tier` (+ `kube-system` + `monitoring`).
 `platform`) ruft die Origin-Services für den öffentlichen Tunnel
 (`*.pke-lab.de`) per ClusterIP **direkt** an — u. a. `wikijs`, `mealie`,
 `vaultwarden`, `nextcloud`, `immich`, `paperless-ngx`, `zammad`
-(`argocd/apps/platform/cloudflared/values.yaml`). Das ist Cross-Tier
+(`argocd/apps/tech/cloudflared/values.yaml`). Das ist Cross-Tier
 (platform → workload) und wurde durch die grobe Policy sofort blockiert —
 **ab dem Schritt-1-Rollout war der komplette externe Zugriff über den
 Cloudflare-Tunnel für diese Apps down**, ohne dass es bei den lokalen
@@ -113,7 +113,7 @@ angenommenen Zustand aufgefallen (Stand 13.08.2026):
    wieder (idempotenter Task, bereits vorhanden).
 2. **Namespaces außerhalb der beiden Tier-Listen gefunden:**
    - `cert-manager`, `metallb-system` — laufen aktiv, sind aber nie unter
-     GitOps (`argocd/apps/platform/`) gewandert. Bleiben vorerst
+     GitOps (`argocd/apps/tech/`) gewandert. Bleiben vorerst
      Cluster-Infrastruktur außerhalb der Tier-Policies (siehe unten,
      [Ausgeschlossene Namespaces](#ausgeschlossene-namespaces)) —
      Nachziehen unter GitOps ist ein separates Aufräum-Ticket, nicht Teil
@@ -343,7 +343,7 @@ Abhängigkeit für den Normalbetrieb.
 > läuft als CronJob (`*/15 * * * *`) in seinem **eigenen** Namespace und
 > ruft `wikijs` per ClusterIP direkt an
 > (`http://wikijs.wikijs.svc.cluster.local`, siehe
-> `argocd/apps/workloads/wiki-docs-sync/values.yaml`) — nicht über
+> `argocd/apps/prod/wiki-docs-sync/values.yaml`) — nicht über
 > Traefik. Das wurde beim ersten `wikijs`-Refinement übersehen (nur die
 > Pods **innerhalb** von `wikijs` wurden auf Selbstständigkeit geprüft,
 > nicht wer **von außen** reinruft). Der nächste Cron-Lauf nach dem

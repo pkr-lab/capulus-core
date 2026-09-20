@@ -78,7 +78,7 @@ Alle `*.homeserver`- **und** alle `*.pke-lab.de`-Hosts laufen über Traefik
 auf `192.168.178.200:80`/`:443` — kein individueller Port pro App nötig,
 Traefik routet in beiden Fällen per Host-Header. `cloudflared` selbst
 terminiert keinen Traffic mehr an einem App-Service direkt, sondern reicht
-alles unverändert an Traefik weiter (`argocd/apps/platform/cloudflared/values.yaml`
+alles unverändert an Traefik weiter (`argocd/apps/tech/cloudflared/values.yaml`
 → `ingress.rules`, zwei bis drei Wildcard-Regeln statt einer Regel pro App).
 
 ---
@@ -144,7 +144,7 @@ Tunnel-Client, baut die Verbindung ausschließlich nach außen auf.
 |---|---|
 | LAN-Hostname (`*.tier.homeserver`) einer App | `argocd/apps/<platform\|workloads>/<app>/values.yaml` → `ingress.hosts[].host` |
 | Externe Erreichbarkeit (`*-tier.pke-lab.de`) für eine App hinzufügen/entfernen | `argocd/apps/<platform\|workloads>/<app>/values.yaml` → zusätzlichen (bzw. entfernten) Eintrag in `ingress.hosts` — **nicht** mehr in `cloudflared/values.yaml`, die Wildcard-Regeln dort decken bereits jedes Tier ab |
-| Neues Tier extern erreichbar machen (aktuell nur `tech`/`prod`/`dev`) | `argocd/apps/platform/cloudflared/values.yaml` → `ingress.rules` um eine weitere `*-<tier>.pke-lab.de`-Regel ergänzen |
+| Neues Tier extern erreichbar machen (aktuell nur `tech`/`prod`/`dev`) | `argocd/apps/tech/cloudflared/values.yaml` → `ingress.rules` um eine weitere `*-<tier>.pke-lab.de`-Regel ergänzen |
 | Internen Service-Port einer App | `argocd/apps/<platform\|workloads>/<app>/values.yaml` → `service.port`/`targetPort` (Chart-abhängig) |
 | NodePort (Pi-hole DNS, MediaMTX Publish) | `argocd/apps/<platform\|workloads>/<app>/values.yaml` → `service.nodePort`/`publishService.ports.*.nodePort` — danach ggf. UFW-Regel auf neuen Port anpassen |
 | ArgoCD-Zugriffsport | ArgoCD-Bootstrap (`ansible/roles/argocd/`) bzw. Helm-Values des ArgoCD-Charts selbst (nicht Teil der App-Wrapper-Charts) |

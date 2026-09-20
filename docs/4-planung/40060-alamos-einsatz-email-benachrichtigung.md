@@ -6,7 +6,7 @@ Workflows in diesem Repo — über ein Zammad-Ticket gelöst (Zammads eigene
 Agenten-Benachrichtigung verschickt dann die Mail, kein eigener
 E-Mail-Node nötig). Umsetzung, Setup-Anleitung und Fehlerbehebung:
 [docs/3-apps-workloads/300h0-alamos-einsatz-zammad.md](../3-apps-workloads/300h0-alamos-einsatz-zammad.md),
-Workflow: `argocd/apps/workloads/n8n/workflows/alamos-einsatz-to-zammad.json`.
+Workflow: `argocd/apps/tech/n8n/workflows/alamos-einsatz-to-zammad.json`.
 Weil die exakten Webhook-Feldnamen (siehe unten) ohne Alamos-Login nicht zu
 ermitteln waren, gibt der Workflow bewusst **alle** empfangenen Felder aus,
 statt nur eine feste Auswahl. Die unten stehende Recherche und die offenen
@@ -62,7 +62,7 @@ mit Alamos-Login in die Webhook-Konfiguration schauen.
 ## Was ich geprüft habe
 
 - Bestehenden Code/Doku im Repo durchsucht: `alamos-apager` (Helm-Chart,
-  `argocd/apps/workloads/alamos-apager/`) macht aktuell nur Redirect +
+  `argocd/apps/tech/alamos-apager/`) macht aktuell nur Redirect +
   Heartbeat/Ausfall-Erkennung, fasst keine Einsatzinhalte an — siehe
   [30010-alamos-apager.md](../3-apps-workloads/30010-alamos-apager.md).
   Die `alamos_kiosk`-Ansible-Rolle (`ansible/roles/alamos_kiosk/`) startet

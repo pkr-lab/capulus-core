@@ -1,7 +1,7 @@
 # Authentik — Zentrale SSO-/2FA-Instanz
 
 [Authentik](https://goauthentik.io/) läuft als neue Platform-App
-(`argocd/apps/platform/authentik/`) und schützt jede App mit eigener
+(`argocd/apps/tech/authentik/`) und schützt jede App mit eigener
 Anmeldemaske per Traefik-ForwardAuth — Ablösung von Authelia.
 Architektur-Begründung, Leitentscheidungen und der komplette Rollout-Plan
 stehen in
@@ -31,7 +31,7 @@ Browser ──▶ Traefik (kube-system) ──▶ Middleware "authentik-authenti
   dauerhaft bei `Redis Connection failed, retrying...` hängen und wird nie
   ready. Eigenes, ebenfalls leichtgewichtiges Redis-Deployment ergänzt
   (kein PVC, reiner Cache/Broker, Muster wie
-  `argocd/apps/workloads/immich/templates/redis-*.yaml`).
+  `argocd/apps/prod/immich/templates/redis-*.yaml`).
 - **Nutzerquelle:** [lldap](d0072-lldap.md) per LDAP Source, Bind als
   `authentik-bind` (Gruppe `lldap_strict_readonly`).
 - **Zwei Hostnamen** (im Unterschied zur ursprünglichen Planung in 40070,
@@ -51,7 +51,7 @@ Browser ──▶ Traefik (kube-system) ──▶ Middleware "authentik-authenti
   Redirect-Loop-Falle zwischen Tiers.
 - **Blueprints:** komplette Konfiguration (LDAP Source, Policies,
   Provider/Application pro App) liegt als YAML unter
-  `argocd/apps/platform/authentik/blueprints/`, gemountet als ConfigMap,
+  `argocd/apps/tech/authentik/blueprints/`, gemountet als ConfigMap,
   von Authentik beim Start automatisch angewendet. Siehe
   [d0074-authentik-iac-cookbook.md](d0074-authentik-iac-cookbook.md).
 
@@ -59,7 +59,7 @@ Browser ──▶ Traefik (kube-system) ──▶ Middleware "authentik-authenti
 
 ## Setup (bereits erledigt / vom Nutzer freizugeben)
 
-1. Chart erstellt (`argocd/apps/platform/authentik/`), Secrets generiert
+1. Chart erstellt (`argocd/apps/tech/authentik/`), Secrets generiert
    (`openssl rand`) und mit `kubeseal --raw --namespace authentik --name
    authentik-credentials` versiegelt: `secret-key`, `db-password`,
    `bootstrap-password`, `bootstrap-email`, `ldap-bind-password`.
@@ -73,7 +73,7 @@ Browser ──▶ Traefik (kube-system) ──▶ Middleware "authentik-authenti
    Web-UI angelegt werden**, siehe d0072 → Abschnitt 2.3. Ohne diesen
    Schritt schlägt die LDAP-Source-Synchronisierung fehl.
 3. `authentik.tech.homeserver` in
-   `argocd/apps/platform/cert-manager/templates/certificate-homeserver-wildcard.yaml`
+   `argocd/apps/tech/cert-manager/templates/certificate-homeserver-wildcard.yaml`
    ergänzt (ersetzt die zwei Authelia-Hostnamen `auth.tech.homeserver`/
    `auth.prod.homeserver`). `authentik-tech.pke-lab.de` braucht **keinen**
    eigenen Eintrag dort — externe Hosts laufen über Cloudflares eigenes
@@ -83,7 +83,7 @@ Browser ──▶ Traefik (kube-system) ──▶ Middleware "authentik-authenti
    `argocd_network_policy_refined_namespaces` + `argocd_network_policy_extra_ingress.lldap`)
    ergänzt, `authelia` dort entfernt.
 5. `authelia`-Chart komplett gelöscht
-   (`argocd/apps/platform/authelia/`), Middleware-Referenzen in
+   (`argocd/apps/tech/authelia/`), Middleware-Referenzen in
    `mealie`/`uptime-kuma` auf `authentik-authentik@kubernetescrd`
    umgestellt.
 

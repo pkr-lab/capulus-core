@@ -1,0 +1,44 @@
+# PROD-Variante von argocd/apps/platform/cert-manager/templates/
+# certificate-homeserver-wildcard.yaml: gleiche Secret-/Namespace-Namen
+# (homeserver-wildcard-tls in kube-system, damit das TLSStore aus
+# argocd/apps/prod/traefik-config unveraendert greift), aber nur die
+# *.prod.homeserver-Hosts. Kein Wildcard moeglich (Single-Label-TLD, siehe
+# docs/d-sicherheit/d0040-internal-tls.md) - neuer PROD-Host = Eintrag hier.
+#
+# Signiert vom PROD-Issuer (Intermediate-CA aus der gemeinsamen Root-CA,
+# siehe clusterissuer-ca.yaml).
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: homeserver-wildcard-tls
+  namespace: kube-system
+spec:
+  secretName: homeserver-wildcard-tls
+  issuerRef:
+    name: homeserver-ca-issuer
+    kind: ClusterIssuer
+  commonName: prod.homeserver
+  duration: 2160h # 90 Tage
+  renewBefore: 720h # 30 Tage vor Ablauf automatisch erneuern
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  dnsNames:
+    - alamos-apager.prod.homeserver
+    - alamos-relay.prod.homeserver
+    - carplay-api.prod.homeserver
+    - demo.prod.homeserver
+    - immich.prod.homeserver
+    - mealie-native.prod.homeserver
+    - mealie.prod.homeserver
+    - n8n.prod.homeserver
+    - nextcloud.prod.homeserver
+    - pacman.prod.homeserver
+    - paperless.prod.homeserver
+    - stream.prod.homeserver
+    - tinyteller.prod.homeserver
+    - uptime-kuma-native.prod.homeserver
+    - uptime-kuma.prod.homeserver
+    - whoami.prod.homeserver
+    - wiki.prod.homeserver
+    - xibo.prod.homeserver
