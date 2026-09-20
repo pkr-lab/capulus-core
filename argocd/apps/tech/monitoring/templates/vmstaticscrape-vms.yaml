@@ -1,0 +1,43 @@
+# Die beiden KVM-VMs der Multi-Cluster-Architektur
+# (docs/4-planung/40080-multi-cluster-entw-prod-tech.md):
+#   - prod-vm (192.168.178.99): PROD-Cluster, laeuft auf homeserver
+#   - entw-vm (192.168.178.100): ENTW-Cluster, laeuft auf worker-1
+# Beide sind eigenstaendige k3s-Cluster (kein Beitritt zu TECH) und werden
+# daher — wie ugreen-nas/infotafel — als Gast-OS per node_exporter
+# (ansible/roles/node_exporter, aktiviert in prod.yml/entw.yml, Port 9100)
+# per VMStaticScrape erfasst. Metriken aus Sicht des Gastes (CPU/RAM/Disk/
+# Netzwerk); die Sicht des Hypervisors (qemu-Prozess auf homeserver/worker-1)
+# liefert der jeweilige Host selbst. `host` + `kind: vm` sind der Filter der
+# Hardware-Dashboards (dashboards/hardware/), Doku:
+# docs/2-betrieb-hardware/20060-hardware-monitoring.md.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMStaticScrape
+metadata:
+  name: prod-vm-node-exporter
+  namespace: {{ .Release.Namespace }}
+spec:
+  jobName: prod-vm-node-exporter
+  targetEndpoints:
+    - targets:
+        - "192.168.178.99:9100"
+      labels:
+        job: node-exporter
+        instance: prod-vm
+        host: prod-vm
+        kind: vm
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMStaticScrape
+metadata:
+  name: entw-vm-node-exporter
+  namespace: {{ .Release.Namespace }}
+spec:
+  jobName: entw-vm-node-exporter
+  targetEndpoints:
+    - targets:
+        - "192.168.178.100:9100"
+      labels:
+        job: node-exporter
+        instance: entw-vm
+        host: entw-vm
+        kind: vm

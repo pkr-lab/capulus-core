@@ -23,6 +23,8 @@
   roles:
     - role: common
       tags: [common, base]
+    - role: node_exporter
+      tags: [node-exporter, monitoring]
     - role: k3s
       tags: [k3s, kubernetes]
     - role: argocd
