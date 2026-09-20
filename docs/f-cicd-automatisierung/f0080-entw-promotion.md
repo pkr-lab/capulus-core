@@ -11,10 +11,11 @@ du den Merge bestätigst.
 
 Das ist die erste, bewusst schlanke Stufe der Promotion-Pipeline aus
 [40080, Baustein 6](../4-planung/40080-multi-cluster-entw-prod-tech.md#6-cicd-pipeline-automatisierte-promotion-entw--tech--prod)
-(Phase 4). Die dortige Kette ENTW → TECH → PROD mit 24-Stunden-Health-Gate
-setzt den eigenen Pfad `argocd/apps/entw/` voraus (existiert seit 2026-09-20 auf dem
-Branch `entw`, siehe [b0050](../b-kubernetes-gitops/b0050-entw-argocd.md)); hier reicht die CI als
-Freigabe.
+(Phase 4). Sie überträgt **alles außer den ENTW-Apps** (Doku, Skripte, Playbooks). Die Apps unter
+`argocd/apps/entw/` (existiert seit 2026-09-20 auf dem Branch `entw`, siehe
+[b0050](../b-kubernetes-gitops/b0050-entw-argocd.md)) gehen ihren eigenen Weg: die
+[Promotion-Kette](f00b0-promotion-chain.md) überträgt deren **Versionen** nach ENTW-Gesundheit (24 h)
+über TECH nach PROD. Hier reicht die CI als Freigabe.
 
 ---
 
@@ -22,7 +23,7 @@ Freigabe.
 
 ```mermaid
 flowchart TD
-    Push["Commit auf entw<br/>(PR oder Admin-Push)"] --> Cron["Cron alle 15 min<br/>promote-entw.yml auf main"]
+    Push["Commit auf entw<br/>(per PR)"] --> Cron["entw-trigger.yml startet sofort,<br/>Cron stündlich als Fallback<br/>promote-entw.yml auf main"]
     Cron --> Detect{"neue entw-Commits<br/>seit Tag entw-promoted?"}
     Detect -->|nein| Ende["nichts zu tun"]
     Detect -->|ja| CI["ci.yml gegen ref=entw<br/>lint, kubeconform, go, gitleaks"]
@@ -54,19 +55,20 @@ kommen nicht ein zweites Mal.
 ## Welche Commits übernommen werden
 
 - **Alle neuen Commits**, außer solchen mit **`[entw-only]`** in der
-  Commit-Nachricht. Damit bleiben ENTW-spezifische Änderungen (z. B. Hosts
-  `*.dev.homeserver` statt `*.prod.homeserver`) auf `entw`.
+  Commit-Nachricht **oder die ausschließlich `argocd/apps/entw/` ändern**: ENTW-Apps
+  laufen über die [Promotion-Kette](f00b0-promotion-chain.md), ein Cherry-Pick des ENTW-Ordners nach `main`
+  wäre nur Rauschen (TECH und PROD lesen ihn nie). Ein **gemischter** Commit (ENTW-Ordner
+  plus anderes) wird übernommen; kollidiert er nur im ENTW-Ordner, wird dieser Anteil verworfen.
 - Merge-Commits werden nicht übernommen, nur die einzelnen Commits.
 - Übernommen wird per `git cherry-pick -x`; die Commit-Nachricht verweist
   dadurch auf das Original. Was `main` schon enthält (gleicher Patch), wird
   verworfen.
-- **Layout-Unterschied:** `entw` hat noch das alte Layout (`argocd/apps/platform/`,
-  `workloads/`), `main` das neue (`tech/`, `prod/`). Änderungen an
-  **bestehenden** Dateien landen dank der Rename-Erkennung von Git automatisch am
-  neuen Ort (`workloads/foo/…` → `tech/foo/…`). **Neu angelegte** Dateien im
-  alten Layout kann Git nicht zuordnen: der PR wird dann als **Draft** geöffnet
-  und nennt die Dateien, die von Hand nach `tech/`/`prod/` verschoben werden
-  müssen.
+- **Layout:** seit `main` nach `entw` gemergt wurde, haben beide Branches dasselbe Layout
+  (`tech/`, `prod/`, dazu `entw/`). Für Commits, die noch im **alten** Layout
+  (`argocd/apps/platform/`, `workloads/`) entstanden sind, erkennt Git Umzüge bestehender Dateien
+  (`workloads/foo/…` → `tech/foo/…`); **neu angelegte** Dateien im alten Layout kann es nicht
+  zuordnen. Der PR wird dann als **Draft** geöffnet und nennt die Dateien, die von Hand nach
+  `tech/`/`prod/` verschoben werden müssen.
 
 ## Fehlerfälle
 
@@ -94,7 +96,7 @@ getrennt widerrufen lassen.
 
 | Ziel | Wie |
 |---|---|
-| Sofort prüfen statt 15 min warten | GitHub → Actions → „Promote ENTW to main“ → *Run workflow* |
+| Sofort prüfen statt auf den nächsten Lauf warten | GitHub → Actions → „Promote ENTW to main“ → *Run workflow* |
 | Einen `entw`-Commit von der Promotion ausnehmen | `[entw-only]` in die Commit-Nachricht |
 | Alles bis zu einem Stand als „erledigt“ markieren | `git tag -f entw-promoted <sha> && git push --force origin refs/tags/entw-promoted` |
 | Neu beginnen | Tag löschen (`git push origin :refs/tags/entw-promoted`); dann gilt wieder der Merge-Base |
@@ -104,26 +106,29 @@ getrennt widerrufen lassen.
 - **Kein Auto-Merge.** `main` speist TECH *und* PROD, der ArgoCD-Sync nach dem
   Merge ist der Rollout. Ein Mensch bestätigt (wie in 40080 für PROD vorgesehen).
 - **Kein ArgoCD-Health-Gate.** „Pipeline durch“ heißt hier: CI grün auf `entw`,
-  nicht „läuft seit 24 h gesund auf ENTW“. Der Tailscale-Runner dafür ist erst als
-  [PoC](f00a0-tailscale-runner-poc.md) vorbereitet; Health- und Smoke-Gate sind
-  Phase 4.4 in 40080.
+  nicht „läuft seit 24 h gesund auf ENTW“. Das Gesundheits- und Smoke-Gate gilt für die
+  ENTW-Apps in der [Promotion-Kette](f00b0-promotion-chain.md).
 - **Kein Rollback** bei einem später rot werdenden ENTW.
 - **Kein Auto-Rebase**: liegen zwei Promotion-PRs offen, die dieselben Dateien
   ändern, muss der zweite nach dem Merge des ersten aktualisiert werden.
 
-## Warum Cron und nicht `on: push: entw`
+## Auslöser: Push-Trigger plus Cron-Fallback
 
-Ein `push`-Workflow läuft mit der Workflow-Datei **des gepushten Branches**.
-`entw` hat ein eigenes, älteres Layout und eine eigene `ci.yml`, die nur für
-`main` triggert. Der Cron auf `main` ist davon unabhängig und nutzt immer die
-aktuellen Workflows. Kosten: bis zu 15 Minuten Verzögerung (GitHub verzögert
-Cron-Läufe zudem unter Last).
+Ein `push`-Workflow läuft mit der Workflow-Datei **des gepushten Branches**, die Arbeit selbst
+soll aber immer mit den aktuellen Workflows von `main` laufen. Deshalb gibt es zwei Auslöser:
+
+- [`entw-trigger.yml`](../../.github/workflows/entw-trigger.yml): kleiner `push`-Workflow auf `entw`, der nur
+  `promote-entw.yml` auf `main` per `workflow_dispatch` startet (ein Dispatch mit dem Standard-Token ist erlaubt).
+  Die Datei muss dafür **auf `entw` liegen**, sie kommt mit dem nächsten Merge `main` → `entw`.
+- Cron **stündlich** als Fallback. Der frühere 15-Minuten-Cron lief im Test nur alle 2–5 Stunden, GitHub drosselt
+  Schedules.
 
 ## Die Rulesets auf `entw`
 
-Für `entw` gelten schon zwei aktive Rulesets (`entw-1`: kein Löschen, kein
-Force-Push; `entw-2`: nur per PR, Admin-Bypass). Die Pipeline pusht nie auf
-`entw`, sie liest nur. Force-Push betrifft ausschließlich den Tag
+Für `entw` gelten drei aktive Rulesets (`entw-1`: kein Löschen, kein Force-Push; `entw-2`: nur per PR,
+Admin-Bypass; `Protect MAIN`: PR-Pflicht ohne Bypass). Weil die Regeln aller Rulesets gelten und ein Bypass
+nur die Regeln seines eigenen Rulesets aufhebt, kommt **jeder Commit auf `entw` per PR**, auch von Admins. Die
+Pipeline pusht nie auf `entw`, sie liest nur. Force-Push betrifft ausschließlich den Tag
 `entw-promoted` und die Branches `promote/entw-*`, die von keinem Ruleset
 erfasst sind.
 
@@ -133,7 +138,8 @@ Lokal an einem Wegwerf-Repo (bare `origin` + Arbeitskopie, `gh`-Aufrufe im
 Trockenlauf): Erkennen neuer Commits, Cherry-Pick über den Layout-Umzug
 `workloads/` → `tech/`, Überspringen von `[entw-only]`, Umlegen des Tags,
 „nichts Neues“ im zweiten Lauf, Draft-Warnung bei Neuanlage im alten Layout,
-Konfliktfall (Issue, Tag unverändert, Exit 1). `actionlint` und `shellcheck`
-sind sauber. **Noch nicht gelaufen** ist der Workflow auf GitHub selbst (PAT,
+Konfliktfall (Issue, Tag unverändert, Exit 1). Später ergänzt und getestet: Commits, die nur
+`argocd/apps/entw/` ändern, werden übersprungen; ein gemischter Commit wird übernommen, sein
+ENTW-Anteil bei Konflikt verworfen. `actionlint` und `shellcheck` sind sauber. **Noch nicht gelaufen** ist der Workflow auf GitHub selbst (PAT,
 `gh pr create`, der `workflow_call` von `ci.yml`): der erste Lauf sollte per
 *Run workflow* beobachtet werden.

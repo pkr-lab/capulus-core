@@ -63,8 +63,28 @@ candidates() {
   git rev-list --no-merges --reverse "$1..$2" "^origin/${MAIN}"
 }
 
+# Nicht uebernommen wird ein Commit, wenn er `[entw-only]` traegt ODER ausschliesslich
+# argocd/apps/entw/ aendert: solche Aenderungen gehen ueber die Promotion-Kette
+# (promote-chain.yml: Versionen nach 24 h Gesundheit als PR nach tech/prod), ein Cherry-Pick
+# des ENTW-Ordners nach main waere nur Rauschen (TECH/PROD lesen ihn nie).
 is_entw_only() {
-  git log -1 --format=%B "$1" | grep -qF "$MARKER"
+  if git log -1 --format=%B "$1" | grep -qF "$MARKER"; then
+    return 0
+  fi
+  local other
+  other=$(git diff-tree --no-commit-id --name-only -r "$1" | grep -v '^argocd/apps/entw/' || true)
+  [ -z "$other" ]
+}
+
+# Konflikt, der ausschliesslich argocd/apps/entw/ betrifft (typisch: ein Vorgaenger-Commit im
+# ENTW-Ordner wurde uebersprungen): den ENTW-Anteil verwerfen, den Rest des Commits uebernehmen.
+resolve_entw_only_conflict() {
+  local unmerged
+  unmerged=$(git diff --name-only --diff-filter=U)
+  [ -n "$unmerged" ] || return 1
+  if grep -qv '^argocd/apps/entw/' <<<"$unmerged"; then return 1; fi
+  git checkout HEAD -- argocd/apps/entw >/dev/null 2>&1 || return 1
+  GIT_EDITOR=true git cherry-pick --continue >/dev/null 2>&1
 }
 
 short() { printf '%s' "${1:0:7}"; }
@@ -155,7 +175,7 @@ cmd_promote() {
       continue
     fi
     before=$(git rev-parse HEAD)
-    if git cherry-pick -x --empty=drop "$c" >/dev/null 2>&1; then
+    if git cherry-pick -x --empty=drop "$c" >/dev/null 2>&1 || resolve_entw_only_conflict; then
       if [ "$(git rev-parse HEAD)" = "$before" ]; then already+=("$c"); else picked+=("$c"); fi
     else
       conflict=$c
@@ -215,7 +235,7 @@ $(printf '%s\n' "$legacy" | sed 's/^/> - `/; s/$/`/')"
   list_skipped=""
   if [ "${#skipped[@]}" -gt 0 ]; then
     list_skipped="
-### Nicht uebernommen (\`${MARKER}\`)
+### Nicht uebernommen (\`${MARKER}\` oder nur \`argocd/apps/entw/\`)
 $(for c in "${skipped[@]}"; do printf -- '- [`%s`](%s/commit/%s) %s\n' "$(short "$c")" "$(repo_url)" "$c" "$(subject "$c")"; done)
 "
   fi

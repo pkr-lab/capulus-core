@@ -1,0 +1,97 @@
+name: Promote chain (ENTW -> TECH -> PROD)
+
+# Uebernimmt Versionen (image.tag, Chart-Abhaengigkeiten) entlang ENTW -> TECH -> PROD, sobald sie
+# das Gesundheits-Gate bestehen: >= 24 h gesund auf ENTW, danach >= 2 h gesund auf TECH.
+# Ergebnis sind PRs nach main (TECH: optional Auto-Merge, PROD: immer manuelles Review).
+# Logik: scripts/promote-chain.py, Konfiguration: argocd/promotion.yaml,
+# Beschreibung, Voraussetzungen, Betrieb: docs/f-cicd-automatisierung/f00b0-promotion-chain.md
+#
+# Der Runner tritt per Tailscale dem Tailnet bei und fragt die beiden ArgoCD-Instanzen ab
+# (ENTW: eigene Instanz auf entw-vm ueber die Subnet-Route des Homeservers, TECH/PROD: Hub-ArgoCD).
+# Solange die Secrets ARGOCD_ENTW_TOKEN / ARGOCD_HUB_TOKEN fehlen, macht der Lauf nichts.
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "Welche Stufe? (entw = ENTW -> erstes Ziel, tech = TECH -> PROD)"
+        type: choice
+        options: [all, entw, tech]
+        default: all
+      plan_only:
+        description: "Nur planen: keine Branches, PRs oder Issues"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: promote-chain
+  cancel-in-progress: false
+
+jobs:
+  chain:
+    name: Gates pruefen, PRs oeffnen
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    env:
+      PROMOTE_PAT: ${{ secrets.PROMOTE_TOKEN || secrets.RENOVATE_TOKEN }}
+      ARGOCD_ENTW_TOKEN: ${{ secrets.ARGOCD_ENTW_TOKEN }}
+      ARGOCD_HUB_TOKEN: ${{ secrets.ARGOCD_HUB_TOKEN }}
+    steps:
+      - name: Konfiguration pruefen
+        id: cfg
+        run: |
+          missing=""
+          [ -n "$ARGOCD_ENTW_TOKEN" ] || missing="$missing ARGOCD_ENTW_TOKEN"
+          [ -n "$ARGOCD_HUB_TOKEN" ] || missing="$missing ARGOCD_HUB_TOKEN"
+          [ -n "$PROMOTE_PAT" ] || missing="$missing PROMOTE_TOKEN/RENOVATE_TOKEN"
+          if [ -n "$missing" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Promotion-Kette inaktiv::Es fehlen die Repo-Secrets:$missing (docs/f-cicd-automatisierung/f00b0-promotion-chain.md#einrichtung)"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+        if: steps.cfg.outputs.configured == 'true'
+        with:
+          fetch-depth: 0
+          token: ${{ env.PROMOTE_PAT }}
+
+      - name: Install PyYAML
+        if: steps.cfg.outputs.configured == 'true'
+        run: pip install --disable-pip-version-check pyyaml
+
+      - name: Connect runner to tailnet
+        if: steps.cfg.outputs.configured == 'true'
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          # --accept-routes: das LAN-Subnetz (192.168.178.0/24, u. a. ENTW-VM) kommt vom Homeserver.
+          args: --accept-routes
+          version: latest
+
+      - name: Run promotion chain
+        if: steps.cfg.outputs.configured == 'true'
+        env:
+          GH_TOKEN: ${{ env.PROMOTE_PAT }}
+          AUTOMERGE_TECH: ${{ vars.PROMOTE_AUTOMERGE_TECH }}
+          STAGE: ${{ github.event.inputs.stage || 'all' }}
+          PLAN_ONLY: ${{ github.event.inputs.plan_only }}
+          ENTW_URL: ${{ vars.ARGOCD_ENTW_URL || 'http://192.168.178.100:30080' }}
+          # Beide ArgoCD-Instanzen ueber das LAN-Subnetz (Subnet-Route des Homeservers): ein einziger
+          # ACL-Grant auf 192.168.178.94 und .100 (Port 30080) genuegt, siehe Doku.
+          HUB_URL: ${{ vars.ARGOCD_HUB_URL || 'http://192.168.178.94:30080' }}
+        run: |
+          set -eu
+          flags=""
+          [ "$PLAN_ONLY" = "true" ] && flags="--plan-only"
+          # shellcheck disable=SC2086
+          python3 scripts/promote-chain.py --stage "$STAGE" --argocd "entw=$ENTW_URL" --argocd "hub=$HUB_URL" $flags

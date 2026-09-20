@@ -36,6 +36,13 @@ Ein Matrix-Job pro App:
    Standard-`GITHUB_TOKEN` (Job-Permission `packages: write`) — kein PAT,
    kein Sealed-Secret nötig, anders als beim Kaniko-Weg.
 4. **Job-Summary** listet den gepushten `repository:tag`-String.
+5. **Bump-PR:** bei Push auf `main` und `workflow_dispatch` öffnet der Lauf einen PR, der `image.tag` in der
+   `values.yaml` der App (`argocd/apps/tech/<app>/values.yaml`) auf den neuen Tag setzt (Branch
+   `bump/<app>-image`, Label `image-bump`, Werkzeug [`scripts/bump-image-tag.py`](../../scripts/bump-image-tag.py):
+   ändert nur die eine Zeile, Kommentare bleiben). Es ist ein PR, kein Commit: er läuft durch die Pflicht-Checks
+   ([f0090](f0090-branch-schutz-main.md)), der Merge ist der Rollout. Er braucht ein PAT (`PROMOTE_TOKEN`,
+   ersatzweise `RENOVATE_TOKEN`), weil PRs mit dem Standard-Token keine CI auslösen; ohne PAT bleibt es beim
+   Hinweis im Summary. Steht der Tag schon richtig, passiert nichts; ein offener PR wird aktualisiert.
 
 ## Chronik: pacman-Build rot vom 2026-09-03 bis 2026-09-19
 
@@ -52,12 +59,9 @@ Layout-Umzug (`workloads/` → `tech/`) die Pfade im Workflow überholt hatte
 
 ## Was der Workflow NICHT tut
 
-- **Kein Auto-Commit.** `image.tag` in der jeweiligen `values.yaml` wird
-  nicht automatisch geändert — den im Job-Summary gemeldeten Tag von Hand
-  eintragen und selbst committen/pushen. Bewusste Entscheidung: Commits
-  bleiben unter eigener Kontrolle statt eines Bots.
-- **Kein Deploy.** Wie beim alten Weg auch: erst der manuelle Commit auf
-  `image.tag` (+ Push nach `main`) lässt ArgoCD den neuen Stand ausrollen,
+- **Kein Direkt-Commit.** `image.tag` wird nie auf `main` geschrieben, sondern nur über den
+  Bump-PR (oben); der Merge bleibt bei dir.
+- **Kein Deploy.** Erst der Merge des Bump-PR lässt ArgoCD den neuen Stand ausrollen,
   siehe [b0010-argocd.md](../b-kubernetes-gitops/b0010-argocd.md).
 - **Kein Rebuild bei reinen `values.yaml`-Änderungen** — die Pfad-Filter
   greifen nur auf `Dockerfile`/Source-Verzeichnisse, nicht auf
@@ -73,8 +77,8 @@ Layout-Umzug (`workloads/` → `tech/`) die Pfade im Workflow überholt hatte
 2. GitHub → Actions → "Build Workload Images" abwarten (baut nur die App(s),
    deren Pfad sich geändert hat), Job-Summary öffnen → gepushten Tag
    kopieren.
-3. `image.tag` in `argocd/apps/tech/<app>/values.yaml` auf diesen Tag
-   setzen, committen, pushen.
+3. Den automatisch geöffneten **Bump-PR** prüfen und mergen (er setzt `image.tag` in
+   `argocd/apps/tech/<app>/values.yaml`; ohne PAT den Tag von Hand eintragen).
 4. ArgoCD synct wie gewohnt (siehe [b0010-argocd.md](../b-kubernetes-gitops/b0010-argocd.md)).
 
 ## GHCR-Package-Sichtbarkeit

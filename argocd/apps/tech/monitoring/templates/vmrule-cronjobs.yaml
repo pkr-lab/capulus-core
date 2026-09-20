@@ -1,0 +1,45 @@
+# CronJobs/Backups: Alert, wenn der letzte ERFOLGREICHE Lauf zu lange her ist. Bewusst nicht
+# `kube_job_status_failed > 0`: fehlgeschlagene Jobs bleiben in der Historie stehen und wuerden
+# nach der Reparatur weiter feuern. Anlass: die Authentik-Backups schlugen in den Naechten auf den
+# 17. und 18.09.2026 fehl (BackoffLimitExceeded) und wurden nur zufaellig bemerkt.
+# Gilt fuer den Hub-Cluster (TECH) - kube-state-metrics-Daten anderer Cluster sind hier nicht enthalten.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: cronjobs-health
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: cronjobs.health
+      interval: 1m
+      rules:
+
+        # Datensicherungen laufen taeglich (Nacht): nach 30 h ohne Erfolg fehlt mindestens eine Sicherung.
+        - alert: BackupJobStale
+          expr: |
+            (time() - kube_cronjob_status_last_successful_time{cronjob=~".*backup.*"}) > 30 * 3600
+              unless on(namespace, cronjob)
+            kube_cronjob_spec_suspend == 1
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Backup {{`{{ $labels.namespace }}`}}/{{`{{ $labels.cronjob }}`}} seit ueber 30 h ohne Erfolg"
+            description: >-
+              Der CronJob {{`{{ $labels.cronjob }}`}} (Namespace {{`{{ $labels.namespace }}`}}) war zuletzt vor
+              mehr als 30 Stunden erfolgreich. Job-Logs pruefen (`kubectl -n {{`{{ $labels.namespace }}`}}
+              logs job/<letzter Job>`); es fehlt mindestens eine Datensicherung.
+
+        - alert: CronJobStale
+          expr: |
+            (time() - kube_cronjob_status_last_successful_time{cronjob!~".*backup.*"}) > 36 * 3600
+              unless on(namespace, cronjob)
+            kube_cronjob_spec_suspend == 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "CronJob {{`{{ $labels.namespace }}`}}/{{`{{ $labels.cronjob }}`}} seit ueber 36 h ohne Erfolg"
+            description: >-
+              Der CronJob {{`{{ $labels.cronjob }}`}} (Namespace {{`{{ $labels.namespace }}`}}) war zuletzt vor
+              mehr als 36 Stunden erfolgreich (ausgesetzte CronJobs werden ignoriert).
