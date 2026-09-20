@@ -4,9 +4,14 @@
 # the argocd_repo_* / argocd_namespace vars in group_vars. Do not hand-edit the
 # committed copy.
 #
+# Layout "entw" (argocd_entw_layout: true, nur ENTW-Cluster): EIN ApplicationSet home-server-apps-entw
+# liest ausschliesslich argocd/apps/entw/* auf argocd_repo_revision (ENTW: Branch entw), Projekt "entw".
+# TECH und PROD lesen main und dort nur argocd/apps/tech/* bzw. argocd/apps/prod/*; die ENTW-Instanz
+# kennt keinen anderen Cluster.
+#
 # Layout "tech" (argocd_tech_layout: true, Hub seit 2026-09-19): ALLE TECH-Apps liegen unter
 # argocd/apps/tech/<app>, ein ApplicationSet home-server-apps-tech mit Projekt "tech". Altes Layout
-# (false, weiterhin ENTW): Apps live under argocd/apps/platform/<app> or argocd/apps/workloads/<app>
+# (false, von keinem Cluster mehr genutzt): Apps live under argocd/apps/platform/<app> or argocd/apps/workloads/<app>
 # (see docs/b-kubernetes-gitops/b0020-argocd-projects.md) — each app keeps its own namespace
 # (destination.namespace is still just the app's basename, unaffected by the
 # directory nesting). Two SEPARATE ApplicationSet resources below (one per

@@ -21,9 +21,14 @@ k3s_audit_log_enabled: false
 k3s_kubelet_memory_protection_enabled: false
 k3s_secrets_encryption_enabled: false
 
-# ---- ArgoCD: eigene Instanz, Quelle = Branch `entw` ----------------------
+# ---- ArgoCD: eigene Instanz, Quelle = argocd/apps/entw/ auf Branch `entw` --
+# Ein ApplicationSet (home-server-apps-entw) liest nur argocd/apps/entw/* auf dem Branch entw; jeder
+# neue Ordner dort wird ohne weitere Freigabe deployt (Projekt "entw" erlaubt jeden Namespace). Die
+# TECH/PROD-Instanzen lesen main und dort nur argocd/apps/tech/* bzw. argocd/apps/prod/*.
 argocd_repo_revision: entw
-argocd_apps_from_lists: true
+argocd_entw_layout: true
+# Diese Listen steuern hier nur noch security-tier-Label und Tier-NetworkPolicy der gelisteten
+# Namespaces (Bestand), nicht mehr, was deployt wird. Neue Apps bekommen keine Policy (Trainingsumgebung).
 argocd_platform_apps:
   - sealed-secrets
 argocd_workloads_apps:
