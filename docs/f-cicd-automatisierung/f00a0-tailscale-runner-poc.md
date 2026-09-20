@@ -21,6 +21,13 @@ Beitritt ins Tailnet selbst klappte: der Runner erschien als Gerät des Benutzer
 Die neue Fassung des Workflows testet deshalb **jeden Weg einzeln** und gibt eine Tabelle aus. Sie schlägt erst am Ende
 fehl, und nur dann, wenn ein für die Kette nötiger Weg fehlt.
 
+**Zweiter Lauf (2026-09-20, neue Fassung): `tailscale status` meldete `Logged out`**, alle Wege `zu/gefiltert`. Das war
+kein ACL-Problem, sondern mein Fehler im Workflow: `args: --accept-routes` setzte das Flag ein zweites Mal
+(die Action übergibt es bereits selbst), `tailscale up` brach mit `invalid boolean flag accept-routes: flag provided
+multiple times` ab, und die Action wertet das nach ihren Wiederholungen **nicht als Fehler**: der Beitritts-Schritt war
+grün, der Runner aber nie angemeldet. Behoben (Flag entfernt) und abgesichert: ein eigener Schritt bricht jetzt mit
+klarer Meldung ab, wenn der Runner nicht `Running` ist. Aussagen zur ACL sind aus diesem Lauf nicht ableitbar.
+
 ## Was der Workflow prüft
 
 | Weg | Ziel | Nötig? | Nötiger Grant |
@@ -30,8 +37,9 @@ fehl, und nur dann, wenn ein für die Kette nötiger Weg fehlt.
 | `smoke` | ENTW-Ingress `192.168.178.100:80` mit Host `whoami.dev.homeserver` | optional (Smoke-Checks) | `192.168.178.100`, `tcp:80` |
 | `hub` | Hub über die Tailnet-Adresse des Homeservers | nur Diagnose | `tag:tech-node`, `tcp:30080` |
 
-Der Runner tritt mit `--accept-routes` bei, sonst nutzt er die Subnet-Route nicht. `/api/version` ist bei ArgoCD
-ohne Anmeldung erreichbar.
+Die Tailscale-Action nimmt Subnet-Routen selbst an (`--accept-routes`). Ein zusätzliches `args: --accept-routes` im
+Workflow ist ein Fehler, siehe unten. `/api/version` ist bei ArgoCD ohne Anmeldung erreichbar. Vor der Probe prüft der
+Workflow, dass der Runner wirklich verbunden ist (`BackendState` = `Running`).
 
 ## Voraussetzungen
 
@@ -64,8 +72,9 @@ Netzweg des Runners ist also weiter unbestätigt.
 | Symptom | Ursache / Lösung |
 |---|---|
 | Schritt „Connect runner to tailnet“ scheitert mit Auth-Fehler | Key abgelaufen, nicht reusable oder falsch kopiert: neuen Key erzeugen, Secret ersetzen. |
+| Schritt „Connect …“ grün, aber `Logged out` / „Tailscale nicht verbunden“ | `tailscale up` ist im Log des Verbindungsschritts still gescheitert (Action meldet trotzdem Erfolg). Dort nach der Fehlermeldung suchen: doppeltes Flag (`args:` nicht für `--accept-routes` nutzen), Key ungültig/abgelaufen, Tag nicht in `tagOwners`. |
 | `hub-lan`/`entw`: `TCP zu/gefiltert` (Timeout) | ACL erlaubt den Runner nicht: Grant auf die LAN-Adresse und den Port ergänzen. Ein Timeout (statt sofortiger Ablehnung) ist typisch für gefilterten Verkehr. |
 | `hub-lan`/`entw`: sofort abgelehnt | Die Route kommt an, aber der Dienst antwortet nicht: läuft ArgoCD (`server.insecure`, NodePort 30080)? Bei ENTW: `ssh ubuntu@192.168.178.96 'sudo virsh list --all'`, VM muss `running` sein. |
-| Route nicht sichtbar (Fehler „no route“) | `--accept-routes` fehlt oder die Subnet-Route ist im Admin-Panel nicht freigegeben. |
+| Route nicht sichtbar (Fehler „no route“) | Die Subnet-Route ist im Admin-Panel nicht freigegeben oder der Runner ist nicht verbunden (siehe Zeile darüber). |
 | `hub` (Tailnet-Adresse) filtert, `hub-lan` geht | erwartbar, wenn nur das Subnetz freigegeben ist. Die Kette nutzt `hub-lan`. |
 | Workflow bricht mit „FEHLGESCHLAGEN“ ab | Meldung des letzten Schritts: mindestens `hub-lan` oder `entw` ist nicht erreichbar, siehe die Zeilen darüber. |
