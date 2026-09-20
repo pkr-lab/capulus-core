@@ -1,4 +1,7 @@
 ---
 disable_eee_enabled: true
 
+# ACHTUNG: auf Hosts mit Bridge (libvirt_host_configure_bridge) ist das
+# Default-Route-Interface br0 - EEE gibt es nur an der physischen NIC. Dort
+# in host_vars/<host>/vars.yml auf libvirt_host_bridge_interface setzen.
 disable_eee_interface: "{{ ansible_default_ipv4.interface }}"
