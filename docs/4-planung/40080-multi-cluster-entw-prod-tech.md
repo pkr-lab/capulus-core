@@ -734,7 +734,33 @@ hier ist reversibel.
       worker-1 jetzt in `host_vars` auf `enp2s0` / `192.168.178.96`
       gepinnt, die Rolle bricht per `assert` ab, wenn Interface = Bridge.
       Recovery: Konsole/SSH auf die DHCP-IP, `/etc/netplan/99-libvirt-bridge.yaml`
-      korrigieren, `sudo netplan try`. **k3s + ArgoCD
+      korrigieren, `sudo netplan try`. **Vorfall homeserver
+      (2026-09-20):** nach einem Neustart war der homeserver eingeschaltet,
+      aber im LAN nicht erreichbar (ARP `INCOMPLETE`, kubectl/SSH "no route
+      to host", auch die PROD-VM `.99`). Ursache: `network_interface`
+      stand auf `eno1`, die NIC heißt aber seit dem Boot vom 2026-09-11
+      `enp4s0` (Kernel/initramfs vergibt den Namen neu). Netplan legte `br0`
+      **ohne physischen Port** an, die Bridge trug `.94`, gleichzeitig hatte
+      `enp4s0` per DHCP ebenfalls `.94` → doppelte IP, zwei Default-Routen.
+      Der Fehler blieb bis zum Neustart unbemerkt. **Erreichbar blieb er per
+      IPv6:** `ssh ubuntu@fe80::<EUI-64 der NIC>%<Workstation-NIC>` bzw.
+      `tailscale ping`. **Reparatur** (Konsole oder IPv6-SSH):
+      `/etc/netplan/99-libvirt-bridge.yaml` sichern, `eno1` durch die echte
+      NIC ersetzen, `sudo netplan generate` (prüft die Syntax), dann
+      `sudo netplan apply` — die SSH-Sitzung über die NIC reißt dabei ab,
+      danach wieder über `.94` verbinden. Als Sicherheitsnetz vorher eine
+      Rücknahme planen: `sudo systemd-run --on-active=180 --unit=netplan-rollback
+      sh -c 'cp <Sicherung> /etc/netplan/99-libvirt-bridge.yaml && netplan apply'`
+      und nach erfolgreichem Test `sudo systemctl stop netplan-rollback.timer`.
+      **Vorbeugung:** `network_interface` steht jetzt auf `enp4s0`; die Rolle
+      `libvirt_host` bricht per `assert` ab, **bevor** sie Netplan anfasst,
+      wenn das Interface auf dem Host nicht existiert; nach jeder
+      Netzwerkumstellung in einem Wartungsfenster einen **Reboot-Test**
+      machen (der Fehler zeigte sich erst nach dem Neustart). **Nebenbei
+      behoben:** der EEE-Dienst (`disable_eee`) zielte auf
+      `ansible_default_ipv4.interface`, also `br0`, und lief seit dem
+      Bridge-Umbau ins Leere — `disable_eee_interface` zeigt jetzt in den
+      `host_vars` von homeserver und worker-1 auf die physische NIC. **k3s + ArgoCD
       in der VM:** `ansible/entw.yml` / `make entw` (Rollen `common`,
       `k3s`, `argocd`), Vars in `host_vars/entw-vm/vars.yml`: eigenständiger
       k3s-Server, eigene CIDRs `10.44.0.0/16` / `10.45.0.0/16`, ArgoCD folgt

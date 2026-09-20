@@ -59,7 +59,13 @@ Pod, aber `/start?station=...` antwortet mit `404`.
 je Standort den Unix-Zeitstempel der letzten erfolgreichen `/start`-Anfrage
 (`alamos_apager_last_start_timestamp_seconds`, = ein Kiosk-Browser hat die
 echte AMweb-URL tatsächlich angefragt) und des letzten Heartbeats
-(`alamos_apager_last_heartbeat_timestamp_seconds`), plus den aktuellen
+(`alamos_apager_last_heartbeat_timestamp_seconds`). **Wichtig für die
+Interpretation:** `/start` wird nur aufgerufen, wenn Chromium (neu) startet
+— nach einem Reboot, Absturz oder Fallback-Wechsel; danach hält der Browser
+die AMweb-Seite dauerhaft offen. Der `/start`-Zeitstempel ist also ein
+*Browser-Start*-Marker und wächst im Normalbetrieb bis zum nächsten Neustart
+(z. B. ~24 h bei nächtlichem Reboot). Ob ein Standort lebt, zeigt allein der
+Heartbeat. Dazu kommt der aktuelle
 Down-Status (`alamos_apager_station_down`). Läuft cluster-intern, also
 unabhängig davon, ob ein Standort per LAN oder nur per Tailscale angebunden
 ist — genutzt vom Zammad-Ticket-Workflow des Banana-Pi-Standorts, siehe
