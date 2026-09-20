@@ -1,0 +1,74 @@
+# GitOps-Gesundheit: Alerts auf den Metriken des ArgoCD-application-controllers
+# (Scrape: vmscrape-argocd.yaml). Anlass: die Sync-Operation von `monitoring` hing vom
+# 2026-09-15 bis 2026-09-19 unbemerkt (wartete auf einen nie gesunden DaemonSet) - aufgefallen
+# ist es nur von Hand. Alle Alerts laufen ueber die vorhandene Route (gotify + ntfy).
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: argocd-gitops
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: argocd.gitops
+      interval: 30s
+      rules:
+
+        - alert: ArgoAppDegraded
+          expr: argocd_app_info{health_status=~"Degraded|Missing"} == 1
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "ArgoCD-App {{`{{ $labels.name }}`}} ist {{`{{ $labels.health_status }}`}}"
+            description: >-
+              Die Application {{`{{ $labels.name }}`}} (Projekt {{`{{ $labels.project }}`}},
+              Ziel-Namespace {{`{{ $labels.dest_namespace }}`}}) ist seit mehr als 10 Minuten
+              {{`{{ $labels.health_status }}`}}.
+
+        - alert: ArgoAppOutOfSync
+          expr: argocd_app_info{sync_status="OutOfSync"} == 1
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "ArgoCD-App {{`{{ $labels.name }}`}} ist seit 1 h OutOfSync"
+            description: >-
+              Die Application {{`{{ $labels.name }}`}} weicht seit mehr als einer Stunde vom Stand in Git ab
+              (Auto-Sync aktiv: {{`{{ $labels.autosync_enabled }}`}}). Sync-Fehler oder ComparisonError pruefen.
+
+        - alert: ArgoAppProgressing
+          expr: argocd_app_info{health_status="Progressing"} == 1
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "ArgoCD-App {{`{{ $labels.name }}`}} ist seit 30 min Progressing"
+            description: >-
+              Die Application {{`{{ $labels.name }}`}} wird seit mehr als 30 Minuten nicht gesund
+              (Rollout haengt, Ressource wird nie bereit).
+
+        # Das Label `operation` ist leer, solange keine Sync-Operation laeuft.
+        - alert: ArgoSyncOperationStuck
+          expr: argocd_app_info{operation!=""} == 1
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "ArgoCD-Sync von {{`{{ $labels.name }}`}} haengt seit 30 min"
+            description: >-
+              Fuer {{`{{ $labels.name }}`}} laeuft seit mehr als 30 Minuten eine Operation
+              ({{`{{ $labels.operation }}`}}). Meist wartet sie auf eine nie gesunde Ressource; im
+              Zweifel die Operation beenden (`status.operationState.phase` auf Terminating).
+
+        # Totmannschalter: ohne Metriken schweigen alle Regeln oben.
+        - alert: ArgoMetricsMissing
+          expr: absent(argocd_app_info)
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Keine ArgoCD-Metriken"
+            description: >-
+              Von argocd-application-controller kommen keine Metriken mehr an
+              (VMPodScrape argocd-application-controller im Namespace monitoring). Die
+              GitOps-Alerts sind damit blind.

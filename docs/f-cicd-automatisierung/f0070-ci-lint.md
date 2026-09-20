@@ -2,7 +2,7 @@
 
 [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) prüft jeden
 Pull Request gegen `main` (und jeden Push auf `main` selbst), bevor eine
-Änderung beim ArgoCD-Sync gegen den Live-Cluster landet. Die vier Jobs sind
+Änderung beim ArgoCD-Sync gegen den Live-Cluster landet. Die fünf Jobs sind
 die **Pflicht-Checks** des Rulesets [„main: PR + CI“](f0090-branch-schutz-main.md):
 ein PR lässt sich erst mergen, wenn alle grün sind.
 
@@ -17,14 +17,15 @@ Branch `entw` auf, bevor ein PR nach `main` entsteht.
 
 ---
 
-## Vier parallele Jobs
+## Fünf parallele Jobs
 
 | Job (= Check-Name) | Prüft | Tool |
 |---|---|---|
 | `make lint (yamllint, ansible-lint, helm lint)` | YAML-Syntax (`ansible/`, `argocd/`), Ansible-Best-Practices, `helm lint` je Chart | ruft schlicht `make lint` auf — dieselbe Prüfung wie lokal |
 | `helm template \| kubeconform` | rendert jeden Chart und validiert die entstandenen Ressourcen gegen echte API-Schemas; prüft zusätzlich **reine Manifest-Ordner** (ohne `Chart.yaml`) und `argocd/bootstrap*` | [kubeconform](https://github.com/yannh/kubeconform) mit CRD-Katalog |
 | `go build, vet, test, tidy` | jedes Go-Modul im Repo: `go mod tidy -diff`, `go build`, `go vet`, `go test` | Go (`stable`); Module per `git ls-files` gefunden |
-| `gitleaks` | Plaintext-Secrets in PRs, bevor sie versiegelt werden | [gitleaks](https://github.com/gitleaks/gitleaks) |
+| `docs links` | relative Links und Überschriften-Anker in allen `*.md` (Slug-Regeln wie auf GitHub); externe URLs werden nicht abgerufen | [`scripts/check-doc-links.py`](../../scripts/check-doc-links.py) |
+| `gitleaks` | Plaintext-Secrets in PRs, bevor sie versiegelt werden | [gitleaks](https://github.com/gitleaks/gitleaks), Konfiguration siehe unten |
 
 ### Warum der CRD-Katalog
 
@@ -70,6 +71,32 @@ Tests automatisch an.
 
 Die Module werden nicht fest verdrahtet: der Job greift dadurch auch auf `entw`
 (anderes Ordner-Layout) und für künftige Go-Dienste ohne Anpassung.
+
+### Warum `docs links`
+
+Nach dem Layout-Umzug (`platform`/`workloads` → `tech`) und dem Entfernen einzelner Docs zeigten **26 Links** ins
+Leere (z. B. `../../../docs/…` in den READMEs unter `argocd/apps/tech/`, das jetzt eine Ebene tiefer liegt), dazu
+Anker auf Überschriften, die es so nicht gibt. Alle sind repariert; der Job verhindert neue. Er nutzt bewusst kein
+externes Tool: ein eigenes Skript mit den GitHub-Slug-Regeln (Sonderzeichen wie `/` und `&` entfallen, Umlaute
+bleiben) ist ohne Netzzugriff und ohne Action-Version reproduzierbar. Codeblöcke und Inline-Code werden ignoriert.
+Lokal: `python3 scripts/check-doc-links.py`.
+
+### gitleaks-Konfiguration
+
+- [`.gitleaks.toml`](../../.gitleaks.toml) erweitert die Standardregeln um **eine Ausnahme**: den Chiffretext von
+  SealedSecrets (Base64, beginnt mit `Ag`, mindestens 200 Zeichen). Ohne sie meldete die Regel `generic-api-key` den
+  verschlüsselten Wert von Feldern namens `token:` als Klartext-Token (der Lauf nach Commit `433afb3` wurde rot,
+  und mit Pflicht-Checks hätte jeder PR mit einem neuen SealedSecret hier gehangen). Die Ausnahme hängt am **Wert**,
+  nicht am Dateipfad: ein versehentlich im Klartext eingetragenes Token in einer `sealedsecret*.yaml` wird weiter
+  gemeldet (getestet).
+- [`.gitleaksignore`](../../.gitleaksignore) führt **7 Altfunde in der Git-Historie** auf. Ohne die Liste scheitert
+  jeder Lauf, der die ganze Historie scannt (Cron/`workflow_call` der [ENTW-Promotion](f0080-entw-promotion.md)),
+  dauerhaft. Fünf sind harmlos (Platzhalter in alten Doku-Beispielen, eine öffentliche UUID im pacman-Manifest).
+  **Zwei sind echte Altlasten und gelten als kompromittiert**, weil das Repo öffentlich ist: ein OpenSSH-Private-Key
+  der Banana Pis (Commit vom 2026-08-10, in `8625d54` entfernt) und ein `clientSecret` in einer alten MinIO-`values.yaml`
+  (Klartext, im aktuellen Stand nicht mehr vorhanden). Zugehörige Zugangsdaten rotieren, sofern noch in Benutzung
+  (Schlüssel aus den `authorized_keys` der Pis entfernen; MinIO-Client in Authentik neu erzeugen). Die Datei nennt das
+  bei den Einträgen.
 
 ---
 
