@@ -327,7 +327,11 @@ cups_print_server_extra_queues:
 
 # ---- Optional: configure a static IP via Netplan ----------
 network_configure_static_ip: false
-network_interface: "eno1"              # CHANGE: run `ip link show` on the server
+# Physische NIC des homeserver. Hiess frueher "eno1", heisst seit dem Boot vom
+# 2026-09-11 "enp4s0" (initramfs/Kernel vergibt den Namen neu) - mit `ip -br link`
+# pruefen. Ein falscher Name hat am 2026-09-20 die Bridge br0 ohne Uplink
+# angelegt und den homeserver vom LAN getrennt (libvirt_host prueft das jetzt).
+network_interface: "enp4s0"
 network_static_ip: "192.168.178.94"
 network_prefix_length: 24              # 24 = /24 = 255.255.255.0
 network_gateway: "192.168.178.1"

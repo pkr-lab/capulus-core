@@ -331,6 +331,18 @@ Die bestehenden gotify-/ntfy-Routen bleiben für diesen Alert (und alle
 anderen) unverändert bestehen — die n8n-Route kommt rein additiv dazu
 (`continue: true`, siehe Kommentar in `values.yaml`).
 
+**Achtung, Bedeutung des Werts:** Der Zeitstempel der letzten `/start`-Anfrage
+ist ein *Browser-Start*-Marker, kein Lebenszeichen. `/start` wird nur
+aufgerufen, wenn Chromium (neu) startet (Reboot, Absturz, Fallback-Wechsel);
+danach hält der Browser die AMweb-Seite dauerhaft offen. Ein Wert von
+10 h oder mehr ist daher normal und wächst bis zum nächsten Neustart. Im
+Dashboard "1002011-pis" heißt das Panel deshalb "Letzter Browser-Start"
+(neutral blau, ohne Alarmfarbe); massgeblich für "lebt der Monitor" ist das
+Panel "Letztes Lebenszeichen (Heartbeat)" (grün < 2 min, gelb ab 2 min, rot
+ab 5 min). Im Zammad-Ticket-Workflow unten steht dieser Wert ebenfalls unter
+der Bezeichnung "Letzte AMweb-Anfrage" — gemeint ist dort der letzte
+Browser-Start.
+
 **Woher "letzte AMweb-Anfrage" kommt:** `alamos-apager` (die geteilte
 Cluster-Komponente aus [docs/3-apps-workloads/30010-alamos-apager.md](30010-alamos-apager.md))
 merkt sich jetzt zusätzlich zum Heartbeat auch den Zeitstempel jeder
@@ -458,6 +470,8 @@ Online-Status prüfen und den PC wieder herunterfahren: siehe
 | Kiosk startet nicht / schwarzer Bildschirm | `systemctl status getty@tty1` auf dem Pi, Autologin aktiv? Läuft `startx`? |
 | Fallback schaltet nicht um | `journalctl -t banana-pi-kiosk` auf dem Pi (Supervisor loggt Moduswechsel) |
 | Fallback zeigt AMweb-Login statt Alarmmonitor | Chromium-Session abgelaufen — einmaligen manuellen Login wiederholen (siehe oben) |
+| Dashboard zeigt "Letzter Browser-Start" vor > 10 h | Normal: `/start` kommt nur bei Chromium-Start (siehe Hinweis im Abschnitt Zammad-Ticket). Lebenszeichen prüfen: Panel "Letztes Lebenszeichen (Heartbeat)" bzw. `alamos_apager_last_heartbeat_timestamp_seconds` |
+| Alert `BananaPiAlarmmonitorDown` feuert, obwohl der Pi läuft (Ausfall 18.–19.09.2026, ~37 h) | Pfad Pi → Cluster prüfen, nicht den Pi selbst: `journalctl -u tailscaled` auf dem Homeserver nach `Drop: TCP{100.123.214.4 …} no rules matched` (Tailscale-ACL/Subnetz-Route für `192.168.178.0/24`). Metriken werden vom vmagent nachgeliefert, der Verlauf sieht danach lückenlos aus, der Alarm feuerte aber in Echtzeit |
 | Kein Zammad-Ticket trotz 10+ Minuten Ausfall | `kubectl -n monitoring get vmrule banana-pi-availability` (Alert "firing"?), Alertmanager-Route korrekt? n8n-Workflow aktiv? |
 | Ticket erstellt, aber keine Mail | Zammad-Agent-Mitgliedschaft/Benachrichtigung prüfen (siehe oben), ausgehender E-Mail-Kanal in Zammad konfiguriert? |
 | n8n-Workflow schlägt am Zammad-Node fehl | Header-Auth-Credential zugewiesen? Token gültig/`ticket.agent`-Berechtigung? |
