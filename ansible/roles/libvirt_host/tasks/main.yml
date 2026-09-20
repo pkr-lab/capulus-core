@@ -89,6 +89,23 @@
           In host_vars/<host>/vars.yml libvirt_host_bridge_interface und
           libvirt_host_static_ip explizit setzen.
 
+    # Existiert die NIC nicht (z. B. "eno1" statt "enp4s0" nach einer
+    # Umbenennung durch Kernel/initramfs), entsteht eine Bridge OHNE Uplink,
+    # die trotzdem die Host-IP traegt - der Host ist danach im LAN nicht mehr
+    # erreichbar (Vorfall homeserver, 2026-09-20). Deshalb hier abbrechen,
+    # bevor irgendeine Netplan-Datei angefasst wird.
+    - name: Sicherstellen, dass die physische NIC auf dem Host existiert
+      ansible.builtin.assert:
+        that:
+          - libvirt_host_bridge_interface in ansible_facts['interfaces']
+        fail_msg: >-
+          Interface "{{ libvirt_host_bridge_interface }}" existiert auf
+          {{ inventory_hostname }} nicht (vorhanden:
+          {{ ansible_facts['interfaces'] | reject('match', '^(veth|cali|flannel|cni|vnet|lo$)') | join(', ') }}).
+          Die Bridge wuerde ohne Uplink angelegt und den Host vom LAN
+          trennen. Mit `ip -br link` den echten Namen pruefen und in
+          host_vars/<host>/vars.yml (bzw. network_interface) korrigieren.
+
     - name: Vorhandene Netplan-Configs finden
       ansible.builtin.find:
         paths: /etc/netplan
