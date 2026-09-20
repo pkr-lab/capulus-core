@@ -112,20 +112,23 @@ NFS-Export anlegt.
 
 ---
 
-## Monitoring (Grafana "Home Server Auslastung")
+## Monitoring (Grafana Hardware-Dashboards)
 
 Das NAS ist kein k3s-Node und wird daher nicht vom `prometheus-node-exporter`-
 DaemonSet erfasst. Stattdessen laufen zwei Exporter **manuell als Docker-
 Container direkt auf dem NAS** (UGOS unterstützt Docker über die App
 "Container Manager"/SSH — analog zum Docker-Compose-Setup auf anderen
 UGREEN-Geräten in diesem Fleet). `argocd/apps/tech/monitoring/templates/
-vmstaticscrape-ugreen-nas.yaml` zapft beide per `VMStaticScrape` an; das
-Dashboard `dashboard-homeservers.yaml` erwartet die Metriken unter
-`instance="ugreen-nas"`.
+vmstaticscrape-ugreen-nas.yaml` zapft beide per `VMStaticScrape` an und setzt
+dabei `host: ugreen-nas` / `kind: nas` — darüber erscheint das NAS in den
+Dashboards im Grafana-Ordner **Hardware** ("Hardware Übersicht",
+"Server-Detail", "Speicher & Laufwerke", siehe
+[Hardware-Monitoring](20060-hardware-monitoring.md)): CPU/RAM/Netzwerk/
+Temperatur, Füllstand von `/volume1`, `/volume2`, `/overlay` und der USB-Platte,
+RAID-Zustand (`md1`/`md2`) und die S.M.A.R.T.-Tabelle.
 
-1. **node_exporter** (CPU/RAM/Netzwerk/Disk-Auslastung, Temperatur) —
-   erscheint dadurch automatisch in allen bestehenden Panels des
-   `$instance`-Filters:
+1. **node_exporter** (CPU/RAM/Netzwerk/Disk-Auslastung, Temperatur, RAID,
+   Füllstand):
    ```bash
    docker run -d --name node-exporter --restart unless-stopped \
      --net host --pid host \
@@ -134,8 +137,8 @@ Dashboard `dashboard-homeservers.yaml` erwartet die Metriken unter
      --path.rootfs=/host
    ```
 2. **smartctl_exporter** (S.M.A.R.T.-Werte je Platte: Health, Temperatur,
-   Betriebsstunden — eigene Sektion ganz unten im Dashboard). Braucht
-   Zugriff auf die Block-Devices, daher `--privileged`:
+   Betriebszeit, Verschleiß, defekte Sektoren). Braucht Zugriff auf die
+   Block-Devices, daher `--privileged`:
    ```bash
    docker run -d --name smartctl-exporter --restart unless-stopped \
      --net host --privileged \
@@ -149,14 +152,21 @@ oben ergänzen). Nach dem Start:
 
 ```bash
 curl 192.168.178.97:9100/metrics | head
-curl 192.168.178.97:9633/metrics | head
+curl 192.168.178.97:9633/metrics | grep '^smartctl_device'
 ```
 
 Metrik-Namen (`smartctl_device_smart_status`, `smartctl_device_temperature`,
-`smartctl_device_power_on_hours`, Label `device`) stammen vom
-`prometheuscommunity/smartctl-exporter`-Image — bei Abweichungen die Panel-
-Queries in `dashboard-homeservers.yaml` gegen die tatsächliche `/metrics`-
-Ausgabe abgleichen.
+`smartctl_device_power_on_seconds` — **Sekunden**, nicht Stunden —, Label
+`device`) stammen vom `prometheuscommunity/smartctl-exporter`-Image (v0.14.0).
+
+> **Stand 2026-09-20:** Der Container auf dem NAS liefert nur
+> `smartctl_devices 5`, aber **keine** Werte je Platte (`smartctl_device_*`
+> fehlt komplett) — die S.M.A.R.T.-Panels sind daher für das NAS leer, bis das
+> behoben ist. Diagnose auf dem NAS: `docker logs smartctl-exporter` und
+> `docker exec smartctl-exporter smartctl --json -a /dev/sda`. Typische
+> Ursachen: fehlender Gerätezugriff im Container oder ein Gerätetyp, der `-d
+> sat` braucht (dann Container mit `--smartctl.device=/dev/sda;sat` je Platte
+> starten statt Auto-Scan).
 
 ---
 
