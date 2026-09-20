@@ -122,7 +122,7 @@ Neuer Chart-Ordner `argocd/apps/tech/authelia/` (Struktur analog zu
 > `rd=`-Wert ist eine statische Login-Portal-Basis-URL, keine dynamisch pro
 > Tier berechnete. Tatsächlich umgesetzt: **eine Middleware pro Tier**
 > (`authelia-prod`, `authelia-tech`, `authelia-external`). Details:
-> [d0070-authelia-sso.md](../d-sicherheit/d0070-authelia-sso.md).
+> d0070-authelia-sso.md (entfernt).
 
 Neue `Middleware`-Ressource in `argocd/apps/tech/authelia/templates/`
 (Skizze unten zeigt nur eine Instanz — real also dreifach, je Tier):
@@ -176,7 +176,7 @@ Der zugehörige Chart-Template-Block ist pro Chart einmalig zu ergänzen
 `ingressApi`-Mechanismus bereits als Referenzimplementierung).
 
 Neue, kleine Doc-Seite (automatisch per `wiki-docs-sync` nach Wiki.js
-gespiegelt, siehe [d0071-native-login-fallback.md](../d-sicherheit/d0071-native-login-fallback.md))
+gespiegelt, siehe d0071-native-login-fallback.md (entfernt))
 mit einer Tabelle aller `-native`-URLs.
 
 > **Korrektur nach Live-Recherche (21.08.2026):** Der ursprünglich geplante
@@ -195,7 +195,7 @@ mit einer Tabelle aller `-native`-URLs.
 > vorgeschalteter Chooser — das würde aber pro App eine unauthentifizierte
 > Zwischenseite bei JEDEM Besuch einbauen und widerspricht "Authelia ist die
 > erste Wahl" aus der ursprünglichen Anfrage). Offener Punkt, siehe
-> [d0070-authelia-sso.md](../d-sicherheit/d0070-authelia-sso.md).
+> d0070-authelia-sso.md (entfernt).
 
 ### 4. Access-Control-Policy (Authelia `configuration.yml`)
 
