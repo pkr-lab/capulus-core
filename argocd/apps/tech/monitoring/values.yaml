@@ -46,6 +46,11 @@ victoria-metrics-k8s-stack:
       extraArgs:
         # Drop scrapes from misbehaving targets instead of blowing memory.
         memory.allowedPercent: "60"
+        # host/kind-Labels fuer den per Push angebundenen Vereinsheim-Pi,
+        # siehe templates/configmap-vmsingle-relabel.yaml.
+        relabelConfig: /etc/vm/configs/vmsingle-relabel/relabel.yml
+      configMaps:
+        - vmsingle-relabel
       resources:
         requests:
           cpu: 50m

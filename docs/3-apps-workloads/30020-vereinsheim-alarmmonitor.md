@@ -276,9 +276,11 @@ nach.
 Kein Dashboard-Change nötig — die Hardware-Dashboards (Ordner "Hardware",
 [Hardware-Monitoring](../2-betrieb-hardware/20060-hardware-monitoring.md))
 filtern dynamisch über das Label `host`; der Pi taucht automatisch auf, sobald
-seine Metriken mit `host`/`kind` ankommen (setzt die `vmagent`-Rolle,
-`ansible/roles/vmagent/templates/vmagent-scrape.yml.j2`, ab dem nächsten
-`make banana-pi-kiosks`). Zusätzlich hat der Pi (fest verdrahtet, nicht über `host`) eigene
+seine Metriken mit `host`/`kind` ankommen. Die Labels ergänzt VictoriaMetrics
+beim Empfang (`argocd/apps/tech/monitoring/templates/configmap-vmsingle-relabel.yaml`),
+die `vmagent`-Rolle (`ansible/roles/vmagent/templates/vmagent-scrape.yml.j2`)
+setzt sie ab dem nächsten `make banana-pi-kiosks` zusätzlich selbst — ein
+Ansible-Lauf gegen den Pi ist dafür nicht nötig. Zusätzlich hat der Pi (fest verdrahtet, nicht über `host`) eigene
 Detail-Panels im Standort-Dashboard **"1002011-pis"**
 (`argocd/apps/tech/monitoring/templates/dashboard-1002011-pis.yaml`,
 ehemals "Vereinsheim-Alarmmonitor" — umbenannt, als die xibosignage-
