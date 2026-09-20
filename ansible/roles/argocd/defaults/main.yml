@@ -19,6 +19,12 @@ argocd_entw_layout: false
 # false = altes Layout platform/workloads (von keinem Cluster mehr genutzt, seit ENTW auf argocd_entw_layout ist).
 argocd_tech_layout: false
 
+# true = lokales ArgoCD-Konto `ci` (nur API-Token, kein Login) mit Nur-Lese-Rolle: die Promotion-Kette
+# (.github/workflows/promote-chain.yml) liest damit den Gesundheitsstatus der Applications. Der Token wird
+# NICHT von Ansible erzeugt, sondern einmalig per scripts/create-argocd-ci-token.sh
+# (docs/f-cicd-automatisierung/f00b0-promotion-chain.md#einrichtung).
+argocd_ci_account_enabled: true
+
 argocd_platform_apps:
   - sealed-secrets
   - kubeseal-webgui

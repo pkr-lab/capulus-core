@@ -1,0 +1,19 @@
+# gitleaks-Konfiguration (wird von gitleaks-action im Repo-Root automatisch gefunden).
+# Beschreibung: docs/f-cicd-automatisierung/f0070-ci-lint.md
+title = "capulus-core"
+
+[extend]
+# Alle Standardregeln bleiben aktiv.
+useDefault = true
+
+[allowlist]
+description = "SealedSecrets: der verschluesselte Wert ist kein Klartext-Secret"
+# Bewusst ueber den Wert (Chiffretext), nicht ueber den Dateipfad: ein versehentlich
+# im Klartext eingetragenes Token in einer sealedsecret*.yaml faellt so weiterhin auf.
+# Sealed-Secrets-Chiffretext ist Base64 und beginnt mit "Ag" (RSA-OAEP + AES-GCM,
+# mehrere hundert Zeichen lang). Anlass: `generic-api-key` meldete den Chiffretext
+# von Feldern namens `token:` als Klartext-Token (Commit 433afb3).
+regexTarget = "secret"
+regexes = [
+  '''^Ag[A-Za-z0-9+/=]{200,}$''',
+]

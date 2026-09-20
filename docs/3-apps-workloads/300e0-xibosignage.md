@@ -29,7 +29,7 @@ periodisch über die Xibo-REST-API in einen festen NAS-Ordner, und ein
 ## Inhaltsverzeichnis
 
 1. [Architektur](#architektur)
-2. [Xibo CMS deployen (argocd/apps/prod/xibosignage)](#xibo-cms-deployen-argocdappsxibosignage)
+2. [Xibo CMS deployen (argocd/apps/prod/xibosignage)](#xibo-cms-deployen-argocdappsprodxibosignage)
 3. [NAS-Ordner einrichten (Display)](#nas-ordner-einrichten-display)
 4. [n8n-Workflow: Xibo-CMS-Playlist → Display (primär)](#n8n-workflow-xibo-cms-playlist--display-primär)
 5. [Alternative (deaktiviert): OnlineSync → Inbox → Display](#alternative-deaktiviert-onlinesync--inbox--display)
@@ -425,10 +425,11 @@ node_exporter (Port 9100, ansible/roles/node_exporter)
   → VictoriaMetrics im Cluster
 ```
 
-Kein Dashboard-Change für "Home Server Auslastung" nötig (`uid:
-homeserver-auslastung`) — das Dashboard filtert dynamisch über die
-Grafana-Variable `$instance`, `infotafel` taucht dort automatisch mit auf,
-sobald die Metriken ankommen (identisches Prinzip wie bei den Banana-Pi-
+Kein Dashboard-Change nötig — die Hardware-Dashboards (Ordner "Hardware",
+[Hardware-Monitoring](../2-betrieb-hardware/20060-hardware-monitoring.md))
+filtern dynamisch über das Label `host` (der VMStaticScrape setzt `host:
+infotafel`, `kind: pi`), `infotafel` taucht dort automatisch mit auf, sobald
+die Metriken ankommen (identisches Prinzip wie bei den Banana-Pi-
 Alarmmonitoren).
 
 Da `infotafel` physisch am selben Standort (Vereinsheim, ALAMOS-Standortcode

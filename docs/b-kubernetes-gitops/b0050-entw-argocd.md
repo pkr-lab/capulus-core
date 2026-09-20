@@ -28,8 +28,8 @@ Die Trennung hat drei voneinander unabhängige Ebenen:
 | Ordner | Die ApplicationSets von TECH (`argocd/apps/tech/*`) und PROD (`argocd/bootstrap-prod/applicationset.yaml`, nur `argocd/apps/prod/…`) nennen den Pfad `entw/` nirgends | Landet der Ordner (etwa durch die Promotion) doch auf `main`, erzeugt er in TECH und PROD keine Application. |
 | Cluster | ENTW-ArgoCD kennt nur `https://kubernetes.default.svc` (den eigenen Cluster), es gibt kein `cluster`-Secret zu TECH oder PROD | Selbst ein Fehler im ENTW-Ordner kann TECH und PROD nicht erreichen. |
 
-Auf `entw` gelten die Rulesets `entw-1` (kein Löschen, kein Force-Push) und
-`entw-2` (nur per PR, Admin-Bypass), siehe
+Auf `entw` gelten die Rulesets `entw-1` (kein Löschen, kein Force-Push), `entw-2` (nur per PR, Admin-Bypass)
+und `Protect MAIN` (PR-Pflicht ohne Bypass): Änderungen kommen daher immer per PR, siehe
 [f0080](../f-cicd-automatisierung/f0080-entw-promotion.md#die-rulesets-auf-entw).
 Die CI (`helm template | kubeconform`) prüft den Ordner erst beim Promotion-Lauf
 gegen `ref=entw`, nicht schon im PR auf `entw`. Vor dem Push also lokal
@@ -45,7 +45,7 @@ gegen `ref=entw`, nicht schon im PR auf `entw`. Vor dem Push also lokal
 2. Ingress-Host unter `*.dev.homeserver` wählen (dnsmasq leitet die Domain auf
    die ENTW-VM, siehe [c0000](../c-netzwerk-dns/c0000-dns-architecture.md)),
    z. B. `whoami.dev.homeserver`.
-3. Auf den Branch `entw` bringen (PR oder Admin-Push).
+3. Per PR auf den Branch `entw` bringen (`Protect MAIN` verlangt PRs auch für Admins).
 4. Nach ca. 3 Minuten (Git-Polling) erscheint die Application in ArgoCD, der
    Namespace wird angelegt (`CreateNamespace=true`).
 
@@ -96,7 +96,7 @@ Application weiter, ohne dass ArgoCD sie noch verwaltet.
 
 1. Rollen-Änderung (Templates, Host-Vars, Doku) per PR nach `main`.
 2. Ordner `argocd/apps/entw/` mit den drei Bestands-Apps auf den Branch `entw`
-   bringen (PR oder Admin-Push, siehe Rulesets oben).
+   bringen (per PR, siehe Rulesets oben).
 3. Playbook aus einem Checkout ausführen, der die Rollen-Änderung enthält:
 
 ```bash
@@ -126,15 +126,16 @@ Erwartet: ein ApplicationSet `home-server-apps-entw`, Applications `demo-app`,
 ## Auswirkung auf die Promotion-Pipeline
 
 [`promote-entw.yml`](../f-cicd-automatisierung/f0080-entw-promotion.md)
-cherry-pickt jeden neuen Commit vom Branch `entw` als PR nach `main`. Ohne
-Gegenmaßnahme erzeugt deshalb auch jedes ENTW-Experiment unter
-`argocd/apps/entw/` einen PR, der den Ordner auf `main` legt. Dort ist er
-harmlos (TECH und PROD lesen `entw/` nicht), aber unnötiger Lärm. Commits, die
-nur ENTW betreffen, bekommen **`[entw-only]`** in die Commit-Nachricht und bleiben
-auf `entw`. Ausnahme ist der Commit, der den Ordner einmalig anlegt: er darf
-promotet werden, dann liegt der Ordner auch auf `main`. Die Promotion einer
-getesteten App nach `argocd/apps/tech/` oder `prod/` ist ein Kopieren des
-Ordners per PR (Phase 4 in 40080).
+cherry-pickt neue Commits vom Branch `entw` als PR nach `main`, **überspringt aber Commits, die
+ausschließlich `argocd/apps/entw/` ändern**: ein ENTW-Experiment erzeugt keinen PR mehr. (Der Ordner selbst liegt
+seit dem Einführungs-Commit auch auf `main`, dort ist er harmlos, TECH und PROD lesen `entw/` nie.) Andere
+ENTW-spezifische Commits bekommen weiterhin **`[entw-only]`** in die Commit-Nachricht.
+
+Die **Version** einer getesteten App wandert über die
+[Promotion-Kette](../f-cicd-automatisierung/f00b0-promotion-chain.md) nach `argocd/apps/tech/` bzw. `prod/`:
+`image.tag` und Chart-Abhängigkeiten, nach 24 h Gesundheit auf ENTW und mit optionalen Smoke-Checks
+(`argocd/promotion.yaml`), Hosts und Templates bleiben unberührt. Renovate aktualisiert auf dem Branch `entw`
+ausschließlich `argocd/apps/entw/`.
 
 ---
 

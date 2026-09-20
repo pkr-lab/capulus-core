@@ -32,6 +32,12 @@ Renovate-PR gegen eine generierte Lockdatei.
   Updates sofort — damit Sicherheitspatches nicht bis Montag liegen bleiben.
 - **Gruppierung:** Alle Änderungen einer App (Chart-Version + Image-Tag)
   landen in einem gemeinsamen PR statt in mehreren Einzel-PRs.
+- **Zwei Basis-Branches:** `main` und `entw` (`baseBranches`). Auf `entw` aktualisiert Renovate
+  **ausschließlich** `argocd/apps/entw/` (ENTW zuerst), auf `main` dafür **nicht** `argocd/apps/entw/`: ENTW liest den
+  Branch `entw`, ein PR auf `main` wäre wirkungslos. Von ENTW übernimmt die
+  [Promotion-Kette](f00b0-promotion-chain.md) die Versionen nach TECH/PROD.
+- **Gemeinsame PRs für dieselbe App in TECH und PROD:** `cert-manager`, `sealed-secrets` und `cloudflared` liegen
+  in beiden Ordnern und werden zusammen aktualisiert, damit die Cluster nicht auseinanderlaufen.
 - **Dependency Dashboard:** Renovate legt ein offenes GitHub-Issue
   „Dependency Dashboard" an, das den Status aller erkannten Updates auflistet
   (auch die, die z. B. wegen offener Major-Version zurückgehalten werden).
