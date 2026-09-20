@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "demo-app.fullname" . }}
+  labels:
+    {{- include "demo-app.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "demo-app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "demo-app.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # Der anzuzeigende Text steckt in dieser Environment-Variable.
+          # Genau sie ueberschreibst du live mit "kubectl set env ...".
+          env:
+            - name: MESSAGE
+              value: {{ .Values.message | quote }}
+          # Kubernetes ersetzt $(MESSAGE) durch den Wert der Env-Variable.
+          # http-echo gibt danach exakt diesen Text als kompletten Body aus.
+          args:
+            - "-text=$(MESSAGE)"
+            - "-listen=:{{ .Values.service.targetPort }}"
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

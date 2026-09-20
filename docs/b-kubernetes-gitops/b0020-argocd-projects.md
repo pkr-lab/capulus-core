@@ -4,8 +4,10 @@
 > ApplicationSet `home-server-apps-tech`; alle TECH-Apps liegen unter `argocd/apps/tech/<app>/`, die
 > PROD-Apps unter `argocd/apps/prod/<app>/` (eigenes Projekt `prod`, siehe
 > [40080](../4-planung/40080-multi-cluster-entw-prod-tech.md)). Die Trennung `platform`/`workloads`
-> unten beschreibt den frueheren Schnitt und gilt weiter fuer den ENTW-Cluster (Role-Variable
-> `argocd_tech_layout: false`); die NetworkPolicy-Stufen (`security-tier`) blieben erhalten.
+> unten beschreibt den frueheren Schnitt (Role-Variable `argocd_tech_layout: false`, von keinem Cluster
+> mehr genutzt); die NetworkPolicy-Stufen (`security-tier`) blieben erhalten. Der ENTW-Cluster hat seit
+> 2026-09-20 ein eigenes Projekt `entw` und liest `argocd/apps/entw/` auf dem Branch `entw`, siehe
+> [b0050](b0050-entw-argocd.md).
 
 Apps liegen seit diesem (frueheren) Schnitt nicht mehr flach unter `argocd/apps/<app>/`,
 sondern unter `argocd/apps/platform/<app>/` oder `argocd/apps/workloads/<app>/`.
