@@ -1226,7 +1226,8 @@
        }
       ]
      },
-     "unit": "bps"
+     "unit": "bps",
+     "noValue": "–"
     },
     "overrides": []
    },
@@ -2664,7 +2665,7 @@
      {
       "matcher": {
        "id": "byRegexp",
-       "options": "Realloz. Sektoren|Pending Sektoren|NVMe-Fehler"
+       "options": "Realloz. Sektoren|Pending Sektoren|Unkorrigierbar|NVMe-Fehler"
       },
       "properties": [
        {
@@ -2716,7 +2717,7 @@
      {
       "matcher": {
        "id": "byRegexp",
-       "options": "Server|Größe|Health|Geschrieben|Betriebszeit|NVMe-Fehler"
+       "options": "Server|Größe|Health|Geschrieben|Betriebszeit|NVMe-Fehler|Unkorrigierbar"
       },
       "properties": [
        {
@@ -2780,7 +2781,7 @@
       "type": "prometheus",
       "uid": "${datasource}"
      },
-     "expr": "((max by (host,device) (smartctl_device_rotation_rate{host=\"$host\"}) + 1) or (max by (host,device) (smartctl_device{host=\"$host\", protocol=\"NVMe\"}) * 0 + 0.5)) * on(host,device) group_left(model_name) max by (host,device,model_name) (smartctl_device{host=\"$host\"})",
+     "expr": "((max by (host,device) (smartctl_device_attribute{host=\"$host\", attribute_name=\"Spin_Up_Time\", attribute_value_type=\"raw\"}) * 0 + 7200) or (max by (host,device) (smartctl_device{host=\"$host\", protocol=\"NVMe\"}) * 0 + 0.5) or ((max by (host,device) (smartctl_device{host=\"$host\", protocol=\"ATA\"}) unless on(host,device) max by (host,device) (smartctl_device_attribute{host=\"$host\", attribute_name=\"Spin_Up_Time\", attribute_value_type=\"raw\"})) * 0 + 1)) * on(host,device) group_left(model_name) max by (host,device,model_name) (smartctl_device{host=\"$host\"})",
      "legendFormat": "",
      "refId": "B",
      "instant": true,
@@ -2824,7 +2825,7 @@
       "type": "prometheus",
       "uid": "${datasource}"
      },
-     "expr": "(max by (host,device) (smartctl_device_percentage_used{host=\"$host\"}) or (100 - max by (host,device) (smartctl_device_attribute{host=\"$host\", attribute_name=~\"Wear_Leveling_Count|Media_Wearout_Indicator|SSD_Life_Left|Percent_Lifetime_Remain|Remaining_Lifetime_Perc|Perc_Rated_Life_Used\", attribute_value_type=\"value\"}))) * on(host,device) group_left(model_name) max by (host,device,model_name) (smartctl_device{host=\"$host\"})",
+     "expr": "(max by (host,device) (smartctl_device_percentage_used{host=\"$host\"}) or (100 - min by (host,device) (smartctl_device_attribute{host=\"$host\", attribute_name=~\"Wear_Leveling_Count|Media_Wearout_Indicator|SSD_Life_Left|Percent_Lifetime_Remain|Remaining_Lifetime_Perc|Perc_Rated_Life_Used\", attribute_value_type=\"value\"}))) * on(host,device) group_left(model_name) max by (host,device,model_name) (smartctl_device{host=\"$host\"})",
      "legendFormat": "",
      "refId": "F",
      "instant": true,
@@ -2857,7 +2858,7 @@
       "type": "prometheus",
       "uid": "${datasource}"
      },
-     "expr": "(max by (host,device) (smartctl_device_attribute{host=\"$host\", attribute_name=\"Current_Pending_Sector\", attribute_value_type=\"raw\"})) * on(host,device) group_left(model_name) max by (host,device,model_name) (smartctl_device{host=\"$host\"})",
+     "expr": "(max by (host,device) (smartctl_device_attribute{host=\"$host\", attribute_name=~\"Current_Pending_Sector|Total_Pending_Sectors\", attribute_value_type=\"raw\"})) * on(host,device) group_left(model_name) max by (host,device,model_name) (smartctl_device{host=\"$host\"})",
      "legendFormat": "",
      "refId": "I",
      "instant": true,
@@ -2871,6 +2872,17 @@
      "expr": "(max by (host,device) (smartctl_device_media_errors{host=\"$host\"})) * on(host,device) group_left(model_name) max by (host,device,model_name) (smartctl_device{host=\"$host\"})",
      "legendFormat": "",
      "refId": "J",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${datasource}"
+     },
+     "expr": "(max by (host,device) (smartctl_device_attribute{host=\"$host\", attribute_name=~\"Reported_Uncorrect|Offline_Uncorrectable|Uncorrectable_Error_Cnt\", attribute_value_type=\"raw\"})) * on(host,device) group_left(model_name) max by (host,device,model_name) (smartctl_device{host=\"$host\"})",
+     "legendFormat": "",
+     "refId": "K",
      "instant": true,
      "format": "table"
     }
@@ -2901,7 +2913,8 @@
        "Value #G": 9,
        "Value #H": 10,
        "Value #I": 11,
-       "Value #J": 12
+       "Value #K": 12,
+       "Value #J": 13
       },
       "renameByName": {
        "Value #A": "Health",
@@ -2914,6 +2927,7 @@
        "Value #H": "Realloz. Sektoren",
        "Value #I": "Pending Sektoren",
        "Value #J": "NVMe-Fehler",
+       "Value #K": "Unkorrigierbar",
        "host": "Server",
        "device": "Gerät",
        "model_name": "Modell"
@@ -2922,7 +2936,7 @@
     }
    ],
    "type": "table",
-   "description": "Health = S.M.A.R.T.-Gesamtstatus. Verschleiß: NVMe 'Percentage Used' bzw. bei SATA-SSDs 100 − normalisierter Wear-Wert. Realloz./Pending Sektoren > 0 bei HDDs = Platte tauschen. Leere Felder = Wert wird vom Laufwerk nicht gemeldet."
+   "description": "Health = S.M.A.R.T.-Gesamtstatus. Typ: HDD = hat das Attribut Spin_Up_Time, sonst SATA-SSD bzw. NVMe. Verschleiß: NVMe 'Percentage Used' bzw. bei SATA-SSDs 100 − schlechtester normalisierter Restwert. Realloz./Pending Sektoren/Unkorrigierbar > 0 bei HDDs = Platte im Auge behalten/tauschen. Leere Felder = Wert wird vom Laufwerk nicht gemeldet."
   },
   {
    "datasource": {

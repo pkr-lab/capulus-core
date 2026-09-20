@@ -61,10 +61,12 @@ Objekt, Farbe nach Schwellwert:
   `acpitz` = Mainboard, sonst PCI-Geräte) und alle Sensoren im Verlauf;
   **Akku/Netzteil** (nur homeserver — die Hardware ist ein Notebook und
   dient als Mini-USV).
-- **S.M.A.R.T.-Tabelle**: Modell, Typ (SSD/HDD/NVMe), Größe, Health,
-  Temperatur, Verschleiß (NVMe *Percentage Used* bzw. `100 −` normalisierter
-  Wear-Wert bei SATA-SSDs), Betriebszeit, geschriebene Datenmenge,
-  reallozierte/pending Sektoren, NVMe-Medienfehler.
+- **S.M.A.R.T.-Tabelle**: Modell, Typ (NVMe = Protokoll; HDD = hat das
+  Attribut `Spin_Up_Time`; sonst SATA-SSD), Größe, Health, Temperatur,
+  Verschleiß (NVMe *Percentage Used* bzw. `100 −` schlechtester normalisierter
+  Restwert bei SATA-SSDs), Betriebszeit, geschriebene Datenmenge,
+  reallozierte/pending Sektoren, unkorrigierbare Fehler
+  (`Reported_Uncorrect`/`Offline_Uncorrectable`), NVMe-Medienfehler.
 
 ### Speicher & Laufwerke
 
@@ -183,7 +185,10 @@ und NAS-Container identisch):
 | `smartctl_device_percentage_used`, `…_available_spare`, `…_media_errors`, `…_bytes_written` | NVMe: Verschleiß, Reserve, Medienfehler, geschriebene Daten |
 | `smartctl_device_attribute{attribute_name,attribute_value_type}` | ATA-Attribute (`Reallocated_Sector_Ct`, `Current_Pending_Sector`, `Wear_Leveling_Count`, …) |
 
-Hinweis: Das Attribut für den SATA-SSD-Verschleiß heißt je nach Hersteller
+Hinweis: Attributnamen unterscheiden sich je Hersteller (z. B. heißt der
+Pending-Zähler bei der Samsung-HDD in worker-1 `Total_Pending_Sectors`, sonst
+`Current_Pending_Sector`; `smartctl_device_rotation_rate` liefert der Exporter
+nicht für jede Platte). Das Attribut für den SATA-SSD-Verschleiß heißt je nach Hersteller
 anders; die Tabelle deckt `Wear_Leveling_Count`, `Media_Wearout_Indicator`,
 `SSD_Life_Left`, `Percent_Lifetime_Remain`, `Remaining_Lifetime_Perc` und
 `Perc_Rated_Life_Used` ab. Fehlt der Verschleiß-Wert bei einer SSD, das
