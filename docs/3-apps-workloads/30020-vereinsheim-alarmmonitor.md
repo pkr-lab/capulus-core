@@ -18,7 +18,7 @@ die es bei den Raspberry Pis bewusst nicht gibt:
 2. **Lokaler Server-Fallback** — springt bei Nichterreichbarkeit von
    `alamos-apager.homeserver` automatisch auf die echte AMweb-URL.
 3. **Grafana-Monitoring + Zammad-Ticket bei Ausfall** — taucht im
-   Dashboard "Home Server Auslastung" auf (per **Push**, nicht Pull — siehe
+   Dashboards im Ordner "Hardware" auf (per **Push**, nicht Pull — siehe
    unten) und erzeugt (nur für dieses Gerät) ein Zammad-Ticket, wenn es
    länger als 10 Minuten nicht erreichbar ist. Ein eigenes Standort-Dashboard
    **"1002011-pis"** (`dashboard-1002011-pis.yaml`, benannt nach dem
@@ -273,10 +273,12 @@ ohnehin schon braucht — kein zusätzliches Pod-zu-Tailscale-Routing nötig.
 Nichterreichbarkeit lokal (`-remoteWrite.tmpDataPath`) und holt das dann
 nach.
 
-Kein Dashboard-Change nötig — "Home Server Auslastung"
-(`uid: homeserver-auslastung`) filtert dynamisch über die Grafana-Variable
-`$instance`; der Pi taucht automatisch auf, sobald seine Metriken ankommen.
-Zusätzlich hat der Pi (fest verdrahtet, nicht über `$instance`) eigene
+Kein Dashboard-Change nötig — die Hardware-Dashboards (Ordner "Hardware",
+[Hardware-Monitoring](../2-betrieb-hardware/20060-hardware-monitoring.md))
+filtern dynamisch über das Label `host`; der Pi taucht automatisch auf, sobald
+seine Metriken mit `host`/`kind` ankommen (setzt die `vmagent`-Rolle,
+`ansible/roles/vmagent/templates/vmagent-scrape.yml.j2`, ab dem nächsten
+`make banana-pi-kiosks`). Zusätzlich hat der Pi (fest verdrahtet, nicht über `host`) eigene
 Detail-Panels im Standort-Dashboard **"1002011-pis"**
 (`argocd/apps/tech/monitoring/templates/dashboard-1002011-pis.yaml`,
 ehemals "Vereinsheim-Alarmmonitor" — umbenannt, als die xibosignage-
