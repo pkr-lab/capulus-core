@@ -1,0 +1,28 @@
+# Hardware-Dashboards (Ordner "Hardware"): eine ConfigMap je JSON-Datei unter
+# dashboards/hardware/ — hardware-overview (Waben-Uebersicht + Server-Tabelle),
+# hardware-host (Server-Detail mit $host-Variable) und hardware-storage
+# (Fuellstand, S.M.A.R.T., RAID). Die Dateien werden per .Files.Get roh
+# eingelesen (nicht als Template gerendert), damit die Grafana-Legenden
+# `{{ "{{host}}" }}` nicht escaped werden muessen und sich die JSONs 1:1 aus
+# Grafana exportieren/zurueckspielen lassen. Filter aller Panels ist das Label
+# `host` (siehe values.yaml prometheus-node-exporter.vmScrape und die
+# VMStaticScrapes vmstaticscrape-*.yaml). Doku:
+# docs/2-betrieb-hardware/20060-hardware-monitoring.md.
+#
+# Der `grafana_folder`-Annotation-Mechanismus entspricht dashboards-apps.yaml
+# (sidecar.dashboards.folderAnnotation in values.yaml).
+{{- range $path, $_ := .Files.Glob "dashboards/hardware/*.json" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "dashboard-%s" (base $path | trimSuffix ".json") }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: "Hardware"
+data:
+  {{ base $path }}: |
+{{ $.Files.Get $path | indent 4 }}
+{{- end }}
