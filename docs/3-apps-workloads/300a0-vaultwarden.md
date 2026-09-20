@@ -26,7 +26,7 @@ vault.pke-lab.de         →  Cloudflare Tunnel → vaultwarden (Port 80)
   Absicherung). Ein ForwardAuth-Redirect würde den Login/Sync der Apps
   brechen — anders als bei reinen Web-UIs ohne eigenes Client-Protokoll.
 - **Extern erreichbar** über den bestehenden Cloudflare Tunnel
-  (`argocd/apps/platform/cloudflared/values.yaml`), damit Handy-App und
+  (`argocd/apps/tech/cloudflared/values.yaml`), damit Handy-App und
   Browser-Erweiterung auch unterwegs syncen können.
 
 ---
@@ -95,7 +95,7 @@ echo -n '$argon2id$...' \
 
 ### 1.3 Ciphertext in `values.yaml` eintragen
 
-`argocd/apps/workloads/vaultwarden/values.yaml` öffnen und den Platzhalter ersetzen:
+`argocd/apps/tech/vaultwarden/values.yaml` öffnen und den Platzhalter ersetzen:
 
 ```yaml
 adminSecret:
@@ -107,7 +107,7 @@ adminSecret:
 Committen + pushen (macht der Nutzer selbst):
 
 ```bash
-git add argocd/apps/workloads/vaultwarden/values.yaml
+git add argocd/apps/tech/vaultwarden/values.yaml
 git commit -m "feat(vaultwarden): set sealed admin token"
 git push
 ```
@@ -262,7 +262,7 @@ StorageClass (wie beim Großteil der übrigen Apps, siehe
 verworfen**: das NAS erzwingt inzwischen `all_squash` (kein
 `no_root_squash` mehr verfügbar), was bei Vaultwardens SQLite-Datei zu
 Permission-Problemen führt — siehe Kommentar in
-`argocd/apps/workloads/vaultwarden/values.yaml`. Die Haupt-PVC bleibt daher auf
+`argocd/apps/tech/vaultwarden/values.yaml`. Die Haupt-PVC bleibt daher auf
 `local-path` (Homeserver-System-SSD).
 
 Stattdessen sichert ein nächtlicher `backup`-CronJob (eigene PVC, bewusst

@@ -45,14 +45,14 @@ flowchart TB
         E5["CUPS :631<br/>IPP / AirPrint"]
     end
 
-    subgraph L4["SCHICHT 4 — ANWENDUNGEN (argocd/apps/workloads/)"]
+    subgraph L4["SCHICHT 4 — ANWENDUNGEN (argocd/apps/tech/)"]
         direction LR
         P1["Nextcloud · Immich · Paperless-NGX<br/>Wiki.js · Zammad · Vaultwarden"]
         P2["Mealie · n8n · Uptime Kuma<br/>MediaMTX · TinyTeller"]
         P3["alamos-apager · github-release-watcher<br/>wiki-docs-sync · example-whoami · xibosignage"]
     end
 
-    subgraph L3["SCHICHT 3 — PLATTFORMDIENSTE (argocd/apps/platform/)"]
+    subgraph L3["SCHICHT 3 — PLATTFORMDIENSTE (argocd/apps/tech/)"]
         direction LR
         S2["sealed-secrets<br/>kubeseal-webgui"]
         S3["monitoring<br/>VictoriaMetrics + Grafana"]
@@ -150,7 +150,7 @@ sequenceDiagram
     participant Sem as Semaphore Web-UI
     participant Host as Ubuntu-Hosts
 
-    Dev->>Git: git push (neuer Ordner in argocd/apps/platform/ oder /workloads/)
+    Dev->>Git: git push (neuer Ordner in argocd/apps/tech/ oder /workloads/)
     Argo->>Git: pollt alle ~3 Minuten (nur Lesezugriff)
     Argo->>Argo: Soll-Ist-Vergleich
     Argo->>K3s: kubectl apply
@@ -233,11 +233,11 @@ flowchart TB
 
 Seit [docs/b-kubernetes-gitops/b0020-argocd-projects.md](../b-kubernetes-gitops/b0020-argocd-projects.md) ist diese
 Schicht-3/Schicht-4-Trennung nicht mehr nur konzeptionell, sondern auch die
-tatsächliche Git-Ordnerstruktur (`argocd/apps/platform/…` bzw.
-`argocd/apps/workloads/…`) und das zugewiesene ArgoCD-AppProject
+tatsächliche Git-Ordnerstruktur (`argocd/apps/tech/…` bzw.
+`argocd/apps/tech/…`) und das zugewiesene ArgoCD-AppProject
 (`platform` bzw. `workloads`).
 
-### Schicht 3 — Plattformdienste (`argocd/apps/platform/…`, AppProject `platform`)
+### Schicht 3 — Plattformdienste (`argocd/apps/tech/…`, AppProject `platform`)
 
 | App | Aufgabe | Kürzel |
 |---|---|---|
@@ -258,7 +258,7 @@ tatsächliche Git-Ordnerstruktur (`argocd/apps/platform/…` bzw.
 | `headlamp` | Kubernetes-Dashboard im Browser | S |
 | `traefik-config` | Traefik-Zusatzkonfiguration (HelmChartConfig, Metrics-Scrape) | — |
 
-### Schicht 4 — Anwendungen (`argocd/apps/workloads/…`, AppProject `workloads`)
+### Schicht 4 — Anwendungen (`argocd/apps/tech/…`, AppProject `workloads`)
 
 | App | Aufgabe | Kürzel | Adresse |
 |---|---|---|---|

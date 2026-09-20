@@ -1,6 +1,15 @@
 # ArgoCD-Projects — Platform/Workloads-Trennung
 
-Apps liegen seit diesem Schnitt nicht mehr flach unter `argocd/apps/<app>/`,
+> **Stand 2026-09-19 (aktuelles Layout):** Der Hub kennt nur noch ein AppProject `tech` und ein
+> ApplicationSet `home-server-apps-tech`; alle TECH-Apps liegen unter `argocd/apps/tech/<app>/`, die
+> PROD-Apps unter `argocd/apps/prod/<app>/` (eigenes Projekt `prod`, siehe
+> [40080](../4-planung/40080-multi-cluster-entw-prod-tech.md)). Die Trennung `platform`/`workloads`
+> unten beschreibt den frueheren Schnitt (Role-Variable `argocd_tech_layout: false`, von keinem Cluster
+> mehr genutzt); die NetworkPolicy-Stufen (`security-tier`) blieben erhalten. Der ENTW-Cluster hat seit
+> 2026-09-20 ein eigenes Projekt `entw` und liest `argocd/apps/entw/` auf dem Branch `entw`, siehe
+> [b0050](b0050-entw-argocd.md).
+
+Apps liegen seit diesem (frueheren) Schnitt nicht mehr flach unter `argocd/apps/<app>/`,
 sondern unter `argocd/apps/platform/<app>/` oder `argocd/apps/workloads/<app>/`.
 Jede App bekommt zusätzlich ein passendes ArgoCD-`AppProject` zugewiesen
 (`platform` bzw. `workloads`), statt wie bisher pauschal im `default`-Project
@@ -15,8 +24,8 @@ uneingeschränkt jede Kombination aus Quell-Repo, Ziel-Namespace und
 Ressourcentyp. Ein Tippfehler oder ein kompromittierter Commit hätte z. B.
 eine Workload-App (Mealie, n8n, …) theoretisch in den `monitoring`- oder
 `pihole`-Namespace deployen können. Die Trennung in zwei Projects grenzt das
-ein: Apps aus `argocd/apps/workloads/*` dürfen nur in Workload-Namespaces
-deployen, Apps aus `argocd/apps/platform/*` nur in Platform-Namespaces.
+ein: Apps aus `argocd/apps/tech/*` dürfen nur in Workload-Namespaces
+deployen, Apps aus `argocd/apps/tech/*` nur in Platform-Namespaces.
 
 Wichtig: **Jede App behält ihren eigenen Kubernetes-Namespace wie bisher**
 (`destination.namespace` ist weiterhin nur der App-Ordnername, z. B.
@@ -34,8 +43,8 @@ verringern.
 
 | Tier | Ordner | AppProject | Charakter |
 |---|---|---|---|
-| **Platform** (Schicht 3) | `argocd/apps/platform/<app>/` | `platform` | Identity, Secrets, Netzwerk, Monitoring — Infrastruktur, auf der andere Apps aufbauen |
-| **Workloads** (Schicht 4) | `argocd/apps/workloads/<app>/` | `workloads` | Apps mit echtem Nutzerkreis (Familie, Vereinsmitglieder, Kunden) |
+| **Platform** (Schicht 3) | `argocd/apps/tech/<app>/` | `platform` | Identity, Secrets, Netzwerk, Monitoring — Infrastruktur, auf der andere Apps aufbauen |
+| **Workloads** (Schicht 4) | `argocd/apps/tech/<app>/` | `workloads` | Apps mit echtem Nutzerkreis (Familie, Vereinsmitglieder, Kunden) |
 
 Die Zuordnung folgt exakt der bereits bestehenden Schicht-3/Schicht-4-Tabelle
 in [docs/a-betriebssystem/a0010-overview.md](../a-betriebssystem/a0010-overview.md#5-app-matrix-schicht-3-und-4) — hier
@@ -63,8 +72,8 @@ die Namespaces.
 
 ```mermaid
 flowchart TB
-    AS1["ApplicationSet home-server-apps-platform<br/>Generator: argocd/apps/platform/*<br/>spec.project: platform (fest codiert)"] --> APPS1["Applications<br/>(je App = eigener Namespace,<br/>wie bisher)"]
-    AS2["ApplicationSet home-server-apps-workloads<br/>Generator: argocd/apps/workloads/*<br/>spec.project: workloads (fest codiert)"] --> APPS2["Applications<br/>(je App = eigener Namespace,<br/>wie bisher)"]
+    AS1["ApplicationSet home-server-apps-platform<br/>Generator: argocd/apps/tech/*<br/>spec.project: platform (fest codiert)"] --> APPS1["Applications<br/>(je App = eigener Namespace,<br/>wie bisher)"]
+    AS2["ApplicationSet home-server-apps-workloads<br/>Generator: argocd/apps/tech/*<br/>spec.project: workloads (fest codiert)"] --> APPS2["Applications<br/>(je App = eigener Namespace,<br/>wie bisher)"]
     APPS1 --> PP["AppProject platform<br/>destinations: nur Platform-Namespaces"]
     APPS2 --> PW["AppProject workloads<br/>destinations: nur Workload-Namespaces"]
 ```
@@ -131,8 +140,8 @@ zusätzlichen Entscheidungsschritt:
 1. Gehört die neue App zu **Platform** (Infrastruktur, Admin-Charakter) oder
    **Workloads** (echter Nutzerkreis)? Im Zweifel: reiner Infrastruktur-/
    Betriebsdienst ohne eigenen "Endnutzer" → Platform.
-2. Verzeichnis anlegen: `argocd/apps/platform/<name>/` oder
-   `argocd/apps/workloads/<name>/`.
+2. Verzeichnis anlegen: `argocd/apps/tech/<name>/` oder
+   `argocd/apps/tech/<name>/`.
 3. `<name>` in `argocd_platform_apps` bzw. `argocd_workloads_apps` in
    `ansible/roles/argocd/defaults/main.yml` ergänzen (sonst fehlt der
    AppProject-`destinations`-Eintrag und der Sync schlägt fehl).
@@ -155,8 +164,8 @@ wichtig, weil beide Git-Generatoren (alt wie neu) fest gegen
 Branch:
 
 1. **Erst `feat-update-security` nach `main` mergen.** Vor dem Merge findet
-   der neue Generator-Pfad (`argocd/apps/platform/*` /
-   `argocd/apps/workloads/*`) auf `main` noch nichts — ein `make argocd` vor
+   der neue Generator-Pfad (`argocd/apps/tech/*` /
+   `argocd/apps/tech/*`) auf `main` noch nichts — ein `make argocd` vor
    dem Merge legt zwar gefahrlos zwei neue, aber leere ApplicationSets an
    (0 Apps gefunden), während die alte `home-server-apps` unangetastet
    weiterläuft und alle 36 Apps von der alten Struktur auf `main` sync.

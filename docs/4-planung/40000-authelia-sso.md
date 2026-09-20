@@ -99,8 +99,8 @@ Browser ──▶ Traefik (kube-system) ──▶ Middleware "authelia-authelia@
 
 ### 1. Authelia als neue Platform-App
 
-Neuer Chart-Ordner `argocd/apps/platform/authelia/` (Struktur analog zu
-`argocd/apps/platform/gotify/`: `Chart.yaml`, `values.yaml`,
+Neuer Chart-Ordner `argocd/apps/tech/authelia/` (Struktur analog zu
+`argocd/apps/tech/gotify/`: `Chart.yaml`, `values.yaml`,
 `templates/deployment.yaml`, `templates/service.yaml`,
 `templates/ingress.yaml`, `templates/sealedsecret.yaml`).
 
@@ -110,7 +110,7 @@ Neuer Chart-Ordner `argocd/apps/platform/authelia/` (Struktur analog zu
 | Nutzerverwaltung | File-basierter `users_database.yml`-Provider, Argon2id-Hashes, als `SealedSecret` committed (gleiches Muster wie bei Vaultwarden) |
 | 2FA | eingebautes TOTP, erzwungen nur für Admin-Tool-Regeln (siehe Baustein 4) |
 | Hostnamen | `auth.tech.homeserver` (intern) und `auth-tech.pke-lab.de` (extern, über bestehenden `*.pke-lab.de`-Wildcard, kein neuer `cloudflared`-Schritt nötig) |
-| TLS | `auth.tech.homeserver` als neuer Eintrag in `argocd/apps/platform/cert-manager/templates/certificate-homeserver-wildcard.yaml` → `dnsNames` |
+| TLS | `auth.tech.homeserver` als neuer Eintrag in `argocd/apps/tech/cert-manager/templates/certificate-homeserver-wildcard.yaml` → `dnsNames` |
 | NetworkPolicy | `authelia` als neuer Eintrag in `argocd_platform_apps` + `argocd_network_policy_refined_namespaces` (`ansible/roles/argocd/defaults/main.yml`) — Traefik (`kube-system`) ist dort standardmäßig als Ingress-Quelle erlaubt |
 | AppProject | `platform` (Identity-Layer, wie früher Authentik) |
 
@@ -124,7 +124,7 @@ Neuer Chart-Ordner `argocd/apps/platform/authelia/` (Struktur analog zu
 > (`authelia-prod`, `authelia-tech`, `authelia-external`). Details:
 > [d0070-authelia-sso.md](../d-sicherheit/d0070-authelia-sso.md).
 
-Neue `Middleware`-Ressource in `argocd/apps/platform/authelia/templates/`
+Neue `Middleware`-Ressource in `argocd/apps/tech/authelia/templates/`
 (Skizze unten zeigt nur eine Instanz — real also dreifach, je Tier):
 
 ```yaml
@@ -161,7 +161,7 @@ bewährter Mechanismus, kein neues Risiko.
 
 Für jede zu schützende App (außer den in Baustein 5 ausgeschlossenen) ein
 zweiter Ingress-Block nach dem bereits etablierten Gotify-Muster
-(`argocd/apps/platform/gotify/values.yaml`, `ingressApi`):
+(`argocd/apps/tech/gotify/values.yaml`, `ingressApi`):
 
 ```yaml
 ingressNative:
@@ -172,7 +172,7 @@ ingressNative:
 Der zugehörige Chart-Template-Block ist pro Chart einmalig zu ergänzen
 (gleiches Grundgerüst wie das bestehende `templates/ingress.yaml`, nur ohne
 `router.middlewares`-Annotation) — als Vorlage dient
-`argocd/apps/platform/gotify/templates/` (dort existiert der
+`argocd/apps/tech/gotify/templates/` (dort existiert der
 `ingressApi`-Mechanismus bereits als Referenzimplementierung).
 
 Neue, kleine Doc-Seite (automatisch per `wiki-docs-sync` nach Wiki.js

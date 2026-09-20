@@ -18,13 +18,11 @@
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
-  name: platform
+  name: tech
   namespace: argocd
 spec:
   description: >-
-    Plattformdienste (Schicht 3): Identity/Secrets/Netzwerk/Monitoring-
-    Infrastruktur, auf die andere Apps aufbauen. Admin-/Infrastruktur-
-    Charakter, siehe docs/a-betriebssystem/a0010-overview.md Abschnitt 5.
+    TECH-Cluster (homeserver): Plattform- und Betriebs-Apps (frueher platform + workloads). NetworkPolicy-Stufen haengen an den Listen argocd_platform_apps / argocd_workloads_apps.
   sourceRepos:
     - "https://github.com/pkr-lab/capulus-core.git"
   destinations:
@@ -68,77 +66,34 @@ spec:
       namespace: headlamp
     - server: https://kubernetes.default.svc
       namespace: traefik-config
-    # traefik-config and coredns-custom deploy into kube-system rather than
-    # their own app-named namespace (HelmChartConfig/ConfigMap must live
-    # where Traefik/CoreDNS actually read them from).
-    - server: https://kubernetes.default.svc
-      namespace: kube-system
-    # cert-manager (docs/d-sicherheit/d0040-internal-tls.md): eigener Namespace wie jede
-    # andere App, aber bewusst NICHT in argocd_platform_apps — das ist
-    # Cluster-Infrastruktur wie kube-system/argocd, kein App-Tier-Namespace,
-    # und soll deshalb kein tier-default-ingress NetworkPolicy/security-tier-
-    # Label bekommen (siehe bootstrap-networkpolicies.yaml.j2).
-    - server: https://kubernetes.default.svc
-      namespace: cert-manager
-  clusterResourceWhitelist:
-    - group: "*"
-      kind: "*"
-  namespaceResourceWhitelist:
-    - group: "*"
-      kind: "*"
----
-apiVersion: argoproj.io/v1alpha1
-kind: AppProject
-metadata:
-  name: workloads
-  namespace: argocd
-spec:
-  description: >-
-    Anwendungen (Schicht 4): Apps mit echtem Nutzerkreis (Familie, Vereins-
-    mitglieder, Kunden), siehe docs/a-betriebssystem/a0010-overview.md Abschnitt 5.
-  sourceRepos:
-    - "https://github.com/pkr-lab/capulus-core.git"
-  destinations:
     - server: https://kubernetes.default.svc
       namespace: alamos-apager
     - server: https://kubernetes.default.svc
+      namespace: alamos-relay
+    - server: https://kubernetes.default.svc
       namespace: carplay-api
     - server: https://kubernetes.default.svc
-      namespace: demo-app
-    - server: https://kubernetes.default.svc
-      namespace: example-whoami
-    - server: https://kubernetes.default.svc
       namespace: github-release-watcher
-    - server: https://kubernetes.default.svc
-      namespace: immich
-    - server: https://kubernetes.default.svc
-      namespace: mealie
     - server: https://kubernetes.default.svc
       namespace: mediamtx
     - server: https://kubernetes.default.svc
       namespace: n8n
     - server: https://kubernetes.default.svc
-      namespace: nextcloud
-    - server: https://kubernetes.default.svc
       namespace: ollama
     - server: https://kubernetes.default.svc
       namespace: pacman
-    - server: https://kubernetes.default.svc
-      namespace: paperless-ngx
-    - server: https://kubernetes.default.svc
-      namespace: tinyteller
     - server: https://kubernetes.default.svc
       namespace: uptime-kuma
     - server: https://kubernetes.default.svc
       namespace: vaultwarden
     - server: https://kubernetes.default.svc
-      namespace: wiki-docs-sync
-    - server: https://kubernetes.default.svc
-      namespace: wikijs
-    - server: https://kubernetes.default.svc
-      namespace: xibosignage
-    - server: https://kubernetes.default.svc
       namespace: zammad
+    # traefik-config und coredns-custom deployen nach kube-system, cert-manager hat einen eigenen
+    # Namespace, ist aber bewusst NICHT in argocd_platform_apps (Cluster-Infrastruktur).
+    - server: https://kubernetes.default.svc
+      namespace: kube-system
+    - server: https://kubernetes.default.svc
+      namespace: cert-manager
   clusterResourceWhitelist:
     - group: "*"
       kind: "*"

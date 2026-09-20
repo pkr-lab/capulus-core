@@ -1,7 +1,7 @@
 Dan# Pi-hole — Netzwerkweites Werbeblocking
 
 [Pi-hole](https://pi-hole.net) läuft als ArgoCD-verwaltete App im k3s-Cluster
-(`argocd/apps/platform/pihole/`) und wird von `dnsmasq` auf dem Home-Server als
+(`argocd/apps/tech/pihole/`) und wird von `dnsmasq` auf dem Home-Server als
 Upstream-DNS genutzt. Dadurch bekommt jedes Gerät, das dnsmasq bereits als
 DNS-Server verwendet (siehe [`c0000-dns-architecture.md`](c0000-dns-architecture.md)),
 automatisch Werbe-/Tracking-Blocking — **ohne die Fritz!Box anzufassen**.
@@ -54,7 +54,7 @@ echo -n 'DEIN_STARKES_PIHOLE_PW' \
 
 ### 1.3 Ciphertext in `values.yaml` eintragen
 
-`argocd/apps/platform/pihole/values.yaml` öffnen und den Platzhalter ersetzen:
+`argocd/apps/tech/pihole/values.yaml` öffnen und den Platzhalter ersetzen:
 
 ```yaml
 adminSecret:
@@ -66,7 +66,7 @@ adminSecret:
 Committen + pushen:
 
 ```bash
-git add argocd/apps/platform/pihole/values.yaml
+git add argocd/apps/tech/pihole/values.yaml
 git commit -m "feat(pihole): set sealed web password"
 git push
 ```
