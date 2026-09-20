@@ -121,8 +121,8 @@ enthält die Tabelle der Änderungen und die Belege des Gates.
 
 ## Netzweg und Zugriff
 
-GitHub-Runner erreichen ArgoCD nur über Tailscale. Der Workflow tritt dem Tailnet mit
-`--accept-routes` bei und nutzt die **Subnet-Route** `192.168.178.0/24`, die der Homeserver bereits ins
+GitHub-Runner erreichen ArgoCD nur über Tailscale. Der Workflow tritt dem Tailnet bei (die Action nimmt
+Subnet-Routen selbst an, ein Schritt prüft die Verbindung) und nutzt die **Subnet-Route** `192.168.178.0/24`, die der Homeserver bereits ins
 Tailnet bewirbt. Damit kommen beide ArgoCD-Instanzen über ihre LAN-Adresse, ohne Änderung an worker-1:
 
 | Ziel | Adresse | Zweck |
