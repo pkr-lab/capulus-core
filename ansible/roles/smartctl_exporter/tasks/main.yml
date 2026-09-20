@@ -1,0 +1,39 @@
+---
+# ============================================================
+# smartctl_exporter role — S.M.A.R.T.-Werte (Health, Temperatur, Wear,
+# Betriebsstunden, defekte Sektoren) der physischen Platten als
+# Prometheus-Metriken. Nur fuer Hosts MIT echter Hardware (homeserver,
+# worker-0, worker-1) — die KVM-VMs (prod-vm, entw-vm) sehen nur virtuelle
+# virtio-Platten ohne SMART, das NAS hat seinen eigenen Docker-Exporter
+# (docs/2-betrieb-hardware/20000-nas-storage.md).
+#
+# Der Exporter laeuft als root (braucht Zugriff auf /dev/sd*, /dev/nvme*) und
+# scannt alle Platten selbst (smartctl --scan). Das Dashboard-Gegenstueck:
+# argocd/apps/tech/monitoring/dashboards/hardware/, Doku:
+# docs/2-betrieb-hardware/20060-hardware-monitoring.md.
+# ============================================================
+
+- name: smartmontools und prometheus-smartctl-exporter installieren
+  ansible.builtin.apt:
+    name:
+      - smartmontools
+      - prometheus-smartctl-exporter
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: smartctl_exporter_enabled | bool
+
+- name: smartctl_exporter aktivieren und starten
+  ansible.builtin.systemd:
+    name: smartctl_exporter.service
+    enabled: true
+    state: started
+  when: smartctl_exporter_enabled | bool
+
+- name: smartctl_exporter deaktivieren (smartctl_exporter_enabled false)
+  ansible.builtin.systemd:
+    name: smartctl_exporter.service
+    enabled: false
+    state: stopped
+  when: not (smartctl_exporter_enabled | bool)
+  failed_when: false
