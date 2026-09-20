@@ -270,6 +270,17 @@ dieselbe NIC-Generation verbaut haben. Die vier Schichten oben bleiben
 trotzdem sinnvoll — sie schützen vor echtem Ressourcendruck, unabhängig
 von dieser konkreten Ursache.
 
+**Nachtrag 2026-09-20:** Der EEE-Dienst war auf dem homeserver seit dem
+Bridge-Umbau (`br0`, siehe
+[40080](../4-planung/40080-multi-cluster-entw-prod-tech.md)) wirkungslos:
+`disable_eee_interface` nahm das Default-Route-Interface (jetzt `br0`,
+`ethtool --set-eee br0` schlägt fehl, Dienst `failed`), auf der physischen
+NIC (`enp4s0`, früher `eno1`) war EEE weiter "enabled - active". Auf Hosts
+mit Bridge muss `disable_eee_interface` in den `host_vars` auf die
+physische NIC zeigen (`libvirt_host_bridge_interface`). Prüfen:
+`systemctl is-active disable-eee.service` und
+`ethtool --show-eee <NIC>` (muss "disabled" zeigen).
+
 ---
 
 ## Relevante Links
