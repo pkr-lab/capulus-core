@@ -46,8 +46,8 @@ Platte selbst.
 ## Diagnose-Schritte (sobald wieder Zugriff — vor Ort oder per SSH)
 
 1. **NAS zuerst:** UGOS → Speicher-Manager → welche Platte ist rot, SMART-
-   Status im Detail. Grafana-Dashboard "Home Server Auslastung" prüfen
-   (`smartctl_exporter`-Panel, siehe [docs/2-betrieb-hardware/20000-nas-storage.md#monitoring-grafana-home-server-auslastung](../2-betrieb-hardware/20000-nas-storage.md#monitoring-grafana-home-server-auslastung))
+   Status im Detail. Grafana-Dashboard "Speicher & Laufwerke" prüfen
+   (S.M.A.R.T.-Tabelle, siehe [docs/2-betrieb-hardware/20060-hardware-monitoring.md](../2-betrieb-hardware/20060-hardware-monitoring.md) und [docs/2-betrieb-hardware/20000-nas-storage.md#monitoring-grafana-hardware-dashboards](../2-betrieb-hardware/20000-nas-storage.md#monitoring-grafana-hardware-dashboards))
    — Health/Temperatur/Power-On-Hours der betroffenen Platte, plus
    Verlauf **vor** dem Ausfallzeitpunkt (Vorwarnung verpasst?).
 2. **homeserver, sobald erreichbar:**

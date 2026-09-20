@@ -223,6 +223,10 @@ victoria-metrics-k8s-stack:
       # VictoriaLogs: Datasource für zentrales Logging, siehe
       # argocd/apps/tech/logging/.
       - victoriametrics-logs-datasource
+      # Polystat: Waben-/Hexagon-Statusuebersicht (Server, Datentraeger,
+      # Fuellstand) im Ordner "Hardware", siehe dashboards/hardware/ und
+      # docs/2-betrieb-hardware/20060-hardware-monitoring.md.
+      - grafana-polystat-panel
 
     admin:
       existingSecret: "grafana-admin"        # leave empty → auto-generated password
@@ -332,6 +336,30 @@ victoria-metrics-k8s-stack:
       type: RollingUpdate
       rollingUpdate:
         maxUnavailable: 2
+    # `host` (= k8s-Nodename) und `kind` fuer die Hardware-Dashboards
+    # (dashboards/hardware/): dieselben Labels tragen die VMStaticScrapes der
+    # Nicht-Cluster-Hosts (ugreen-nas, prod-vm, entw-vm, infotafel), sodass
+    # alle Server einheitlich ueber `host` gefiltert werden. `instance` bleibt
+    # bewusst die IP:Port (Alert-Regeln wie worker-0Down matchen darauf).
+    # Ueberschreibt die komplette Default-`spec` des Charts (Listen werden nicht
+    # gemergt), daher Selector/Endpoint hier vollstaendig wiederholt.
+    vmScrape:
+      spec:
+        jobLabel: jobLabel
+        selector:
+          matchLabels:
+            app.kubernetes.io/name: '{{ include "prometheus-node-exporter.name" (index .Subcharts "prometheus-node-exporter") }}'
+        endpoints:
+          - port: metrics
+            relabelConfigs:
+              - source_labels: [__meta_kubernetes_pod_node_name]
+                target_label: host
+              - target_label: kind
+                replacement: server
+            metricRelabelConfigs:
+              - action: drop
+                source_labels: [mountpoint]
+                regex: "/var/lib/kubelet/pods.+"
     resources:
       requests:
         cpu: 20m
