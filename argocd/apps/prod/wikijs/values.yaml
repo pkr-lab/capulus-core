@@ -43,7 +43,7 @@ wikijs:
     repository: ghcr.io/requarks/wiki
     pullPolicy: IfNotPresent
     # Pinned für Reproduzierbarkeit. Releases: https://github.com/requarks/wiki/releases
-    tag: "2.5.314"
+    tag: "2.5.315"
 
   service:
     type: ClusterIP
