@@ -26,7 +26,7 @@ image:
   pullPolicy: IfNotPresent
   # Pinned für Reproduzierbarkeit. Releases:
   # https://github.com/bluenviron/mediamtx/releases
-  tag: "1.21.0"
+  tag: "1.21.1"
 
 nameOverride: ""
 fullnameOverride: ""
