@@ -10,9 +10,12 @@ name: Build Workload Images
 # Merge im Image-Build auf). Kein Required-Check: der Pfadfilter unten laesst den
 # Workflow bei PRs ohne Image-Aenderung gar nicht erst laufen.
 #
-# Does NOT touch values.yaml: the resulting tag is printed to the run's job
-# summary, `image.tag` still gets set by hand and committed by whoever ran
-# the build (Renovate-style auto-commits are deliberately out of scope here).
+# Nach dem Push oeffnet der Lauf einen PR, der `image.tag` in der values.yaml der App auf
+# den neuen Tag setzt (scripts/bump-image-tag.py, Branch bump/<app>-image). Es wird nichts
+# direkt auf main committet: der PR laeuft durch die Pflicht-Checks und wird von Hand gemergt
+# (Merge = Rollout in TECH). Braucht ein PAT (PROMOTE_TOKEN, ersatzweise RENOVATE_TOKEN), weil
+# PRs mit dem Standard-GITHUB_TOKEN keine CI ausloesen; ohne PAT bleibt es beim Hinweis im
+# Job-Summary und der Tag wird von Hand eingetragen. Details: f0060-build-images.md
 on:
   push:
     branches: [main]
@@ -63,14 +66,17 @@ jobs:
         include:
           - app: pacman
             path: argocd/apps/tech/pacman
+            values: argocd/apps/tech/pacman/values.yaml
             dockerfile: argocd/apps/tech/pacman/Dockerfile
             image: ghcr.io/pkr-lab/pacman
           - app: carplay-api
             path: argocd/apps/tech/carplay-api
+            values: argocd/apps/tech/carplay-api/values.yaml
             dockerfile: argocd/apps/tech/carplay-api/Dockerfile
             image: ghcr.io/pkr-lab/carplay-api
           - app: n8n
             path: argocd/apps/tech/n8n/image
+            values: argocd/apps/tech/n8n/values.yaml
             dockerfile: argocd/apps/tech/n8n/image/Dockerfile
             image: ghcr.io/pkr-lab/n8n-custom
     runs-on: ubuntu-latest
@@ -148,5 +154,54 @@ jobs:
             echo "${{ matrix.image }}:${{ steps.tag.outputs.tag }}"
             echo '```'
             echo
-            echo "Manuell in \`argocd/apps/tech/${{ matrix.app }}/values.yaml\` (\`image.tag\`) eintragen und committen/pushen."
+            echo "Ein PR setzt \`image.tag\` in \`${{ matrix.values }}\` automatisch (Branch \`bump/${{ matrix.app }}-image\`)."
+            echo "Fehlt das PAT (PROMOTE_TOKEN/RENOVATE_TOKEN), den Tag von Hand eintragen."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Install PyYAML
+        if: steps.gate.outputs.build == 'true' && github.event_name != 'pull_request'
+        run: pip install --disable-pip-version-check pyyaml
+
+      - name: Open image.tag bump PR
+        if: steps.gate.outputs.build == 'true' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.PROMOTE_TOKEN || secrets.RENOVATE_TOKEN }}
+          APP: ${{ matrix.app }}
+          VALUES: ${{ matrix.values }}
+          IMAGE: ${{ matrix.image }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -eu
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::notice title=Kein PAT::PROMOTE_TOKEN/RENOVATE_TOKEN fehlt - image.tag-PR uebersprungen, Tag von Hand eintragen."
+            exit 0
+          fi
+          git fetch -q origin main
+          branch="bump/${APP}-image"
+          git checkout -q -B "$branch" origin/main
+          set +e
+          change=$(python3 scripts/bump-image-tag.py "$VALUES" "$TAG")
+          rc=$?
+          set -e
+          if [ "$rc" = 3 ]; then
+            echo "image.tag steht schon auf $TAG - nichts zu tun."
+            exit 0
+          fi
+          [ "$rc" = 0 ] || exit "$rc"
+          git add -- "$VALUES"
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "chore($APP): image.tag auf $TAG ($change)"
+          # actions/checkout haengt den GITHUB_TOKEN (nur contents: read) als extraheader an und der
+          # hat Vorrang vor den Zugangsdaten in der URL -> 403 "denied to github-actions[bot]".
+          # Den Header fuer diesen Push leeren, damit das PAT aus der URL greift.
+          git -c "http.https://github.com/.extraheader=" push -q --force \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$branch"
+          if [ -z "$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')" ]; then
+            gh label create image-bump --color 5319e7 --description "Neuer Image-Tag nach Build" 2>/dev/null || true
+            gh pr create --base main --head "$branch" --label image-bump \
+              --title "chore($APP): image.tag auf $TAG" \
+              --body "Neues Image \`$IMAGE:$TAG\` wurde gebaut und gepusht ($RUN_URL). Der PR setzt \`image.tag\` in \`$VALUES\` ($change). **Merge = Rollout in TECH.** Hinweis: GHCR-Packages sind anfangs privat - bei ImagePullBackOff die Sichtbarkeit pruefen (f0060-build-images.md)."
+          else
+            echo "PR fuer $branch ist offen - Branch wurde aktualisiert."
+          fi

@@ -1,0 +1,22 @@
+# Bekannte Altfunde von gitleaks - ausschliesslich Commits, die schon in der Historie liegen.
+# Ohne diese Liste scheitert jeder Lauf, der die ganze Historie scannt (Cron/workflow_call aus
+# promote-entw.yml), dauerhaft. Neue Funde in neuen Commits werden weiterhin gemeldet.
+# Format: <commit>:<datei>:<regel>:<zeile>   (docs/f-cicd-automatisierung/f0070-ci-lint.md)
+
+# --- Platzhalter in Doku-Beispielen (`curl -u publisher:<Passwort>`, Header-Beispiel) ---
+38755ee438a741c8f80a8fd45db150c0e830c965:docs/10-gotify.md:curl-auth-header:118
+49620da0ccb228d6ed5913896388887f5845fa43:docs/11-ntfy.md:curl-auth-user:142
+3e04f03a064024050ed6a4f59dd1a1a324dc3e87:docs/15-ntfy.md:curl-auth-user:141
+f041c5e75e659508197138d21e4943523d82a298:docs/1-benachrichtigungen/10010-ntfy.md:curl-auth-user:166
+
+# --- Kein Geheimnis: oeffentliche `verification_key` (UUID) im PWA-Manifest von pacman ---
+8cefa6cebb098d435051c33950eef0db2c907ede:argocd/apps/workloads/pacman/src/web-app-manifest.json:generic-api-key:2
+
+# --- ECHTE ALTFUNDE, nur noch in der Git-Historie (im aktuellen Stand entfernt) ---
+# ACHTUNG: Sie liegen im oeffentlichen Repo und muessen als kompromittiert gelten, auch wenn sie
+# hier nicht mehr gemeldet werden. Zugehoerige Zugangsdaten rotieren, sofern noch in Benutzung.
+# OpenSSH-Private-Key der Banana Pi (Commit 2026-08-10, entfernt in 8625d54): Schluessel aus den
+# authorized_keys der Pis entfernen bzw. Paar neu erzeugen.
+9dea3e368f074e1d4ecfbdea1be7171f547e0b42:BananaPi:private-key:1
+# MinIO-OIDC clientSecret in einer alten values.yaml (Klartext): Client in Authentik neu erzeugen.
+6626b2b1806320d6cb27c5a335774f7b17f041f0:argocd/apps/minio/values.yaml:generic-api-key:61

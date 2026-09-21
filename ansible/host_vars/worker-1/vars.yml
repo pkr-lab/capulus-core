@@ -52,6 +52,8 @@ libvirt_host_configure_bridge: true
 # falsche IP bekommen (Vorfall 2026-09-19).
 libvirt_host_bridge_interface: "enp2s0"
 libvirt_host_static_ip: "192.168.178.96"
+# EEE auf der physischen NIC, nicht auf br0 (siehe host_vars/homeserver).
+disable_eee_interface: "{{ libvirt_host_bridge_interface }}"
 
 libvirt_host_vms:
   - name: entw-vm

@@ -37,6 +37,8 @@
 #      bestehende victoria-logs-collector-DaemonSet liest nur
 #      Container-Logs, nicht das journald des Nodes selbst), siehe
 #      docs/3-apps-workloads/300j0-logging.md
+#   6b. smartctl_exporter — S.M.A.R.T.-Werte der Platten fuer Grafana
+#      (docs/2-betrieb-hardware/20060-hardware-monitoring.md)
 #   7. wake_on_lan — WoL-Empfangsbereitschaft, damit cluster_power_manager
 #      (läuft auf homeserver, siehe ansible/site.yml) diesen Node aus dem
 #      ausgeschalteten Zustand aufwecken kann
@@ -73,6 +75,8 @@
       tags: [resource-watchdog, thermal]
     - role: journal_upload
       tags: [journal-upload, logging]
+    - role: smartctl_exporter
+      tags: [smartctl-exporter, monitoring]
     - role: wake_on_lan
       tags: [wake-on-lan, power-management]
     - role: cluster_power_manager_target

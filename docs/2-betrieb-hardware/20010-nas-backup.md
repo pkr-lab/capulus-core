@@ -58,7 +58,7 @@ node_exporter/smartctl_exporter-Containern.
    unten — bei täglichen Backups mit restic-Dedup meist 20–40 % Aufschlag,
    nicht ein Vielfaches, da nur geänderte Blöcke zusätzlich Platz kosten).
 3. Docker (Container Manager) auf dem NAS aktiv — bereits Voraussetzung
-   für die Exporter in [docs/2-betrieb-hardware/20000-nas-storage.md → Monitoring](20000-nas-storage.md#monitoring-grafana-home-server-auslastung).
+   für die Exporter in [docs/2-betrieb-hardware/20000-nas-storage.md → Monitoring](20000-nas-storage.md#monitoring-grafana-hardware-dashboards).
 
 ---
 

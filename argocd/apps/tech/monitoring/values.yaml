@@ -46,6 +46,11 @@ victoria-metrics-k8s-stack:
       extraArgs:
         # Drop scrapes from misbehaving targets instead of blowing memory.
         memory.allowedPercent: "60"
+        # host/kind-Labels fuer den per Push angebundenen Vereinsheim-Pi,
+        # siehe templates/configmap-vmsingle-relabel.yaml.
+        relabelConfig: /etc/vm/configs/vmsingle-relabel/relabel.yml
+      configMaps:
+        - vmsingle-relabel
       resources:
         requests:
           cpu: 50m
@@ -223,6 +228,10 @@ victoria-metrics-k8s-stack:
       # VictoriaLogs: Datasource für zentrales Logging, siehe
       # argocd/apps/tech/logging/.
       - victoriametrics-logs-datasource
+      # Polystat: Waben-/Hexagon-Statusuebersicht (Server, Datentraeger,
+      # Fuellstand) im Ordner "Hardware", siehe dashboards/hardware/ und
+      # docs/2-betrieb-hardware/20060-hardware-monitoring.md.
+      - grafana-polystat-panel
 
     admin:
       existingSecret: "grafana-admin"        # leave empty → auto-generated password
@@ -261,10 +270,10 @@ victoria-metrics-k8s-stack:
     # folderAnnotation + provider.foldersFromFilesStructure together turn a
     # ConfigMap's `grafana_folder` annotation (see templates/_dashboard-app.tpl
     # and templates/dashboards-apps.yaml) into a real Grafana folder — that's
-    # how dashboards end up under "Platform" / "Workloads" instead of the
-    # root folder. Unverified against the live sidecar (kiwigrid/k8s-sidecar):
-    # check in the Grafana UI after deploy that dashboards actually land in
-    # the expected folder, not flat in root.
+    # how dashboards end up under "Plattform (TECH)" / "Anwendungen (TECH)" /
+    # "Hardware" / "Kubernetes (TECH)" / "Monitoring-Stack" instead of the
+    # root folder (verified live 2026-09-20). Renaming a folder creates a new
+    # Grafana folder; the old, now empty one has to be deleted by hand.
     sidecar:
       datasources:
         enabled: true
@@ -332,6 +341,30 @@ victoria-metrics-k8s-stack:
       type: RollingUpdate
       rollingUpdate:
         maxUnavailable: 2
+    # `host` (= k8s-Nodename) und `kind` fuer die Hardware-Dashboards
+    # (dashboards/hardware/): dieselben Labels tragen die VMStaticScrapes der
+    # Nicht-Cluster-Hosts (ugreen-nas, prod-vm, entw-vm, infotafel), sodass
+    # alle Server einheitlich ueber `host` gefiltert werden. `instance` bleibt
+    # bewusst die IP:Port (Alert-Regeln wie worker-0Down matchen darauf).
+    # Ueberschreibt die komplette Default-`spec` des Charts (Listen werden nicht
+    # gemergt), daher Selector/Endpoint hier vollstaendig wiederholt.
+    vmScrape:
+      spec:
+        jobLabel: jobLabel
+        selector:
+          matchLabels:
+            app.kubernetes.io/name: '{{ include "prometheus-node-exporter.name" (index .Subcharts "prometheus-node-exporter") }}'
+        endpoints:
+          - port: metrics
+            relabelConfigs:
+              - source_labels: [__meta_kubernetes_pod_node_name]
+                target_label: host
+              - target_label: kind
+                replacement: server
+            metricRelabelConfigs:
+              - action: drop
+                source_labels: [mountpoint]
+                regex: "/var/lib/kubelet/pods.+"
     resources:
       requests:
         cpu: 20m
@@ -378,10 +411,17 @@ victoria-metrics-k8s-stack:
 # Grafana dashboard (CPU/RAM/pod-restarts, plus HTTP request rate/error
 # rate/latency when hasIngress) into the `folder` Grafana folder.
 #
-# - namespace == directory basename for every argocd/apps/{platform,
-#   workloads}/<name> app (see argocd/bootstrap/root-applicationset.yaml
-#   destination.namespace, "{{.path.basename}}") — no per-app overrides
-#   needed except the two apps commented out below.
+# - namespace == directory basename for every argocd/apps/tech/<name> app
+#   (see the ApplicationSet destination.namespace, "{{.path.basename}}") —
+#   no per-app overrides needed except the apps excluded below. Only apps
+#   that run in the TECH cluster belong here: PROD/ENTW workloads are not
+#   scraped by this VictoriaMetrics, so their dashboards would stay empty
+#   (removed 2026-09-20: demo-app, example-whoami, immich, mealie,
+#   nextcloud, paperless-ngx, tinyteller, wikijs, xibosignage — moved to PROD).
+# - Folders (Grafana): "Plattform (TECH)" = infrastructure/operations services,
+#   "Anwendungen (TECH)" = everything else running in TECH; hardware, Kubernetes and
+#   monitoring-stack dashboards get their own folders (see
+#   templates/dashboards-hardware.yaml, templates/job-dashboard-folders.yaml).
 # - hasIngress: true only if the app defines a k8s Ingress/IngressRoute —
 #   drives the Traefik-metrics "User Requests/s" panel
 #   (traefik_service_requests_total{service=~"^<namespace>-.*"}). Verify
@@ -400,40 +440,31 @@ victoria-metrics-k8s-stack:
 #   - coredns-custom, traefik-config: config-only (ConfigMap /
 #     HelmChartConfig in kube-system), no workload of their own.
 dashboardApps:
-  # ---- Workloads (argocd/apps/tech/*) ----
-  - { name: alamos-apager, namespace: alamos-apager, folder: Workloads, hasIngress: true }
-  - { name: carplay-api, namespace: carplay-api, folder: Workloads, hasIngress: true }
-  - { name: demo-app, namespace: demo-app, folder: Workloads, hasIngress: true }
-  - { name: example-whoami, namespace: example-whoami, folder: Workloads, hasIngress: true }
-  - { name: immich, namespace: immich, folder: Workloads, hasIngress: true }
-  - { name: mealie, namespace: mealie, folder: Workloads, hasIngress: true }
-  - { name: mediamtx, namespace: mediamtx, folder: Workloads, hasIngress: true }
-  - { name: n8n, namespace: n8n, folder: Workloads, hasIngress: true }
-  - { name: nextcloud, namespace: nextcloud, folder: Workloads, hasIngress: true }
-  - { name: ollama, namespace: ollama, folder: Workloads, hasIngress: false }
-  - { name: pacman, namespace: pacman, folder: Workloads, hasIngress: true }
-  - { name: paperless-ngx, namespace: paperless-ngx, folder: Workloads, hasIngress: true }
-  - { name: tinyteller, namespace: tinyteller, folder: Workloads, hasIngress: true }
-  - { name: uptime-kuma, namespace: uptime-kuma, folder: Workloads, hasIngress: true }
-  - { name: vaultwarden, namespace: vaultwarden, folder: Workloads, hasIngress: true }
-  - { name: wikijs, namespace: wikijs, folder: Workloads, hasIngress: true }
-  - { name: xibosignage, namespace: xibosignage, folder: Workloads, hasIngress: true }
-  # ---- Platform (argocd/apps/tech/*) ----
-  - { name: argo-workflows, namespace: argo-workflows, folder: Platform, hasIngress: false }
-  - { name: authentik, namespace: authentik, folder: Platform, hasIngress: true }
-  - { name: cert-manager, namespace: cert-manager, folder: Platform, hasIngress: false }
-  - { name: cloudflared, namespace: cloudflared, folder: Platform, hasIngress: false }
-  - { name: gotify, namespace: gotify, folder: Platform, hasIngress: true }
-  - { name: gotify-bridge, namespace: gotify-bridge, folder: Platform, hasIngress: false }
-  - { name: headlamp, namespace: headlamp, folder: Platform, hasIngress: false }
-  - { name: immich-storage, namespace: immich-storage, folder: Platform, hasIngress: false }
-  - { name: kubeseal-webgui, namespace: kubeseal-webgui, folder: Platform, hasIngress: false }
-  - { name: lldap, namespace: lldap, folder: Platform, hasIngress: true }
-  - { name: logging, namespace: logging, folder: Platform, hasIngress: false }
-  - { name: minio, namespace: minio, folder: Platform, hasIngress: false }
-  - { name: nas-storage, namespace: nas-storage, folder: Platform, hasIngress: false }
-  - { name: ntfy, namespace: ntfy, folder: Platform, hasIngress: true }
-  - { name: ntfy-bridge, namespace: ntfy-bridge, folder: Platform, hasIngress: false }
-  - { name: pihole, namespace: pihole, folder: Platform, hasIngress: true }
-  - { name: sealed-secrets, namespace: sealed-secrets, folder: Platform, hasIngress: false }
-  - { name: semaphore, namespace: semaphore, folder: Platform, hasIngress: true }
+  # ---- Anwendungen (TECH) (argocd/apps/tech/*) ----
+  - { name: alamos-apager, namespace: alamos-apager, folder: "Anwendungen (TECH)", hasIngress: true }
+  - { name: carplay-api, namespace: carplay-api, folder: "Anwendungen (TECH)", hasIngress: true }
+  - { name: mediamtx, namespace: mediamtx, folder: "Anwendungen (TECH)", hasIngress: true }
+  - { name: n8n, namespace: n8n, folder: "Anwendungen (TECH)", hasIngress: true }
+  - { name: ollama, namespace: ollama, folder: "Anwendungen (TECH)", hasIngress: false }
+  - { name: pacman, namespace: pacman, folder: "Anwendungen (TECH)", hasIngress: true }
+  - { name: uptime-kuma, namespace: uptime-kuma, folder: "Anwendungen (TECH)", hasIngress: true }
+  - { name: vaultwarden, namespace: vaultwarden, folder: "Anwendungen (TECH)", hasIngress: true }
+  # ---- Plattform (TECH) (argocd/apps/tech/*) ----
+  - { name: argo-workflows, namespace: argo-workflows, folder: "Plattform (TECH)", hasIngress: false }
+  - { name: authentik, namespace: authentik, folder: "Plattform (TECH)", hasIngress: true }
+  - { name: cert-manager, namespace: cert-manager, folder: "Plattform (TECH)", hasIngress: false }
+  - { name: cloudflared, namespace: cloudflared, folder: "Plattform (TECH)", hasIngress: false }
+  - { name: gotify, namespace: gotify, folder: "Plattform (TECH)", hasIngress: true }
+  - { name: gotify-bridge, namespace: gotify-bridge, folder: "Plattform (TECH)", hasIngress: false }
+  - { name: headlamp, namespace: headlamp, folder: "Plattform (TECH)", hasIngress: false }
+  - { name: immich-storage, namespace: immich-storage, folder: "Plattform (TECH)", hasIngress: false }
+  - { name: kubeseal-webgui, namespace: kubeseal-webgui, folder: "Plattform (TECH)", hasIngress: false }
+  - { name: lldap, namespace: lldap, folder: "Plattform (TECH)", hasIngress: true }
+  - { name: logging, namespace: logging, folder: "Plattform (TECH)", hasIngress: false }
+  - { name: minio, namespace: minio, folder: "Plattform (TECH)", hasIngress: false }
+  - { name: nas-storage, namespace: nas-storage, folder: "Plattform (TECH)", hasIngress: false }
+  - { name: ntfy, namespace: ntfy, folder: "Plattform (TECH)", hasIngress: true }
+  - { name: ntfy-bridge, namespace: ntfy-bridge, folder: "Plattform (TECH)", hasIngress: false }
+  - { name: pihole, namespace: pihole, folder: "Plattform (TECH)", hasIngress: true }
+  - { name: sealed-secrets, namespace: sealed-secrets, folder: "Plattform (TECH)", hasIngress: false }
+  - { name: semaphore, namespace: semaphore, folder: "Plattform (TECH)", hasIngress: true }

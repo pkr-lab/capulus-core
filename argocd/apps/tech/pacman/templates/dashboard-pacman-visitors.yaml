@@ -32,7 +32,7 @@ metadata:
     # anderen Workloads-Dashboards (Grafana-Sidecar sortiert per
     # grafana_folder-Annotation ein, siehe monitoring/values.yaml
     # sidecar.dashboards).
-    grafana_folder: Workloads
+    grafana_folder: "Anwendungen (TECH)"
 data:
   pacman-visitors.json: |
     {
