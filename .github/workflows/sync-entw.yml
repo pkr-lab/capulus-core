@@ -1,0 +1,42 @@
+name: Sync main into ENTW
+
+# Haelt den Branch `entw` auf dem Stand von `main`: nach jedem Push auf main wird main in
+# entw gemergt - ausser entw hat eigene, noch nicht uebergebene Commits (dort wird gerade
+# etwas getestet). Dann bleibt entw unveraendert, bis die Promotion (promote-entw.yml) die
+# Commits nach main uebergeben hat oder der Test-Branch aufgeraeumt ist.
+# Logik: scripts/sync-entw.sh, Beschreibung: docs/f-cicd-automatisierung/f0080-entw-promotion.md
+#
+# Pause per Hand: Repo-Variable ENTW_SYNC_PAUSED=true (Settings -> Variables).
+#
+# Braucht ein PAT (PROMOTE_TOKEN, ersatzweise RENOVATE_TOKEN): der Push auf entw mit dem
+# Standard-GITHUB_TOKEN loest keine Workflows aus (entw-trigger.yml bliebe stumm) und
+# kann durch einen Branch-Schutz auf entw abgelehnt werden.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 * * * *" # Fallback, falls ein Push-Lauf ausgefallen ist
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-entw
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: main -> entw
+    if: vars.ENTW_SYNC_PAUSED != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PROMOTE_TOKEN || secrets.RENOVATE_TOKEN }}
+
+      - name: Sync
+        run: bash scripts/sync-entw.sh
