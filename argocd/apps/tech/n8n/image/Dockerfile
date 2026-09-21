@@ -13,7 +13,7 @@ RUN apk add --no-cache --root /chroot --initdb --no-scripts \
 
 WORKDIR /build/wwebjs
 RUN PUPPETEER_SKIP_DOWNLOAD=true PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    npm install wwebjs@1.23.1-alpha.7 --omit=dev --legacy-peer-deps
+    npm install wwebjs@1.23.1-alpha.7 qrcode@1.5.4 --omit=dev --legacy-peer-deps
 
 FROM n8nio/n8n:2.38.4
 
