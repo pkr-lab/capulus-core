@@ -101,6 +101,19 @@ getrennt widerrufen lassen.
 | Alles bis zu einem Stand als „erledigt“ markieren | `git tag -f entw-promoted <sha> && git push --force origin refs/tags/entw-promoted` |
 | Neu beginnen | Tag löschen (`git push origin :refs/tags/entw-promoted`); dann gilt wieder der Merge-Base |
 
+## Gegenrichtung: main -> entw
+
+[`sync-entw.yml`](../../.github/workflows/sync-entw.yml) (Logik: `scripts/sync-entw.sh`) merged `main` nach jedem
+Push (Cron stündlich als Fallback) in `entw`, damit `entw` nicht hinter `main` zurückfällt.
+Hat `entw` **eigene Commits** (Nicht-Merge-Commits, die `main` nach Patch-Id nicht hat und die noch nicht
+per Tag `entw-promoted` übergeben sind), passiert nichts: dort wird gerade getestet. Ein Merge-Konflikt lässt
+den Lauf rot enden, ohne zu pushen.
+
+| Ziel | Wie |
+|---|---|
+| Sync anhalten (z. B. längerer Test) | Repo-Variable `ENTW_SYNC_PAUSED=true` setzen, zum Fortsetzen löschen |
+| Sofort synchronisieren | Actions → „Sync main into ENTW“ → *Run workflow* |
+
 ## Bewusst nicht enthalten
 
 - **Kein Auto-Merge.** `main` speist TECH *und* PROD, der ArgoCD-Sync nach dem

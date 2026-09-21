@@ -9,7 +9,7 @@ image:
   # übernehmen.
   repository: ghcr.io/pkr-lab/n8n-custom
   pullPolicy: IfNotPresent
-  tag: "sha-53eb4d5"
+  tag: "sha-e580ac2"
 
 nameOverride: ""
 fullnameOverride: ""
@@ -66,7 +66,7 @@ env:
   DB_TYPE: sqlite
   N8N_BASIC_AUTH_ACTIVE: "true"
   NODES_EXCLUDE: "[]"
-  NODE_FUNCTION_ALLOW_EXTERNAL: "wwebjs"
+  NODE_FUNCTION_ALLOW_EXTERNAL: "wwebjs,qrcode"
   N8N_RESTRICT_FILE_ACCESS_TO: "/data/xibosignage-inbox;/data/xibosignage-display"
 
 resources:
