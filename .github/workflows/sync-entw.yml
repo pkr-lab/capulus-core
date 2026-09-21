@@ -8,9 +8,11 @@ name: Sync main into ENTW
 #
 # Pause per Hand: Repo-Variable ENTW_SYNC_PAUSED=true (Settings -> Variables).
 #
-# Braucht ein PAT (PROMOTE_TOKEN, ersatzweise RENOVATE_TOKEN): der Push auf entw mit dem
-# Standard-GITHUB_TOKEN loest keine Workflows aus (entw-trigger.yml bliebe stumm) und
-# kann durch einen Branch-Schutz auf entw abgelehnt werden.
+# entw ist per Ruleset geschuetzt (Pull Request Pflicht, kein Bypass): der Workflow oeffnet
+# einen PR main -> entw und aktiviert Auto-Merge (gh pr merge --auto). Braucht ein PAT
+# (PROMOTE_TOKEN, ersatzweise RENOVATE_TOKEN), weil PRs/Merges mit dem Standard-GITHUB_TOKEN
+# keine Workflows ausloesen (entw-trigger.yml bliebe stumm). Repo-Einstellung
+# "Allow auto-merge" muss aktiv sein.
 on:
   push:
     branches: [main]
@@ -39,4 +41,6 @@ jobs:
           token: ${{ secrets.PROMOTE_TOKEN || secrets.RENOVATE_TOKEN }}
 
       - name: Sync
+        env:
+          GH_TOKEN: ${{ secrets.PROMOTE_TOKEN || secrets.RENOVATE_TOKEN }}
         run: bash scripts/sync-entw.sh
