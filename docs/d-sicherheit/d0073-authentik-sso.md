@@ -137,6 +137,12 @@ kein Authentik-seitiger Schritt.
 | Uptime Kuma (`uptime-kuma.prod.homeserver`) | `admins` ODER Gruppe `uptime-kuma-user` | Nur intern, 2FA für `admins`-Mitglieder |
 | Mealie (`mealie.prod.homeserver` **+** `mealie-prod.pke-lab.de`) | `admins` ODER Gruppe `mealie-user` | Intern + extern, kein 2FA-Zwang für `mealie-user` — **zwei** Provider/Application-Paare (ein `forward_single`-Provider pro `external_host`, siehe `blueprints/apps/mealie.yaml`), gleiche Policy auf beide gebunden |
 
+> **Stand PROD (September 2026):** Mealie läuft seit dem Umzug im **PROD**-Cluster, und PROD hat noch keinen
+> Authentik-Outpost. Die ForwardAuth-Middleware ist dort bewusst ausgebaut, der Mealie-Eintrag oben gilt
+> damit nur, sobald der Outpost in PROD steht (Anleitung und geparkte Manifeste:
+> [`argocd/bootstrap-prod/migrations/sso-outpost/README.md`](../../argocd/bootstrap-prod/migrations/sso-outpost/README.md)).
+> Uptime Kuma läuft weiterhin im TECH-Cluster hinter Authentik.
+
 **Korrektur (nach Live-Rollout):** ursprünglich fest verdrahtet (`user ==
 rdn` für Mealie, nur `admins` für Uptime Kuma) — auf gruppenbasierte
 Policies umgestellt (`<app>-user`-Gruppen), damit neue Personen ohne
