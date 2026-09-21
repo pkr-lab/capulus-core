@@ -10,12 +10,12 @@
 #   entw hat eigene Commits (es wird gerade dort getestet) -> nichts tun
 #   entw enthaelt schon alles aus main                      -> nichts tun
 #   sonst                                                   -> main in entw mergen
-#                                                              (Fast-Forward, wenn moeglich)
+#                                                              (per PR + Auto-Merge)
 #
-# Ein Merge-Konflikt bricht ab, ohne zu pushen; der Lauf wird rot und entw bleibt unveraendert.
+# Ein Merge-Konflikt bricht ab, ohne zu mergen; der Lauf wird rot und entw bleibt unveraendert.
 # Pause per Hand: Repo-Variable ENTW_SYNC_PAUSED=true (Workflow prueft sie).
 #
-# Umgebung: DRY_RUN=1 merged lokal, pusht aber nicht.
+# Umgebung: DRY_RUN=1 oeffnet keinen PR.
 set -euo pipefail
 
 TAG="entw-promoted"
@@ -49,20 +49,33 @@ if [ -n "$own" ]; then
   exit 0
 fi
 
-git config user.name "github-actions[bot]"
-git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-git checkout --quiet -B "${ENTW}" "origin/${ENTW}"
+PR_TITLE="chore: sync main into entw"
 
-if ! git merge --no-edit -m "chore: sync main into entw" "origin/${MAIN}"; then
-  git merge --abort || true
-  log "Merge-Konflikt - entw bleibt unveraendert, bitte von Hand aufloesen."
-  exit 1
-fi
-
+# Das Ruleset auf entw verlangt Pull Requests (keine Bypass-Actors) -> statt direkt zu pushen
+# wird ein PR main -> entw geoeffnet und per Auto-Merge (Merge-Commit, kein Squash, damit
+# main danach Vorfahre von entw bleibt) gemergt.
 if [ -n "${DRY_RUN:-}" ]; then
-  log "DRY_RUN: kein Push. entw waere jetzt $(git rev-parse --short HEAD)."
+  log "DRY_RUN: haette einen PR ${MAIN} -> ${ENTW} geoeffnet und Auto-Merge aktiviert."
   exit 0
 fi
 
-git push origin "${ENTW}"
-log "entw auf $(git rev-parse --short HEAD) aktualisiert."
+pr=$(gh pr list --base "${ENTW}" --head "${MAIN}" --state open --json number --jq '.[0].number // empty')
+if [ -z "$pr" ]; then
+  pr=$(gh pr create --base "${ENTW}" --head "${MAIN}" --title "${PR_TITLE}" \
+    --body "Automatischer Sync von \`${MAIN}\` nach \`${ENTW}\` (scripts/sync-entw.sh)." )
+  log "PR geoeffnet: ${pr}"
+else
+  log "PR #${pr} ist schon offen."
+fi
+
+# --auto wartet auf die Pflicht-Checks. Sind keine (mehr) offen, lehnt gh das mit "clean status"
+# ab -> dann direkt mergen. Ein Merge-Konflikt bricht hier mit Fehler ab, entw bleibt unveraendert.
+if ! out=$(gh pr merge "$pr" --auto --merge 2>&1); then
+  if echo "$out" | grep -qi "clean status"; then
+    gh pr merge "$pr" --merge
+  else
+    echo "$out" >&2
+    exit 1
+  fi
+fi
+log "PR ${pr} wird gemergt (Auto-Merge/Merge)."
