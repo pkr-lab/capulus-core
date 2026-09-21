@@ -1,5 +1,7 @@
 # Uptime Kuma — Status-Seite und Service-Alerting
 
+> **Cluster:** TECH · Ordner `argocd/apps/tech/uptime-kuma/` · URL `https://uptime-kuma.prod.homeserver` und `https://status-prod.pke-lab.de`. `kubectl`-Befehle in diesem Doc gelten für den TECH-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
+
 Uptime Kuma ist eine schlanke, selbst gehostete Status-Seite. Sie prüft
 regelmäßig ob Dienste erreichbar sind und schickt Alerts bei Ausfällen —
 via ntfy, Gotify, E-Mail oder anderen Kanälen.
@@ -9,7 +11,7 @@ via ntfy, Gotify, E-Mail oder anderen Kanälen.
 ## Architektur
 
 ```
-uptime-kuma.homeserver  →  Traefik  →  uptime-kuma (Port 3001)
+uptime-kuma.prod.homeserver  →  Traefik  →  uptime-kuma (Port 3001)
                                             └── PVC: data (2 Gi, local-path)
 ```
 
@@ -22,7 +24,7 @@ uptime-kuma.homeserver  →  Traefik  →  uptime-kuma (Port 3001)
 
 ## Erster Start
 
-Nach dem Deploy unter **https://uptime-kuma.homeserver** den Admin-Account
+Nach dem Deploy unter **https://uptime-kuma.prod.homeserver** den Admin-Account
 anlegen (erscheint beim ersten Besuch automatisch).
 
 ---
@@ -40,13 +42,13 @@ anlegen (erscheint beim ersten Besuch automatisch).
 
 | Monitor | URL | Typ |
 |---|---|---|
-| Grafana | https://grafana.homeserver | HTTP |
+| Grafana | https://grafana.tech.homeserver | HTTP |
 | ArgoCD | https://`<server-ip>`:30443 | HTTPS (selbstsigniert) |
-| ntfy | https://ntfy.homeserver | HTTP |
-| Semaphore | https://semaphore.homeserver | HTTP |
-| Paperless | https://paperless.homeserver | HTTP |
-| Mealie | https://mealie.homeserver | HTTP |
-| n8n | https://n8n.homeserver | HTTP |
+| ntfy | https://ntfy.tech.homeserver | HTTP |
+| Semaphore | https://semaphore.tech.homeserver | HTTP |
+| Paperless | https://paperless.prod.homeserver | HTTP |
+| Mealie | https://mealie.prod.homeserver | HTTP |
+| n8n | https://n8n.prod.homeserver | HTTP |
 | worker-0 (Ping) | 192.168.178.95 | Ping |
 
 ---
@@ -56,7 +58,7 @@ anlegen (erscheint beim ersten Besuch automatisch).
 ### ntfy
 
 1. Uptime Kuma: *Einstellungen* → *Benachrichtigung* → *ntfy*
-2. Server: `https://ntfy.homeserver`
+2. Server: `https://ntfy.tech.homeserver`
 3. Topic: z. B. `homelab-uptime`
 4. Priorität: `urgent` für Ausfälle
 
@@ -64,7 +66,7 @@ anlegen (erscheint beim ersten Besuch automatisch).
 
 1. In Gotify eine neue App anlegen, Token kopieren
 2. Uptime Kuma: Benachrichtigung → *Gotify*
-3. URL: `https://gotify.homeserver`, Token eintragen
+3. URL: `https://gotify.tech.homeserver`, Token eintragen
 
 ---
 

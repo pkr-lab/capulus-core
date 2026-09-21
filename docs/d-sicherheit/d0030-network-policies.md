@@ -5,6 +5,12 @@ grobe Default-Deny-NetworkPolicy je `security-tier`, damit ein
 kompromittierter Pod (z. B. n8n) nicht mehr uneingeschränkt auf
 Postgres/Redis/Services in fremden Namespaces zugreifen kann.
 
+> **Geltungsbereich (September 2026):** Die Default-Deny-Policies je Namespace werden von der `argocd`-Rolle
+> auf den **TECH**-Hub angewendet (und auf ENTW für dessen drei Bestands-Namespaces). Für die nach PROD
+> umgezogenen Apps gibt es keinen entsprechenden Rollen-Lauf; PROD-Apps bringen ihre NetworkPolicies bei
+> Bedarf selbst mit (z. B. `xibosignage`). Die Zahlen und Namespaces unten beschreiben den Stand vom 13.08.2026,
+> als es noch einen einzigen Cluster gab.
+
 **Status (13.08.2026): Fertig.** Schritt 1 + Schritt 2 komplett live, alle
 36 App-Namespaces auf die strikte Policy verfeinert (nur eigener Namespace
 + kube-system + monitoring + cloudflared + gezielte Extra-Ausnahmen, keine
@@ -251,7 +257,7 @@ EOF
 done
 ```
 
-**Validieren:** `https://whoami.homeserver` und `https://tinyteller.homeserver`
+**Validieren:** `https://whoami.prod.homeserver` und `https://tinyteller.prod.homeserver`
 im Browser laden (Traefik-Zugriff über kube-system funktioniert noch?),
 die App-Dashboards in Grafana prüfen, ob für beide Namespaces
 weiterhin Metriken reinkommen (monitoring-Zugriff funktioniert noch?).
@@ -390,8 +396,8 @@ make argocd
 
 # 3. Validieren
 kubectl get networkpolicy -n example-whoami -n tinyteller -o yaml | grep -A3 "ingress:"
-curl -sk -o /dev/null -w "whoami: %{http_code}\n" https://whoami.homeserver/
-curl -sk -o /dev/null -w "tinyteller: %{http_code}\n" https://tinyteller.homeserver/
+curl -sk -o /dev/null -w "whoami: %{http_code}\n" https://whoami.prod.homeserver/
+curl -sk -o /dev/null -w "tinyteller: %{http_code}\n" https://tinyteller.prod.homeserver/
 kubectl get applications -n argocd example-whoami tinyteller -o custom-columns='NAME:.metadata.name,SYNC:.status.sync.status,HEALTH:.status.health.status'
 ```
 

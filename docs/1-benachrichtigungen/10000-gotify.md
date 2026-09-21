@@ -14,7 +14,7 @@ in Gotify-Push-Nachrichten; das App-Token dafür liegt als Kubernetes-Secret
 im `gotify-bridge`-Namespace (siehe Kommentar in
 `argocd/apps/tech/gotify-bridge/values.yaml`). Jede andere App im Cluster kann
 genauso einen eigenen Application-Token in der Gotify-Web-UI anlegen und
-direkt gegen `https://gotify.homeserver/message` pushen.
+direkt gegen `https://gotify.tech.homeserver/message` pushen.
 
 ---
 
@@ -36,7 +36,7 @@ Klartext bei einer Rotation nicht verloren geht.
 
 Der Cluster-Controller (bereits über `argocd/apps/tech/sealed-secrets/` deployt)
 akzeptiert nur Ciphertext, der mit seinem Public Key erzeugt wurde. Der
-einfachste Weg ist die Web-UI unter <https://kubeseal-webgui.homeserver>:
+einfachste Weg ist die Web-UI unter <https://kubeseal-webgui.tech.homeserver>:
 
 1. Öffnen und ausfüllen:
    - **Namespace**: `gotify`
@@ -91,7 +91,7 @@ der ArgoCD-UI bei der `gotify`-App klicken, um sie sofort anzuwenden).
 
 ```bash
 $SRV 'sudo kubectl -n gotify get pods,svc,ingress,pvc,sealedsecret,secret'
-curl -sS https://gotify.homeserver/health
+curl -sS https://gotify.tech.homeserver/health
 ```
 
 Erwartet:
@@ -99,7 +99,7 @@ Erwartet:
   (vom Controller aus dem SealedSecret entschlüsselt).
 - `/health` liefert `{"health":"green",...}`.
 
-Bei `https://gotify.homeserver` mit `admin` + dem Passwort aus 1.1 einloggen.
+Bei `https://gotify.tech.homeserver` mit `admin` + dem Passwort aus 1.1 einloggen.
 
 ---
 
@@ -115,7 +115,7 @@ Bei `https://gotify.homeserver` mit `admin` + dem Passwort aus 1.1 einloggen.
 3. Manueller Push-Test (Token-Sanity-Check):
 
 ```bash
-curl -fsS -X POST "https://gotify.homeserver/message" \
+curl -fsS -X POST "https://gotify.tech.homeserver/message" \
   -H "X-Gotify-Key: DEIN_APP_TOKEN" \
   -F "title=test" -F "message=hello" -F "priority=5"
 ```
@@ -140,4 +140,4 @@ curl -fsS -X POST "https://gotify.homeserver/message" \
 | Pod CrashLoopBackOff nach Erstdeployment | `encryptedPassword` ist noch `REPLACE_ME_WITH_KUBESEAL_OUTPUT` — Schritt 1.3 abschließen |
 | `gotify-admin`-Secret fehlt | `kubectl -n gotify describe sealedsecret gotify-admin` — Controller-Logs erklären Entschlüsselungsfehler; Ciphertext muss gegen den Public Key dieses Clusters erzeugt worden sein |
 | Keine Pushes von Alertmanager | `kubectl -n gotify-bridge logs deploy/gotify-bridge` prüfen; Token im `gotify-bridge`-Secret gegen einen manuellen curl-Test (Abschnitt 2) verifizieren |
-| Falscher Hostname (`gotify.homeserver` löst nicht auf) | Prüfen, ob `gotify` in `dnsmasq_hosts` in `group_vars/all.yml` steht, dann `make dnsmasq` |
+| Falscher Hostname (`gotify.tech.homeserver` löst nicht auf) | `dig +short gotify.tech.homeserver @192.168.178.94` prüfen (Wildcard `*.homeserver`), sonst `make dnsmasq` erneut ausführen |

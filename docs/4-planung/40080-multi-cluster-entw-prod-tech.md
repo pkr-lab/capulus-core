@@ -2,12 +2,32 @@
 
 Architektur- und Rollout-Plan für den Umbau des bestehenden **einen**
 3-Node-k3s-Clusters in **drei getrennte Cluster** (ENTW, PROD, TECH) inkl.
-Aufteilung der bestehenden ArgoCD-Struktur. Noch **nicht umgesetzt** —
-dieses Doc beantwortet zunächst die vom Nutzer gestellten Kernfragen
-(Machbarkeit, ArgoCD-Modell, Cluster-zu-Cluster-Kommunikation, Hardware,
-Nutzen, Kubernetes-Aktualität) und hält danach den daraus abgeleiteten,
+Aufteilung der bestehenden ArgoCD-Struktur. Das Doc beantwortet die vom Nutzer
+gestellten Kernfragen (Machbarkeit, ArgoCD-Modell, Cluster-zu-Cluster-Kommunikation,
+Hardware, Nutzen, Kubernetes-Aktualität) und hält den daraus abgeleiteten,
 gestaffelten Plan fest — analog zur Konvention aus
 [40070-authentik-sso-iac.md](40070-authentik-sso-iac.md).
+
+> **Umsetzungsstand (21.09.2026): weitgehend umgesetzt.** Die Ausgangslage und die
+> Schritt-Tabellen unten sind der Plan- und Rollout-Text vom 18.–19.09.2026 und werden
+> nicht laufend nachgezogen. Der heutige Ist-Zustand steht in
+> [a0010 Überblick](../a-betriebssystem/a0010-overview.md#1-drei-cluster-im-überblick),
+> [b0020 ArgoCD-Projects](../b-kubernetes-gitops/b0020-argocd-projects.md),
+> [b0050 ENTW-ArgoCD](../b-kubernetes-gitops/b0050-entw-argocd.md) und
+> [c0040 Domain-Tiers](../c-netzwerk-dns/c0040-domain-tiers.md).
+>
+> | Phase | Stand |
+> |---|---|
+> | 0 — Entscheidungen | erledigt: ein Hub für TECH+PROD, Ordner `argocd/apps/{tech,prod,entw}/`, gemeinsame Root-CA, TECH-Promotion automatisch / PROD manuell; CI-Gate ([f0070](../f-cicd-automatisierung/f0070-ci-lint.md)) und Tailscale-Runner-PoC ([f00a0](../f-cicd-automatisierung/f00a0-tailscale-runner-poc.md)) laufen |
+> | 1 — ENTW | erledigt: `entw-vm` (`.100`) auf worker-1 mit eigener ArgoCD-Instanz ([b0050](../b-kubernetes-gitops/b0050-entw-argocd.md)), `*.dev.homeserver` → ENTW |
+> | 2 — TECH/PROD-Split | erledigt: `prod-vm` (`.99`) auf dem homeserver, eigene k3s-CIDRs, NFS-Storage, cert-manager mit PROD-Intermediate-CA |
+> | 3 — Hub-Verkabelung + App-Migration | PROD ist im TECH-Hub registriert (`argocd/bootstrap-prod/`); `argocd/apps/platform|workloads` wurden am 19.09.2026 zu `argocd/apps/tech/` zusammengelegt. **Nach PROD umgezogen:** Nextcloud, Immich, Paperless-ngx, Wiki.js (+ wiki-docs-sync), Mealie, xibosignage, tinyteller, Demo-Apps. **In TECH geblieben** (bewusste Entscheidung, siehe [App-Zuordnung](#app-zuordnung-erster-entwurf-stand-argocd_platform_appsargocd_workloads_apps)): Vaultwarden, Zammad, n8n und die daran gekoppelten Apps |
+> | 4 — Promotion-Pipeline | umgesetzt: [promote-entw](../f-cicd-automatisierung/f0080-entw-promotion.md), `sync-entw`, [Promotion-Kette](../f-cicd-automatisierung/f00b0-promotion-chain.md) mit 24-h/2-h-Gesundheits-Gate und Smoke-Checks |
+>
+> Die Pfade `argocd/apps/platform/…` und `argocd/apps/workloads/…` im weiteren Text bezeichnen den
+> **Stand vor der Umstellung**. Ob die im Text noch als offen geführten Punkte (z. B. Tailscale-ACL
+> für `tag:entw-node`, Metriken-/Log-Remote-Write von PROD nach TECH, das Chaos-Probe-Workflow 4.6) inzwischen
+> erledigt sind, ist in diesem Doc nicht nachgeführt, bitte vor dem Aufgreifen gegen den Live-Stand prüfen.
 
 ---
 

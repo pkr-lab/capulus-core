@@ -6,11 +6,14 @@ Schritt-für-Schritt-Anleitung, um den Home-Server von Null aus zu provisioniere
 
 ## Überblick
 
-Die komplette Installation wird durch einen einzigen Ansible-Playbook-Run
-erledigt. Dieser Leitfaden begleitet jeden Schritt — vom Repo-Clone bis zur
-Verifikation eines lauffähigen Clusters mit ArgoCD und Tailscale.
+Die Installation des **TECH**-Clusters (Homeserver mit k3s, ArgoCD-Hub, Tailscale) wird durch
+einen einzigen Ansible-Playbook-Run erledigt. Dieser Leitfaden begleitet jeden Schritt — vom
+Repo-Clone bis zur Verifikation eines lauffähigen Clusters. Die beiden weiteren Cluster **PROD**
+und **ENTW** (KVM-VMs) sowie die Worker kommen danach dazu, siehe
+[Schritt 9](#schritt-9--worker-0-als-worker-node-beitreten-lassen) und
+[Schritt 10](#schritt-10--prod--und-entw-cluster-einrichten-optional).
 
-**Dauer:** ca. 15–25 Minuten (mehrheitlich Downloads).
+**Dauer TECH:** ca. 15–25 Minuten (mehrheitlich Downloads).
 
 ---
 
@@ -84,7 +87,7 @@ $EDITOR ansible/group_vars/all.yml
 | `helm_version`              | `""` (leer)   | Leer ⇒ neuestes Helm 3                                                 |
 | `argocd_version`            | `""` (leer)   | Leer ⇒ neuestes Argo-Helm-Chart                                        |
 | `hostname`                  | `homeserver`  | Hostname des Servers                                                   |
-| `dnsmasq_hosts`             | App-Liste     | Hostnamen, die von `dnsmasq` unter `*.homeserver` aufgelöst werden     |
+| `dnsmasq_prod_vm_hosts`     | Hostliste     | Hosts unter `*.prod.homeserver`, die auf die PROD-VM (`.99`) statt auf den TECH-Cluster zeigen |
 | `semaphore_vault_password`  | Vault-Block   | Ansible-Vault-Passwort, das Semaphore zur Laufzeit zum Decrypten nutzt |
 | `gotify_admin_password`     | Vault-Block   | Optional: Gotify-Admin-Passwort als Vault-Eintrag aufbewahren          |
 
@@ -206,7 +209,7 @@ ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --tags common -
 # Nur k3s + argocd
 ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --tags k3s,argocd --ask-vault-pass
 
-# Nur die Split-DNS-Schicht (nach Änderung von dnsmasq_hosts)
+# Nur die Split-DNS-Schicht (nach Änderung von dnsmasq_prod_vm_hosts)
 make dnsmasq
 
 # Tailscale komplett überspringen
@@ -234,15 +237,15 @@ Nach `make install` (nur homeserver):
 
 ```
 NAME         STATUS   ROLES                  AGE   VERSION
-homeserver   Ready    control-plane,master   5m    v1.29.3+k3s1
+homeserver   Ready    control-plane,master   5m    v1.36.4+k3s1
 ```
 
 Nach `make worker-0` (beide Nodes):
 
 ```
 NAME          STATUS   ROLES                  AGE   VERSION
-homeserver    Ready    control-plane,master   5m    v1.29.3+k3s1
-worker-0   Ready    <none>                 2m    v1.29.3+k3s1
+homeserver    Ready    control-plane,master   5m    v1.36.4+k3s1
+worker-0   Ready    <none>                 2m    v1.36.4+k3s1
 ```
 
 ### Alle System-Pods
@@ -410,14 +413,58 @@ Erwartet:
 
 ```
 NAME          STATUS   ROLES                  AGE   VERSION          INTERNAL-IP
-homeserver    Ready    control-plane,master   10m   v1.29.3+k3s1    192.168.178.94
-worker-0   Ready    <none>                 2m    v1.29.3+k3s1    192.168.178.95
+homeserver    Ready    control-plane,master   10m   v1.36.4+k3s1    192.168.178.94
+worker-0   Ready    <none>                 2m    v1.36.4+k3s1    192.168.178.95
 ```
 
 **Weiterer Worker (worker-1):** folgt demselben Muster über
 `make worker-1` (Playbook `ansible/worker-1.yml`) — inhaltlich identisch zu
 `worker-0.yml`, beide sind reine k3s-Compute-Nodes. Details siehe
 [docs/b-kubernetes-gitops/b0000-k3s.md](../b-kubernetes-gitops/b0000-k3s.md).
+
+---
+
+## Schritt 10 — PROD- und ENTW-Cluster einrichten (optional)
+
+Nach dem TECH-Cluster lassen sich zwei weitere, voneinander getrennte Cluster als KVM-VMs aufbauen
+(Hintergrund: [a0010](a0010-overview.md#1-drei-cluster-im-überblick),
+[40080](../4-planung/40080-multi-cluster-entw-prod-tech.md)). Voraussetzung sind
+`libvirt_host_enabled: true` und die VM-Definitionen in den `host_vars`
+(`host_vars/homeserver/vars.yml` für `prod-vm`, `host_vars/worker-1/vars.yml` für `entw-vm`).
+
+> **Achtung Netzwerk:** Die Rolle `libvirt_host` stellt den Host auf eine Bridge (`br0`) um. Ein
+> falsch angegebenes Interface (`network_interface`) trennt den Host vom LAN. Die Rolle prüft das
+> per `assert`; trotzdem in einem Wartungsfenster arbeiten, eine Konsole bereithalten und danach
+> einen **Reboot-Test** machen ([Troubleshooting](a0040-troubleshooting.md#multi-cluster-prod--entw)).
+
+**PROD (auf dem Homeserver):**
+
+```bash
+make libvirt-host    # KVM + Bridge auf dem homeserver, legt die prod-vm (192.168.178.99) an
+make prod            # common + node_exporter + k3s in der prod-vm
+```
+
+Danach den Cluster im ArgoCD-Hub registrieren und die PROD-ApplicationSets anwenden — Schritt für
+Schritt in [argocd/bootstrap-prod/README.md](../../argocd/bootstrap-prod/README.md).
+
+**ENTW (auf worker-1):**
+
+```bash
+make worker-1-libvirt-host   # KVM + Bridge auf worker-1, legt die entw-vm (192.168.178.100) an
+make entw                    # common + k3s + eigene ArgoCD-Instanz in der entw-vm
+```
+
+Die ENTW-ArgoCD-Instanz folgt dem Branch `entw`, der vorher gepusht sein muss
+([b0050](../b-kubernetes-gitops/b0050-entw-argocd.md)). DNS für `*.dev.homeserver` setzt die
+`dnsmasq`-Rolle (`make dnsmasq`).
+
+**Verifikation:**
+
+```bash
+kubectl -n argocd get applications | grep '^prod-'                # im TECH-Hub: PROD-Applications
+ssh ubuntu@192.168.178.99  'sudo k3s kubectl get nodes'           # PROD
+ssh ubuntu@192.168.178.100 'sudo k3s kubectl get nodes'           # ENTW
+```
 
 ---
 
