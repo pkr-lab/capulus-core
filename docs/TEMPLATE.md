@@ -42,6 +42,7 @@ ans Ende der Kategorie angehängt zu werden.
 | `2` | Betrieb & Hardware | `2-betrieb-hardware/` |
 | `3` | Apps & Workloads | `3-apps-workloads/` |
 | `4` | Planung | `4-planung/` |
+| `5` | Incidents | `5-incidents/` |
 
 `4-planung/` ist die einzige Kategorie, die nicht den aktuellen Ist-Zustand
 beschreibt: sie hält ausgiebig recherchierte, aber noch nicht (vollständig)
@@ -49,10 +50,18 @@ umgesetzte Architektur-/Rollout-Pläne, bis sie entweder umgesetzt sind (dann
 wandert das Ergebnis als eigenes Doc in die fachlich passende Kategorie,
 z. B. `d-sicherheit/`) oder verworfen werden.
 
+`5-incidents/` nimmt Vorfallsberichte auf, die keinem Fachthema zugeordnet
+werden sollen (Typ C). Ein Vorfall, dessen Lehren direkt eine
+Sicherheitsmaßnahme betreffen, kann stattdessen in `d-sicherheit/` liegen
+(Beispiel: `d0000-incident-2026-08-12.md`).
+
 Passt ein neues Thema in keine bestehende Kategorie, ist das ein Signal, kurz
-zu prüfen, ob eine zehnte Kategorie wirklich nötig ist, statt es einer
-unpassenden zuzuordnen — Hex hat mit `0` und `5`–`9` (abzüglich der schon
-genutzten Ziffern `1`–`4`) noch Reserve.
+zu prüfen, ob eine zwölfte Kategorie wirklich nötig ist, statt es einer
+unpassenden zuzuordnen — Hex hat mit `0` und `6`–`9` noch Reserve.
+
+Ausnahme vom Namensschema: `superpowers/plans/` und `superpowers/specs/`
+enthalten datierte Plan- und Spec-Dokumente (`YYYY-MM-DD-<thema>.md`) mit
+eigenem Schema. Sie zählen nicht zu den Kategorien oben.
 
 ### Cross-Referenzen
 
@@ -82,6 +91,10 @@ Für App- und Komponenten-Dokus mit einem konkreten Einrichtungsablauf
 # <Titel> — <Kurzbeschreibung>
 
 <1–3 Sätze: was es ist, warum es im Stack steckt.>
+
+> **Cluster:** <TECH | PROD | ENTW> · Ordner `argocd/apps/<cluster>/<app>/` · URL `https://<app>.<tier>.homeserver`
+> `kubectl`-Befehle in diesem Doc gelten für diesen Cluster
+> (Zugriff je Cluster: [a0010](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
 
 ---
 
@@ -180,3 +193,12 @@ Für punktuelle Vorfallsberichte, datiert im Dateinamen mitgeführt (Beispiel:
 - Cross-Referenzen direkt im Fließtext an der Stelle, wo sie relevant sind
   (siehe [Abschnitt 1](#cross-referenzen)) — keine gesammelte Link-Fußzeile.
 - Deutsch als Sprache, konsistent mit dem restlichen Bestand.
+- **Ist-Zustand vs. Plan:** Docs außerhalb von `4-planung/` beschreiben, was heute läuft. Ändert sich der
+  Zustand (App zieht in einen anderen Cluster, Host wird umbenannt, Komponente wird ersetzt), das Doc
+  im **selben** PR mitziehen. Planungs-Docs tragen oben eine Statuszeile (geplant / teilweise umgesetzt /
+  umgesetzt und wohin der Ist-Zustand gewandert ist).
+- **Hostnamen** immer im Tier-Schema (`<app>.tech.homeserver`, `<app>.prod.homeserver`), nie flach
+  (`<app>.homeserver`), siehe [c0040](c-netzwerk-dns/c0040-domain-tiers.md).
+- **Repo-Pfade** mit Cluster-Ordner (`argocd/apps/tech/…`, `argocd/apps/prod/…`, `argocd/apps/entw/…`).
+- **Verlinkung prüfen:** `python3 scripts/check-doc-links.py` findet kaputte relative Links und Anker
+  (läuft auch in der CI, siehe [f0070](f-cicd-automatisierung/f0070-ci-lint.md)).

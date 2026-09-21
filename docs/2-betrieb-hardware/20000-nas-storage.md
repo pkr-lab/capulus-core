@@ -1,8 +1,12 @@
 # NAS-Storage (UGREEN NAS, RAID1, NFS)
 
-Persistenter Speicher für den k3s-Cluster liegt auf dem UGREEN NAS
+Persistenter Speicher für die k3s-Cluster liegt auf dem UGREEN NAS
 (192.168.178.97, DNS-Name `ugreen-nas`) und ist als Kubernetes-StorageClass
-`nas` verfügbar. Anders als die frühere `hdd`-StorageClass (7,3-TB-Platte
+`nas` verfügbar. Das NAS ist eine **gemeinsame Abhängigkeit aller drei Cluster**
+(TECH, PROD, ENTW, siehe [a0010](../a-betriebssystem/a0010-overview.md#1-drei-cluster-im-überblick)):
+TECH und PROD haben je eine eigene Provisioner-App `nas-storage` (`argocd/apps/tech/nas-storage/`,
+`argocd/apps/prod/nas-storage/`), die auf dieselben NFS-Exporte zeigen. Ein NAS-Ausfall trifft
+deshalb alle NFS-Apps in beiden Clustern. Anders als die frühere `hdd`-StorageClass (7,3-TB-Platte
 `/dev/sda` fest an worker-0 gebunden, siehe Git-Historie) ist `nas` per NFS
 erreichbar — **jeder** k3s-Node kann PVCs dieser StorageClass mounten, es
 gibt keine NodeAffinity-Pflicht mehr. Der Scheduler darf Pods frei über
@@ -11,7 +15,7 @@ homeserver/worker-0/worker-1 verteilen.
 > **Zweiter, dedizierter Export für Immich:** Neben `nas` (→
 > `/volume1/k8s-storage`) existiert eine zweite, unabhängige StorageClass
 > `immich-nas` (→ `/volume2/immich-storage`, App
-> `argocd/apps/tech/immich-storage/`) — bewusst getrennt, damit die
+> `argocd/apps/prod/immich-storage/` für Immich in PROD; die App `argocd/apps/tech/immich-storage/` gibt es im TECH-Cluster ebenfalls) — bewusst getrennt, damit die
 > Fotobibliothek nicht im geteilten Cluster-Storage-Export landet. Details:
 > [docs/3-apps-workloads/300c0-immich.md](../3-apps-workloads/300c0-immich.md).
 

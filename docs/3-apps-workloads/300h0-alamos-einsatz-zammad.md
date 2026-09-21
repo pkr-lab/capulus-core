@@ -1,5 +1,7 @@
 # ALAMOS-Einsatzalarm → Zammad-Ticket (n8n)
 
+> **Cluster:** TECH · Ordner `argocd/apps/tech/n8n/workflows/` · Zugang: n8n-Workflow, Webhook über alamos-relay. `kubectl`-Befehle in diesem Doc gelten für den TECH-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
+
 Erweitert die reine Kiosk-Anzeige aus
 [30010-alamos-apager.md](30010-alamos-apager.md) um eine
 Push-Benachrichtigung: Kommt in ALAMOS AMweb ein echter Einsatz rein, legt

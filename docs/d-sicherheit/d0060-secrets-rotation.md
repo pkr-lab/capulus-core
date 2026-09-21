@@ -19,6 +19,20 @@ unten. Diese Seite ist das Ziel, auf das das Ticket verlinkt.
 | **ArgoCD-Admin-Passwort** | Login unter `https://<server-ip>:30443` | Alle 6–12 Monate | `argocd account update-password` (oder `kubectl -n argocd patch secret argocd-secret ...`, siehe [ArgoCD-Doku](https://argo-cd.readthedocs.io/en/stable/faq/#i-forgot-the-admin-password-how-do-i-reset-it)) |
 | **Sealed-Secrets-Schlüssel** | Verschlüsselt alle `SealedSecret`-Objekte im Repo | **Rotiert automatisch** — der Controller generiert standardmäßig alle 30 Tage einen neuen aktiven Schlüssel (`--key-renew-period`, hier auf Chart-Default belassen, siehe `argocd/apps/tech/sealed-secrets/values.yaml`). Alte Schlüssel bleiben für bereits versiegelte Secrets nötig und werden nicht automatisch gelöscht | Nichts zu tun für neue Secrets. Nur bei Verdacht auf Kompromittierung: `kubeseal --re-encrypt` auf alle bestehenden SealedSecrets im Repo anwenden, danach alte Controller-Keys manuell löschen (siehe [sealed-secrets-Doku](https://github.com/bitnami-labs/sealed-secrets#secret-rotation)) |
 
+### Was seit der Multi-Cluster-Umstellung dazukommt
+
+Die vier Secrets oben sind die zentralen. Mit den drei Clustern gibt es weitere Werte, die **je Cluster**
+existieren und bei einer Rotation mitzudenken sind:
+
+| Secret | Wo | Hinweis |
+|---|---|---|
+| **Sealed-Secrets-Schlüssel je Cluster** | TECH, PROD und ENTW haben jeweils eigene Controller-Schlüssel | Rotiert je Controller automatisch (siehe oben). Ein Secret muss für den **Ziel-Cluster** versiegelt sein, für PROD mit `scripts/reseal-for-prod.sh` |
+| **ArgoCD-Admin-Passwort ENTW** | Eigene ArgoCD-Instanz auf der `entw-vm` | Unabhängig vom Hub-Passwort, Passwort-Update per UI/CLI der ENTW-Instanz ([b0050](../b-kubernetes-gitops/b0050-entw-argocd.md#argocd-oberfläche)) |
+| **Cluster-Token `argocd-manager` (PROD im Hub)** | Secret `cluster-prod` im Hub, ServiceAccount-Token in der `prod-vm` | Berechtigt den Hub zu Cluster-Admin in PROD, bei Verdacht neu ausstellen ([argocd/bootstrap-prod/README.md](../../argocd/bootstrap-prod/README.md)) |
+| **Cloudflare-Tunnel-Credentials** | Tunnel `homeserver` (TECH) und `homeserver-prod` (PROD), je als SealedSecret | Rotation je Tunnel, siehe [e0010](../e-externe-erreichbarkeit/e0010-cloudflare-deploy.md#credentials-rotieren) |
+| **Interne CA** | Root-CA-Schlüssel (nur lokal) und PROD-Intermediate-CA | Siehe [d0040](d0040-internal-tls.md#prod-cluster-phase-28-multi-cluster-plan) |
+| **Authentik-/lldap-Secrets** | `authentik-credentials` u. a. als SealedSecrets in TECH | Aufbau und Betrieb: [d0073](d0073-authentik-sso.md), [d0072](d0072-lldap.md); beim Neu-Versiegeln auf die Base64-Fallen im Rollout-Log von d0073 achten |
+
 ---
 
 ## Automatisierte Erinnerung: n8n → Zammad
@@ -45,7 +59,7 @@ API-Tokens im HTTP-Header zu nutzen.
 2. Node **"Zammad-Ticket erstellen"** öffnen → Credential neu anlegen/
    zuweisen (Credential-IDs werden beim Import nicht mitgenommen):
    - Typ: **Zammad Token Auth API**
-   - Base URL: `https://zammad.homeserver`
+   - Base URL: `https://zammad.tech.homeserver`
    - Access Token: neuen Token in Zammad unter **Profil → Token Access**
      erzeugen (Berechtigung `ticket.agent` reicht), analog zu
      [docs/f-cicd-automatisierung/f0040-github-release-watcher.md → Schritt 1](../f-cicd-automatisierung/f0040-github-release-watcher.md#schritt-1--zammad-api-token-erzeugen)

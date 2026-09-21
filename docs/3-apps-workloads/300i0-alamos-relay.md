@@ -1,5 +1,7 @@
 # ALAMOS-Webhook-Relay (öffentlicher Proxy vor n8n)
 
+> **Cluster:** TECH · Ordner `argocd/apps/tech/alamos-relay/` · URL `https://alamos-relay-prod.pke-lab.de` (extern), `alamos-relay.prod.homeserver` (intern). `kubectl`-Befehle in diesem Doc gelten für den TECH-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
+
 Kleiner, einzweckiger Proxy: nimmt den ALAMOS-Einsatzalarm-Webhook
 öffentlich unter einem geheimen Pfad entgegen und reicht ihn
 Server-zu-Server an den internen n8n-Webhook weiter (siehe

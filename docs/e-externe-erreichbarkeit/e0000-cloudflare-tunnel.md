@@ -1,7 +1,7 @@
 # Cloudflare Tunnel — Externe Erreichbarkeit ohne VPN
 
-Dieses Dokument beschreibt, wie ausgewählte Dienste aus `argocd/apps/`
-über [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/)
+Dieses Dokument beschreibt, wie ausgewählte Dienste aus `argocd/apps/tech/` und
+`argocd/apps/prod/` über [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/)
 öffentlich im Internet erreichbar gemacht werden — **ohne** Portfreigabe am
 Router, ohne öffentliche IP und ohne dass du für jeden Zugriff erst
 Tailscale verbinden musst.
@@ -65,6 +65,25 @@ Tailscale bleibt für alles mit Admin-Charakter (ArgoCD, Semaphore,
 Headlamp, kubectl, SSH) der richtige Weg — Cloudflare Tunnel ergänzt das
 nur für die Dienste, bei denen "irgendwer ohne VPN-Client" tatsächlich
 Zugriff braucht.
+
+### Zwei Tunnel: TECH und PROD
+
+Seit der Multi-Cluster-Umstellung ([40080](../4-planung/40080-multi-cluster-entw-prod-tech.md)) läuft in
+**TECH und PROD je ein eigenes `cloudflared`** mit **eigenem Tunnel**:
+
+| Cluster | ArgoCD-App | Tunnel | Was dort ankommt |
+|---|---|---|---|
+| TECH | `argocd/apps/tech/cloudflared/` | `homeserver` | der Wildcard `*.pke-lab.de` und alle Hosts der Apps im TECH-Cluster |
+| PROD | `argocd/apps/prod/cloudflared/` | `homeserver-prod` | nur die Hosts, die einzeln auf diesen Tunnel geroutet sind (Apps im PROD-Cluster) |
+
+Beide Tunnel tragen dieselbe Wildcard-Regel `*.pke-lab.de` → Traefik des eigenen Clusters. Welcher
+Host bei welchem Tunnel landet, entscheidet **allein der DNS-Eintrag bei Cloudflare**: der Wildcard
+zeigt auf den TECH-Tunnel, ein PROD-Host bekommt einen eigenen, spezifischeren Eintrag per
+`cloudflared tunnel route dns homeserver-prod <host>`. ENTW hat keinen Tunnel (kein `cloudflared` unter `argocd/apps/entw/`); die
+Trainingsumgebung ist nicht aus dem Internet erreichbar.
+
+Die Schritte 2–5 unten beschreiben den Aufbau für den TECH-Tunnel; für den PROD-Tunnel sind sie mit
+Tunnel-Name `homeserver-prod` und den Dateien unter `argocd/apps/prod/cloudflared/` identisch.
 
 ---
 

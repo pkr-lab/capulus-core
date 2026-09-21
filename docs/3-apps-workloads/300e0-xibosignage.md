@@ -1,5 +1,7 @@
 # xibosignage — Xibo CMS + Bilder-Slideshow auf Raspberry Pi 3 B+
 
+> **Cluster:** PROD · Ordner `argocd/apps/prod/xibosignage/` · URL `https://xibo.prod.homeserver` und `https://xibo-prod.pke-lab.de`. `kubectl`-Befehle in diesem Doc gelten für den PROD-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
+
 Digital-Signage-Setup: **Xibo CMS** läuft als zentrale Medien-/Asset-
 Verwaltung im k3s-Cluster, Inhalte werden über eine **Xibo-CMS-Playlist** im
 Web-UI gepflegt, ein **n8n-Workflow** synchronisiert die Playlist-Bilder
@@ -46,7 +48,7 @@ periodisch über die Xibo-REST-API in einen festen NAS-Ordner, und ein
 │  Xibo CMS (k3s, Namespace xibosignage)       │
 │  cms-web ── MySQL ── XMR ── Memcached        │
 │             └── QuickChart                   │
-│  https://xibo.homeserver                     │
+│  https://xibo.prod.homeserver                     │
 │  PVC "library"/"state" (StorageClass nas)    │
 │                                               │
 │  Design → Playlists → "infotafel"            │
@@ -124,8 +126,8 @@ Den Output in `argocd/apps/prod/xibosignage/values.yaml` unter
 ### Erster Start
 
 Nach dem Sync ist Xibo unter **https://xibo.prod.homeserver** (intern) und
-**https://xibo-prod.pke-lab.de** (extern, über den Cloudflare Tunnel —
-Wildcard-DNS/-Ingress-Route, kein zusätzlicher DNS-Schritt nötig, siehe
+**https://xibo-prod.pke-lab.de** (extern, über den Cloudflare-Tunnel des PROD-Clusters —
+der externe Host braucht einen DNS-Eintrag auf den Tunnel `homeserver-prod`, siehe
 [docs/e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md](../e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md))
 erreichbar. Bewusst **ohne** zusätzliche Authentik-ForwardAuth-Middleware
 (anders als mealie/uptime-kuma) — nur das CMS-eigene Login schützt den
@@ -203,7 +205,7 @@ Application referenziert.
 
 ### 2. n8n-Credential anlegen
 
-n8n (https://n8n.homeserver) → **Credentials** → neue Credential vom Typ
+n8n (https://n8n.prod.homeserver) → **Credentials** → neue Credential vom Typ
 **OAuth2 API**, Name **`Xibo CMS (OAuth2 Client Credentials)`** (exakt so,
 der importierte Workflow referenziert die Credential über diesen Namen):
 
@@ -309,7 +311,7 @@ Eine fertige Workflow-Definition liegt unter
 (bleibt nach Import **deaktiviert**, solange der Playlist-Sync-Workflow
 läuft):
 
-1. n8n öffnen (https://n8n.homeserver) → **Workflows** → **Import from File**.
+1. n8n öffnen (https://n8n.prod.homeserver) → **Workflows** → **Import from File**.
 2. `argocd/apps/tech/n8n/workflows/xibosignage-inbox-to-display.json` auswählen.
 3. Workflow öffnen, Knoten-Parameter prüfen (Node-Schemas können sich
    zwischen n8n-Versionen leicht unterscheiden — insbesondere beim
@@ -500,7 +502,7 @@ erreichen (neuer, leerer Unterordner derselben PVC):
 | Xibo-CMS-Pod bleibt `CrashLoopBackOff` beim allerersten Start | `kubectl -n xibosignage logs deploy/xibosignage-cms` — meist DB noch nicht bereit, Pod startet automatisch neu; bei anhaltenden Fehlern MySQL-Pod-Status prüfen (`kubectl -n xibosignage get pods`) |
 | MySQL-Pod: `Permission denied` auf `/var/lib/mysql` | NFS-Squash-Identität auf dem UGREEN NAS hat sich geändert (siehe [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md) und die identische Problemlösung bei wikijs/immich) — `mysql.securityContext.runAsUser`/`runAsGroup` in `argocd/apps/prod/xibosignage/values.yaml` an die aktuelle Squash-Identität anpassen. **Nicht** auf `cms.securityContext` übertragen — das offizielle xibo-cms-Image braucht beim ersten Start Root (schreibt `/root/.my.cnf`, konfiguriert Apache/PHP/cron unter `/etc`), analog zu wikijs/immich bleibt `cms.securityContext` deshalb bewusst leer |
 | CMS-Pod: `CrashLoopBackOff`, Logs voller `Permission denied` (`/root/.my.cnf`, `/etc/apache2`, `/etc/php`, `settings.php`) und `ERROR 1045 ... UNKNOWN_USER` | `cms.securityContext` in `argocd/apps/prod/xibosignage/values.yaml` wurde (versehentlich) auf `runAsUser: 1000` o.ä. gesetzt — muss leer (`{}`) sein, da das CMS-Image root für sein Setup braucht |
-| `xibo.homeserver` löst nicht auf | Wildcard-DNS prüfen: `nslookup xibo.homeserver` (siehe [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md)) |
+| `xibo.prod.homeserver` löst nicht auf | Wildcard-DNS prüfen: `nslookup xibo.prod.homeserver` (siehe [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md)) |
 | Playlist-Sync-Workflow: `Failed to acquire OAuth2 access token: Client authentication failed` (`invalid_client`) | Fast immer: **"Confidential Client"** in der Xibo-Application (Administration → Applications → General) ist nicht angehakt — ohne dieses Häkchen lehnt Xibo jede Secret-basierte Client-Auth ab, unabhängig davon, ob Client-ID/Secret korrekt sind. Anhaken, speichern, erneut versuchen |
 | Playlist-Sync-Workflow: jeder API-Call liefert `403` (auch `/api/display`, `/api/library`, nicht nur `/api/playlist`) | OAuth2-Token hat leere `scopes` (im JWT-Payload prüfbar) — in der Xibo-Application unter dem Tab **"Sharing"** fehlen die Scopes. Mindestens **"Access to Library, Layouts, Playlists, Widgets and Resolutions"** anhaken und speichern |
 | Playlist-Sync-Workflow: `Playlist "infotafel" nicht gefunden oder ohne widgets` trotz befüllter Playlist | Playlist ist **dynamisch** (`isDynamic: 1` in der API-Antwort) — dynamische Playlists liefern ihre Inhalte nicht über das `widgets`-Embed. Playlist auf **statisch** umstellen (oder neu als statische Playlist anlegen) und Bilder manuell per "Add Media" hinzufügen |

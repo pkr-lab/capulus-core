@@ -9,11 +9,10 @@
 
 Architektur- und Rollout-Plan für einen zentralen Single-Sign-On-Layer via
 [Authelia](https://www.authelia.com/) vor jeder App mit eigener Anmeldemaske.
-Noch **nicht umgesetzt** — dieses Doc hält den recherchierten und mit dem
-Nutzer abgestimmten Plan fest, bevor der erste Rollout-Batch beginnt. Sobald
-Umsetzung + Verifikation abgeschlossen sind, wandert der Ist-Zustand als
-eigenes Doc nach `d-sicherheit/` (analog zu den bestehenden Security-Docs),
-dieses Planungsdoc bleibt als historischer Kontext bestehen.
+**Status: umgesetzt und wieder abgelöst.** Authelia wurde eingeführt und später durch
+Authentik ersetzt (siehe Hinweis oben). Dieses Doc hält den ursprünglichen, mit dem
+Nutzer abgestimmten Plan fest und bleibt als historischer Kontext bestehen; die
+Ausgangslage unten beschreibt den Stand vor dem SSO-Rollout.
 
 ---
 

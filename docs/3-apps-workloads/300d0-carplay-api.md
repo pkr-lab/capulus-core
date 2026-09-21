@@ -1,5 +1,7 @@
 # carplay-api — Homeserver-Dashboard-API
 
+> **Cluster:** TECH · Ordner `argocd/apps/tech/carplay-api/` · URL `https://carplay-api.prod.homeserver`. `kubectl`-Befehle in diesem Doc gelten für den TECH-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
+
 Kleine Go/Gin-API, die VictoriaMetrics (Systemmetriken pro Host), ntfy
 (Alerts) und Uptime-Kuma (Service-Status) zu einem einzigen JSON-Payload
 zusammenfasst, 30s gecacht, plus Bildschirmhelligkeit und
@@ -33,7 +35,7 @@ Homeserver Dashboard (iOS)
         │  POST /api/power/wake
         │  POST /api/power/shutdown
         ▼
-carplay-api.homeserver ──▶ Traefik ──▶ carplay-api Pod (Namespace carplay-api)
+carplay-api.prod.homeserver ──▶ Traefik ──▶ carplay-api Pod (Namespace carplay-api)
                                           ├─ VictoriaMetrics  (CPU/RAM/Disk/Temp/Uptime, PRO Host)
                                           ├─ ntfy             (Alerts, Topic "alerts")
                                           ├─ Uptime-Kuma       (Service-Status, Status-Page)
@@ -138,7 +140,7 @@ funktioniert hätte), wurde angepasst:
      > ~/homelab-certs/sealed-secrets.pem
    ```
 
-   Alternative ohne CLI/SSH-Zugriff: **https://kubeseal-webgui.homeserver**
+   Alternative ohne CLI/SSH-Zugriff: **https://kubeseal-webgui.tech.homeserver**
    verschlüsselt einzelne Werte über eine Weboberfläche (Namespace
    `carplay-api`, Secret-Name `carplay-api-token`, Key `token`) — liefert
    denselben Base64-Blob wie unten, ohne Schritt 1.
@@ -212,7 +214,7 @@ funktioniert hätte), wurde angepasst:
 
 ## Uptime-Kuma Status-Page anlegen
 
-1. **https://uptime-kuma.homeserver** → *Status-Pages* → *New Status Page*.
+1. **https://uptime-kuma.prod.homeserver** → *Status-Pages* → *New Status Page*.
 2. Slug vergeben (Default in `values.yaml`: `homeserver`) — muss exakt mit
    `config.uptimeKuma.slug` übereinstimmen.
 3. Alle Monitore hinzufügen, die im Dashboard erscheinen sollen (siehe
@@ -271,7 +273,7 @@ Die wichtigsten:
 | `secrets.apiToken.enabled` | Default `true` — siehe [Ersteinrichtung](#ersteinrichtung) |
 | `secrets.powerAgentToken.enabled` | Muss `true` sein, sonst 502 auf Helligkeit/Wake/Shutdown — siehe [power-agent](#power-agent) |
 | `secrets.shutdownConfirmationCode.enabled` | Muss `true` sein, sonst 503 auf Homeserver-Shutdown — siehe [Ersteinrichtung](#ersteinrichtung) Schritt 4 |
-| `ingress.host` | `carplay-api.homeserver` |
+| `ingress.host` | `carplay-api.prod.homeserver` |
 
 ## Fehlerbehebung
 
@@ -288,4 +290,4 @@ Die wichtigsten:
 | App meldet Erfolg beim Homeserver-Shutdown, aber der Host läuft noch minutenlang weiter | Erwartet — `kubectl drain` läuft im Hintergrund (bis zu 180s Timeout) bevor `k3s` gestoppt und `poweroff` ausgeführt wird, siehe [power-agent](#power-agent). `journalctl -u power-agent -f` auf dem Homeserver zeigt den Fortschritt |
 | `kubectl cordon`/`drain` in den power-agent-Logs schlägt sofort fehl | `NODE_NAME` in `/etc/power-agent/config.env` ≠ tatsächlicher k3s-Node-Name (`kubectl get nodes`) — Poweroff läuft trotzdem weiter (Best-Effort), nur ohne sauberes Draining |
 | App bekommt `403` nach Aktivieren der IP-Allowlist | `config.trustedProxies` fehlt/falsch — App sieht Traefik-Pod-IP statt Tailscale-IP, siehe [Absicherung](#absicherung) |
-| `carplay-api.homeserver` löst nicht auf | Wildcard-DNS prüfen: `nslookup carplay-api.homeserver` (siehe [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md)) |
+| `carplay-api.prod.homeserver` löst nicht auf | Wildcard-DNS prüfen: `nslookup carplay-api.prod.homeserver` (siehe [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md)) |

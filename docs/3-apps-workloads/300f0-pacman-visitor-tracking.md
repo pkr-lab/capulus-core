@@ -1,5 +1,7 @@
 # pacman — Besucher-Tracking (IP/GeoIP) für die Schulung
 
+> **Cluster:** TECH · Ordner `argocd/apps/tech/pacman/` · URL `https://pacman.prod.homeserver` und `https://pacman-prod.pke-lab.de`. `kubectl`-Befehle in diesem Doc gelten für den TECH-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
+
 `argocd/apps/tech/pacman/` liefert neben dem eigentlichen Spiel
 (siehe [dessen README](../../argocd/apps/tech/pacman/README.md)) auch
 eine bewusst sichtbare Demonstration dessen, was ein gewöhnlicher
