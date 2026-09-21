@@ -1,46 +1,80 @@
-# Tailscale-Runner-PoC — kommt ein GitHub-Runner an das interne ArgoCD?
+# Tailscale-Runner-PoC — erreicht ein GitHub-Runner ArgoCD und ENTW?
 
-[`.github/workflows/tailscale-poc.yml`](../../.github/workflows/tailscale-poc.yml)
-ist ein reiner Machbarkeitsnachweis (Phase 0, Schritt 0.8 in
-[40080](../4-planung/40080-multi-cluster-entw-prod-tech.md)): Kann ein
-GitHub-Actions-Cloud-Runner per Tailscale dem Tailnet beitreten und das nicht
-öffentlich erreichbare ArgoCD ansprechen? Die Antwort entscheidet, ob eine
-spätere Promotion-Stufe mit Health-Gate (ArgoCD-Status, Smoke-Tests gegen
-`*.dev.homeserver`) aus GitHub Actions heraus möglich ist, ohne einen Port zu
-öffnen.
+[`.github/workflows/tailscale-poc.yml`](../../.github/workflows/tailscale-poc.yml) ist die Diagnose für die
+[Promotion-Kette](f00b0-promotion-chain.md) (Phase 0, Schritt 0.8 in
+[40080](../4-planung/40080-multi-cluster-entw-prod-tech.md)): Kann ein GitHub-Actions-Cloud-Runner per Tailscale dem
+Tailnet beitreten und die nicht öffentlich erreichbaren ArgoCD-Instanzen ansprechen? Das Gate der Kette
+(24 h gesund auf ENTW, 2 h auf TECH) braucht genau diese Verbindung. Der Workflow läuft nur manuell.
 
-**Stand:** der Workflow wurde angelegt und das Secret gesetzt, aber **noch nie
-ausgeführt** (0 Läufe). Er läuft nur manuell und ist für den Dauerbetrieb nicht
-gedacht. Die [ENTW-Promotion](f0080-entw-promotion.md) braucht ihn noch nicht, sie
-gibt nur anhand der CI frei.
+## Ergebnis des ersten Laufs (2026-09-20) und was daraus folgt
 
-## Ablauf
+Der erste Lauf mit der ursprünglichen Fassung schlug im Schritt „Reach ArgoCD“ mit `HTTP 000` fehl. Der
+Beitritt ins Tailnet selbst klappte: der Runner erschien als Gerät des Benutzers (nicht getaggt) und sah
+`homeserver`, `worker-1` und die übrigen Geräte. Die Untersuchung danach ergab zwei Ursachen und eine offene Frage:
 
-1. `tailscale/github-action` holt den Runner mit dem Auth-Key temporär ins Tailnet.
-2. `tailscale status` zeigt die erreichbaren Knoten.
-3. `curl -sk https://homeserver:30443` gegen ArgoCD; jeder HTTP-Status außer einem
-   Verbindungsfehler gilt als Erfolg (es geht um Erreichbarkeit, nicht um Login).
+| Befund | Beleg |
+|---|---|
+| Der PoC sprach das **falsche Ziel** an. ArgoCD läuft per NodePort im **Klartext** (`server.insecure`), `https://…:30443` wird zurückgesetzt, auch direkt im LAN. Richtig ist `http://…:30080`. | `curl` vom Arbeitsplatz: `https://192.168.178.94:30443` → Verbindung zurückgesetzt, `http://192.168.178.94:30080` → 200 |
+| Der Homeserver bewirbt das LAN-Subnetz `192.168.178.0/24` ins Tailnet. Damit sind **beide** ArgoCD-Instanzen (`192.168.178.94:30080`, ENTW `192.168.178.100:30080`) über eine Route erreichbar, ohne Änderung an worker-1. | `tailscale status --json` auf dem Homeserver: `PrimaryRoutes: 192.168.178.0/24` |
+| **Offen:** ob die ACL dem Runner die Verbindung erlaubt. Die Grants (40080) erlauben Mitgliedern nur `tcp:443` auf die Cluster-Knoten. Vom Arbeitsplatz aus liefen alle Ports der Tailnet-Adresse des Homeservers in ein Timeout (auch 22 und 443), das LAN dagegen antwortete, ein Rückschluss auf den Runner ist daher nicht möglich. | Portprobe `100.74.0.59`, `100.124.213.94` |
+
+Die neue Fassung des Workflows testet deshalb **jeden Weg einzeln** und gibt eine Tabelle aus. Sie schlägt erst am Ende
+fehl, und nur dann, wenn ein für die Kette nötiger Weg fehlt.
+
+**Zweiter Lauf (2026-09-20, neue Fassung): `tailscale status` meldete `Logged out`**, alle Wege `zu/gefiltert`. Das war
+kein ACL-Problem, sondern mein Fehler im Workflow: `args: --accept-routes` setzte das Flag ein zweites Mal
+(die Action übergibt es bereits selbst), `tailscale up` brach mit `invalid boolean flag accept-routes: flag provided
+multiple times` ab, und die Action wertet das nach ihren Wiederholungen **nicht als Fehler**: der Beitritts-Schritt war
+grün, der Runner aber nie angemeldet. Behoben (Flag entfernt) und abgesichert: ein eigener Schritt bricht jetzt mit
+klarer Meldung ab, wenn der Runner nicht `Running` ist. Aussagen zur ACL sind aus diesem Lauf nicht ableitbar.
+
+## Was der Workflow prüft
+
+| Weg | Ziel | Nötig? | Nötiger Grant |
+|---|---|---|---|
+| `hub-lan` | Hub-ArgoCD `192.168.178.94:30080`, `/api/version` | ja | `192.168.178.94`, `tcp:30080` |
+| `entw` | ENTW-ArgoCD `192.168.178.100:30080`, `/api/version` | ja | `192.168.178.100`, `tcp:30080` |
+| `smoke` | ENTW-Ingress `192.168.178.100:80` mit Host `whoami.dev.homeserver` | optional (Smoke-Checks) | `192.168.178.100`, `tcp:80` |
+| `hub` | Hub über die Tailnet-Adresse des Homeservers | nur Diagnose | `tag:tech-node`, `tcp:30080` |
+
+Die Tailscale-Action nimmt Subnet-Routen selbst an (`--accept-routes`). Ein zusätzliches `args: --accept-routes` im
+Workflow ist ein Fehler, siehe unten. `/api/version` ist bei ArgoCD ohne Anmeldung erreichbar. Vor der Probe prüft der
+Workflow, dass der Runner wirklich verbunden ist (`BackendState` = `Running`).
 
 ## Voraussetzungen
 
 | Was | Wo |
 |---|---|
-| Repo-Secret `TAILSCALE_AUTHKEY` | GitHub → Settings → Secrets (gesetzt am 2026-09-18). Für einen wechselnden Runner passt ein *reusable* Key; die Voreinstellungen für Server-Keys (single-use, nicht ephemeral) in [c0010](../c-netzwerk-dns/c0010-tailscale.md#auth-key-besorgen) gelten hier nicht. |
-| ACL, die den Runner-Tag auf `homeserver:30443` zulässt | [c0010-tailscale.md → ACL-Konfiguration](../c-netzwerk-dns/c0010-tailscale.md#acl-konfiguration) |
+| Repo-Secret `TAILSCALE_AUTHKEY` | GitHub → Settings → Secrets (gesetzt am 2026-09-18). Für wechselnde Runner passt ein *reusable*, *ephemeral* Key. Die Voreinstellungen für Server-Keys (single-use, nicht ephemeral) in [c0010](../c-netzwerk-dns/c0010-tailscale.md#auth-key-besorgen) gelten hier nicht. |
+| ACL-Grant für den Runner | siehe [Promotion-Kette → Netzweg](f00b0-promotion-chain.md#netzweg-und-zugriff): empfohlen ein Tag `tag:ci` mit Grant auf die beiden LAN-Adressen; Grundlagen in [c0010 → ACL-Konfiguration](../c-netzwerk-dns/c0010-tailscale.md#acl-konfiguration) |
+| Freigegebene Subnet-Route `192.168.178.0/24` des Homeservers | Tailscale-Admin-Panel (ist freigegeben) |
 
 ## Ausführen und Ergebnis
 
-GitHub → Actions → „Tailscale Runner PoC“ → *Run workflow*. Grün = Ansatz
-tauglich, Schritt 0.8 in 40080 kann abgehakt werden.
+GitHub → Actions → „Tailscale Runner PoC“ → *Run workflow*. Ausgabe der Probe, lokal vom Arbeitsplatz im LAN
+ausgeführt (dort gilt keine Runner-ACL, die Tailnet-Adresse filtert aber trotzdem):
+
+```
+hub       100.74.0.59:30080                  TCP zu/gefiltert  HTTP 000  (nur Diagnose)
+hub-lan   192.168.178.94:30080               TCP offen         HTTP 200  "Version":"v3.5.3"
+entw      192.168.178.100:30080              TCP offen         HTTP 200  "Version":"v3.5.3"
+smoke     192.168.178.100:80 (whoami.dev)    TCP offen         HTTP 200  (Smoke-Tests, optional)
+
+OK: hub-lan und entw erreichbar - die Promotion-Kette kann die Gates auswerten.
+```
+
+`OK` = die Kette kann die Gates auswerten; Schritt 0.8 in 40080 ist erledigt. Die Skriptlogik ist lokal
+geprüft; **die Fassung wurde noch nicht auf GitHub ausgeführt** (der GitHub-Lauf nutzt die Datei auf `main`), der
+Netzweg des Runners ist also weiter unbestätigt.
 
 ## Troubleshooting
 
 | Symptom | Ursache / Lösung |
 |---|---|
-| Schritt „Connect runner to tailnet“ scheitert mit Auth-Fehler | Key abgelaufen, nicht reusable oder falsch kopiert — neuen Key erzeugen, Secret ersetzen. |
-| `tailscale status` zeigt den Homeserver nicht | ACL erlaubt den Runner-Tag nicht — Tag/ACL in der Tailscale-Admin-Konsole prüfen. |
-| `curl` läuft in ein Timeout | Der Runner sieht den Homeserver im Tailnet, aber `:30443` ist für ihn nicht erreichbar — ACL (Port) und UFW auf dem Homeserver prüfen. |
-| Workflow bricht mit „FEHLGESCHLAGEN“ ab | Meldung des letzten Schritts, wenn `curl` gar keine Verbindung bekam — Ursache siehe die Zeilen darüber. |
-
-Die Inputs `oauth-client-id`/`oauth-secret` sind im Workflow leer gelassen,
-angemeldet wird über `authkey`.
+| Schritt „Connect runner to tailnet“ scheitert mit Auth-Fehler | Key abgelaufen, nicht reusable oder falsch kopiert: neuen Key erzeugen, Secret ersetzen. |
+| Schritt „Connect …“ grün, aber `Logged out` / „Tailscale nicht verbunden“ | `tailscale up` ist im Log des Verbindungsschritts still gescheitert (Action meldet trotzdem Erfolg). Dort nach der Fehlermeldung suchen: doppeltes Flag (`args:` nicht für `--accept-routes` nutzen), Key ungültig/abgelaufen, Tag nicht in `tagOwners`. |
+| `hub-lan`/`entw`: `TCP zu/gefiltert` (Timeout) | ACL erlaubt den Runner nicht: Grant auf die LAN-Adresse und den Port ergänzen. Ein Timeout (statt sofortiger Ablehnung) ist typisch für gefilterten Verkehr. |
+| `hub-lan`/`entw`: sofort abgelehnt | Die Route kommt an, aber der Dienst antwortet nicht: läuft ArgoCD (`server.insecure`, NodePort 30080)? Bei ENTW: `ssh ubuntu@192.168.178.96 'sudo virsh list --all'`, VM muss `running` sein. |
+| Route nicht sichtbar (Fehler „no route“) | Die Subnet-Route ist im Admin-Panel nicht freigegeben oder der Runner ist nicht verbunden (siehe Zeile darüber). |
+| `hub` (Tailnet-Adresse) filtert, `hub-lan` geht | erwartbar, wenn nur das Subnetz freigegeben ist. Die Kette nutzt `hub-lan`. |
+| Workflow bricht mit „FEHLGESCHLAGEN“ ab | Meldung des letzten Schritts: mindestens `hub-lan` oder `entw` ist nicht erreichbar, siehe die Zeilen darüber. |

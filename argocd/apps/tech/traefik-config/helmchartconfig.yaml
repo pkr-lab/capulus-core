@@ -21,8 +21,8 @@
 # vmservicescrape.yaml) referenziert einen Service-Port NAMENS "metrics" —
 # ohne den lief der Scrape ins Leere, VictoriaMetrics hatte dadurch NULL
 # traefik_*-Metriken, was wiederum alle "User Requests"-Panels in den
-# automatisch generierten Pro-App-Dashboards (Grafana-Ordner Platform/
-# Workloads) dauerhaft auf "No data" stehen ließ.
+# automatisch generierten Pro-App-Dashboards (Grafana-Ordner Plattform/
+# Anwendungen (TECH)) dauerhaft auf "No data" stehen ließ.
 # Fix: metrics.prometheus.service.enabled: true lässt den Traefik-Chart
 # einen ZUSÄTZLICHEN, rein clusterinternen ClusterIP-Service
 # "traefik-metrics" mit einem Port namens "metrics" rendern (Selector

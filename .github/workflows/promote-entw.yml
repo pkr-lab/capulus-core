@@ -20,7 +20,7 @@ name: Promote ENTW to main
 # bliebe sonst aus und der Pflicht-Check wuerde ewig auf "pending" stehen.
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "7 * * * *" # Fallback; sofort angestossen wird per entw-trigger.yml (Push auf entw)
   workflow_dispatch: {}
 
 permissions:

@@ -6,7 +6,7 @@ metadata:
   labels:
     grafana_dashboard: "1"
   annotations:
-    grafana_folder: "Workloads"
+    grafana_folder: "Anwendungen (TECH)"
 data:
   1002011-pis.json: |
     {
@@ -418,22 +418,21 @@ data:
         },
         {
           "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "description": "Informativ, KEIN Ausfall-Indikator: /start wird nur aufgerufen, wenn Chromium (neu) startet - nach dem naechtlichen Reboot (~03:00), einem Absturz oder einem Fallback-Wechsel. Danach haelt der Browser die AMweb-Seite dauerhaft offen und fragt /start nicht mehr an. Der Wert waechst deshalb im Normalbetrieb bis zum naechsten Neustart auf ~24 h. Ob der Monitor lebt, zeigt 'Letztes Lebenszeichen'.",
           "fieldConfig": {
             "defaults": {
-              "color": {"mode": "thresholds"},
+              "color": {"mode": "fixed", "fixedColor": "blue"},
               "mappings": [],
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
-                  {"color": "green", "value": null},
-                  {"color": "yellow", "value": 120},
-                  {"color": "red", "value": 3600}
+                  {"color": "blue", "value": null}
                 ]
               },
               "unit": "s"
             }
           },
-          "gridPos": {"h": 4, "w": 8, "x": 0, "y": 14},
+          "gridPos": {"h": 4, "w": 8, "x": 16, "y": 14},
           "id": 7,
           "options": {
             "colorMode": "background",
@@ -447,15 +446,16 @@ data:
             {
               "datasource": {"type": "prometheus", "uid": "${datasource}"},
               "expr": "time() - max by (station) (alamos_apager_last_start_timestamp_seconds{station=\"1002011_Fahrzeughalle\"})",
-              "legendFormat": "Letzte AMweb-Anfrage vor",
+              "legendFormat": "Letzter Browser-Start vor",
               "refId": "A"
             }
           ],
-          "title": "Letzte AMweb-Anfrage (alamos-apager /start)",
+          "title": "Letzter Browser-Start (alamos-apager /start)",
           "type": "stat"
         },
         {
           "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "description": "Massgeblicher Lebenszeichen-Wert: der Pi meldet sich ca. jede Minute bei alamos-apager. Gruen < 2 min, gelb ab 2 min, rot ab 5 min (= Standort gilt als offline, ntfy-Alarm).",
           "fieldConfig": {
             "defaults": {
               "color": {"mode": "thresholds"},
@@ -471,7 +471,7 @@ data:
               "unit": "s"
             }
           },
-          "gridPos": {"h": 4, "w": 8, "x": 8, "y": 14},
+          "gridPos": {"h": 4, "w": 8, "x": 0, "y": 14},
           "id": 8,
           "options": {
             "colorMode": "background",
@@ -489,7 +489,7 @@ data:
               "refId": "A"
             }
           ],
-          "title": "Letzter Heartbeat (alamos-apager)",
+          "title": "Letztes Lebenszeichen (Heartbeat an alamos-apager)",
           "type": "stat"
         },
         {
@@ -504,7 +504,7 @@ data:
               "unit": "none"
             }
           },
-          "gridPos": {"h": 4, "w": 8, "x": 16, "y": 14},
+          "gridPos": {"h": 4, "w": 8, "x": 8, "y": 14},
           "id": 9,
           "options": {
             "colorMode": "background",

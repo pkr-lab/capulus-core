@@ -1,0 +1,32 @@
+name: Trigger ENTW promotion
+
+# Startet die Promotion sofort, wenn auf den Branch `entw` gepusht wird, statt auf den
+# Cron zu warten (GitHub drosselt Schedules: im Test lief der 15-Minuten-Cron nur ca. alle
+# 2-5 Stunden). Beschreibung: docs/f-cicd-automatisierung/f0080-entw-promotion.md
+#
+# Ein `push`-Workflow laeuft mit der Datei DES GEPUSHTEN BRANCHES: diese Datei wirkt also
+# erst, wenn sie auf `entw` liegt (kommt mit dem naechsten Merge main -> entw). Der Job
+# tut selbst nichts ausser einem `workflow_dispatch` auf main; die Arbeit macht weiter
+# promote-entw.yml mit den aktuellen Workflows von main. Ein Dispatch mit dem Standard-
+# GITHUB_TOKEN ist erlaubt (im Gegensatz zu Pushes/PRs loest er andere Workflows aus).
+on:
+  push:
+    branches: [entw]
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: entw-trigger
+  cancel-in-progress: true
+
+jobs:
+  trigger:
+    name: promote-entw.yml starten
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch promote-entw.yml on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run promote-entw.yml --repo "$GITHUB_REPOSITORY" --ref main

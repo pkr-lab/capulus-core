@@ -15,7 +15,7 @@ mergen, wenn die CI-Jobs grün sind.
 | Regel | Wirkung |
 |---|---|
 | Pull Request | Kein Direkt-Push auf `main`. Kein Pflicht-Review (`0` Freigaben), du arbeitest allein — die Sicherheit kommt aus den Checks. |
-| Pflicht-Checks | `make lint (yamllint, ansible-lint, helm lint)`, `helm template \| kubeconform`, `go build, vet, test, tidy`, `gitleaks` — die vier Jobs aus [`ci.yml`](../../.github/workflows/ci.yml) |
+| Pflicht-Checks | `make lint (yamllint, ansible-lint, helm lint)`, `helm template \| kubeconform`, `go build, vet, test, tidy`, `docs links`, `gitleaks` — die fünf Jobs aus [`ci.yml`](../../.github/workflows/ci.yml) |
 | Kein Force-Push, kein Löschen | `main` ist nicht überschreibbar |
 | „Up to date“ nicht verlangt | `strict_required_status_checks_policy: false` — sonst müsste jeder PR nach jedem anderen Merge neu gebaut werden |
 
@@ -37,7 +37,7 @@ scripts/setup-main-ruleset.sh --dry-run   # zeigt das JSON
 scripts/setup-main-ruleset.sh             # anlegen bzw. aktualisieren (gh als Admin)
 ```
 
-**Reihenfolge ist wichtig:** erst die neue `ci.yml` (mit allen vier Jobs) auf
+**Reihenfolge ist wichtig:** erst die neue `ci.yml` (mit allen fünf Jobs) auf
 `main` bringen, dann das Skript ausführen. Andernfalls verlangt das Ruleset
 Checks, die es nirgends gibt, und der erste PR bleibt auf „pending“. Nach dem
 Aktivieren ist auch der eigene Push auf `main` gesperrt.
@@ -65,7 +65,7 @@ Commits) und `mirror-gitlab.yml` (liest `main`).
 |---|---|---|
 | `entw-1` | aktiv | `entw`: kein Löschen, kein Force-Push |
 | `entw-2` | aktiv | `entw`: nur per PR, Admin-Bypass immer; Pflicht-Checks leer (auf `entw`-PRs läuft mangels passendem Trigger keine CI, die Freigabe übernimmt [die Promotion](f0080-entw-promotion.md)) |
-| `Protect MAIN` | **deaktiviert** | ein früherer Entwurf: Löschen/Force-Push/PR (0 Freigaben) plus `code_quality`, trifft `main` **und** `entw`. Wird von „main: PR + CI“ nicht angefasst; bei Aktivierung addieren sich die Regeln. Wer nur eines der beiden will, löscht das andere im Repo unter *Settings → Rules*. |
+| `Protect MAIN` | aktiv (seit 2026-09-20) | Löschen/Force-Push/PR (0 Freigaben) plus `code_quality`, trifft `main` **und** `entw`. Die Regeln addieren sich mit „main: PR + CI“. Auf `entw` gilt damit auch hier PR-Pflicht ohne Bypass (der Admin-Bypass von `entw-2` hebt die Regeln eines anderen Rulesets nicht auf). |
 
 ## Stolperfallen
 
@@ -74,8 +74,9 @@ Commits) und `mirror-gitlab.yml` (liest `main`).
 - **`GITHUB_TOKEN`-PRs lösen keine CI aus.** Automatisch erzeugte PRs brauchen ein
   PAT (siehe Promotion), sonst sind sie nicht mergbar.
 - **Check-Namen** im Ruleset müssen den `name:` der Jobs in `ci.yml` entsprechen.
-  Wird ein Job umbenannt, in `scripts/setup-main-ruleset.sh` nachziehen und das
-  Skript erneut ausführen.
+  Wird ein Job umbenannt oder kommt einer dazu (zuletzt `docs links`), in
+  `scripts/setup-main-ruleset.sh` nachziehen und das Skript erneut ausführen: es
+  aktualisiert das vorhandene Ruleset.
 - **Lock-out:** Ist das Ruleset aktiv und die CI kaputt, hilft nur der
   Admin-Bypass am PR (oder das Ruleset unter *Settings → Rules* auf `disabled`
   setzen).

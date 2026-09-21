@@ -1,7 +1,7 @@
 # One Grafana dashboard ConfigMap per entry in values.yaml `dashboardApps`
 # (see that file for the list and why each app is in/excluded). The
 # `grafana_folder` annotation + sidecar.dashboards.folderAnnotation
-# (monitoring/values.yaml) sorts these into the "Platform" / "Workloads"
+# (monitoring/values.yaml) sorts these into the "Plattform (TECH)" / "Anwendungen (TECH)"
 # Grafana folders instead of the flat root folder.
 {{- range .Values.dashboardApps }}
 ---

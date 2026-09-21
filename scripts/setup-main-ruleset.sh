@@ -50,6 +50,7 @@ ruleset_json() {
           { "context": "make lint (yamllint, ansible-lint, helm lint)" },
           { "context": "helm template | kubeconform" },
           { "context": "go build, vet, test, tidy" },
+          { "context": "docs links" },
           { "context": "gitleaks" }
         ]
       }

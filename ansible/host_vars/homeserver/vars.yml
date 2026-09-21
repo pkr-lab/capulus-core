@@ -14,6 +14,10 @@
 # (Vorfall worker-1, 2026-09-19, siehe docs/4-planung/40080).
 libvirt_host_bridge_interface: "{{ network_interface }}"
 libvirt_host_static_ip: "{{ network_static_ip }}"
+# EEE muss auf der physischen NIC abgeschaltet werden, nicht auf br0: die
+# Rollen-Default (ansible_default_ipv4.interface) liefert nach dem Bridge-
+# Umbau br0, dort schlaegt `ethtool --set-eee` fehl (Vorfall 2026-09-20).
+disable_eee_interface: "{{ libvirt_host_bridge_interface }}"
 libvirt_host_vms:
   - name: prod-vm
     vcpus: 6

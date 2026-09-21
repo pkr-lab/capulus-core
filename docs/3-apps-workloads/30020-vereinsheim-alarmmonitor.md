@@ -18,7 +18,7 @@ die es bei den Raspberry Pis bewusst nicht gibt:
 2. **Lokaler Server-Fallback** — springt bei Nichterreichbarkeit von
    `alamos-apager.homeserver` automatisch auf die echte AMweb-URL.
 3. **Grafana-Monitoring + Zammad-Ticket bei Ausfall** — taucht im
-   Dashboard "Home Server Auslastung" auf (per **Push**, nicht Pull — siehe
+   Dashboards im Ordner "Hardware" auf (per **Push**, nicht Pull — siehe
    unten) und erzeugt (nur für dieses Gerät) ein Zammad-Ticket, wenn es
    länger als 10 Minuten nicht erreichbar ist. Ein eigenes Standort-Dashboard
    **"1002011-pis"** (`dashboard-1002011-pis.yaml`, benannt nach dem
@@ -273,10 +273,14 @@ ohnehin schon braucht — kein zusätzliches Pod-zu-Tailscale-Routing nötig.
 Nichterreichbarkeit lokal (`-remoteWrite.tmpDataPath`) und holt das dann
 nach.
 
-Kein Dashboard-Change nötig — "Home Server Auslastung"
-(`uid: homeserver-auslastung`) filtert dynamisch über die Grafana-Variable
-`$instance`; der Pi taucht automatisch auf, sobald seine Metriken ankommen.
-Zusätzlich hat der Pi (fest verdrahtet, nicht über `$instance`) eigene
+Kein Dashboard-Change nötig — die Hardware-Dashboards (Ordner "Hardware",
+[Hardware-Monitoring](../2-betrieb-hardware/20060-hardware-monitoring.md))
+filtern dynamisch über das Label `host`; der Pi taucht automatisch auf, sobald
+seine Metriken mit `host`/`kind` ankommen. Die Labels ergänzt VictoriaMetrics
+beim Empfang (`argocd/apps/tech/monitoring/templates/configmap-vmsingle-relabel.yaml`),
+die `vmagent`-Rolle (`ansible/roles/vmagent/templates/vmagent-scrape.yml.j2`)
+setzt sie ab dem nächsten `make banana-pi-kiosks` zusätzlich selbst — ein
+Ansible-Lauf gegen den Pi ist dafür nicht nötig. Zusätzlich hat der Pi (fest verdrahtet, nicht über `host`) eigene
 Detail-Panels im Standort-Dashboard **"1002011-pis"**
 (`argocd/apps/tech/monitoring/templates/dashboard-1002011-pis.yaml`,
 ehemals "Vereinsheim-Alarmmonitor" — umbenannt, als die xibosignage-
@@ -326,6 +330,18 @@ absent_over_time(up{...}[10m]) für vereinsheim-alarmmonitor
 Die bestehenden gotify-/ntfy-Routen bleiben für diesen Alert (und alle
 anderen) unverändert bestehen — die n8n-Route kommt rein additiv dazu
 (`continue: true`, siehe Kommentar in `values.yaml`).
+
+**Achtung, Bedeutung des Werts:** Der Zeitstempel der letzten `/start`-Anfrage
+ist ein *Browser-Start*-Marker, kein Lebenszeichen. `/start` wird nur
+aufgerufen, wenn Chromium (neu) startet (Reboot, Absturz, Fallback-Wechsel);
+danach hält der Browser die AMweb-Seite dauerhaft offen. Ein Wert von
+10 h oder mehr ist daher normal und wächst bis zum nächsten Neustart. Im
+Dashboard "1002011-pis" heißt das Panel deshalb "Letzter Browser-Start"
+(neutral blau, ohne Alarmfarbe); massgeblich für "lebt der Monitor" ist das
+Panel "Letztes Lebenszeichen (Heartbeat)" (grün < 2 min, gelb ab 2 min, rot
+ab 5 min). Im Zammad-Ticket-Workflow unten steht dieser Wert ebenfalls unter
+der Bezeichnung "Letzte AMweb-Anfrage" — gemeint ist dort der letzte
+Browser-Start.
 
 **Woher "letzte AMweb-Anfrage" kommt:** `alamos-apager` (die geteilte
 Cluster-Komponente aus [docs/3-apps-workloads/30010-alamos-apager.md](30010-alamos-apager.md))
@@ -454,6 +470,8 @@ Online-Status prüfen und den PC wieder herunterfahren: siehe
 | Kiosk startet nicht / schwarzer Bildschirm | `systemctl status getty@tty1` auf dem Pi, Autologin aktiv? Läuft `startx`? |
 | Fallback schaltet nicht um | `journalctl -t banana-pi-kiosk` auf dem Pi (Supervisor loggt Moduswechsel) |
 | Fallback zeigt AMweb-Login statt Alarmmonitor | Chromium-Session abgelaufen — einmaligen manuellen Login wiederholen (siehe oben) |
+| Dashboard zeigt "Letzter Browser-Start" vor > 10 h | Normal: `/start` kommt nur bei Chromium-Start (siehe Hinweis im Abschnitt Zammad-Ticket). Lebenszeichen prüfen: Panel "Letztes Lebenszeichen (Heartbeat)" bzw. `alamos_apager_last_heartbeat_timestamp_seconds` |
+| Alert `BananaPiAlarmmonitorDown` feuert, obwohl der Pi läuft (Ausfall 18.–19.09.2026, ~37 h) | Pfad Pi → Cluster prüfen, nicht den Pi selbst: `journalctl -u tailscaled` auf dem Homeserver nach `Drop: TCP{100.123.214.4 …} no rules matched` (Tailscale-ACL/Subnetz-Route für `192.168.178.0/24`). Metriken werden vom vmagent nachgeliefert, der Verlauf sieht danach lückenlos aus, der Alarm feuerte aber in Echtzeit |
 | Kein Zammad-Ticket trotz 10+ Minuten Ausfall | `kubectl -n monitoring get vmrule banana-pi-availability` (Alert "firing"?), Alertmanager-Route korrekt? n8n-Workflow aktiv? |
 | Ticket erstellt, aber keine Mail | Zammad-Agent-Mitgliedschaft/Benachrichtigung prüfen (siehe oben), ausgehender E-Mail-Kanal in Zammad konfiguriert? |
 | n8n-Workflow schlägt am Zammad-Node fehl | Header-Auth-Credential zugewiesen? Token gültig/`ticket.agent`-Berechtigung? |

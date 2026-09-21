@@ -1,0 +1,10 @@
+---
+# Kill-switch: auf false setzen (z.B. in host_vars) um den SMART-Exporter auf
+# einem bestimmten Host zu deaktivieren, ohne die Rolle aus dem Playbook zu
+# entfernen (gleiches Prinzip wie node_exporter_enabled).
+smartctl_exporter_enabled: true
+
+# Port des Ubuntu-Pakets prometheus-smartctl-exporter (Default des Exporters,
+# hier nur zur Dokumentation — wird vom Cluster per VMStaticScrape abgefragt,
+# siehe argocd/apps/tech/monitoring/templates/vmstaticscrape-smartctl.yaml).
+smartctl_exporter_port: 9633
