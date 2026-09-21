@@ -192,7 +192,11 @@ jobs:
           git add -- "$VALUES"
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -q -m "chore($APP): image.tag auf $TAG ($change)"
-          git push -q --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$branch"
+          # actions/checkout haengt den GITHUB_TOKEN (nur contents: read) als extraheader an und der
+          # hat Vorrang vor den Zugangsdaten in der URL -> 403 "denied to github-actions[bot]".
+          # Den Header fuer diesen Push leeren, damit das PAT aus der URL greift.
+          git -c "http.https://github.com/.extraheader=" push -q --force \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$branch"
           if [ -z "$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')" ]; then
             gh label create image-bump --color 5319e7 --description "Neuer Image-Tag nach Build" 2>/dev/null || true
             gh pr create --base main --head "$branch" --label image-bump \
