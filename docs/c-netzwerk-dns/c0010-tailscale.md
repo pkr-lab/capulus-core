@@ -339,7 +339,7 @@ Auth-Keys werden dann mit den passenden Tags erstellt (`tag:homeserver` für den
 
 ## Troubleshooting
 
-Detaillierte Schritte in [../a-betriebssystem/a0040-troubleshooting.md](../a-betriebssystem/a0040-troubleshooting.md#tailscale-not-connecting).
+Detaillierte Schritte in [../a-betriebssystem/a0040-troubleshooting.md](../a-betriebssystem/a0040-troubleshooting.md#tailscale-verbindet-nicht).
 
 Schnell-Checks:
 

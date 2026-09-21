@@ -253,7 +253,7 @@ done
 
 **Validieren:** `https://whoami.homeserver` und `https://tinyteller.homeserver`
 im Browser laden (Traefik-Zugriff über kube-system funktioniert noch?),
-Grafana-Dashboard "Home Server Auslastung" prüfen, ob für beide Namespaces
+die App-Dashboards in Grafana prüfen, ob für beide Namespaces
 weiterhin Metriken reinkommen (monitoring-Zugriff funktioniert noch?).
 
 **5. Rollback-Kommando** falls Schritt 4 etwas kaputt macht:

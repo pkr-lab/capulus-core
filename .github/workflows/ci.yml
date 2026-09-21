@@ -186,6 +186,20 @@ jobs:
           done
           exit $fail
 
+  docs-links:
+    name: docs links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      # Relative Links und Ueberschriften-Anker in allen *.md (Slug-Regeln wie auf GitHub).
+      # Anlass: nach dem Layout-Umzug (platform/workloads -> tech) und dem Entfernen
+      # einzelner Docs zeigten 26 Links ins Leere.
+      - name: Check relative links and anchors in Markdown
+        run: python3 scripts/check-doc-links.py
+
   secret-scan:
     name: gitleaks
     runs-on: ubuntu-latest

@@ -4,6 +4,7 @@
     "config:recommended",
     ":dependencyDashboard"
   ],
+  "baseBranches": ["main", "entw"],
   "timezone": "Europe/Berlin",
   "schedule": ["before 6am on monday"],
   "labels": ["dependencies"],
@@ -36,6 +37,39 @@
       "description": "Security patch releases land immediately, not on the weekly schedule.",
       "matchUpdateTypes": ["patch"],
       "schedule": ["at any time"]
+    },
+    {
+      "description": "ENTW zuerst (docs/f-cicd-automatisierung/f00b0-promotion-chain.md): auf dem Branch `entw` aktualisiert Renovate ausschliesslich argocd/apps/entw/, von dort uebernimmt die Promotion-Kette die Versionen nach TECH/PROD. Eine spaetere Regel schlaegt die vorige.",
+      "matchBaseBranches": ["entw"],
+      "enabled": false
+    },
+    {
+      "description": "Auf `entw` bleibt der ENTW-Ordner aktiv.",
+      "matchBaseBranches": ["entw"],
+      "matchFileNames": ["argocd/apps/entw/**"],
+      "enabled": true
+    },
+    {
+      "description": "Der ENTW-Ordner auf main wird nicht aktualisiert: ENTW liest den Branch `entw`, ein PR auf main waere wirkungslos.",
+      "matchBaseBranches": ["main"],
+      "matchFileNames": ["argocd/apps/entw/**"],
+      "enabled": false
+    },
+    {
+      "description": "Dieselbe App in TECH und PROD: ein gemeinsamer PR statt zweier getrennter (kein Versions-Drift zwischen den Clustern).",
+      "matchBaseBranches": ["main"],
+      "matchFileNames": ["argocd/apps/*/cert-manager/**"],
+      "groupName": "argocd/apps/cert-manager"
+    },
+    {
+      "matchBaseBranches": ["main"],
+      "matchFileNames": ["argocd/apps/*/sealed-secrets/**"],
+      "groupName": "argocd/apps/sealed-secrets"
+    },
+    {
+      "matchBaseBranches": ["main"],
+      "matchFileNames": ["argocd/apps/*/cloudflared/**"],
+      "groupName": "argocd/apps/cloudflared"
     },
     {
       "description": "Nextcloud app image paused: all_squash on the NFS 'nas' StorageClass breaks the container's chown-based upgrade rsync on every version mismatch between image and PVC (CrashLoopBackOff, see argocd/apps/prod/nextcloud/values.yaml and docs/3-apps-workloads/300b0-nextcloud.md#datenbank-major-upgrade-postgres-16--18). Re-enable once a safe upgrade path (e.g. S3/MinIO as primary storage) exists.",

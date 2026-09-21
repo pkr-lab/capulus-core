@@ -212,7 +212,8 @@ capulus-core/
 │   │   ├── f0070-ci-lint.md                 # CI-Pflicht-Gate: lint, kubeconform, Go, gitleaks
 │   │   ├── f0080-entw-promotion.md          # Automatischer PR entw → main nach grüner CI
 │   │   ├── f0090-branch-schutz-main.md      # Ruleset: main nur per PR + grüne Checks
-│   │   └── f00a0-tailscale-runner-poc.md    # PoC: GitHub-Runner erreicht ArgoCD über Tailscale
+│   │   ├── f00a0-tailscale-runner-poc.md    # Diagnose: GitHub-Runner erreicht ArgoCD und ENTW über Tailscale
+│   │   └── f00b0-promotion-chain.md         # Promotion-Kette ENTW → TECH → PROD mit Gesundheits-Gate
 │   ├── 1-benachrichtigungen/         # Benachrichtigungen
 │   │   ├── 10000-gotify.md                  # Push-Notifications via Gotify
 │   │   └── 10010-ntfy.md                    # iOS Push-Notifications via ntfy
@@ -221,7 +222,9 @@ capulus-core/
 │   │   ├── 20010-nas-backup.md              # Externe USB-Platte am NAS: regelmäßige Backups
 │   │   ├── 20020-cluster-power-manager.md   # Worker per Wake-on-LAN je nach Homeserver-Last dazuschalten
 │   │   ├── 20030-nightly-worker-update.md   # Nachts 01:00 Uhr: Worker per WoL wecken, apt-Update, wieder abschalten
-│   │   └── 20040-printer.md                 # Samsung Xpress M2026 per CUPS im Heimnetz freigeben
+│   │   ├── 20040-printer.md                 # Samsung Xpress M2026 per CUPS im Heimnetz freigeben
+│   │   ├── 20050-gitops-und-backup-alerts.md # Alerts: ArgoCD-Apps (Degraded/OutOfSync/hängender Sync) und veraltete Backups
+│   │   └── 20060-hardware-monitoring.md     # Grafana-Ordner "Hardware": Waben-Übersicht, Server-Detail, Speicher & S.M.A.R.T., inkl. VMs
 │   ├── 3-apps-workloads/             # Apps & Workloads
 │   │   ├── 30000-zammad.md                  # Zammad Helpdesk/Ticket-System
 │   │   ├── 30010-alamos-apager.md           # Alarmmonitor-Kiosk-Verwaltung (ALAMOS AMweb)
@@ -250,7 +253,9 @@ capulus-core/
 │   └── workflows/
 │       ├── ci.yml                    # Pflicht-Gate auf PRs: lint, kubeconform, Go, gitleaks (siehe docs/f-cicd-automatisierung/f0070-ci-lint.md)
 │       ├── build-images.yml          # Workload-Images bauen (auf PRs ohne Push, siehe f0060-build-images.md)
-│       ├── promote-entw.yml          # Cron: entw nach grüner CI als PR an main (siehe f0080-entw-promotion.md)
+│       ├── promote-entw.yml          # entw nach grüner CI als PR an main (siehe f0080-entw-promotion.md)
+│       ├── entw-trigger.yml          # Push auf entw startet promote-entw.yml sofort
+│       ├── promote-chain.yml         # Versionen ENTW → TECH → PROD nach Gesundheits-Gate (siehe f00b0-promotion-chain.md)
 │       ├── release.yml               # semantic-release bei jedem Push auf main
 │       ├── renovate.yml              # Self-hosted Renovate als Fallback (siehe f0020-renovate.md)
 │       ├── tailscale-poc.yml         # Manueller PoC: Runner im Tailnet (siehe f00a0-tailscale-runner-poc.md)
@@ -346,7 +351,7 @@ Ein schlanker VictoriaMetrics-+-Grafana-Stack lebt unter `argocd/apps/tech/monit
 | **Host-Metriken** | `prometheus-node-exporter` als DaemonSet auf dem Ubuntu-Host |
 | **Cluster-Metriken** | kubelet/cAdvisor, kube-apiserver, kube-state-metrics, CoreDNS |
 | **Alerts** | Default-kube-prometheus-Rules; Gotify- und ntfy-Alertmanager-Bridges |
-| **Dashboards** | Node Exporter Full, VictoriaMetrics + Kubernetes Views von grafana.com |
+| **Dashboards** | Ordner *Hardware* (Übersicht mit Waben, Server-Detail, Speicher & S.M.A.R.T.), Node Exporter Full, VictoriaMetrics + Kubernetes Views |
 
 </details>
 
@@ -536,7 +541,8 @@ und Konventionen für neue Docs: **[docs/TEMPLATE.md](docs/TEMPLATE.md)**.
 | [CI-Pflicht-Gate](docs/f-cicd-automatisierung/f0070-ci-lint.md) | `make lint`, kubeconform (Charts, Manifeste, Bootstrap), Go-Check und gitleaks auf jedem PR |
 | [ENTW → main Promotion](docs/f-cicd-automatisierung/f0080-entw-promotion.md) | Cron-Workflow: neue `entw`-Commits nach grüner CI als PR an `main`, Tag `entw-promoted` |
 | [Branch-Schutz `main`](docs/f-cicd-automatisierung/f0090-branch-schutz-main.md) | Ruleset: `main` nur per Pull Request, vier CI-Jobs als Pflicht-Checks, Admin-Notausgang |
-| [Tailscale-Runner-PoC](docs/f-cicd-automatisierung/f00a0-tailscale-runner-poc.md) | Machbarkeitsnachweis: GitHub-Runner erreicht das interne ArgoCD über Tailscale |
+| [Tailscale-Runner-PoC](docs/f-cicd-automatisierung/f00a0-tailscale-runner-poc.md) | Diagnose: GitHub-Runner erreicht Hub- und ENTW-ArgoCD über Tailscale |
+| [Promotion-Kette](docs/f-cicd-automatisierung/f00b0-promotion-chain.md) | Versionen ENTW → TECH → PROD als PRs nach bestandenem Gesundheits-Gate (24 h ENTW, 2 h TECH), Smoke-Checks |
 
 ### Benachrichtigungen (`1-benachrichtigungen/`)
 
@@ -554,6 +560,8 @@ und Konventionen für neue Docs: **[docs/TEMPLATE.md](docs/TEMPLATE.md)**.
 | [Cluster Power Manager](docs/2-betrieb-hardware/20020-cluster-power-manager.md) | worker-0/worker-1 per Wake-on-LAN je nach Homeserver-Last automatisch dazu- und wieder abschalten |
 | [Nightly Worker Update](docs/2-betrieb-hardware/20030-nightly-worker-update.md) | worker-0/worker-1 nachts um 01:00 Uhr per Wake-on-LAN wecken, apt-Update fahren (max. 20 Min.), wieder herunterfahren |
 | [Drucker (CUPS)](docs/2-betrieb-hardware/20040-printer.md) | Samsung Xpress M2026 per USB am Homeserver, Freigabe im Heimnetz + Tailnet via IPP/AirPrint |
+| [GitOps- und Backup-Alerts](docs/2-betrieb-hardware/20050-gitops-und-backup-alerts.md) | Alerts auf ArgoCD-Gesundheit (Degraded, OutOfSync, hängender Sync) und auf CronJobs/Backups ohne Erfolg der letzten 30–36 h |
+| [Hardware-Monitoring](docs/2-betrieb-hardware/20060-hardware-monitoring.md) | Grafana-Ordner "Hardware": Waben-Übersicht aller Server/VMs/NAS, Server-Detail (CPU, RAM, Netzwerk, Disk, Temp), Füllstand + S.M.A.R.T. |
 
 ### Apps & Workloads (`3-apps-workloads/`)
 

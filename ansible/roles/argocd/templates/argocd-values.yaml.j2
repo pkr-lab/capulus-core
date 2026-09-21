@@ -10,6 +10,10 @@ server:
 
 configs:
   cm:
+{% if argocd_ci_account_enabled | bool %}
+    # Konto fuer die Promotion-Kette (GitHub Actions): nur API-Token, kein Passwort-Login.
+    accounts.ci: apiKey
+{% endif %}
     # Eigene DaemonSet-Gesundheitspruefung (siehe Kommentar im Skript): node-exporter ausgenommen.
     resource.customizations.health.apps_DaemonSet: |
       local hs = {}
@@ -51,6 +55,12 @@ configs:
       hs.status = "Healthy"
       hs.message = tostring(obj.status.numberAvailable or 0) .. " of " .. tostring(desired) .. " updated pods are available"
       return hs
+{% if argocd_ci_account_enabled | bool %}
+  rbac:
+    # Das Konto `ci` darf Applications nur lesen (eingebaute Rolle role:readonly).
+    policy.csv: |
+      g, ci, role:readonly
+{% endif %}
   params:
     server.insecure: "{{ argocd_server_insecure | lower }}"
 
