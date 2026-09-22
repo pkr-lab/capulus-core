@@ -36,12 +36,13 @@ die es bei den Raspberry Pis bewusst nicht gibt:
 3. [Ersteinrichtung (manuell)](#ersteinrichtung-manuell)
 4. [Ansible-Provisionierung](#ansible-provisionierung)
 5. [Server-Fallback](#server-fallback)
-6. [Periodischer Seiten-Neustart](#periodischer-seiten-neustart)
-7. [Grafana (Push statt Pull)](#grafana-push-statt-pull)
-8. [Zammad-Ticket via n8n](#zammad-ticket-via-n8n)
-9. [Sichtprüfung ohne physischen Zugriff](#sichtprüfung-ohne-physischen-zugriff)
-10. [Wake-on-LAN für den Windows-PC](#wake-on-lan-für-den-windows-pc)
-11. [Fehlerbehebung](#fehlerbehebung)
+6. [Täglicher Neustart (03:00, gewollt)](#täglicher-neustart-0300-gewollt)
+7. [Periodischer Seiten-Neustart](#periodischer-seiten-neustart)
+8. [Grafana (Push statt Pull)](#grafana-push-statt-pull)
+9. [Zammad-Ticket via n8n](#zammad-ticket-via-n8n)
+10. [Sichtprüfung ohne physischen Zugriff](#sichtprüfung-ohne-physischen-zugriff)
+11. [Wake-on-LAN für den Windows-PC](#wake-on-lan-für-den-windows-pc)
+12. [Fehlerbehebung](#fehlerbehebung)
 
 ---
 
@@ -143,7 +144,7 @@ Rollen, in dieser Reihenfolge (siehe `ansible/banana-pi-kiosks.yml`):
 | `tailscale` | Netzwerk-Anbindung (siehe oben) — läuft zuerst, alles Weitere braucht ggf. schon `*.homeserver` |
 | `node_exporter` | Metriken-Quelle (Port 9100, nur lokal) |
 | `vmagent` | Pusht die Metriken aktiv an den Cluster (siehe [Grafana](#grafana-push-statt-pull)) |
-| `banana_pi_kiosk` | X11-Autologin, Chromium-Kiosk, Server-Fallback-Supervisor, Heartbeat, täglicher Kiosk-Session-Neustart um 00:00 Uhr (kein Kernel-Reboot, siehe Kommentar in `banana-pi-daily-reboot.service.j2` — Warm-Reset auf diesem Board unzuverlässig) |
+| `banana_pi_kiosk` | X11-Autologin, Chromium-Kiosk, Server-Fallback-Supervisor, Heartbeat, optionaler Kiosk-Session-Neustart-Timer (Default aus, `banana_pi_kiosk_daily_reboot_enabled: false`). Der **gewollte tägliche Kernel-Reboot um 03:00** läuft NICHT über Ansible, sondern über einen manuellen Root-Cron, siehe [Täglicher Neustart](#täglicher-neustart-0300-gewollt) |
 | `thermal_watchdog` | Selbstschutz bei Übertemperatur (gleiches Bundling wie bei den Alamos-Pis) |
 | `resource_watchdog` | Selbstschutz bei CPU/RAM-Sättigung |
 
@@ -197,6 +198,36 @@ Der bestehende Heartbeat-Timer (→ ntfy-Ausfall-Alarm in
 davon weiter — er braucht denselben `*.homeserver`-Pfad wie der Kiosk
 selbst, ist also von derselben Split-DNS/Route-Voraussetzung abhängig.
 
+## Täglicher Neustart (03:00, gewollt)
+
+Der Pi startet sich **einmal täglich um 03:00 Uhr komplett neu** (Kernel-Reboot).
+Das ist **gewollt und wichtig** (Entscheidung des Betreibers, 2026-09-20) und
+**bleibt bestehen**. Umgesetzt ist es durch einen **manuell angelegten
+Root-Cron** auf dem Pi — nicht durch Ansible:
+
+```
+sudo crontab -l     # -> 0 3 * * * /sbin/shutdown -r now   (crontab von root, angelegt 2026-03-24)
+```
+
+- **Nicht in Ansible verwaltet:** Weder die Rolle `banana_pi_kiosk` noch
+  `banana_pi_kiosk_daily_reboot_*` kennen diesen Job (die Variablen steuern nur
+  den optionalen Session-Neustart-Timer, Default aus). Ein `make banana-pi-kiosks`
+  lässt ihn unangetastet. Bei einer **Neuinstallation** des Pi geht er verloren
+  und muss von Hand neu gesetzt werden (`sudo crontab -e`).
+- **Folgen:** Um 03:00–03:01 ist der Pi kurz offline (der Alert
+  `BananaPiAlarmmonitorDown` hat `for: 10m`, feuert dabei nicht); Chromium
+  startet neu und ruft dabei `/start` auf — deshalb wächst der Wert
+  "Letzter Browser-Start" im Dashboard im Normalbetrieb bis auf ~24 h (siehe
+  Hinweis im Abschnitt Zammad-Ticket). Das lokale journald reicht wegen des
+  Reboots und des 20-MB-Limits nur ~3,5 Tage zurück; zentral in
+  [VictoriaLogs](300j0-logging.md) (14 Tage).
+- **Risiko:** Der Warm-Reset auf diesem Board war einmal unzuverlässig (Pi kam
+  nach einem echten Reboot nicht zurück, nur ein physischer Stromzyklus half,
+  siehe Kommentar in `banana-pi-daily-reboot.service.j2`). Kommt der Pi um 03:00
+  nicht zurück, feuert nach 10 Minuten `BananaPiAlarmmonitorDown` (Zammad-Ticket).
+- **Prüfen:** In Grafana `node_boot_time_seconds{instance="vereinsheim-alarmmonitor"}`
+  (Sprung um ~03:00), oder auf dem Pi `journalctl --list-boots`.
+
 ## Periodischer Seiten-Neustart
 
 **Hintergrund:** Am 2026-09-12 wurde ein echter Einsatzalarm auf diesem
@@ -212,9 +243,9 @@ neue Alarme sollen live innerhalb derselben, dauerhaft offenen
 Chromium-Session erscheinen, nicht über einen neuen Redirect.
 
 **Verbleibende Hypothese (nicht abschließend bestätigt):** Chromium bleibt
-bis zu 24h ununterbrochen offen (bisher nur täglicher
-`getty@tty1`-Neustart um 00:00, siehe
-[Ansible-Provisionierung](#ansible-provisionierung)). Bleibt die Seite
+bis zu 24h ununterbrochen offen (bisher nur der tägliche
+Neustart um 03:00, siehe
+[Täglicher Neustart](#täglicher-neustart-0300-gewollt)). Bleibt die Seite
 äußerlich normal sichtbar, während ihre eigene In-Page-Live-Aktualisierung
 (Websocket/Polling) lautlos hängen bleibt, greift **keiner** der
 bestehenden Sicherheitsmechanismen: `alamos-apager` selbst bleibt

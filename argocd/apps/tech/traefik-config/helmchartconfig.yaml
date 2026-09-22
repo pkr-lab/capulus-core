@@ -68,6 +68,10 @@ spec:
         expose:
           default: false
         protocol: TCP
+      websecure:
+        transport:
+          respondingTimeouts:
+            readTimeout: 900s
       web:
         http:
           redirections:

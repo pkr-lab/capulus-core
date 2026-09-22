@@ -155,6 +155,35 @@ Fehlerbehebung). Umgekehrt scheitert der Upload bis zum neuen Zertifikat
 an der Hostname-Prüfung (harmlos, der Dienst versucht es weiter).
 Nicht angebunden sind bewusst die PROD-VM und die ENTW-VM.
 
+**Backlog und die 60-s-Grenze (Vorfall Pi, 2026-09-20):** `systemd-journal-upload`
+schickt sein ganzes Backlog in **einer** HTTP-Anfrage und speichert den Cursor
+(`/var/lib/systemd/journal-upload/state`) erst, wenn diese Anfrage vollständig
+durch ist. Traefik 3 bricht jede Anfrage nach **60 s** Lesezeit ab (Standard,
+Antwort `504`) — ein Backlog, das länger braucht (neuer Host, oder ein Host nach
+längerem Ausfall; der Banana Pi schafft ~130 Zeilen/s), wird deshalb nie
+fertig: der Dienst startet neu, sendet wieder den Anfang, VictoriaLogs füllt
+sich mit Duplikaten (Symptom im Host-Journal:
+`Upload … failed: transfer closed with 15 bytes remaining to read`; State-Datei
+fehlt). Belegt: derselbe 70-s-Streaming-Upload läuft direkt gegen VictoriaLogs
+mit `200` durch, über Traefik endet er mit `504`. **Vorbeugung:**
+`argocd/apps/tech/traefik-config/helmchartconfig.yaml` setzt
+`ports.websecure.transport.respondingTimeouts.readTimeout: 900s` (deckt ein
+volles 20-MB-Journal auf dem Pi ab; gilt für den ganzen `websecure`-Entrypoint).
+Prüfen nach dem Sync (Traefik startet dabei neu):
+`kubectl -n kube-system get deploy traefik -o jsonpath='{.spec.template.spec.containers[0].args}' | tr ',' '\n' | grep readTimeout`.
+
+**Wenn die Schleife trotzdem auftritt:** (1) sofort
+`sudo systemctl stop systemd-journal-upload` auf dem Host (stoppt den
+Duplikat-Zufluss); (2) Zeitpunkt bestimmen, ab dem in VictoriaLogs etwas fehlt
+(`_HOSTNAME:"<host>" | stats max(_time)` in Grafana Explore); (3) auf dem Host
+nachladen und den Cursor setzen:
+`ssh <host> 'sudo bash -s -- "<UTC-Zeitpunkt>"' < scripts/journal-backfill.sh`
+(erst mit `DRY_RUN=1` zählen; das Skript lädt in Fenstern von 2 h, bricht bei
+jedem Nicht-200 ab, setzt den State mit dem richtigen Besitzer — sonst
+`Failed to read state file … Permission denied` — und startet den Dienst).
+Bereits entstandene Duplikate bleiben bis zum Ablauf der 14 Tage Retention;
+in Grafana ausblenden mit `| uniq by (_time, _msg)`.
+
 ## Logs in Grafana abfragen
 
 Grafana → Explore → Datasource "VictoriaLogs". LogsQL-Beispiele:
@@ -182,6 +211,7 @@ vorher bot.
 | `journalctl -u systemd-journal-upload`: `failed with code 308: Permanent Redirect` | Die Upload-URL steht noch auf `http://` — Rolle neu ausrollen (`journal_upload_push_url` ist `https://`). |
 | `journalctl -u systemd-journal-upload`: Zertifikatsfehler / `SSL certificate problem` | (a) steht `logs-write.tech.homeserver` in der SAN-Liste des ausgelieferten Zertifikats (Befehl siehe Abschnitt Rolle)? Sonst `certificate-homeserver-wildcard.yaml` prüfen und ArgoCD syncen. (b) liegt `/usr/local/share/ca-certificates/homeserver-root-ca.crt` auf dem Host und zeigt `TrustedCertificateFile=` in `/etc/systemd/journal-upload.conf` darauf? |
 | Worker: `Could not resolve host: logs-write.tech.homeserver` | `/etc/hosts`-Eintrag fehlt — Rolle ausrollen (`journal_upload_hosts_entry_enabled: true`). Die Worker lösen `*.homeserver` nicht per DNS auf. |
+| Zeilen in VictoriaLogs stark mehr als eindeutige (`count()` vs. `count_uniq(_time, _msg)`), `transfer closed with N bytes remaining` im Host-Journal, keine State-Datei | Upload-Schleife durch das 60-s-Limit, siehe „Backlog und die 60-s-Grenze“ oben — Dienst stoppen, `scripts/journal-backfill.sh` ausführen. |
 | Ausrollen auf einzelne Hosts | Homeserver: `ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --limit homeserver --tags journal-upload`; Pi: `ansible-playbook … ansible/banana-pi-kiosks.yml --tags journal-upload`; worker: `… worker-1.yml --tags journal-upload` (jeweils mit `--vault-password-file`). |
 | `logs-write.tech.homeserver` löst nicht auf / Timeout | Gleiche Checks wie bei `alamos-apager.homeserver` (Wildcard-DNS, bei Tailscale-only-Hosts zusätzlich Split-DNS + Subnetz-Route), siehe [docs/3-apps-workloads/30010-alamos-apager.md, Fehlerbehebung](30010-alamos-apager.md#fehlerbehebung) |
 | Dienst läuft, aber keine neuen Logs seit Neustart | `/var/lib/systemd/journal-upload/state` prüfen (Cursor) — bei sehr altem Cursor kann ein initialer Nachtrag laenger dauern, bis aktuelle Zeilen erscheinen |
