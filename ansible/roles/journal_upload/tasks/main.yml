@@ -93,14 +93,14 @@
       when:
         - not journal_upload_state_stat.stat.exists
         - journal_upload_start_cursor.stdout_lines | length > 0
-      register: journal_upload_state_seeded
-      notify: Restart systemd-journal-upload
+      notify:
+        - Start-Limit des Dienstes zuruecksetzen (nach Endlos-Fehlschlaegen)
+        - Restart systemd-journal-upload
 
-    - name: Start-Limit des Dienstes zuruecksetzen (nach Endlos-Fehlschlaegen)
-      ansible.builtin.command: systemctl reset-failed systemd-journal-upload.service
-      changed_when: false
-      failed_when: false
-      when: journal_upload_state_seeded is changed
+    # Sofort, damit reset-failed + Restart VOR "aktivieren und starten" laufen -
+    # ein noch im Start-Limit haengender Dienst liesse sich dort nicht starten.
+    - name: Handler sofort ausfuehren (Start-Limit zuruecksetzen, bevor der Dienst gestartet wird)
+      ansible.builtin.meta: flush_handlers
 
 - name: systemd-journal-upload aktivieren und starten
   ansible.builtin.systemd:
