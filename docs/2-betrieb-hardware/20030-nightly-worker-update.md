@@ -365,7 +365,7 @@ Prüfen:
 
 ```bash
 cat /etc/semaphore-secrets/admin_password   # noch aktuell?
-curl -i http://semaphore-api.tech.homeserver/api/ping
+curl -i https://semaphore-api.tech.homeserver/api/ping
 ```
 
 Meist rotiertes Admin-Passwort in der Semaphore-UI (siehe
@@ -451,7 +451,7 @@ im `EXIT`-Trap), und das Zammad-Ticket zeigt den Fehler. Task-Log prüfen:
 ```bash
 # Task-ID aus dem Ticket bzw. journalctl -u nightly-worker-wake
 curl -s -b <cookie-jar> \
-  http://semaphore-api.tech.homeserver/api/project/<id>/tasks/<task-id>/output \
+  https://semaphore-api.tech.homeserver/api/project/<id>/tasks/<task-id>/output \
   | jq -r '.[].output'
 ```
 
