@@ -10,16 +10,54 @@
   changed_when: false
   failed_when: false
 
-- name: Copy-on-Write-Disk fuer die VM anlegen (ueberspringt, falls Domain schon existiert)
+# EIGENSTAENDIGE Disk (kein Backing-File): eine Kopie des Basis-Images, danach
+# auf die gewuenschte Groesse vergroessert. Ein Overlay auf dem Basis-Image
+# wurde unbrauchbar, als das Basis-Image ausgetauscht wurde (Vorfall
+# 2026-09-23, docs/5-incidents/50010-prod-vm-basis-image-ersetzt.md).
+# Kostet nur den tatsaechlich belegten Platz (~3 GB), nicht die virtuelle Groesse.
+- name: Eigenstaendige Disk fuer die VM aus dem Basis-Image anlegen (ueberspringt, falls sie schon existiert)
   ansible.builtin.command: >
-    qemu-img create -f qcow2
-    -F qcow2
-    -b {{ libvirt_host_pool_dir }}/{{ libvirt_host_base_image_name }}
+    qemu-img convert -O qcow2
+    {{ libvirt_host_pool_dir }}/{{ libvirt_host_base_image_name }}
     {{ libvirt_host_pool_dir }}/{{ vm.name }}.qcow2
-    {{ vm.disk_gb }}G
   args:
     creates: "{{ libvirt_host_pool_dir }}/{{ vm.name }}.qcow2"
+  register: libvirt_host_vm_disk_created
   when: libvirt_host_vm_exists.rc != 0
+
+- name: Disk auf die konfigurierte Groesse vergroessern
+  ansible.builtin.command: >
+    qemu-img resize {{ libvirt_host_pool_dir }}/{{ vm.name }}.qcow2 {{ vm.disk_gb }}G
+  changed_when: true
+  when:
+    - libvirt_host_vm_exists.rc != 0
+    - libvirt_host_vm_disk_created is changed
+
+# Bestehende VMs (vor dieser Aenderung angelegt) haengen noch als Overlay am
+# Basis-Image. Ersetzt jemand die Basis-Datei von Hand, startet die VM nicht mehr.
+# Nur eine Warnung, kein Umbau: das Aufloesen braucht eine ausgeschaltete VM
+# (Runbook: docs/5-incidents/50010-prod-vm-basis-image-ersetzt.md).
+- name: Pruefen, ob die Disk einer bestehenden VM noch ein Backing-File hat
+  ansible.builtin.command: >
+    qemu-img info --force-share --output=json
+    {{ libvirt_host_pool_dir }}/{{ vm.name }}.qcow2
+  register: libvirt_host_vm_disk_info
+  changed_when: false
+  failed_when: false
+  when: libvirt_host_vm_exists.rc == 0
+
+- name: Warnen, wenn die Disk einer bestehenden VM am Basis-Image haengt
+  ansible.builtin.debug:
+    msg: >-
+      WARNUNG: Die Disk von {{ vm.name }} ist ein Overlay auf
+      {{ (libvirt_host_vm_disk_info.stdout | from_json)['full-backing-filename'] }}.
+      Wird diese Datei ersetzt oder geloescht, startet die VM nicht mehr. Disk bei
+      ausgeschalteter VM per `qemu-img convert` unabhaengig machen, siehe
+      docs/5-incidents/50010-prod-vm-basis-image-ersetzt.md.
+  when:
+    - libvirt_host_vm_exists.rc == 0
+    - libvirt_host_vm_disk_info.rc == 0
+    - "'full-backing-filename' in (libvirt_host_vm_disk_info.stdout | from_json)"
 
 - name: cloud-init user-data + meta-data + network-config rendern
   ansible.builtin.template:

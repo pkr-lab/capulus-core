@@ -6,3 +6,7 @@
     name: dnsmasq
     state: restarted
   failed_when: false # dnsmasq laeuft nicht auf jedem Host (z. B. worker-1) - dann harmlos
+
+- name: systemd nach libvirt-guests-Drop-in neu laden
+  ansible.builtin.systemd:
+    daemon_reload: true
