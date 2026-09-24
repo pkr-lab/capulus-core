@@ -145,7 +145,7 @@ unter Linux: `sudo wg-quick up ./homeserver-backup.conf`.
 sudo wg-quick up wg0        # oder Toggle in der App
 ping 10.99.99.1
 ssh ubuntu@10.99.99.1
-curl -k https://10.99.99.1:30443     # ArgoCD
+curl -s http://10.99.99.1:30080/api/version     # ArgoCD (Klartext, nur CLI/API)
 kubectl --server=https://10.99.99.1:6443 get nodes
 
 # Auf dem Server

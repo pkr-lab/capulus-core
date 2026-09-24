@@ -722,8 +722,9 @@ hier ist reversibel.
       `host_vars/worker-1/vars.yml`, bewusst separat von homeserver
       gegated). Disk geprüft (2026-09-18): Root-LV hatte nur 31 GiB frei,
       VG `ubuntu-vg-1` aber 58 GiB unbelegt — per `lvextend -r` auf 87 GiB
-      vergrößert (58 GiB frei), VM-Disk bleibt bei 20 GiB (Copy-on-Write,
-      bei Bedarf später vergrößerbar). `libvirt_host_enabled: true` +
+      vergrößert (58 GiB frei), VM-Disk bleibt bei 20 GiB (bei Bedarf später vergrößerbar; die Disk war damals ein
+      Overlay auf dem Basis-Image, seit 2026-09-24 legt die Rolle eigenständige Disks an, siehe
+      [docs/5-incidents/50010-prod-vm-basis-image-ersetzt.md](../5-incidents/50010-prod-vm-basis-image-ersetzt.md)). `libvirt_host_enabled: true` +
       `libvirt_host_configure_bridge: true` gesetzt. Bridge + `entw-vm`
       (192.168.178.100, 3 vCPU / 12 GiB / 20 GiB) laufen. **Stolperfalle
       (2026-09-19):** `libvirt_host_bridge_interface` /
