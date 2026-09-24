@@ -1,12 +1,26 @@
 global:
-  domain: argocd.{{ hostname }}
+  # Ist argocd_ui_host gesetzt, leitet das Chart daraus auch configs.cm.url ab (Links, SSO-Callbacks).
+  domain: {{ argocd_ui_host | default('argocd.' ~ hostname, true) }}
 
 server:
   insecure: {{ argocd_server_insecure | lower }}
   service:
     type: NodePort
+    # Beide NodePorts sprechen wegen server.insecure Klartext-HTTP (https://...:30443 wird zurueckgesetzt).
+    # 30080 dient CLI und CI; die Web-UI laeuft per HTTPS ueber den Ingress unten.
     nodePortHttp: 30080
     nodePortHttps: 30443
+{% if argocd_ingress_enabled | bool %}
+  # HTTPS-Ingress ueber Traefik (internes Wildcard-Zertifikat, Host steht in
+  # argocd/apps/tech/cert-manager/templates/certificate-homeserver-wildcard.yaml). Der Server
+  # laeuft insecure, TLS endet im Traefik - wie bei allen anderen Apps. Als Wert in der Rolle,
+  # damit der taegliche Semaphore-Lauf (helm upgrade) ihn nicht zurueckdreht.
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    hostname: {{ argocd_ui_host }}
+    tls: false
+{% endif %}
 
 configs:
   cm:
