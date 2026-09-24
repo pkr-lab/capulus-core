@@ -85,6 +85,51 @@
     state: started
   when: libvirt_host_enabled | bool
 
+# ---- Neustart des Hosts: VMs sauber herunterfahren und in der richtigen ----
+# ---- Reihenfolge wieder starten -----------------------------------------
+# Wirkt beim naechsten Shutdown/Boot; die laufenden VMs werden hier nicht angefasst.
+- name: libvirt-guests - Verhalten beim Host-Shutdown und -Boot festlegen
+  ansible.builtin.lineinfile:
+    path: /etc/default/libvirt-guests
+    regexp: "^#?{{ item.key }}="
+    line: "{{ item.key }}={{ item.value }}"
+    create: false
+  loop:
+    - { key: ON_BOOT, value: "{{ libvirt_host_guests_on_boot }}" }
+    - { key: ON_SHUTDOWN, value: "{{ libvirt_host_guests_on_shutdown }}" }
+    - { key: SHUTDOWN_TIMEOUT, value: "{{ libvirt_host_guests_shutdown_timeout }}" }
+  when: libvirt_host_enabled | bool
+
+# libvirt-guests startet die VMs, sobald das Netz steht. Die PROD-VM loest
+# *.homeserver und alle externen Namen ueber den dnsmasq des Hosts auf (host_vars:
+# dns = network_static_ip); ohne laufenden dnsmasq scheitern Image-Pulls und
+# Cluster-Verbindungen der VM. After=/Wants= ist auf Hosts ohne dnsmasq (worker-1)
+# wirkungslos. Beim Herunterfahren gilt die umgekehrte Reihenfolge: die VMs stoppen,
+# solange dnsmasq noch antwortet.
+- name: libvirt-guests - Start nach dnsmasq und Tailscale ordnen (systemd-Drop-in)
+  when: libvirt_host_enabled | bool
+  block:
+    - name: Drop-in-Verzeichnis anlegen
+      ansible.builtin.file:
+        path: /etc/systemd/system/libvirt-guests.service.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Drop-in schreiben
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/libvirt-guests.service.d/10-ordering.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          # Managed by Ansible (libvirt_host role).
+          [Unit]
+          After=dnsmasq.service tailscaled.service
+          Wants=dnsmasq.service
+      notify: systemd nach libvirt-guests-Drop-in neu laden
+
 # ---- Bridge-Netzwerk (HOHES RISIKO — siehe defaults/main.yml) --------
 # Standardmaessig deaktiviert (libvirt_host_configure_bridge: false).
 # Eigener Tag, damit dieser Task NIE versehentlich als Teil eines
@@ -220,12 +265,28 @@
     - "'already active' not in libvirt_host_pool_start.stderr"
   when: libvirt_host_enabled | bool
 
-- name: Basis-Cloud-Image herunterladen (einmalig, VMs nutzen es als Backing-File)
+# NUR herunterladen, wenn die Datei noch fehlt - niemals ersetzen. get_url
+# schickt bei vorhandenem dest ein If-Modified-Since und ueberschreibt die Datei,
+# sobald Canonical unter derselben URL ein neueres Build veroeffentlicht. Das
+# passierte bei jedem taeglichen Semaphore-Lauf (06:00) und hat die Basis der
+# VM-Disks ausgetauscht (Vorfall 2026-09-23, docs/5-incidents/50010-...).
+# Neue VMs kopieren das Image in eine eigene Disk (vm.yml), das Basis-Image
+# dient nur noch als Vorlage fuer NEUE VMs.
+- name: Pruefen, ob das Basis-Cloud-Image schon vorhanden ist
+  ansible.builtin.stat:
+    path: "{{ libvirt_host_pool_dir }}/{{ libvirt_host_base_image_name }}"
+  register: libvirt_host_base_image
+  when: libvirt_host_enabled | bool
+
+- name: Basis-Cloud-Image herunterladen (nur wenn es fehlt, bestehende Datei wird nie ersetzt)
   ansible.builtin.get_url:
     url: "{{ libvirt_host_base_image_url }}"
     dest: "{{ libvirt_host_pool_dir }}/{{ libvirt_host_base_image_name }}"
     mode: "0644"
-  when: libvirt_host_enabled | bool
+    force: false
+  when:
+    - libvirt_host_enabled | bool
+    - not libvirt_host_base_image.stat.exists
 
 # ---- Pro VM: Disk + Cloud-Init-Seed + Domain ---------------------------
 # "loop" auf einem "block" existiert in Ansible nicht - deshalb per

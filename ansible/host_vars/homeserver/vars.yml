@@ -40,3 +40,7 @@ libvirt_host_vms:
 
 # ---- ArgoCD-Hub: ein Projekt/ApplicationSet "tech" fuer alle TECH-Apps (argocd/apps/tech/) ----
 argocd_tech_layout: true
+# Web-UI per HTTPS ueber Traefik: https://argocd.tech.homeserver (statt https://...:30443, das wegen
+# server.insecure zurueckgesetzt wird). CLI/CI weiter per NodePort http://192.168.178.94:30080.
+argocd_ingress_enabled: true
+argocd_ui_host: argocd.tech.homeserver

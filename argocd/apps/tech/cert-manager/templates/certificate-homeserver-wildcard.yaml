@@ -41,6 +41,8 @@ spec:
     # fehl (Sweep 2026-09-24). Gleiches gilt fuer pacman.prod.homeserver unten.
     - alamos-relay.prod.homeserver
     - argo-workflows.tech.homeserver
+    # ArgoCD-Web-UI per HTTPS ueber Traefik (ansible/roles/argocd, argocd_ui_host).
+    - argocd.tech.homeserver
     # Authentik-Portal — ein einziger Hostname reicht (im Unterschied zum
     # historischen Authelia-Setup, das wegen einer statischen Cookie-Domain
     # pro Tier zwei Hostnamen brauchte, siehe
