@@ -56,11 +56,28 @@ libvirt_host_dns: "{{ network_dns | default(['1.1.1.1', '8.8.8.8']) }}"
 libvirt_host_pool_dir: /var/lib/libvirt/images
 
 # Basis-Cloud-Image (Ubuntu Server 26.04 LTS, "generischer" Cloud-Build
-# mit cloud-init vorinstalliert) - wird einmal heruntergeladen, jede VM
-# bekommt eine eigene Copy-on-Write-Disk darauf (qemu-img backing file),
-# spart Platz gegenüber einer vollen Kopie pro VM.
+# mit cloud-init vorinstalliert) - wird EINMALIG heruntergeladen und danach
+# nie mehr ersetzt (siehe Task "Basis-Cloud-Image ..." in tasks/main.yml).
+# Jede VM bekommt daraus eine EIGENSTAENDIGE Disk (qemu-img convert, kein
+# Backing-File): frueher war die VM-Disk ein Copy-on-Write-Overlay auf dieser
+# Datei. Der taegliche Semaphore-Lauf (06:00) hat die Datei bei jedem neuen
+# Canonical-Build ersetzt; beim naechsten VM-Start passte die Overlay-Disk
+# nicht mehr zur Basis, die prod-vm startete nicht mehr (Vorfall 2026-09-23,
+# docs/5-incidents/50010-prod-vm-basis-image-ersetzt.md).
 libvirt_host_base_image_url: "https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-amd64.img" # verifiziert 2026-09-18 (HTTP 200, ~863 MB) - "resolute" ist der Ubuntu-26.04-Codename, /releases/26.04/... leitet per 302 hierher um
 libvirt_host_base_image_name: "ubuntu-26.04-server-cloudimg-amd64.img"
+
+# ---- libvirt-guests: Verhalten der VMs beim Neustart des Hosts ----------
+# Ubuntu-Default ist ON_SHUTDOWN=suspend: der komplette Arbeitsspeicher der VM
+# (PROD-VM: 24 GiB) wird beim Herunterfahren auf die Platte geschrieben und
+# beim Boot wieder eingelesen. Das ist langsam, laeuft bei knappem Timeout in
+# einen harten Abbruch und stellt eine VM mit altem Speicherstand gegen
+# veraenderte Umgebung (NFS, DNS) wieder her. Stattdessen: ACPI-Shutdown, die
+# VM faehrt sauber herunter (k3s, Datenbanken) und bootet beim Host-Start neu.
+libvirt_host_guests_on_boot: start
+libvirt_host_guests_on_shutdown: shutdown
+# Sekunden, die libvirt-guests pro VM auf das Herunterfahren wartet.
+libvirt_host_guests_shutdown_timeout: 300
 
 # CHANGE: euer eigener SSH-Public-Key, den cloud-init in den
 # "ubuntu"-User jeder VM eintraegt - gleiches Prinzip wie bei den
