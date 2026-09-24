@@ -1,0 +1,8 @@
+---
+# Eigener Name (nicht "Restart dnsmasq"), damit er nicht mit dem Handler der
+# dnsmasq-Rolle kollidiert - Handler-Namen gelten play-weit.
+- name: System-dnsmasq nach Snippet-Entschaerfung neu starten
+  ansible.builtin.systemd:
+    name: dnsmasq
+    state: restarted
+  failed_when: false # dnsmasq laeuft nicht auf jedem Host (z. B. worker-1) - dann harmlos

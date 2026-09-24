@@ -70,14 +70,13 @@
           # Managed by Ansible (libvirt_host role): bewusst leer.
           # libvirt-daemon-config-network legt hier bei jedem Upgrade einen Symlink
           # mit "bind-interfaces" an - kollidiert mit "bind-dynamic" in /etc/dnsmasq.conf.
-      register: libvirt_host_dnsmasq_stub
+      notify: System-dnsmasq nach Snippet-Entschaerfung neu starten
 
-    - name: System-dnsmasq neu starten, falls der Snippet ihn zuvor zum Absturz gebracht haben koennte
-      ansible.builtin.systemd:
-        name: dnsmasq
-        state: restarted
-      when: libvirt_host_dnsmasq_stub.changed
-      failed_when: false # dnsmasq laeuft nicht auf jedem Host (z. B. worker-1) - dann harmlos
+    # Sofort statt am Play-Ende: war dnsmasq durch den Snippet abgestuerzt, ist
+    # das LAN-DNS weg, bis er neu startet - das soll nicht vom Erfolg der
+    # restlichen Tasks (VM-Setup, Bridge, ...) abhaengen.
+    - name: Handler sofort ausfuehren (System-dnsmasq moeglichst schnell wieder hochbringen)
+      ansible.builtin.meta: flush_handlers
 
 - name: libvirtd aktivieren und starten
   ansible.builtin.systemd:
