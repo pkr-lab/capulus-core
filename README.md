@@ -152,7 +152,7 @@ ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --ask-vault-pas
 **Ergebnis:**
 
 ```
-ArgoCD UI:  https://<server-ip>:30443
+ArgoCD UI:  https://argocd.tech.homeserver   (CLI/CI: http://<server-ip>:30080)
 Username:   admin
 Password:   <auto-generiert>
 ```
@@ -397,7 +397,7 @@ Apps mit echtem Nutzerkreis) — Details und Begründung:
 | Service | Tier | URL |
 |---|---|---|
 | Grafana | tech | https://grafana.tech.homeserver |
-| ArgoCD | – | https://\<server-ip\>:30443 |
+| ArgoCD | – | https://argocd.tech.homeserver |
 | Headlamp | tech | https://headlamp.tech.homeserver |
 | Semaphore | tech | https://semaphore.tech.homeserver |
 | Gotify | tech | https://gotify.tech.homeserver |
@@ -463,7 +463,7 @@ Apps mit echtem Nutzerkreis) — Details und Begründung:
 | 80 | TCP | LAN + Tailnet | Traefik HTTP |
 | 443 | TCP | LAN + Tailnet | Traefik HTTPS |
 | 6443 | TCP | LAN + Tailnet | k3s-API |
-| 30443 | TCP | LAN + Tailnet | ArgoCD-UI (HTTPS) |
+| 30080 | TCP | LAN + Tailnet | ArgoCD-API/CLI/CI (HTTP, Klartext; die UI läuft per HTTPS über Traefik) |
 | 41641 | UDP | Internet | Tailscale-WireGuard |
 
 </details>
