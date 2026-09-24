@@ -2,7 +2,14 @@
 # ============================================================
 # semaphore_bootstrap — defaults
 # ============================================================
-semaphore_api_base: "http://semaphore-api.tech.homeserver"
+# HTTPS ist Pflicht: der TECH-Traefik leitet HTTP global per 308 auf HTTPS um
+# (argocd/apps/tech/traefik-config/helmchartconfig.yaml). ansible.builtin.uri
+# folgt einem 308 bei POST nicht ("Status code was 308 and not [200, 204]" beim
+# Login); GETs wie /api/ping liefen dagegen still durch die Weiterleitung. Das
+# Zertifikat wird gegen die interne Root-CA im System-Vertrauensspeicher
+# geprueft (installiert von der journal_upload-Rolle), der Hostname steht in
+# der SAN-Liste von certificate-homeserver-wildcard.yaml.
+semaphore_api_base: "https://semaphore-api.tech.homeserver"
 
 semaphore_namespace: semaphore
 

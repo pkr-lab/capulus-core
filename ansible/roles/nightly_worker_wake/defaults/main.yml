@@ -25,7 +25,7 @@ nightly_worker_wake_kubeconfig: "{{ cluster_power_manager_kubeconfig }}"
 nightly_worker_wake_state_dir: "{{ cluster_power_manager_state_dir }}"
 
 # ---- Semaphore-API — MUSS zu ansible/roles/semaphore_bootstrap/defaults
-nightly_worker_wake_semaphore_api_base: "http://semaphore-api.tech.homeserver"
+nightly_worker_wake_semaphore_api_base: "https://semaphore-api.tech.homeserver"
 nightly_worker_wake_semaphore_admin_username: "admin"
 nightly_worker_wake_semaphore_admin_password_path: "/etc/semaphore-secrets/admin_password"
 
