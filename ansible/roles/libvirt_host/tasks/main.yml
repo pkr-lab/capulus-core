@@ -39,6 +39,13 @@
 # diesen System-weiten Snippet nicht - der Ausschluss von virbr0 passiert
 # bei "bind-dynamic" ohnehin implizit ueber die vorhandene
 # interface=/listen-address-Allowlist im System-dnsmasq.
+#
+# Nur Entfernen reicht NICHT: das postinst von libvirt-daemon-config-network
+# legt den Symlink bei jedem Paket-Upgrade neu an ("if [ ! -e ... ]"), auch
+# per unattended-upgrades. Live erneut aufgetreten am 2026-09-24 06:08
+# (Upgrade 12.0.0-1ubuntu5.3 -> .4, dnsmasq danach bis zum Reboot tot,
+# *.homeserver-DNS im LAN weg). Ein leerer Platzhalter als regulaere Datei
+# besteht den "-e"-Test und verhindert die Neuanlage.
 - name: Konfliktenden dnsmasq-Snippet von libvirt-daemon-system entschaerfen
   when: libvirt_host_enabled | bool
   block:
@@ -47,18 +54,29 @@
         path: /etc/dnsmasq.d/libvirt-daemon
       register: libvirt_host_dnsmasq_snippet
 
-    - name: Snippet entfernen, falls vorhanden
+    - name: Symlink auf das Paket-Original entfernen
       ansible.builtin.file:
         path: /etc/dnsmasq.d/libvirt-daemon
         state: absent
-      when: libvirt_host_dnsmasq_snippet.stat.exists
+      when: libvirt_host_dnsmasq_snippet.stat.islnk | default(false)
 
-    - name: System-dnsmasq neu starten, falls der Snippet ihn zuvor zum Absturz gebracht haben koennte
-      ansible.builtin.systemd:
-        name: dnsmasq
-        state: restarted
-      when: libvirt_host_dnsmasq_snippet.stat.exists
-      failed_when: false # dnsmasq laeuft nicht auf jedem Host (z. B. worker-1) - dann harmlos
+    - name: Leeren Platzhalter anlegen (blockt die Neuanlage des Symlinks durch Upgrades)
+      ansible.builtin.copy:
+        dest: /etc/dnsmasq.d/libvirt-daemon
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          # Managed by Ansible (libvirt_host role): bewusst leer.
+          # libvirt-daemon-config-network legt hier bei jedem Upgrade einen Symlink
+          # mit "bind-interfaces" an - kollidiert mit "bind-dynamic" in /etc/dnsmasq.conf.
+      notify: System-dnsmasq nach Snippet-Entschaerfung neu starten
+
+    # Sofort statt am Play-Ende: war dnsmasq durch den Snippet abgestuerzt, ist
+    # das LAN-DNS weg, bis er neu startet - das soll nicht vom Erfolg der
+    # restlichen Tasks (VM-Setup, Bridge, ...) abhaengen.
+    - name: Handler sofort ausfuehren (System-dnsmasq moeglichst schnell wieder hochbringen)
+      ansible.builtin.meta: flush_handlers
 
 - name: libvirtd aktivieren und starten
   ansible.builtin.systemd:
