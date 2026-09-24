@@ -1,6 +1,10 @@
 ---
 journal_upload_enabled: true
 
+# StateDirectory des Dienstes (DynamicUser => /var/lib/private/...). Hier liegt
+# die "state"-Datei mit dem letzten uebertragenen Journal-Cursor.
+journal_upload_state_dir: /var/lib/private/systemd/journal-upload
+
 # HTTPS ist Pflicht: der TECH-Traefik leitet HTTP global per 308 auf HTTPS um,
 # und systemd-journal-upload folgt keiner Weiterleitung ("Upload ... failed
 # with code 308: Permanent Redirect"). Mit der frueheren http://-URL kam

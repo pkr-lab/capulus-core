@@ -45,6 +45,63 @@
   when: journal_upload_enabled | bool
   notify: Restart systemd-journal-upload
 
+# Ohne State-Datei beginnt systemd-journal-upload am Journal-ANFANG und schickt
+# das komplette Backlog als einen einzigen Request. Auf dem homeserver (5 GB
+# Journal) brach das jedes Mal mit "Buffer space is too small to write entry" /
+# "operation aborted by callback" ab, bevor je ein Cursor gespeichert wurde -
+# Endlosschleife bis zum Start-Limit, kein Log kam an (Vorfall 2026-09-24).
+# Kleine Nachtraege ab einem aktuellen Cursor laufen dagegen sauber durch.
+# Deshalb: fehlt der State, den Startpunkt auf das Journal-Ende setzen.
+- name: Startpunkt fuer systemd-journal-upload setzen (kein Upload des Alt-Journals)
+  when: journal_upload_enabled | bool
+  block:
+    - name: State-Verzeichnis pruefen
+      ansible.builtin.stat:
+        path: "{{ journal_upload_state_dir }}"
+      register: journal_upload_state_dir_stat
+
+    - name: State-Datei pruefen
+      ansible.builtin.stat:
+        path: "{{ journal_upload_state_dir }}/state"
+      register: journal_upload_state_stat
+
+    - name: Aktuellen Journal-Cursor ermitteln
+      ansible.builtin.command: journalctl -q -n 1 --show-cursor
+      register: journal_upload_start_cursor
+      changed_when: false
+      check_mode: false # rein lesend
+      when: not journal_upload_state_stat.stat.exists
+
+    - name: State-Verzeichnis anlegen
+      ansible.builtin.file:
+        path: "{{ journal_upload_state_dir }}"
+        state: directory
+        mode: "0755"
+      when: not journal_upload_state_stat.stat.exists
+
+    # Besitzer = Besitzer des (dynamischen) Dienst-Users, sonst kann der Dienst
+    # die Datei nicht lesen ("Failed to read state file: Permission denied").
+    - name: State-Datei mit Startpunkt anlegen
+      ansible.builtin.copy:
+        dest: "{{ journal_upload_state_dir }}/state"
+        owner: "{{ journal_upload_state_dir_stat.stat.uid | default(0) }}"
+        group: "{{ journal_upload_state_dir_stat.stat.gid | default(0) }}"
+        mode: "0600"
+        content: |
+          # This is private data. Do not parse.
+          LAST_CURSOR={{ journal_upload_start_cursor.stdout_lines | last | regex_replace('^-- cursor: ', '') }}
+      when:
+        - not journal_upload_state_stat.stat.exists
+        - journal_upload_start_cursor.stdout_lines | length > 0
+      register: journal_upload_state_seeded
+      notify: Restart systemd-journal-upload
+
+    - name: Start-Limit des Dienstes zuruecksetzen (nach Endlos-Fehlschlaegen)
+      ansible.builtin.command: systemctl reset-failed systemd-journal-upload.service
+      changed_when: false
+      failed_when: false
+      when: journal_upload_state_seeded is changed
+
 - name: systemd-journal-upload aktivieren und starten
   ansible.builtin.systemd:
     name: systemd-journal-upload.service
