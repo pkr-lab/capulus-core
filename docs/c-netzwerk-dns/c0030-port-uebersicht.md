@@ -64,6 +64,7 @@ Node-IP von `homeserver`: `192.168.178.94`. Traefik-LoadBalancer-IP (MetalLB):
 | Tinyteller | prod | tinyteller | tinyteller-frontend:80 | tinyteller.prod.homeserver | — |
 | Argo Workflows | tech | argo-workflows | argo-workflows-server:2746 | argo-workflows.tech.homeserver | — |
 | Headlamp | tech | headlamp | headlamp:80 | headlamp.tech.homeserver | — |
+| ArgoCD (Web-UI) | tech | argocd | argocd-server:80 | argocd.tech.homeserver | — |
 | MinIO Console | tech | minio | minio-console:9001 | minio.tech.homeserver | — |
 | kubeseal-webgui | tech | kubeseal-webgui | kubeseal-webgui:8080 | kubeseal-webgui.tech.homeserver | — |
 | example-whoami | prod | example-whoami | example-whoami:80 | whoami.prod.homeserver | — |
@@ -92,7 +93,7 @@ alles unverändert an Traefik weiter (`argocd/apps/tech/cloudflared/values.yaml`
 | MediaMTX Publish (RTSP) | 8554 | NodePort `homeserver:31554` | s.o., nur LAN/Tailnet |
 | MediaMTX WebRTC | 8889 | Nur ClusterIP intern | Kein eigener Ingress-Host, wird intern vom HLS-Player-Frontend genutzt |
 | MediaMTX API | 9997 | Nur ClusterIP intern | Kein externer Zugriff |
-| ArgoCD | 443 | NodePort `homeserver:30443` (HTTPS) | Kein Ingress-Host, direkter NodePort-Zugriff. HTTP-NodePort (30080) bewusst nicht in UFW freigegeben |
+| ArgoCD (CLI/CI) | 30080 (HTTP) | NodePort `homeserver:30080` | **Klartext** (`server.insecure`), UFW nur für LAN, Tailnet und WireGuard-Notzugang. `https://…:30443` funktioniert nicht (Klartext-Port), keine UFW-Freigabe mehr. Die Web-UI läuft per HTTPS über Traefik: `argocd.tech.homeserver` |
 | Tailscale (SSH/Admin) | — | Tailnet-IP des Nodes | Siehe [docs/c-netzwerk-dns/c0010-tailscale.md](c0010-tailscale.md) |
 | WireGuard Backup-VPN | UDP, `wireguard_backup_port` (Default 51888) | Router-Portforward → Homeserver-LAN-IP | Notfall-Fallback falls Tailscale ausfällt, genau 1 Peer, kein LAN-Routing. Siehe [docs/c-netzwerk-dns/c0011-wireguard-backup.md](c0011-wireguard-backup.md) |
 
