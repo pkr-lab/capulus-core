@@ -1,12 +1,4 @@
 ---
-# ============================================================
-# cluster_power_manager_target/tasks/main.yml
-# Autorisiert den auf homeserver von cluster_power_manager erzeugten SSH
-# Public Key auf diesem Worker — beschränkt per forced-command auf
-# "sudo poweroff", damit dieser Key (anders als der Semaphore-Key) NICHTS
-# anderes ausführen kann, selbst wenn das private Schlüsselmaterial
-# jemals abfließen sollte.
-# ============================================================
 
 - name: Public Key des cluster-power-manager vom Homeserver lesen
   ansible.builtin.slurp:

@@ -1,10 +1,5 @@
 import Foundation
 
-/// Decodes Open-Meteo's `/v1/forecast` daily block — same fields Glance's
-/// "Wetter — Morgen" widget queries (see argocd/apps/glance/templates/
-/// configmap.yaml) plus max wind speed, requested once for both today
-/// (index 0) and tomorrow (index 1) instead of Glance's two separate
-/// widgets/requests.
 struct WeatherForecast: Decodable {
     let current: Current?
     let daily: Daily
@@ -64,8 +59,6 @@ struct DayForecast {
     let maxTemp: Double
     let precipitationProbability: Int
     let windSpeed: Double
-    /// Open-Meteo's local (no offset) "yyyy-MM-dd'T'HH:mm", already in
-    /// Europe/Berlin since that's the requested `timezone`.
     let sunrise: String
     let sunset: String
 
@@ -76,10 +69,6 @@ struct DayForecast {
 
     private static let isoLocalFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        // Fixed-format parsing needs a fixed locale — without this,
-        // DateFormatter falls back to the device's current locale/calendar
-        // (e.g. non-Gregorian regional calendar settings), `date(from:)`
-        // silently returns nil, and the whole sun-arc card disappears.
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd'T'HH:mm"
         formatter.timeZone = TimeZone(identifier: "Europe/Berlin")
@@ -88,8 +77,6 @@ struct DayForecast {
 }
 
 enum WeatherCode {
-    /// Same weathercode → German label mapping as Glance's
-    /// weatherTomorrowTemplate (argocd/apps/glance/templates/_helpers.tpl).
     static func condition(for code: Int) -> String {
         switch code {
         case 0: return "Klar"
@@ -104,8 +91,6 @@ enum WeatherCode {
         }
     }
 
-    /// SF Symbol matching the same grouping as `condition(for:)`, for the
-    /// more visual "Heute"-Karte.
     static func symbolName(for code: Int) -> String {
         switch code {
         case 0: return "sun.max.fill"

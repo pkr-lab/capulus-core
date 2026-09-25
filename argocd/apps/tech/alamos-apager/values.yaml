@@ -9,20 +9,12 @@ image:
 nameOverride: ""
 fullnameOverride: ""
 
-# ntfy connection — wohin der Ausfall-Alarm gepusht wird.
 ntfy:
   url: "http://ntfy.ntfy.svc.cluster.local"
   topic: "Alarmmonitor"
 
-# Name des SealedSecret mit den Standort→AMweb-URL-Paaren (ein Key pro
-# Standort). Wird NICHT von diesem Chart erzeugt — siehe
-# docs/3-apps-workloads/30010-alamos-apager.md für den kubeseal-Befehl, der ihn anlegt.
 stationsSecretName: alamos-apager-stations
 
-# Nach wie vielen Sekunden ohne Heartbeat ein Standort als "down" gilt.
-# Sollte deutlich über dem Heartbeat-Intervall des Pi-Timers liegen
-# (siehe ansible/roles/alamos_kiosk: alamos_kiosk_heartbeat_interval),
-# damit ein einzelner verpasster Ping noch keinen Fehlalarm auslöst.
 heartbeatTimeoutSeconds: 300
 
 service:

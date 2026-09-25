@@ -6,26 +6,6 @@ metadata:
   labels:
     {{- include "alamos-relay.labels" . | nindent 4 }}
 data:
-  # Öffentlich per Cloudflare-Tunnel erreichbar (siehe values.yaml,
-  # ingress.hosts) — n8n selbst bleibt dadurch weiterhin komplett
-  # unerreichbar aus dem Internet, siehe
-  # docs/3-apps-workloads/300i0-alamos-relay.md.
-  #
-  # Einziger Endpunkt: GET/POST /relay/<TOKEN> — TOKEN kommt aus dem
-  # SealedSecret (env RELAY_TOKEN), Pfad-Vergleich per hmac.compare_digest
-  # (konstante Laufzeit, kein Timing-Seitenkanal). Jede andere
-  # Pfad/Methode-Kombination bekommt exakt dieselbe 404-Antwort wie ein
-  # falsches Token — ein Angreifer kann so nicht unterscheiden, ob der Pfad
-  # oder das Token falsch war.
-  #
-  # Bei Treffer: Request 1:1 (Methode, Query-String, Body, Content-Type)
-  # an N8N_TARGET_URL weitergereicht -- ein normaler Server-zu-Server-Call
-  # innerhalb des Clusters, kein Browser involviert (das war der vermutete
-  # Grund, warum der direkte Aufruf von AMweb aus nicht funktioniert hat --
-  # siehe docs/3-apps-workloads/300h0-alamos-einsatz-zammad.md, Abschnitt
-  # "Private Network Access"). n8ns Antwort (Status + Body) wird 1:1
-  # zurückgegeben, damit ALAMOS dieselbe Rückmeldung sieht wie bei einem
-  # direkten Aufruf.
   app.py: |
     #!/usr/bin/env python3
     import hmac

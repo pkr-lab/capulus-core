@@ -1,16 +1,3 @@
-# Uptime Kuma hinter ForwardAuth — Zugriff für "admins" ODER die
-# App-Gruppe "uptime-kuma-user" (in lldap anlegen, siehe
-# docs/d-sicherheit/d0072-lldap.md). Bis jemand explizit in
-# "uptime-kuma-user" aufgenommen wird, bleibt der Zugriff faktisch
-# admins-only (identisch zum letzten Authelia-Zustand vor der Ablösung) —
-# die Gruppe existiert aber bereits als Erweiterungspunkt, kein
-# Blueprint-Edit mehr nötig, um weitere Personen zuzulassen. TOTP wird
-# durch die Policy aus 01-admin-2fa-policy.yaml erzwungen, nicht hier
-# nochmal.
-#
-# Beispiel/Vorlage für weitere Apps — siehe
-# docs/d-sicherheit/d0074-authentik-iac-cookbook.md für das Vorgehen, um
-# eine neue App hinzuzufügen.
 version: 1
 metadata:
   name: app-uptime-kuma
@@ -51,5 +38,3 @@ entries:
       policy: !KeyOf uptime-kuma-access-policy
       order: 0
 
-  # Outpost-Registrierung NICHT hier — siehe
-  # blueprints/90-outpost-providers.yaml (zentrale Datei, Begründung dort).

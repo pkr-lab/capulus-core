@@ -1,8 +1,4 @@
 ---
-# ============================================================
-# journal_upload role — journald an VictoriaLogs pushen (alle
-# Ansible-Hosts, siehe docs/3-apps-workloads/300j0-logging.md)
-# ============================================================
 
 - name: systemd-journal-remote installieren (liefert systemd-journal-upload)
   ansible.builtin.apt:

@@ -1,37 +1,13 @@
 ---
-# ============================================================
-# Zammad — Wrapper-Chart values
-#
-# Secrets-Block (SealedSecret):
-#   Werte mit kubeseal versiegeln und hier eintragen.
-#   Anleitung: docs/3-apps-workloads/30000-zammad.md → Abschnitt "Schritt 1 — Secrets versiegeln"
-# ============================================================
 
 secrets:
   enabled: true
   name: zammad-secrets
-  # Versiegelte Ciphertext-Werte — NIEMALS Klartext committen!
-  # Versiegeln: echo -n 'WERT' | kubeseal --raw --namespace zammad \
-  #             --name zammad-secrets --controller-namespace sealed-secrets \
-  #             --controller-name sealed-secrets-controller
-  #
-  # Beide Keys müssen dasselbe Passwort enthalten:
-  #   postgresql-pass      → Key für den Zammad-App-Container
-  #   postgresql-password  → Key für den Bitnami-PostgreSQL-Sub-Chart
   encryptedPostgresPass: "AgC3wyHBZ7SZvjsOZWAX4jslBec4RrFtcGTjEzMTXuW2tWVqf4Mtl72yZjfi120Rk2lV4ncRFBn4t+tsOYzsh5svLH4xPHddTNSzH7S+3Kwr9wCtnxCKiEpdeIRB9BVjqnz5Z0OmEhAaqHtCC9ZjIcJrKKGgFmc46gw4icVcbm3zINI1ofc5MpdpARYdKXmEUdwjC254LqWonXvcFfjXjloZljGWTaSp+uCOwlf9z+ACCgljLeC78IWhKOR8Jb/ydfzSRD5vSZLGtquz9lnEeRbd/dpwyNVYlv4IWzQeOAvXrg8aGCtAd73ltr7gqorGdn3RTgb959/KRigE0hXehCLvJT/7xn5KXWTQMiulM1s5Vtj/3Yk7SW33FOqvsBeSO4+3PcK/yBZgpys5zad1b07O3KcmcZ+IOOZ6rn1SNOWB7D/dgFUMv6zf/JfX3ko80ra483z/2t82ll2uNc6waN2zi8Dtgc21pe61VRWRZbeo0BQQoLhdysvKeIj84uWHp0vwVz3PwHYSt4vNfNS586zbu2sldcHHTYbArp9VG+rKHcHyZKrgryswA/jrJ22lSMo7SS13GvHIc2+NG30/Id4HbkgIWRFhj2QBXgYXzrgpslgV7qS7f9QlmMicoeFjLBwP1czlb4Z1t72fAnecsXImBbQVUFb0QYTVj6+8D9lCL4/SmEJnUanaA2XtKM4fWe43cL/MbOcRXjHoP/EGxEyPB9jy2scllXnw1fl8cBq5tg=="
   encryptedPostgresPassword: "AgAm6eHdm20h1r+R6A6O96qUCNpyJQnvaEOGCRXoEwb6saOFV28nDuodHAdZOBIXhfUkeXElpUArFjAAY0cMSRsQfq8igNj1PnaNDGXhzxeigjkLHk/1V1L4dHtLB6M9ljmtMiBzseZRaAZSW6K1vkaQAe/OZS2L2ZpX2rH73xFN9gRjTaPIfXaVop7ggizgaX2NAcnN8yaZ0Ew7ZoafE832AewbGasWKJ9k0UF4ztwGHFGYhMaP54wFaaM2vXa9vI6IiiSyg3mtV1ghNj7YPbz+cp2963WR/pp8ABFidmmiODAzlg0JuN7tqIo7MAyeNKzXy9i8k3qm8KPl0MKVZGzDo/dBVfwIVQqsyZnybRO210qjkIcaXOb+t2wIJBfqjLMhqXnmiK/jHc5cUbm/sTTyWHw2uwdUebvjdChzFelZvtYC+kHJkdimrET7yT5a5B7bZeaozV2gvfGVpPUXAHP/Qv0mZHoPq79DfwvY2i53TTlajWLX3I+AV0b8XB2cIPsN7pz9rfWgbzS7APv9JjtE+7K51d86hHdhAhZ6BCRvpjbr/ufOyuZpAIei6VgdKFMY87dxOfyrbyYu4q59tK687JVaYIV2B5xVYDEUpXujV7GMxjp3sb5k0O+oetj9VhdrUqjYsDjBIGlju+A+2yOwSDTSqQ+NuxErXwjdVNTnNt2s3nMDO6DqcbN3JY9acCXVfJ2AtHupA4E3uo0fmhnQ2O36PSTC2+l0X864w6Q6Hg=="
-  # redis-password → Key für Zammad-App-Container + CloudPirates-Redis-Sub-Chart (gemeinsames Passwort)
   encryptedRedisPassword: "AgDMea3b4MoAFfa0yf9MtmtY7uKFBZcIc7gdkj4/nTHKtFaePimlkRT7ExiwzQp6MD86Wd1EAtU9vYLkgRRcgiCXwOEbDM1JdqBno92da1FVceQ4/08POTbcZ4SPRIYJlu/1+kSAbOiekBgjEmnwk3Vp4DyGj4at75XRdYND6eTbt+MF9wg7XnC6EkjADsd7vukuyBhNpj0biKnbv+Uvn4SCxDyw3eifGzK/MMgKlQhdBr6iG73VSpl8pg9tWvZxD8K897x/8IC0sjwNFQyueIRf0b2GkEq4BFxzEJgbgzcZer0GdKNnHkkXCxpg8tOshioR16k/yy4H6jwYxGkn8XEBhJzNbbqobFkQFISmL+ptQMdZM3/X8WvsNMwqrRr4/mstwmTOjDgNwGSEFGMK5pJ6QKqqRTu1VmSaQdpiBvMff1vPkQXm1EFo5g+sG2kFyJYK3/hbMVm3psGPqlBSJ86/IfY+Kktwld5hE5sbZ4cAO68Rm1+7lDHgJllcqBPNbfEJbbA8XDZbisv+6mV43bkMvOYx1vMrOctylNQYRN9L4i0qEamA1ZRexpSvnxxX2YrEJPPK3aDA1xVXLfkKDwffs4xtRC7c/t5+Bo6OBYWfMjrDHamyFU4v0wD63yXyyEz1poBeCNfE8TNzrOKjUcH5WYUd/L/4E7eQG0qK3qXZ5U5m/yLKufNcMCsa3enfyaL7G/WUs0xuenr+c80MOLyC/oCJwe4OY2yAf20iOaeW1g=="
 
-# ============================================================
-# Sub-Chart: zammad/zammad v16.4.7
-# Alle Keys unterhalb von `zammad:` landen beim upstream-Chart.
-# Upstream values.yaml:
-#   https://github.com/zammad/zammad-helm/blob/main/zammad/values.yaml
-# ============================================================
-
 zammad:
-  # ---- Ingress -----------------------------------------------
   ingress:
     enabled: true
     className: traefik
@@ -43,89 +19,47 @@ zammad:
         paths:
           - path: /
             pathType: Prefix
-      # Externer Host — bewusst "support", nicht "zammad" (so lautet der
-      # öffentliche Hostname in cloudflared). Per Cloudflare-Tunnel-Wildcard
-      # an Traefik weitergereicht, siehe docs/c-netzwerk-dns/c0040-domain-tiers.md.
       - host: support-tech.pke-lab.de
         paths:
           - path: /
             pathType: Prefix
     tls: []
 
-  # ---- Secrets (aus bestehendem SealedSecret) ----------------
-  # Zammad liest das DB-Passwort aus `zammad-secrets[postgresql-pass]`.
   secrets:
     postgresql:
       useExisting: true
       secretKey: postgresql-pass
       secretName: zammad-secrets
-    # Redis-Passwort aus existierendem SealedSecret (zammad-secrets[redis-password]).
-    # Hinweis: Passwortloses Redis ist mit diesem Chart nicht nutzbar — REDIS_URL
-    # wird immer als "redis://:$(REDIS_PASSWORD)@..." gebaut; ohne definierte
-    # REDIS_PASSWORD-Var landet der wörtliche String "$(REDIS_PASSWORD)" im
-    # Passwort-Feld und Zammad sendet ein AUTH-Kommando an ein Redis ohne Auth.
     redis:
       useExisting: true
       secretKey: redis-password
       secretName: zammad-secrets
 
-  # ---- Zammad App + Sub-Chart Konfiguration ------------------
   zammadConfig:
-    # ---- Init-Job: fester statt zufälliger Name ---------------
-    # Chart-Default (randomName: true) haengt "-{{uuidv4}}" an den Job-Namen
-    # an -> bei JEDEM Helm-Render (also jedem ArgoCD-Sync, auch No-Op-Syncs)
-    # entsteht ein "neuer" Job, den ArgoCD anlegen will, waehrend der alte
-    # (mit anderem Namen) noch existiert bzw. gepruned wird -> Applikation
-    # zeigt dauerhaft "OutOfSync". Fester Name macht den Job fuer ArgoCD
-    # wieder ein normales, stabil vergleichbares Objekt; ttlSecondsAfterFinished
-    # (Chart-Default 300s) raeumt den abgeschlossenen Job vor dem naechsten
-    # echten Upgrade zuverlaessig weg.
     initJob:
       randomName: false
 
-    # ---- Elasticsearch deaktivieren (Ressourcenersparnis) ----
-    # Zammad 7.x nutzt PostgreSQL-basierte Volltextsuche als Fallback.
-    # Für Produktionseinsatz mit großem Ticketvolumen ES aktivieren.
     elasticsearch:
       enabled: false
-      # initialisation ist standardmäßig true, unabhängig von enabled — ohne
-      # diese Zeile versucht der zammad-init-Job trotzdem, ein (nicht
-      # vorhandenes) Elasticsearch zu initialisieren, und der Job schlägt fehl.
       initialisation: false
 
-    # ---- Memcached (aktiv — Standard-Cache) -----------------
     memcached:
       enabled: true
 
-    # ---- PostgreSQL (intern, Bitnami Sub-Chart) -------------
     postgresql:
       enabled: true
       db: zammad_production
       user: zammad
-      # pass leer lassen → kommt aus secrets.postgresql (useExisting: true)
       pass: ""
 
-    # ---- Redis (intern, CloudPirates OCI Sub-Chart) ---------
     redis:
       enabled: true
-      # pass leer lassen → kommt aus secrets.redis (useExisting: true)
       pass: ""
 
-    # ---- Datei-Ablage (deaktiviert → Dateien in DB) ---------
-    # Attachments werden in PostgreSQL gespeichert.
-    # Für separates PVC: storageVolume.enabled=true +
-    #   existingClaim (ReadWriteMany) — auf single-node k3s nicht Standard.
     storageVolume:
       enabled: false
 
-    # ---- Nginx (Web-Frontend) --------------------------------
     nginx:
-      # null (nicht weggelassen), damit `replicas: {{ .Values.zammadConfig.nginx.replicas }}`
-      # leer rendert → Kubernetes behandelt das Feld als nicht gesetzt und
-      # defaultet bei der Erstellung auf 1, rührt es danach aber nicht mehr an.
-      # Verhindert, dass ArgoCDs selfHeal templates/nginx-hpa.yaml bei jedem
-      # Sync bekämpft (ein festes `1` hier würde die Deployment sofort nach
-      # jedem HPA-Scale-Up wieder auf 1 zurücksetzen).
       replicas: null
       resources:
         requests:
@@ -134,14 +68,7 @@ zammad:
         limits:
           memory: 128Mi
 
-    # ---- Rails-App-Server -----------------------------------
     railsserver:
-      # null (nicht weggelassen), damit `replicas: {{ .Values.zammadConfig.railsserver.replicas }}`
-      # leer rendert → Kubernetes behandelt das Feld als nicht gesetzt und
-      # defaultet bei der Erstellung auf 1, rührt es danach aber nicht mehr an.
-      # Verhindert, dass ArgoCDs selfHeal templates/railsserver-hpa.yaml bei
-      # jedem Sync bekämpft (ein festes `1` hier würde die Deployment sofort
-      # nach jedem HPA-Scale-Up wieder auf 1 zurücksetzen).
       replicas: null
       resources:
         requests:
@@ -150,15 +77,7 @@ zammad:
         limits:
           memory: 1Gi
 
-    # ---- Scheduler (Background Jobs) ------------------------
     scheduler:
-      # Läuft (wie railsserver) die volle Rails-App dauerhaft; bei Backlog-
-      # Verarbeitung (z.B. viele SearchIndexJobs nach einem Neustart) reichten
-      # 512Mi nicht aus → OOMKilled. Limit an railsserver angeglichen (1Gi).
-      # Reichte ebenfalls nicht dauerhaft — Pod lief in einer OOM-Crash-Loop
-      # (529 Restarts in 18 Tagen), wodurch u.a. Mail-Jobs (z.B. Agent-
-      # Einladungsmails) mitten in der Verarbeitung verloren gingen. Weiter
-      # auf 1.5Gi angehoben.
       resources:
         requests:
           cpu: 50m
@@ -166,7 +85,6 @@ zammad:
         limits:
           memory: 1.5Gi
 
-    # ---- Websocket-Server -----------------------------------
     websocket:
       resources:
         requests:
@@ -175,7 +93,6 @@ zammad:
         limits:
           memory: 512Mi
 
-    # ---- Init-Container ------------------------------------
     initContainers:
       zammad:
         resources:
@@ -185,8 +102,6 @@ zammad:
           limits:
             memory: 512Mi
       postgresql:
-        # postgresql-init/-post führen die volle Rails-App aus (DB-Migrationen,
-        # Locale-Sync) — vergleichbare Last wie railsserver, daher gleiches Limit.
         resources:
           requests:
             cpu: 50m
@@ -194,27 +109,14 @@ zammad:
           limits:
             memory: 1Gi
 
-  # ---- PostgreSQL Sub-Chart (Bitnami) -----------------------
-  # War auf "nas" (NFS), bis das UGREEN-NAS all_squash statt no_root_squash
-  # erzwang und der Bitnami-Entrypoint (chmod auf das Datenverzeichnis)
-  # dauerhaft mit "Operation not permitted" scheiterte (docs/2-betrieb-hardware/20000-nas-storage.md).
-  # DB-Datenverzeichnis ist reiner State → lokaler Storage auf der
-  # Homeserver-SSD statt NAS.
   postgresql:
     enabled: true
     auth:
       username: zammad
       database: zammad_production
-      # Passwort aus existierendem SealedSecret
       existingSecret: zammad-secrets
       secretKeys:
         userPasswordKey: postgresql-password
-    # local-path legt das Volume-Verzeichnis als root:root (0777) an — fsGroup
-    # (siehe primary.podSecurityContext, Chart-Default) setzt nur die Gruppe,
-    # nicht den Owner. Ohne volumePermissions scheitert der interne
-    # chmod-Fixup des Postgres-Containers (non-root, UID 1001) daher genau
-    # wie vorher auf NFS. Bitnami-Chart-eigener Fix: Init-Container, der
-    # einmalig als root vorchownt.
     volumePermissions:
       enabled: true
     primary:
@@ -222,9 +124,6 @@ zammad:
         enabled: true
         storageClass: local-path
         size: 50Gi
-      # local-path bindet den Pod an den Node, auf dem die PVC zuerst
-      # provisioniert wird — fest auf homeserver (aktuell ohnehin der
-      # einzige Ready-Node).
       nodeSelector:
         kubernetes.io/hostname: homeserver
       affinity: {}
@@ -235,29 +134,11 @@ zammad:
         limits:
           memory: 512Mi
 
-  # ---- Redis Sub-Chart (CloudPirates OCI) -------------------
-  # Cache/Websocket-Pub-Sub, ebenfalls auf die NAS ausgelagert, damit kein
-  # Persistenzspeicher auf der Homeserver-SSD landet.
   redis:
     auth:
-      # Passwort aus existierendem SealedSecret (zammad-secrets[redis-password]).
-      # Passwortloses Redis funktioniert mit dem zammad-Chart nicht zuverlässig,
-      # siehe Kommentar bei zammad.secrets.redis weiter oben.
       enabled: true
       existingSecret: zammad-secrets
       existingSecretPasswordKey: redis-password
-    # Chart-Default setzt updateStrategy.rollingUpdate.maxUnavailable: 1, aber
-    # dieser k3s-Cluster hat das Feature-Gate MaxUnavailableStatefulSet nicht
-    # aktiviert — der API-Server verwirft das Feld bei jedem Apply. "null"
-    # sollte das Feld per Helm-Konvention aus dem Rendering entfernen, greift
-    # hier aber nicht zuverlässig: Helm v3 (lokal) loescht damit den
-    # Subchart-Default, das im argocd-repo-server gebündelte Helm v4 tut das
-    # beim Vererben an diesen Sub-Sub-Chart (Wrapper -> zammad -> redis) NICHT
-    # (bestätigt per "argocd app diff --core --hard-refresh"). Echter Fix
-    # daher per ignoreDifferences im ApplicationSet-Template
-    # (ansible/roles/argocd/templates/bootstrap-applicationset.yaml.j2) statt
-    # hier — "null" bleibt trotzdem stehen, schadet nicht und dokumentiert
-    # die Absicht.
     updateStrategy:
       rollingUpdate:
         maxUnavailable: null

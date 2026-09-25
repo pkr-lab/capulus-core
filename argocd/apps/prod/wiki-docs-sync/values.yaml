@@ -4,11 +4,8 @@ image:
   tag: "3.14-slim"
   pullPolicy: IfNotPresent
 
-# CronJob-Schedule (Standard: alle 15 Minuten).
 schedule: "*/15 * * * *"
 timezone: "Europe/Berlin"
-# Sync wurde manuell verifiziert (Pfad, README/DEPLOY, nummerierte Titel) —
-# CronJob läuft ab jetzt automatisch alle 15 Minuten.
 suspend: false
 concurrencyPolicy: Forbid
 failedJobsHistoryLimit: 3
@@ -19,50 +16,19 @@ github:
   repo: "capulus-core"
   branch: "main"
   docsPath: "docs"
-  # Zusätzliche Root-Level-Dateien, die direkt unter wikijs.pathPrefix
-  # (statt unter wikijs.docsSubpath) gespiegelt werden. `slug` bestimmt
-  # sowohl den Wiki.js-Seitenpfad als auch den Fallback-Titel.
   extraFiles:
     - path: "README.md"
       slug: "ReadMe"
-  # Optionaler GitHub-PAT (nur für Contents-Listing-Anfragen relevant, nicht
-  # für die Datei-Downloads über raw.githubusercontent.com). sync.py listet
-  # docs/ eine Ebene rekursiv (1 Call für docs/ selbst + 1 pro
-  # Unterordner/Kategorie, aktuell ~11 Calls/Lauf) — bei 15-Minuten-Takt
-  # macht das ~44 Contents-API-Calls/h, noch unter dem unauthenticated-Limit
-  # von 60 req/h, aber mit wenig Puffer für weitere Kategorie-Unterordner.
-  # Name/Key eines VORHANDENEN Secrets im Namespace — wird NICHT von diesem
-  # Chart angelegt.
   tokenSecretName: "github-api-token"
   tokenSecretKey: token
 
 wikijs:
-  # Interner ClusterIP-Service statt der öffentlichen Cloudflare-Tunnel-URL:
-  # Cloudflares Bot-Schutz blockt Requests von urllib (403, error code 1010),
-  # da der Sync-Job ohnehin im selben Cluster wie Wiki.js läuft.
   url: "http://wikijs.wikijs.svc.cluster.local"
-  # Wiki.js reserviert zweistellige Pfad-Segmente (z. B. "en") für das
-  # Locale — es wird NICHT Teil von pathPrefix, sondern separat gesetzt
-  # und von Wiki.js automatisch vor den Pfad gehängt.
   locale: "en"
   pathPrefix: "Github/capulus-core"
-  # Unterordner unterhalb von pathPrefix, in den die docs/*.md-Dateien
-  # gespiegelt werden. github.extraFiles landen dagegen direkt unter
-  # pathPrefix (siehe oben).
   docsSubpath: "docs"
   tokenSecretName: wiki-docs-sync-wikijs-token
   tokenSecretKey: token
-
-# Sealed Secret für den Wiki.js-API-Token
-# (Administration → Utilities → API Access in Wiki.js).
-secrets:
-  enabled: true
-  name: wiki-docs-sync-wikijs-token
-  # Versiegeln: echo -n '<TOKEN>' | kubeseal --raw --namespace wiki-docs-sync \
-  #             --name wiki-docs-sync-wikijs-token \
-  #             --controller-namespace sealed-secrets \
-  #             --controller-name sealed-secrets-controller
-  encryptedToken: "AgARpBo/OFUqBu7YXD0l42fKjNHJ+5732JGQRqEDX+VnAW609iJt2UfpC3udz2IKL2NuqI7lVdz9S6eo8ijzUzP1HCKEKhYGrbsBwRAV3dy7BbqdbGsZ+Smxf7botqTXllDqX1+LHAPFAhz0h0e3kukyZlg7DEkSIW5gfikix8vcyWSOn3H+GtNQtlyIMQOvGRhD/+z+Ti+Dn6AeVtbMExsSRjpk4pEs11JyNthdaorXADX+bn2Pwzw8224BfzuZyXOD3BAFPotHw7vCI8qZ4PL4BjbusLY2QmYMysPOx4P4G164SoUh9KLzWY++ShD9otFbUqOT8KzxWJu7Km0JfhqJihkNADavudLj01G4QjkrT3eIkDsrr9GBAXXGEUX9IQyqJbvCsB3RQfKCRlwCl+AiuqGI9e6yhmLHv/iMj179hmCQzKkfASk/iOCDcBeGY807hQhz3ErAjb7shQJJIRTER6Z8NNU4gehvuyqaOJ3ffcgolicG5VZ2AkXnVYsTGJv9ogO4Vy83nS7Zf10+fh5hS7P73ow8Qe30Eohxa/06xd062YtGH3osu4Qg/ZZ5JC3eTKJVAK0UPXDnCjK20jnrBHCh0BeR8PQEt87nO8IM42T6LQsy4nM3hx9im4bUZlJVURfMD6h/5iBu1YYKKUBI/2jZFX/IYxQ/DIt0ovk+Ii7qZ1Hjb4bhcbWmZ2ueLwxoiuzLeg5wT9ZfaAu1xfpha93i0ljs1SyTF3bU1RqG67Pd3P9n1GRTuLE4nFXy/EQgIvRArR3Keuxv3IYCnq6BW9l6Woy4051K4QPYHyeYvfeyl2ngl0NDaGFYSun+TuXQzHXT1I7EL7b69jZQySbaSiqlBu0FCvlU6F+0+mi6L8pwJCxT4/26lPSq17t6hgKR1IRqS+a/qEJuTdELomQXK3JRy0DiA0U7XbAe8Mynsq7+O/j1LpGmblv3hlyvPOjVxekR6054x+TrFO6MaCMl0xoVRPUGPnhH9jvcq9wZypOqscWt448fgG3+qGOaFXQdQ5paX0Lz5IYvjybDcEJUl8sK1BgsH21G6pGAb6vwm82HU/S3D7KiuQ58n7Lb9bLCAXBWF6XrxQOkNgNiUw/TF3W/4L0PmMOilVxK180WkfIZzTrLVwYl/FP+gIHiQCMXgHARAYyfAomeSDBKy7xnCo3ZvGhVrTdPm9ujoT3rfuZrCWGBoTX7oEcevmsncoA/hiopxKcaAIz3P1BsH3EbqzYbeJ+n31LyKRRUc3f1hsu9ltGbdyMDpy2dXRtrt/VTwXJjicdRnYAz/74NEwRQPQkhPLsbl2HWavGfm0eKIKxO07hT3k6MAUggWuhZxjdg6WeGDIMZW/DxTla5JoF8A4RIIdSF"
 
 podSecurityContext:
   runAsNonRoot: true

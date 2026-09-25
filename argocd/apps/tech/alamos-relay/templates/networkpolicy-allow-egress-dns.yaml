@@ -1,9 +1,3 @@
-# Ohne diese Ausnahme würde networkpolicy-default-deny-egress.yaml auch die
-# DNS-Aufloesung von N8N_TARGET_URL blockieren (klassischer Fehler bei
-# Egress-Policies, siehe docs/d-sicherheit/d0030-network-policies.md,
-# Abschnitt "Warum Ingress-only, kein Egress" -- dort bewusst vermieden,
-# hier brauchen wir es aber, weil dieser Pod als einziger im Cluster
-# tatsaechlich selbst Egress einschraenkt).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

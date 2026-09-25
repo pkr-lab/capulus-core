@@ -1,5 +1,3 @@
-# Custom n8n image with n8n-nodes-imap baked in.
-
 FROM node:24.20.0-alpine AS builder
 
 RUN apk add --no-cache python3 make g++

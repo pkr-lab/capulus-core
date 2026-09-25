@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Uptime-Kuma service status.
 struct StatusGridView: View {
     let statuses: [ServiceStatus]
     let onSelect: (ServiceStatus) -> Void

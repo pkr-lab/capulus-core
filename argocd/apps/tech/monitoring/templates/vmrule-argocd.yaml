@@ -1,7 +1,3 @@
-# GitOps-Gesundheit: Alerts auf den Metriken des ArgoCD-application-controllers
-# (Scrape: vmscrape-argocd.yaml). Anlass: die Sync-Operation von `monitoring` hing vom
-# 2026-09-15 bis 2026-09-19 unbemerkt (wartete auf einen nie gesunden DaemonSet) - aufgefallen
-# ist es nur von Hand. Alle Alerts laufen ueber die vorhandene Route (gotify + ntfy).
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMRule
 metadata:
@@ -47,7 +43,6 @@ spec:
               Die Application {{`{{ $labels.name }}`}} wird seit mehr als 30 Minuten nicht gesund
               (Rollout haengt, Ressource wird nie bereit).
 
-        # Das Label `operation` ist leer, solange keine Sync-Operation laeuft.
         - alert: ArgoSyncOperationStuck
           expr: argocd_app_info{operation!=""} == 1
           for: 30m
@@ -60,7 +55,6 @@ spec:
               ({{`{{ $labels.operation }}`}}). Meist wartet sie auf eine nie gesunde Ressource; im
               Zweifel die Operation beenden (`status.operationState.phase` auf Terminating).
 
-        # Totmannschalter: ohne Metriken schweigen alle Regeln oben.
         - alert: ArgoMetricsMissing
           expr: absent(argocd_app_info)
           for: 10m

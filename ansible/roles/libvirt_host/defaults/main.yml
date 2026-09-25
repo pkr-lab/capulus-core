@@ -1,76 +1,21 @@
 ---
-# ============================================================
-# libvirt_host — Defaults
-# ============================================================
-# KVM/libvirt, NICHT Proxmox (siehe
-# docs/4-planung/40030-gitlab-hosting-proxmox-pruefung.md und
-# docs/4-planung/40080-multi-cluster-entw-prod-tech.md, Baustein 5) —
-# schlankes Paket auf dem bestehenden Ubuntu Server, kein OS-Wechsel.
-#
-# Host-generisch: laeuft gegen JEDEN Host, der diese Rolle bekommt
-# (homeserver fuer die PROD-VM, worker-1 fuer die ENTW-VM, siehe
-# host_vars/homeserver/vars.yml bzw. host_vars/worker-1/vars.yml fuer
-# die jeweilige libvirt_host_vms-Liste). Netzwerk-Variablen unten sind
-# deshalb bewusst Facts-basiert (ansible_default_ipv4.*) statt an die
-# homeserver-spezifischen network_*-Variablen aus group_vars/all.yml
-# gekoppelt — die waeren auf worker-1 schlicht falsch (andere IP,
-# anderer NIC-Name: eno1 vs. enp2s0).
-#
-# ACHTUNG Bridge-Task (libvirt_host_configure_bridge): baut die
-# physische NIC in eine Linux-Bridge (br0) ein und verschiebt die
-# Host-IP darauf. Ein Fehler hier kann den jeweiligen Host vom Netz
-# trennen. Fuer `homeserver` (einziges Interface, keine Out-of-Band-
-# Konsole, 24/7-Single-Point-of-Failure) ist das hochriskant. Fuer
-# `worker-1` (WoL-gesteuerter Compute-Node, kein Dauerbetrieb-Zwang)
-# deutlich weniger kritisch, aber trotzdem per eigenem Tag
-# (`libvirt-bridge`) von den uebrigen Tasks getrennt und standardmaessig
-# NICHT automatisch mitgezogen — explizit gegenlesen, siehe Plan-Doc.
-# ============================================================
 
-# Master-Schalter fuer die ganze Rolle - bewusst false, bis das
-# jeweilige Phase-Fenster aus dem Plan-Doc (Wartungsfenster fuer
-# homeserver/PROD, deutlich risikoaermer fuer worker-1/ENTW) beginnt.
-# Pro Host in host_vars/<host>/vars.yml auf true setzen, wenn es
-# soweit ist - NICHT hier global, sonst starten beide Hosts gleichzeitig.
 libvirt_host_enabled: false
 
-# Bridge-Netzwerk - siehe Warnung oben. Erst auf true setzen, wenn
-# Wartungsfenster + Rollback-Plan stehen (bei worker-1 weniger kritisch
-# als bei homeserver, aber trotzdem bewusst als expliziter Schritt).
 libvirt_host_configure_bridge: false
 libvirt_host_bridge_name: br0
-# Auto-erkannt aus dem Default-Route-Interface des jeweiligen Hosts
-# (eno1 auf homeserver, enp2s0 auf worker-1, ...) - kein manuelles
-# Nachpflegen pro Host noetig.
 libvirt_host_bridge_interface: "{{ ansible_default_ipv4.interface }}"
 
-# Host-eigene IP/Gateway/DNS - Facts-basiert, damit dieselbe Rolle auf
-# jedem Host automatisch die richtigen Werte nimmt (die Bridge traegt
-# am Ende dieselbe IP, die der Host vorher direkt auf der NIC hatte).
 libvirt_host_static_ip: "{{ ansible_default_ipv4.address }}"
 libvirt_host_gateway: "{{ ansible_default_ipv4.gateway }}"
 libvirt_host_prefix_length: "{{ network_prefix_length | default(24) }}"
 libvirt_host_dns: "{{ network_dns | default(['1.1.1.1', '8.8.8.8']) }}"
 
-# Storage-Pool für VM-Disks + gecachte Cloud-Images.
 libvirt_host_pool_dir: /var/lib/libvirt/images
 
-# Basis-Cloud-Image (Ubuntu Server 26.04 LTS, "generischer" Cloud-Build
-# mit cloud-init vorinstalliert) - wird einmal heruntergeladen, jede VM
-# bekommt eine eigene Copy-on-Write-Disk darauf (qemu-img backing file),
-# spart Platz gegenüber einer vollen Kopie pro VM.
-libvirt_host_base_image_url: "https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-amd64.img" # verifiziert 2026-09-18 (HTTP 200, ~863 MB) - "resolute" ist der Ubuntu-26.04-Codename, /releases/26.04/... leitet per 302 hierher um
+libvirt_host_base_image_url: "https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-amd64.img"
 libvirt_host_base_image_name: "ubuntu-26.04-server-cloudimg-amd64.img"
 
-# CHANGE: euer eigener SSH-Public-Key, den cloud-init in den
-# "ubuntu"-User jeder VM eintraegt - gleiches Prinzip wie bei den
-# bare-metal-Nodes (ansible_user: ubuntu in inventory/hosts.yml), damit
-# Ansible sich danach identisch verhaelt.
 libvirt_host_admin_ssh_public_key: ""
 
-# Liste der VMs, die dieser Host traegt - bewusst LEER als Default.
-# Die tatsaechlichen Listen (PROD-VM auf homeserver, ENTW-VM auf
-# worker-1) stehen host-spezifisch in host_vars/<host>/vars.yml, nicht
-# hier - sonst wuerde jeder Host, der diese Rolle bekommt, automatisch
-# auch die VM(s) eines anderen Hosts mitbauen wollen.
 libvirt_host_vms: []

@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// Lets the user paste the bearer token generated in
-/// docs/3-apps-workloads/300d0-carplay-api.md ("Ersteinrichtung") into the Keychain.
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var token: String = ""
@@ -17,7 +15,7 @@ struct SettingsView: View {
                 Section {
                     SecureField("Bearer token", text: $token)
                         .textInputAutocapitalization(.never)
-                        .disableAutocorrection(true) // .autocorrectionDisabled() needs iOS 16; target here is 15.0
+                        .disableAutocorrection(true)
                 } header: {
                     Text("carplay-api Token")
                 } footer: {
