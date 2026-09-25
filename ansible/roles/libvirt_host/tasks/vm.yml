@@ -1,8 +1,4 @@
 ---
-# ============================================================
-# Pro VM aus libvirt_host_vms — per include_tasks geloopt aus main.yml
-# (ein "loop" direkt auf einem "block" existiert in Ansible nicht).
-# ============================================================
 
 - name: Pruefen, ob die VM-Domain bereits existiert
   ansible.builtin.command: "virsh dominfo {{ vm.name }}"
@@ -63,7 +59,7 @@
     --import
     --noautoconsole
     --autostart
-  changed_when: true # laeuft nur, wenn die Domain oben noch nicht existiert (siehe when)
+  changed_when: true
   when: libvirt_host_vm_exists.rc != 0
 
 - name: Warten, bis die VM per SSH erreichbar ist (erster Boot + cloud-init dauert etwas)

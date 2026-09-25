@@ -1,45 +1,20 @@
-# Managed by Ansible — do not edit manually.
-# Wildcard-DNS: alle *.homeserver-Namen → network_static_ip
-# Neue Services brauchen keinen manuellen Eintrag mehr.
-
-# Upstream DNS: Pi-hole (k3s NodePort, argocd/apps/tech/pihole). Pi-hole selbst
-# leitet gefilterte Anfragen an die Fritz!Box weiter (siehe dnsUpstreams in
-# argocd/apps/tech/pihole/values.yaml). So bekommt jedes Gerät, das dnsmasq
-# bereits als DNS nutzt (siehe docs/c-netzwerk-dns/c0000-dns-architecture.md), automatisch
-# Werbeblocking — ganz ohne Router-Konfiguration.
 no-resolv
 server={{ network_static_ip }}#{{ pihole_dns_nodeport }}
 
-# Wildcard: *.homeserver und homeserver selbst → statische Server-IP
 address=/homeserver/{{ network_static_ip }}
 
-# ENTW-Cluster (KVM-VM auf worker-1, docs/4-planung/40080 Baustein 3):
-# *.dev.homeserver → ENTW-VM. Spezifischere Domain gewinnt in dnsmasq
-# gegenueber address=/homeserver/ oben, alle anderen Namen bleiben
-# unveraendert auf dem Hauptcluster.
 address=/dev.homeserver/{{ entw_vm_ip }}
 
-# PROD-VM (KVM-VM auf homeserver, Phase 3.3): einzeln umgezogene Hosts.
-# Exakter Host gewinnt gegenueber address=/homeserver/ - alle anderen
-# *.prod.homeserver-Namen bleiben bis zu ihrem Umzug auf dem Hauptcluster.
 {% for host in dnsmasq_prod_vm_hosts | default([]) %}
 address=/{{ host }}/{{ prod_vm_ip }}
 {% endfor %}
 
-# worker-0 (worker-0) → statische IP
 address=/worker-0/192.168.178.95
 
-# worker-1 (worker-1) → statische IP
 address=/worker-1/192.168.178.96
 
-# ugreen-nas (UGREEN NAS, RAID5/NFS-Export) → statische IP
 address=/ugreen-nas/192.168.178.97
 
-# bind-dynamic statt bind-interfaces, damit dnsmasq die tailscale0-Adresse
-# automatisch übernimmt, sobald tailscaled startet (kein Restart nötig).
-# - LAN-Clients fragen über die statische LAN-IP
-# - Tailnet-Clients fragen über die 100.x.y.z-Adresse von tailscale0
-# - systemd-resolved bleibt auf 127.0.0.53 unangetastet (lo wird excluded)
 bind-dynamic
 listen-address={{ network_static_ip }}
 interface=tailscale0

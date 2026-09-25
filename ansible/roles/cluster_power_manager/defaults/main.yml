@@ -1,42 +1,32 @@
 ---
-# ============================================================
-# cluster_power_manager — Defaults
-# ============================================================
 
 cluster_power_manager_enabled: true
 
-# Abtastintervall (Sekunden).
 cluster_power_manager_poll_seconds: 30
 
-# ---- Hochskalieren (Homeserver überlastet -> Worker aufwecken) --------
 cluster_power_manager_cpu_scale_up_threshold: 60
 cluster_power_manager_ram_scale_up_threshold: 60
 cluster_power_manager_scale_up_sustain_seconds: 60
 cluster_power_manager_scale_up_sustain_seconds_stage2: 200
 
-# ---- Herunterskalieren (Last wieder niedrig -> Worker ausschalten) ----
 cluster_power_manager_cpu_scale_down_threshold: 30
 cluster_power_manager_ram_scale_down_threshold: 30
 cluster_power_manager_scale_down_sustain_seconds: 900
 
 cluster_power_manager_min_uptime_seconds: 300
 
-# ---- Wie lange auf "Ready" gewartet wird, nachdem WoL gesendet wurde --
 cluster_power_manager_ready_timeout_seconds: 120
 
-# ---- SSH-Zugang zum ferngesteuerten Poweroff --------------------------
 cluster_power_manager_ssh_user: ubuntu
 cluster_power_manager_ssh_key_path: /etc/cluster-power-manager/id_ed25519
 cluster_power_manager_state_dir: /var/lib/cluster-power-manager
 
 cluster_power_manager_kubeconfig: /etc/rancher/k3s/k3s.yaml
 
-# ---- ntfy-Benachrichtigungen -------------------------------------------
 cluster_power_manager_ntfy_host: "ntfy.tech.homeserver"
 cluster_power_manager_ntfy_ip: "{{ network_static_ip }}"
 cluster_power_manager_ntfy_topic: "Home-Lab-System"
 
-# ---- Worker, in Weck-Reihenfolge (Shutdown erfolgt in umgekehrter
 cluster_power_manager_workers:
   - name: worker-0
     ansible_host: "{{ hostvars.get('worker-0', {}).ansible_host | default('') }}"

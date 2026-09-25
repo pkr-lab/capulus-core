@@ -1,7 +1,4 @@
 ---
-# ============================================================
-# dnsmasq role — wildcard DNS für *.homeserver
-# ============================================================
 
 - name: Install dnsmasq
   ansible.builtin.apt:
@@ -44,7 +41,6 @@
     enabled: true
     state: started
 
-# ---- Host DNS via systemd-resolved -------------------------
 - name: Ensure systemd-resolved drop-in directory exists
   ansible.builtin.file:
     path: /etc/systemd/resolved.conf.d

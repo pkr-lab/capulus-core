@@ -8,12 +8,6 @@ spec:
     - name: thermal.resources
       interval: 30s
       rules:
-        # Reine Warnstufen (severity: warning → nur Gotify, siehe
-        # argocd/apps/platform/monitoring/values.yaml). Die Shutdown-Schwellen für
-        # CPU/RAM (90%) laufen NICHT über Alertmanager, sondern über den
-        # lokalen resource_watchdog auf dem Host selbst
-        # (ansible/roles/resource_watchdog) — gleiches Prinzip wie beim
-        # thermal_watchdog für Temperatur.
         - alert: HostHighCPULoad
           expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) >= 80
           for: 2m

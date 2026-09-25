@@ -1,8 +1,3 @@
-# Managed by Ansible (disable_eee role) — do not edit manually.
-#
-# Der Treiber setzt "Energy Efficient Ethernet" bei jedem Boot/Link-Up neu
-# — ein einmaliges `ethtool --set-eee ... eee off` von Hand übersteht daher
-# keinen Neustart und muss hier persistent gemacht werden.
 [Unit]
 Description=Disable Energy Efficient Ethernet (EEE) on {{ disable_eee_interface }}
 After=network-online.target

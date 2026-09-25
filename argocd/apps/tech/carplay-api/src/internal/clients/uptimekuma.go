@@ -12,17 +12,6 @@ import (
 	"carplay-api/internal/models"
 )
 
-// UptimeKumaClient reads monitor status from Uptime-Kuma's public
-// Status-Page JSON API. Uptime-Kuma has no Bearer-token "list monitors" REST
-// endpoint — its only stable, documented read API is the status-page one,
-// and it's deliberately public/unauthenticated (that's the point of a
-// status page). A status page with the configured slug must exist in the
-// Uptime-Kuma UI with every monitor to show added to it; see
-// docs/3-apps-workloads/300d0-carplay-api.md.
-//
-// The exact JSON shape isn't formally versioned upstream, so parsing here
-// is defensive: any monitor/heartbeat field that's missing or a different
-// type than expected is skipped rather than failing the whole response.
 type UptimeKumaClient struct {
 	baseURL    string
 	slug       string
@@ -49,12 +38,9 @@ type kumaStatusPage struct {
 }
 
 type kumaHeartbeat struct {
-	Status int    `json:"status"` // 0=down, 1=up, 2=pending, 3=maintenance
-	Time   string `json:"time"`
-	// Uptime-Kuma reports ping as a fractional millisecond value (e.g.
-	// 0.457 for a fast local check), not an integer — decoding straight
-	// into *int fails the whole heartbeat fetch.
-	Ping *float64 `json:"ping"`
+	Status int      `json:"status"`
+	Time   string   `json:"time"`
+	Ping   *float64 `json:"ping"`
 }
 
 type kumaHeartbeatResponse struct {
@@ -84,9 +70,6 @@ func (c *UptimeKumaClient) getJSON(ctx context.Context, path string, out any) er
 	return nil
 }
 
-// GetStatuses returns the current status of every monitor on the configured
-// status page. Returns an empty slice and an error if Uptime-Kuma is
-// unreachable — callers treat that as "no status data right now".
 func (c *UptimeKumaClient) GetStatuses(ctx context.Context) ([]models.ServiceStatus, error) {
 	var page kumaStatusPage
 	if err := c.getJSON(ctx, "/api/status-page/"+c.slug, &page); err != nil {
@@ -107,7 +90,7 @@ func (c *UptimeKumaClient) GetStatuses(ctx context.Context) ([]models.ServiceSta
 			status := models.ServiceStatus{
 				ID:     key,
 				Name:   monitor.Name,
-				Status: "paused", // no heartbeats at all => never checked / paused
+				Status: "paused",
 			}
 
 			if len(beats) > 0 {
@@ -137,18 +120,12 @@ func kumaStatusToString(status int) string {
 	case 3:
 		return "maintenance"
 	case 2:
-		// "pending" = a check just failed and Kuma is retrying before
-		// declaring it down (retry interval). Treated as down: a glance
-		// dashboard should flag it now, not wait for confirmation.
 		return "down"
 	default:
 		return "down"
 	}
 }
 
-// parseKumaTime tries the layouts Uptime-Kuma has used across versions for
-// heartbeat.time (naive "YYYY-MM-DD HH:mm:ss" in server-local time, or
-// RFC3339). Falls back to "now" so a parse miss never crashes the response.
 func parseKumaTime(raw string, logger *slog.Logger) int64 {
 	layouts := []string{time.RFC3339, "2006-01-02 15:04:05", "2006-01-02T15:04:05.000Z"}
 	for _, layout := range layouts {

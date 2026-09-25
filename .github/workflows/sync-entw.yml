@@ -1,23 +1,10 @@
 name: Sync main into ENTW
 
-# Haelt den Branch `entw` auf dem Stand von `main`: nach jedem Push auf main wird main in
-# entw gemergt - ausser entw hat eigene, noch nicht uebergebene Commits (dort wird gerade
-# etwas getestet). Dann bleibt entw unveraendert, bis die Promotion (promote-entw.yml) die
-# Commits nach main uebergeben hat oder der Test-Branch aufgeraeumt ist.
-# Logik: scripts/sync-entw.sh, Beschreibung: docs/f-cicd-automatisierung/f0080-entw-promotion.md
-#
-# Pause per Hand: Repo-Variable ENTW_SYNC_PAUSED=true (Settings -> Variables).
-#
-# entw ist per Ruleset geschuetzt (Pull Request Pflicht, kein Bypass): der Workflow oeffnet
-# einen PR main -> entw und aktiviert Auto-Merge (gh pr merge --auto). Braucht ein PAT
-# (PROMOTE_TOKEN, ersatzweise RENOVATE_TOKEN), weil PRs/Merges mit dem Standard-GITHUB_TOKEN
-# keine Workflows ausloesen (entw-trigger.yml bliebe stumm). Repo-Einstellung
-# "Allow auto-merge" muss aktiv sein.
 on:
   push:
     branches: [main]
   schedule:
-    - cron: "17 * * * *" # Fallback, falls ein Push-Lauf ausgefallen ist
+    - cron: "17 * * * *"
   workflow_dispatch: {}
 
 permissions:

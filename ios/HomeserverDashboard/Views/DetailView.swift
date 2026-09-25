@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Detail sheet for a tapped alert or service status row.
 struct DetailView: View {
     enum Kind: Identifiable {
         case alert(Alert)

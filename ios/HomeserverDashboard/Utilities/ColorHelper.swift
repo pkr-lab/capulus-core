@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Central status → color/icon mapping used across Home/Brightness/Power.
 enum StatusPalette {
     static func color(for level: AlertLevel) -> Color {
         switch level {
@@ -36,8 +35,6 @@ enum StatusPalette {
         }
     }
 
-    /// Green < 50%, yellow 50-75%, orange 75-90%, red > 90% — used for
-    /// CPU/RAM/Disk/Temperature gauges on the home screen's host cards.
     static func color(forPercentage value: Double) -> Color {
         switch value {
         case ..<50: return Theme.statusGood

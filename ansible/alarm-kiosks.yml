@@ -1,8 +1,4 @@
 ---
-# ============================================================
-# Alarmmonitor-Kiosk-Playbook (ALAMOS AMweb)
-# DLRG OG Andernach
-# ============================================================
 - name: Alarmmonitor-Kiosks einrichten
   hosts: raspberry_pis
   become: true

@@ -1,6 +1,3 @@
-// Command server runs carplay-api: a small read-only aggregation API that
-// combines VictoriaMetrics, ntfy and Uptime-Kuma into the single payload the
-// Homeserver CarPlay Dashboard iOS app polls every 30 seconds.
 package main
 
 import (
@@ -58,10 +55,6 @@ func run(cfg config, logger *slog.Logger) error {
 	healthHandler := handlers.NewHealthHandler(cfg.vmURL, cfg.ntfyURL, cfg.kumaURL, 2*time.Second)
 	powerHandler := handlers.NewPowerHandler(powerAgent, cfg.shutdownConfirmationCode, logger)
 
-	// Only available when actually running in-cluster (needs the mounted
-	// ServiceAccount token) — nil here just means GET /api/updates always
-	// returns an empty list instead of failing the whole binary, e.g. for
-	// local `go run` outside k3s.
 	k8sConfigMaps, err := clients.NewK8sConfigMapClient()
 	if err != nil {
 		logger.Warn("k8s in-cluster client unavailable, /api/updates will always be empty", "error", err)
@@ -136,10 +129,6 @@ func run(cfg config, logger *slog.Logger) error {
 	return srv.Shutdown(shutdownCtx)
 }
 
-// requestLogger emits one structured JSON line per request: method, path,
-// status, duration and a per-request trace ID. Deliberately excludes
-// headers and query strings — the Authorization bearer token and any other
-// sensitive value must never end up in logs.
 func requestLogger(logger *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		traceID := newTraceID()
@@ -199,9 +188,6 @@ type config struct {
 	kumaURL  string
 	kumaSlug string
 
-	// See argocd/apps/tech/github-release-watcher — different namespace than
-	// this pod, read via the in-cluster k8s API + a cross-namespace
-	// RoleBinding (role.yaml "...-updates-reader"), not HTTP.
 	updatesNamespace     string
 	updatesConfigMapName string
 	updatesCacheTTL      time.Duration
@@ -210,10 +196,6 @@ type config struct {
 	powerAgentToken   string
 	powerAgentTimeout time.Duration
 
-	// Compared against the "code" field of POST /api/power/shutdown when
-	// Target is "homeserver" — deliberately kept in lockstep with the
-	// ArgoCD admin password by whoever rotates it (see
-	// docs/3-apps-workloads/300d0-carplay-api.md), not verified live against ArgoCD itself.
 	shutdownConfirmationCode string
 }
 
@@ -238,10 +220,6 @@ func loadConfig() config {
 				"worker-1|Worker 1|192.168.178.96:9100,"+
 				"nas|NAS|192.168.178.97:9100",
 		)),
-		// Default list mirrors the iOS app's Kurzlink-Kacheln
-		// (Constants.SelfHostedServices) — Match is a substring of the raw
-		// Traefik "service" metric label (see clients.ServiceConfig on why
-		// it's a substring, not an exact match).
 		services: parseServices(getEnv("SERVICES",
 			"nextcloud|Nextcloud|nextcloud,"+
 				"immich|Immich|immich,"+
@@ -274,12 +252,6 @@ func loadConfig() config {
 	}
 }
 
-// parseHosts reads the "id|name|instance,id|name|instance,..." format HOSTS
-// uses (values.yaml config.hosts) into HostConfig entries. instance is the
-// VictoriaMetrics "instance" label for that machine's node-exporter target
-// (see clients.HostConfig) — not necessarily its hostname. Malformed
-// entries are silently skipped rather than crashing startup over a typo'd
-// Helm value.
 func parseHosts(v string) []clients.HostConfig {
 	var hosts []clients.HostConfig
 	for _, entry := range strings.Split(v, ",") {
@@ -300,10 +272,6 @@ func parseHosts(v string) []clients.HostConfig {
 	return hosts
 }
 
-// parseServices reads the "id|name|match,id|name|match,..." format SERVICES
-// uses (values.yaml config.services), same shape as parseHosts. match is a
-// substring of the raw Traefik "service" metric label, see
-// clients.ServiceConfig.
 func parseServices(v string) []clients.ServiceConfig {
 	var services []clients.ServiceConfig
 	for _, entry := range strings.Split(v, ",") {

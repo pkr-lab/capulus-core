@@ -1,17 +1,4 @@
 #!/usr/bin/env python3
-# Managed by Ansible (banana_pi_kiosk role) — do not edit manually.
-#
-# Thin HTTP wrapper around banana-pi-wol.sh so the iOS app (or anything
-# else on the tailnet) can trigger a Wake-on-LAN broadcast into this
-# Pi's local Standort-LAN without an SSH session. Structurally mirrors
-# power-agent.py (ansible/roles/power_agent/files/power-agent.py) but is
-# otherwise unrelated: that one runs on the homeserver's LAN and is
-# called by carplay-api's pod; this one runs on the Pi's Tailscale-only
-# network and is called DIRECTLY by the iOS app, because carplay-api's
-# pod has no route to Tailscale peers — see
-# docs/4-planung/40020-vereinsheim-wol-router-vpn.md. No MAC knowledge of
-# its own — target validity and MAC lookup both stay in banana-pi-wol.sh
-# / banana_pi_kiosk_wol_devices, this only forwards the alias.
 import hmac
 import json
 import os

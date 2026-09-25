@@ -6,8 +6,6 @@ metadata:
   labels:
     {{- include "github-release-watcher.labels" . | nindent 4 }}
 rules:
-  # "create" kann nicht per resourceNames eingeschraenkt werden (das Objekt
-  # existiert vor dem Request noch nicht) -> eigene Regel ohne resourceNames.
   - apiGroups: [""]
     resources: ["configmaps"]
     verbs: ["create"]
@@ -34,9 +32,6 @@ subjects:
     name: {{ include "github-release-watcher.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}
 ---
-# Erlaubt carplay-api (anderer Namespace), NUR die Update-Status-ConfigMap
-# zu lesen — kein Zugriff auf state-ConfigMap oder irgendetwas anderes in
-# diesem Namespace.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:

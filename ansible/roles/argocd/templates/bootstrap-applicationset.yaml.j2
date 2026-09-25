@@ -32,7 +32,7 @@
 #      not worth re-testing when two independent, structurally-proven
 #      ApplicationSets (this file) need zero uncertain templating features.
 ---
-{% for tier in (["entw"] if argocd_entw_layout | bool else (["tech"] if argocd_tech_layout | bool else ["platform", "workloads"])) %}
+{% set tier = "entw" if argocd_entw_layout | bool else "tech" %}
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -46,13 +46,7 @@ spec:
         repoURL: "{{ argocd_repo_url }}"
         revision: "{{ argocd_repo_revision }}"
         directories:
-{% if argocd_apps_from_lists | bool and tier != "entw" %}
-{% for app in ((argocd_platform_apps + argocd_workloads_apps) if tier == "tech" else (argocd_platform_apps if tier == "platform" else argocd_workloads_apps)) %}
-          - path: "argocd/apps/{{ tier }}/{{ app }}"
-{% endfor %}
-{% else %}
           - path: "argocd/apps/{{ tier }}/*"
-{% endif %}
   template:
     metadata:
       name: "{{ '{{' }}.path.basename{{ '}}' }}"
@@ -163,7 +157,3 @@ spec:
           - CreateNamespace=true
           - ServerSideApply=true
           - SkipDryRunOnMissingResource=true
-{% if not loop.last %}
----
-{% endif %}
-{% endfor %}

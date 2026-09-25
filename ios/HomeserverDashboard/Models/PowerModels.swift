@@ -1,13 +1,9 @@
 import Foundation
 
-/// Mirrors carplay-api's `models.BrightnessResponse`.
 struct BrightnessResponse: Codable {
     let percent: Int
 }
 
-/// Mirrors carplay-api's `models.PowerTarget`. worker0/worker1 rawValues
-/// use hyphens to match the Go string constants exactly, since this is
-/// sent verbatim as JSON.
 enum PowerTarget: String, Codable, CaseIterable, Identifiable {
     case homeserver
     case worker0 = "worker-0"

@@ -1,20 +1,3 @@
-# Scraped die in helmchartconfig.yaml aktivierten Traefik-Metriken für
-# VictoriaMetrics — kein prometheus-operator in diesem Cluster, nur die
-# VictoriaMetrics-CRDs, daher VMServiceScrape statt ServiceMonitor.
-#
-# Selector nur auf app.kubernetes.io/name: traefik (nicht zusätzlich auf
-# app.kubernetes.io/instance), weil k3s' Addon-Charts den Instance-Label-
-# Suffix je nach k3s-Version unterschiedlich benennen — mit
-# `kubectl get svc traefik -n kube-system --show-labels` prüfen und bei
-# Bedarf präzisieren, falls der Name-Selector in eurem Cluster nicht
-# eindeutig auf den Traefik-Service trifft.
-#
-# Trifft auf ZWEI Services: den Haupt-Service "traefik" (kein Port namens
-# "metrics", da helmchartconfig.yaml Port 9100 bewusst mit
-# expose.default: false vom Haupt-Service fernhält) und den seit
-# metrics.prometheus.service.enabled: true (siehe helmchartconfig.yaml)
-# zusätzlich gerenderten ClusterIP-Service "traefik-metrics", der den
-# Port tatsächlich "metrics" nennt — nur dort greift dieser Endpoint.
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMServiceScrape
 metadata:
@@ -31,14 +14,4 @@ spec:
     - port: metrics
       path: /metrics
       interval: 30s
-      # OHNE das: VMAgent schreibt beim Scrapen sein eigenes "service"-Label
-      # (= Name des gescrapten k8s-Service, hier "traefik-metrics") über
-      # Traefiks eigenes "service"-Label (= der eigentliche Router-Service,
-      # z.B. "pacman-pacman-80@kubernetes", per addServicesLabels: true aus
-      # helmchartconfig.yaml). Traefiks Original-Label landet dann nur noch
-      # unter "exported_service" — live verifiziert 2026-09-15: alle
-      # traefik_service_requests_total-Serien trugen service="traefik-metrics",
-      # wodurch JEDE Dashboard-Query mit service=~"^<namespace>-.*" leer
-      # blieb ("No Data"), obwohl die Metriken längst ankamen. honorLabels
-      # kehrt die Priorität um und behält Traefiks Original-Label.
       honorLabels: true

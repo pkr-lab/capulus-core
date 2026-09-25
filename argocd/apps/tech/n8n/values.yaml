@@ -2,11 +2,6 @@
 replicaCount: 1
 
 image:
-  # Custom image with n8n-nodes-imap + wwebjs/Chromium baked in, see ./image/Dockerfile.
-  # Gebaut/gepusht über .github/workflows/build-images.yml bei jeder
-  # Änderung an image/Dockerfile (siehe argocd/apps/tech/pacman/README.md,
-  # Abschnitt "Image bauen"). Tag manuell aus dem Workflow-Run-Summary
-  # übernehmen.
   repository: ghcr.io/pkr-lab/n8n-custom
   pullPolicy: IfNotPresent
   tag: "sha-e580ac2"
@@ -81,8 +76,6 @@ affinity: {}
 
 nodeSelector: {}
 tolerations: []
-
-# ============================================================
 
 xibosignage:
   enabled: true

@@ -1,6 +1,3 @@
-# Reiner Datei-Locking- und Cache-Backend für Nextcloud — kein PVC, da der
-# Zustand (Locks, Transactional-Cache) bei einem Neustart unkritisch ist
-# und automatisch neu aufgebaut wird.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -1,4 +1,3 @@
-# Managed by Ansible (nightly_worker_wake role) — do not edit manually.
 [Unit]
 Description=Nightly worker wake/update/shutdown cycle (WoL -> Semaphore apt update -> poweroff)
 After=network-online.target k3s.service
@@ -8,7 +7,4 @@ Wants=network-online.target
 Type=oneshot
 EnvironmentFile=/etc/nightly-worker-wake/config.env
 ExecStart=/usr/local/bin/nightly-worker-wake.sh
-# Ansible-Playbook-Runs über Semaphore können je nach Paketlage mehrere
-# Minuten dauern -- deutlich über dem systemd-Default von 90s für
-# Type=oneshot ohne RemainAfterExit.
 TimeoutStartSec=1500

@@ -1,8 +1,3 @@
-# ArgoCD-Hub (TECH + PROD): Metriken des application-controllers. Der Controller-Pod
-# oeffnet den Port `metrics` (8082) immer, die NetworkPolicy `argocd-application-controller`
-# erlaubt Zugriff aus jedem Namespace - dafuer ist keine Aenderung an ArgoCD noetig.
-# Grundlage der Regeln in vmrule-argocd.yaml (`argocd_app_info` mit health_status,
-# sync_status, operation). Der separate ENTW-ArgoCD (eigener Cluster) ist nicht erfasst.
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMPodScrape
 metadata:

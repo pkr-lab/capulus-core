@@ -1,7 +1,4 @@
 ---
-# ============================================================
-# disable_eee role — Energy Efficient Ethernet dauerhaft deaktivieren
-# ============================================================
 
 - name: ethtool installieren (für EEE-Konfiguration)
   ansible.builtin.apt:

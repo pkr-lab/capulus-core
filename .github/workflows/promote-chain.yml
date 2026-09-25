@@ -1,14 +1,5 @@
 name: Promote chain (ENTW -> TECH -> PROD)
 
-# Uebernimmt Versionen (image.tag, Chart-Abhaengigkeiten) entlang ENTW -> TECH -> PROD, sobald sie
-# das Gesundheits-Gate bestehen: >= 24 h gesund auf ENTW, danach >= 2 h gesund auf TECH.
-# Ergebnis sind PRs nach main (TECH: optional Auto-Merge, PROD: immer manuelles Review).
-# Logik: scripts/promote-chain.py, Konfiguration: argocd/promotion.yaml,
-# Beschreibung, Voraussetzungen, Betrieb: docs/f-cicd-automatisierung/f00b0-promotion-chain.md
-#
-# Der Runner tritt per Tailscale dem Tailnet bei und fragt die beiden ArgoCD-Instanzen ab
-# (ENTW: eigene Instanz auf entw-vm ueber die Subnet-Route des Homeservers, TECH/PROD: Hub-ArgoCD).
-# Solange die Secrets ARGOCD_ENTW_TOKEN / ARGOCD_HUB_TOKEN fehlen, macht der Lauf nichts.
 on:
   schedule:
     - cron: "17 * * * *"
@@ -74,9 +65,6 @@ jobs:
         uses: tailscale/github-action@v3
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
-          # Die Action nimmt Subnet-Routen selbst an (--accept-routes): das LAN-Subnetz
-          # 192.168.178.0/24 (u. a. ENTW-VM) kommt vom Homeserver. Kein zusaetzliches `args`
-          # dafuer setzen: ein doppeltes Flag bricht `tailscale up` ab, ohne dass die Action fehlschlaegt.
           version: latest
 
       - name: Verify tailnet connection
@@ -96,8 +84,6 @@ jobs:
           STAGE: ${{ github.event.inputs.stage || 'all' }}
           PLAN_ONLY: ${{ github.event.inputs.plan_only }}
           ENTW_URL: ${{ vars.ARGOCD_ENTW_URL || 'http://192.168.178.100:30080' }}
-          # Beide ArgoCD-Instanzen ueber das LAN-Subnetz (Subnet-Route des Homeservers): ein einziger
-          # ACL-Grant auf 192.168.178.94 und .100 (Port 30080) genuegt, siehe Doku.
           HUB_URL: ${{ vars.ARGOCD_HUB_URL || 'http://192.168.178.94:30080' }}
         run: |
           set -eu

@@ -1,9 +1,4 @@
 ---
-# ============================================================
-# group_vars für die Inventory-Gruppe "banana_pis"
-# (Banana-Pi-Alarmmonitore, Armbian — siehe
-# docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md und ansible/banana-pi-kiosks.yml)
-# ============================================================
 tailscale_hostname: "{{ inventory_hostname }}"
 
 tailscale_advertise_routes: ""
@@ -20,5 +15,4 @@ tailscale_auth_key: !vault |
           30333366353235653535663932353937646162383434663339633936333634353631626432656439
           656539343061396330363236326338353636
 
-# ---- Metriken-Push (vmagent) --------------------------------
 vmagent_remote_write_url: "http://vm-write.tech.homeserver/api/v1/write"

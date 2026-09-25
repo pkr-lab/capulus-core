@@ -1,12 +1,4 @@
 ---
-# ============================================================
-# cups_print_server role — USB-Drucker per CUPS im Heimnetz freigeben
-# ============================================================
-# Läuft auf homeserver. Installiert CUPS + Treiber-Pakete, aktiviert
-# Sharing (IPP/AirPrint via Avahi) und legt — sobald Device-URI und PPD
-# bekannt sind — eine Warteschlange für den lokal angeschlossenen
-# USB-Drucker an. Dokumentation: docs/2-betrieb-hardware/20040-printer.md.
-# ============================================================
 
 - name: CUPS-/Drucker-Pakete installieren
   ansible.builtin.apt:
@@ -41,7 +33,6 @@
     timeout: 30
   when: cups_print_server_enabled | bool
 
-# ---- Sharing / Remote-Zugriff --------------------------------
 - name: Aktuelle cupsd-Einstellungen auslesen
   ansible.builtin.command: cupsctl
   register: cups_print_server_current_settings
@@ -55,7 +46,7 @@
       - "{{ '--remote-admin' if cups_print_server_remote_admin | bool else '--no-remote-admin' }}"
       - "{{ '--remote-any' if cups_print_server_remote_any | bool else '--no-remote-any' }}"
       - "{{ '--share-printers' if cups_print_server_share_printers | bool else '--no-share-printers' }}"
-  changed_when: true # laeuft nur, wenn der when-Vergleich unten eine echte Abweichung findet
+  changed_when: true
   when:
     - cups_print_server_enabled | bool
     - >-
@@ -63,7 +54,6 @@
       or ('_remote_any=' ~ (1 if cups_print_server_remote_any | bool else 0) not in cups_print_server_current_settings.stdout)
       or ('_share_printers=' ~ (1 if cups_print_server_share_printers | bool else 0) not in cups_print_server_current_settings.stdout)
 
-# ---- Optional: QPDL-Community-Treiber für die M2020/M2026-Serie bauen --
 - name: Build-Abhängigkeiten für den QPDL-Treiber installieren
   ansible.builtin.apt:
     name:
@@ -86,7 +76,6 @@
     - cups_print_server_enabled | bool
     - cups_print_server_build_qpdl_driver | bool
 
-# ---- Eigener Patch: PageSize-Fallback ----------------------------------
 - name: "Patch: PPDFile::getDefaultChoice() deklarieren (ppdfile.h)"
   ansible.builtin.blockinfile:
     path: "{{ cups_print_server_qpdl_build_dir }}/splix/include/ppdfile.h"
@@ -167,7 +156,6 @@
 - name: Handler sofort ausführen, damit lpinfo -m die neue PPD sieht
   ansible.builtin.meta: flush_handlers
 
-# ---- Debug-Hilfen: Device-URI + passende PPD ermitteln --------
 - name: Verfügbare Drucker-Device-URIs ermitteln
   ansible.builtin.command: lpinfo -v
   register: cups_print_server_detected_devices
@@ -215,7 +203,6 @@
     - cups_print_server_enabled | bool
     - (cups_print_server_device_uri | length == 0) or (cups_print_server_ppd | length == 0)
 
-# ---- Warteschlange ---------------------------------------------
 - name: Druckerwarteschlange anlegen/aktualisieren
   ansible.builtin.command:
     argv:
@@ -269,7 +256,6 @@
     - cups_print_server_device_uri | length > 0
     - cups_print_server_ppd | length > 0
 
-# ---- Weitere Warteschlangen (Netzwerkdrucker, generisch) -------------
 - name: "Extra-Queues: Splix-Katalog nach passenden PPDs durchsuchen (Debug)"
   ansible.builtin.debug:
     msg: >-
@@ -360,7 +346,6 @@
     - (item.ppd | default('')) | length > 0
     - (item.device_uri | default('')) | length > 0
 
-# ---- Verifikation ------------------------------------------
 - name: Status aller Warteschlangen anzeigen
   ansible.builtin.command: lpstat -t
   register: cups_print_server_status

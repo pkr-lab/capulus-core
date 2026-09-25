@@ -1,16 +1,4 @@
 ---
-# ============================================================
-# vmagent role — Metriken-Push fuer Tailscale-only-Hosts
-# ============================================================
-# Fuer Hosts ohne direkten LAN-Pfad zum Cluster (siehe
-# ansible/group_vars/banana_pis.yml): Cluster-seitiges Scrapen wie bei
-# ugreen-nas (VMStaticScrape) scheidet aus, da Pods im Cluster keinen Pfad
-# zu Tailscale-Peers haben (kein Subnet-Router ins Pod-Netz). Stattdessen
-# installiert diese Rolle vmagent als statische Binary (kein Debian-Paket
-# verfuegbar) und laesst ihn lokal node_exporter scrapen + per remote_write
-# an argocd/apps/tech/monitoring/templates/ingress-vm-write.yaml pushen. Details:
-# docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md.
-# ============================================================
 
 - name: Sicherstellen dass vmagent_remote_write_url gesetzt ist
   ansible.builtin.assert:
