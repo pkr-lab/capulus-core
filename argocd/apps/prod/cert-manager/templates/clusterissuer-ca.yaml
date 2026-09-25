@@ -1,13 +1,3 @@
-# PROD-Issuer: signiert mit einer PROD-eigenen Intermediate-CA, die von der
-# gemeinsamen Homeserver-Root-CA ausgestellt wurde (Entscheidung 0.3,
-# docs/4-planung/40080 Baustein 4). Clients vertrauen weiterhin nur der
-# Root-CA (docs/assets/homeserver-root-ca.pem) - kein neuer Trust-Store-
-# Rollout. Der Root-Key verlaesst den Rechner nicht, nur der Intermediate-
-# Key liegt in PROD.
-#
-# Das Secret homeserver-ca-keypair (Namespace cert-manager) wird EINMALIG
-# manuell importiert, nie im Repo, auch nicht versiegelt: siehe
-# docs/d-sicherheit/d0040-internal-tls.md, Abschnitt "PROD-Cluster".
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:

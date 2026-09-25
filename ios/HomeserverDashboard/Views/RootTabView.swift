@@ -1,11 +1,5 @@
 import SwiftUI
 
-/// The whole app, in one of two modes picked at the top and persisted
-/// across launches (see DashboardMode):
-/// - PKR-Lab: the original 3 tabs — overview, control (brightness +
-///   wake/shutdown), alerts. Unchanged.
-/// - Alltag: weather dashboard, Tankstellen, News.
-/// No CarPlay scene — universal iPhone/iPad app, no Mac.
 struct RootTabView: View {
     @AppStorage("dashboardMode") private var modeRaw = DashboardMode.pkrLab.rawValue
 
@@ -48,16 +42,9 @@ struct RootTabView: View {
         .tint(Theme.accentLight)
         .preferredColorScheme(.dark)
         .onAppear(perform: configureTabBarAppearance)
-        // Every tab's root is a single-screen NavigationView, not a
-        // master/detail pair — without .stack, iPad defaults to a
-        // two-column split (narrow sidebar + empty black detail pane).
-        // Style propagates down to all nested NavigationViews.
         .navigationViewStyle(.stack)
     }
 
-    /// Without this, UITabBar falls back to the system's translucent
-    /// light-leaning material even under forced dark mode, which clashes
-    /// with the near-black brand background.
     private func configureTabBarAppearance() {
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
@@ -67,9 +54,6 @@ struct RootTabView: View {
     }
 }
 
-/// The PKR-Lab/Alltag switch pinned above the tab content, always visible
-/// and reachable regardless of which tab is currently open — switching
-/// modes changes the whole tab set, not just one screen's content.
 private struct ModeSwitcher: View {
     @Binding var mode: DashboardMode
 

@@ -14,12 +14,6 @@ import (
 	"carplay-api/internal/models"
 )
 
-// UpdatesHandler serves GET /api/updates: which self-hosted apps have a
-// newer GitHub release than the version pinned in github-release-watcher's
-// values.yaml (config.github.repos[].currentVersion). k8s is nil when this
-// pod isn't running in-cluster (see clients.NewK8sConfigMapClient) — Handle
-// degrades to an empty list rather than failing the request, same
-// philosophy as every other upstream in this service.
 type UpdatesHandler struct {
 	k8s           *clients.K8sConfigMapClient
 	namespace     string
@@ -66,8 +60,6 @@ func (h *UpdatesHandler) Handle(c *gin.Context) {
 		return
 	}
 	if raw == "" {
-		// ConfigMap exists but the watcher hasn't run yet (or the key
-		// changed) — not an error, just nothing to show yet.
 		c.JSON(http.StatusOK, empty)
 		return
 	}

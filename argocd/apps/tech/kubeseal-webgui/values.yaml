@@ -1,25 +1,13 @@
 ---
-# Values passed through to the kubeseal-webgui sub-chart.
-# All keys live under `kubeseal-webgui:` because that is the dependency name.
 kubeseal-webgui:
-  # null (not omitted) so the upstream template's `replicas: {{ .Values.replicaCount }}`
-  # renders empty → Kubernetes treats the field as unset and defaults to 1 on
-  # create, while leaving it alone afterwards. This keeps ArgoCD's selfHeal
-  # from fighting templates/hpa.yaml every sync (a literal `1` here would make
-  # ArgoCD reset the Deployment back to 1 replica right after the HPA scales up).
   replicaCount: null
 
   image:
     pullPolicy: Always
 
-  # URL the browser uses to reach the API backend.
-  # Must match the Ingress hostname so the UI works correctly.
   api:
     url: "http://kubeseal-webgui.tech.homeserver"
 
-  # Connection to the Sealed Secrets controller.
-  # autoFetchCert lets the app retrieve the public key automatically on startup
-  # instead of requiring a static cert to be embedded here.
   sealedSecrets:
     autoFetchCert: true
     controllerName: sealed-secrets-controller

@@ -1,8 +1,4 @@
 ---
-# ============================================================
-# Provision the project's Git repository entry. Uses the `git-none`
-# access key created earlier (public HTTPS clone, no auth).
-# ============================================================
 
 - name: List existing repositories in project {{ project_spec.name }}
   ansible.builtin.uri:

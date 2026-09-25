@@ -1,10 +1,4 @@
 ---
-# Hand-rolled HPA — the upstream kubeseal-webgui chart has no autoscaling/hpa
-# keys in its values schema, so this wrapper defines its own
-# HorizontalPodAutoscaler instead of toggling a chart-native flag.
-# scaleTargetRef.name is the literal Deployment name rendered by the upstream
-# chart (verified via `helm template`), not a Helm include, since we don't own
-# that chart's templates.
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:

@@ -1,7 +1,4 @@
 ---
-# ============================================================
-# semaphore_targets — defaults
-# ============================================================
 semaphore_public_key_path: /etc/semaphore-secrets/id_ed25519.pub
 
 semaphore_authorize_user: "{{ ansible_user }}"

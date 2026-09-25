@@ -4,8 +4,6 @@ replicaCount: 1
 image:
   repository: binwiederhier/ntfy
   pullPolicy: IfNotPresent
-  # Pinned for reproducibility. Bump to track upstream releases:
-  # https://hub.docker.com/r/binwiederhier/ntfy/tags
   tag: "v2.28.0"
 
 nameOverride: ""
@@ -45,8 +43,6 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-    # Externer Host — per Cloudflare-Tunnel-Wildcard (cloudflared) an
-    # Traefik weitergereicht, siehe docs/c-netzwerk-dns/c0040-domain-tiers.md.
     - host: ntfy-tech.pke-lab.de
       paths:
         - path: /
@@ -60,26 +56,12 @@ persistence:
   accessMode: ReadWriteOnce
   mountPath: /var/lib/ntfy
 
-# ntfy server configuration — rendered into a ConfigMap as server.yml.
-# upstream-base-url enables iOS push via ntfy.sh's APNs relay.
-# base-url MUST be the externally-reachable HTTPS host (not the internal
-# .tech.homeserver one): for iOS, ntfy.sh only relays a silent "wake up"
-# push — the actual message body is fetched afterwards by the phone's
-# notification-service-extension via a GET to `${base-url}/...`. If that
-# base-url is a LAN-only hostname (unresolvable off-WiFi/Tailscale) or
-# plain HTTP (blocked by iOS App Transport Security), that fetch fails
-# silently: the notification still arrives (that's the APNs relay part
-# working) but with empty content, and nothing gets backfilled into the
-# app either. Confirmed live 2026-09-15 (messages_published in the
-# thousands, but base-url was still the internal host).
 config:
   base-url: "https://ntfy-tech.pke-lab.de"
   upstream-base-url: "https://ntfy.sh"
   behind-proxy: true
   cache-file: /var/lib/ntfy/cache.db
   auth-file: /var/lib/ntfy/auth.db
-  # read-write = everyone can publish and subscribe without auth.
-  # Set to "deny-all" and create users via ntfy CLI if you want auth.
   auth-default-access: "read-write"
 
 resources:

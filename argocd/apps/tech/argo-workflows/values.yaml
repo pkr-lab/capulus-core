@@ -1,17 +1,11 @@
 ---
-# Values passed through to the argo-workflows sub-chart (everything under the
-# `argo-workflows:` key). Top-level blocks below configure this chart's own
-# templates/ (SealedSecrets) — they are NOT passed to the sub-chart.
 argo-workflows:
-  # Restrict controller + server to the release namespace (argo-workflows).
-  # Simpler and safer than cluster-wide for a single-user home CI.
   singleNamespace: true
 
   crds:
     install: true
     keep: false
 
-  # ServiceAccount + RBAC that workflow pods run as.
   workflow:
     serviceAccount:
       create: true
@@ -31,7 +25,6 @@ argo-workflows:
   server:
     authModes:
       - server
-    # Serve plain HTTP — TLS is terminated/none behind Traefik on the LAN.
     secure: false
     resources:
       requests:
@@ -49,9 +42,6 @@ argo-workflows:
         - /
       pathType: Prefix
 
-  # S3 artifact repository + log archive, backed by the MinIO app
-  # (argocd/apps/tech/minio) reachable cluster-internally. Credentials come from the
-  # argo-artifacts-s3 Secret rendered by templates/artifact-secret-sealedsecret.yaml.
   artifactRepository:
     archiveLogs: true
     s3:
@@ -66,21 +56,11 @@ argo-workflows:
         name: argo-artifacts-s3
         key: secretkey
 
-# --- Consumed by this chart's own templates/ (NOT the sub-chart) ---
-# SealedSecrets. Seal real values against the cluster controller, e.g.:
-#   echo -n "<value>" | kubeseal --raw --namespace argo-workflows \
-#     --name argo-artifacts-s3 --controller-name sealed-secrets-controller \
-#     --controller-namespace sealed-secrets --from-file=/dev/stdin
-# See docs/f-cicd-automatisierung/f0000-argo-workflows.md for the full workflow (incl. the GHCR token).
-
-# S3 access for the artifact repository — must match the MinIO root creds.
 artifactSecret:
   name: argo-artifacts-s3
   encryptedAccessKey: "AgBPMd/qPy1oGVUqegPgilKgacACDntc3UXdyVOiro1I5KqhsC1SAnrYA+0dsWmwmEFdS6V+2zeHZO6ln1/8l22Ndr/8n2dK3kUnLGltxmNfyNSQqt7dRhYmvBoYRJTWOH/dKDXqeKIaH+1YlZee59fmDpk7Ti7yPVEGIQUjjnKw4jHbSicNInTBTjPGfaGDNxOkfMeSaWZxzNN1Uu03yVn0RvHrHzXDqO5a0C63mnlyioNx0YwduS/8bqgc2YGGfpoJPHN12oueUAn05xmEHCOf04M3NTfmxPTusIDdScSDliXOhMbnMqlXY61zRuKjVdNu3fQ0hBGWnCA6IJ45xuVRGMtQvCVrpYth53IYy7Jk+KB3ZJsvAnzLQdcASVu75DkpfBFJ0aBDDqiRh7jhpNTBrsHW7G/kHEbTRorUh/no59iBB6iUDsfmv6zpvcUUtDtvekY+OfpLmKnRe+aILIva53PvLXyVT9UAeE2XvnIutDQhRVO54mnI25Ot/R0Pdtl7qC83uvRMpJfVpaNsKpUSS708MjuT8zgLIY+t7r3pHa7nJoJTnkfFHm52oeHFak272Zq7jUXkntfiAMgyKKqvCHapD22tYOKJXzRt2CzuDUWsAQ1XAOgps6Vb9GzSAPRYK0MuXKHk8qCv2SkubtpS01WEUXj88UuE/vcxaiLHVjt+LbUy09t9FbOmNh34Wr1ppSrYug=="
   encryptedSecretKey: "AgCyCJJbO4BQ4J0lh96ouMOocB3yRaMe8uMHHBOnb62jE74EtRw3h7VQ4QVXcfHO7Fp/6prDU6EjJHOBCVAJhu0rs14xi9NNAG2C/cE738PAhP8iv7ksXm4/fK44tfQBvieCWvJ1hFZnrgI/disU5PKShExevvQ6NbNxwPLfC3R9myRdEZGkGgL3NEPb8/komBwSjaf9TLyHl3Ou/+N1zob1G8j6RTcVFWyY/5303oblwOQutYQ/WI481aBsFsMSEqhXT1qoVfJXmkDirZs0c7iosvm75ygpLndoXY4mJPoYnWd6HB9UPLAhkKcPD6DbctdBE3GPRPIw/zptu2JGh/lDM+gijo/AwnvAUfVVUHGX0STihFzpEaAkPyhSONxO8s05Z9HR/E61B/IeMRVAUZkeUONv673CZVZMZYXSVxWO2Ej1u9l5Zv3vR3h31weBzGCii7FEQ00fG5l1S/vkYhE2lZChZ4HFsqHZfEfKBAlF2zuToEHNXCcmCpMD4KUNpKJDumD+kUjMQHuPrOw4fq7bBqpoOCj6nZDBsmZ+kocPjG3AO4ERUw5AY4YygaXwKI3KF//IZMA0Eox5G2Mch4MU1ihcjwsufzw8PtoMJS+h9KWby/kYeIQVWWwfYdIsCQTxlUPEd0UAisEk3f7xd4EeV9g3U+G9WWUNFmXtTR0PHWBP18dB9EH/7qmBU9gi+f6rYHqUF8CQkqQW+A=="
 
-# Docker config json for Kaniko to push images to GHCR (ghcr.io/jaydee94/...).
-# Build the dockerconfigjson, then seal it under the `.dockerconfigjson` key.
 ghcrSecret:
   enabled: true
   name: ghcr-push

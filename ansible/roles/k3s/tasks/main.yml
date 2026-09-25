@@ -1,9 +1,5 @@
 ---
-# ============================================================
-# k3s/tasks/main.yml — k3s Kubernetes installation
-# ============================================================
 
-# ---- k3s Configuration Directory ---------------------------
 - name: Create /etc/rancher/k3s directory
   ansible.builtin.file:
     path: /etc/rancher/k3s
@@ -12,7 +8,6 @@
     group: root
     mode: '0755'
 
-# ---- Audit-Log (Security-Härtung Phase 4, docs/d-sicherheit/d0050-secrets-encryption-audit-log.md) ----------
 - name: Template kube-apiserver audit policy
   ansible.builtin.template:
     src: audit-policy.yaml.j2
@@ -39,7 +34,6 @@
     group: root
     mode: '0644'
 
-# ---- k3s Installation ---------------------------------------
 - name: Check if k3s is already installed
   ansible.builtin.stat:
     path: /usr/local/bin/k3s
@@ -88,7 +82,6 @@
     path: /tmp/get-k3s.sh
     state: absent
 
-# ---- k3s Service Management ---------------------------------
 - name: Enable and start k3s service
   ansible.builtin.systemd:
     name: k3s
@@ -118,7 +111,6 @@
   ansible.builtin.debug:
     var: k3s_nodes_status.stdout_lines
 
-# ---- kubeconfig Setup for ubuntu user ----------------------
 - name: Create .kube directory for ubuntu user
   ansible.builtin.file:
     path: /home/{{ ansible_user }}/.kube
@@ -170,7 +162,6 @@
     group: "{{ ansible_user }}"
     mode: '0644'
 
-# ---- Helm Installation -------------------------------------
 - name: Check if Helm is already installed
   ansible.builtin.stat:
     path: /usr/local/bin/helm
@@ -219,7 +210,6 @@
   ansible.builtin.debug:
     msg: "Helm installed: {{ k3s_helm_version.stdout }}"
 
-# ---- Verify k3s System Pods --------------------------------
 - name: Wait for core system pods to be ready
   ansible.builtin.command: >
     kubectl wait --for=condition=Ready pods

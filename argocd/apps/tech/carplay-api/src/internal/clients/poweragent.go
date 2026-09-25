@@ -9,14 +9,6 @@ import (
 	"time"
 )
 
-// PowerAgentClient talks to power-agent, the small privileged HTTP daemon
-// that runs directly on the homeserver host (ansible/roles/power_agent) —
-// NOT a k8s workload. carplay-api's pod has no host access (sysfs
-// backlight, sudo poweroff, the cluster_power_manager SSH key for worker
-// shutdown), so every brightness/wake/shutdown request is proxied to this
-// agent over the LAN, authenticated with its own bearer token (deliberately
-// separate from CARPLAY_API_TOKEN — the app's token should not itself be
-// enough to power anything off).
 type PowerAgentClient struct {
 	baseURL    string
 	token      string

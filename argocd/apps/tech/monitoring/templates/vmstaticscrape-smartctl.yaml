@@ -1,16 +1,3 @@
-# S.M.A.R.T.-Exporter (ansible/roles/smartctl_exporter, Port 9633) der
-# physischen Hosts, die Grafana-Panels "Laufwerke" / "S.M.A.R.T." der
-# Hardware-Dashboards (dashboards/hardware/) speisen. Das NAS hat seinen
-# eigenen Docker-Exporter (vmstaticscrape-ugreen-nas.yaml).
-#
-# Nicht enthalten: worker-0 — der Node schlaeft laut cluster_power_manager
-# den Grossteil der Zeit, ein dauerhaft "down" Target wuerde (wie schon beim
-# node-exporter-Job) den TargetDown-Alert der Default-Regeln zusaetzlich
-# ausloesen. Bei Bedarf hier `192.168.178.95:9633` (host: worker-0)
-# ergaenzen.
-#
-# `instance` ist hier der Hostname (wie bei den anderen Static-Scrapes);
-# `host`/`kind` sind der einheitliche Filter der Dashboards.
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMStaticScrape
 metadata:

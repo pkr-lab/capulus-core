@@ -1,15 +1,3 @@
-# Relabeling beim Empfang (VMSingle `-relabelConfig`, siehe values.yaml
-# vmsingle.spec.configMaps/extraArgs): setzt `host`/`kind` fuer den
-# Vereinsheim-Alarmmonitor. Der Pi ist nur per Tailscale erreichbar und pusht
-# seine Metriken per vmagent (ansible/roles/vmagent) — anders als die
-# Cluster-Nodes und VMStaticScrapes bekommt er `host`/`kind` also nicht beim
-# Scrapen, und ein Ansible-Lauf gegen den produktiven Alarmmonitor soll dafuer
-# nicht noetig sein. Die vmagent-Rolle setzt beide Labels inzwischen ebenfalls
-# selbst; die Regeln greifen nur, solange `host`/`kind` NICHT gesetzt sind
-# (`host=""` = Label fehlt) und werden dann von selbst wirkungslos.
-# Betrifft nur Serien mit instance="vereinsheim-alarmmonitor" — alle anderen
-# Metriken laufen unveraendert durch. Hintergrund:
-# docs/2-betrieb-hardware/20060-hardware-monitoring.md
 apiVersion: v1
 kind: ConfigMap
 metadata:

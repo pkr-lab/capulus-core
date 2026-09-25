@@ -1,20 +1,3 @@
-# Mealie hinter ForwardAuth — Zugriff für "admins" ODER die App-Gruppe
-# "mealie-user" (in lldap anlegen, siehe docs/d-sicherheit/d0072-lldap.md).
-# WICHTIG beim Rollout dieser Änderung: "rdn" war bisher per Username fest
-# verdrahtet — muss jetzt manuell der neuen Gruppe "mealie-user" in lldap
-# zugewiesen werden, sonst verliert rdn den Zugriff! Kein TOTP-Zwang für
-# mealie-user (nur admins-Mitglieder brauchen TOTP, siehe
-# 01-admin-2fa-policy.yaml).
-#
-# ZWEI Provider/Application-Paare, nicht einer: Mealie ist sowohl intern
-# (mealie.prod.homeserver) als auch extern (mealie-prod.pke-lab.de)
-# geschützt, aber ein authentik_providers_proxy.proxyprovider im Modus
-# forward_single ist an genau EINEN external_host gebunden — ein zweiter
-# Hostname für dieselbe App braucht einen zweiten Provider (+ eigene
-# Application, da eine Application aktuell genau einen Provider referenziert).
-# Beide teilen sich dieselbe Policy. Siehe
-# docs/d-sicherheit/d0074-authentik-iac-cookbook.md, Abschnitt 3 (Hinweis
-# "App mit internem UND externem Host").
 version: 1
 metadata:
   name: app-mealie
@@ -80,5 +63,3 @@ entries:
       policy: !KeyOf mealie-access-policy
       order: 0
 
-  # Outpost-Registrierung NICHT hier — siehe
-  # blueprints/90-outpost-providers.yaml (zentrale Datei, Begründung dort).

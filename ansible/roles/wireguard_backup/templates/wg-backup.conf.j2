@@ -1,17 +1,10 @@
-# Managed by Ansible (role: wireguard_backup) — do not edit by hand.
-# Emergency-only fallback tunnel, see docs/c-netzwerk-dns/c0011-wireguard-backup.md
-
 [Interface]
 PrivateKey = {{ wireguard_backup_privkey_raw.content | b64decode | trim }}
 Address = {{ wireguard_backup_server_tunnel_ip }}
 ListenPort = {{ wireguard_backup_port }}
-# No PostUp/PostDown NAT/forwarding rules on purpose: this tunnel only
-# reaches the server itself, it is not a LAN subnet router. Keeps the UFW
-# forward chain (already relied on by k3s/flannel) untouched.
 
 {% if wireguard_backup_peer_public_key | default('') | length > 0 %}
 [Peer]
-# {{ wireguard_backup_peer_name }}
 PublicKey = {{ wireguard_backup_peer_public_key }}
 {% if wireguard_backup_peer_preshared_key | default('') | length > 0 %}
 PresharedKey = {{ wireguard_backup_peer_preshared_key }}

@@ -5,30 +5,11 @@ k3s_agent_hostname: worker-1
 
 wake_on_lan_mac_address: "b8:97:5a:ea:a4:fa"
 
-# worker-1 bekommt (anders als worker-0) per DHCPv6 vom Fritz!Box-Router
-# zuverlaessig DNS -- der Fallback ist hier nur zusaetzliche Absicherung
-# (Konsistenz mit worker-0), nicht Voraussetzung fuer funktionierendes apt.
-# Siehe worker_apt_update_dns_fallback_enabled in
-# ansible/roles/worker_apt_update/defaults/main.yml und
-# docs/2-betrieb-hardware/20030-nightly-worker-update.md.
 worker_apt_update_dns_fallback_enabled: true
-worker_apt_update_dns_fallback_interface: "enp2s0"  # anderer NIC-Name als worker-0 (eno1) -- mit `ip -br addr` pruefen
+worker_apt_update_dns_fallback_interface: "enp2s0"
 
-# ---- Tailscale ------------------------------------------------
-# worker-1 ist reiner Tailnet-Client, kein Subnet-Router (das übernimmt
-# bereits der homeserver für das ganze LAN) -- deshalb KEIN
-# --advertise-routes.
 tailscale_advertise_routes: ""
 
-# Braucht einen EIGENEN Auth-Key -- der globale Default-Key in
-# group_vars/all.yml ist bereits vom homeserver verbraucht, und der fuer
-# worker-0 generierte Key ist (Single-Use-Policy) ebenfalls nicht
-# wiederverwendbar. Einmalig einrichten (siehe host_vars/worker-0/vars.yml
-# fuer den identischen Ablauf inkl. "Disable key expiry"):
-#   1. https://login.tailscale.com/admin/keys -> Generate auth key
-#   2. ansible-vault encrypt_string 'tskey-auth-...' --name 'tailscale_auth_key'
-#      Ergebnis hier einsetzen oder nach
-#      ansible/host_vars/worker-1/vault.yml verschieben.
 tailscale_auth_key: !vault |
           $ANSIBLE_VAULT;1.1;AES256
           64343537326531643438646662656263343831396463633066373336306166326430666563383666
@@ -39,36 +20,18 @@ tailscale_auth_key: !vault |
           66636266313161326339663638373365366261336163366234333432623333366631323430353563
           383634343136613838353938616535323434
 
-# ---- libvirt_host: ENTW-VM (docs/4-planung/40080 Baustein 5, Phase 1) ----
-# Bewusst NICHT vom globalen libvirt_host_enabled aus group_vars/all.yml
-# geerbt - der ist inzwischen dort auf true gesetzt (fuer die PROD-VM
-# auf homeserver), das soll aber NICHT automatisch auch die ENTW-VM auf
-# worker-1 mitbauen. Explizit hier auf false, bis bewusst entschieden.
 libvirt_host_enabled: true
 libvirt_host_configure_bridge: true
-# Explizit gepinnt statt aus den Default-Route-Facts: Bei einem Re-Run nach
-# fehlgeschlagenem/teilweisem Bridge-Setup liefern die Facts br0 bzw. die
-# DHCP-Adresse (.67) - dann wuerde die Bridge sich selbst enslaven bzw. die
-# falsche IP bekommen (Vorfall 2026-09-19).
 libvirt_host_bridge_interface: "enp2s0"
 libvirt_host_static_ip: "192.168.178.96"
-# EEE auf der physischen NIC, nicht auf br0 (siehe host_vars/homeserver).
 disable_eee_interface: "{{ libvirt_host_bridge_interface }}"
 
 libvirt_host_vms:
   - name: entw-vm
-    vcpus: 3 # von 4 vCPU gesamt - Rest fuer Host-OS + Hypervisor-Overhead
-    memory_mb: 12288 # 12 GiB von ~15 GiB gesamt, siehe Baustein 5 Sizing-Begruendung (PROD-VM)
-    # Dauerhaft 20 GiB: Root-Partition von worker-1 hat nur 31 GiB frei
-    # (57 GiB gesamt, siehe df -h vom 2026-09-18). Eine zweite, 465 GiB
-    # grosse Platte (/dev/sda) wurde geprueft und verworfen - beim
-    # Formatieren wiederholte "Input/output error" +
-    # "hostbyte=DID_BAD_TARGET" im Kernel-Log (Bus-/Verbindungsebene,
-    # smartctl kann die Platte nicht mal auslesen) - zu unzuverlaessig
-    # fuer VM-Storage, siehe docs/4-planung/40080, Checkliste.
+    vcpus: 3
+    memory_mb: 12288
     disk_gb: 20
     ip: "192.168.178.100"
     prefix_length: "{{ network_prefix_length }}"
     gateway: "{{ network_gateway }}"
-    # CHANGE: eigene, im LAN eindeutige MAC waehlen, falls diese kollidiert.
     mac: "52:54:00:00:01:00"

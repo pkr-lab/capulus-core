@@ -1,13 +1,3 @@
-# Remote-Proxy-Outpost von Authentik in PROD (docs/4-planung/40080, Batch 4).
-# Meldet sich mit einem Token bei Authentik in TECH an, bekommt von dort die
-# zugeordneten Provider (mealie, ...) und beantwortet die ForwardAuth-Aufrufe
-# der PROD-Middleware lokal. Der Outpost-Eintrag und das Token entstehen in
-# Authentik (Outposts -> Erstellen, Typ "Proxy", Integration: keine); das
-# Token kommt als SealedSecret `authentik-outpost-token` (Schluessel `token`)
-# nach outpost-token-sealedsecret.yaml - siehe migrations/README.md.
-#
-# Version muss zur Authentik-Version in TECH passen (argocd/apps/tech/
-# authentik/values.yaml, image.tag).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -47,7 +37,6 @@ spec:
                 secretKeyRef:
                   name: authentik-outpost-token
                   key: token
-            # Interne Root-CA fuer die Verbindung zu authentik.tech.homeserver.
             - name: SSL_CERT_FILE
               value: /etc/homeserver-ca/ca.pem
           readinessProbe:

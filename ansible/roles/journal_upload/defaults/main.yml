@@ -1,30 +1,11 @@
 ---
 journal_upload_enabled: true
 
-# HTTPS ist Pflicht: der TECH-Traefik leitet HTTP global per 308 auf HTTPS um,
-# und systemd-journal-upload folgt keiner Weiterleitung ("Upload ... failed
-# with code 308: Permanent Redirect"). Mit der frueheren http://-URL kam
-# deshalb von KEINEM Host ein Journal in VictoriaLogs an (Vorfall 2026-09-20).
-#
-# Der Port :443 ist ebenfalls Pflicht: ohne Port haengt systemd-journal-upload
-# selbst ":19532/upload" an (=> Pfad "/insert/journald:19532/upload", den
-# VictoriaLogs nicht kennt); mit Port wird nur "/upload" angehaengt und der
-# Endpunkt /insert/journald/upload getroffen.
 journal_upload_push_url: "https://logs-write.tech.homeserver:443/insert/journald"
 
-# Interne Root-CA, gegen die das Traefik-Zertifikat geprueft wird (gleiche
-# Datei/gleicher Zielpfad wie in den Kiosk-Rollen, siehe
-# docs/d-sicherheit/d0040-internal-tls.md). Der Hostname muss in der SAN-Liste
-# von argocd/apps/tech/cert-manager/templates/certificate-homeserver-wildcard.yaml
-# stehen - es gibt kein Wildcard-Zertifikat.
 journal_upload_ca_src: "{{ playbook_dir }}/../docs/assets/homeserver-root-ca.pem"
 journal_upload_ca_dest: /usr/local/share/ca-certificates/homeserver-root-ca.crt
 
-# Namensaufloesung ohne DNS-Abhaengigkeit: worker-0/worker-1 loesen
-# *.homeserver nicht auf (kein dnsmasq als Resolver), die Pis nur ueber
-# Tailscale-Split-DNS. Ein fester /etc/hosts-Eintrag auf die LAN-IP des
-# homeserver macht das Journal-Upload unabhaengig davon. Nur abschalten, wenn
-# der Host *.homeserver zuverlaessig per DNS aufloest.
 journal_upload_hosts_entry_enabled: true
 journal_upload_hosts_entry_name: "logs-write.tech.homeserver"
 journal_upload_hosts_entry_ip: "{{ network_static_ip | default('192.168.178.94') }}"

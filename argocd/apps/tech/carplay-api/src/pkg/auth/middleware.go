@@ -1,9 +1,3 @@
-// Package auth provides the two independent layers carplay-api relies on
-// instead of the mTLS the original spec asked for: this cluster's Traefik
-// ingress doesn't terminate client-certificate TLS, so "mTLS" here would
-// have been a checkbox with nothing behind it. The real boundary is
-// network-level (Tailscale-only ingress, see docs/3-apps-workloads/300d0-carplay-api.md) plus a
-// Bearer token checked at the application layer.
 package auth
 
 import (
@@ -15,9 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// BearerAuth rejects any request whose Authorization header isn't exactly
-// "Bearer <token>", using a constant-time comparison so response timing
-// can't be used to brute-force the token byte by byte.
 func BearerAuth(token string) gin.HandlerFunc {
 	expected := []byte(token)
 	return func(c *gin.Context) {
@@ -38,11 +29,6 @@ func BearerAuth(token string) gin.HandlerFunc {
 	}
 }
 
-// IPAllowlist rejects any request whose client IP doesn't fall inside one of
-// the given CIDR ranges — the actual "only our network can reach this"
-// control. Malformed CIDR strings are dropped with a startup-time panic
-// rather than silently ignored, since a typo here would otherwise silently
-// open the API to the world.
 func IPAllowlist(cidrs []string) gin.HandlerFunc {
 	nets := make([]*net.IPNet, 0, len(cidrs))
 	for _, cidr := range cidrs {
@@ -71,10 +57,6 @@ func IPAllowlist(cidrs []string) gin.HandlerFunc {
 	}
 }
 
-// CORS allows only the configured origins (e.g. the CarPlay app's WKWebView
-// origin, if ever used from a browser context) instead of gin's wide-open
-// default. Non-browser clients like the iOS app's URLSession ignore CORS
-// entirely, so this only matters for a hypothetical web dashboard.
 func CORS(allowedOrigins []string) gin.HandlerFunc {
 	allowed := make(map[string]bool, len(allowedOrigins))
 	for _, origin := range allowedOrigins {

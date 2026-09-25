@@ -1,14 +1,3 @@
-# Kopiert die Nextcloud-Dateien (data ~11 GB, html ~1 GB) aus den TECH-Verzeichnissen auf dem NAS
-# in die neuen PROD-Volumes (PVCs nextcloud-data / nextcloud-html). Manuell in PROD anwenden,
-# NICHT per ArgoCD (siehe README.md in diesem Ordner):
-#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl apply -f -' < argocd/bootstrap-prod/migrations/nextcloud-data-copy-job.yaml
-#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl -n nextcloud logs job/nextcloud-data-copy'
-#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl -n nextcloud delete job nextcloud-data-copy'
-#
-# NUR mit gestoppter TECH-Nextcloud-App und PROD-App auf 0. Die Datenbank wird separat per
-# pg_dumpall/pg_dump uebernommen (liegt auf local-path, nicht auf dem NAS). Das Zielvolume wird
-# vor dem Kopieren geleert. Laeuft als uid 1000 / gid 10 wie die Dateien (all_squash des NAS);
-# config.php (Modus 640, Besitzer 1000) und data (770, Gruppe 10) bleiben so lesbar.
 apiVersion: batch/v1
 kind: Job
 metadata:

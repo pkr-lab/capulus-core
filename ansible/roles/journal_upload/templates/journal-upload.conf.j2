@@ -1,12 +1,7 @@
-# Managed by Ansible (journal_upload role) — do not edit manually.
 [Upload]
 URL={{ journal_upload_push_url }}
 {% if journal_upload_push_url.startswith('https://') %}
-# Server-Zertifikat gegen die interne Root-CA pruefen ...
 TrustedCertificateFile={{ journal_upload_ca_dest }}
-# ... aber KEIN Client-Zertifikat verwenden. Ohne diese beiden Zeilen versucht
-# systemd-journal-upload bei HTTPS /etc/ssl/certs/journal-upload.pem zu laden
-# und bricht ab ("could not load PEM client certificate").
 ServerKeyFile=-
 ServerCertificateFile=-
 {% endif %}

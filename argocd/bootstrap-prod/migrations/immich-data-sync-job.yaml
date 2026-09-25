@@ -1,18 +1,3 @@
-# Synchronisiert die Immich-Daten aus den TECH-Verzeichnissen auf dem NAS in die neuen PROD-Volumes
-# (PVCs immich-postgresql-data / immich-server-library / immich-postgres-backup) per rsync.
-# Manuell in PROD anwenden, NICHT per ArgoCD (siehe README.md in diesem Ordner):
-#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl apply -f -' < argocd/bootstrap-prod/migrations/immich-data-sync-job.yaml
-#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl -n immich logs -f job/immich-data-sync'
-#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl -n immich delete job immich-data-sync'
-#
-# ZWEI Laeufe mit demselben Manifest:
-#  1. Vorlauf bei LAUFENDEM TECH (Bibliothek ~74 GB, aendert sich kaum): kann lange dauern, Nutzer merken nichts.
-#     Die dabei kopierten Postgres-Dateien sind inkonsistent und werden im 2. Lauf ueberschrieben.
-#  2. Endsync mit GESTOPPTEM TECH (server, machineLearning, postgresql auf 0): nur noch das Delta.
-# --delete gleicht das Ziel exakt an. Kopiert von Postgres nur pgdata_fixed_pg16 (PG 16); das alte
-# pgdata_fixed (PG 14, Upgrade-Rueckfall) bleibt in TECH. ML-Modell-Cache wird nicht kopiert (laedt neu).
-# Laeuft als root im Container, das NAS macht all_squash (Dateien gehoeren danach uid 1000/gid 10);
-# rsync ohne Besitzer-/Gruppenuebernahme (--no-o --no-g), Modus 0700 fuer PGDATA wird danach gesetzt.
 apiVersion: batch/v1
 kind: Job
 metadata:

@@ -1,9 +1,5 @@
 ---
-# ============================================================
-# tailscale/tasks/main.yml — Tailscale VPN installation
-# ============================================================
 
-# ---- Add Tailscale Repository -------------------------------
 - name: Create directory for APT keyrings
   ansible.builtin.file:
     path: /usr/share/keyrings
@@ -26,14 +22,12 @@
     state: present
     update_cache: true
 
-# ---- Install Tailscale --------------------------------------
 - name: Install (or upgrade) tailscale package
   ansible.builtin.apt:
     name: tailscale
     state: "{{ 'latest' if auto_upgrade | bool else 'present' }}"
     update_cache: true
 
-# ---- Enable tailscaled service ------------------------------
 - name: Enable and start tailscaled service
   ansible.builtin.systemd:
     name: tailscaled
@@ -47,7 +41,6 @@
     state: present
     timeout: 30
 
-# ---- Check Existing Connection ------------------------------
 - name: Check current Tailscale connection status
   ansible.builtin.command: tailscale status --json
   register: tailscale_status_raw
@@ -67,7 +60,6 @@
   ansible.builtin.debug:
     msg: "Tailscale connected: {{ tailscale_connected }}"
 
-# ---- Connect to Tailscale -----------------------------------
 - name: Authenticate with Tailscale using auth key
   when: not tailscale_connected
   block:
@@ -115,9 +107,6 @@
   failed_when: false
   when: tailscale_connected
 
-# ---- IP Forwarding for Subnet Routing -----------------------
-
-# ---- Verify Connection --------------------------------------
 - name: Get final Tailscale status
   ansible.builtin.command: tailscale status
   register: tailscale_final_status
