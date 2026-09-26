@@ -1,8 +1,3 @@
-// Package clients holds one HTTP client per upstream dependency
-// (VictoriaMetrics, ntfy, Uptime-Kuma). Every client is timeout-bounded and
-// never returns a hard failure to its caller for "upstream down" — it
-// degrades to a zero/empty value plus a logged warning, so one flaky
-// dependency never takes the whole dashboard down.
 package clients
 
 import (
@@ -21,9 +16,6 @@ import (
 	"carplay-api/internal/models"
 )
 
-// VictoriaMetricsClient queries a Prometheus-API-compatible VictoriaMetrics
-// instance (single-node vmsingle in this cluster, see
-// argocd/apps/tech/monitoring/).
 type VictoriaMetricsClient struct {
 	baseURL    string
 	httpClient *http.Client
@@ -38,10 +30,6 @@ func NewVictoriaMetricsClient(baseURL string, timeout time.Duration, logger *slo
 	}
 }
 
-// HostConfig maps one monitored machine to the VictoriaMetrics "instance"
-// label node-exporter is scraped under (host_config.go / values.yaml
-// config.hosts — no relabeling to hostnames happens in this cluster's
-// scrape config, so it's "ip:9100", not "homeserver:9100").
 type HostConfig struct {
 	ID       string
 	Name     string
@@ -59,11 +47,6 @@ type vmQueryResponse struct {
 	} `json:"data"`
 }
 
-// queryGroupedBy runs a PromQL instant query expected to be grouped
-// `by (<label>)` and returns one float64 per value of that label found in
-// the result vector. A label value missing from the map means "no series"
-// for that metric (query failed, or nothing scraped for it yet) — callers
-// treat that the same as zero rather than erroring the whole response.
 func (c *VictoriaMetricsClient) queryGroupedBy(ctx context.Context, promql, label string) (map[string]float64, error) {
 	endpoint := fmt.Sprintf("%s/api/v1/query?%s", c.baseURL, url.Values{"query": {promql}}.Encode())
 
@@ -110,18 +93,10 @@ func (c *VictoriaMetricsClient) queryGroupedBy(ctx context.Context, promql, labe
 	return out, nil
 }
 
-// queryByInstance is queryGroupedBy specialized to the "instance" label —
-// every host-metrics query below is grouped that way.
 func (c *VictoriaMetricsClient) queryByInstance(ctx context.Context, promql string) (map[string]float64, error) {
 	return c.queryGroupedBy(ctx, promql, "instance")
 }
 
-// GetHostMetrics assembles one HostMetrics per configured host from six
-// PromQL queries run concurrently, each grouped by instance so a single
-// round trip covers every host at once. A host absent from the "up" series,
-// or reporting up=0, comes back with Online=false and every metric at its
-// zero value — the caller (dashboard handler) relies on that to decide
-// whether a host card should show on the app's home screen at all.
 func (c *VictoriaMetricsClient) GetHostMetrics(ctx context.Context, hosts []HostConfig) []models.HostMetrics {
 	if len(hosts) == 0 {
 		return nil
@@ -188,25 +163,12 @@ func (c *VictoriaMetricsClient) GetHostMetrics(ctx context.Context, hosts []Host
 	return out
 }
 
-// ServiceConfig maps one self-hosted app to the substring its Traefik
-// "service" label is expected to contain (config.services in values.yaml).
-// Traefik's generated service-label format varies by provider/chart
-// version ("<ns>-<svc>-<port>@kubernetes" for a plain Ingress,
-// "...@kubernetescrd" for an IngressRoute) — matching by substring instead
-// of an exact label avoids having to pin that down without querying the
-// live cluster (`curl $VM_URL/api/v1/label/service/values`).
 type ServiceConfig struct {
 	ID    string
 	Name  string
 	Match string
 }
 
-// GetServiceActivity approximates "how busy is each self-hosted app right
-// now" from Traefik's request-rate metric (see argocd/apps/tech/traefik-config)
-// — this is request volume, NOT distinct users; Traefik has no concept of
-// who's behind a request. Returns one entry per configured service,
-// RequestsPerSecond 0 for any service whose Match substring doesn't appear
-// in the current result set (not scraped yet, or genuinely idle).
 func (c *VictoriaMetricsClient) GetServiceActivity(ctx context.Context, services []ServiceConfig) []models.ServiceActivity {
 	if len(services) == 0 {
 		return nil
@@ -244,15 +206,6 @@ func clampPercent(v float64) float64 {
 	return v
 }
 
-// regexAlternation builds a PromQL label-matcher regex ("a|b|c") from exact
-// values, escaping each one so IPs' dots don't accidentally act as
-// wildcards. The escaped value is embedded in a double-quoted MetricsQL
-// string literal, so a single backslash (what regexp.QuoteMeta produces,
-// e.g. "192.168.0.1" -> `192\.168\.0\.1`) gets parsed by VictoriaMetrics as
-// a string-literal escape sequence and rejected with 422 ("cannot parse
-// string literal") since "\." isn't one it recognizes. Doubling the
-// backslash makes it decode back to a single one before the regex engine
-// sees it.
 func regexAlternation(values []string) string {
 	escaped := make([]string, len(values))
 	for i, v := range values {

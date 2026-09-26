@@ -1,22 +1,3 @@
-# Ersetzt sowohl den manuellen "SAN-Liste live aus dem Cluster ziehen +
-# openssl signieren + kubeseal"-Ablauf als auch das committete
-# SealedSecret aus docs/d-sicherheit/d0040-internal-tls.md — cert-manager erstellt das
-# `homeserver-wildcard-tls`-Secret jetzt selbst (namespace kube-system,
-# exakt der Name, den argocd/apps/platform/traefik-config/tlsstore.yaml
-# als Traefik-Default-Zertifikat referenziert) und erneuert es automatisch
-# vor Ablauf (duration/renewBefore unten) — kein Kalender-Reminder für den
-# 11.11.2028 mehr nötig.
-#
-# KEIN echtes `*.homeserver`-Wildcard (wie in docs/d-sicherheit/d0040-internal-tls.md erklärt, strukturell
-# unmöglich — Single-Label-TLD, RFC-6125/X509_check_host-Regel, unabhängig
-# vom Tool). Explizite `dnsNames`-Liste bleibt deshalb bestehen, jetzt aber
-# tier-behaftet (`<app>.tech.homeserver`/`<app>.prod.homeserver`, siehe
-# docs/c-netzwerk-dns/c0040-domain-tiers.md) — der alte SealedSecret trug noch die
-# UNTIERTE Liste von vor der Domain-Tier-Migration, was seither zu einem
-# Zertifikats-Hostname-Mismatch auf jedem tier-behafteten Host führte
-# (das eigentliche "der aktuelle Weg funktioniert nicht"). Ein neuer Host
-# braucht weiterhin einen Eintrag hier + Commit — das ist inhärent zur
-# fehlenden Wildcard-Fähigkeit, nicht spezifisch für cert-manager.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -28,25 +9,17 @@ spec:
     name: homeserver-ca-issuer
     kind: ClusterIssuer
   commonName: homeserver
-  duration: 2160h # 90 Tage
-  renewBefore: 720h # 30 Tage vor Ablauf automatisch erneuern
+  duration: 2160h
+  renewBefore: 720h
   privateKey:
     algorithm: RSA
     size: 2048
   dnsNames:
     - homeserver
     - alamos-apager.prod.homeserver
-    # Laeuft (noch) im TECH-Cluster, hatte aber keinen SAN-Eintrag: TLS-Pruefung
-    # gegen https://alamos-relay.prod.homeserver schlug mit Hostname-Mismatch
-    # fehl (Sweep 2026-09-24). Gleiches gilt fuer pacman.prod.homeserver unten.
     - alamos-relay.prod.homeserver
     - argo-workflows.tech.homeserver
-    # ArgoCD-Web-UI per HTTPS ueber Traefik (ansible/roles/argocd, argocd_ui_host).
     - argocd.tech.homeserver
-    # Authentik-Portal — ein einziger Hostname reicht (im Unterschied zum
-    # historischen Authelia-Setup, das wegen einer statischen Cookie-Domain
-    # pro Tier zwei Hostnamen brauchte, siehe
-    # docs/4-planung/40070-authentik-sso-iac.md, Zielarchitektur).
     - authentik.tech.homeserver
     - carplay-api.prod.homeserver
     - demo.prod.homeserver
@@ -56,12 +29,7 @@ spec:
     - headlamp.tech.homeserver
     - immich.prod.homeserver
     - kubeseal-webgui.tech.homeserver
-    # lldap-Web-UI (Nutzer-/Gruppenverwaltung), Tailscale/LAN-only wie
-    # andere Admin-Tools, siehe docs/d-sicherheit/d0072-lldap.md.
     - lldap.tech.homeserver
-    # Journal-Upload aller Hosts (ansible/roles/journal_upload) -> VictoriaLogs.
-    # Ohne diesen Eintrag scheitert die TLS-Pruefung (Hostname-Mismatch), und
-    # der Upload-Dienst laeuft in eine Fehlerschleife.
     - logs-write.tech.homeserver
     - mealie.prod.homeserver
     - mealie-native.prod.homeserver
@@ -77,8 +45,6 @@ spec:
     - stream.prod.homeserver
     - tinyteller.prod.homeserver
     - uptime-kuma.prod.homeserver
-    # Bypass-Ingress "Knopfdruck zur nativen Anmeldung" für Uptime Kuma
-    # (Batch 1/Pilot), siehe docs/4-planung/40000-authelia-sso.md, Baustein 3.
     - uptime-kuma-native.prod.homeserver
     - vault.tech.homeserver
     - vm-write.tech.homeserver

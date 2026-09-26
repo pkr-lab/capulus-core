@@ -1,6 +1,6 @@
 # Domain-Tiers — dev / tech / prod
 
-Seit diesem Schnitt trägt jeder Hostname ein zusätzliches Tier-Label
+Jeder Hostname trägt ein zusätzliches Tier-Label
 zwischen App-Name und Domain. Intern per Punkt, extern per Bindestrich —
 unterschiedliches Trennzeichen, siehe [Warum Punkt intern, Bindestrich
 extern](#warum-punkt-intern-bindestrich-extern) unten:
@@ -15,35 +15,64 @@ Vorher lief alles flach unter `<app>.homeserver` bzw. `<app>.pke-lab.de` —
 ohne erkennbar, ob dahinter Infrastruktur oder eine Familien-/Vereins-App
 steckt.
 
-Diese Seite beschreibt **nur** die URL-Konvention (Namensgebung). Die
-komplett getrennte AppProject/Namespace-Trennung (`platform` vs.
-`workloads`, RBAC-Grenzen für ArgoCD-Applications) ist ein anderes Thema,
-siehe [docs/b-kubernetes-gitops/b0020-argocd-projects.md](../b-kubernetes-gitops/b0020-argocd-projects.md) — beide Schnitte
-verwenden zufällig eine ähnliche Zweiteilung, sind aber unabhängig
-voneinander (das eine wirkt auf ArgoCD-Ebene, das andere ist reines
-DNS-Naming).
+Diese Seite beschreibt die URL-Konvention (Namensgebung) und wie sie mit den drei Clustern
+zusammenhängt. Die ArgoCD-Trennung (Projekte, Ordner) ist ein anderes Thema, siehe
+[docs/b-kubernetes-gitops/b0020-argocd-projects.md](../b-kubernetes-gitops/b0020-argocd-projects.md).
+
+> **Tier ist nicht gleich Cluster.** Das Tier ist ein Namensbestandteil (`tech` = Infrastruktur/
+> Admin, `prod` = Apps mit Nutzerkreis, `dev` = Entwicklung). Welcher *Cluster* hinter dem Namen
+> steckt, entscheidet allein das DNS, siehe
+> [DNS: Tier und Cluster sind zwei verschiedene Dinge](#dns-tier-und-cluster-sind-zwei-verschiedene-dinge).
 
 ---
 
 ## Die drei Tiers
 
-| Tier | Bedeutung | Beispiele |
-|---|---|---|
-| **tech** | Infrastruktur/Admin-Dienste — alles unter `argocd/apps/tech/`, auf dem andere Apps aufbauen (DNS, Monitoring, Secrets-Tooling, ...) | `grafana.tech.homeserver`, `semaphore.tech.homeserver`, `minio.tech.homeserver` |
-| **prod** | Apps mit echtem Nutzerkreis (Familie, Vereinsmitglieder) — alles unter `argocd/apps/tech/`, mit zwei Ausnahmen (s. u.) | `nextcloud.prod.homeserver`, `mealie.prod.homeserver`, `immich.prod.homeserver` |
-| **dev** | Reserviert für künftige Test-/Staging-Deployments. Aktuell läuft keine App unter diesem Tier — die Konvention steht, sobald der erste Bedarf da ist (z. B. eine App vor dem Produktiv-Rollout separat testen) | — (noch keine) |
-
-Die Zuordnung folgt **nicht 1:1** dem `platform`/`workloads`-Ordner — zwei
-Apps liegen zwar unter `argocd/apps/tech/`, sind aber Infrastruktur
-und laufen deshalb bewusst unter **tech**:
-
-| App | Ordner | Tier | Warum die Ausnahme |
+| Tier | Bedeutung | Cluster | Beispiele |
 |---|---|---|---|
-| Vaultwarden | `apps/workloads/vaultwarden` | **tech** | Passwort-Manager — wird von Person *und* anderen Diensten als Credential-Quelle genutzt, kein Endnutzer-Produkt im eigentlichen Sinn |
-| Zammad | `apps/workloads/zammad` | **tech** | Ticket-/Support-System, das auch interne Automatisierung (z. B. `github-release-watcher`) anspricht — Betriebs-Tooling, nicht Familien-/Vereins-Content |
+| **tech** | Infrastruktur/Admin-Dienste, auf denen andere Apps aufbauen (Monitoring, Secrets-Tooling, SSO, DNS, CI/CD) | TECH | `grafana.tech.homeserver`, `semaphore.tech.homeserver`, `authentik.tech.homeserver` |
+| **prod** | Apps mit echtem Nutzerkreis (Familie, Vereinsmitglieder) | überwiegend PROD, einige noch TECH (s. u.) | `nextcloud.prod.homeserver`, `mealie.prod.homeserver`, `immich.prod.homeserver` |
+| **dev** | Entwicklung und Tests vor dem Rollout | ENTW | `whoami.dev.homeserver`, `demo.dev.homeserver` |
 
-Alle übrigen Apps folgen der einfachen Regel: `platform/` → **tech**,
-`workloads/` → **prod**.
+Hostnamen der Form `<app>.<tier>.homeserver` gelten intern (LAN/Tailnet). Die Zuordnung eines
+Hostnamens zu einem Tier folgt dem Charakter der App, **nicht** dem Ordner, in dem sie liegt:
+
+| App | Ordner | Tier | Warum |
+|---|---|---|---|
+| Vaultwarden | `argocd/apps/tech/vaultwarden` | **tech** | Passwort-Manager, Credential-Quelle auch für andere Dienste, kein Endnutzer-Produkt im eigentlichen Sinn |
+| Zammad | `argocd/apps/tech/zammad` | **tech** | Ticket-/Support-System, das auch interne Automatisierung (z. B. `github-release-watcher`) anspricht, Betriebs-Tooling |
+| n8n, alamos-apager, alamos-relay, carplay-api, mediamtx, uptime-kuma, pacman | `argocd/apps/tech/<app>` | **prod** | Apps mit Nutzerkreis, die (noch) im TECH-Cluster laufen. Ihr Name trägt `prod`, ihr Cluster ist TECH |
+
+---
+
+## DNS: Tier und Cluster sind zwei verschiedene Dinge
+
+Die dnsmasq-Rolle ([`dnsmasq.conf.j2`](../../ansible/roles/dnsmasq/templates/dnsmasq.conf.j2)) löst
+nach dem Prinzip „spezifischer gewinnt" auf:
+
+| Regel | Auflösung | Cluster |
+|---|---|---|
+| `address=/homeserver/<homeserver-IP>` | alles unter `*.homeserver` (also alle `*.tech.homeserver` und `*.prod.homeserver`, die nicht weiter unten überschrieben werden) | **TECH** (`.94`) |
+| `address=/dev.homeserver/<entw_vm_ip>` | alles unter `*.dev.homeserver` | **ENTW** (`.100`) |
+| `address=/<host>/<prod_vm_ip>` je Eintrag in `dnsmasq_prod_vm_hosts` (`group_vars/all.yml`) | genau die aufgelisteten Hosts | **PROD** (`.99`) |
+
+Ein Host unter `*.prod.homeserver` landet also **nur dann im PROD-Cluster**, wenn er einzeln in
+`dnsmasq_prod_vm_hosts` steht; sonst antwortet weiterhin der TECH-Traefik. Aktuell sind das
+`demo`, `tinyteller`, `whoami`, `mealie`, `mealie-native`, `paperless`, `wiki`, `nextcloud`, `xibo`
+und `immich` (jeweils `.prod.homeserver`). Nach dem Ändern der Liste: `make dnsmasq`.
+
+Konsequenzen für neue Hosts:
+
+- **Neue App im PROD-Cluster mit internem Host:** Name in `dnsmasq_prod_vm_hosts` ergänzen, sonst
+  bekommt man den TECH-Traefik und einen 404.
+- **Neue App im TECH-Cluster:** kein DNS-Eintrag nötig, die Wildcard greift.
+- **Neue App auf ENTW:** Host unter `*.dev.homeserver` wählen, kein DNS-Eintrag nötig.
+- **TLS:** Das `*.prod.homeserver`-Zertifikat stellt der cert-manager im PROD-Cluster aus einer eigenen
+  Intermediate-CA der gemeinsamen Root-CA aus, siehe
+  [d0040](../d-sicherheit/d0040-internal-tls.md).
+- Die CoreDNS-Auflösung **im** Cluster ist davon getrennt: die PROD-VM fragt ausschließlich den
+  dnsmasq auf dem homeserver (`host_vars/homeserver/vars.yml`, Feld `dns`), damit `*.homeserver`-Namen
+  auch aus PROD-Pods auflösbar sind.
 
 ---
 
@@ -66,89 +95,86 @@ Beide Pfade tragen dasselbe Tier-Label — z. B. ist Grafana intern
 App, derselbe Tier, nur andere Domain (und anderes Trennzeichen vor dem
 Tier, s. u.). Betroffene Stellen pro App:
 
-- `argocd/apps/<platform|workloads>/<app>/values.yaml` →
+- `argocd/apps/<tech|prod>/<app>/values.yaml` →
   `ingress.hosts[].host` (**beide** Hosts, LAN und — falls die App extern
   erreichbar sein soll — extern) und ggf. `env`/OIDC-Redirect-URLs, die den
   eigenen Hostnamen referenzieren
 - Jede Stelle, die den Hostnamen einer *anderen* App referenziert (siehe
   [Cross-App-Referenzen](#cross-app-referenzen) unten)
 
-DNS-Auflösung selbst brauchte **keine** Änderung: sowohl dnsmasq
+Die Tier-Labels brauchten in der DNS-Auflösung selbst keine eigene Regel: sowohl dnsmasq
 (`address=/homeserver/<ip>`, siehe
 [docs/c-netzwerk-dns/c0000-dns-architecture.md](c0000-dns-architecture.md)) als auch der
 CoreDNS-Forward im Cluster (`argocd/apps/tech/coredns-custom/`)
 matchen auf die komplette `homeserver`-Zone inklusive aller
-Subdomain-Ebenen — `app.tech.homeserver` wird also automatisch mit
-aufgelöst, ganz ohne Anpassung an dnsmasq/CoreDNS.
+Subdomain-Ebenen. Nur für Hosts, die in einem **anderen** Cluster laufen, gibt es die
+Ausnahmen aus dem [Abschnitt darüber](#dns-tier-und-cluster-sind-zwei-verschiedene-dinge).
 
 ---
 
 ## Externe Erreichbarkeit: Wildcard-Routing über Traefik
 
-`argocd/apps/tech/cloudflared/values.yaml` enthält **nicht** mehr eine
-Ingress-Regel pro extern freigegebener App, sondern nur noch **eine
-einzige** Wildcard-Regel für die ganze Zone (`*.pke-lab.de`), die auf
-`http://traefik.kube-system.svc.cluster.local:80` zeigt, also auf Traefik
-selbst, genau wie der interne LAN-Pfad das für `*.homeserver` bereits tut.
+`cloudflared` enthält **nicht** eine Ingress-Regel pro extern freigegebener App, sondern nur
+**eine einzige** Wildcard-Regel für die ganze Zone (`*.pke-lab.de`). Sie zeigt auf den Traefik des
+jeweiligen Clusters (`https://traefik.kube-system.svc.cluster.local:443`, `noTLSVerify`, weil das
+interne Zertifikat von der privaten Homeserver-CA stammt), genau wie der interne LAN-Pfad das für
+`*.homeserver` tut.
 
-**Nicht** eine Regel pro Tier (`*-tech.pke-lab.de`, `*-prod.pke-lab.de`,
-...) — das war der erste Versuch, funktioniert bei cloudflared aber nicht:
-laut `cloudflared tunnel ingress rule --help` erkennt cloudflared `*`
-ausschließlich als **komplettes** DNS-Label (`*.example.com`), kein Muster
-mit Stern + Literal *innerhalb* desselben Labels
-(`*-tech.example.com`) — leer bestätigt per
-`cloudflared tunnel ingress rule` im laufenden Pod, das fiel auf
-`defaultService`/404 zurück statt zu matchen. Da `grafana-tech` selbst
-aber schon ein einziges vollständiges Label ist (Bindestrich ist
-innerhalb eines Labels erlaubt), deckt ein simples `*.pke-lab.de` alle
-Tiers gleichzeitig ab — die Tier-Trennung ist auf cloudflared-Ebene gar
-nicht nötig, sie ist reine Namenskonvention für Menschen. Welche App
-tatsächlich erreichbar ist, entscheidet ausschließlich Traefik anhand des
-exakten Host-Headers (siehe unten).
+**Zwei Tunnel, ein Wildcard:** TECH und PROD haben je ein eigenes `cloudflared` mit eigenem Tunnel
+(`argocd/apps/tech/cloudflared/`, `argocd/apps/prod/cloudflared/`, Tunnel `homeserver` bzw.
+`homeserver-prod`). Beide Tunnel tragen dieselbe Wildcard-Regel; **welcher Tunnel einen Host
+bekommt, entscheidet allein der DNS-Eintrag bei Cloudflare.** Der Wildcard `*.pke-lab.de` zeigt auf
+den TECH-Tunnel, Hosts von Apps im PROD-Cluster werden einzeln mit
+`cloudflared tunnel route dns homeserver-prod <host>` auf den PROD-Tunnel gelegt. Wer eine App von
+TECH nach PROD umzieht, muss also auch den DNS-Eintrag ihres externen Hosts umlegen (siehe
+[e0010](../e-externe-erreichbarkeit/e0010-cloudflare-deploy.md)).
 
-**Eine Wildcard-Regel macht dadurch keine App automatisch extern
-erreichbar.** Traefik matcht Ingress-Ressourcen weiterhin exakt nach
-Host-Header — eine App wird nur dann erreichbar, wenn sie zusätzlich zu
-ihrem `*.homeserver`-Host auch einen `*-pke-lab.de`-Host in ihrer eigenen
-`ingress.hosts`-Liste trägt. Fehlt der, matcht Traefik keinen Router und
-liefert 404 — dieselbe "nur was explizit eingetragen ist"-Garantie wie
-vorher über cloudflareds `defaultService`, nur eine Ebene tiefer verlagert.
+**Nicht** eine Regel pro Tier (`*-tech.pke-lab.de`, `*-prod.pke-lab.de`, ...): laut
+`cloudflared tunnel ingress rule --help` erkennt cloudflared `*` ausschließlich als **komplettes**
+DNS-Label (`*.example.com`), kein Muster mit Stern + Literal *innerhalb* eines Labels
+(`*-tech.example.com`); das fiel im Test auf `defaultService`/404 zurück. Da `grafana-tech` selbst
+schon ein einziges vollständiges Label ist, deckt ein simples `*.pke-lab.de` alle Tiers gleichzeitig
+ab, die Tier-Trennung ist auf cloudflared-Ebene nicht nötig und reine Namenskonvention für Menschen.
 
-Aktuell tragen genau diese Apps zusätzlich einen `*-pke-lab.de`-Host (Stand
-dieser Migration):
+**Eine Wildcard-Regel macht keine App automatisch extern erreichbar.** Traefik matcht
+Ingress-Ressourcen weiterhin exakt nach Host-Header: eine App wird nur erreichbar, wenn sie
+zusätzlich zu ihrem `*.homeserver`-Host auch einen `*-pke-lab.de`-Host in ihrer eigenen
+`ingress.hosts`-Liste trägt. Fehlt der, matcht Traefik keinen Router und liefert 404, dieselbe
+„nur was explizit eingetragen ist"-Garantie wie über cloudflareds `defaultService`, nur eine Ebene
+tiefer.
 
-| App | Extern | Tier |
-|---|---|---|
-| Wiki.js | `wiki-prod.pke-lab.de` | prod |
-| ntfy | `ntfy-tech.pke-lab.de` | tech |
-| Zammad | `support-tech.pke-lab.de` (abweichendes Label!) | tech |
-| Grafana | `grafana-tech.pke-lab.de` | tech |
-| MediaMTX | `stream-prod.pke-lab.de` | prod |
-| Mealie | `mealie-prod.pke-lab.de` | prod |
-| Vaultwarden | `vault-tech.pke-lab.de` | tech |
-| Nextcloud | `nextcloud-prod.pke-lab.de` | prod |
-| Immich | `immich-prod.pke-lab.de` | prod |
-| alamos-relay | `alamos-relay-prod.pke-lab.de` | prod (kein Endnutzer, aber Sibling von alamos-apager — einziger Zweck ist die externe Erreichbarkeit selbst, siehe [docs/3-apps-workloads/300i0-alamos-relay.md](../3-apps-workloads/300i0-alamos-relay.md)) |
+Aktuell tragen diese Apps zusätzlich einen `*-pke-lab.de`-Host:
 
-Alle anderen Apps (Semaphore, Pi-hole, MinIO, Gotify, Headlamp,
-Paperless-ngx, n8n, ...) bleiben ausschließlich LAN/Tailscale-erreichbar —
-auch wenn ihr Hostname theoretisch unter die Wildcard-Regel fallen würde,
-weil ihnen schlicht der zweite Ingress-Host fehlt.
+| App | Extern | Tier | Cluster |
+|---|---|---|---|
+| Authentik | `authentik-tech.pke-lab.de` | tech | TECH |
+| Grafana | `grafana-tech.pke-lab.de` | tech | TECH |
+| ntfy | `ntfy-tech.pke-lab.de` | tech | TECH |
+| Zammad | `support-tech.pke-lab.de` (abweichendes Label!) | tech | TECH |
+| Vaultwarden | `vault-tech.pke-lab.de` | tech | TECH |
+| MediaMTX | `stream-prod.pke-lab.de` | prod | TECH |
+| Uptime Kuma (Status-Seite) | `status-prod.pke-lab.de` | prod | TECH |
+| pacman | `pacman-prod.pke-lab.de` (öffentlich, ohne Auth, Schulungsobjekt) | prod | TECH |
+| alamos-relay | `alamos-relay-prod.pke-lab.de` (einziger Zweck ist die externe Erreichbarkeit, siehe [docs/3-apps-workloads/300i0-alamos-relay.md](../3-apps-workloads/300i0-alamos-relay.md)) | prod | TECH |
+| Wiki.js | `wiki-prod.pke-lab.de` | prod | PROD |
+| Mealie | `mealie-prod.pke-lab.de` | prod | PROD |
+| Nextcloud | `nextcloud-prod.pke-lab.de` | prod | PROD |
+| Immich | `immich-prod.pke-lab.de` | prod | PROD |
+| Xibo CMS | `xibo-prod.pke-lab.de` | prod | PROD |
 
-Eine App extern freigeben/entfernen heißt also: den `*-pke-lab.de`-Host in
-der `ingress.hosts`-Liste der **App selbst** ergänzen/löschen — nicht mehr
-in `cloudflared/values.yaml`. Details/Ablauf:
+Alle anderen Apps (Semaphore, Pi-hole, MinIO, Gotify, Headlamp, Paperless-ngx, n8n, ...) bleiben
+ausschließlich LAN/Tailscale-erreichbar, auch wenn ihr Hostname theoretisch unter die Wildcard-Regel
+fiele, weil ihnen schlicht der zweite Ingress-Host fehlt.
+
+Eine App extern freigeben oder entfernen heißt: den `*-pke-lab.de`-Host in der `ingress.hosts`-Liste
+der **App selbst** ergänzen bzw. löschen, nicht in `cloudflared/values.yaml`. Details/Ablauf:
 [docs/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md → Neuen Dienst freigeben](../e-externe-erreichbarkeit/e0010-cloudflare-deploy.md#neuen-dienst-freigeben).
 
-> **Noch gegen den echten Cluster zu verifizieren:** Traefiks
-> Host-Header-Routing setzt voraus, dass `cloudflared` den ORIGINAL
-> angefragten Hostnamen (z. B. `grafana-tech.pke-lab.de`) unverändert als
-> HTTP-Host-Header an Traefik weiterreicht, statt den Hostnamen aus
-> `service:` (`traefik.kube-system.svc.cluster.local`) einzusetzen. Das ist
-> Cloudflares dokumentiertes Default-Verhalten für
-> `originRequest.httpHostHeader`, sollte nach dem Rollout aber per
-> `curl -I https://<app>-<tier>.pke-lab.de` bestätigt werden — falls nicht,
-> `httpHostHeader` pro Regel in `cloudflared/values.yaml` explizit setzen.
+> **Zu prüfen nach einem Rollout:** Traefiks Host-Header-Routing setzt voraus, dass `cloudflared`
+> den ORIGINAL angefragten Hostnamen (z. B. `grafana-tech.pke-lab.de`) unverändert als HTTP-Host-Header
+> weiterreicht. Das ist Cloudflares Default für `originRequest.httpHostHeader`, lässt sich aber per
+> `curl -I https://<app>-<tier>.pke-lab.de` bestätigen; falls nicht, `httpHostHeader` pro Regel in
+> `cloudflared/values.yaml` explizit setzen.
 
 ### Warum Punkt intern, Bindestrich extern
 
@@ -200,9 +226,12 @@ angepasst wurden:
 
 **Faustregel für neue Cross-App-Referenzen:** Der Tier eines Hostnamens
 richtet sich immer nach der **Ziel-App**, nicht nach der App, die
-referenziert. `github-release-watcher` ist selbst `prod`, spricht aber
-`zammad.tech.homeserver` an — weil Zammad `tech` ist, nicht weil der
-Aufrufer es ist.
+referenziert. n8n (Tier `prod`) spricht Zammad über
+`zammad.tech.homeserver` an, weil Zammad `tech` ist, nicht weil der
+Aufrufer es ist. Bei Aufrufen **zwischen Clustern** (z. B. ein PROD-Pod, der
+eine TECH-App anspricht) immer den `*.homeserver`-Hostnamen über den
+Traefik-Ingress nehmen, nicht den Cluster-internen Service-Namen: die
+Cluster haben getrennte Service-Netze.
 
 ---
 
@@ -246,24 +275,24 @@ mehr.
 
 ## Eine neue App einordnen
 
-1. Gehört die App zu **tech** (Infrastruktur/Admin, kein Endnutzer) oder
-   **prod** (echter Nutzerkreis)? Faustregel identisch zu
-   [docs/b-kubernetes-gitops/b0020-argocd-projects.md](../b-kubernetes-gitops/b0020-argocd-projects.md#eine-neue-app-hinzufügen)
-   — im Zweifel: Infrastruktur-/Betriebsdienst ohne eigenen Endnutzer →
-   **tech**.
-2. Ingress-Host in der `values.yaml` der neuen App direkt im neuen Schema
-   anlegen: `<app>.tech.homeserver` bzw. `<app>.prod.homeserver` — nicht
-   erst flach anlegen und später umbenennen.
-3. Soll die App zusätzlich extern erreichbar sein: **in der `values.yaml`
-   der App selbst** einen zweiten `ingress.hosts`-Eintrag mit demselben
-   Tier ergänzen — **mit Bindestrich, nicht Punkt**:
+1. **Tier wählen:** **tech** (Infrastruktur/Admin, kein Endnutzer), **prod** (echter Nutzerkreis)
+   oder **dev** (Entwicklung auf ENTW). Im Zweifel: Infrastruktur-/Betriebsdienst ohne eigenen
+   Endnutzer → **tech**.
+2. **Cluster wählen** und den zugehörigen Ordner anlegen (`argocd/apps/tech/`, `argocd/apps/prod/`,
+   `argocd/apps/entw/`), siehe
+   [docs/b-kubernetes-gitops/b0020-argocd-projects.md](../b-kubernetes-gitops/b0020-argocd-projects.md#eine-neue-app-hinzufügen).
+   Läuft die App im **PROD**-Cluster, den internen Host zusätzlich in `dnsmasq_prod_vm_hosts` eintragen
+   ([DNS-Abschnitt](#dns-tier-und-cluster-sind-zwei-verschiedene-dinge)).
+3. Ingress-Host in der `values.yaml` der neuen App direkt im Schema anlegen:
+   `<app>.tech.homeserver`, `<app>.prod.homeserver` bzw. `<app>.dev.homeserver`, nicht erst flach
+   anlegen und später umbenennen. Ein neuer Host braucht außerdem einen `dnsNames`-Eintrag im
+   Zertifikat ([d0040](../d-sicherheit/d0040-internal-tls.md)).
+4. Soll die App zusätzlich extern erreichbar sein: **in der `values.yaml` der App selbst** einen
+   zweiten `ingress.hosts`-Eintrag mit demselben Tier ergänzen, **mit Bindestrich, nicht Punkt**:
    `<app>-tech.pke-lab.de` / `<app>-prod.pke-lab.de` (siehe
-   [Warum Punkt intern, Bindestrich extern](#warum-punkt-intern-bindestrich-extern)
-   oben). `cloudflared/values.yaml` bleibt dabei unangetastet, siehe
-   [Externe Erreichbarkeit](#externe-erreichbarkeit-wildcard-routing-über-traefik)
-   oben.
-4. Referenziert eine andere, bereits bestehende App diesen neuen Host
-   (oder umgekehrt) — z. B. ein Webhook-Ziel, ein Ansible-Default —
-   auf den korrekten Tier des
-   jeweiligen **Ziels** achten (siehe
-   [Cross-App-Referenzen](#cross-app-referenzen) oben).
+   [Warum Punkt intern, Bindestrich extern](#warum-punkt-intern-bindestrich-extern)).
+   `cloudflared/values.yaml` bleibt dabei unangetastet, dafür muss der DNS-Eintrag beim richtigen
+   Tunnel liegen, siehe [Externe Erreichbarkeit](#externe-erreichbarkeit-wildcard-routing-über-traefik).
+5. Referenziert eine andere, bereits bestehende App diesen neuen Host (oder umgekehrt), z. B. ein
+   Webhook-Ziel oder ein Ansible-Default, auf den korrekten Tier des jeweiligen **Ziels** achten
+   (siehe [Cross-App-Referenzen](#cross-app-referenzen)).

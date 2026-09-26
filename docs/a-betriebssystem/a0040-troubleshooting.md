@@ -500,6 +500,25 @@ ansible-vault encrypt_string 'tskey-auth-DEIN_KEY' --name 'tailscale_auth_key'
 
 ---
 
+## Multi-Cluster (PROD / ENTW)
+
+Alle Abschnitte oben gelten für den TECH-Cluster. Für PROD und ENTW kommen diese Fälle dazu
+(Überblick: [a0010](a0010-overview.md#1-drei-cluster-im-überblick)):
+
+| Symptom | Ursache / Prüfung | Fix |
+|---|---|---|
+| `https://<app>.prod.homeserver` liefert 404 oder die falsche App, obwohl die App in PROD läuft | Der Host löst auf den TECH-Traefik (`.94`) statt auf die PROD-VM (`.99`) auf: `dig +short <host> @192.168.178.94` | Host in `dnsmasq_prod_vm_hosts` (`ansible/group_vars/all.yml`) eintragen, `make dnsmasq` |
+| Application `prod-<app>` steht auf `InvalidSpecError`/`Unknown`, Meldung „destination … not permitted in project 'prod'“ | Namespace fehlt in `argocd/bootstrap-prod/appproject.yaml` (oder wurde dort ergänzt, aber nicht im Hub angewendet) | Datei im **TECH-Hub** anwenden (`kubectl apply -f argocd/bootstrap-prod/appproject.yaml`), dann `kubectl -n argocd annotate application prod-<app> argocd.argoproj.io/refresh=hard --overwrite` |
+| Für einen neuen PROD-Ordner entsteht keine `prod-<app>`-Application | Reiner Manifest-Ordner (ohne `Chart.yaml`) fehlt in `home-server-apps-prod`, oder der Ordner liegt noch nicht auf `main` (die ApplicationSets lesen `main`) | `path` in `argocd/bootstrap-prod/applicationset.yaml` ergänzen und im Hub anwenden; Ordner mergen |
+| SealedSecret in PROD bleibt ohne Secret, Controller meldet „no key could decrypt secret“ | Mit dem TECH-Schlüssel versiegelt, jeder Cluster hat eigene Schlüssel | Für den PROD-Controller neu versiegeln (`scripts/reseal-for-prod.sh`, Kopf des Skripts) |
+| SSH (22) auf `prod-vm` läuft ins Timeout, Ping geht | UFW auf dem homeserver verwirft geroutete Bridge-Pakete (mit `br_netfilter` laufen sie durch die FORWARD-Kette) | Regel `ufw route allow in on br0 out on br0` — die Rolle `libvirt_host` setzt sie, `make libvirt-host` erneut ausführen |
+| homeserver ist nach einem Neustart eingeschaltet, aber im LAN nicht erreichbar (ARP `INCOMPLETE`, „no route to host“, auch `.99`) | Der NIC-Name hat sich geändert (`network_interface` zeigt auf ein nicht existierendes Interface), Netplan hat `br0` ohne physischen Port angelegt | Per Konsole oder IPv6-SSH (`ssh ubuntu@fe80::…%<NIC>`) `/etc/netplan/99-libvirt-bridge.yaml` korrigieren; Vorgehen mit Rollback-Timer in [40080, Phase 1.2](../4-planung/40080-multi-cluster-entw-prod-tech.md). Vorbeugung: `libvirt_host` prüft das Interface per `assert`, nach jeder Netzwerkumstellung einen Reboot-Test machen |
+| Pods in PROD lösen `*.homeserver` nicht auf | Die PROD-VM nutzt ausschließlich den dnsmasq des homeservers als Resolver; steht dnsmasq/Pi-hole, hat PROD kein DNS | `systemctl status dnsmasq` auf dem homeserver, Pi-hole-Pod in TECH prüfen |
+| ENTW-ArgoCD zeigt eine neue App nicht | Der Ordner liegt nicht auf dem **Branch `entw`** (ENTW liest nicht `main`) | Ordner per PR auf `entw` bringen, [b0050](../b-kubernetes-gitops/b0050-entw-argocd.md) |
+| `kubectl` auf dem homeserver zeigt keine PROD-Pods | Falscher Cluster: die PROD-Ressourcen liegen in der `prod-vm` | `ssh ubuntu@192.168.178.99 'sudo k3s kubectl get pods -A'`; die Applications selbst siehst du im Hub (`kubectl -n argocd get applications \| grep '^prod-'`) |
+
+---
+
 ## Nützliche Debug-Kommandos
 
 ### System-weiter Status

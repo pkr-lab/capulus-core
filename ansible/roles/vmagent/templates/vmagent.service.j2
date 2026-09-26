@@ -1,13 +1,3 @@
-# Managed by Ansible (vmagent role) — do not edit manually.
-#
-# Scraped lokal node_exporter (127.0.0.1:{{ vmagent_node_exporter_port }})
-# und pusht per remote_write nach aussen — Cluster-seitiges Scrapen (wie bei
-# ugreen-nas/VMStaticScrape) geht hier nicht, da dieser Host nur per
-# Tailscale erreichbar ist und Pods im Cluster keinen Pfad zu
-# Tailscale-Peers haben. -remoteWrite.tmpDataPath puffert lokal, falls das
-# Ziel (Cluster/Tailscale) kurz nicht erreichbar ist — Nachrichten gehen
-# dabei nicht verloren, werden nur verzoegert zugestellt. Siehe
-# docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md.
 [Unit]
 Description=vmagent (Metriken-Push fuer {{ inventory_hostname }})
 After=network-online.target prometheus-node-exporter.service

@@ -1,11 +1,7 @@
 ---
-# ============================================================
-# nightly_worker_wake — Defaults
-# ============================================================
 
 nightly_worker_wake_enabled: true
 
-# ---- n8n-Trigger (ersetzt den früheren systemd-Timer) -----------------
 nightly_worker_wake_n8n_trigger_ssh_user: ubuntu
 nightly_worker_wake_n8n_trigger_public_key: ""
 nightly_worker_wake_systemctl_bin: /usr/bin/systemctl
@@ -18,24 +14,19 @@ nightly_worker_wake_stop_grace_seconds: 30
 
 nightly_worker_wake_poll_seconds: 15
 
-# ---- SSH/Kubeconfig/State — wiederverwendet von cluster_power_manager,
 nightly_worker_wake_ssh_user: "{{ cluster_power_manager_ssh_user }}"
 nightly_worker_wake_ssh_key_path: "{{ cluster_power_manager_ssh_key_path }}"
 nightly_worker_wake_kubeconfig: "{{ cluster_power_manager_kubeconfig }}"
 nightly_worker_wake_state_dir: "{{ cluster_power_manager_state_dir }}"
 
-# ---- Semaphore-API — MUSS zu ansible/roles/semaphore_bootstrap/defaults
 nightly_worker_wake_semaphore_api_base: "https://semaphore-api.tech.homeserver"
 nightly_worker_wake_semaphore_admin_username: "admin"
 nightly_worker_wake_semaphore_admin_password_path: "/etc/semaphore-secrets/admin_password"
 
-# ---- ntfy-Benachrichtigungen — wiederverwendet von cluster_power_manager.
 nightly_worker_wake_ntfy_host: "{{ cluster_power_manager_ntfy_host }}"
 nightly_worker_wake_ntfy_ip: "{{ cluster_power_manager_ntfy_ip }}"
 nightly_worker_wake_ntfy_topic: "{{ cluster_power_manager_ntfy_topic }}"
 
-# ---- n8n-Webhook für den Zammad-Bericht -------------------------------
 nightly_worker_wake_n8n_webhook_url: "http://n8n.prod.homeserver/webhook/nightly-worker-update"
 
-# ---- Worker — identische Liste wie cluster_power_manager_workers
 nightly_worker_wake_workers: "{{ cluster_power_manager_workers }}"

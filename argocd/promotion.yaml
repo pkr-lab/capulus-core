@@ -1,21 +1,9 @@
-# Konfiguration der Promotion-Kette ENTW -> TECH -> PROD
-# (scripts/promote-chain.py, .github/workflows/promote-chain.yml,
-#  docs/f-cicd-automatisierung/f00b0-promotion-chain.md).
-# Liegt bewusst ausserhalb von argocd/apps/: kein ApplicationSet liest diese Datei.
 gates:
-  # So lange muss eine Version auf ENTW gesund laufen, bevor sie nach TECH (bzw. direkt nach PROD,
-  # wenn die App in TECH nicht existiert) uebernommen wird.
   entw_hours: 24
-  # So lange muss sie danach auf TECH gesund laufen, bevor der PR nach PROD entsteht.
   tech_hours: 2
 
-# Apps, die nie automatisch promotet werden (Ordnername).
 exclude: []
 
-# Optionale HTTP-Pruefungen nach dem Health-Gate, je App und Umgebung (entw | tech).
-# Felder: url (Pflicht), status (Standard 200), contains (Text im Body), timeout (Sekunden).
-# Die Hosts loesen im CI nicht per Heim-DNS auf: der Workflow setzt curl --resolve auf die IP der
-# Umgebung (SMOKE_IP_ENTW/SMOKE_IP_TECH, Standard: 192.168.178.100 / 192.168.178.94).
 smoke:
   example-whoami:
     entw:

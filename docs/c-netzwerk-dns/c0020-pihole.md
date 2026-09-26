@@ -35,7 +35,7 @@ ausschließlich über den SealedSecret unten).
 ### 1.2 SealedSecret-Ciphertext erzeugen
 
 Wie bei Gotify — entweder über die Web-UI unter
-<https://kubeseal-webgui.homeserver>:
+<https://kubeseal-webgui.tech.homeserver>:
 
 - **Namespace**: `pihole`
 - **Secret-Name**: `pihole-webpassword`
@@ -109,7 +109,7 @@ Erwartet:
 - Bekannte Werbe-/Tracking-Domains lösen zu `0.0.0.0` (bzw. `NXDOMAIN`,
   abhängig von der Blocking-Mode-Einstellung) auf, alles andere normal.
 
-Web-UI unter `https://pihole.homeserver/admin` mit dem Passwort aus 1.1
+Web-UI unter `https://pihole.tech.homeserver/admin` mit dem Passwort aus 1.1
 öffnen.
 
 ---
@@ -207,14 +207,14 @@ nslookup doubleclick.net 192.168.178.94   # sollte 0.0.0.0 / NXDOMAIN liefern
 nslookup github.com 192.168.178.94        # sollte normal auflösen
 ```
 
-Oder einfacher: in der Pi-hole-Web-UI (`https://pihole.homeserver/admin`)
+Oder einfacher: in der Pi-hole-Web-UI (`https://pihole.tech.homeserver/admin`)
 unter **Query Log** prüfen, ob Anfragen von der IP des Geräts auftauchen.
 
 ---
 
 ## 3. Blocklisten & Ausnahmen pflegen
 
-Alles Weitere läuft über die Pi-hole-Web-UI (`https://pihole.homeserver`):
+Alles Weitere läuft über die Pi-hole-Web-UI (`https://pihole.tech.homeserver`):
 
 - **Group Management → Adlists**: zusätzliche Blocklisten eintragen (URL zu
   einer Listendatei, **keine** einzelne Domain — dafür siehe Denylist unten),
@@ -268,7 +268,7 @@ ArgoCD es nicht automatisch prunt, dann den Pi-hole-Pod neu starten.
 | `pihole-webpassword`-Secret fehlt | `kubectl -n pihole describe sealedsecret pihole-webpassword` — Ciphertext muss gegen den Public Key dieses Clusters erzeugt worden sein |
 | Kein Internet mehr auf Geräten, die dnsmasq als DNS nutzen | Pi-hole-Pod down + `make dnsmasq` bereits gelaufen → kein Fallback auf die Fritz!Box (siehe [`c0000-dns-architecture.md`](c0000-dns-architecture.md)). `kubectl -n pihole get pods` prüfen, Pod ggf. neu starten |
 | Legitime Seite wird geblockt | Domain in der Pi-hole-Web-UI unter **Domains** auf die Allowlist setzen |
-| `pihole.homeserver` löst nicht auf | Prüfen, ob `pihole` in `dnsmasq_hosts` in `group_vars/all.yml` steht (wird automatisch über die `*.homeserver`-Wildcard aufgelöst, sollte also ohne Eintrag funktionieren), sonst `make dnsmasq` erneut ausführen |
+| `pihole.tech.homeserver` löst nicht auf | `dig +short pihole.tech.homeserver @192.168.178.94` muss die Homeserver-IP liefern (die `*.homeserver`-Wildcard löst automatisch auf, ein Eintrag pro App ist nicht nötig), sonst `make dnsmasq` erneut ausführen |
 | DNS-Antworten kommen doppelt so langsam | NodePort-Hop (`dnsmasq → Pi-hole → Fritz!Box`) fügt einen zusätzlichen Forward hinzu — normal, sollte aber im einstelligen ms-Bereich bleiben. Bei spürbaren Verzögerungen `kubectl -n pihole top pod` prüfen |
 | Neu geblockte Domain wird trotzdem noch aufgelöst (z. B. nach `pihole --wild`/`pihole -g`) | dnsmasq cached die alte, ungeblockte Antwort bis zum TTL-Ablauf. Fix: `sudo systemctl restart dnsmasq` auf dem Home-Server, um den Cache zu leeren. Direkt gegen den NodePort testen (`dig @192.168.178.94 -p 30053 <domain>`), um Pi-hole isoliert von dnsmasqs Cache zu prüfen |
 | Werbung erscheint trotz aktivem Pi-hole weiterhin auf einzelnen Seiten | Häufig eine nicht erfasste Subdomain eines Ad-Netzwerks (Listen blocken meist nur exakte Domains, keine automatischen Wildcards). Im **Query Log** nach nicht geblockten, verdächtigen Domains suchen und gezielt per `pihole --wild <domain>` (blockt die Domain + alle Subdomains) ergänzen |

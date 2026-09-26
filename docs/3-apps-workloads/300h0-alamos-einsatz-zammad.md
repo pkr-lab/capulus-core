@@ -1,5 +1,7 @@
 # ALAMOS-Einsatzalarm → Zammad-Ticket (n8n)
 
+> **Cluster:** TECH · Ordner `argocd/apps/tech/n8n/workflows/` · Zugang: n8n-Workflow, Webhook über alamos-relay. `kubectl`-Befehle in diesem Doc gelten für den TECH-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
+
 Erweitert die reine Kiosk-Anzeige aus
 [30010-alamos-apager.md](30010-alamos-apager.md) um eine
 Push-Benachrichtigung: Kommt in ALAMOS AMweb ein echter Einsatz rein, legt
@@ -31,9 +33,8 @@ empfohlene direkte Aufruf von `n8n.prod.homeserver` aus AMweb heraus hat in
 der Praxis nicht funktioniert (vermutlich genau das unten beschriebene
 Private-Network-Access-Problem, ggf. auch weil "Allgemeine Webhooks"
 serverseitig von Alamos' Cloud statt aus dem Browser-Tab feuert). Statt n8n
-selbst öffentlich zu machen — was die bewusste Entscheidung aus dem
-`N8N_HOST`-Kommentar in `argocd/apps/tech/n8n/values.yaml` aufheben
-würde — steht jetzt ein eigener, minimaler Proxy dazwischen:
+selbst öffentlich zu machen — was die bewusste Entscheidung „n8n nicht aus dem Internet erreichbar“ aufheben würde
+([c0030](../c-netzwerk-dns/c0030-port-uebersicht.md): aus dem Cloudflare-Tunnel entfernt, Security) — steht jetzt ein eigener, minimaler Proxy dazwischen:
 [alamos-relay](300i0-alamos-relay.md). Die **Ziel-URL in der
 Alamos-Webhook-Konfiguration zeigt seitdem auf das Relay, nicht mehr auf
 `n8n.prod.homeserver` direkt** (siehe [Einrichtung](#einrichtung) unten,

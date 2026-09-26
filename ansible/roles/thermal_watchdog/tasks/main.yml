@@ -1,15 +1,4 @@
 ---
-# ============================================================
-# thermal_watchdog role — Hardware-Selbstschutz
-# ============================================================
-# Liest die hwmon-Sensoren direkt vom Host (ohne Umweg über
-# Prometheus/k8s) und fährt den Host selbst herunter, wenn die
-# Temperatur zu lange zu hoch bleibt. Läuft bewusst unabhängig vom
-# Cluster, damit der Schutz auch greift, wenn der Cluster wegen der
-# Hitze schon klemmt. Ergänzt den Grafana/Alertmanager-Alert ab 80°C
-# (argocd/apps/tech/monitoring/templates/vmrule-temperature.yaml), der
-# parallel über Gotify/ntfy warnt.
-# ============================================================
 
 - name: Install lm-sensors (hwmon kernel modules / sysfs helpers)
   ansible.builtin.apt:

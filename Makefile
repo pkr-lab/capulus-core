@@ -1,6 +1,3 @@
-# Convenience targets for the home-server playbook.
-# Run `make help` to see what's available.
-
 ANSIBLE_DIR := ansible
 INVENTORY   := $(ANSIBLE_DIR)/inventory/hosts.yml
 PLAYBOOK    := $(ANSIBLE_DIR)/site.yml
@@ -127,24 +124,6 @@ worker-apt-update: ## Manuelles apt-Update auf worker-0 + worker-1 (läuft norma
 	ansible-playbook -i $(INVENTORY) $(HS2_PLAYBOOK) --tags apt-update $(VAULT_OPTS)
 	ansible-playbook -i $(INVENTORY) $(HS3_PLAYBOOK) --tags apt-update $(VAULT_OPTS)
 
-.PHONY: windows windows-check windows-users windows-software windows-settings
-WIN_PLAYBOOK := $(ANSIBLE_DIR)/windows.yml
-
-windows: ## Einrichten aller Windows-PCs (DLRG OG Andernach).
-	ansible-playbook -i $(INVENTORY) $(WIN_PLAYBOOK) $(VAULT_OPTS)
-
-windows-check: ## Dry-run des Windows-Playbooks (keine Änderungen).
-	ansible-playbook -i $(INVENTORY) $(WIN_PLAYBOOK) --check --diff $(VAULT_OPTS)
-
-windows-users: ## Nur Benutzer auf Windows-PCs anlegen/aktualisieren.
-	ansible-playbook -i $(INVENTORY) $(WIN_PLAYBOOK) --tags users $(VAULT_OPTS)
-
-windows-software: ## Nur Software auf Windows-PCs installieren.
-	ansible-playbook -i $(INVENTORY) $(WIN_PLAYBOOK) --tags software $(VAULT_OPTS)
-
-windows-settings: ## Nur System-Einstellungen auf Windows-PCs konfigurieren.
-	ansible-playbook -i $(INVENTORY) $(WIN_PLAYBOOK) --tags settings $(VAULT_OPTS)
-
 .PHONY: alarm-kiosks alarm-kiosks-check
 ALARM_PLAYBOOK := $(ANSIBLE_DIR)/alarm-kiosks.yml
 
@@ -172,16 +151,6 @@ banana-pi-kiosks: ## Banana-Pi-Alarmmonitore einrichten (Armbian, ALAMOS AMweb +
 banana-pi-kiosks-check: ## Dry-run des Banana-Pi-Alarmmonitor-Playbooks (keine Änderungen).
 	ansible-playbook -i $(INVENTORY) $(BANANA_PI_PLAYBOOK) --check --diff $(VAULT_OPTS)
 
-# Der "Kiosk-Supervisor-Skript deployen"-Task (ansible/roles/banana_pi_kiosk/
-# tasks/main.yml) loest den "Reload getty@tty1"-Handler nur bei Ansible
-# "changed" aus -- liegt das Skript auf der Platte bereits korrekt (z. B.
-# weil ein frueherer Lauf es schon geschrieben hat, bevor dieser notify
-# existierte), meldet der Task "ok" und der laengst laufende Prozess bleibt
-# mit veralteten Werten (z. B. BASE_URL) im Speicher haengen, da er sich
-# nicht selbst neu einliest. Dieses Target erzwingt den Neustart der
-# tty1-Session unabhaengig von einem Playbook-Diff. Braucht kein
-# Vault-Passwort, da der Ad-hoc-Befehl keine vault-verschluesselten
-# Variablen referenziert.
 banana-pi-kiosks-restart-session: ## tty1-Session auf den Banana-Pi-Alarmmonitoren erzwungen neu starten (laedt bereits deployte Skripte/Configs neu ein, ohne dass ein Playbook-Diff noetig ist).
 	ansible -i $(INVENTORY) banana_pis -m ansible.builtin.systemd -a "name=getty@tty1.service state=restarted" --become
 

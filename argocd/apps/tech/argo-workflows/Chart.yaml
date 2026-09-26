@@ -25,9 +25,6 @@ sources:
 maintainers:
   - name: home-server-admin
 dependencies:
-  # Community chart. Floats like the monitoring/victoria chart; observed
-  # version at authoring time: 1.0.x (argo-helm). Pin a concrete version here
-  # once verified against `helm search repo argo/argo-workflows`.
   - name: argo-workflows
     repository: https://argoproj.github.io/argo-helm
     version: "*"

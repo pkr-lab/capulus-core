@@ -1,9 +1,4 @@
 ---
-# ============================================================
-# semaphore_targets/tasks/main.yml
-# Authorizes the Semaphore SSH public key on each target host so
-# Semaphore can SSH in non-interactively.
-# ============================================================
 
 - name: Fetch Semaphore public key from the home-server
   ansible.builtin.slurp:

@@ -1,10 +1,12 @@
 # Immich
 
+> **Cluster:** PROD · Ordner `argocd/apps/prod/immich/` · URL `https://immich.prod.homeserver` und `https://immich-prod.pke-lab.de`. `kubectl`-Befehle in diesem Doc gelten für den PROD-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
+
 [Immich](https://immich.app) ist ein selbst gehostetes Foto-/Video-Backup
 (Google-Photos-Ersatz) mit automatischem Handy-Upload, Gesichtserkennung
 und Timeline-Ansicht. Die Deployment-Konfiguration liegt unter
-`argocd/apps/prod/immich/`, der zugehörige NAS-Storage unter
-`argocd/apps/tech/immich-storage/`.
+`argocd/apps/prod/immich/`, der zugehörige NAS-Storage (StorageClass
+`immich-nas`) unter `argocd/apps/prod/immich-storage/`.
 
 ---
 
@@ -137,7 +139,7 @@ ML-Container lädt beim ersten Start seine Modelle herunter (landet im
 `model-cache`-PVC) — das kann je nach Verbindung ein paar Minuten dauern,
 danach ist der Cache persistent und Neustarts sind schnell.
 
-**DNS:** `immich.homeserver` ist dank Wildcard-DNS sofort erreichbar.
+**DNS:** Immich läuft im **PROD**-Cluster; `immich.prod.homeserver` steht in `dnsmasq_prod_vm_hosts` (`ansible/group_vars/all.yml`) und zeigt auf die PROD-VM (`.99`).
 
 > **Machine-Learning-Verbindung:** `immich-server` erwartet den
 > ML-Dienst standardmäßig unter `http://immich-machine-learning:3003`
@@ -152,7 +154,7 @@ danach ist der Cache persistent und Neustarts sind schnell.
 
 ## Schritt 4 — Erstlogin und Handy-App
 
-1. `https://immich.homeserver` öffnen → erster Aufruf legt den
+1. `https://immich.prod.homeserver` öffnen → erster Aufruf legt den
    Admin-Account an (kein separates Admin-Passwort in `values.yaml` nötig
    — Immich fragt das im Browser ab)
 2. **Handy-App** (iOS/Android, "Immich"): Server-URL

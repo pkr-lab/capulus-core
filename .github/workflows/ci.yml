@@ -1,16 +1,5 @@
 name: CI
 
-# Pflicht-Gate auf jedem PR gegen main (siehe docs/f-cicd-automatisierung/
-# f0090-branch-schutz-main.md: die vier Jobs unten sind die "Required checks"
-# des main-Rulesets) und Nachkontrolle auf jedem Push nach main.
-#
-# Zusaetzlich als wiederverwendbarer Workflow (`workflow_call`): promote-entw.yml
-# ruft ihn mit `ref: entw` auf, um den Branch `entw` mit denselben Pruefungen
-# freizugeben, bevor ein PR nach main entsteht (f0080-entw-promotion.md).
-#
-# Historie: `make lint` existierte lange nur lokal, ein kaputtes Manifest fiel
-# erst beim ArgoCD-Sync gegen den Live-Cluster auf (docs/4-planung/
-# 40080-multi-cluster-entw-prod-tech.md, Baustein 6, f0070-ci-lint.md).
 on:
   pull_request:
     branches: [main]
@@ -28,8 +17,6 @@ permissions:
   contents: read
 
 concurrency:
-  # `inputs.ref` in der Gruppe: der Aufruf aus promote-entw.yml (Branch entw)
-  # darf einen laufenden CI-Lauf auf main weder abbrechen noch blockieren.
   group: ci-${{ inputs.ref || github.ref }}
   cancel-in-progress: true
 
@@ -156,12 +143,6 @@ jobs:
           go-version: stable
           cache-dependency-path: "**/go.sum"
 
-      # Module werden per `git ls-files` gefunden statt fest verdrahtet: so
-      # greift der Job auch auf dem Branch `entw` (anderes Ordner-Layout) und
-      # fuer kuenftige Go-Dienste ohne Aenderung am Workflow.
-      # Anlass: Ein Renovate-Merge (geoip2-golang v1 -> v2) hat pacmans go.mod
-      # kaputt gemacht, ohne dass irgendetwas den Go-Code vor dem Image-Build
-      # uebersetzt hat.
       - name: Build, vet, test and tidy-check every Go module
         run: |
           set -eu
@@ -194,9 +175,6 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      # Relative Links und Ueberschriften-Anker in allen *.md (Slug-Regeln wie auf GitHub).
-      # Anlass: nach dem Layout-Umzug (platform/workloads -> tech) und dem Entfernen
-      # einzelner Docs zeigten 26 Links ins Leere.
       - name: Check relative links and anchors in Markdown
         run: python3 scripts/check-doc-links.py
 
@@ -205,7 +183,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read # gitleaks-action listet bei PRs die Commits ueber die API
+      pull-requests: read
     steps:
       - uses: actions/checkout@v7
         with:

@@ -1,14 +1,4 @@
 ---
-# ============================================================
-# semaphore_bootstrap — defaults
-# ============================================================
-# HTTPS ist Pflicht: der TECH-Traefik leitet HTTP global per 308 auf HTTPS um
-# (argocd/apps/tech/traefik-config/helmchartconfig.yaml). ansible.builtin.uri
-# folgt einem 308 bei POST nicht ("Status code was 308 and not [200, 204]" beim
-# Login); GETs wie /api/ping liefen dagegen still durch die Weiterleitung. Das
-# Zertifikat wird gegen die interne Root-CA im System-Vertrauensspeicher
-# geprueft (installiert von der journal_upload-Rolle), der Hostname steht in
-# der SAN-Liste von certificate-homeserver-wildcard.yaml.
 semaphore_api_base: "https://semaphore-api.tech.homeserver"
 
 semaphore_namespace: semaphore
@@ -18,7 +8,7 @@ semaphore_admin_username: admin
 
 semaphore_ssh_private_key_path: "/etc/semaphore-secrets/id_ed25519"
 
-semaphore_api_ready_retries: 60   # 60 * 5s = 5 min
+semaphore_api_ready_retries: 60
 semaphore_api_ready_delay: 5
 
 semaphore_vault_password: ""
@@ -34,11 +24,6 @@ semaphore_default_keys:
   - name: vault-password
     type: login_password
 
-# ============================================================
-# Desired state: list of projects to provision in Semaphore.
-# Override in group_vars/all.yml to add more projects without
-# editing the role.
-# ============================================================
 semaphore_default_environment:
   name: default-env
   env:

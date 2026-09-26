@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// News-Seite im Alltag-Modus: je eine Top-Meldung von Tagesschau, Heise
-/// und WELT. Tippen öffnet den Artikel in Safari.
 struct NewsView: View {
     @State private var headlines: [NewsSource: NewsHeadline] = [:]
     @State private var errors: [NewsSource: String] = [:]

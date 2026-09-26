@@ -1,9 +1,3 @@
-# Einzige Ausnahme zum Default-Deny: die n8n-Pods (nicht "irgendwas im
-# n8n-Namespace") duerfen Ollama auf seinem HTTP-Port erreichen. Nutzt das
-# von Kubernetes automatisch gesetzte, stabile Namespace-Label
-# kubernetes.io/metadata.name -- kein manuelles Labeln des n8n-Namespace
-# noetig. Egress bleibt bewusst ohne jede Ausnahme (siehe
-# networkpolicy-default-deny.yaml).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

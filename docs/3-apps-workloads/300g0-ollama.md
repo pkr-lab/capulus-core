@@ -1,5 +1,7 @@
 # Ollama — lokales LLM, nur bei Bedarf hochgefahren
 
+> **Cluster:** TECH · Ordner `argocd/apps/tech/ollama/` · Zugang: nur clusterintern, kein Ingress. `kubectl`-Befehle in diesem Doc gelten für den TECH-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
+
 Ollama stellt ein lokal gehostetes LLM (`llama3.2:3b`) über eine einfache
 HTTP-API bereit. Genutzt wird es aktuell ausschließlich vom n8n-Workflow
 **„Zammad Externer KI-Lauf (täglich)“** (siehe [30070-n8n.md](30070-n8n.md)),
@@ -263,5 +265,5 @@ kubectl -n ollama delete networkpolicy ollama-temp-allow-egress-internet
 | `ollama pull` schlägt fehl (kein Internet) | Temporäre Egress-Ausnahme aus „Netzwerk-Isolation“ vergessen? Muss vor dem Pull gesetzt UND danach wieder gelöscht werden |
 | n8n bekommt Timeout bei `/api/generate`, obwohl Ollama laut `kubectl get pods` läuft | `networkpolicy-allow-n8n-ingress.yaml` korrekt deployt? Label `app.kubernetes.io/name: n8n` bei den n8n-Pods vorhanden (`kubectl -n n8n get pods --show-labels`)? |
 | Verifikationstest (Schritt 5 oben) zeigt, dass Ollama trotz Default-Deny von überall erreichbar bleibt | NetworkPolicy wird auf diesem Cluster nicht durchgesetzt (k3s-NetworkPolicy-Controller inaktiv?) — kein Workaround hier, sondern als Befund zurückmelden statt selbstständig CNI zu wechseln |
-| `/api/generate` liefert `500 model requires more system memory (X GiB) than is available (Y GiB)` | `resources.limits.memory` in `values.yaml` zu knapp für das geladene Modell — anheben (siehe Kommentar dort), aber gegen `kubectl describe node worker-0` → Allocatable prüfen; ist die Node-Kapazität selbst der Flaschenhals, hilft nur mehr RAM oder ein kleineres/staerker quantisiertes Modell |
+| `/api/generate` liefert `500 model requires more system memory (X GiB) than is available (Y GiB)` | `resources.limits.memory` in `values.yaml` zu knapp für das geladene Modell — anheben (siehe [60040](../6-hintergruende/60040-helm-charts-tech.md#ollama)), aber gegen `kubectl describe node worker-0` → Allocatable prüfen; ist die Node-Kapazität selbst der Flaschenhals, hilft nur mehr RAM oder ein kleineres/staerker quantisiertes Modell |
 | Live-`kubectl patch`/`edit` auf dem `ollama`-Deployment wird nach Sekunden wieder zurückgesetzt | Erwartetes ArgoCD-`selfHeal`-Verhalten für JEDES Feld außer `/spec/replicas` (dafür existiert die `ignoreDifferences`-Ausnahme oben) — Änderungen an `resources`, `image` etc. gehören in `values.yaml`, nicht als Live-Patch |

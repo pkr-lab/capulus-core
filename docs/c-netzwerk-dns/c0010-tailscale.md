@@ -335,6 +335,20 @@ ACL-Policy im [Admin-Panel](https://login.tailscale.com/admin/acls) editieren:
 Auth-Keys werden dann mit den passenden Tags erstellt (`tag:homeserver` für den Server,
 `tag:personal-devices` für Laptops/Phones).
 
+### Multi-Cluster: wer im Tailnet ist
+
+Nur die **physischen** Hosts sind Tailnet-Mitglieder: `homeserver`, `worker-0`, `worker-1` (plus
+Kiosk-Geräte wie der Banana Pi und die Xibo-Displays). Die KVM-VMs `prod-vm` (PROD) und `entw-vm`
+(ENTW) tragen bewusst **keinen** Tailscale-Schlüssel (ENTW ist eine absichtlich verwundbare
+Trainingsumgebung). Sie sind aus der Ferne nur über den **Subnet-Router** erreichbar: der `homeserver`
+bewirbt `192.168.178.0/24` (`tailscale_advertise_routes`), `worker-0` und `worker-1` sind reine
+Clients ohne `--advertise-routes`. Im Admin-Panel muss die beworbene Route freigegeben sein.
+
+Für eine restriktivere Policy ist in [40080, Baustein 2](../4-planung/40080-multi-cluster-entw-prod-tech.md#2-cluster-zu-cluster-kommunikation--immich-beispiel-konkret)
+ein Tag-Schema pro Cluster vorgesehen (`tag:tech-node`, `tag:prod-node`, `tag:entw-node`; laut Plan
+`homeserver` = tech + prod, `worker-1` = entw). Welche Policy im Admin-Panel tatsächlich gespeichert ist,
+steht nicht im Repo — dort prüfen, bevor man sich auf eine Trennung verlässt.
+
 ---
 
 ## Troubleshooting

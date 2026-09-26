@@ -1,17 +1,4 @@
 ---
-# ============================================================
-# wake_on_lan role — WoL-Empfangsbereitschaft auf einem Worker-Node
-# ============================================================
-# Aktiviert "Wake-on-LAN via Magic Packet" (ethtool wol g) persistent bei
-# jedem Boot, damit cluster_power_manager (läuft auf homeserver, siehe
-# ansible/roles/cluster_power_manager) den Node per WoL aus dem
-# ausgeschalteten Zustand aufwecken kann.
-#
-# Setzt voraus, dass WoL im BIOS/UEFI des jeweiligen Hosts aktiviert ist
-# (Bezeichnung je nach Hersteller z.B. "Power On by PCI-E/PCIE",
-# "Wake on LAN" o.ä.) — das kann Ansible nicht setzen, das ist einmalig
-# manuell im BIOS zu prüfen.
-# ============================================================
 
 - name: ethtool installieren (für WoL-Konfiguration)
   ansible.builtin.apt:

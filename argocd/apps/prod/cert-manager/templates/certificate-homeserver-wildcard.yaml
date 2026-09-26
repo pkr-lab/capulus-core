@@ -1,12 +1,3 @@
-# PROD-Variante von argocd/apps/platform/cert-manager/templates/
-# certificate-homeserver-wildcard.yaml: gleiche Secret-/Namespace-Namen
-# (homeserver-wildcard-tls in kube-system, damit das TLSStore aus
-# argocd/apps/prod/traefik-config unveraendert greift), aber nur die
-# *.prod.homeserver-Hosts. Kein Wildcard moeglich (Single-Label-TLD, siehe
-# docs/d-sicherheit/d0040-internal-tls.md) - neuer PROD-Host = Eintrag hier.
-#
-# Signiert vom PROD-Issuer (Intermediate-CA aus der gemeinsamen Root-CA,
-# siehe clusterissuer-ca.yaml).
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -18,8 +9,8 @@ spec:
     name: homeserver-ca-issuer
     kind: ClusterIssuer
   commonName: prod.homeserver
-  duration: 2160h # 90 Tage
-  renewBefore: 720h # 30 Tage vor Ablauf automatisch erneuern
+  duration: 2160h
+  renewBefore: 720h
   privateKey:
     algorithm: RSA
     size: 2048

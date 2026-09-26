@@ -61,7 +61,7 @@ Zeitangaben in Ortszeit (CEST). „Beleg" sagt, woher die Angabe stammt.
 | 23.09. | Die VM startet nicht mehr (GRUB). Reparaturversuch, Sicherung der Disk als `prod-vm.qcow2.bak-pregrubfix` (20:15), beschädigte Disk als `…corrupted-20260923` (20:25) | Dateizeiten auf dem homeserver |
 | 23.09. Abend | VM und k3s neu aufgebaut: neue Disk und neue Seed-ISO (20:27), neue k3s-CA (erzeugt 17:31 UTC = 19:31 CEST). Die Zeitangaben widersprechen sich leicht (CA-Erzeugung liegt **vor** den Disk-Dateizeiten), die genaue Reihenfolge der Schritte an diesem Abend ist nicht rekonstruiert | Dateizeiten, Zertifikat der neuen CA, Node-Alter |
 | 23.09. 20:31 | Der Hub verliert PROD: `x509: certificate signed by unknown authority`, alle `prod-*`-Apps stehen auf `Unknown` | Erste `ComparisonError`-Meldung, 18:31:56 UTC |
-| 24.09. 06:08 | Nebenschauplatz: libvirt-Paketupdate legt den dnsmasq-Snippet-Symlink neu an (siehe [Nebenbefunde](#nebenbefunde)) | Kommentar in der Rolle |
+| 24.09. 06:08 | Nebenschauplatz: libvirt-Paketupdate legt den dnsmasq-Snippet-Symlink neu an (siehe [Nebenbefunde](#nebenbefunde)) | Rolle `libvirt_host`, [60010](../6-hintergruende/60010-ansible-hosts-und-playbooks.md#dnsmasq-snippet-von-libvirt-daemon-system) |
 
 **Warum erst am 21.09.?** Canonicals Build ist vom 19.09. Die Läufe vom 19. und 20.09. haben das Image vermutlich nicht ersetzt, weil sie in einer früheren Rolle abbrachen (an diesen Tagen gab es Bridge- und EEE-Probleme am homeserver). Das ist eine Vermutung, nicht belegt.
 

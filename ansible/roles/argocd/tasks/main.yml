@@ -1,9 +1,5 @@
 ---
-# ============================================================
-# argocd/tasks/main.yml — ArgoCD GitOps installation
-# ============================================================
 
-# ---- Namespace ----------------------------------------------
 - name: Create argocd namespace (idempotent)
   ansible.builtin.shell:
     cmd: |
@@ -16,7 +12,6 @@
   register: argocd_ns_apply
   changed_when: "'created' in argocd_ns_apply.stdout"
 
-# ---- Helm Repository ----------------------------------------
 - name: Add Argo Helm repository
   ansible.builtin.command: helm repo add argo https://argoproj.github.io/argo-helm
   register: argocd_helm_repo_add
@@ -33,7 +28,6 @@
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
 
-# ---- ArgoCD Helm Values -------------------------------------
 - name: Template ArgoCD Helm values to /tmp
   ansible.builtin.template:
     src: argocd-values.yaml.j2
@@ -42,7 +36,6 @@
     group: root
     mode: '0644'
 
-# ---- Install ArgoCD -----------------------------------------
 - name: Install or upgrade ArgoCD via Helm
   ansible.builtin.command: >
     helm upgrade --install argocd argo/argo-cd
@@ -64,7 +57,6 @@
   ansible.builtin.debug:
     var: argocd_helm_result.stdout_lines
 
-# ---- Wait for ArgoCD Server ---------------------------------
 - name: Wait for ArgoCD server deployment to be available
   ansible.builtin.command: >
     kubectl rollout status deployment/argocd-server
@@ -87,7 +79,6 @@
   register: argocd_pods_ready
   changed_when: false
 
-# ---- Retrieve Initial Admin Password -------------------------
 - name: Check if initial admin secret exists
   ansible.builtin.command: >
     kubectl get secret argocd-initial-admin-secret
@@ -144,7 +135,6 @@
       - "=================================================="
   when: argocd_show_initial_password | default(false) | bool
 
-# ---- Bootstrap AppProjects (must exist before the ApplicationSet syncs) ----
 - name: Template bootstrap AppProjects
   ansible.builtin.template:
     src: bootstrap-appprojects.yaml.j2
@@ -161,10 +151,6 @@
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
 
-# ---- Legacy-Layout abloesen (nur ENTW-Layout) -----------------
-# Vor dem neuen ApplicationSet loeschen, damit die alten Generatoren (Branch entw, platform/workloads)
-# keine Applications mehr erzeugen. Das Template setzt keinen resources-finalizer: die Workloads bleiben
-# stehen und werden von den gleichnamigen Applications aus argocd/apps/entw/ uebernommen.
 - name: Remove legacy platform/workloads ApplicationSets (ENTW layout)
   ansible.builtin.command: >
     kubectl delete applicationset
@@ -177,7 +163,6 @@
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
 
-# ---- Bootstrap ApplicationSet ------------------------------
 - name: Template bootstrap ApplicationSet
   ansible.builtin.template:
     src: bootstrap-applicationset.yaml.j2
@@ -201,8 +186,6 @@
     --ignore-not-found
   register: argocd_legacy_project_delete
   changed_when: "'deleted' in argocd_legacy_project_delete.stdout"
-  # Schlaegt fehl, solange noch Applications das Projekt nutzen (ArgoCD verweigert das Loeschen); der
-  # naechste Lauf holt es nach, sobald die neuen Applications uebernommen haben.
   failed_when: false
   when: argocd_entw_layout | bool
   environment:
@@ -217,7 +200,7 @@
     kubectl get applicationsets home-server-apps-{{ item }}
     --namespace {{ argocd_namespace }}
     -o jsonpath='{.status.conditions[?(@.type=="ErrorOccurred")].status}'
-  loop: "{{ ['entw'] if argocd_entw_layout | bool else (['tech'] if argocd_tech_layout | bool else ['platform', 'workloads']) }}"
+  loop: "{{ ['entw'] if argocd_entw_layout | bool else ['tech'] }}"
   register: argocd_appset_status
   changed_when: false
   failed_when: false
@@ -241,7 +224,6 @@
   ansible.builtin.debug:
     msg: "{{ argocd_apps_list.stdout_lines | default(['No applications found yet — ArgoCD is polling Git']) }}"
 
-# ---- Namespace security-tier labels -------------------------
 - name: Label platform-tier namespaces with security-tier=platform
   ansible.builtin.command: >
     kubectl label namespace {{ item }} security-tier=platform --overwrite
@@ -262,7 +244,6 @@
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
 
-# ---- Phase 3 Security-Härtung: tier-default-ingress NetworkPolicies ------
 - name: Get existing namespaces
   ansible.builtin.command: >
     kubectl get namespaces -o jsonpath={.items[*].metadata.name}
@@ -291,9 +272,6 @@
     kubectl apply -f /tmp/argocd-bootstrap-networkpolicies.yaml
   register: argocd_netpol_apply
   changed_when: "'created' in argocd_netpol_apply.stdout or 'configured' in argocd_netpol_apply.stdout"
-  # Auf einem frischen Cluster existiert beim ersten Lauf noch kein
-  # App-Namespace (ArgoCD-Sync hinkt hinterher) -> Datei waere leer und
-  # `kubectl apply` bricht mit "no objects passed to apply" ab.
   when:
     - argocd_apply_network_policies | bool
     - (argocd_platform_apps + argocd_workloads_apps)
@@ -303,7 +281,6 @@
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
 
-# ---- Clean up temp files -----------------------------------
 - name: Remove temporary Helm values file
   ansible.builtin.file:
     path: /tmp/argocd-values.yaml

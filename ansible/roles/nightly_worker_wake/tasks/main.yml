@@ -1,8 +1,4 @@
 ---
-# ============================================================
-# nightly_worker_wake role — 01:00-Uhr Wake/Update/Shutdown-Zyklus für
-# worker-0/worker-1.
-# ============================================================
 
 - name: Config-Verzeichnis anlegen
   ansible.builtin.file:

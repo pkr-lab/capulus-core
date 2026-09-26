@@ -1,16 +1,3 @@
-# LDAP Source — Authentik konsumiert lldap als Nutzerquelle (Authentik ist
-# hier NICHT der LDAP-Server, sondern der Client). Service-Account
-# "authentik-bind" muss vorab manuell in lldaps Web-UI angelegt und der
-# Gruppe "lldap_strict_readonly" hinzugefügt werden (gleiches Muster wie
-# "authelia-bind", siehe docs/d-sicherheit/d0072-lldap.md), Passwort
-# identisch zum Klartext, der beim Versiegeln von
-# argocd/apps/platform/authentik/values.yaml → credentials.encryptedLdapBindPassword
-# verwendet wurde. Details: docs/d-sicherheit/d0073-authentik-sso.md.
-#
-# WICHTIG: Feldnamen/Modelle hier sind gegen die zum Rollout-Zeitpunkt
-# aktuelle Authentik-Version zu prüfen (docs.goauthentik.io/docs/users-sources/sources/ldap/) —
-# dieses Blueprint ist der recherchierte Startpunkt, kein garantiert
-# 1:1 lauffähiger Endzustand für jede Version.
 version: 1
 metadata:
   name: lldap-source
@@ -34,14 +21,6 @@ entries:
       sync_users: true
       sync_users_password: false
       sync_groups: true
-      # user_/group_property_mappings sind seit dieser Authentik-Version
-      # Pflicht, sobald sync_users/sync_groups aktiv sind (sonst schlägt die
-      # Blueprint-Validierung mit "... property mappings cannot be empty"
-      # fehl und die LDAP Source wird NIE angelegt — kein Sync, keine
-      # Nutzer, jeder Login scheitert mit "Invalid password", weil der
-      # Nutzer schlicht nicht existiert). "default-name" passt NICHT, das
-      # erwartet ein AD-typisches "name"-Attribut, das lldap nicht liefert;
-      # stattdessen "openldap-cn" (name aus cn), s. openldap-Mappings.
       user_property_mappings:
         - !Find [authentik_core.propertymapping, [managed, "goauthentik.io/sources/ldap/openldap-uid"]]
         - !Find [authentik_core.propertymapping, [managed, "goauthentik.io/sources/ldap/openldap-cn"]]
@@ -50,17 +29,6 @@ entries:
       group_property_mappings:
         - !Find [authentik_core.propertymapping, [managed, "goauthentik.io/sources/ldap/openldap-cn"]]
 
-  # Korrektur (nach Live-Rollout): Nutzer landeten zwar per Sync in
-  # Authentik, aber jeder Login schlug mit "Invalid credentials" fehl,
-  # unabhängig vom eingegebenen (korrekten) lldap-Passwort. Ursache: die
-  # Standard-Passwort-Stage im default-authentication-flow prüft per
-  # Default NUR gegen Authentiks eigene, lokale Nutzer-DB
-  # (InbuiltBackend) — und die ist für LDAP-Nutzer leer, weil
-  # sync_users_password bewusst false ist (lldap gibt keine Passwort-Hashes
-  # heraus). Ohne den LDAPBackend zusätzlich in der Stage würde JEDER
-  # LDAP-Nutzer-Login unabhängig vom Passwort scheitern. InbuiltBackend
-  # bleibt zusätzlich bestehen, sonst verliert der lokale Bootstrap-Admin
-  # "akadmin" (kein LDAP-Nutzer) seinen Login.
   - model: authentik_stages_password.passwordstage
     identifiers:
       name: default-authentication-password

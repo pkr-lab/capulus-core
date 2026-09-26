@@ -1,5 +1,7 @@
 # Nextcloud
 
+> **Cluster:** PROD · Ordner `argocd/apps/prod/nextcloud/` · URL `https://nextcloud.prod.homeserver` und `https://nextcloud-prod.pke-lab.de`. `kubectl`-Befehle in diesem Doc gelten für den PROD-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
+
 [Nextcloud](https://nextcloud.com) ist eine selbst gehostete
 Datei-Sync-, Kalender- und Kontakte-Plattform (Google-Drive-/-Workspace-
 Ersatz). Die Deployment-Konfiguration liegt unter `argocd/apps/prod/nextcloud/`.
@@ -101,9 +103,10 @@ zuerst, dann `nextcloud-*` (App-Pod) — führt beim ersten Start die
 Installation durch, das kann 1–2 Minuten dauern (siehe `readinessProbe`
 gegen `/status.php`).
 
-**DNS:** `nextcloud.prod.homeserver` ist dank Wildcard-DNS sofort erreichbar
-(siehe [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md) und
-[docs/c-netzwerk-dns/c0040-domain-tiers.md](../c-netzwerk-dns/c0040-domain-tiers.md) zum `prod`-Tier-Präfix).
+**DNS:** Nextcloud läuft im **PROD**-Cluster; `nextcloud.prod.homeserver` steht dafür in
+`dnsmasq_prod_vm_hosts` (`ansible/group_vars/all.yml`) und zeigt auf die PROD-VM (`.99`), siehe
+[docs/c-netzwerk-dns/c0040-domain-tiers.md](../c-netzwerk-dns/c0040-domain-tiers.md#dns-tier-und-cluster-sind-zwei-verschiedene-dinge)
+und [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md).
 
 ---
 
@@ -223,7 +226,7 @@ Rollback ist nur ein Revert der beiden geänderten Zeilen.
 
 > **Hinweis `storageClassName: local-path`:** Anders als die meisten
 > anderen Apps liegt die Nextcloud-Postgres-PVC bewusst nicht auf der
-> NFS-`nas`-StorageClass (siehe Kommentar in `values.yaml`) — der Pod ist
+> NFS-`nas`-StorageClass (siehe [60050](../6-hintergruende/60050-helm-charts-prod.md#nextcloud)) — der Pod ist
 > dadurch an einen festen Node gebunden. Das ändert am Ablauf oben nichts,
 > nur zur Einordnung, falls der Node mal getauscht werden soll.
 
@@ -334,8 +337,7 @@ UID/GID abgebildet. Auswirkungen:
 - `chown`/`chmod` auf eine *andere* Ziel-UID schlägt in der Regel fehl,
   da die anonyme Identität serverseitig keine Owner-Änderungsrechte hat —
   betrifft z. B. den offiziellen Nextcloud-Entrypoint, der beim ersten
-  Start versucht, `html`/`data` auf `www-data` zu chownen (siehe
-  Kommentar zu `podSecurityContext`/`securityContext` in `values.yaml`).
+  Start versucht, `html`/`data` auf `www-data` zu chownen (siehe [60050](../6-hintergruende/60050-helm-charts-prod.md#nextcloud)).
 - Plain reads/writes auf bereits existierende Dateien funktionieren i. d. R.
   weiterhin, solange konsistent dieselbe (anonyme) Identität zugreift.
 - PostgreSQL liegt deshalb bewusst nicht auf `nas`, sondern auf

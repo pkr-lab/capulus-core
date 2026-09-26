@@ -79,7 +79,7 @@ gelöscht (`prune: true`).
 | AppProject `entw` (jeder Namespace, nur dieses Repo als Quelle) | [`bootstrap-appprojects.yaml.j2`](../../ansible/roles/argocd/templates/bootstrap-appprojects.yaml.j2) |
 
 Die committeten TECH-Dateien `argocd/bootstrap/*` bleiben vom ENTW-Layout
-unberührt (`make render-bootstrap` rendert weiter mit `argocd_tech_layout`).
+unberührt (`make render-bootstrap` rendert mit dem Standard der Rolle, dem TECH-Layout).
 `argocd_platform_apps`/`argocd_workloads_apps` in den ENTW-Host-Vars steuern nur
 noch `security-tier`-Label und Tier-NetworkPolicy der drei Bestands-Namespaces
 (`sealed-secrets`, `demo-app`, `example-whoami`), nicht mehr, was deployt wird.

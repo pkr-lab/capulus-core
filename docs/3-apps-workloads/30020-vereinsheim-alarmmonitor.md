@@ -16,7 +16,7 @@ die es bei den Raspberry Pis bewusst nicht gibt:
    `*.homeserver` läuft über Tailscale Split-DNS + eine genehmigte
    Subnetz-Route.
 2. **Lokaler Server-Fallback** — springt bei Nichterreichbarkeit von
-   `alamos-apager.homeserver` automatisch auf die echte AMweb-URL.
+   `alamos-apager.prod.homeserver` automatisch auf die echte AMweb-URL.
 3. **Grafana-Monitoring + Zammad-Ticket bei Ausfall** — taucht im
    Dashboards im Ordner "Hardware" auf (per **Push**, nicht Pull — siehe
    unten) und erzeugt (nur für dieses Gerät) ein Zammad-Ticket, wenn es
@@ -89,7 +89,7 @@ und [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-
 Homeserver lauscht bereits auf `tailscale0`. Einmaliger Admin-Schritt:
 Tailscale-Adminkonsole → DNS → Nameservers → Custom Nameserver mit der
 Tailscale-IP des Homeservers, **restricted to search domain `homeserver`**
-hinzufügen. Danach löst der Pi `alamos-apager.homeserver` etc. korrekt auf
+hinzufügen. Danach löst der Pi `alamos-apager.prod.homeserver` etc. korrekt auf
 (Antwort ist weiterhin eine LAN-IP, siehe Punkt 3).
 
 **3. Tatsächliche Erreichbarkeit der aufgelösten LAN-IP.** Die DNS-Antwort
@@ -114,7 +114,7 @@ Reines Imaging, kein Ansible-Thema (analog zu "Raspberry Pi OS Desktop +
 Autologin" bei den anderen Kiosks):
 
 1. Armbian-Image auf SD/eMMC flashen.
-2. Erstboot: Root-Login, Kiosk-User anlegen (Konvention: `pi`, siehe
+2. Erstboot: Root-Login, Kiosk-User anlegen (hier `pela`, siehe
    `banana_pi_kiosk_user` in `ansible/roles/banana_pi_kiosk/defaults/main.yml`).
 3. Netzwerk/SSH so einrichten, dass der Host **noch am LAN** per
    `ansible_host` aus dem Inventory (`192.168.178.129`, Phase 1) erreichbar
@@ -143,7 +143,7 @@ Rollen, in dieser Reihenfolge (siehe `ansible/banana-pi-kiosks.yml`):
 | `tailscale` | Netzwerk-Anbindung (siehe oben) — läuft zuerst, alles Weitere braucht ggf. schon `*.homeserver` |
 | `node_exporter` | Metriken-Quelle (Port 9100, nur lokal) |
 | `vmagent` | Pusht die Metriken aktiv an den Cluster (siehe [Grafana](#grafana-push-statt-pull)) |
-| `banana_pi_kiosk` | X11-Autologin, Chromium-Kiosk, Server-Fallback-Supervisor, Heartbeat, täglicher Kiosk-Session-Neustart um 00:00 Uhr (kein Kernel-Reboot, siehe Kommentar in `banana-pi-daily-reboot.service.j2` — Warm-Reset auf diesem Board unzuverlässig) |
+| `banana_pi_kiosk` | X11-Autologin, Chromium-Kiosk, Server-Fallback-Supervisor, Heartbeat, täglicher Kiosk-Session-Neustart um 00:00 Uhr (kein Kernel-Reboot, siehe [60020](../6-hintergruende/60020-ansible-rollen.md#banana_pi_kiosk-vereinsheim-alarmmonitor) — Warm-Reset auf diesem Board unzuverlässig) |
 | `thermal_watchdog` | Selbstschutz bei Übertemperatur (gleiches Bundling wie bei den Alamos-Pis) |
 | `resource_watchdog` | Selbstschutz bei CPU/RAM-Sättigung |
 
@@ -160,7 +160,7 @@ Vor dem ersten Lauf nötig:
    Ausgabe in `ansible/host_vars/vereinsheim-alarmmonitor/vault.yml`
    anstelle des `CHANGE-ME`-Platzhalters einfügen.
 3. **Eigener Tailscale-Auth-Key** in `ansible/group_vars/banana_pis.yml`
-   (Ansible-Vault-verschlüsselt, siehe Kommentar dort — nicht den
+   (Ansible-Vault-verschlüsselt, Ablauf in [60010](../6-hintergruende/60010-ansible-hosts-und-playbooks.md#worker-0-dns-und-tailscale) — nicht den
    Homeserver-Key wiederverwenden).
 4. **Tailscale-Adminkonsole:** Split-DNS + Subnetz-Route-Genehmigung, siehe
    [Netzwerk: Tailscale-only](#netzwerk-tailscale-only).
@@ -181,7 +181,7 @@ ist der X-Session-Client (läuft dauerhaft, damit `xinit` die Session nicht
 beendet) und:
 
 - prüft alle 30s (`banana_pi_kiosk_failover_poll_seconds`) die
-  Erreichbarkeit von `alamos-apager.homeserver`,
+  Erreichbarkeit von `alamos-apager.prod.homeserver`,
 - schaltet nach 3 aufeinanderfolgenden Fehlversuchen (~90s,
   `banana_pi_kiosk_failover_fail_threshold`) auf die lokal (Ansible-Vault)
   hinterlegte echte AMweb-URL um,
@@ -334,7 +334,7 @@ absent_over_time(up{...}[10m]) für vereinsheim-alarmmonitor
   → VMRule "BananaPiAlarmmonitorDown" (vmrule-banana-pi.yaml, severity=critical)
   → Alertmanager, zusätzliche Route NUR für diesen Alertnamen
     (argocd/apps/tech/monitoring/values.yaml)
-  → n8n-Webhook https://n8n.homeserver/webhook/banana-pi-down
+  → n8n-Webhook https://n8n.prod.homeserver/webhook/banana-pi-down
   → Workflow "Banana-Pi-Down -> Zammad-Ticket"
     (argocd/apps/tech/n8n/workflows/banana-pi-down-to-zammad.json):
       1. letzte bekannte CPU/RAM/Temperatur-Werte aus VictoriaMetrics holen
@@ -354,7 +354,7 @@ absent_over_time(up{...}[10m]) für vereinsheim-alarmmonitor
 
 Die bestehenden gotify-/ntfy-Routen bleiben für diesen Alert (und alle
 anderen) unverändert bestehen — die n8n-Route kommt rein additiv dazu
-(`continue: true`, siehe Kommentar in `values.yaml`).
+(`continue: true`, siehe [60060](../6-hintergruende/60060-monitoring-und-alerting.md#alertmanager-routing)).
 
 **Achtung, Bedeutung des Werts:** Der Zeitstempel der letzten `/start`-Anfrage
 ist ein *Browser-Start*-Marker, kein Lebenszeichen. `/start` wird nur
@@ -489,9 +489,9 @@ Online-Status prüfen und den PC wieder herunterfahren: siehe
 | Symptom | Check |
 |---|---|
 | `make banana-pi-kiosks` erreicht den Pi nicht mehr | Phase 1 vs. Phase 2? `ansible_host` in `ansible/inventory/hosts.yml` noch auf der alten LAN-IP, obwohl der Pi schon umgezogen ist? |
-| Kiosk zeigt weder Redirect noch Fallback (Chromium-Fehlerseite) | `nslookup alamos-apager.homeserver` auf dem Pi — löst das auf? Tailscale Split-DNS eingerichtet (siehe oben)? |
+| Kiosk zeigt weder Redirect noch Fallback (Chromium-Fehlerseite) | `nslookup alamos-apager.prod.homeserver` auf dem Pi — löst das auf? Tailscale Split-DNS eingerichtet (siehe oben)? |
 | DNS löst auf, aber Verbindung timeout | Subnetz-Route `192.168.178.0/24` im Tailscale-Adminpanel genehmigt? `tailscale_accept_routes: true` beim Pi angekommen (`tailscale status` auf dem Pi prüfen)? |
-| Pi taucht nicht in Grafana auf | `systemctl status vmagent` auf dem Pi, `journalctl -u vmagent` — Fehler beim remote_write? `curl -I https://vm-write.homeserver/api/v1/write` vom Pi aus erreichbar? |
+| Pi taucht nicht in Grafana auf | `systemctl status vmagent` auf dem Pi, `journalctl -u vmagent` — Fehler beim remote_write? `curl -I https://vm-write.tech.homeserver/api/v1/write` vom Pi aus erreichbar? |
 | Pi ist online, Lebenszeichen kommen, aber **keine CPU/Hardware-Daten** und Alert `RemoteWriteDroppingData` (26.09.2026) | Der Heartbeat ist winzig und kommt durch, die `vmagent`-Blöcke (~20 KB) nicht. Auf dem Pi: `journalctl -u vmagent` → `Client.Timeout exceeded while awaiting headers`; `grep vm-write /etc/systemd/system/vmagent.service` — steht dort `http://`? Dann läuft jeder Push über den hängenden 308-Umweg, siehe [Grafana (Push statt Pull)](#grafana-push-statt-pull). Backlog: `curl -s localhost:8429/metrics \| grep pending_data_bytes`. Transport-Gegentest vom Pi: `curl -s -o /dev/null -w '%{time_total}\n' -X POST --data-binary @<20-KB-Datei> https://vm-write.tech.homeserver/x` (~1 s) gegenüber `http://…` (Timeout). Im Cluster: `vm_concurrent_insert_limit_reached_total` von vmsingle steigt, wenn Pi-Requests die Insert-Slots belegen. Hinweis: Große Pings über Tailscale verlieren hier 50–80 %, TCP über 443 läuft trotzdem sauber — Ping ist kein Maßstab |
 | Kiosk startet nicht / schwarzer Bildschirm | `systemctl status getty@tty1` auf dem Pi, Autologin aktiv? Läuft `startx`? |
 | Fallback schaltet nicht um | `journalctl -t banana-pi-kiosk` auf dem Pi (Supervisor loggt Moduswechsel) |

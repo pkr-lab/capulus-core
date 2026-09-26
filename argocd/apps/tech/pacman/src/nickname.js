@@ -1,36 +1,9 @@
-// Nickname / public-leaderboard identity for this repo's Pacman fork.
-// On first visit, prompts for a display name via the #nickname-overlay
-// markup in index.htm - a real, single <input name="name"
-// autocomplete="name"> field with genuine browser autofill support. The
-// typed name itself never leaves the browser: it only ever produces and
-// stores a pseudonymous "<NAME>-<HEX>" tag, which is the sole thing
-// pacman-canvas.js submits to the public /api/leaderboard.
-//
-// window.PACMAN_TRAINING_MODE (rendered server-side into index.htm from
-// the TRAINING_MODE env var, see server/cmd/server/main.go and
-// values.yaml's trainingMode.enabled - default OFF) additionally wires
-// this same visible name field into the hidden email/tel/address/postal
-// autofill capture already used by fingerprint.js's harvestAutofill() for
-// the IT-security classroom demo (see docs/3-apps-workloads/300f0-pacman-visitor-tracking.md):
-// same technique, same hidden fields riding in the *same* <form> as the
-// visible name input, because Chrome fills every matching field in a form
-// together once the visitor accepts one autofill suggestion. Whatever gets
-// harvested here is sent to /api/fingerprint (server-side log only,
-// separate pipeline from the public leaderboard - see leaderboard.go vs.
-// main.go's handleFingerprint) and never appears in the nickname or on the
-// leaderboard. TRAINING_MODE is a deliberate, teacher-controlled toggle:
-// while it's on, this applies to *every* visitor of whatever host it's
-// enabled on, not just an informed group - see README.md's "Bestenliste"
-// section before enabling it on a publicly reachable host.
 (function () {
   "use strict";
 
   var STORAGE_NAME = "pacman.playerName";
   var STORAGE_NICKNAME = "pacman.nickname";
 
-  // FNV-1a 32-bit - same algorithm as fingerprint.js's hashString(): fast,
-  // synchronous, no WebCrypto round-trip, only needs to differ between
-  // distinguishable inputs.
   function hashHex(str) {
     var hash = 2166136261;
     for (var i = 0; i < str.length; i++) {
@@ -50,9 +23,6 @@
     return slug || "PLAYER";
   }
 
-  // Salted with time + randomness so the same name typed twice (different
-  // people, or the same person after a reset) doesn't collide on the
-  // shared public leaderboard.
   function generateNickname(name) {
     var salt = Date.now().toString(36) + Math.random().toString(36).slice(2);
     var hex = hashHex(name + "|" + salt).slice(-4).toUpperCase();
@@ -81,12 +51,6 @@
     } catch (e) {}
   }
 
-  // Same hidden-field technique as fingerprint.js's harvestAutofill():
-  // off-screen (not display:none/visibility:hidden - some browsers exclude
-  // those from autofill entirely), same <form> as the visible name input,
-  // common autocomplete tokens so a saved browser profile fills them
-  // together with the name field. Only ever called when
-  // window.PACMAN_TRAINING_MODE === true.
   function addHiddenAutofillFields(form) {
     var fields = [
       { key: "email", autocomplete: "email", type: "email" },
@@ -109,12 +73,6 @@
     return inputs;
   }
 
-  // Sends whatever the hidden fields picked up to /api/fingerprint - the
-  // same endpoint/log line (client_fingerprint) fingerprint.js's own
-  // harvestAutofill() already uses, so both correlate the same way in
-  // Grafana (see docs/3-apps-workloads/300f0-pacman-visitor-tracking.md). Deliberately separate from ajax_add() in
-  // pacman-canvas.js, which only ever sends the nickname to the public
-  // /api/leaderboard - this data never touches that endpoint.
   function reportHarvestedAutofill(realName, hiddenInputs) {
     var payload = { autofill_name: realName };
     Object.keys(hiddenInputs).forEach(function (key) {
@@ -187,8 +145,6 @@
     init();
   }
 
-  // Exposed for pacman-canvas.js (game-over leaderboard submission) and
-  // the "Namen ändern" link in the Info panel.
   window.PacmanNickname = {
     get: function () {
       return currentNickname || readStorage(STORAGE_NICKNAME);
