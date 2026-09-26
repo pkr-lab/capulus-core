@@ -1,6 +1,7 @@
 // Einmalige Kopplung des n8n-Pods mit einem WhatsApp-Konto (Business-App:
-// Einstellungen -> Verknuepfte Geraete) und Ermittlung der Ziel-ID fuer den
-// Workflow email-to-whatsapp-kanal.json.
+// Einstellungen -> Verknuepfte Geraete) und Ermittlung der Kanal-ID fuer den
+// Workflow email-to-whatsapp-kanal.json. Der Workflow sendet ausschliesslich in
+// Kanaele, deshalb werden nur Kanaele aufgelistet.
 //
 // Aufruf vom Rechner mit kubectl-Zugriff auf den TECH-Cluster (Skript per stdin):
 //   kubectl -n n8n exec -i deploy/n8n -- node - < argocd/apps/tech/n8n/scripts/whatsapp-pair.js
@@ -9,7 +10,7 @@
 //   kubectl -n n8n exec -i deploy/n8n -- node - --invite=0029Vaxxxxxxxx < .../whatsapp-pair.js
 //
 // Ablauf: QR-Code erscheint im Terminal -> mit dem Handy scannen -> Skript listet
-// Kanaele und Gruppen mit ihrer ID und beendet sich. Die Session landet auf dem
+// die Kanaele mit ihrer ID und beendet sich. Die Session landet auf dem
 // n8n-PVC (/home/node/.n8n/whatsapp-session) und wird vom Workflow wiederverwendet.
 // Vorher den Workflow deaktivieren (oder sicherstellen, dass keine Mail kommt):
 // Chromium erlaubt das Profil nur einmal, das Skript nutzt dasselbe Lock wie der Workflow.
@@ -81,9 +82,6 @@ const listChannels = () => client.pupPage.evaluate(() => {
     };
   });
 });
-const listGroups = () => client.pupPage.evaluate(() => window.require('WAWebCollections').Chat.getModelsArray()
-  .filter((c) => c.id && String(c.id._serialized).endsWith('@g.us'))
-  .map((c) => ({ id: c.id._serialized, name: c.formattedTitle || c.name || '' })));
 
 client.on('ready', async () => {
   clearTimeout(timer);
@@ -112,14 +110,7 @@ client.on('ready', async () => {
     } catch (e) { failed = true; console.error('  Aufloesen fehlgeschlagen: ' + errText(e)); }
   }
 
-  console.log('\nGruppen (Ziel-ID endet auf @g.us):');
-  try {
-    const groups = await listGroups();
-    for (const g of groups) console.log('  ' + g.id + '  ' + g.name);
-    if (!groups.length) console.log('  (keine)');
-  } catch (e) { failed = true; console.error('  Gruppenliste fehlgeschlagen: ' + errText(e)); }
-
-  console.log('\nZiel-ID in n8n im Node "An WhatsApp senden" als TARGET_ID eintragen.');
+  console.log('\nKanal-ID in n8n im Node "An WhatsApp senden" als TARGET_ID eintragen.');
   await finish(failed ? 1 : 0);
 });
 
