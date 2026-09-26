@@ -69,7 +69,7 @@ Das Hub-ApplicationSet:
 - deployt in den lokalen Cluster (`https://kubernetes.default.svc`);
 - synct automatisch mit `prune`, `selfHeal`, `CreateNamespace`, `ServerSideApply`;
 - trägt zentral die `ignoreDifferences` für bekannte Dauerdiffs (HPA-`replicas`, ollama-`replicas`,
-  SealedSecret-Status, victoria-metrics-operator-Webhook), jeweils mit Begründung im Kommentar der Vorlage.
+  SealedSecret-Status, victoria-metrics-operator-Webhook), die Begründungen stehen in [60030](../6-hintergruende/60030-argocd-und-bootstrap.md#ignoredifferences-im-applicationset-template).
 
 Das Projekt `tech` listet als `destinations` die Vereinigung aus `argocd_platform_apps` und
 `argocd_workloads_apps` plus die Namespaces `kube-system` (dorthin deployen `traefik-config`

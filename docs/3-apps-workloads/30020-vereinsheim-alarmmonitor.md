@@ -114,7 +114,7 @@ Reines Imaging, kein Ansible-Thema (analog zu "Raspberry Pi OS Desktop +
 Autologin" bei den anderen Kiosks):
 
 1. Armbian-Image auf SD/eMMC flashen.
-2. Erstboot: Root-Login, Kiosk-User anlegen (Konvention: `pi`, siehe
+2. Erstboot: Root-Login, Kiosk-User anlegen (hier `pela`, siehe
    `banana_pi_kiosk_user` in `ansible/roles/banana_pi_kiosk/defaults/main.yml`).
 3. Netzwerk/SSH so einrichten, dass der Host **noch am LAN** per
    `ansible_host` aus dem Inventory (`192.168.178.129`, Phase 1) erreichbar
@@ -143,7 +143,7 @@ Rollen, in dieser Reihenfolge (siehe `ansible/banana-pi-kiosks.yml`):
 | `tailscale` | Netzwerk-Anbindung (siehe oben) — läuft zuerst, alles Weitere braucht ggf. schon `*.homeserver` |
 | `node_exporter` | Metriken-Quelle (Port 9100, nur lokal) |
 | `vmagent` | Pusht die Metriken aktiv an den Cluster (siehe [Grafana](#grafana-push-statt-pull)) |
-| `banana_pi_kiosk` | X11-Autologin, Chromium-Kiosk, Server-Fallback-Supervisor, Heartbeat, täglicher Kiosk-Session-Neustart um 00:00 Uhr (kein Kernel-Reboot, siehe Kommentar in `banana-pi-daily-reboot.service.j2` — Warm-Reset auf diesem Board unzuverlässig) |
+| `banana_pi_kiosk` | X11-Autologin, Chromium-Kiosk, Server-Fallback-Supervisor, Heartbeat, täglicher Kiosk-Session-Neustart um 00:00 Uhr (kein Kernel-Reboot, siehe [60020](../6-hintergruende/60020-ansible-rollen.md#banana_pi_kiosk-vereinsheim-alarmmonitor) — Warm-Reset auf diesem Board unzuverlässig) |
 | `thermal_watchdog` | Selbstschutz bei Übertemperatur (gleiches Bundling wie bei den Alamos-Pis) |
 | `resource_watchdog` | Selbstschutz bei CPU/RAM-Sättigung |
 
@@ -160,7 +160,7 @@ Vor dem ersten Lauf nötig:
    Ausgabe in `ansible/host_vars/vereinsheim-alarmmonitor/vault.yml`
    anstelle des `CHANGE-ME`-Platzhalters einfügen.
 3. **Eigener Tailscale-Auth-Key** in `ansible/group_vars/banana_pis.yml`
-   (Ansible-Vault-verschlüsselt, siehe Kommentar dort — nicht den
+   (Ansible-Vault-verschlüsselt, Ablauf in [60010](../6-hintergruende/60010-ansible-hosts-und-playbooks.md#worker-0-dns-und-tailscale) — nicht den
    Homeserver-Key wiederverwenden).
 4. **Tailscale-Adminkonsole:** Split-DNS + Subnetz-Route-Genehmigung, siehe
    [Netzwerk: Tailscale-only](#netzwerk-tailscale-only).
@@ -354,7 +354,7 @@ absent_over_time(up{...}[10m]) für vereinsheim-alarmmonitor
 
 Die bestehenden gotify-/ntfy-Routen bleiben für diesen Alert (und alle
 anderen) unverändert bestehen — die n8n-Route kommt rein additiv dazu
-(`continue: true`, siehe Kommentar in `values.yaml`).
+(`continue: true`, siehe [60060](../6-hintergruende/60060-monitoring-und-alerting.md#alertmanager-routing)).
 
 **Achtung, Bedeutung des Werts:** Der Zeitstempel der letzten `/start`-Anfrage
 ist ein *Browser-Start*-Marker, kein Lebenszeichen. `/start` wird nur

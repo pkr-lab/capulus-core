@@ -224,7 +224,7 @@ alles auf einmal eintragen.
 | App | Grund |
 |---|---|
 | **Vaultwarden** | bereits dokumentierte, bestehende Entscheidung — Bitwarden-Clients sprechen die API direkt an, ein Redirect bricht Login/Sync ([300a0-vaultwarden.md](../3-apps-workloads/300a0-vaultwarden.md)). Unverändert lassen. |
-| **Pacman** | öffentliches, absichtlich anmeldefreies Spiel ([300f0-pacman-visitor-tracking.md](../3-apps-workloads/300f0-pacman-visitor-tracking.md)) — ein Login-Wall widerspricht dem Zweck. Separater, von diesem Plan unabhängiger Hinweis: `trainingMode.enabled: true` steht aktuell live im committeten `values.yaml` für die öffentliche Prod-Instanz — laut eigenem Doku-Kommentar dort nur für die Dauer einer Unterrichtsstunde gedacht, lohnt sich unabhängig zu prüfen. |
+| **Pacman** | öffentliches, absichtlich anmeldefreies Spiel ([300f0-pacman-visitor-tracking.md](../3-apps-workloads/300f0-pacman-visitor-tracking.md)) — ein Login-Wall widerspricht dem Zweck. Separater, von diesem Plan unabhängiger Hinweis: `trainingMode.enabled: true` steht aktuell live im committeten `values.yaml` für die öffentliche Prod-Instanz — laut [60090](../6-hintergruende/60090-pacman-schulungsobjekt.md#trainingsmodus) nur für die Dauer einer Unterrichtsstunde gedacht, lohnt sich unabhängig zu prüfen. |
 | **MediaMTX** | eigene HTTP-Basic-Auth für HLS-Viewer, RTMP/RTSP-Publisher brauchen Stream-URL-Auth ohne Browser-Redirect-Fähigkeit — ForwardAuth würde Publisher-Clients brechen. Bleibt wie dokumentiert ("kein IdP nötig"). |
 | **Semaphore-/Gotify-API-Ingress** | bereits bestehende `ingressApi`-Hosts für maschinelle Zugriffe (Ansible-Bootstrap, iOS-App) — bleiben unangetastet, bekommen keine Middleware (unabhängig vom neuen `-native`-Bypass für die Haupt-App). |
 

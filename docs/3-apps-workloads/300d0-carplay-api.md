@@ -46,9 +46,7 @@ carplay-api.prod.homeserver ──▶ Traefik ──▶ carplay-api Pod (Namespa
 Die Alerts-, Metrik- und Status-Abfragen laufen parallel und mit eigenem
 kurzen Timeout (VictoriaMetrics 3s, ntfy/Kuma je 2s). Fällt eine Quelle
 aus, liefert `/api/dashboard` trotzdem `200` mit den übrigen Spalten
-gefüllt und der ausgefallenen Spalte leer/auf 0 — siehe
-Quellcode-Kommentare in
-`argocd/apps/tech/carplay-api/src/internal/handlers/dashboard.go`. Metriken
+gefüllt und der ausgefallenen Spalte leer/auf 0 — siehe [60080](../6-hintergruende/60080-carplay-api-und-ios-app.md#aufbau-und-verträge). Metriken
 kommen pro Host (`hosts[]` im Payload, siehe `config.hosts` in
 `values.yaml`), nicht mehr als ein einziger Flotten-Durchschnitt — ein
 Host, der gerade aus ist, taucht mit `online: false` auf, alle
@@ -97,8 +95,7 @@ Setup: `power_agent` läuft in `site.yml` direkt nach
 Re-Deploy). Beim ersten Rollout erzeugt die Rolle ein Bearer-Token unter
 `/etc/power-agent/token` auf dem Homeserver — dieser Wert muss danach
 manuell in `argocd/apps/tech/carplay-api/values.yaml` unter
-`secrets.powerAgentToken` versiegelt werden (kubeseal), siehe Kommentar
-dort. Ohne passendes Secret bekommt die App dauerhaft `502` auf
+`secrets.powerAgentToken` versiegelt werden (kubeseal), siehe [60080](../6-hintergruende/60080-carplay-api-und-ios-app.md#absicherung). Ohne passendes Secret bekommt die App dauerhaft `502` auf
 Helligkeit/Wake/Shutdown, der Rest des Dashboards bleibt aber nutzbar.
 
 ## Abweichungen vom ursprünglichen Konzept
@@ -146,8 +143,7 @@ funktioniert hätte), wurde angepasst:
    denselben Base64-Blob wie unten, ohne Schritt 1.
 
 2. **API-Token erzeugen und versiegeln** (Pflicht — ohne dieses Secret
-   bleibt der Pod in `CreateContainerConfigError` hängen, siehe
-   `values.yaml`-Kommentar bei `secrets.apiToken`):
+   bleibt der Pod in `CreateContainerConfigError` hängen, siehe [60080](../6-hintergruende/60080-carplay-api-und-ios-app.md#absicherung)):
 
    ```bash
    TOKEN=$(openssl rand -hex 32)
@@ -205,7 +201,7 @@ funktioniert hätte), wurde angepasst:
 6. `config.hosts` prüfen/anpassen — ein Eintrag pro Host-Karte auf der
    App-Startseite, `instance` muss exakt das VictoriaMetrics-Label des
    jeweiligen node-exporter-Targets treffen (Default deckt
-   Homeserver/worker-0/worker-1/NAS ab, siehe Kommentar in `values.yaml`).
+   Homeserver/worker-0/worker-1/NAS ab, siehe [60080](../6-hintergruende/60080-carplay-api-und-ios-app.md#datenquellen-und-ihre-eigenheiten)).
 
 7. Image bauen/pushen (siehe [unten](#image-bauen--pushen)) und
    `image.repository`/`image.tag` setzen.
@@ -232,8 +228,7 @@ jeder Änderung an `Dockerfile`/`src/**` automatisch nach
 
 Der Workflow setzt `values.yaml` nicht selbst — den im Job-Summary
 gemeldeten Tag manuell in `image.tag` eintragen und committen. Ist das
-GHCR-Package privat, zusätzlich ein `imagePullSecrets`-Secret anlegen (siehe
-Kommentar in `values.yaml`).
+GHCR-Package privat, zusätzlich ein `imagePullSecrets`-Secret anlegen (siehe [60040](../6-hintergruende/60040-helm-charts-tech.md#images-und-build)).
 
 ## Absicherung
 

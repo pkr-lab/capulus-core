@@ -8,6 +8,18 @@ zum Vorfall mit dem Basis-Image siehe [50010](../5-incidents/50010-prod-vm-basis
 
 ---
 
+## Inventar
+
+Aufbau von `ansible/inventory/hosts.yml`:
+
+| Stelle | Begründung |
+|---|---|
+| `homeservers` ist selbst Mitglied von `semaphore_targets` | Semaphore kann so dieses Repo auch gegen den Homeserver selbst ausrollen (rekursives Template „Deploy Home Server“, [b0030](../b-kubernetes-gitops/b0030-semaphore.md)). Alle Mitglieder von `semaphore_targets` bekommen den öffentlichen Semaphore-SSH-Schlüssel in `authorized_keys`, damit die UI Playbooks gegen sie ausführen kann. |
+| `ugreen_nas` steht nur zur Dokumentation im Inventar | Das UGREEN NAS (RAID1, NFS-Export für die `nas`-StorageClass, [20000](../2-betrieb-hardware/20000-nas-storage.md)) läuft mit der eigenen Firmware UGOS. Es läuft kein Playbook dagegen, RAID und NFS werden von Hand über die Web-UI eingerichtet. Der Eintrag dient als Referenz (DNS, spätere Backup-Rolle auf einer extern angeschlossenen Platte). |
+| `entw` und `prod` | Eigenständige k3s-Server in KVM-VMs (ENTW auf worker-1, PROD auf dem Homeserver). Die Hintergründe stehen unten bei [ENTW](#entw-cluster-entw-vm) und [PROD](#prod-cluster-prod-vm), die Planung in [40080](../4-planung/40080-multi-cluster-entw-prod-tech.md) (Baustein 5). |
+| `ansible_user: pela` bei `infotafel` und `vereinsheim-alarmmonitor` | So heißt der Benutzer auf diesen Geräten, die Raspberry-Pi-OS-Konvention `pi` gilt hier nicht. `xibo_kiosk_user: pela` überschreibt deshalb den Rollen-Default `pi`. Für andere Benutzer als `pi` legt Raspberry Pi OS keinen `NOPASSWD`-Sudoers-Eintrag an, das Fehlerbild steht in [300e0](../3-apps-workloads/300e0-xibosignage.md). |
+| `ansible_host` von `vereinsheim-alarmmonitor` ist die Tailscale-IP | Das Gerät wurde vorzeitig auf Phase 2 umgestellt, weil der LAN-Pfad zum Pi defekt war. Die Re-Provisionierung geht deshalb nur noch per `make banana-pi-kiosks` aus dem Tailnet, nicht über die Semaphore-UI ([30020](../3-apps-workloads/30020-vereinsheim-alarmmonitor.md)). |
+
 ## ENTW-Cluster (`entw-vm`)
 
 | Entscheidung | Begründung |
@@ -17,6 +29,7 @@ zum Vorfall mit dem Basis-Image siehe [50010](../5-incidents/50010-prod-vm-basis
 | Kein Tailscale, kein CrowdSec, keine Watchdogs | Die VM ist absichtlich verwundbar (Trainings-/Pentest-Umgebung) und soll keinen Tailscale-Schlüssel tragen (Entscheidung 2026-09-18). |
 | Erreichbarkeit über den Subnet-Router `homeserver` (192.168.178.0/24) | Die Tailscale-ACL lässt sich auf das Ziel `192.168.178.100` beschränken. |
 | Kein Audit-Log, kein RAM-Schutz | Wegwerf-Cluster mit 12 GiB. Das Tuning des Hauptclusters (`system-reserved` 1Gi usw.) passt nicht. |
+| VM mit 3 vCPU / 12 GiB RAM / 20 GiB Disk | worker-1 hat 4 vCPU und rund 15 GiB RAM. Der Rest bleibt für Host-OS und Hypervisor-Overhead (Sizing-Begründung der PROD-VM: Baustein 5 in 40080). Zur Disk siehe [worker-1: Speicher](#worker-1-speicher). |
 | `argocd_platform_apps` / `argocd_workloads_apps` in `host_vars/entw-vm` steuern nur noch `security-tier`-Label und Tier-NetworkPolicy der dort gelisteten Namespaces (Bestand) | Neue Apps bekommen keine Policy (Trainingsumgebung). Was deployt wird, entscheidet allein der Ordner `argocd/apps/entw/`. |
 
 Die statische IP setzt cloud-init (Rolle `libvirt_host`), deshalb steht in `host_vars` `network_configure_static_ip: false`.
@@ -27,7 +40,9 @@ Die statische IP setzt cloud-init (Rolle `libvirt_host`), deshalb steht in `host
   TECH registriert PROD ([argocd/bootstrap-prod](../../argocd/bootstrap-prod/README.md)).
 - Audit-Log und Secrets-Verschlüsselung bleiben auf den Rollen-Defaults, weil PROD die echten Familien- und Vereinsdaten trägt.
 - Die VM-Definition (6 vCPU / 24 GiB / 100 GiB, IP `.99`) steht in `host_vars/homeserver`, nicht in den Rollen-Defaults, weil
-  worker-1 (ENTW) eine andere Liste braucht.
+  worker-1 (ENTW) eine andere Liste braucht. `.98` ist schon die Infotafel (Xibo), deshalb `.99`.
+- `prod.yml` enthält nur `common`, `node_exporter` und `k3s`. Tailscale/CrowdSec, NAS-/Immich-Storage, Re-Sealing und CA/cert-manager
+  waren beim Bau als eigene Schritte geplant (Phasen 2.6 bis 2.8 in [40080](../4-planung/40080-multi-cluster-entw-prod-tech.md)).
 - Pod-/Service-Netze ohne Überlappung: TECH `10.42`/`10.43`, ENTW `10.44`/`10.45`, PROD `10.46`/`10.47`.
 
 ## DNS von PROD-VM und Homeserver
@@ -137,7 +152,9 @@ einmal auslesen) — zu unzuverlässig für VM-Storage.
   Task der Rolle `worker_apt_update`.
 - Konsequenz: Tailscale ist seit 2026-09-15 über die Rolle `tailscale` Ansible-verwaltet, und `worker_apt_update` setzt bei Bedarf
   statische Fallback-Nameserver per Netplan-Drop-in (`worker_apt_update_dns_fallback_enabled`, pro Host per Opt-in, Default `false`).
-  worker-1 bekommt per DHCPv6 vom Router zuverlässig DNS, der Fallback ist dort nur zusätzliche Absicherung.
+  worker-1 bekommt per DHCPv6 vom Router zuverlässig DNS, der Fallback ist dort nur zusätzliche Absicherung (Konsistenz mit worker-0).
+  Die Schnittstelle des Fallbacks (`worker_apt_update_dns_fallback_interface`) ist pro Host verschieden: Rollen-Default und worker-0
+  `eno1`, worker-1 `enp2s0`. Mit `ip -br addr` prüfen.
 - Beide Worker sind **reine Tailnet-Clients, keine Subnet-Router** (das übernimmt der Homeserver für das ganze LAN), deshalb
   `tailscale_advertise_routes: ""` bzw. kein `--advertise-routes`.
 - Jeder Worker braucht einen **eigenen** Auth-Key. Der globale Default in `group_vars/all.yml` ist vom Homeserver verbraucht

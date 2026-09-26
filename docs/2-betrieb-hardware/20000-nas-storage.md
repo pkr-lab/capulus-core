@@ -183,9 +183,8 @@ siehe unten), `mealie`, `minio` — insgesamt 10 PVCs über 6 Apps.
 **Nicht (mehr) auf `nas`, bewusst auf `local-path`:** `monitoring` (vmsingle)
 und `uptime-kuma` wurden versuchsweise migriert, dann aber zurück auf
 `local-path` gestellt, nachdem das NAS auf `all_squash` umgestellt wurde und
-beide Apps mit "permission denied" abstürzten (siehe Kommentare in den
-jeweiligen `values.yaml`). `zammad`s PostgreSQL-Primary läuft aus demselben
-Grund von Anfang an auf `local-path` (siehe Kommentar dort) — nur der
+beide Apps mit "permission denied" abstürzten (siehe [60040](../6-hintergruende/60040-helm-charts-tech.md#speicher-local-path-nas-und-squash)). `zammad`s PostgreSQL-Primary läuft aus demselben
+Grund von Anfang an auf `local-path` (siehe [60040](../6-hintergruende/60040-helm-charts-tech.md#zammad)) — nur der
 Redis-Sub-Chart von Zammad ist auf `nas`. Vor einer erneuten Migration dieser
 drei Workloads erst klären, ob/wie sich das `all_squash`-Problem lösen lässt.
 

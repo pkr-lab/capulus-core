@@ -226,7 +226,7 @@ Rollback ist nur ein Revert der beiden geänderten Zeilen.
 
 > **Hinweis `storageClassName: local-path`:** Anders als die meisten
 > anderen Apps liegt die Nextcloud-Postgres-PVC bewusst nicht auf der
-> NFS-`nas`-StorageClass (siehe Kommentar in `values.yaml`) — der Pod ist
+> NFS-`nas`-StorageClass (siehe [60050](../6-hintergruende/60050-helm-charts-prod.md#nextcloud)) — der Pod ist
 > dadurch an einen festen Node gebunden. Das ändert am Ablauf oben nichts,
 > nur zur Einordnung, falls der Node mal getauscht werden soll.
 
@@ -337,8 +337,7 @@ UID/GID abgebildet. Auswirkungen:
 - `chown`/`chmod` auf eine *andere* Ziel-UID schlägt in der Regel fehl,
   da die anonyme Identität serverseitig keine Owner-Änderungsrechte hat —
   betrifft z. B. den offiziellen Nextcloud-Entrypoint, der beim ersten
-  Start versucht, `html`/`data` auf `www-data` zu chownen (siehe
-  Kommentar zu `podSecurityContext`/`securityContext` in `values.yaml`).
+  Start versucht, `html`/`data` auf `www-data` zu chownen (siehe [60050](../6-hintergruende/60050-helm-charts-prod.md#nextcloud)).
 - Plain reads/writes auf bereits existierende Dateien funktionieren i. d. R.
   weiterhin, solange konsistent dieselbe (anonyme) Identität zugreift.
 - PostgreSQL liegt deshalb bewusst nicht auf `nas`, sondern auf
