@@ -52,6 +52,8 @@ statische Slideshow-Seite aus, und Chromium zeigt sie im Kiosk-Modus.
 - **Idempotenz beim NFS-Mount:** War der Mount aus einem früheren (ggf. abgebrochenen) Lauf noch aktiv, blockt der read-only
   NFS-Export `chown`/`chmod` im nächsten Task („Das Dateisystem ist nur lesbar“), weil dann die Attribute des Exports statt des lokalen
   Verzeichnisses gelten. Deshalb wird das Mountpoint-Verzeichnis nur angefasst, solange nichts gemountet ist.
+- Der Kiosk-Browser läuft in der grafischen Session (`DISPLAY=:0`) von `xibo_kiosk_user`. Autologin für diesen User muss schon eingerichtet
+  sein (Raspberry Pi Imager, „Enable autologin“), die Rolle richtet es nicht ein (wie bei `alamos_kiosk`).
 - Chromium startet hier **mit** `--incognito`: Die Slideshow braucht keine Anmeldung, es gibt keinen Login-Zustand zu erhalten.
 - Das Start-Skript wartet **unbegrenzt**, bis der lokale Webserver antwortet. Startet Chromium blind, landet es auf seiner eigenen
   Fehlerseite „nicht erreichbar“, die sich nie von selbst neu lädt (nur per manuellem F5). Ein Timeout würde denselben kaputten
@@ -103,6 +105,8 @@ statische Slideshow-Seite aus, und Chromium zeigt sie im Kiosk-Modus.
   `nightly_worker_wake_max_runtime_seconds` abwartet, ein eigener Schritt im Orchestrator-Skript ist nicht nötig. `cordon`+`drain`
   laufen **vor** dem Reboot, damit Pods sauber evakuiert werden statt beim harten Neustart abzureißen. Das Uncordon übernimmt die
   Play „Uncordon nach Provisioning“ am Ende von `worker-0.yml`/`worker-1.yml`, die immer läuft.
+  `worker_apt_update_reboot_timeout_seconds` (300) gilt für den Neustart samt erneuter Erreichbarkeit und für die Wartezeit danach, bis
+  sich k3s-Agent und Netzwerk gesetzt haben.
 
 ### power_agent
 

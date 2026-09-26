@@ -67,7 +67,7 @@ zu `argocd_platform_apps` schlug der Task „Apply tier-default-ingress
 NetworkPolicies" fehl: `namespaces "authelia" not found`. Ursache: der
 ArgoCD-Sync, der den `authelia`-Namespace anlegt, kann hinter diesem
 Playbook-Lauf zurücklagen (derselbe Effekt wie bei den
-`security-tier`-Label-Tasks, siehe deren `failed_when: false`-Kommentar in
+`security-tier`-Label-Tasks, siehe [60030](../6-hintergruende/60030-argocd-und-bootstrap.md#rolle-argocd) und
 [ansible/roles/argocd/tasks/main.yml](../../ansible/roles/argocd/tasks/main.yml)).
 Anders als bei den Label-Tasks (ein `kubectl`-Aufruf pro Namespace) wird die
 NetworkPolicy-Datei aber als **eine** Multi-Dokument-YAML mit einem

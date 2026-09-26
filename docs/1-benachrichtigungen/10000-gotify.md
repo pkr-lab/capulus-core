@@ -11,8 +11,7 @@ VictoriaMetrics Alertmanager ─webhook──> gotify-bridge (k3s) ─push──
 
 `gotify-bridge` (`argocd/apps/tech/gotify-bridge/`) übersetzt Alertmanager-Webhooks
 in Gotify-Push-Nachrichten; das App-Token dafür liegt als Kubernetes-Secret
-im `gotify-bridge`-Namespace (siehe Kommentar in
-`argocd/apps/tech/gotify-bridge/values.yaml`). Jede andere App im Cluster kann
+im `gotify-bridge`-Namespace (siehe [60040](../6-hintergruende/60040-helm-charts-tech.md#benachrichtigungen-ntfy-ntfy-bridge-gotify-gotify-bridge)). Jede andere App im Cluster kann
 genauso einen eigenen Application-Token in der Gotify-Web-UI anlegen und
 direkt gegen `https://gotify.tech.homeserver/message` pushen.
 
@@ -110,8 +109,7 @@ Bei `https://gotify.tech.homeserver` mit `admin` + dem Passwort aus 1.1 einlogge
      jeweiligen App.
 2. Den generierten Token (langer opaker String) kopieren und als Kubernetes-
    Secret bzw. SealedSecret der jeweiligen App hinterlegen — z. B. für
-   `gotify-bridge` siehe Kommentar in
-   `argocd/apps/tech/gotify-bridge/values.yaml`.
+   `gotify-bridge` siehe [60040](../6-hintergruende/60040-helm-charts-tech.md#benachrichtigungen-ntfy-ntfy-bridge-gotify-gotify-bridge).
 3. Manueller Push-Test (Token-Sanity-Check):
 
 ```bash

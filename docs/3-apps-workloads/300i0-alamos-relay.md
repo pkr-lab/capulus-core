@@ -8,7 +8,7 @@ Server-zu-Server an den internen n8n-Webhook weiter (siehe
 [300h0-alamos-einsatz-zammad.md](300h0-alamos-einsatz-zammad.md)). **n8n
 selbst bleibt dabei komplett unerreichbar aus dem Internet** — genau die
 Entscheidung, die für `n8n.prod.homeserver` schon einmal bewusst getroffen
-wurde (Kommentar bei `N8N_HOST` in `argocd/apps/tech/n8n/values.yaml`).
+wurde ([c0030](../c-netzwerk-dns/c0030-port-uebersicht.md): n8n ist aus dem Cloudflare-Tunnel entfernt).
 
 ## Warum dieser Umweg nötig ist
 
