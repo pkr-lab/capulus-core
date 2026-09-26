@@ -26,6 +26,18 @@ vmagent_install_dir: "/opt/vmagent-{{ vmagent_version }}"
 vmagent_node_exporter_port: 9100
 vmagent_scrape_interval: "30s"
 
+# Begrenzung des Uploads. Der Vereinsheim-Uplink ist duenn und verlustbehaftet:
+# Im Normalbetrieb sind es nur ~1 KB/s (ein node_exporter-Scrape alle 30s),
+# aber beim Nachliefern eines Backlogs (Stunden Ausfall) sendet vmagent mit
+# Default-Einstellungen (2x CPU-Kerne parallele Queues, kein Rate-Limit)
+# alles gleichzeitig, saettigt den Uplink (Retransmits, Timeouts nach 60s)
+# und blockiert dabei serverseitig die Insert-Slots von VictoriaMetrics.
+# Eine Queue reicht fuer diese Datenmenge; das Rate-Limit (Bytes/s, ~64 kbit/s)
+# laesst dem Kiosk, Heartbeat und journal-upload Luft auf derselben Leitung.
+# Ein 10-h-Backlog (~26 MB) ist damit in ~55 min aufgeholt.
+vmagent_remote_write_queues: 1
+vmagent_remote_write_rate_limit: 8192
+
 # Wohin gepusht wird (Prometheus-remote_write-Endpunkt, per Traefik-Ingress
 # exponiert — siehe argocd/apps/tech/monitoring/templates/ingress-vm-write.yaml).
 # MUSS pro Host/Gruppe gesetzt werden (siehe ansible/group_vars/banana_pis.yml)
