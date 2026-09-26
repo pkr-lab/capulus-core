@@ -148,8 +148,11 @@ Grant. Empfehlung: ein eigenes Tag für den Runner, damit die Rechte nicht an ei
 ]
 ```
 
-Der Auth-Key für `TAILSCALE_AUTHKEY` wird dazu mit dem Tag `tag:ci` erzeugt (*reusable*, *ephemeral*). Der
-Runner ist dann ein getaggtes, kurzlebiges Gerät und sieht nichts außer diesen Zielen. Die Subnet-Route des
+Der Workflow meldet sich mit einem **OAuth-Client** an (Secrets `TS_OAUTH_CLIENT_ID` und `TS_OAUTH_SECRET`) und
+tritt mit dem Tag `tag:ci` bei. Die Action erzeugt dabei pro Lauf einen frischen, kurzlebigen Key: nichts läuft
+ab, nichts wird verbraucht. Der Runner ist ein getaggtes, kurzlebiges Gerät und sieht nichts außer diesen Zielen.
+Der OAuth-Client entsteht im Tailscale-Admin-Panel unter *Settings → OAuth clients → Generate*, mit Scope
+`auth_keys` (Write) und Tag `tag:ci`; das Secret wird nur einmal angezeigt. Die Subnet-Route des
 Homeservers muss im Admin-Panel freigegeben sein (sie ist es: der Homeserver zeigt `PrimaryRoutes: 192.168.178.0/24`).
 
 ## Einrichtung
@@ -164,9 +167,10 @@ Reihenfolge (nach dem Merge der Änderungen, die diese Pipeline einführen):
 3. **Tokens erzeugen und als Secret hinterlegen** (nichts wird ausgegeben):
    `scripts/create-argocd-ci-token.sh hub` und `scripts/create-argocd-ci-token.sh entw`
    → Secrets `ARGOCD_HUB_TOKEN`, `ARGOCD_ENTW_TOKEN` (365 Tage gültig).
-4. **Tailscale:** ACL-Grant (oben) speichern, neuen Auth-Key mit `tag:ci` erzeugen und als `TAILSCALE_AUTHKEY` ablegen.
-   **Auth-Keys laufen nach höchstens 90 Tagen ab** (Voreinstellung 90): den Key spätestens vierteljährlich ersetzen, sonst
-   scheitert im Workflow der Schritt „Connect runner to tailnet“ und die Kette läuft nicht mehr.
+4. **Tailscale:** ACL-Grant (oben) speichern, OAuth-Client mit Scope `auth_keys` (Write) und Tag `tag:ci` erzeugen und
+   als `TS_OAUTH_CLIENT_ID` und `TS_OAUTH_SECRET` ablegen. Ein Auth-Key als Secret taugt nicht (einmalig oder nach
+   höchstens 90 Tagen abgelaufen): der Beitritt scheitert dann dauerhaft mit `BackendState=NeedsLogin`.
+   Fehlen die beiden Secrets, läuft die Kette als „inaktiv“ (Hinweis statt Fehler).
 5. **PoC ausführen** (*Actions → Tailscale Runner PoC*): muss `OK` melden.
 6. **Trockenlauf:** *Promote chain → Run workflow*, `plan_only` aktivieren, Summary prüfen.
 7. **Beobachten:** einige echte Zyklen begleiten. Danach optional Repo-Variable `PROMOTE_AUTOMERGE_TECH=true`.
