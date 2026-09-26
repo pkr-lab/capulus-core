@@ -87,11 +87,11 @@ client.on('ready', async () => {
   clearTimeout(timer);
   console.log('\nGekoppelt als ' + (client.info && client.info.pushname) + ' (' + (client.info && client.info.wid && client.info.wid.user) + ').');
   let failed = false;
+  let channels = [];
 
   // Die Kanalliste ist direkt nach "ready" oft noch leer und fuellt sich erst nach einigen Sekunden.
   console.log('\nKanaele (Ziel-ID endet auf @newsletter), warte bis zu 45 s auf die Liste ...');
   try {
-    let channels = [];
     for (const end = Date.now() + 45000; ;) {
       channels = await listChannels();
       if (channels.length || Date.now() > end) break;
@@ -104,9 +104,29 @@ client.on('ready', async () => {
   if (invite) {
     console.log('\nKanal zu Einladungscode ' + invite + ':');
     try {
-      // Nur die Metadaten-Abfrage (liefert die ID); client.getChannelByInviteCode() laedt danach noch den ganzen Chat.
-      const md = await client.pupPage.evaluate((code) => window.WWebJS.getChannelMetadata(code), invite);
-      console.log('  ' + ((md.id && md.id._serialized) || md.id) + '  ' + (md.titleMetadata && md.titleMetadata.title));
+      // Eigene Abfrage statt client.getChannelByInviteCode()/WWebJS.getChannelMetadata(): Die
+      // Bibliothek sucht getRoleByIdentifier im Modul WAWebNewsletterModelUtils, WhatsApp Web hat es
+      // nach WAWebNewsletterRoleIdentifier verschoben ("... is not a function"). Beide werden versucht;
+      // fehlt die Funktion oder liefert sie undefined (Konto kennt den Kanal nicht), gilt die Gast-Sicht.
+      const md = await client.pupPage.evaluate(async (code) => {
+        let getRole = null;
+        for (const name of ['WAWebNewsletterRoleIdentifier', 'WAWebNewsletterModelUtils']) {
+          try { const m = window.require(name); if (m && typeof m.getRoleByIdentifier === 'function') { getRole = m.getRoleByIdentifier; break; } } catch (e) { /* naechstes Modul */ }
+        }
+        const res = await window.require('WAWebNewsletterMetadataQueryJob').queryNewsletterMetadataByInviteCode(code, getRole ? getRole(code) : undefined);
+        const name = res && res.newsletterNameMetadataMixin;
+        return { id: (res && res.idJid) || null, title: (name && name.nameElementValue) || null, keys: Object.keys(res || {}).slice(0, 25) };
+      }, invite);
+      const id = md.id && (md.id._serialized || md.id);
+      if (!id) throw new Error('Antwort ohne Kanal-ID (WhatsApp Web hat das Format geaendert?), Felder: ' + md.keys.join(','));
+      console.log('  ' + id + '  ' + md.title);
+      // Die Rolle dieses Kontos steht nicht in der Einladung, sondern nur in dessen eigener Kanalliste.
+      const own = channels.find((c) => c.id === id);
+      console.log(own && (own.role === 'owner' || own.role === 'admin')
+        ? '  Rolle dieses Kontos: ' + own.role + ' -> Senden moeglich'
+        : own
+          ? '  Rolle dieses Kontos: ' + (own.role || 'unbekannt') + ' -> zum Senden muss das Konto Inhaber oder Admin sein'
+          : '  Der Kanal steht NICHT in der Liste dieses Kontos -> es ist weder Inhaber, Admin noch Follower, Senden nicht moeglich (Kanal-Inhaber muss das Konto als Admin hinzufuegen).');
     } catch (e) { failed = true; console.error('  Aufloesen fehlgeschlagen: ' + errText(e)); }
   }
 
