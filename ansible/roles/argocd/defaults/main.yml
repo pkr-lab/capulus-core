@@ -107,6 +107,7 @@ argocd_network_policy_extra_ingress:
     - carplay-api
     - alamos-apager
     - ntfy-bridge   # Batch 4: ntfy-bridge/values.yaml
+    - n8n   # n8n-Workflows pushen per HTTP an ntfy.ntfy.svc (zammad-ki-entwuerfe, whatsapp-relay)
   monitoring:
     - carplay-api
     - n8n
