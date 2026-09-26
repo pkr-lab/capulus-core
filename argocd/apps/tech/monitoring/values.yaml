@@ -46,6 +46,16 @@ victoria-metrics-k8s-stack:
       extraArgs:
         # Drop scrapes from misbehaving targets instead of blowing memory.
         memory.allowedPercent: "60"
+        # Default ist an das CPU-Limit gekoppelt (hier: 2 bei 1000m). Ein
+        # Insert haelt seinen Slot, solange der Client den Body noch sendet —
+        # der ueber Tailscale pushende Vereinsheim-Pi (viele parallele
+        # vmagent-Queues, haengende http->https-Umleitung) belegte die Slots,
+        # sodass vmalert nicht mehr schreiben konnte (Alert
+        # RemoteWriteDroppingData, vm_concurrent_insert_limit_reached_total
+        # steigt).
+        # Die Requests sind klein und warten nur auf I/O, daher kaum
+        # Speicher-/CPU-Mehrbedarf.
+        maxConcurrentInserts: "16"
         # host/kind-Labels fuer den per Push angebundenen Vereinsheim-Pi,
         # siehe templates/configmap-vmsingle-relabel.yaml.
         relabelConfig: /etc/vm/configs/vmsingle-relabel/relabel.yml
