@@ -230,6 +230,7 @@ capulus-core/
 │   ├── 3-apps-workloads/             # Doku je App
 │   ├── 4-planung/                    # Pläne und Analysen (teils umgesetzt, siehe Statuszeile im Doc)
 │   ├── 5-incidents/                  # Vorfallsberichte
+│   ├── 6-hintergruende/              # Begründungen, Fallstricke und Vorfall-Regeln zum Code (der Code selbst ist kommentarfrei)
 │   ├── superpowers/                  # Datierte Plan-/Spec-Docs, eigenes Namensschema
 │   └── assets/                       # Banner, Root-CA-Zertifikat
 ├── renovate.json                     # Renovate-Konfiguration (siehe docs/f-cicd-automatisierung/f0020-renovate.md)
@@ -466,7 +467,7 @@ Vollständige Architektur: **[docs/a-betriebssystem/a0010-overview.md](docs/a-be
 
 ## Dokumentation
 
-Alle Docs liegen unter `docs/`, sortiert in 11 Kategorie-Unterordner. Jede
+Alle Docs liegen unter `docs/`, sortiert in 12 Kategorie-Unterordner. Jede
 Datei trägt eine 5-stellige Hex-ID (erstes Zeichen = Kategorie) — Details
 und Konventionen für neue Docs: **[docs/TEMPLATE.md](docs/TEMPLATE.md)**.
 Neu hier? Der beste Einstieg ist der **[Architektur-Überblick](docs/a-betriebssystem/a0010-overview.md)**.
@@ -609,6 +610,25 @@ Pläne und Analysen. Ein Doc trägt in seiner Statuszeile, wie weit es umgesetzt
 | Dokument | Inhalt |
 |---|---|
 | [NAS-Platte rot, homeserver unerreichbar](docs/5-incidents/50000-nas-disk-red-homeserver-unreachable.md) | Vorfall vom 02.09.2026: Hypothese und Prüfschritte |
+| [PROD-VM startet nicht mehr, Basis-Image ausgetauscht](docs/5-incidents/50010-prod-vm-basis-image-ersetzt.md) | Vorfall vom 23.09.2026: Ursache, Behebung und Lehren |
+
+### Hintergründe (`6-hintergruende/`)
+
+Warum der Code so gebaut ist: Begründungen, Fallstricke und Vorfall-Regeln. Der Code selbst enthält keine Kommentare, was früher daneben stand, steht hier.
+Einstieg und Zuordnung von Dateien zu Docs: **[docs/6-hintergruende/60000-uebersicht.md](docs/6-hintergruende/60000-uebersicht.md)**.
+
+| Dokument | Inhalt |
+|---|---|
+| [Ansible: Hosts, VMs und Playbooks](docs/6-hintergruende/60010-ansible-hosts-und-playbooks.md) | ENTW-/PROD-VM, `libvirt_host` (Bridge, dnsmasq-Snippet, Basis-Image), DNS der VMs, Worker-Playbooks, WireGuard-Notzugang |
+| [Ansible: Rollen](docs/6-hintergruende/60020-ansible-rollen.md) | Kiosk-Geräte, Energie-Rollen, Watchdogs, vmagent, `journal_upload`, Semaphore-Rollen |
+| [ArgoCD, Bootstrap und SealedSecrets](docs/6-hintergruende/60030-argocd-und-bootstrap.md) | Bootstrap-Dateien, `ignoreDifferences`, PROD im Hub, Migrationen, Promotion-Konfiguration, Fallstricke beim Versiegeln |
+| [Helm-Charts im TECH-Cluster](docs/6-hintergruende/60040-helm-charts-tech.md) | Gemeinsame Muster, Zertifikate und TLS, Traefik-Metriken, alle TECH-Apps |
+| [Helm-Charts im PROD-Cluster](docs/6-hintergruende/60050-helm-charts-prod.md) | PROD-Kopien, Nextcloud, Immich, Wiki.js und wiki-docs-sync, Xibo, Paperless-ngx |
+| [Monitoring und Alerting](docs/6-hintergruende/60060-monitoring-und-alerting.md) | Alertmanager-Routing, VMRules, Scrapes und Labels, Grafana-Ordner, Logging |
+| [Authentik und lldap](docs/6-hintergruende/60070-authentik-und-lldap.md) | Blueprint-Fallstricke aus dem Live-Betrieb, Chart, Secrets |
+| [carplay-api und iOS-App](docs/6-hintergruende/60080-carplay-api-und-ios-app.md) | Verträge, Absicherung, Datenquellen, Transport über Tailscale |
+| [pacman (Schulungsobjekt)](docs/6-hintergruende/60090-pacman-schulungsobjekt.md) | Server, Bestenliste, Trainingsmodus, Frontend-Skripte |
+| [CI-Workflows, Skripte und Lint](docs/6-hintergruende/600a0-ci-workflows-und-skripte.md) | Workflows, Promotions- und Sync-Skripte, Ruleset, Lint-Konfiguration |
 
 Weitere Ordner-READMEs: [argocd/apps/entw/](argocd/apps/entw/README.md) (ENTW-Ordner),
 [argocd/bootstrap-prod/](argocd/bootstrap-prod/README.md) (PROD im Hub anbinden, Umzug mit Daten),

@@ -6,11 +6,6 @@
   changed_when: false
   failed_when: false
 
-# EIGENSTAENDIGE Disk (kein Backing-File): eine Kopie des Basis-Images, danach
-# auf die gewuenschte Groesse vergroessert. Ein Overlay auf dem Basis-Image
-# wurde unbrauchbar, als das Basis-Image ausgetauscht wurde (Vorfall
-# 2026-09-23, docs/5-incidents/50010-prod-vm-basis-image-ersetzt.md).
-# Kostet nur den tatsaechlich belegten Platz (~3 GB), nicht die virtuelle Groesse.
 - name: Eigenstaendige Disk fuer die VM aus dem Basis-Image anlegen (ueberspringt, falls sie schon existiert)
   ansible.builtin.command: >
     qemu-img convert -O qcow2
@@ -29,10 +24,6 @@
     - libvirt_host_vm_exists.rc != 0
     - libvirt_host_vm_disk_created is changed
 
-# Bestehende VMs (vor dieser Aenderung angelegt) haengen noch als Overlay am
-# Basis-Image. Ersetzt jemand die Basis-Datei von Hand, startet die VM nicht mehr.
-# Nur eine Warnung, kein Umbau: das Aufloesen braucht eine ausgeschaltete VM
-# (Runbook: docs/5-incidents/50010-prod-vm-basis-image-ersetzt.md).
 - name: Pruefen, ob die Disk einer bestehenden VM noch ein Backing-File hat
   ansible.builtin.command: >
     qemu-img info --force-share --output=json

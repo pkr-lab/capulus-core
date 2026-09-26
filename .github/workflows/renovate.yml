@@ -1,6 +1,5 @@
 name: Renovate (self-hosted fallback)
 
-# renovate.json is reused as-is.
 on:
   schedule:
     - cron: "0 5 * * 1"

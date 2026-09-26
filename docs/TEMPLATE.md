@@ -43,6 +43,7 @@ ans Ende der Kategorie angehängt zu werden.
 | `3` | Apps & Workloads | `3-apps-workloads/` |
 | `4` | Planung | `4-planung/` |
 | `5` | Incidents | `5-incidents/` |
+| `6` | Hintergründe | `6-hintergruende/` |
 
 `4-planung/` ist die einzige Kategorie, die nicht den aktuellen Ist-Zustand
 beschreibt: sie hält ausgiebig recherchierte, aber noch nicht (vollständig)
@@ -55,9 +56,14 @@ werden sollen (Typ C). Ein Vorfall, dessen Lehren direkt eine
 Sicherheitsmaßnahme betreffen, kann stattdessen in `d-sicherheit/` liegen
 (Beispiel: `d0000-incident-2026-08-12.md`).
 
+`6-hintergruende/` hält die Begründungen zum Code: warum etwas so gebaut ist, welche
+Fallstricke und Vorfälle dahinterstehen. Der Code selbst bleibt kommentarfrei, solche
+Begründungen stehen nicht als Kommentar daneben. Einstieg und Zuordnung von Dateien
+zu Docs: [60000](6-hintergruende/60000-uebersicht.md).
+
 Passt ein neues Thema in keine bestehende Kategorie, ist das ein Signal, kurz
-zu prüfen, ob eine zwölfte Kategorie wirklich nötig ist, statt es einer
-unpassenden zuzuordnen — Hex hat mit `0` und `6`–`9` noch Reserve.
+zu prüfen, ob eine dreizehnte Kategorie wirklich nötig ist, statt es einer
+unpassenden zuzuordnen — Hex hat mit `0` und `7`–`9` noch Reserve.
 
 Ausnahme vom Namensschema: `superpowers/plans/` und `superpowers/specs/`
 enthalten datierte Plan- und Spec-Dokumente (`YYYY-MM-DD-<thema>.md`) mit
@@ -70,7 +76,7 @@ Innerhalb von `docs/` immer **relativ** verlinken, nicht mit `docs/`-Präfix:
 - Gleiche Kategorie: `[Text](b0010-argocd.md)`
 - Andere Kategorie: `[Text](../c-netzwerk-dns/c0000-dns-architecture.md)`
 
-Außerhalb von `docs/` (README, Ansible-Kommentare, ArgoCD-`values.yaml`, …)
+Außerhalb von `docs/` (README, Skripte, ArgoCD-`values.yaml`, …)
 immer den vollen, repo-root-relativen Pfad inkl. Kategorie-Ordner:
 `docs/c-netzwerk-dns/c0000-dns-architecture.md`.
 
@@ -200,5 +206,7 @@ Für punktuelle Vorfallsberichte, datiert im Dateinamen mitgeführt (Beispiel:
 - **Hostnamen** immer im Tier-Schema (`<app>.tech.homeserver`, `<app>.prod.homeserver`), nie flach
   (`<app>.homeserver`), siehe [c0040](c-netzwerk-dns/c0040-domain-tiers.md).
 - **Repo-Pfade** mit Cluster-Ordner (`argocd/apps/tech/…`, `argocd/apps/prod/…`, `argocd/apps/entw/…`).
+- **Keine Kommentare im Code:** Wer eine Begründung, einen Fallstrick oder eine Vorfall-Regel festhalten will, trägt sie im selben PR in das passende Doc unter
+  [6-hintergruende/](6-hintergruende/60000-uebersicht.md) ein, nicht als Kommentar neben den Code.
 - **Verlinkung prüfen:** `python3 scripts/check-doc-links.py` findet kaputte relative Links und Anker
   (läuft auch in der CI, siehe [f0070](f-cicd-automatisierung/f0070-ci-lint.md)).
