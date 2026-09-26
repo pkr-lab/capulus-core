@@ -21,4 +21,10 @@ tailscale_auth_key: !vault |
           656539343061396330363236326338353636
 
 # ---- Metriken-Push (vmagent) --------------------------------
-vmagent_remote_write_url: "http://vm-write.tech.homeserver/api/v1/write"
+# HTTPS ist Pflicht: der TECH-Traefik leitet HTTP global per 308 auf HTTPS um
+# (argocd/apps/tech/traefik-config/helmchartconfig.yaml). Mit http:// macht
+# vmagent jeden Push in zwei Etappen, und die erste (Port 80) haengt bei
+# Bodies ab ~12 KB bis zum Timeout (gemessen vom Pi aus 26.09.2026: 20 KB ueber
+# http 9-40 s oder Timeout, ueber https direkt ~1 s). Die vmagent-Bloecke sind
+# ~20 KB gross. Gleiches Muster wie bei journal_upload_push_url.
+vmagent_remote_write_url: "https://vm-write.tech.homeserver/api/v1/write"

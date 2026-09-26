@@ -63,33 +63,64 @@ client.on('qr', async (qr) => {
 client.on('authenticated', () => console.log('Authentifiziert, warte auf WhatsApp Web ...'));
 client.on('auth_failure', (m) => { console.error('Anmeldung fehlgeschlagen: ' + m); finish(1); });
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Aus WhatsApp Web kommen teils minifizierte Fehler (Message z. B. nur "r") -> mit Stack ausgeben.
+const errText = (e) => String((e && (e.stack || e.message)) || e).split('\n').slice(0, 3).join(' | ');
+
+// client.getChannels()/getChats() holen pro Eintrag Metadaten nach und scheitern
+// als Ganzes, sobald ein Eintrag Probleme macht. Fuer die Auflistung reicht ein
+// direkter Blick in die (lokalen) WhatsApp-Web-Sammlungen.
+const listChannels = () => client.pupPage.evaluate(() => {
+  const col = window.require('WAWebCollections').WAWebNewsletterCollection;
+  return (col ? col.getModelsArray() : []).map((c) => {
+    const md = c.newsletterMetadata || {};
+    return {
+      id: c.id && c.id._serialized,
+      name: c.name || c.formattedTitle || md.name || (md.titleMetadata && md.titleMetadata.title) || '',
+      role: md.membershipType || null,
+    };
+  });
+});
+const listGroups = () => client.pupPage.evaluate(() => window.require('WAWebCollections').Chat.getModelsArray()
+  .filter((c) => c.id && String(c.id._serialized).endsWith('@g.us'))
+  .map((c) => ({ id: c.id._serialized, name: c.formattedTitle || c.name || '' })));
+
 client.on('ready', async () => {
   clearTimeout(timer);
+  console.log('\nGekoppelt als ' + (client.info && client.info.pushname) + ' (' + (client.info && client.info.wid && client.info.wid.user) + ').');
+  let failed = false;
+
+  // Die Kanalliste ist direkt nach "ready" oft noch leer und fuellt sich erst nach einigen Sekunden.
+  console.log('\nKanaele (Ziel-ID endet auf @newsletter), warte bis zu 45 s auf die Liste ...');
   try {
-    console.log('\nGekoppelt als ' + (client.info && client.info.pushname) + ' (' + (client.info && client.info.wid && client.info.wid.user) + ').');
-
-    const channels = await client.getChannels();
-    console.log('\nKanaele (Ziel-ID endet auf @newsletter):');
-    for (const c of channels) console.log('  ' + c.id._serialized + '  ' + c.name + '  [posten: ' + (c.isReadOnly ? 'NEIN, nur lesen' : 'ja') + ']');
-    if (!channels.length) console.log('  (keine)');
-
-    if (invite) {
-      const c = await client.getChannelByInviteCode(invite);
-      console.log('\nKanal zu Einladungscode ' + invite + ':');
-      console.log(c ? '  ' + c.id._serialized + '  ' + c.name + '  [posten: ' + (c.isReadOnly ? 'NEIN, nur lesen' : 'ja') + ']' : '  nicht gefunden');
+    let channels = [];
+    for (const end = Date.now() + 45000; ;) {
+      channels = await listChannels();
+      if (channels.length || Date.now() > end) break;
+      await sleep(3000);
     }
+    for (const c of channels) console.log('  ' + c.id + '  ' + c.name + '  [Rolle: ' + (c.role || 'unbekannt') + ']');
+    if (!channels.length) console.log('  (keine) -> Kanal per Einladungslink aufloesen: --invite=<Code hinter whatsapp.com/channel/>');
+  } catch (e) { failed = true; console.error('  Kanalliste fehlgeschlagen: ' + errText(e)); }
 
-    const groups = (await client.getChats()).filter((c) => c.isGroup);
-    console.log('\nGruppen (Ziel-ID endet auf @g.us):');
-    for (const g of groups) console.log('  ' + g.id._serialized + '  ' + g.name);
-    if (!groups.length) console.log('  (keine)');
-
-    console.log('\nZiel-ID in n8n im Node "An WhatsApp senden" als TARGET_ID eintragen.');
-    await finish(0);
-  } catch (e) {
-    console.error('Fehler beim Auflisten: ' + (e && e.message));
-    await finish(1);
+  if (invite) {
+    console.log('\nKanal zu Einladungscode ' + invite + ':');
+    try {
+      // Nur die Metadaten-Abfrage (liefert die ID); client.getChannelByInviteCode() laedt danach noch den ganzen Chat.
+      const md = await client.pupPage.evaluate((code) => window.WWebJS.getChannelMetadata(code), invite);
+      console.log('  ' + ((md.id && md.id._serialized) || md.id) + '  ' + (md.titleMetadata && md.titleMetadata.title));
+    } catch (e) { failed = true; console.error('  Aufloesen fehlgeschlagen: ' + errText(e)); }
   }
+
+  console.log('\nGruppen (Ziel-ID endet auf @g.us):');
+  try {
+    const groups = await listGroups();
+    for (const g of groups) console.log('  ' + g.id + '  ' + g.name);
+    if (!groups.length) console.log('  (keine)');
+  } catch (e) { failed = true; console.error('  Gruppenliste fehlgeschlagen: ' + errText(e)); }
+
+  console.log('\nZiel-ID in n8n im Node "An WhatsApp senden" als TARGET_ID eintragen.');
+  await finish(failed ? 1 : 0);
 });
 
 client.initialize().catch((e) => { console.error('Start fehlgeschlagen: ' + (e && e.message)); finish(1); });
