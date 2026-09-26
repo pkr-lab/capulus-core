@@ -45,7 +45,7 @@ Workflow, dass der Runner wirklich verbunden ist (`BackendState` = `Running`).
 
 | Was | Wo |
 |---|---|
-| Repo-Secret `TAILSCALE_AUTHKEY` | GitHub → Settings → Secrets (gesetzt am 2026-09-18). Für wechselnde Runner passt ein *reusable*, *ephemeral* Key. Die Voreinstellungen für Server-Keys (single-use, nicht ephemeral) in [c0010](../c-netzwerk-dns/c0010-tailscale.md#auth-key-besorgen) gelten hier nicht. |
+| Repo-Secrets `TS_OAUTH_CLIENT_ID` und `TS_OAUTH_SECRET` | GitHub → Settings → Secrets. OAuth-Client aus dem Tailscale-Admin-Panel, Einrichtung siehe [Promotion-Kette → Netzweg](f00b0-promotion-chain.md#netzweg-und-zugriff). Ein Auth-Key taugt hier nicht: einmalig verwendbare Keys sind nach dem ersten Lauf verbraucht, alle anderen laufen nach höchstens 90 Tagen ab (der Beitritt scheiterte danach dauerhaft mit `NeedsLogin`). |
 | ACL-Grant für den Runner | siehe [Promotion-Kette → Netzweg](f00b0-promotion-chain.md#netzweg-und-zugriff): empfohlen ein Tag `tag:ci` mit Grant auf die beiden LAN-Adressen; Grundlagen in [c0010 → ACL-Konfiguration](../c-netzwerk-dns/c0010-tailscale.md#acl-konfiguration) |
 | Freigegebene Subnet-Route `192.168.178.0/24` des Homeservers | Tailscale-Admin-Panel (ist freigegeben) |
 
@@ -71,8 +71,8 @@ Netzweg des Runners ist also weiter unbestätigt.
 
 | Symptom | Ursache / Lösung |
 |---|---|
-| Schritt „Connect runner to tailnet“ scheitert mit Auth-Fehler | Key abgelaufen, nicht reusable oder falsch kopiert: neuen Key erzeugen, Secret ersetzen. |
-| Schritt „Connect …“ grün, aber `Logged out` / „Tailscale nicht verbunden“ | `tailscale up` ist im Log des Verbindungsschritts still gescheitert (Action meldet trotzdem Erfolg). Dort nach der Fehlermeldung suchen: doppeltes Flag (`args:` nicht für `--accept-routes` nutzen), Key ungültig/abgelaufen, Tag nicht in `tagOwners`. |
+| Schritt „Connect runner to tailnet“ scheitert mit Auth-Fehler | OAuth-Client gelöscht, Secret falsch kopiert oder Scope `auth_keys:write` bzw. Tag `tag:ci` fehlt am Client: Client prüfen, Secrets ersetzen. |
+| Schritt „Connect …“ grün, aber `NeedsLogin` / `Logged out` / „Tailscale nicht verbunden“ | `tailscale up` ist im Log des Verbindungsschritts still gescheitert (Action meldet trotzdem Erfolg). Dort nach der Fehlermeldung suchen: doppeltes Flag (`args:` nicht für `--accept-routes` nutzen), OAuth-Client ohne Recht auf `tag:ci`, `tag:ci` nicht in `tagOwners`. |
 | `hub-lan`/`entw`: `TCP zu/gefiltert` (Timeout) | ACL erlaubt den Runner nicht: Grant auf die LAN-Adresse und den Port ergänzen. Ein Timeout (statt sofortiger Ablehnung) ist typisch für gefilterten Verkehr. |
 | `hub-lan`/`entw`: sofort abgelehnt | Die Route kommt an, aber der Dienst antwortet nicht: läuft ArgoCD (`server.insecure`, NodePort 30080)? Bei ENTW: `ssh ubuntu@192.168.178.96 'sudo virsh list --all'`, VM muss `running` sein. |
 | Route nicht sichtbar (Fehler „no route“) | Die Subnet-Route ist im Admin-Panel nicht freigegeben oder der Runner ist nicht verbunden (siehe Zeile darüber). |
