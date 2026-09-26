@@ -431,6 +431,7 @@ Intra-Tier stillschweigend erlaubt, jetzt durch je eine gezielte
 | `gotify-bridge` | `monitoring` | vmalertmanager-Webhook |
 | `ntfy-bridge` | `monitoring` | vmalertmanager-Webhook |
 | `ntfy` | (+ `ntfy-bridge`, zusätzlich zu `carplay-api`/`alamos-apager` aus Batch 3) | `ntfy-bridge/values.yaml` |
+| `ntfy` | (+ `n8n`) | Push-Nodes in den n8n-Workflows (`zammad-tickets-verarbeiten`, `email-to-whatsapp-kanal`); ohne die Freigabe meldet n8n `ECONNREFUSED` auf den ntfy-Service, gefunden am 26.09.2026 |
 | `minio` | `argo-workflows` | Artifact-Storage-Endpoint in `argo-workflows/values.yaml` |
 | `monitoring` | (+ `argo-workflows`, zusätzlich zu `carplay-api`/`n8n` aus Batch 3) | Alertmanager-URL in `maintenance-workflowtemplate.yaml` |
 
