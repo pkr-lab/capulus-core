@@ -1,4 +1,9 @@
-# Custom n8n image with n8n-nodes-imap baked in.
+# Custom n8n image with n8n-nodes-imap baked in, plus whatsapp-web.js + Chromium
+# for the workflows that send WhatsApp messages from a Code node.
+#
+# Offizielles npm-Paket "whatsapp-web.js" (github.com/wwebjs/whatsapp-web.js), nicht
+# das aeltere "wwebjs@1.23.1-alpha.7" (Alpha von 04/2024 mit Puppeteer 18, ohne
+# Kanal-Unterstuetzung, d. h. ohne @newsletter-IDs).
 
 FROM node:24.20.0-alpine AS builder
 
@@ -13,7 +18,7 @@ RUN apk add --no-cache --root /chroot --initdb --no-scripts \
 
 WORKDIR /build/wwebjs
 RUN PUPPETEER_SKIP_DOWNLOAD=true PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    npm install wwebjs@1.23.1-alpha.7 qrcode@1.5.4 --omit=dev --legacy-peer-deps
+    npm install whatsapp-web.js@1.34.7 qrcode@1.5.4 --omit=dev --legacy-peer-deps
 
 FROM n8nio/n8n:2.38.4
 
