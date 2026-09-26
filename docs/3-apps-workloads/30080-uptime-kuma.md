@@ -43,7 +43,7 @@ anlegen (erscheint beim ersten Besuch automatisch).
 | Monitor | URL | Typ |
 |---|---|---|
 | Grafana | https://grafana.tech.homeserver | HTTP |
-| ArgoCD | https://`<server-ip>`:30443 | HTTPS (selbstsigniert) |
+| ArgoCD | https://argocd.tech.homeserver | HTTPS (internes Zertifikat) |
 | ntfy | https://ntfy.tech.homeserver | HTTP |
 | Semaphore | https://semaphore.tech.homeserver | HTTP |
 | Paperless | https://paperless.prod.homeserver | HTTP |

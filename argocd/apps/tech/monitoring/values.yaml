@@ -24,6 +24,7 @@ victoria-metrics-k8s-stack:
       replicaCount: 1
       extraArgs:
         memory.allowedPercent: "60"
+        maxConcurrentInserts: "16"
         relabelConfig: /etc/vm/configs/vmsingle-relabel/relabel.yml
       configMaps:
         - vmsingle-relabel

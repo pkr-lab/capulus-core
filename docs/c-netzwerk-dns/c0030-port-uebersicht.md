@@ -72,6 +72,7 @@ Nicht jede App mit LAN-Ingress ist automatisch auch extern erreichbar.
 | Pi-hole (Web-UI) | tech | TECH | pihole | pihole:80 | pihole.tech.homeserver | — |
 | Argo Workflows | tech | TECH | argo-workflows | argo-workflows-server:2746 | argo-workflows.tech.homeserver | — |
 | Headlamp | tech | TECH | headlamp | headlamp:80 | headlamp.tech.homeserver | — |
+| ArgoCD (Web-UI) | tech | TECH | argocd | argocd-server:80 | argocd.tech.homeserver | — |
 | MinIO Console | tech | TECH | minio | minio-console:9001 | minio.tech.homeserver | — |
 | kubeseal-webgui | tech | TECH | kubeseal-webgui | kubeseal-webgui:8080 | kubeseal-webgui.tech.homeserver | — |
 | VictoriaMetrics/-Logs (Schreib-Endpunkte) | tech | TECH | monitoring / logging | siehe Charts | vm-write.tech.homeserver, logs-write.tech.homeserver | — |
@@ -100,7 +101,7 @@ alles an Traefik weiter (`argocd/apps/tech/cloudflared/values.yaml` bzw.
 | MediaMTX Publish (RTSP) | 8554 | NodePort `homeserver:31554` | s.o., nur LAN/Tailnet |
 | MediaMTX WebRTC | 8889 | Nur ClusterIP intern | Kein eigener Ingress-Host, wird intern vom HLS-Player-Frontend genutzt |
 | MediaMTX API | 9997 | Nur ClusterIP intern | Kein externer Zugriff |
-| ArgoCD-Hub | 443 | NodePort `homeserver:30443` (HTTPS) | Kein Ingress-Host, direkter NodePort-Zugriff. HTTP-NodePort (30080) bewusst nicht in UFW freigegeben |
+| ArgoCD-Hub (CLI/CI) | 30080 (HTTP) | NodePort `homeserver:30080` | **Klartext** (`server.insecure`), UFW nur für LAN, Tailnet und WireGuard-Notzugang. `https://…:30443` funktioniert nicht (Klartext-Port), keine UFW-Freigabe mehr. Die Web-UI läuft per HTTPS über Traefik: `argocd.tech.homeserver` |
 | ArgoCD ENTW | 80 | NodePort `entw-vm:30080` (HTTP, `server.insecure`) | Eigene Instanz, Zugriff aus dem LAN, siehe [b0050](../b-kubernetes-gitops/b0050-entw-argocd.md#argocd-oberfläche) |
 | Tailscale (SSH/Admin) | — | Tailnet-IP des Nodes | Siehe [docs/c-netzwerk-dns/c0010-tailscale.md](c0010-tailscale.md) |
 | WireGuard Backup-VPN | UDP, `wireguard_backup_port` (Default 51888) | Router-Portforward → Homeserver-LAN-IP | Notfall-Fallback falls Tailscale ausfällt, genau 1 Peer, kein LAN-Routing. Siehe [docs/c-netzwerk-dns/c0011-wireguard-backup.md](c0011-wireguard-backup.md) |

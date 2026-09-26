@@ -16,6 +16,10 @@ libvirt_host_pool_dir: /var/lib/libvirt/images
 libvirt_host_base_image_url: "https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-amd64.img"
 libvirt_host_base_image_name: "ubuntu-26.04-server-cloudimg-amd64.img"
 
+libvirt_host_guests_on_boot: start
+libvirt_host_guests_on_shutdown: shutdown
+libvirt_host_guests_shutdown_timeout: 300
+
 libvirt_host_admin_ssh_public_key: ""
 
 libvirt_host_vms: []

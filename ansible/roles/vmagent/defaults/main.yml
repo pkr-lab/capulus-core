@@ -13,3 +13,4 @@ vmagent_install_dir: "/opt/vmagent-{{ vmagent_version }}"
 vmagent_node_exporter_port: 9100
 vmagent_scrape_interval: "30s"
 
+vmagent_remote_write_queues: 1
