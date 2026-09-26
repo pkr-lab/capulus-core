@@ -1,5 +1,5 @@
 ---
-semaphore_api_base: "http://semaphore-api.tech.homeserver"
+semaphore_api_base: "https://semaphore-api.tech.homeserver"
 
 semaphore_namespace: semaphore
 

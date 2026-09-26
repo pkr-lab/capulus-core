@@ -107,7 +107,7 @@ flowchart TB
         E1["dnsmasq :53<br/>Split-DNS *.homeserver"]
         E2["Traefik :80/:443<br/>Ingress (je Cluster)"]
         E3["k3s-API :6443"]
-        E4["ArgoCD :30443"]
+        E4["ArgoCD :30080"]
         E5["CUPS :631<br/>IPP / AirPrint"]
     end
 
@@ -480,7 +480,7 @@ flowchart LR
 | 8472 | UDP | Flannel VXLAN | nur zwischen den TECH-Knoten |
 | 10250 | TCP | kubelet-API | nur zwischen den TECH-Knoten |
 | 30053 | TCP/UDP | Pi-hole NodePort | LAN |
-| 30443 | TCP | ArgoCD-Hub-Weboberfläche (HTTPS) | LAN + Tailnet |
+| 30080 | TCP | ArgoCD-Hub-API/CLI/CI (Klartext-HTTP; die Web-UI läuft per HTTPS über Traefik: `argocd.tech.homeserver`) | LAN + Tailnet |
 | 41641 | UDP | Tailscale/WireGuard | **ausgehend** ins Internet |
 
 Die Ports 80/443/6443 gelten je Cluster für dessen eigene IP (`.94`, `.99`, `.100`); ENTW bietet
@@ -529,7 +529,7 @@ zusätzlich die ArgoCD-UI auf `:30080` (HTTP). Details je App: [c0030](../c-netz
 
 Kein eingehender Port aus dem Internet. Fernzugriff läuft über Tailscale, öffentliche Dienste
 ausschließlich über ausgehende Cloudflare-Verbindungen. UFW erlaubt 22, 53, 80, 443, 631, 6443
-und 30443 nur im LAN und im Tailnet, nach außen nur 41641/UDP. Die drei Cluster sind getrennt:
+und 30080 nur im LAN und im Tailnet, nach außen nur 41641/UDP. Die drei Cluster sind getrennt:
 eigene Pod-/Service-Netze, eigene SealedSecrets-Schlüssel, PROD und ENTW als KVM-VMs mit
 Hypervisor-Grenze zum jeweiligen Host, und ENTW bekommt bewusst keine Route zu TECH/PROD und keinen
 ArgoCD-Zugriff vom Hub. ArgoCD hat ausschließlich Leserechte auf das Git-Repo. Innerhalb von ArgoCD
@@ -552,7 +552,7 @@ und Traefik-Logs und sperrt auffällige IPs per Firewall-Bouncer
 ZUGRIFF     LAN-Gerät      Tailscale-VPN      Internet (Cloudflare)      git push / PR
                |                 |                     |                    |
                v                 v                     v                    v
-EINTRITT   dnsmasq:53      Traefik:80/443      k3s-API:6443      ArgoCD:30443   CUPS:631
+EINTRITT   dnsmasq:53      Traefik:80/443      k3s-API:6443      ArgoCD:30080   CUPS:631
                                    |
                                    v
 SCHICHT 4  PROD:  Nextcloud  Immich  Paperless  Wiki.js  Mealie  xibosignage  + wiki-docs-sync

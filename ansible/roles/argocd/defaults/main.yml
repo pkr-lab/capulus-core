@@ -5,6 +5,13 @@ argocd_entw_layout: false
 
 argocd_ci_account_enabled: true
 
+# HTTPS-Ingress fuer die ArgoCD-Web-UI ueber Traefik. Standard aus: die ENTW-Instanz (entw-vm) hat
+# keinen eigenen Ingress-Host. Der Hub aktiviert ihn in host_vars/homeserver/vars.yml. Der Host
+# muss im Wildcard-Zertifikat stehen (argocd/apps/tech/cert-manager) und unter *.homeserver
+# aufloesen (dnsmasq-Wildcard).
+argocd_ingress_enabled: false
+argocd_ui_host: ""
+
 argocd_platform_apps:
   - sealed-secrets
   - kubeseal-webgui
@@ -85,6 +92,7 @@ argocd_network_policy_extra_ingress:
     - carplay-api
     - alamos-apager
     - ntfy-bridge
+    - n8n
   monitoring:
     - carplay-api
     - n8n

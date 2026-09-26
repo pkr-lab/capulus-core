@@ -273,6 +273,31 @@ ohnehin schon braucht — kein zusätzliches Pod-zu-Tailscale-Routing nötig.
 Nichterreichbarkeit lokal (`-remoteWrite.tmpDataPath`) und holt das dann
 nach.
 
+**Push-Pfad: https und eine Queue (Vorfall 26.09.2026):** Der Pi lieferte
+stundenlang keine Hardware-Daten (Heartbeat lief weiter), und `vmalert` im
+Cluster meldete `RemoteWriteDroppingData`. Zwei zusammenwirkende Ursachen:
+
+1. **`http://` statt `https://` in `vmagent_remote_write_url`.** Der TECH-Traefik
+   leitet HTTP global per 308 auf HTTPS um, `vmagent` folgt der Weiterleitung —
+   jeder Push besteht also aus zwei Etappen. Die erste (Port 80) hängt vom Pi
+   aus reproduzierbar, sobald der Body größer als ~12 KB ist (≤ 4 KB gehen
+   durch): 20 KB über `http` brauchten 9–40 s oder liefen ins Timeout, über
+   `https` direkt ~1 s. Die `vmagent`-Blöcke sind ~20 KB groß. Warum Port 80
+   hängt, ist nicht abschließend geklärt (Vermutung: Traefik antwortet mit 308,
+   ohne den Body zu lesen). Gleiches Muster wie beim Journal-Upload
+   ([300j0-logging.md](300j0-logging.md)).
+2. **Zu viele parallele Queues.** `vmagent` nutzt standardmäßig `2 × CPU-Kerne`
+   Queues (Pi: 8). VictoriaMetrics hält pro Insert-Request einen Slot, solange
+   der Client noch sendet, und erlaubt bei 1000m CPU nur 2 gleichzeitige
+   (`maxConcurrentInserts`). Haken mehrere Pi-Requests, wartet auch `vmalert` bis
+   zum Timeout auf einen Slot und verwirft seine Daten
+   (`vm_concurrent_insert_limit_reached_total` steigt).
+
+Daher setzt die Rolle `-remoteWrite.queues=1` (Normalbetrieb ~1 KB/s), die
+Gruppen-Variable steht auf `https://`, und vmsingle erlaubt
+`maxConcurrentInserts: 16`. Der Pi-Teil wirkt erst nach `make banana-pi-kiosks`;
+der lokal gepufferte Backlog wird danach nachgeliefert.
+
 Kein Dashboard-Change nötig — die Hardware-Dashboards (Ordner "Hardware",
 [Hardware-Monitoring](../2-betrieb-hardware/20060-hardware-monitoring.md))
 filtern dynamisch über das Label `host`; der Pi taucht automatisch auf, sobald
@@ -467,6 +492,7 @@ Online-Status prüfen und den PC wieder herunterfahren: siehe
 | Kiosk zeigt weder Redirect noch Fallback (Chromium-Fehlerseite) | `nslookup alamos-apager.prod.homeserver` auf dem Pi — löst das auf? Tailscale Split-DNS eingerichtet (siehe oben)? |
 | DNS löst auf, aber Verbindung timeout | Subnetz-Route `192.168.178.0/24` im Tailscale-Adminpanel genehmigt? `tailscale_accept_routes: true` beim Pi angekommen (`tailscale status` auf dem Pi prüfen)? |
 | Pi taucht nicht in Grafana auf | `systemctl status vmagent` auf dem Pi, `journalctl -u vmagent` — Fehler beim remote_write? `curl -I https://vm-write.tech.homeserver/api/v1/write` vom Pi aus erreichbar? |
+| Pi ist online, Lebenszeichen kommen, aber **keine CPU/Hardware-Daten** und Alert `RemoteWriteDroppingData` (26.09.2026) | Der Heartbeat ist winzig und kommt durch, die `vmagent`-Blöcke (~20 KB) nicht. Auf dem Pi: `journalctl -u vmagent` → `Client.Timeout exceeded while awaiting headers`; `grep vm-write /etc/systemd/system/vmagent.service` — steht dort `http://`? Dann läuft jeder Push über den hängenden 308-Umweg, siehe [Grafana (Push statt Pull)](#grafana-push-statt-pull). Backlog: `curl -s localhost:8429/metrics \| grep pending_data_bytes`. Transport-Gegentest vom Pi: `curl -s -o /dev/null -w '%{time_total}\n' -X POST --data-binary @<20-KB-Datei> https://vm-write.tech.homeserver/x` (~1 s) gegenüber `http://…` (Timeout). Im Cluster: `vm_concurrent_insert_limit_reached_total` von vmsingle steigt, wenn Pi-Requests die Insert-Slots belegen. Hinweis: Große Pings über Tailscale verlieren hier 50–80 %, TCP über 443 läuft trotzdem sauber — Ping ist kein Maßstab |
 | Kiosk startet nicht / schwarzer Bildschirm | `systemctl status getty@tty1` auf dem Pi, Autologin aktiv? Läuft `startx`? |
 | Fallback schaltet nicht um | `journalctl -t banana-pi-kiosk` auf dem Pi (Supervisor loggt Moduswechsel) |
 | Fallback zeigt AMweb-Login statt Alarmmonitor | Chromium-Session abgelaufen — einmaligen manuellen Login wiederholen (siehe oben) |

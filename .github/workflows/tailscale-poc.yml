@@ -13,14 +13,16 @@ jobs:
       - name: Connect runner to tailnet
         uses: tailscale/github-action@v3
         with:
-          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
           version: latest
 
       - name: Verify tailnet connection
         run: |
           state=$(tailscale status --json | jq -r '.BackendState')
           if [ "$state" != "Running" ]; then
-            echo "::error title=Tailscale nicht verbunden::BackendState=$state (erwartet: Running). Der Beitritt ist gescheitert, obwohl der Schritt davor gruen war (die Action wertet das nicht als Fehler). Auth-Key pruefen: abgelaufen (max. 90 Tage), nicht reusable oder das Tag ist nicht in tagOwners; siehe die Log-Zeilen des Schritts Connect runner to tailnet."
+            echo "::error title=Tailscale nicht verbunden::BackendState=$state (erwartet: Running). Der Beitritt ist gescheitert, obwohl der Schritt davor gruen war (die Action wertet das nicht als Fehler). OAuth-Client pruefen (Scope auth_keys:write, Tag tag:ci) und ob tag:ci in tagOwners steht; siehe die Log-Zeilen des Schritts Connect runner to tailnet."
             exit 1
           fi
           echo "Tailscale verbunden: $(tailscale ip -4 | head -1)"

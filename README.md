@@ -159,7 +159,7 @@ ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --ask-vault-pas
 **Ergebnis:**
 
 ```
-ArgoCD UI:  https://<server-ip>:30443
+ArgoCD UI:  https://argocd.tech.homeserver   (CLI/CI: http://<server-ip>:30080)
 Username:   admin
 Password:   <auto-generiert>
 ```
@@ -374,7 +374,7 @@ Jeder Hostname trägt ein Tier-Label (`tech` = Infrastruktur/Admin, `prod` = App
 | Service | Tier | Cluster | URL |
 |---|---|---|---|
 | Grafana | tech | TECH | https://grafana.tech.homeserver |
-| ArgoCD-Hub | – | TECH | https://\<server-ip\>:30443 |
+| ArgoCD-Hub | – | TECH | https://argocd.tech.homeserver |
 | ArgoCD ENTW | – | ENTW | http://192.168.178.100:30080 |
 | Headlamp | tech | TECH | https://headlamp.tech.homeserver |
 | Semaphore | tech | TECH | https://semaphore.tech.homeserver |
@@ -450,7 +450,7 @@ Jeder Hostname trägt ein Tier-Label (`tech` = Infrastruktur/Admin, `prod` = App
 | 443 | TCP | LAN + Tailnet | Traefik HTTPS |
 | 631 | TCP | LAN + Tailnet | CUPS (IPP/AirPrint) |
 | 6443 | TCP | LAN + Tailnet | k3s-API |
-| 30443 | TCP | LAN + Tailnet | ArgoCD-UI (HTTPS) |
+| 30080 | TCP | LAN + Tailnet | ArgoCD-API/CLI/CI (HTTP, Klartext; die UI läuft per HTTPS über Traefik) |
 | 41641 | UDP | Internet | Tailscale-WireGuard |
 
 Die Regeln der `common`-Rolle gelten auch in `prod-vm` und `entw-vm` (dort jeweils mit den eigenen Pod-/Service-CIDRs).

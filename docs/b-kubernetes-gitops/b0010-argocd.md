@@ -20,20 +20,31 @@ gesagt, auf den **Hub**.
 
 ### Web-UI
 
-ArgoCD läuft als NodePort-Service auf Port **30443** (HTTPS). Der HTTP-NodePort
-(30080) ist absichtlich **nicht** in der UFW-Firewall freigegeben — ArgoCD hat
-vollen GitOps-Controller-Zugriff auf den Cluster, das Initial-Passwort und
-spätere Logins sollen nicht im Klartext über LAN/Tailnet gehen.
+Die Web-UI läuft per **HTTPS über Traefik** (wie alle anderen Dienste, mit dem
+internen Zertifikat, siehe [d0040](../d-sicherheit/d0040-internal-tls.md)):
 
 ```
-https://<server-ip>:30443
-https://homeserver:30443          (via Tailscale-MagicDNS)
-https://100.x.x.x:30443           (via Tailscale-IP)
+https://argocd.tech.homeserver
 ```
 
-Das Zertifikat ist selbstsigniert (Standard-ArgoCD-Setup) — der Browser zeigt
-eine Zertifikatswarnung, die du bestätigen musst (`argocd`-CLI braucht dafür
-`--insecure`, siehe unten).
+Der Hostname löst über den dnsmasq-Wildcard (`*.homeserver`) im LAN und im Tailnet auf.
+Konfiguriert ist der Ingress in `ansible/roles/argocd` (`argocd_ingress_enabled`,
+`argocd_ui_host`, gesetzt in `ansible/host_vars/homeserver/vars.yml`) — als Wert der Rolle,
+damit der tägliche Semaphore-Lauf (`helm upgrade`) ihn nicht zurückdreht.
+
+**Klartext-Zugang für CLI und CI:** Der ArgoCD-Server läuft mit `server.insecure: true`
+(TLS endet im Traefik). Deshalb sprechen beide NodePorts **Klartext-HTTP**:
+`https://<server-ip>:30443` wird zurückgesetzt und ist **nicht** nutzbar. Für `argocd`-CLI und
+die Promotion-Kette gilt:
+
+```
+http://<server-ip>:30080          (LAN)
+http://homeserver:30080           (via Tailscale-MagicDNS)
+```
+
+UFW lässt Port 30080 nur aus dem LAN, dem Tailnet (`100.64.0.0/10`) und dem WireGuard-Notzugang
+(`10.99.99.0/24`) zu, nicht aus dem Internet. Da der Port Klartext spricht, das Admin-Passwort
+bitte nur in der Web-UI (HTTPS) eingeben und für die CLI ein API-Token verwenden.
 
 ### Initial-Credentials
 
@@ -53,7 +64,7 @@ kubectl -n argocd get secret argocd-initial-admin-secret \
 
 ## Erst-Login und Passwortwechsel
 
-1. `https://<server-ip>:30443` öffnen (Zertifikatswarnung bestätigen).
+1. `https://argocd.tech.homeserver` öffnen.
 2. Login mit `admin` + Initial-Passwort.
 3. **User-Icon** oben links anklicken.
 4. **User Info**.
@@ -334,11 +345,11 @@ brew install argocd
 **Authentifizierung:**
 
 ```bash
-# Login (--insecure wegen selbstsigniertem Zertifikat)
-argocd login 192.168.1.100:30443 --username admin --password <password> --insecure
+# Login (--plaintext: der NodePort spricht Klartext-HTTP, kein TLS)
+argocd login 192.168.178.94:30080 --username admin --password <password> --plaintext
 
 # Via Tailscale
-argocd login homeserver:30443 --username admin --password <password> --insecure
+argocd login homeserver:30080 --username admin --password <password> --plaintext
 
 # Aktueller Context
 argocd context
@@ -449,7 +460,7 @@ wird der Sync sofort nach jedem Push ausgelöst:
 
 1. GitHub-Repo → **Settings → Webhooks**.
 2. **Add webhook**.
-3. Payload-URL: `https://<tailscale-ip>:30443/api/webhook`.
+3. Payload-URL: `http://<tailscale-ip>:30080/api/webhook` (nur sinnvoll, wenn GitHub den Hub erreichen kann; ohne offenen Port bleibt es beim Polling).
 4. Content type: `application/json`.
 5. **Just the push event**.
 6. **Add webhook**.

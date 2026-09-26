@@ -3,6 +3,14 @@
   ansible.builtin.command: update-ca-certificates
   changed_when: true
 
+# Muss VOR "Restart systemd-journal-upload" stehen (Handler laufen in
+# Definitionsreihenfolge, nicht in Notify-Reihenfolge): ein im Start-Limit
+# haengender Dienst laesst sich sonst nicht neu starten.
+- name: Start-Limit des Dienstes zuruecksetzen (nach Endlos-Fehlschlaegen)
+  ansible.builtin.command: systemctl reset-failed systemd-journal-upload.service
+  changed_when: false
+  failed_when: false
+
 - name: Restart systemd-journal-upload
   ansible.builtin.systemd:
     name: systemd-journal-upload.service

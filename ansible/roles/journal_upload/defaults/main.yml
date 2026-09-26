@@ -1,6 +1,8 @@
 ---
 journal_upload_enabled: true
 
+journal_upload_state_dir: /var/lib/private/systemd/journal-upload
+
 journal_upload_push_url: "https://logs-write.tech.homeserver:443/insert/journald"
 
 journal_upload_ca_src: "{{ playbook_dir }}/../docs/assets/homeserver-root-ca.pem"
