@@ -37,4 +37,3 @@ entries:
       target: !KeyOf uptime-kuma-app
       policy: !KeyOf uptime-kuma-access-policy
       order: 0
-

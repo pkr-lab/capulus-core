@@ -15,11 +15,6 @@
     mode: "0644"
   notify: Restart dnsmasq
 
-# dnsmasq ist beim Boot der DNS-Dienst fuer das ganze LAN und fuer die PROD-VM. Das Debian-
-# Unit hat kein Restart=: stuerzt dnsmasq beim Start ab (z. B. Konflikt bind-interfaces/
-# bind-dynamic durch den libvirt-Snippet, Vorfall 2026-09-18 und 2026-09-24), bleibt er
-# bis zum naechsten Eingriff tot. Neustart bei Fehlern, ohne Start-Limit (sonst gibt
-# systemd nach 5 Versuchen auf).
 - name: dnsmasq - automatischer Neustart bei Fehlern (systemd-Drop-in)
   block:
     - name: Drop-in-Verzeichnis anlegen

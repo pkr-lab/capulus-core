@@ -62,4 +62,3 @@ entries:
       target: !KeyOf mealie-external-app
       policy: !KeyOf mealie-access-policy
       order: 0
-

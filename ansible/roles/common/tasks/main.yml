@@ -192,13 +192,6 @@
     proto: tcp
     comment: "k3s Kubernetes API"
 
-# ArgoCD laeuft mit server.insecure (argocd_server_insecure): beide NodePorts (30080/30443)
-# sprechen KLARTEXT-HTTP, `https://...:30443` wird zurueckgesetzt. Die Web-UI ist per
-# HTTPS ueber Traefik erreichbar (argocd.tech.homeserver, siehe argocd-values.yaml.j2).
-# Der Klartext-NodePort 30080 bleibt fuer CLI und CI (Promotion-Kette, Tailscale-Runner
-# greift auf 192.168.178.94:30080 zu, docs/f-cicd-automatisierung/f00b0-promotion-chain.md)
-# und ist nur aus LAN und Tailnet erreichbar. Die Freigabe stand bisher nur von Hand in
-# UFW, nicht im Repo - ein Neuaufbau haette die CI stillgelegt.
 - name: Allow ArgoCD NodePort HTTP (port 30080) from LAN and Tailnet only
   community.general.ufw:
     rule: allow
@@ -209,7 +202,7 @@
   loop:
     - "{{ local_subnet }}"
     - "100.64.0.0/10"
-    - "10.99.99.0/24" # WireGuard-Notzugang (roles/wireguard_backup, wireguard_backup_server_tunnel_ip)
+    - "10.99.99.0/24"
 
 - name: Remove unrestricted ArgoCD NodePort 30080 rule (manuell gesetzt, jetzt auf LAN/Tailnet begrenzt)
   community.general.ufw:
