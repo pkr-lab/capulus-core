@@ -273,6 +273,18 @@ ohnehin schon braucht — kein zusätzliches Pod-zu-Tailscale-Routing nötig.
 Nichterreichbarkeit lokal (`-remoteWrite.tmpDataPath`) und holt das dann
 nach.
 
+**Upload bewusst gedrosselt:** Der Vereinsheim-Uplink ist dünn und
+verlustbehaftet. Im Normalbetrieb sind es ~1 KB/s, ohne Begrenzung sendet
+`vmagent` einen Backlog aber mit `2 × CPU-Kernen` parallelen Queues und ohne
+Rate-Limit — das sättigt die Leitung (Retransmits, 60-s-Timeouts), und weil
+VictoriaMetrics pro Request einen Insert-Slot hält, solange der Client noch
+sendet, sperrte der Pi damit auch `vmalert` aus (Alert
+`RemoteWriteDroppingData`, 26.09.2026). Deshalb setzt die Rolle
+`-remoteWrite.queues=1` und `-remoteWrite.rateLimit=8192` (Bytes/s, siehe
+`ansible/roles/vmagent/defaults/main.yml`), und vmsingle erlaubt
+`maxConcurrentInserts: 16` statt 2. Ein Backlog von ~10 h (~26 MB) ist damit
+in knapp einer Stunde aufgeholt; wirkt erst nach `make banana-pi-kiosks`.
+
 Kein Dashboard-Change nötig — die Hardware-Dashboards (Ordner "Hardware",
 [Hardware-Monitoring](../2-betrieb-hardware/20060-hardware-monitoring.md))
 filtern dynamisch über das Label `host`; der Pi taucht automatisch auf, sobald
@@ -467,6 +479,7 @@ Online-Status prüfen und den PC wieder herunterfahren: siehe
 | Kiosk zeigt weder Redirect noch Fallback (Chromium-Fehlerseite) | `nslookup alamos-apager.homeserver` auf dem Pi — löst das auf? Tailscale Split-DNS eingerichtet (siehe oben)? |
 | DNS löst auf, aber Verbindung timeout | Subnetz-Route `192.168.178.0/24` im Tailscale-Adminpanel genehmigt? `tailscale_accept_routes: true` beim Pi angekommen (`tailscale status` auf dem Pi prüfen)? |
 | Pi taucht nicht in Grafana auf | `systemctl status vmagent` auf dem Pi, `journalctl -u vmagent` — Fehler beim remote_write? `curl -I https://vm-write.homeserver/api/v1/write` vom Pi aus erreichbar? |
+| Pi ist online, Lebenszeichen kommen, aber **keine CPU/Hardware-Daten** (Grafana leer/veraltet) und Alert `RemoteWriteDroppingData` ("vmalert ... dropping data sent to remote write URL", 26.09.2026) | Kein Ausfall des Pi, sondern ein **verstopfter Uplink**: Der Heartbeat ist winzig und kommt durch, die vmagent-Blöcke (~20 KB) nicht. Auf dem Pi: `journalctl -u vmagent` → `Client.Timeout exceeded while awaiting headers`; `curl -s localhost:8429/metrics \| grep -E 'pending_data_bytes\|retries_count'` (Backlog), `nstat -az TcpRetransSegs` (steigt schnell?), `ping -s 1200 192.168.178.94` (Verlust bei großen Paketen, kleine ok). Im Cluster: `vm_concurrent_insert_limit_reached_total` von vmsingle steigt, weil die langsamen Pi-Uploads die Insert-Slots belegen und dabei auch vmalert aussperren. Gegenmittel: `vmagent_remote_write_queues`/`vmagent_remote_write_rate_limit` (Pi, Rolle `vmagent`) und `maxConcurrentInserts` (vmsingle, `argocd/apps/tech/monitoring/values.yaml`) — siehe [Grafana (Push statt Pull)](#grafana-push-statt-pull). Ursache dahinter bleibt die Leitung am Vereinsheim (Router `192.168.1.1`, Upload-Verlust) |
 | Kiosk startet nicht / schwarzer Bildschirm | `systemctl status getty@tty1` auf dem Pi, Autologin aktiv? Läuft `startx`? |
 | Fallback schaltet nicht um | `journalctl -t banana-pi-kiosk` auf dem Pi (Supervisor loggt Moduswechsel) |
 | Fallback zeigt AMweb-Login statt Alarmmonitor | Chromium-Session abgelaufen — einmaligen manuellen Login wiederholen (siehe oben) |
