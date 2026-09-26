@@ -263,8 +263,7 @@ StorageClass (wie beim Großteil der übrigen Apps, siehe
 [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md)) wurde erwogen, aber **bewusst
 verworfen**: das NAS erzwingt inzwischen `all_squash` (kein
 `no_root_squash` mehr verfügbar), was bei Vaultwardens SQLite-Datei zu
-Permission-Problemen führt — siehe Kommentar in
-`argocd/apps/tech/vaultwarden/values.yaml`. Die Haupt-PVC bleibt daher auf
+Permission-Problemen führt — siehe [60040](../6-hintergruende/60040-helm-charts-tech.md#vaultwarden). Die Haupt-PVC bleibt daher auf
 `local-path` (Homeserver-System-SSD).
 
 Stattdessen sichert ein nächtlicher `backup`-CronJob (eigene PVC, bewusst

@@ -59,6 +59,7 @@ Alle Alerts außer `InfoInhibitor`/`Watchdog` gehen an **gotify-bridge** (übers
 - **Speicher der VMSingle:** Lag auf `nas` (NFS), bis das UGREEN-NAS `all_squash` erzwang und VictoriaMetrics beim Öffnen bestehender Storage-Parts mit
   „permission denied“ abstürzte ([20000](../2-betrieb-hardware/20000-nas-storage.md)). TSDB-Daten sind reiner State, daher lokaler Storage (fest auf `homeserver`).
   Bewusst **ohne Datenmigration** neu aufgesetzt (nur 15 Tage Retention, Verdacht auf teilbeschädigte Parts durch die vorherigen Schreibfehler).
+  `retentionPeriod` akzeptiert `h`/`d`/`w`/`y`, ein Wert **ohne Einheit** gilt als **Monate** (`15d`, nicht `15`).
 - **CRDs:** `crds.plain: true` rendert die VictoriaMetrics-CRDs (`VMSingle`, `VMAgent`, `VMAlert`, `VMServiceScrape`, …) als normale Templates, weil ArgoCD den
   `crds/`-Ordner von Helm standardmäßig ignoriert. Beim Löschen des Charts bleiben die CRDs erhalten (sicherer Default). Die Admission-Webhook-Policy steht auf
   `Ignore`, um Sync-Loop-Races gegen den Operator-Webhook bei der Erstinstallation zu vermeiden. Prometheus-`ServiceMonitor` werden automatisch in
