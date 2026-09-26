@@ -9,7 +9,7 @@ image:
   # übernehmen.
   repository: ghcr.io/pkr-lab/n8n-custom
   pullPolicy: IfNotPresent
-  tag: "sha-e580ac2"
+  tag: "sha-7428c04"
 
 nameOverride: ""
 fullnameOverride: ""
