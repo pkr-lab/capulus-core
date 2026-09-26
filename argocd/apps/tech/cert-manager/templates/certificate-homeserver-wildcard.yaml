@@ -17,7 +17,12 @@ spec:
   dnsNames:
     - homeserver
     - alamos-apager.prod.homeserver
+    # Laeuft (noch) im TECH-Cluster, hatte aber keinen SAN-Eintrag: TLS-Pruefung
+    # gegen https://alamos-relay.prod.homeserver schlug mit Hostname-Mismatch
+    # fehl (Sweep 2026-09-24). Gleiches gilt fuer pacman.prod.homeserver unten.
+    - alamos-relay.prod.homeserver
     - argo-workflows.tech.homeserver
+    - argocd.tech.homeserver
     - authentik.tech.homeserver
     - carplay-api.prod.homeserver
     - demo.prod.homeserver
@@ -35,6 +40,7 @@ spec:
     - n8n.prod.homeserver
     - nextcloud.prod.homeserver
     - ntfy.tech.homeserver
+    - pacman.prod.homeserver
     - paperless.prod.homeserver
     - pihole.tech.homeserver
     - semaphore-api.tech.homeserver

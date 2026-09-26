@@ -14,3 +14,6 @@ libvirt_host_vms:
     dns:
       - "{{ network_static_ip }}"
     mac: "52:54:00:00:00:99"
+
+argocd_ingress_enabled: true
+argocd_ui_host: argocd.tech.homeserver

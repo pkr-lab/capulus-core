@@ -55,11 +55,11 @@ MagicDNS erreichst du den Home-Server unter `homeserver` oder
 
 ```
 # Kurzer Hostname (im Tailnet)
-https://homeserver:30443       # ArgoCD (HTTPS, selbstsigniertes Zertifikat)
+https://argocd.tech.homeserver  # ArgoCD (HTTPS über Traefik, interne CA)
 ssh homeserver                 # SSH
 
 # Voller Tailnet-Hostname
-https://homeserver.tail12345.ts.net:30443
+http://homeserver.tail12345.ts.net:30080   # ArgoCD-API/CLI (Klartext)
 ssh homeserver.tail12345.ts.net
 ```
 
@@ -71,7 +71,7 @@ Den Tailnet-Namen findest du im Admin-Panel unter **Settings → General**.
 # Vom Client mit laufendem Tailscale
 ping homeserver
 nslookup homeserver
-curl -k https://homeserver:30443
+curl -s http://homeserver:30080/api/version
 ```
 
 ---
@@ -93,7 +93,7 @@ tailscale ip -4
 Beispiel — Server-Tailscale-IP `100.101.102.103`:
 
 ```
-https://100.101.102.103:30443   # ArgoCD (HTTPS)
+http://100.101.102.103:30080    # ArgoCD-API/CLI (Klartext)
 http://100.101.102.103:80       # Traefik HTTP
 ssh 100.101.102.103             # SSH
 kubectl --server=https://100.101.102.103:6443 get nodes
@@ -142,7 +142,7 @@ ping 192.168.1.1
 curl http://192.168.1.1/      # Router-Admin-Seite (falls erreichbar)
 
 # Server direkt über die LAN-IP
-curl -k https://192.168.1.100:30443
+curl -s http://192.168.1.100:30080/api/version
 ```
 
 **Subnet-Routing am Client aktivieren:**
@@ -209,7 +209,7 @@ Nach dem Verbinden eines Clients:
 # Vom Client
 tailscale status                         # homeserver sollte in der Liste stehen
 ping homeserver                          # MagicDNS
-curl -k https://homeserver:30443         # ArgoCD
+curl -s http://homeserver:30080/api/version   # ArgoCD
 ssh ubuntu@homeserver                    # SSH
 ```
 

@@ -4,7 +4,7 @@ replicaCount: 1
 image:
   repository: ghcr.io/pkr-lab/n8n-custom
   pullPolicy: IfNotPresent
-  tag: "sha-e580ac2"
+  tag: "sha-7428c04"
 
 nameOverride: ""
 fullnameOverride: ""
@@ -61,7 +61,10 @@ env:
   DB_TYPE: sqlite
   N8N_BASIC_AUTH_ACTIVE: "true"
   NODES_EXCLUDE: "[]"
-  NODE_FUNCTION_ALLOW_EXTERNAL: "wwebjs,qrcode"
+  # child_process: der Code-Node "An WhatsApp senden" startet whatsapp-web.js/Chromium in einem
+  # eigenen Node-Prozess, weil der Task-Runner alle Prototypen einfriert und Puppeteer darin
+  # scheitert. Externe npm-Module braucht kein Code-Node (whatsapp-web.js laedt nur der Kindprozess).
+  NODE_FUNCTION_ALLOW_BUILTIN: "child_process"
   N8N_RESTRICT_FILE_ACCESS_TO: "/data/xibosignage-inbox;/data/xibosignage-display"
 
 resources:

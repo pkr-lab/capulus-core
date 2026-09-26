@@ -15,4 +15,4 @@ tailscale_auth_key: !vault |
           30333366353235653535663932353937646162383434663339633936333634353631626432656439
           656539343061396330363236326338353636
 
-vmagent_remote_write_url: "http://vm-write.tech.homeserver/api/v1/write"
+vmagent_remote_write_url: "https://vm-write.tech.homeserver/api/v1/write"

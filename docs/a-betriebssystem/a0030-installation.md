@@ -296,13 +296,14 @@ kubectl -n argocd get secret argocd-initial-admin-secret \
 Im Browser öffnen:
 
 ```
-https://<server-ip>:30443
+https://argocd.tech.homeserver
 ```
 
-Oder via Tailscale-MagicDNS (sofern aktiviert):
+Direkt nach der Erstinstallation existiert der Ingress noch nicht (der Hostname greift erst, wenn das
+Zertifikat den Eintrag `argocd.tech.homeserver` enthält). Bis dahin (und für die CLI) geht der Klartext-NodePort:
 
 ```
-https://homeserver:30443
+http://<server-ip>:30080
 ```
 
 Das Zertifikat ist selbstsigniert — Browser-Warnung bestätigen.
@@ -335,7 +336,7 @@ brew install argocd
 Login:
 
 ```bash
-argocd login <server-ip>:30443 --username admin --password <initial-passwort> --insecure
+argocd login <server-ip>:30080 --username admin --password <initial-passwort> --plaintext
 ```
 
 ### kubectl von der Control-Machine

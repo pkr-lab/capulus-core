@@ -15,6 +15,37 @@
     mode: "0644"
   notify: Restart dnsmasq
 
+# dnsmasq ist beim Boot der DNS-Dienst fuer das ganze LAN und fuer die PROD-VM. Das Debian-
+# Unit hat kein Restart=: stuerzt dnsmasq beim Start ab (z. B. Konflikt bind-interfaces/
+# bind-dynamic durch den libvirt-Snippet, Vorfall 2026-09-18 und 2026-09-24), bleibt er
+# bis zum naechsten Eingriff tot. Neustart bei Fehlern, ohne Start-Limit (sonst gibt
+# systemd nach 5 Versuchen auf).
+- name: dnsmasq - automatischer Neustart bei Fehlern (systemd-Drop-in)
+  block:
+    - name: Drop-in-Verzeichnis anlegen
+      ansible.builtin.file:
+        path: /etc/systemd/system/dnsmasq.service.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Drop-in schreiben
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/dnsmasq.service.d/10-restart.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          # Managed by Ansible (dnsmasq role).
+          [Unit]
+          StartLimitIntervalSec=0
+
+          [Service]
+          Restart=on-failure
+          RestartSec=5
+      notify: systemd nach dnsmasq-Drop-in neu laden
+
 - name: Allow DNS from local subnet (UFW)
   community.general.ufw:
     rule: allow

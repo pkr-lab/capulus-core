@@ -11,7 +11,7 @@ absichtlich so gewählt, dass jede Phase auf der vorherigen aufbaut.
 
 | Phase | Inhalt | Doku |
 |---|---|---|
-| 0 | Quick Wins: Vaultwarden `SIGNUPS_ALLOWED: false`, ArgoCD-NodePort 30080 (HTTP) aus UFW entfernt, nur noch HTTPS (30443) | [docs/b-kubernetes-gitops/b0010-argocd.md](../b-kubernetes-gitops/b0010-argocd.md), [docs/c-netzwerk-dns/c0030-port-uebersicht.md](../c-netzwerk-dns/c0030-port-uebersicht.md) |
+| 0 | Quick Wins: Vaultwarden `SIGNUPS_ALLOWED: false`, ArgoCD-NodePort 30080 (HTTP) aus UFW entfernt, nur noch HTTPS (30443) — *Stand 2026-09-24 korrigiert: 30443 sprach wegen `server.insecure` nie TLS; die Web-UI läuft jetzt per HTTPS über Traefik (`argocd.tech.homeserver`), 30080 (Klartext) ist nur aus LAN, Tailnet und WireGuard erreichbar und steht als Regel im Repo* | [docs/b-kubernetes-gitops/b0010-argocd.md](../b-kubernetes-gitops/b0010-argocd.md), [docs/c-netzwerk-dns/c0030-port-uebersicht.md](../c-netzwerk-dns/c0030-port-uebersicht.md) |
 | 1 | CrowdSec — Brute-Force-Schutz SSH + Traefik | [docs/d-sicherheit/d0020-crowdsec.md](d0020-crowdsec.md) |
 | 2 | ArgoCD AppProject-Trennung Platform/Workloads + Namespace-Tier-Label | [docs/b-kubernetes-gitops/b0020-argocd-projects.md](../b-kubernetes-gitops/b0020-argocd-projects.md) — **inkl. eines Incidents beim Rollout**, siehe [docs/d-sicherheit/d0000-incident-2026-08-12.md](d0000-incident-2026-08-12.md) |
 | 9 | Renovate (automatische Update-PRs) + semantic-release (GitHub Release bei jedem Merge auf `main`) | [docs/f-cicd-automatisierung/f0020-renovate.md](../f-cicd-automatisierung/f0020-renovate.md), [docs/f-cicd-automatisierung/f0030-release-automation.md](../f-cicd-automatisierung/f0030-release-automation.md) |

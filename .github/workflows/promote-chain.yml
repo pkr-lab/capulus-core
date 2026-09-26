@@ -35,6 +35,8 @@ jobs:
       PROMOTE_PAT: ${{ secrets.PROMOTE_TOKEN || secrets.RENOVATE_TOKEN }}
       ARGOCD_ENTW_TOKEN: ${{ secrets.ARGOCD_ENTW_TOKEN }}
       ARGOCD_HUB_TOKEN: ${{ secrets.ARGOCD_HUB_TOKEN }}
+      TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+      TS_OAUTH_SECRET: ${{ secrets.TS_OAUTH_SECRET }}
     steps:
       - name: Konfiguration pruefen
         id: cfg
@@ -42,6 +44,8 @@ jobs:
           missing=""
           [ -n "$ARGOCD_ENTW_TOKEN" ] || missing="$missing ARGOCD_ENTW_TOKEN"
           [ -n "$ARGOCD_HUB_TOKEN" ] || missing="$missing ARGOCD_HUB_TOKEN"
+          [ -n "$TS_OAUTH_CLIENT_ID" ] || missing="$missing TS_OAUTH_CLIENT_ID"
+          [ -n "$TS_OAUTH_SECRET" ] || missing="$missing TS_OAUTH_SECRET"
           [ -n "$PROMOTE_PAT" ] || missing="$missing PROMOTE_TOKEN/RENOVATE_TOKEN"
           if [ -n "$missing" ]; then
             echo "configured=false" >> "$GITHUB_OUTPUT"
@@ -64,7 +68,9 @@ jobs:
         if: steps.cfg.outputs.configured == 'true'
         uses: tailscale/github-action@v3
         with:
-          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
           version: latest
 
       - name: Verify tailnet connection
@@ -72,7 +78,7 @@ jobs:
         run: |
           state=$(tailscale status --json | jq -r '.BackendState')
           if [ "$state" != "Running" ]; then
-            echo "::error title=Tailscale nicht verbunden::BackendState=$state (erwartet: Running). Auth-Key pruefen: abgelaufen (max. 90 Tage), nicht reusable oder Tag nicht in tagOwners."
+            echo "::error title=Tailscale nicht verbunden::BackendState=$state (erwartet: Running). OAuth-Client pruefen (Scope auth_keys:write, Tag tag:ci) und ob tag:ci in tagOwners steht."
             exit 1
           fi
 
