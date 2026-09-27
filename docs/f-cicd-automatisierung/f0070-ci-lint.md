@@ -2,7 +2,7 @@
 
 [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) prüft jeden
 Pull Request gegen `main` (und jeden Push auf `main` selbst), bevor eine
-Änderung beim ArgoCD-Sync gegen den Live-Cluster landet. Die fünf Jobs sind
+Änderung beim ArgoCD-Sync gegen den Live-Cluster landet. Die sechs Jobs sind
 die **Pflicht-Checks** des Rulesets [„main: PR + CI“](f0090-branch-schutz-main.md):
 ein PR lässt sich erst mergen, wenn alle grün sind.
 
@@ -17,7 +17,7 @@ Branch `entw` auf, bevor ein PR nach `main` entsteht.
 
 ---
 
-## Fünf parallele Jobs
+## Sechs parallele Jobs
 
 | Job (= Check-Name) | Prüft | Tool |
 |---|---|---|
@@ -25,6 +25,7 @@ Branch `entw` auf, bevor ein PR nach `main` entsteht.
 | `helm template \| kubeconform` | rendert jeden Chart und validiert die entstandenen Ressourcen gegen echte API-Schemas; prüft zusätzlich **reine Manifest-Ordner** (ohne `Chart.yaml`) und `argocd/bootstrap*` | [kubeconform](https://github.com/yannh/kubeconform) mit CRD-Katalog |
 | `go build, vet, test, tidy` | jedes Go-Modul im Repo: `go mod tidy -diff`, `go build`, `go vet`, `go test` | Go (`stable`); Module per `git ls-files` gefunden |
 | `docs links` | relative Links und Überschriften-Anker in allen `*.md` (Slug-Regeln wie auf GitHub); externe URLs werden nicht abgerufen | [`scripts/check-doc-links.py`](../../scripts/check-doc-links.py) |
+| `token register` | Pflichtfelder und Datumsformat in [`ops/token-register.yaml`](../../ops/token-register.yaml), und dass jede `SealedSecret`-Datei im Repo dort auftaucht | [`scripts/check-token-register.py`](../../scripts/check-token-register.py), siehe [40090](../4-planung/40090-standby-cluster-ha-paar.md#token-management) |
 | `gitleaks` | Plaintext-Secrets in PRs, bevor sie versiegelt werden | [gitleaks](https://github.com/gitleaks/gitleaks), Konfiguration siehe unten |
 
 ### Warum der CRD-Katalog
