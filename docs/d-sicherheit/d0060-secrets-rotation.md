@@ -8,6 +8,16 @@ aufschlägt, erinnert ein jährliches Zammad-Ticket aktiv daran — siehe
 [Automatisierte Erinnerung](#automatisierte-erinnerung-n8n--zammad)
 unten. Diese Seite ist das Ziel, auf das das Ticket verlinkt.
 
+**Seit der Umsetzung des Token-Managements aus
+[40090](../4-planung/40090-standby-cluster-ha-paar.md#token-management)**
+gibt es zusätzlich ein maschinenlesbares Register aller Tokens und
+SealedSecrets: [`ops/token-register.yaml`](../../ops/token-register.yaml).
+Diese Seite bleibt das **Wie** (Runbooks je Secret), das Register plus der
+tägliche Workflow [`token-watch.yml`](../../.github/workflows/token-watch.yml)
+sind das **Wann** — er meldet nahende Abläufe automatisch als GitHub-Issue,
+statt auf das jährliche Zammad-Ticket zu warten. `scripts/check-token-register.py`
+erzwingt im CI, dass jede `SealedSecret`-Datei im Repo dort auch auftaucht.
+
 ---
 
 ## Die vier zentralen Secrets
