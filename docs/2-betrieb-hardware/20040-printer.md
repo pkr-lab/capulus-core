@@ -298,6 +298,31 @@ Subnet-Route (`local_subnet`) im
 [Tailscale-Admin-Panel](https://login.tailscale.com/admin/machines)
 approved? Siehe [../c-netzwerk-dns/c0010-tailscale.md](../c-netzwerk-dns/c0010-tailscale.md#subnet-routing).
 
+**Verschlüsselter Druck (`ipps://`, z.B. via AirPrint/`cups-browsed`) schlägt
+mit `"Unable to encrypt connection: A TLS fatal alert has been received."`
+im `error_log` fehl, Job bleibt lokal mit `Backend stopped with status 4` /
+`resources-are-not-ready` hängen:**
+`cupsd` bestimmt seinen eigenen Namen für das selbstsignierte TLS-Zertifikat
+per Reverse-Lookup der eigenen IP — und dieser Lookup ist auf dem Homeserver
+mehrdeutig: `avahi` (mDNS, liefert z.B. `homeserver.local`), `dnsmasq`
+(`address=/homeserver/192.168.178.94` matcht auch `logs-write.tech.homeserver`
+aus der `journal_upload`-Rolle) und die FritzBox (DHCP-PTR, liefert
+`homeserver.fritz.box`) beantworten dieselbe Reverse-Anfrage unterschiedlich,
+je nachdem was zuletzt neu gestartet wurde. Welchen Namen `cupsd` gerade
+"glaubt" zu haben, sieht man an den Dateinamen in `/etc/cups/ssl/*.crt` — für
+jeden neu gesehenen Namen legt `cupsd` automatisch ein neues, selbstsigniertes
+Zertifikat an, das dann nicht zu `homeserver` passt und von TLS-prüfenden
+Clients abgelehnt wird.
+
+Statt diese Mehrdeutigkeit aufzulösen (bricht bei jedem Neustart von
+`cupsd`/`avahi`/`dnsmasq` wieder), erzeugt die Rolle ein **einziges
+Zertifikat mit allen bekannten Selbst-Identifikationsnamen als Subject
+Alternative Names** (`cups_print_server_tls_names`) und legt es unter jedem
+dieser Namen in `/etc/cups/ssl/` ab — welchen Namen `cupsd` auch wählt, das
+gefundene Zertifikat passt immer. Taucht nach einem `hostname`- oder
+DNS/mDNS-Wechsel ein neuer, bisher unbekannter Name auf, `cups_print_server_tls_names`
+um diesen Namen ergänzen und `make cups-print-server` erneut laufen lassen.
+
 ---
 
 ## Zweiter Drucker: Samsung ML-1630W über FritzBox
