@@ -1,4 +1,3 @@
-// Package handlers implements the two HTTP endpoints carplay-api exposes.
 package handlers
 
 import (
@@ -16,10 +15,6 @@ import (
 	"carplay-api/pkg/metrics"
 )
 
-// DashboardHandler assembles GET /api/dashboard from three independent
-// upstreams, cached for the configured TTL. Every upstream call already
-// carries its own short timeout inside its client (see internal/clients);
-// overallTimeout is the outer budget across all three combined.
 type DashboardHandler struct {
 	vm       *clients.VictoriaMetricsClient
 	ntfy     *clients.NtfyClient
@@ -94,9 +89,6 @@ func (h *DashboardHandler) Handle(c *gin.Context) {
 
 	go func() {
 		defer wg.Done()
-		// Per-host queries degrade internally (missing metric -> zero
-		// value, missing "up" series -> Online=false) — there's no
-		// all-or-nothing failure mode to log here.
 		hostMetrics = h.vm.GetHostMetrics(ctx, h.hosts)
 	}()
 
@@ -112,9 +104,6 @@ func (h *DashboardHandler) Handle(c *gin.Context) {
 
 	go func() {
 		defer wg.Done()
-		// Degrades internally too (query failure -> every service at 0
-		// requests/s, logged inside GetServiceActivity) — same
-		// no-all-or-nothing-failure reasoning as the host metrics above.
 		serviceActivity = h.vm.GetServiceActivity(ctx, h.services)
 	}()
 

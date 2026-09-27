@@ -112,8 +112,8 @@ falls Option B aus docs/e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md akti
 
 ## Neuen Dienst freigeben
 
-`argocd/apps/tech/cloudflared/values.yaml` selbst bleibt dabei
-**unangetastet** — sie enthält nur noch **eine einzige** Wildcard-Regel
+`cloudflared/values.yaml` selbst (`argocd/apps/tech/cloudflared/` bzw. `argocd/apps/prod/cloudflared/`)
+bleibt dabei **unangetastet** — sie enthält nur noch **eine einzige** Wildcard-Regel
 (`*.deine-domain.de`), die pauschal an Traefik weiterreicht, unabhängig
 vom Tier (siehe [docs/c-netzwerk-dns/c0040-domain-tiers.md](../c-netzwerk-dns/c0040-domain-tiers.md), warum eine
 Regel pro Tier bei cloudflared technisch nicht funktioniert). Freigeben
@@ -139,6 +139,13 @@ grafana:
 > Einzel-Records entschieden hast:** zusätzlich
 > `cloudflared tunnel route dns homeserver grafana-tech.deine-domain.de`
 > ausführen.
+
+> **Läuft die App im PROD-Cluster** (z. B. Nextcloud, Immich, Mealie, Wiki.js, Xibo), reicht der
+> Wildcard-Record **nicht**: er zeigt auf den TECH-Tunnel, dessen Traefik die PROD-App nicht kennt
+> (404). Den Host stattdessen einzeln auf den PROD-Tunnel legen:
+> `cloudflared tunnel route dns homeserver-prod nextcloud-prod.deine-domain.de`
+> (überschreibt für diesen Host den Wildcard). Umgekehrt gilt das beim Umzug einer App von TECH nach
+> PROD genauso, siehe [c0040](../c-netzwerk-dns/c0040-domain-tiers.md#externe-erreichbarkeit-wildcard-routing-über-traefik).
 
 ```bash
 git add argocd/apps/tech/monitoring/values.yaml
@@ -223,10 +230,11 @@ CPU 70% (`autoscaling` in `values.yaml`; Details für alle Apps:
 als Fallback-Wert stehen, greift aber nur, falls `autoscaling.enabled`
 auf `false` gesetzt wird.
 
-Da der Home-Server ein Single-Node-Cluster ist
-([README.md](../../README.md)), schützt eine höhere Replica-Zahl primär vor
-Pod-Neustarts/Rolling-Updates, nicht vor einem Node-Ausfall — die
-grundsätzliche Verfügbarkeit hängt weiterhin am Home-Server selbst.
+Da der Homeserver der einzige Dauerläufer ist (TECH läuft direkt darauf, die
+PROD-VM ebenfalls, siehe [a0010](../a-betriebssystem/a0010-overview.md#1-drei-cluster-im-überblick)),
+schützt eine höhere Replica-Zahl primär vor Pod-Neustarts/Rolling-Updates, nicht
+vor einem Host-Ausfall — die grundsätzliche Verfügbarkeit hängt weiterhin am
+Homeserver selbst.
 
 ---
 

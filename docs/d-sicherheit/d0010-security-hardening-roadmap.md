@@ -95,9 +95,9 @@ Login-Fehlschläge auf den geschützten Diensten).
 
 ### Phase 8 — Authentik SSO vor allen Apps mit Login
 
-**Status: Ablösung von Authelia läuft.** Authelia lief als Zwischenlösung
+**Status: umgesetzt (Authentik seit 06.09.2026 live).** Authelia lief als Zwischenlösung
 (SQLite, kein Postgres/Redis wie beim ursprünglichen Authentik-Setup),
-schützte Uptime Kuma und Mealie per Traefik-ForwardAuth. Wird jetzt
+schützte Uptime Kuma und Mealie per Traefik-ForwardAuth und wurde
 vollständig durch Authentik ersetzt (Begründung, Architektur und
 Rollout-Batches: [docs/4-planung/40070-authentik-sso-iac.md](../4-planung/40070-authentik-sso-iac.md)).
 Historischer Kontext zu Authelia: [docs/4-planung/40000-authelia-sso.md](../4-planung/40000-authelia-sso.md).

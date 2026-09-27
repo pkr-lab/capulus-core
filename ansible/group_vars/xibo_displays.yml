@@ -1,9 +1,4 @@
 ---
-# ============================================================
-# group_vars für die Inventory-Gruppe "xibo_displays"
-# (Raspberry Pi 3 B+, xibosignage-Bilder-Slideshow — siehe
-# docs/3-apps-workloads/300e0-xibosignage.md und ansible/xibo-kiosks.yml)
-# ============================================================
 
 tailscale_hostname: "{{ inventory_hostname }}"
 

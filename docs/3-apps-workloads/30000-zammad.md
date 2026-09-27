@@ -1,5 +1,7 @@
 # Zammad Helpdesk / Ticket-System
 
+> **Cluster:** TECH · Ordner `argocd/apps/tech/zammad/` · URL `https://zammad.tech.homeserver` und `https://support-tech.pke-lab.de`. `kubectl`-Befehle in diesem Doc gelten für den TECH-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
+
 Zammad ist ein Open-Source Helpdesk- und Ticketing-System.  
 Die Deployment-Konfiguration liegt unter `argocd/apps/tech/zammad/`.
 
@@ -141,39 +143,29 @@ Typische Pod-Reihenfolge beim ersten Start:
 
 ## Schritt 4 — Ersten Admin-Account anlegen
 
-Nach dem erfolgreichen Start ist Zammad unter https://zammad.homeserver erreichbar.
+Nach dem erfolgreichen Start ist Zammad unter https://zammad.tech.homeserver erreichbar.
 
-1. Browser öffnen: `https://zammad.homeserver`
+1. Browser öffnen: `https://zammad.tech.homeserver`
 2. Setup-Wizard durchlaufen:
-   - **System-URL** eintragen: `https://zammad.homeserver`
+   - **System-URL** eintragen: `https://zammad.tech.homeserver`
    - **Admin-E-Mail** und Passwort festlegen
    - E-Mail-Kanal konfigurieren (optional, kann später gemacht werden)
 3. Login mit den im Wizard erstellten Zugangsdaten
 
 ---
 
-## Schritt 5 — DNS-Eintrag setzen
+## Schritt 5 — DNS
 
-In `ansible/group_vars/all.yml` den Zammad-Hostnamen zu `dnsmasq_hosts` hinzufügen:
-
-```yaml
-dnsmasq_hosts:
-  # ... bestehende Einträge ...
-  - name: zammad
-    ip: "{{ homeserver_ip }}"
-```
-
-Ansible-Playbook ausführen:
-
-```bash
-ansible-playbook ansible/site.yml --tags dnsmasq
-```
+Kein Eintrag nötig: Zammad läuft im TECH-Cluster, und `zammad.tech.homeserver` wird von der
+`*.homeserver`-Wildcard in dnsmasq auf den Homeserver (`.94`) aufgelöst, siehe
+[docs/c-netzwerk-dns/c0040-domain-tiers.md](../c-netzwerk-dns/c0040-domain-tiers.md#dns-tier-und-cluster-sind-zwei-verschiedene-dinge).
+Test: `dig +short zammad.tech.homeserver @192.168.178.94`.
 
 ---
 
 ## Schritt 6 — Öffentlicher Hostname + HTTPS / TLS (optional)
 
-Aktuell ist nur `zammad.homeserver` (intern, HTTP) konfiguriert. Für einen
+Aktuell ist nur `zammad.tech.homeserver` (intern, HTTP) konfiguriert. Für einen
 öffentlichen Zugriff per Domain zuerst einen weiteren Host in
 `argocd/apps/tech/zammad/values.yaml` → `zammad.ingress.hosts` ergänzen, dann TLS
 aktivieren:
@@ -185,7 +177,7 @@ zammad:
       traefik.ingress.kubernetes.io/router.entrypoints: websecure
       traefik.ingress.kubernetes.io/router.tls: "true"
     hosts:
-      - host: zammad.homeserver
+      - host: zammad.tech.homeserver
         paths:
           - path: /
             pathType: Prefix

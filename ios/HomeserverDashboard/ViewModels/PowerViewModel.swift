@@ -1,10 +1,5 @@
 import Foundation
 
-/// Backs the Brightness and Power tabs: brightness get/set and
-/// wake/shutdown actions, all proxied by carplay-api to power-agent on the
-/// homeserver host (see docs/3-apps-workloads/300d0-carplay-api.md "power-agent"). Kept
-/// separate from DashboardViewModel since these are user-triggered actions
-/// with their own loading/error state, not part of the 30s polling loop.
 @MainActor
 final class PowerViewModel: ObservableObject {
     static let shared = PowerViewModel()
@@ -37,9 +32,6 @@ final class PowerViewModel: ObservableObject {
         isLoadingBrightness = false
     }
 
-    /// Called as the slider moves — optimistic local update so the UI
-    /// doesn't lag behind the finger, reconciled with the server's clamped
-    /// value once the request lands.
     func setBrightness(percent: Int) async {
         brightness = percent
         do {
@@ -62,9 +54,6 @@ final class PowerViewModel: ObservableObject {
         await DashboardViewModel.shared.fetchDashboard()
     }
 
-    /// `code` must be non-nil (and correct) for `.homeserver` — see
-    /// PowerView's confirmation sheet, which is the only caller that ever
-    /// passes one.
     func shutdown(_ target: PowerTarget, code: String? = nil) async {
         pendingAction = target
         actionError = nil
@@ -78,10 +67,6 @@ final class PowerViewModel: ObservableObject {
         await DashboardViewModel.shared.fetchDashboard()
     }
 
-    /// Wakes a device at the vereinsheim-alarmmonitor site by relaying
-    /// through the Pi itself, bypassing carplay-api entirely (see
-    /// RemoteWolAgentClient.swift). No dashboard refresh afterward — this
-    /// target has no host entry in carplay-api's dashboard payload.
     func wakeRemote(_ target: RemoteWolTarget) async {
         pendingRemoteWol = target
         remoteWolError = nil

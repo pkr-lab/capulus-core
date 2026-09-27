@@ -1,8 +1,3 @@
-# ============================================================
-# crowdsec/tasks/main.yml — Brute-force protection (SSH + Traefik)
-# ============================================================
-
-# ---- Repository ------------------------------------------------
 - name: Check whether cscli is already installed
   ansible.builtin.stat:
     path: /usr/bin/cscli
@@ -22,7 +17,6 @@
   environment:
     DEBIAN_FRONTEND: noninteractive
 
-# ---- Install crowdsec (LAPI + agent) first ----------------------
 - name: Install crowdsec package
   ansible.builtin.apt:
     name: crowdsec
@@ -41,7 +35,6 @@
     port: 8080
     timeout: 30
 
-# ---- Install the firewall bouncer AFTER crowdsec is running -----
 - name: Install crowdsec-firewall-bouncer package (iptables backend, matches UFW)
   ansible.builtin.apt:
     name: crowdsec-firewall-bouncer-iptables
@@ -53,7 +46,6 @@
     state: started
     enabled: true
 
-# ---- Collections --------------------------------------------------
 - name: Install CrowdSec collections
   ansible.builtin.command: "cscli collections install {{ item }}"
   loop: "{{ crowdsec_collections }}"
@@ -63,7 +55,6 @@
     crowdsec_collection_install.rc != 0 and
     'already installed' not in crowdsec_collection_install.stdout
 
-# ---- Acquisition sources -------------------------------------------
 - name: Ensure acquisition.d directory exists
   ansible.builtin.file:
     path: /etc/crowdsec/acquis.d
@@ -90,7 +81,6 @@
     mode: '0644'
   notify: Restart crowdsec
 
-# ---- Whitelist LAN + Tailscale so nobody bans themselves -----------
 - name: Deploy CIDR whitelist for LAN + Tailscale
   ansible.builtin.template:
     src: whitelist.yaml.j2
@@ -103,7 +93,6 @@
 - name: Flush handlers so acquisition/whitelist changes are live before verifying
   ansible.builtin.meta: flush_handlers
 
-# ---- Verify -----------------------------------------------------
 - name: Verify firewall bouncer registered with the local API
   ansible.builtin.command: cscli bouncers list -o json
   register: crowdsec_bouncers

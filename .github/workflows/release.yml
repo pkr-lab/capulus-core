@@ -1,9 +1,5 @@
 name: Release
 
-# Every push to main (i.e. every merged PR) is analyzed by semantic-release.
-# If the commits since the last tag warrant a release (feat/fix/BREAKING
-# CHANGE per Conventional Commits), it tags the new version and publishes a
-# GitHub Release with generated notes. No release-worthy commits -> no-op.
 on:
   push:
     branches: [main]

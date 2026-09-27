@@ -1,36 +1,13 @@
-# PROD-Kopie: Daten am 2026-09-19 aus TECH synchronisiert (migrations/README.md). Nie mit LEEREN Volumes starten.
 ---
-# ============================================================
-# Immich — wrapper values
-#
-# Secrets-Block (SealedSecret):
-#   DB-Passwort mit kubeseal versiegeln und hier eintragen.
-#   Anleitung: docs/3-apps-workloads/300c0-immich.md → Abschnitt "Secrets versiegeln"
-# ============================================================
 
 secrets:
   enabled: true
   name: immich-secrets
-  # Versiegeln: echo -n 'WERT' | kubeseal --raw --namespace immich \
-  #             --name immich-secrets --controller-namespace sealed-secrets \
-  #             --controller-name sealed-secrets-controller
   encryptedDbPassword: "AgBRQs+8k7zOs52gwcId4A5pyPYPXp4Sxm9Jj8UWBrFk27yXpxwyLB7RW/7lpDBgEKxhjx3DchCgZkAzONLkVHjNwcboNBVrY8Aj4mDvnbrLXx6K944T87LM+y0PINbeiTGk8wLHZgI4/fk95Z1vzeEhyBYUwSC1UkwIOw+mBQEBB/ZAuHq54rOanGkLYOolROBkQCtme9f0VDTbWoIJGH8l8dqONxUDvYfYrJzD8eB9wqjN4jLxYEeXamekgHjdGyOBySQS3PVv5rpQlNf8YNW/NeFzBBHsyKlBWgMR0dxxv0S+VsDhCged5Y7xETRijFLbdCF1p/t3EsxQ1NzjxRJNdc3+x613kTjZp/2BMWCgPg+PRA1N/YNn4GGwU8FXSm6xM08EB1mUJ6I4ADBlP1w1hLMJspW5giIFuuVzXWki/PEsy4xRLXSr8t0yvtOnLjOzZq9/T41+0wVXdn17OwrAAtdCvnnsqZQ1hatX7ELY1iC0KNal7NVAWQcYS52m08CMEOGHubMZ7CXiIW7iwIdrJqzWSO1U7ATcVdUgw/ucblyzbSeaDKVryqFkaMJ9ckWp1By/kKwI+KycrewV0eeMl402Z0BfL2evC+iL+BdKIiSAOd2qQWJnh3mlQl55JgHmG2zDryIKpZrsvCBOjlY7KYnEpQqLg8dYi+ezcNVfljG8naIDilde9cyUxE0lg0p0uiGbET8+iIBLUZmY9UdK2lfUEsnWwGpsBSlyzI+xfg=="
 
-# ============================================================
-# immich-server — API, Web-UI, Hintergrund-Jobs
-# ============================================================
 server:
-  # Nur wirksam solange autoscaling.enabled=false ist (siehe unten) —
-  # danach übernimmt der HPA die Replica-Anzahl.
   replicaCount: 1
 
-  # Hilft gegen Absturz durch VIELE gleichzeitige Uploads (mehr Pods =
-  # mehr parallele Job-Verarbeitung). Löst NICHT das Problem, dass EIN
-  # einzelnes sehr großes Foto/Video mehr RAM braucht als resources.limits
-  # erlaubt — dafür ggf. limits.memory unten erhöhen. Pods laufen per
-  # podAffinity (siehe templates/server-deployment.yaml) immer auf
-  # demselben Node wie bereits vorhandene Server-Pods, da die
-  # "library"-PVC ReadWriteOnce ist.
   autoscaling:
     enabled: true
     minReplicas: 1
@@ -40,12 +17,8 @@ server:
   image:
     repository: ghcr.io/immich-app/immich-server
     pullPolicy: IfNotPresent
-    # Pinned für Reproduzierbarkeit. Releases: https://github.com/immich-app/immich/releases
     tag: "v3.2.2"
 
-  # Offizielles Image — kein erzwungenes runAsNonRoot, analog zu
-  # Nextcloud (siehe dortige Kommentare). "immich-nas" ist mit
-  # no_root_squash exportiert (siehe argocd/apps/tech/immich-storage/).
   podSecurityContext: {}
   securityContext:
     allowPrivilegeEscalation: false
@@ -64,8 +37,6 @@ server:
         paths:
           - path: /
             pathType: Prefix
-      # Externer Host — per Cloudflare-Tunnel-Wildcard (cloudflared) an
-      # Traefik weitergereicht, siehe docs/c-netzwerk-dns/c0040-domain-tiers.md.
       - host: immich-prod.pke-lab.de
         paths:
           - path: /
@@ -79,15 +50,6 @@ server:
       size: 500Gi
       accessMode: ReadWriteOnce
 
-  # Externe Bibliothek (optional, standardmäßig deaktiviert): direkter,
-  # read-only NFS-Mount für bereits vorhandene Fotoordner (z.B. ein
-  # Massen-Export aus OneDrive), die NICHT über die Upload-API laufen
-  # sollen, sondern per Immichs "External Library"-Feature eingelesen
-  # werden — Dateien bleiben als normale Ordnerstruktur auf dem NAS
-  # liegen, kein Duplikat in der "library"-PVC oben. Analog zu Jellyfins
-  # media-Mount (siehe argocd/apps/jellyfin/values.yaml), nur read-only
-  # und opt-in, da der Unterordner auf dem NAS erst manuell angelegt
-  # werden muss (siehe docs/3-apps-workloads/300c0-immich.md → "Externe Bibliothek").
   externalLibrary:
     enabled: false
     mountPath: /mnt/external
@@ -95,13 +57,6 @@ server:
       server: "192.168.178.97"
       path: "/volume2/immich-storage/external"
       readOnly: true
-    # Weitere, unabhängige Ordner einbinden. Beispiel:
-    #   extraMounts:
-    #     - name: onedrive-fotos
-    #       mountPath: /mnt/external/onedrive
-    #       server: "192.168.178.97"
-    #       path: "/volume2/immich-storage/external/onedrive"
-    #       readOnly: true
     extraMounts: []
 
   resources:
@@ -113,24 +68,11 @@ server:
       memory: 4Gi
 
   nodeSelector: {}
-  # affinity ist fest im Deployment-Template verdrahtet (Co-location wegen
-  # RWO-Storage, siehe templates/server-deployment.yaml) und daher hier
-  # kein konfigurierbarer Wert mehr.
   tolerations: []
 
-# ============================================================
-# immich-machine-learning — Gesichtserkennung, CLIP-Ähnlichkeitssuche
-# (reine CPU-Inferenz, kein GPU-Passthrough konfiguriert)
-# ============================================================
 machineLearning:
-  # Nur wirksam solange autoscaling.enabled=false ist (siehe unten) —
-  # danach übernimmt der HPA die Replica-Anzahl.
   replicaCount: 1
 
-  # maxReplicas bewusst niedriger als beim Server: jede Inferenz-Instanz
-  # ist mit bis zu 4 CPU-Kernen/4Gi RAM (siehe resources unten) schon für
-  # sich genommen teuer. Co-location per podAffinity analog zum Server,
-  # da model-cache ebenfalls ReadWriteOnce ist.
   autoscaling:
     enabled: true
     minReplicas: 1
@@ -166,31 +108,13 @@ machineLearning:
       memory: 4Gi
 
   nodeSelector: {}
-  # affinity ist fest im Deployment-Template verdrahtet (Co-location wegen
-  # RWO-Storage, siehe templates/ml-deployment.yaml) und daher hier kein
-  # konfigurierbarer Wert mehr.
   tolerations: []
 
-# ============================================================
-# PostgreSQL + VectorChord (offizielles immich-app/postgres-Image —
-# Standard-postgres-Image reicht NICHT, da die Vektor-Ähnlichkeitssuche
-# eine Extension braucht, die Immich selbst mitliefert)
-# ============================================================
 postgresql:
-  # 0 = Postgres gestoppt (Umzug/Wartung).
   replicaCount: 1
   image:
     repository: ghcr.io/immich-app/postgres
     pullPolicy: IfNotPresent
-    # Major-Upgrade 14→16 am 2026-08-30 abgeschlossen (docs/3-apps-workloads/300c0-immich.md →
-    # Datenbank-Major-Upgrade, Dump/Restore-Verfahren) — kein exakter
-    # pgvectors0.2.0-Tag für Postgres 16 verfügbar (GHCR-Tag-Liste geprüft),
-    # nächster Treffer derselben vectorchord0.4.3-Familie ist pgvectors0.2.1
-    # (Patch-Bump, innerhalb des laut docs.immich.app unterstützten Bereichs
-    # VectorChord >=0.3,<2.0). PGDATA in templates/postgres-deployment.yaml
-    # zeigt seitdem auf pgdata_fixed_pg16 — der alte pgdata_fixed-Ordner
-    # liegt als Rollback-Fallback noch auf derselben PVC, kann nach ein
-    # paar Tagen störungsfreiem Betrieb aufgeräumt werden.
     tag: "16-vectorchord0.4.3-pgvectors0.2.1"
 
   database: immich
@@ -205,7 +129,6 @@ postgresql:
     size: 20Gi
     accessMode: ReadWriteOnce
 
-  # Empfehlung aus der offiziellen Immich-Doku für Datenintegrität.
   initdbArgs: "--data-checksums"
 
   resources:
@@ -217,11 +140,6 @@ postgresql:
 
   affinity: {}
 
-# ============================================================
-# Postgres-Backup — pg_dump-CronJob auf NAS-Storage, ergaenzt das
-# Datei-Level-Restic-Backup von immich-nas um einen transaktions-
-# konsistenten, einzeln rueckspielbaren Dump (docs/4-planung/40080).
-# ============================================================
 backup:
   enabled: true
   schedule: "50 1 * * *"
@@ -238,10 +156,6 @@ backup:
     limits:
       memory: 512Mi
 
-# ============================================================
-# Valkey/Redis (Job-Queue) — kein PVC, Jobs werden bei Neustart aus der
-# DB neu eingeplant, kein dauerhafter Zustand nötig.
-# ============================================================
 redis:
   image:
     repository: docker.io/valkey/valkey

@@ -9,9 +9,6 @@ enum LocationError: LocalizedError {
     }
 }
 
-/// Thin CLLocationManager wrapper for the "nächste Tankstelle" lookup in
-/// TankstellenView (Alltag-Modus) — the app has no other use for the
-/// device's location.
 final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     static let shared = LocationManager()
 
@@ -27,16 +24,6 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
         authorizationStatus = manager.authorizationStatus
     }
 
-    /// Requests one fresh location fix, prompting for "When In Use"
-    /// authorization first if it hasn't been decided yet. Throws if the
-    /// user denies access or the fix fails.
-    ///
-    /// If the user only granted "Approximate Location", `requestLocation()`
-    /// alone would hand back a coordinate fuzzed by several km — enough to
-    /// push a genuinely nearby (e.g. 5 km away) gas station outside the
-    /// Tankerkönig radius search entirely. Requesting temporary full
-    /// accuracy first (see `NSLocationTemporaryUsageDescriptionDictionary`
-    /// in Info.plist) fixes that for this one-shot lookup.
     func requestLocation() async throws -> CLLocation {
         if manager.authorizationStatus == .authorizedWhenInUse || manager.authorizationStatus == .authorizedAlways,
            manager.accuracyAuthorization == .reducedAccuracy {

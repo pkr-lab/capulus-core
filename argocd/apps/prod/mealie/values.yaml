@@ -1,7 +1,4 @@
 ---
-# Umschalten (argocd/bootstrap-prod/migrations/README.md, Teil B): waehrend der
-# Endkopie auf 0 (der Kopier-Job leert das Zielvolume), danach auf 1.
-# Nie mit LEEREM Volume starten - das legt eine neue DB und neue Secrets an.
 replicaCount: 1
 
 image:
@@ -39,34 +36,18 @@ service:
 ingress:
   enabled: true
   className: traefik
-  # Authentik-SSO (docs/d-sicherheit/d0073-authentik-sso.md, Ablösung von
-  # Authelia siehe docs/4-planung/40070-authentik-sso-iac.md) — gilt für
-  # beide Hosts unten. Nur der Nutzer "rdn" hat Zugriff (Policy-Blueprint
-  # argocd/apps/tech/authentik/blueprints/apps/mealie.yaml).
-  #
-  # PROD-KOPIE: die Authentik-Middleware ist hier BEWUSST ausgebaut - PROD hat
-  # noch keinen Authentik-Outpost (argocd/bootstrap-prod/migrations/sso-outpost/).
-  # Ohne SSO schuetzt nur Mealies eigene Anmeldung (ALLOW_SIGNUP=false), die
-  # Zugriffsbeschraenkung ueber die Authentik-Policy (admins / mealie-user)
-  # entfaellt. Zum Wiedereinbau die Zeile unten zurueck in `annotations` setzen:
-  #   traefik.ingress.kubernetes.io/router.middlewares: "authentik-authentik@kubernetescrd"
   annotations: {}
   hosts:
     - host: mealie.prod.homeserver
       paths:
         - path: /
           pathType: Prefix
-    # Externer Host — per Cloudflare-Tunnel-Wildcard (cloudflared) an
-    # Traefik weitergereicht, siehe docs/c-netzwerk-dns/c0040-domain-tiers.md.
     - host: mealie-prod.pke-lab.de
       paths:
         - path: /
           pathType: Prefix
   tls: []
 
-# "Knopfdruck zur nativen Anmeldung" — Bypass-Ingress ohne
-# ForwardAuth-Middleware (Mealie-Mobile-App), siehe
-# docs/d-sicherheit/d0073-authentik-sso.md.
 ingressNative:
   enabled: true
   host: mealie-native.prod.homeserver
@@ -82,7 +63,6 @@ env:
   TZ: Europe/Berlin
   ALLOW_SIGNUP: "false"
   BASE_URL: "https://mealie-prod.pke-lab.de"
-  # Maximale Anzahl Workers — für Home Lab reicht 1
   MAX_WORKERS: "1"
   WEB_CONCURRENCY: "1"
 

@@ -1,21 +1,5 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2016 # Backticks in '...' sind Markdown fuer PR-/Issue-Texte, keine Expansion
-# Promotion ENTW -> main (Logik hinter .github/workflows/promote-entw.yml,
-# Beschreibung in docs/f-cicd-automatisierung/f0080-entw-promotion.md).
-#
-#   detect             Gibt `head`, `base` und `changed` aus (GITHUB_OUTPUT, sonst stdout).
-#   promote            Cherry-pickt die neuen entw-Commits auf einen Branch ab main,
-#                      oeffnet den PR und setzt danach den Tag entw-promoted um.
-#   report-ci-failure  Meldet ein rotes CI auf entw als Issue (verhindert, dass der
-#                      Cron denselben Stand alle 15 Minuten neu prueft).
-#
-# Umgebung: PROMOTE_HEAD (promote, report-ci-failure), GH_TOKEN (gh + git push),
-# GITHUB_REPOSITORY, optional DRY_RUN=1 (ueberspringt alle `gh`-Aufrufe, fuer lokale Tests).
-#
-# Der Tag `entw-promoted` ist die Marke "bis hierhin wurde entw an main uebergeben".
-# Er wandert erst nach erfolgreich geoeffnetem PR (oder nach "nichts zu uebergeben")
-# auf den neuen entw-Stand. Neue Commits = alles zwischen Tag und entw-Spitze, das
-# nicht schon in main ist. Ohne Tag (erster Lauf) gilt der Merge-Base von main und entw.
 set -euo pipefail
 
 TAG="entw-promoted"
@@ -27,7 +11,6 @@ PR_LABEL="promotion"
 
 log() { echo "[promote-entw] $*" >&2; }
 
-# gh nur ausfuehren, wenn kein Trockenlauf; im Trockenlauf wird der Aufruf nur gezeigt.
 gh_run() {
   if [ -n "${DRY_RUN:-}" ]; then
     log "DRY_RUN: gh $*"
@@ -45,7 +28,6 @@ fetch_refs() {
   git fetch --quiet origin \
     "+refs/heads/${MAIN}:refs/remotes/origin/${MAIN}" \
     "+refs/heads/${ENTW}:refs/remotes/origin/${ENTW}"
-  # Der Tag existiert erst nach der ersten Promotion.
   git fetch --quiet origin "+refs/tags/${TAG}:refs/tags/${TAG}" 2>/dev/null || true
 }
 
@@ -57,16 +39,10 @@ base_commit() {
   fi
 }
 
-# Alte -> neue Reihenfolge, ohne Merge-Commits und ohne alles, was main schon hat
-# (z. B. nach einem Merge main -> entw kommen main-Commits nicht doppelt zurueck).
 candidates() {
   git rev-list --no-merges --reverse "$1..$2" "^origin/${MAIN}"
 }
 
-# Nicht uebernommen wird ein Commit, wenn er `[entw-only]` traegt ODER ausschliesslich
-# argocd/apps/entw/ aendert: solche Aenderungen gehen ueber die Promotion-Kette
-# (promote-chain.yml: Versionen nach 24 h Gesundheit als PR nach tech/prod), ein Cherry-Pick
-# des ENTW-Ordners nach main waere nur Rauschen (TECH/PROD lesen ihn nie).
 is_entw_only() {
   if git log -1 --format=%B "$1" | grep -qF "$MARKER"; then
     return 0
@@ -76,8 +52,6 @@ is_entw_only() {
   [ -z "$other" ]
 }
 
-# Konflikt, der ausschliesslich argocd/apps/entw/ betrifft (typisch: ein Vorgaenger-Commit im
-# ENTW-Ordner wurde uebersprungen): den ENTW-Anteil verwerfen, den Rest des Commits uebernehmen.
 resolve_entw_only_conflict() {
   local unmerged
   unmerged=$(git diff --name-only --diff-filter=U)
@@ -97,8 +71,6 @@ ensure_label() {
   gh_run label create "$1" --color "$2" --description "$3" 2>/dev/null || true
 }
 
-# Ein offenes Issue mit der Kurz-SHA im Titel bedeutet: fuer diesen entw-Stand ist
-# bereits Bescheid gegeben (Konflikt oder rotes CI) - nicht erneut versuchen.
 open_issue_for_head() {
   [ -z "${DRY_RUN:-}" ] || return 1
   command -v gh >/dev/null || return 1
@@ -214,8 +186,6 @@ Alternativ die Commit-Nachricht auf \`entw\` mit \`${MARKER}\` versehen, wenn di
     return 0
   fi
 
-  # Neue Dateien im alten Layout (platform/workloads) haben auf main keinen Platz mehr
-  # (tech/prod) - Cherry-Pick erkennt Umzuege bestehender Dateien, aber keine Neuanlagen.
   local legacy draft=() draft_note=""
   legacy=$(git diff --name-only "origin/${MAIN}" HEAD | grep -E '^argocd/apps/(platform|workloads)/' || true)
   if [ -n "$legacy" ]; then

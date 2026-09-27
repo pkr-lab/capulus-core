@@ -46,7 +46,6 @@ DEFAULT_SMOKE_IP = {"entw": "192.168.178.100", "tech": "192.168.178.94"}
 MAIN = "origin/main"
 
 
-# --------------------------------------------------------------------------- git
 def git(*args, check=True, cwd=None) -> str:
     r = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
     if check and r.returncode != 0:
@@ -86,7 +85,6 @@ def is_ancestor(sha: str, rev: str):
     return False if r.returncode == 1 else None
 
 
-# ---------------------------------------------------------------------- Versionen
 def collect(env: str, app: str) -> dict:
     e = ENVS[env]
     out = {}
@@ -115,11 +113,11 @@ class Item:
     src: str
     dst: str
     changes: list = field(default_factory=list)
-    skipped: list = field(default_factory=list)  # Felder, die bewusst nicht uebertragen werden
+    skipped: list = field(default_factory=list)
     ok: bool = False
     reasons: list = field(default_factory=list)
     evidence: list = field(default_factory=list)
-    result: str = ""  # Ergebnis der Ausfuehrung (PR-Link, "unveraendert", ...)
+    result: str = ""
 
 
 def diff_versions(src: str, dst: str, app: str):
@@ -148,7 +146,6 @@ def diff_versions(src: str, dst: str, app: str):
     return changes, skipped
 
 
-# -------------------------------------------------------------------------- Gate
 def parse_ts(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
@@ -222,11 +219,10 @@ def run_smoke(env: str, checks: list) -> list:
     return failures
 
 
-# ------------------------------------------------------------------------- Plan
 def plan(stage: str, cfg: dict, now: datetime, statuses: dict, smoke: bool) -> list:
     exclude = set(cfg.get("exclude") or [])
     gates = cfg.get("gates") or {}
-    pairs = []  # (src, dst, app)
+    pairs = []
     if stage in ("entw", "all"):
         for app in list_apps("entw"):
             dst = next((e for e in ("tech", "prod") if app in list_apps(e)), None)
@@ -258,7 +254,6 @@ def plan(stage: str, cfg: dict, now: datetime, statuses: dict, smoke: bool) -> l
     return items
 
 
-# ------------------------------------------------------------------- Ausfuehrung
 def gh(*args, dry: bool, check=True) -> str:
     if dry:
         print(f"[dry] gh {' '.join(args)[:160]}", file=sys.stderr)
@@ -340,7 +335,6 @@ def execute(item: Item, dry: bool) -> None:
         item.result += " (Auto-Merge aktiviert)"
 
 
-# ------------------------------------------------------------------------ Ausgabe
 def summary(items: list, unreachable: list) -> str:
     lines = ["## Promotion-Kette", ""]
     if unreachable:
@@ -373,8 +367,6 @@ def index_items(data: dict) -> dict:
 
 def fetch_argocd(url: str, token: str):
     req = urllib.request.Request(
-        # Feldliste gegen die echte API getestet: `items.status.health` liefert health komplett, fuer sync
-        # muessen die Unterfelder einzeln genannt werden (`items.status.sync` allein liefert nichts).
         url.rstrip("/") + "/api/v1/applications"
         "?fields=items.metadata.name,items.status.health,items.status.sync.status,items.status.sync.revision",
         headers={"Authorization": f"Bearer {token}"},

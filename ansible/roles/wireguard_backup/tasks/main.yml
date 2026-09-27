@@ -1,9 +1,4 @@
 ---
-# ============================================================
-# wireguard_backup/tasks/main.yml — standalone WireGuard tunnel,
-# emergency-only fallback in case Tailscale's control plane is
-# down. See docs/c-netzwerk-dns/c0011-wireguard-backup.md.
-# ============================================================
 
 - name: Install WireGuard tools
   ansible.builtin.apt:
@@ -24,8 +19,6 @@
     path: "/etc/wireguard/{{ wireguard_backup_interface }}.privatekey"
   register: wireguard_backup_privkey_stat
 
-# Generated once and reused on every run — regenerating it would change the
-# server's public key and silently break every already-configured peer.
 - name: Generate server private key (first run only)
   ansible.builtin.shell: umask 077 && wg genkey > /etc/wireguard/{{ wireguard_backup_interface }}.privatekey
   when: not wireguard_backup_privkey_stat.stat.exists
@@ -52,11 +45,6 @@
     mode: '0600'
   notify: Restart wireguard backup tunnel
 
-# Allowing the UDP port is the only firewall change this role makes — no
-# FORWARD/NAT rules, because this tunnel intentionally only reaches the
-# server itself (SSH/kubectl/ArgoCD), it is not a LAN subnet router like the
-# Tailscale advertised route. Keeps it out of the UFW forward chain that
-# k3s/flannel already depend on.
 - name: Allow WireGuard backup port through UFW
   community.general.ufw:
     rule: allow

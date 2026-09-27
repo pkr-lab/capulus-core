@@ -1,13 +1,4 @@
 ---
-# ============================================================
-# cluster_power_manager role — Homeserver-Last -> Worker per WoL
-# ============================================================
-# Läuft auf homeserver. Generiert das SSH-Schlüsselpaar, mit dem der
-# Watchdog später worker-0/worker-1 herunterfährt (autorisiert wird der
-# Public Key erst durch cluster_power_manager_target auf den Workern
-# selbst, in worker-0.yml/worker-1.yml — dieses Playbook muss also VOR
-# den Worker-Playbooks laufen, siehe ansible/site.yml).
-# ============================================================
 
 - name: Warnen, falls eine Worker-MAC-Adresse noch nicht gesetzt ist
   ansible.builtin.debug:

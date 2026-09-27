@@ -1,9 +1,5 @@
 ---
-# ============================================================
-# common/tasks/main.yml — Base OS configuration
-# ============================================================
 
-# ---- Hostname -----------------------------------------------
 - name: Set system hostname
   ansible.builtin.hostname:
     name: "{{ hostname }}"
@@ -16,7 +12,6 @@
     line: "127.0.1.1 {{ hostname }}"
     state: present
 
-# ---- Package Management ------------------------------------
 - name: Update apt cache
   ansible.builtin.apt:
     update_cache: true
@@ -52,10 +47,9 @@
       - bash-completion
       - ufw
       - unattended-upgrades
-      - update-notifier-common   # provides /var/run/reboot-required
+      - update-notifier-common
     state: "{{ 'latest' if auto_upgrade | bool else 'present' }}"
 
-# ---- Unattended upgrades (background security patches) -----
 - name: Enable unattended-upgrades (security patches between Ansible runs)
   ansible.builtin.copy:
     dest: /etc/apt/apt.conf.d/20auto-upgrades
@@ -93,20 +87,17 @@
     enabled: true
     state: started
 
-# ---- Timezone -----------------------------------------------
 - name: Set system timezone
   community.general.timezone:
     name: "{{ timezone }}"
   notify: Restart chrony
 
-# ---- Chrony (NTP) -------------------------------------------
 - name: Ensure chrony is enabled and running
   ansible.builtin.service:
     name: chrony
     state: started
     enabled: true
 
-# ---- Swap ---------------------------------------------------
 - name: Check for active swap devices
   ansible.builtin.command: swapon --noheadings --show=NAME
   register: common_active_swap
@@ -130,7 +121,6 @@
     state: stopped
     masked: true
 
-# ---- Kernel Modules -----------------------------------------
 - name: Create modules-load.d config for k3s/Kubernetes
   ansible.builtin.copy:
     dest: /etc/modules-load.d/k3s.conf
@@ -147,7 +137,6 @@
     - br_netfilter
     - overlay
 
-# ---- sysctl -------------------------------------------------
 - name: Configure sysctl parameters for Kubernetes
   ansible.posix.sysctl:
     name: "{{ item.key }}"
@@ -165,7 +154,6 @@
     - {key: "vm.swappiness", value: "0"}
   notify: Reload sysctl
 
-# ---- UFW Firewall -------------------------------------------
 - name: Allow SSH (port 22) before any other firewall changes
   community.general.ufw:
     rule: allow
@@ -204,13 +192,6 @@
     proto: tcp
     comment: "k3s Kubernetes API"
 
-# ArgoCD laeuft mit server.insecure (argocd_server_insecure): beide NodePorts (30080/30443)
-# sprechen KLARTEXT-HTTP, `https://...:30443` wird zurueckgesetzt. Die Web-UI ist per
-# HTTPS ueber Traefik erreichbar (argocd.tech.homeserver, siehe argocd-values.yaml.j2).
-# Der Klartext-NodePort 30080 bleibt fuer CLI und CI (Promotion-Kette, Tailscale-Runner
-# greift auf 192.168.178.94:30080 zu, docs/f-cicd-automatisierung/f00b0-promotion-chain.md)
-# und ist nur aus LAN und Tailnet erreichbar. Die Freigabe stand bisher nur von Hand in
-# UFW, nicht im Repo - ein Neuaufbau haette die CI stillgelegt.
 - name: Allow ArgoCD NodePort HTTP (port 30080) from LAN and Tailnet only
   community.general.ufw:
     rule: allow
@@ -221,7 +202,7 @@
   loop:
     - "{{ local_subnet }}"
     - "100.64.0.0/10"
-    - "10.99.99.0/24" # WireGuard-Notzugang (roles/wireguard_backup, wireguard_backup_server_tunnel_ip)
+    - "10.99.99.0/24"
 
 - name: Remove unrestricted ArgoCD NodePort 30080 rule (manuell gesetzt, jetzt auf LAN/Tailnet begrenzt)
   community.general.ufw:
@@ -295,7 +276,6 @@
   ansible.builtin.debug:
     var: common_ufw_status.stdout_lines
 
-# ---- Static IP via Netplan ----------------------------------
 - name: Configure static IP via Netplan
   when: network_configure_static_ip | bool
   block:
@@ -340,7 +320,6 @@
       delegate_to: localhost
       become: false
 
-# ---- Reboot if package upgrades require it -----------------
 - name: Check whether a reboot is required (kernel/libc updates)
   ansible.builtin.stat:
     path: /var/run/reboot-required

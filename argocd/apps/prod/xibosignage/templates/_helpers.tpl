@@ -16,14 +16,6 @@
 {{- define "xibosignage.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
-{{- define "xibosignage.labels" -}}
-helm.sh/chart: {{ include "xibosignage.chart" . }}
-{{ include "xibosignage.selectorLabels" . }}
-{{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
-{{- end }}
-app.kubernetes.io/managed-by: {{ .Release.Service }}
-{{- end }}
 {{- define "xibosignage.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "xibosignage.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}

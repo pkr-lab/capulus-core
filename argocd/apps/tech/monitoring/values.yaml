@@ -1,14 +1,4 @@
 ---
-# ============================================================
-# Monitoring stack — values for victoria-metrics-k8s-stack.
-# All keys live under `victoria-metrics-k8s-stack:` because that
-# is the dependency name in Chart.yaml.
-#
-# Upstream values.yaml reference:
-#   https://github.com/VictoriaMetrics/helm-charts/blob/master/charts/victoria-metrics-k8s-stack/values.yaml
-# Chart docs:
-#   https://docs.victoriametrics.com/helm/victoria-metrics-k8s-stack/
-# ============================================================
 
 victoria-metrics-k8s-stack:
   global:
@@ -16,48 +6,25 @@ victoria-metrics-k8s-stack:
     cluster:
       dnsDomain: cluster.local.
 
-  # ---- VictoriaMetrics Operator ----------------------------
-  # Installs VM CRDs (VMSingle, VMAgent, VMAlert, VMServiceScrape, ...).
-  # `crds.plain: true` renders CRDs as plain templates so ArgoCD can apply
-  # them — required because ArgoCD ignores Helm's `crds/` folder by default.
   victoria-metrics-operator:
     enabled: true
     crds:
       plain: true
       cleanup:
-        # Deleting the chart leaves CRDs on the cluster (safer default).
         enabled: false
     admissionWebhooks:
-      # Avoid sync-loop races against the operator's webhook on first install.
       policy: Ignore
     operator:
-      # Auto-convert Prometheus ServiceMonitor → VMServiceScrape so apps
-      # that ship Prometheus-style monitors work out of the box.
       disable_prometheus_converter: false
 
-  # ---- VictoriaMetrics single-node TSDB --------------------
-  # Single-node is plenty for a home server. Switch to vmcluster only if
-  # you ever push > 1M active series.
   vmsingle:
     enabled: true
     spec:
-      retentionPeriod: "15d"       # h/d/w/y; unit-less = months
+      retentionPeriod: "15d"
       replicaCount: 1
       extraArgs:
-        # Drop scrapes from misbehaving targets instead of blowing memory.
         memory.allowedPercent: "60"
-        # Default ist an das CPU-Limit gekoppelt (hier: 2 bei 1000m). Ein
-        # Insert haelt seinen Slot, solange der Client den Body noch sendet —
-        # der ueber Tailscale pushende Vereinsheim-Pi (viele parallele
-        # vmagent-Queues, haengende http->https-Umleitung) belegte die Slots,
-        # sodass vmalert nicht mehr schreiben konnte (Alert
-        # RemoteWriteDroppingData, vm_concurrent_insert_limit_reached_total
-        # steigt).
-        # Die Requests sind klein und warten nur auf I/O, daher kaum
-        # Speicher-/CPU-Mehrbedarf.
         maxConcurrentInserts: "16"
-        # host/kind-Labels fuer den per Push angebundenen Vereinsheim-Pi,
-        # siehe templates/configmap-vmsingle-relabel.yaml.
         relabelConfig: /etc/vm/configs/vmsingle-relabel/relabel.yml
       configMaps:
         - vmsingle-relabel
@@ -71,27 +38,14 @@ victoria-metrics-k8s-stack:
       storage:
         accessModes:
           - ReadWriteOnce
-        # War auf "nas" (NFS), bis das UGREEN-NAS all_squash erzwang und
-        # VictoriaMetrics beim Öffnen bestehender Storage-Parts mit
-        # "permission denied" panickte (docs/2-betrieb-hardware/20000-nas-storage.md). TSDB-Daten
-        # sind reiner State → lokaler Storage. Bewusst ohne Datenmigration
-        # neu aufgesetzt (nur 15d Retention, Verdacht auf teilbeschädigte
-        # Parts durch die vorherigen Schreibfehler).
         storageClassName: local-path
         resources:
           requests:
             storage: 10Gi
-      # local-path bindet den Pod an den Node, auf dem die PVC zuerst
-      # provisioniert wird — fest auf homeserver (aktuell ohnehin der
-      # einzige Ready-Node).
       nodeSelector:
         kubernetes.io/hostname: homeserver
       affinity: {}
 
-  # ---- VMAgent ---------------------------------------------
-  # Scrapes everything matching a VMServiceScrape / VMPodScrape /
-  # VMNodeScrape / VMStaticScrape in any namespace. ServiceMonitors are
-  # auto-converted by the operator.
   vmagent:
     enabled: true
     spec:
@@ -109,30 +63,12 @@ victoria-metrics-k8s-stack:
           cpu: 200m
           memory: 256Mi
 
-  # ---- VMAlert ---------------------------------------------
   vmalert:
     enabled: true
     spec:
       selectAllByDefault: true
       evaluationInterval: 30s
 
-  # ---- Alertmanager ----------------------------------------
-  # Routing:
-  #   alle Alerts (außer InfoInhibitor/Watchdog) → gotify-bridge
-  #   zusätzlich severity=critical → auch ntfy /Home-Lab (iOS Push)
-  #   zusätzlich NUR alertname=BananaPiAlarmmonitorDown → auch n8n-Webhook
-  #     (-> Zammad-Ticket, siehe docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md). Rein
-  #     additiv: die anderen Alamos-Raspberry-Pis bekommen bewusst weiterhin
-  #     KEIN Ticket pro Ausfall (siehe docs/3-apps-workloads/30010-alamos-apager.md), nur dieser
-  #     eine Alertname bekommt den zusätzlichen Pfad.
-  #
-  # gotify-bridge: argocd/apps/tech/gotify-bridge/ — übersetzt Alertmanager-JSON
-  #   in Gotifys message-API. Token als Secret `gotify-bridge-token` anlegen
-  #   (siehe argocd/apps/tech/gotify-bridge/values.yaml).
-  # ntfy: argocd/apps/tech/ntfy/ — Alertmanager-Webhook wird direkt empfangen.
-  # n8n: argocd/apps/tech/n8n/ — Webhook-Trigger des Workflows
-  #   "Banana-Pi-Down -> Zammad-Ticket"
-  #   (argocd/apps/tech/n8n/workflows/banana-pi-down-to-zammad.json).
   alertmanager:
     enabled: true
     spec:
@@ -148,19 +84,10 @@ victoria-metrics-k8s-stack:
           - matchers:
               - alertname=~"InfoInhibitor|Watchdog"
             receiver: blackhole
-          # Match-all sibling: every alert reaching here goes to gotify, then
-          # (continue: true) falls through to the next matching sibling
-          # below. A bare top-level receiver does NOT get combined with a
-          # matched child route — Alertmanager only falls back to it when no
-          # child matches at all — so the "default + critical (+ banana-pi)"
-          # fan-out has to be modeled as explicit sibling routes.
           - matchers:
               - severity=~".*"
             receiver: gotify
             continue: true
-          # Nur dieser eine Alertname zusätzlich an n8n — muss VOR der
-          # severity=critical-Route stehen (die hat kein continue: true und
-          # würde die Auswertung sonst dort beenden).
           - matchers:
               - alertname="BananaPiAlarmmonitorDown"
             receiver: n8n-banana-pi-down
@@ -192,12 +119,8 @@ victoria-metrics-k8s-stack:
             - alertname
 
 
-  # ---- Default alert rules ---------------------------------
   defaultRules:
     create: true
-    # Disable rules for components k3s does not expose as separate pods:
-    # controller-manager, scheduler, and etcd all run inside the single
-    # k3s server process. kubeProxy is also baked in.
     groups:
       etcd:
         create: false
@@ -208,7 +131,6 @@ victoria-metrics-k8s-stack:
       kubernetesSystemControllerManager:
         create: false
 
-  # ---- Default dashboards (cluster, nodes, VM components) ---
   defaultDashboards:
     enabled: true
     defaultTimezone: browser
@@ -220,31 +142,18 @@ victoria-metrics-k8s-stack:
       victoriametrics-operator:
         enabled: true
 
-  # ---- Grafana --------------------------------------------
-  # Exposed at https://grafana.tech.homeserver via Traefik. Admin password is
-  # auto-generated and stored in the `monitoring-grafana` Secret. Retrieve
-  # with:
-  #   kubectl -n monitoring get secret monitoring-grafana \
-  #     -o jsonpath='{.data.admin-password}' | base64 -d; echo
   grafana:
     enabled: true
     defaultDashboardsTimezone: browser
 
     plugins:
       - victoriametrics-metrics-datasource
-      # Infinity: direkte HTTP/JSON-API-Abfragen in Grafana-Panels —
-      # wird für Pegelonline, DWD und ELWIS-Dashboards benötigt.
       - yesoreyeram-infinity-datasource
-      # VictoriaLogs: Datasource für zentrales Logging, siehe
-      # argocd/apps/tech/logging/.
       - victoriametrics-logs-datasource
-      # Polystat: Waben-/Hexagon-Statusuebersicht (Server, Datentraeger,
-      # Fuellstand) im Ordner "Hardware", siehe dashboards/hardware/ und
-      # docs/2-betrieb-hardware/20060-hardware-monitoring.md.
       - grafana-polystat-panel
 
     admin:
-      existingSecret: "grafana-admin"        # leave empty → auto-generated password
+      existingSecret: "grafana-admin"
 
     securityContext:
       runAsNonRoot: true
@@ -263,8 +172,6 @@ victoria-metrics-k8s-stack:
         - ReadWriteOnce
       size: 2Gi
 
-    # Speicher: 512Mi war zu knapp (OOMKilled am 2026-09-19, RSS 488 MB beim Kill). Grafana 12 baut
-    # Suchindizes (bleve) im Speicher auf und startet vier Plugin-Prozesse (gpx_*), die im selben cgroup zaehlen.
     resources:
       requests:
         cpu: 50m
@@ -273,17 +180,6 @@ victoria-metrics-k8s-stack:
         cpu: 500m
         memory: 1Gi
 
-    # Sidecar picks up any ConfigMap labelled `grafana_dashboard=1` —
-    # `defaultDashboards` above ships its dashboards this way, and you
-    # can drop extra ConfigMaps in the `monitoring` namespace to add more.
-    #
-    # folderAnnotation + provider.foldersFromFilesStructure together turn a
-    # ConfigMap's `grafana_folder` annotation (see templates/_dashboard-app.tpl
-    # and templates/dashboards-apps.yaml) into a real Grafana folder — that's
-    # how dashboards end up under "Plattform (TECH)" / "Anwendungen (TECH)" /
-    # "Hardware" / "Kubernetes (TECH)" / "Monitoring-Stack" instead of the
-    # root folder (verified live 2026-09-20). Renaming a folder creates a new
-    # Grafana folder; the old, now empty one has to be deleted by hand.
     sidecar:
       datasources:
         enabled: true
@@ -304,22 +200,15 @@ victoria-metrics-k8s-stack:
     ingress:
       enabled: true
       ingressClassName: traefik
-      # Bewusst KEIN SSO davor (22.08.2026, Nutzerentscheidung, gilt
-      # unverändert nach der Authentik-Ablösung) — keine wichtigen Daten
-      # hinter Grafana, eigener Login reicht. Siehe
-      # docs/d-sicherheit/d0073-authentik-sso.md.
       annotations: {}
       labels: {}
       path: /
       pathType: Prefix
-      # Zweiter Host: extern, per Cloudflare-Tunnel-Wildcard (cloudflared)
-      # an Traefik weitergereicht, siehe docs/c-netzwerk-dns/c0040-domain-tiers.md.
       hosts:
         - grafana.tech.homeserver
         - grafana-tech.pke-lab.de
       tls: []
 
-    # Grafana itself is scraped by VMAgent.
     vmScrape:
       enabled: true
 
@@ -328,36 +217,12 @@ victoria-metrics-k8s-stack:
         domain: grafana-tech.pke-lab.de
         root_url: "https://grafana-tech.pke-lab.de"
 
-  # ---- prometheus-node-exporter ----------------------------
-  # DaemonSet: one pod per node (homeserver, worker-0, worker-1), exposes
-  # host CPU/RAM/disk/network/load. Mounts /proc and /sys read-only.
   prometheus-node-exporter:
     enabled: true
-    # worker-0/worker-1 werden vom cluster-power-manager nur bei Bedarf
-    # geweckt und sind sonst absichtlich ausgeschaltet (ansible/roles/
-    # cluster_power_manager) -> für k8s dauerhaft "unreachable". Jedes
-    # DaemonSet toleriert node.kubernetes.io/unreachable/not-ready OHNE
-    # tolerationSeconds (Kubernetes-Default, nicht hier konfigurierbar) —
-    # der alte Pod auf einem schlafenden Worker bleibt beim Chart-Update
-    # daher dauerhaft "Terminating" hängen. Beim Default
-    # maxUnavailable: 1 blockiert genau dieser eine feststeckende Pod
-    # JEDEN weiteren Rollout, auch auf gesunden Nodes (homeserver) — der
-    # Helm-Release/die ArgoCD-App bleibt dadurch dauerhaft "Progressing"
-    # statt "Healthy" (siehe docs/d-sicherheit/d0000-incident-2026-08-12.md, Abschnitt
-    # "Grafana zeigte nach Recovery nur noch UGREEN-NAS-Werte"). Fix:
-    # genug Unavailable-Budget, dass beide Worker gleichzeitig "stuck"
-    # sein können, ohne den Rollout auf homeserver zu blockieren.
     updateStrategy:
       type: RollingUpdate
       rollingUpdate:
         maxUnavailable: 2
-    # `host` (= k8s-Nodename) und `kind` fuer die Hardware-Dashboards
-    # (dashboards/hardware/): dieselben Labels tragen die VMStaticScrapes der
-    # Nicht-Cluster-Hosts (ugreen-nas, prod-vm, entw-vm, infotafel), sodass
-    # alle Server einheitlich ueber `host` gefiltert werden. `instance` bleibt
-    # bewusst die IP:Port (Alert-Regeln wie worker-0Down matchen darauf).
-    # Ueberschreibt die komplette Default-`spec` des Charts (Listen werden nicht
-    # gemergt), daher Selector/Endpoint hier vollstaendig wiederholt.
     vmScrape:
       spec:
         jobLabel: jobLabel
@@ -383,7 +248,6 @@ victoria-metrics-k8s-stack:
         cpu: 200m
         memory: 128Mi
 
-  # ---- kube-state-metrics ----------------------------------
   kube-state-metrics:
     enabled: true
     resources:
@@ -394,8 +258,6 @@ victoria-metrics-k8s-stack:
         cpu: 200m
         memory: 128Mi
 
-  # ---- Kubernetes component scraping ----------------------
-  # Enabled where k3s actually exposes the metric.
   kubelet:
     enabled: true
   kubeApiServer:
@@ -403,54 +265,16 @@ victoria-metrics-k8s-stack:
   coreDns:
     enabled: true
 
-  # Disabled — k3s bakes these into a single process bound to 127.0.0.1.
   kubeControllerManager:
     enabled: false
   kubeScheduler:
     enabled: false
   kubeProxy:
     enabled: false
-  # k3s ships an embedded SQLite datastore by default; no etcd to scrape.
   kubeEtcd:
     enabled: false
 
-# ============================================================
-# dashboardApps — drives templates/dashboards-apps.yaml (own chart
-# template, NOT part of the victoria-metrics-k8s-stack subchart values
-# above, so it lives at the document root here). One entry generates one
-# Grafana dashboard (CPU/RAM/pod-restarts, plus HTTP request rate/error
-# rate/latency when hasIngress) into the `folder` Grafana folder.
-#
-# - namespace == directory basename for every argocd/apps/tech/<name> app
-#   (see the ApplicationSet destination.namespace, "{{.path.basename}}") —
-#   no per-app overrides needed except the apps excluded below. Only apps
-#   that run in the TECH cluster belong here: PROD/ENTW workloads are not
-#   scraped by this VictoriaMetrics, so their dashboards would stay empty
-#   (removed 2026-09-20: demo-app, example-whoami, immich, mealie,
-#   nextcloud, paperless-ngx, tinyteller, wikijs, xibosignage — moved to PROD).
-# - Folders (Grafana): "Plattform (TECH)" = infrastructure/operations services,
-#   "Anwendungen (TECH)" = everything else running in TECH; hardware, Kubernetes and
-#   monitoring-stack dashboards get their own folders (see
-#   templates/dashboards-hardware.yaml, templates/job-dashboard-folders.yaml).
-# - hasIngress: true only if the app defines a k8s Ingress/IngressRoute —
-#   drives the Traefik-metrics "User Requests/s" panel
-#   (traefik_service_requests_total{service=~"^<namespace>-.*"}). Verify
-#   that regex against the live cluster after deploy
-#   (curl :9100/metrics on the k3s Traefik pod, or query in Grafana) —
-#   built from Traefik's Kubernetes-Ingress-provider naming convention,
-#   not confirmed against this cluster.
-#
-# Intentionally excluded:
-#   - github-release-watcher, wiki-docs-sync: CronJob-only, no
-#     long-running pod to chart.
-#   - zammad: already has a hand-built dashboard
-#     (templates/dashboard-zammad.yaml), not duplicated here.
-#   - monitoring: covered by the chart's own defaultDashboards
-#     (node-exporter-full, victoriametrics-vmalert/-operator above).
-#   - coredns-custom, traefik-config: config-only (ConfigMap /
-#     HelmChartConfig in kube-system), no workload of their own.
 dashboardApps:
-  # ---- Anwendungen (TECH) (argocd/apps/tech/*) ----
   - { name: alamos-apager, namespace: alamos-apager, folder: "Anwendungen (TECH)", hasIngress: true }
   - { name: carplay-api, namespace: carplay-api, folder: "Anwendungen (TECH)", hasIngress: true }
   - { name: mediamtx, namespace: mediamtx, folder: "Anwendungen (TECH)", hasIngress: true }
@@ -459,7 +283,6 @@ dashboardApps:
   - { name: pacman, namespace: pacman, folder: "Anwendungen (TECH)", hasIngress: true }
   - { name: uptime-kuma, namespace: uptime-kuma, folder: "Anwendungen (TECH)", hasIngress: true }
   - { name: vaultwarden, namespace: vaultwarden, folder: "Anwendungen (TECH)", hasIngress: true }
-  # ---- Plattform (TECH) (argocd/apps/tech/*) ----
   - { name: argo-workflows, namespace: argo-workflows, folder: "Plattform (TECH)", hasIngress: false }
   - { name: authentik, namespace: authentik, folder: "Plattform (TECH)", hasIngress: true }
   - { name: cert-manager, namespace: cert-manager, folder: "Plattform (TECH)", hasIngress: false }

@@ -11,12 +11,6 @@ import (
 	"carplay-api/internal/models"
 )
 
-// HealthHandler answers GET /health. It always returns 200 as long as the
-// Go process itself can serve HTTP — with one replica, failing k8s's
-// liveness/readiness probe because an upstream (ntfy, Uptime-Kuma, ...) is
-// temporarily unreachable would only restart or de-route a perfectly
-// healthy pod, achieving nothing. Per-dependency status is reported in the
-// body for observability instead.
 type HealthHandler struct {
 	vmBaseURL   string
 	ntfyBaseURL string

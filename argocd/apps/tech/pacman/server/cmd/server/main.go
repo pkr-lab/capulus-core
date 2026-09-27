@@ -1,7 +1,3 @@
-// pacman-server serves the vendored Pacman Canvas static assets and logs
-// one structured JSON line per request (client IP, user agent, and — if an
-// MMDB geo database is mounted — the resolved location) for a security
-// training that demonstrates what a web server can learn about a visitor.
 package main
 
 import (
@@ -65,14 +61,6 @@ func openGeoIP(logger *slog.Logger, dbPath string) *geoip2.Reader {
 	return reader
 }
 
-// serveStatic wraps http.FileServer to serve index.htm for "/" — the
-// vendored pacman-canvas source (see ../../../src/) ships an "index.htm",
-// not "index.html", which Go's http.FileServer only recognizes as an
-// implicit directory index under the ".html" name. Without this, "/"
-// falls through to FileServer's directory-listing behavior instead of the
-// game itself. Left as a server-side rewrite rather than renaming the
-// vendored file so future re-vendoring from upstream doesn't need to
-// repeat that change.
 func serveStatic(dir string, trainingMode bool) http.Handler {
 	fileServer := http.FileServer(http.Dir(dir))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -84,19 +72,6 @@ func serveStatic(dir string, trainingMode bool) http.Handler {
 	})
 }
 
-// serveIndexWithFingerprint injects the fingerprint.js <script> tag (see
-// ../../../src/fingerprint.js) plus a window.PACMAN_TRAINING_MODE flag
-// before serving index.htm — done here rather than editing the vendored
-// HTML file directly, same reasoning as serveStatic's index.htm rewrite
-// above: keeps re-vendoring from upstream a clean diff instead of a merge
-// conflict.
-//
-// trainingMode (TRAINING_MODE env var, see values.yaml's trainingMode.enabled)
-// controls whether nickname.js's page-load name field also carries the
-// hidden email/tel/address/postal autofill fields — see nickname.js and
-// README.md's "Bestenliste" section. Rendered server-side (not decided
-// client-side) so it takes effect for every visitor consistently and isn't
-// just a client-side toggle a curious visitor could flip via devtools.
 func serveIndexWithFingerprint(w http.ResponseWriter, dir string, trainingMode bool) {
 	content, err := os.ReadFile(dir + "/index.htm")
 	if err != nil {
@@ -109,7 +84,6 @@ func serveIndexWithFingerprint(w http.ResponseWriter, dir string, trainingMode b
 	_, _ = w.Write([]byte(injected))
 }
 
-// fingerprintPayload mirrors the JSON body posted by fingerprint.js.
 type fingerprintPayload struct {
 	Timezone            string  `json:"timezone"`
 	ScreenWidth         int     `json:"screen_width"`
@@ -134,10 +108,6 @@ type fingerprintPayload struct {
 	AutofillPostal      string  `json:"autofill_postal"`
 }
 
-// handleFingerprint receives the client-side fingerprint payload (see
-// fingerprint.js) and logs it as its own structured line, separate from
-// the per-request "http_access" line — correlate the two in Grafana by
-// remote_ip (and roughly by time; one fingerprint POST per page load).
 func handleFingerprint(logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -185,13 +155,6 @@ func getenv(key, fallback string) string {
 	return fallback
 }
 
-// parseUserAgent pulls a browser name/version and OS name out of a raw
-// User-Agent string, in browser/OS split for the Grafana table (see
-// docs/3-apps-workloads/300f0-pacman-visitor-tracking.md). Deliberately simple ordered
-// substring matching, not a full UA-parser library — order matters
-// because most UA strings claim to be several browsers at once (e.g.
-// Edge and Opera both include "Chrome/" and "Safari/" tokens for
-// compatibility, so their own markers must be checked first).
 func parseUserAgent(ua string) (browser, browserVersion, osName string) {
 	browser, browserVersion = "unknown", ""
 	switch {
@@ -212,17 +175,10 @@ func parseUserAgent(ua string) (browser, browserVersion, osName string) {
 	switch {
 	case strings.Contains(ua, "Windows"):
 		osName = "Windows"
-	// iPhone/iPad UAs contain "like Mac OS X" as a compatibility string
-	// (e.g. "... CPU iPhone OS 17_0 like Mac OS X ..."), so iOS must be
-	// checked before the plain "Mac OS X" case below or every iPhone
-	// would be misreported as macOS.
 	case strings.Contains(ua, "iPhone") || strings.Contains(ua, "iPad"):
 		osName = "iOS"
 	case strings.Contains(ua, "Mac OS X"):
 		osName = "macOS"
-	// Same reasoning as the browser switch above: Android UAs also
-	// contain "Linux" (e.g. "... (Linux; Android 10; ...) ..."), so
-	// Android must be checked first.
 	case strings.Contains(ua, "Android"):
 		osName = "Android"
 	case strings.Contains(ua, "Linux"):
@@ -233,9 +189,6 @@ func parseUserAgent(ua string) (browser, browserVersion, osName string) {
 	return browser, browserVersion, osName
 }
 
-// versionAfter returns the token right after marker, up to the next
-// space or ';', e.g. versionAfter("... Chrome/120.0.0.0 Safari/...",
-// "Chrome/") == "120.0.0.0".
 func versionAfter(ua, marker string) string {
 	idx := strings.Index(ua, marker)
 	if idx == -1 {
@@ -249,11 +202,6 @@ func versionAfter(ua, marker string) string {
 	return rest[:end]
 }
 
-// clientIP extracts the real visitor IP (v4 or v6). Cloudflare sets
-// CF-Connecting-IP at its edge — a single authoritative value — before the
-// request ever reaches the cluster, unlike X-Forwarded-For which can carry
-// a multi-hop chain. Falls back to the first X-Forwarded-For entry, then to
-// the raw TCP peer address.
 func clientIP(r *http.Request) string {
 	if ip := r.Header.Get("CF-Connecting-IP"); ip != "" {
 		return ip
@@ -296,26 +244,10 @@ func withAccessLog(logger *slog.Logger, geo *geoip2.Reader, next http.Handler) h
 			"status", rec.status,
 			"duration_ms", time.Since(start).Milliseconds(),
 			"user_agent", ua,
-			// Parsed out of user_agent server-side so Grafana can show
-			// them as their own table columns instead of everyone having
-			// to read the single raw User-Agent string — see
-			// parseUserAgent() below. Good-enough-for-a-classroom-demo
-			// coverage of the mainstream browsers/OSes, not a full UA
-			// parser library.
 			"ua_browser", browser,
 			"ua_browser_version", browserVersion,
 			"ua_os", osName,
 			"referer", r.Header.Get("Referer"),
-			// Everything below is still passive request-header capture,
-			// present on every request without the visitor doing anything
-			// beyond loading the page: browser/OS via Client Hints, content
-			// negotiation, fetch context, and the privacy opt-out signals
-			// themselves (DNT/GPC) — including a header that says "don't
-			// track me" in the log is itself part of the demo's point.
-			// Client-side fingerprinting (canvas/WebGL/audio/autofill
-			// harvesting) is a separate "client_fingerprint" log line, see
-			// fingerprint.js and handleFingerprint() below. See
-			// docs/3-apps-workloads/300f0-pacman-visitor-tracking.md.
 			"accept_language", r.Header.Get("Accept-Language"),
 			"accept_encoding", r.Header.Get("Accept-Encoding"),
 			"sec_ch_ua", r.Header.Get("Sec-Ch-Ua"),
@@ -326,9 +258,6 @@ func withAccessLog(logger *slog.Logger, geo *geoip2.Reader, next http.Handler) h
 			"sec_fetch_dest", r.Header.Get("Sec-Fetch-Dest"),
 			"dnt", r.Header.Get("DNT"),
 			"sec_gpc", r.Header.Get("Sec-GPC"),
-			// Cloudflare's own edge-derived country — independent
-			// cross-check against the local DB-IP GeoIP lookup below,
-			// resolved at the edge rather than from the local MMDB.
 			"cf_ipcountry", r.Header.Get("CF-IPCountry"),
 		}
 
