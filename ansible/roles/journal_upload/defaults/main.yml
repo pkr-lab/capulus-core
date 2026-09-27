@@ -10,4 +10,4 @@ journal_upload_ca_dest: /usr/local/share/ca-certificates/homeserver-root-ca.crt
 
 journal_upload_hosts_entry_enabled: true
 journal_upload_hosts_entry_name: "logs-write.tech.homeserver"
-journal_upload_hosts_entry_ip: "{{ network_static_ip | default('192.168.178.94') }}"
+journal_upload_hosts_entry_ip: "127.0.0.1"
