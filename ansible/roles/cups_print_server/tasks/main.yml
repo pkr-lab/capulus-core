@@ -54,6 +54,74 @@
       or ('_remote_any=' ~ (1 if cups_print_server_remote_any | bool else 0) not in cups_print_server_current_settings.stdout)
       or ('_share_printers=' ~ (1 if cups_print_server_share_printers | bool else 0) not in cups_print_server_current_settings.stdout)
 
+- name: Aktuelle Subject-Alternative-Names des cupsd-TLS-Zertifikats auslesen
+  ansible.builtin.command:
+    cmd: "openssl x509 -in /etc/cups/ssl/{{ cups_print_server_tls_names[0] }}.crt -noout -ext subjectAltName"
+  register: cups_print_server_current_cert_sans
+  changed_when: false
+  failed_when: false
+  when: cups_print_server_enabled | bool
+
+- name: "TLS-Zertifikat fuer cupsd mit allen bekannten Selbst-Identifikationsnamen erzeugen (siehe docs/2-betrieb-hardware/20040-printer.md)"
+  when:
+    - cups_print_server_enabled | bool
+    - >-
+      cups_print_server_current_cert_sans.rc != 0
+      or (cups_print_server_tls_names + [cups_print_server_tls_ip])
+         | reject('in', cups_print_server_current_cert_sans.stdout)
+         | list | length > 0
+  block:
+    - name: Temporaeres Schluessel-/Zertifikatspaar generieren
+      ansible.builtin.command:
+        argv:
+          - openssl
+          - req
+          - -x509
+          - -nodes
+          - -newkey
+          - rsa:2048
+          - -days
+          - "3650"
+          - -keyout
+          - /tmp/cups-print-server-tls.key
+          - -out
+          - /tmp/cups-print-server-tls.crt
+          - -subj
+          - "/C=US/CN={{ cups_print_server_tls_names[0] }}/O={{ cups_print_server_tls_names[0] }}"
+          - -addext
+          - "subjectAltName={{ (cups_print_server_tls_names | map('regex_replace', '^(.*)$', 'DNS:\\1') | list + ['IP:' + cups_print_server_tls_ip]) | join(',') }}"
+      changed_when: true
+
+    - name: Zertifikat unter allen Selbst-Identifikationsnamen ablegen
+      ansible.builtin.copy:
+        remote_src: true
+        src: /tmp/cups-print-server-tls.crt
+        dest: "/etc/cups/ssl/{{ item }}.crt"
+        owner: root
+        group: root
+        mode: "0644"
+      loop: "{{ cups_print_server_tls_names }}"
+      notify: Restart cups
+
+    - name: Key unter allen Selbst-Identifikationsnamen ablegen
+      ansible.builtin.copy:
+        remote_src: true
+        src: /tmp/cups-print-server-tls.key
+        dest: "/etc/cups/ssl/{{ item }}.key"
+        owner: root
+        group: root
+        mode: "0644"
+      loop: "{{ cups_print_server_tls_names }}"
+      notify: Restart cups
+
+    - name: Temporaere Zertifikatsdateien entfernen
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/cups-print-server-tls.key
+        - /tmp/cups-print-server-tls.crt
+
 - name: Build-Abhängigkeiten für den QPDL-Treiber installieren
   ansible.builtin.apt:
     name:
