@@ -1,14 +1,4 @@
 ---
-# ============================================================
-# Provision one cron schedule for a template inside the current
-# project. Idempotent: GET list → POST if a schedule with that
-# name doesn't exist yet, else PUT the full desired body so the
-# cron expression is self-healing on re-runs.
-#
-# Schedules are evaluated in SEMAPHORE_SCHEDULE_TIMEZONE (set to
-# Europe/Berlin in the Semaphore Deployment), so "0 6 * * *" fires
-# at 06:00 local time year-round.
-# ============================================================
 
 - name: List existing schedules in project {{ project_spec.name }}
   ansible.builtin.uri:

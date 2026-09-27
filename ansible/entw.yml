@@ -1,21 +1,4 @@
 ---
-# ============================================================
-# ENTW-Playbook — provisioniert die ENTW-VM (192.168.178.100), die per
-# `make worker-1-libvirt-host` auf worker-1 angelegt wurde
-# (docs/4-planung/40080-multi-cluster-entw-prod-tech.md, Phase 1.2).
-#
-# Eigenstaendiger k3s-Server (KEIN Beitritt zum Hauptcluster) mit eigener
-# ArgoCD-Instanz, die dem Branch `entw` folgt und nur die Apps aus
-# host_vars/entw-vm/vars.yml synchronisiert.
-#
-# Bewusst ohne tailscale/crowdsec/Watchdogs: die VM ist eine absichtlich
-# verwundbare Trainings-Umgebung, siehe host_vars/entw-vm/vars.yml.
-#
-# Run with:
-#   make entw
-# Dry-run:
-#   make entw-check
-# ============================================================
 
 - name: Deploy ENTW cluster (k3s + ArgoCD) in the worker-1 KVM VM
   hosts: entw-vm

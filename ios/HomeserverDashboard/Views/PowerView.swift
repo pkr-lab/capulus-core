@@ -1,10 +1,5 @@
 import SwiftUI
 
-/// Subpage 2: brightness, Wake-on-LAN + shutdown for worker-0/worker-1,
-/// and shutdown (only — the Homeserver has no WoL path, it's the always-on
-/// control plane, see docs/2-betrieb-hardware/20020-cluster-power-manager.md) for the Homeserver
-/// itself gated behind an extra warning + the same confirmation code as
-/// ArgoCD. Alerts live in their own tab, see AlertsView.swift.
 struct PowerView: View {
     @ObservedObject private var dashboardViewModel = DashboardViewModel.shared
     @ObservedObject private var powerViewModel = PowerViewModel.shared
@@ -131,11 +126,6 @@ struct PowerView: View {
         }
     }
 
-    /// Applies the new value once the finger lifts, not on every frame the
-    /// slider moves — brightness writes hit sysfs on the homeserver host
-    /// through two network hops (this app -> carplay-api -> power-agent),
-    /// so streaming every intermediate value would just queue up stale
-    /// writes behind the current one.
     private func handleBrightnessEditingChanged(_ editing: Bool) {
         isEditingBrightness = editing
         guard !editing else { return }
@@ -272,12 +262,6 @@ private struct HomeserverPowerCard: View {
     }
 }
 
-/// Wakes a device at the vereinsheim-alarmmonitor site, relayed through
-/// the Pi itself (banana-pi-wol-agent) — see RemoteWolAgentClient.swift.
-/// No online/offline dot: unlike worker-0/worker-1/Homeserver, this
-/// target has no host entry in carplay-api's dashboard, so there's no
-/// status to show beyond the outcome of the last wake attempt. WoL-only,
-/// no shutdown — capulus-core has no remote shutdown path for it either.
 private struct RemoteWolCard: View {
     let target: RemoteWolTarget
     let isBusy: Bool
@@ -339,10 +323,6 @@ private struct PowerButtonStyle: ButtonStyle {
     }
 }
 
-/// The extra warning + code prompt gating a Homeserver shutdown — the code
-/// is the same one used for the ArgoCD admin login (see
-/// docs/3-apps-workloads/300d0-carplay-api.md), checked server-side against
-/// SHUTDOWN_CONFIRMATION_CODE. The app never stores or pre-fills it.
 private struct HomeserverShutdownSheet: View {
     let isBusy: Bool
     let onConfirm: (String) -> Void

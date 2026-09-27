@@ -1,26 +1,7 @@
 ---
-# ============================================================
-# Cloudflare Tunnel — Werte-Datei (PROD-Kopie, eigener Tunnel homeserver-prod)
-#
-# Eigener Tunnel fuer den PROD-Cluster (docs/4-planung/40080, Baustein 3.3).
-# Es kommen nur Hosts an, deren DNS-Eintrag per `cloudflared tunnel route dns
-# homeserver-prod <host>` auf diesen Tunnel zeigt - der Wildcard `*.pke-lab.de`
-# zeigt weiter auf den TECH-Tunnel. Die Regel unten ist deshalb bewusst ein
-# Wildcard: welcher Host hier ankommt, entscheidet allein das DNS.
-#
-# Setup-Anleitung: docs/e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md
-# Deploy-Anleitung: docs/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md
-# ============================================================
 
-# Zwei Replicas = zwei unabhängige Edge-Verbindungen für denselben Tunnel
-# (cloudflared unterstützt das nativ — kein Leader-Election-Gedöns nötig).
-# Nur wirksam solange autoscaling.enabled=false ist — danach übernimmt der
-# HPA die Replica-Anzahl (minReplicas unten bewusst auf 2 gesetzt, um die
-# zwei unabhängigen Edge-Verbindungen als Minimum beizubehalten).
 replicaCount: 2
 
-# CPU-only: winziger Footprint (32Mi request/128Mi limit), nicht
-# speicherbound — eine Memory-Metrik würde hier nichts sinnvolles messen.
 autoscaling:
   enabled: true
   minReplicas: 2
@@ -30,8 +11,6 @@ autoscaling:
 image:
   repository: cloudflare/cloudflared
   pullPolicy: IfNotPresent
-  # Pinned für Reproduzierbarkeit. Releases:
-  # https://github.com/cloudflare/cloudflared/releases
   tag: "2026.8.3"
 
 nameOverride: ""
@@ -66,34 +45,15 @@ resources:
     memory: 128Mi
 
 tunnel:
-  # Name, den `cloudflared tunnel create <name>` vergeben hat.
   name: homeserver-prod
 
-  # Tunnel-ID (UUID aus `cloudflared tunnel create`). Kein Secret — nur ein
-  # Bezeichner, unbedenklich im Klartext in Git.
   id: "3faaf987-cda6-40f1-8bfe-7901b341f43e"
 
-  # credentials.json aus `cloudflared tunnel create` mit kubeseal versiegeln:
-  #   kubeseal --raw --namespace cloudflared --name cloudflared-credentials \
-  #     --controller-namespace sealed-secrets --controller-name sealed-secrets-controller \
-  #     --from-file=/pfad/zur/<tunnel-id>.json
-  # Details: docs/e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md → Schritt 3
   credentialsSecretName: cloudflared-credentials
   encryptedCredentialsJson: "AgCoxusvPvLZVK5mG0f3wrs4eZS7VmUJA6jAF4BMnx5BD/jaVxUiybjFm4qFHI8CyqUJvqblZXls0uZNpN0P9u4AvWLFKo5nqCIpxpBuacpMZrAnhw3Ih+5st/yMC1Fd4Hb3rxF1OcJ2j5ndgR2S1RZ4rg7ySFgWRkzTB3cojameauBJmd7a+RV1myCVMvlDA5KY/c4XU7CkHXWBp7lgFpfleNkCbZtBo8nSs+aEnhhns1W8+eiSLV/wSI2SRP8mlj4ORIkV6alIAU478lBmuYCCAHPcpb+feqF1v6/V7c8k5HH+agbyJxUoaL/1Yraaa/volPRiNllEtFNrz/5Ky1+wWeqetTMpM0TuJ2ijCKCUKuO1iiYPGAA8anuEVCFNKFjDLqgQF7BqutjuWHV8r24/YhUtBYDdygMlWWsWqEfcvhEgJbToJPUiY0ZUvoil/2ejw3ZJsLJS+7SuDEsndS62m2p9b2XOtCNvhf7iuGlyTKIn1S1+6MZ8zPqg+e/vbcYSAjexiciWo0JwDcd2ExqVzALPLAT4kxCr42qpzSTegRWJA2rIXwv28PtTTuC60n/8D/DlpBd+9eMe9CMp0/lzuUuqZF7RUTy9jRDccI2jwgMMU1J7jSEkST/FK0cYubDnhv9zgYxiyTIFLYtOmu0Qu3WpXCg1ck/POFW4V67PWR7NagnvYREWDnV0iPZ7c3l+I7UtUdoi3ZUJjOWQ3ieVEYD5Tu73DUr3vg0eU2IuCadBUlg+8YRwYCVGv1TJh0RZVJIEwtN3gfSnVx3pxDg6LkjEXflJwvulUJX04Jnxv3fM+/4ep2GLXUY9zzApxoQIiATmcMnODeSuPATqE6W7UhiIbXIoRuh/ZXizyWxHoayAEV0zfs6SkwTt50EMksTSAgnrjyMyShK1ctRgNg2xj5cLXMjFcYvUo+uqZjT3"
 
   ingress:
     rules:
-      # https://+443 statt http://+80 (22.08.2026, ursprünglich wegen
-      # Authelia, gilt unverändert für Authentik weiter — siehe
-      # docs/d-sicherheit/d0073-authentik-sso.md): Session-Cookies über eine
-      # als "unsicher" gemeldete Verbindung werden abgelehnt — auf dem alten
-      # Klartext-Port 80 setzte Traefik X-Forwarded-Proto: http, obwohl TLS
-      # längst an der Cloudflare-Edge terminiert war (401 statt Redirect für
-      # jeden extern exponierten, SSO-geschützten Host). noTLSVerify: true,
-      # weil das interne
-      # Zertifikat von der privaten Homeserver-CA kommt, die cloudflared
-      # nicht kennt — die eigentliche Sicherheitsgrenze ist ohnehin die
-      # Cloudflare-Tunnel-Verschlüsselung selbst, nicht diese interne Hop.
       - hostname: "*.pke-lab.de"
         service: https://traefik.kube-system.svc.cluster.local:443
         originRequest:

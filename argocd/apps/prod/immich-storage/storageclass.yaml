@@ -1,14 +1,3 @@
-# StorageClass "immich-nas": dedizierter NFS-Export für Immich auf dem
-# UGREEN NAS (192.168.178.97/volume2/immich-storage) — bewusst getrennt
-# von der generischen "nas"-StorageClass (/volume1/k8s-storage), siehe
-# docs/2-betrieb-hardware/20000-nas-storage.md und docs/3-apps-workloads/300c0-immich.md.
-#
-# Verwendung in PVCs:
-#   storageClassName: immich-nas
-#
-# Eigenschaften identisch zur "nas"-StorageClass (siehe dort für Details):
-# Retain-Reclaim, Immediate-Binding, keine Volume-Expansion, keine
-# NodeAffinity für nutzende Pods nötig.
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:

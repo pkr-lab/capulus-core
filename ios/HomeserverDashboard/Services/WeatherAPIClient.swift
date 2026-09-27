@@ -8,9 +8,6 @@ enum WeatherError: LocalizedError {
     }
 }
 
-/// Talks to Open-Meteo directly — no API key needed, same endpoint/params
-/// as Glance's "Wetter — Morgen" widget (see argocd/apps/glance/templates/
-/// configmap.yaml).
 final class WeatherAPIClient {
     private let session = URLSession(configuration: .default)
     private let decoder = JSONDecoder()

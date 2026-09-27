@@ -1,9 +1,11 @@
 # Rhein-Dashboard — Pegel, Warnungen & Schifffahrt Andernach
 
+> **Cluster:** TECH · Ordner `argocd/apps/tech/monitoring/ (Dashboard in Grafana)` · URL `https://grafana.tech.homeserver`. `kubectl`-Befehle in diesem Doc gelten für den TECH-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
+
 Das Grafana-Dashboard **"Rhein Andernach — Pegel & Warnungen"** zeigt
 Echtzeitdaten aus vier öffentlichen, kostenlosen Datenquellen.
 
-Grafana URL: **https://grafana.homeserver** → Dashboard: *Rhein Andernach*
+Grafana URL: **https://grafana.tech.homeserver** → Dashboard: *Rhein Andernach*
 
 ---
 

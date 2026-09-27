@@ -254,10 +254,12 @@ nicht wieder dieselbe Config schreibt.
 
 ## Bekannte Einschränkungen
 
-- **Single-Node-Setup:** Dieser Cluster hat nur einen Control-Plane-Node
-  (`homeserver`) — die in der k3s-Doku erwähnten HA-spezifischen Schritte
-  (Server einzeln nacheinander neu starten, Hash-Abgleich zwischen
-  Servern) entfallen hier komplett.
+- **Ein Control-Plane-Node je Cluster:** Jeder Cluster hat genau einen k3s-Server
+  (TECH: `homeserver`, PROD: `prod-vm`, ENTW: `entw-vm`) — die in der k3s-Doku
+  erwähnten HA-spezifischen Schritte (Server einzeln nacheinander neu starten,
+  Hash-Abgleich zwischen Servern) entfallen hier komplett. Secrets-Encryption und Audit-Log
+  laufen auf TECH und PROD (Defaults in `ansible/group_vars/all.yml`), auf ENTW sind sie bewusst
+  abgeschaltet (`host_vars/entw-vm/vars.yml`).
 - **Encryption-Key-Rotation danach:** Für künftige Rotationen (z. B.
   turnusmäßig, siehe Phase 7 in docs/d-sicherheit/d0010-security-hardening-roadmap.md) reicht danach ein einzelnes
   `sudo k3s secrets-encrypt rotate-keys` + Restart, kein erneutes

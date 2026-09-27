@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// ntfy alerts, most recent first.
 struct AlertsGridView: View {
     let alerts: [Alert]
     let onSelect: (Alert) -> Void

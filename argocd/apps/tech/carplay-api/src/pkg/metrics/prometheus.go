@@ -1,8 +1,3 @@
-// Package metrics exposes a hand-rolled Prometheus text-format /metrics
-// endpoint. A full client_golang dependency would be overkill for four
-// counters on a single-replica sidecar-sized service, and it's not the
-// dependency the spec actually asked for (Gin is) — this keeps the
-// dependency tree, image size, and go.sum small.
 package metrics
 
 import (
@@ -21,13 +16,11 @@ type requestKey struct {
 	status int
 }
 
-// Registry tracks HTTP request counts/durations and cache hit/miss counts
-// for this process. Safe for concurrent use.
 type Registry struct {
 	mu sync.Mutex
 
 	requestsTotal   map[requestKey]int64
-	durationSeconds map[requestKey]float64 // running sum, paired with requestsTotal as the count
+	durationSeconds map[requestKey]float64
 
 	cacheHits   int64
 	cacheMisses int64
@@ -52,8 +45,6 @@ func (r *Registry) observeRequest(method, path string, status int, duration time
 	r.durationSeconds[key] += duration.Seconds()
 }
 
-// RecordCacheHit/RecordCacheMiss let handlers report dashboard cache
-// effectiveness.
 func (r *Registry) RecordCacheHit() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -66,8 +57,6 @@ func (r *Registry) RecordCacheMiss() {
 	r.cacheMisses++
 }
 
-// Middleware records every request's method, route (not raw path, to avoid
-// unbounded label cardinality from unknown paths), status, and duration.
 func (r *Registry) Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
@@ -81,7 +70,6 @@ func (r *Registry) Middleware() gin.HandlerFunc {
 	}
 }
 
-// Handler renders the current state in Prometheus text exposition format.
 func (r *Registry) Handler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.String(200, r.render())

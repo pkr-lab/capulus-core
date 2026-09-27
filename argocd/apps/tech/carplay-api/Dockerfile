@@ -1,6 +1,3 @@
-# Multi-stage build: compile a static Go binary, ship it on a distroless
-# base with no shell, package manager, or libc — nothing an attacker could
-# use if the container were ever compromised, and nothing to patch either.
 FROM golang:1.27-alpine AS builder
 
 WORKDIR /build
@@ -15,8 +12,6 @@ FROM gcr.io/distroless/static-debian12:nonroot
 
 COPY --from=builder /carplay-api /carplay-api
 
-# Overridden by the Deployment's securityContext (runAsUser: 1000) — this is
-# just the image-level default if ever run outside that context.
 USER nonroot:nonroot
 
 EXPOSE 8080

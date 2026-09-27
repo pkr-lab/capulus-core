@@ -1,4 +1,10 @@
-# App-Umzug mit Daten nach PROD (Phase 3.3, Batch 4)
+# App-Umzug mit Daten nach PROD
+
+Runbook und Vorlage fuer den Umzug einer App samt Daten von TECH nach PROD. **Stand 21.09.2026:** die
+Apps mealie, paperless-ngx, wikijs, nextcloud, immich und xibosignage sind umgezogen, ihre
+TECH-Ordner sind entfernt. Die Kopier-Jobs bleiben als Vorlage fuer weitere Umzuege erhalten;
+Vaultwarden, Zammad und n8n bleiben bewusst in TECH
+([Planung](../../../docs/4-planung/40080-multi-cluster-entw-prod-tech.md)).
 
 Manuell anzuwendende Hilfsmanifeste, **nicht** von ArgoCD gelesen (weder das
 Manifest- noch das Charts-Set schauen in diesen Ordner).
@@ -10,11 +16,19 @@ dieselben Daten schreiben lassen.
 
 ## Weitere Apps
 
-Je App ein eigener Kopier-Job in diesem Ordner (`<app>-data-copy-job.yaml`), gleicher
-Ablauf wie bei mealie (unten). Bisher: `mealie-data-copy-job.yaml` (umgezogen),
-`paperless-ngx-data-copy-job.yaml` (4 Volumes, umgezogen),
-`wikijs-postgres-copy-job.yaml` (Postgres-Datenverzeichnis, eigener uid/Modus 0700). Push 1 = TECH und PROD auf
-`replicaCount: 0`, Endkopie, Push 2 = PROD auf `1` plus Hosts in `dnsmasq_prod_vm_hosts`.
+Je App ein eigener Kopier-Job in diesem Ordner, gleicher Ablauf wie bei mealie (unten):
+
+| Job | App | Besonderheit |
+|---|---|---|
+| `mealie-data-copy-job.yaml` | mealie | SQLite + Secret-Dateien, Vorlage fuer weitere `nas`-Apps |
+| `paperless-ngx-data-copy-job.yaml` | paperless-ngx | 4 Volumes |
+| `wikijs-postgres-copy-job.yaml` | wikijs | Postgres-Datenverzeichnis, eigener uid/Modus 0700 |
+| `nextcloud-data-copy-job.yaml` | nextcloud | `html`- und `data`-Volume |
+| `immich-data-sync-job.yaml` | immich | rsync grosser Foto-Bestaende, Postgres-Schalter |
+| `xibosignage-data-copy-job.yaml` | xibosignage | CMS-Daten, MySQL-Schalter |
+
+Ablauf: Push 1 = TECH und PROD auf `replicaCount: 0`, Endkopie, Push 2 = PROD auf `1` plus Hosts in
+`dnsmasq_prod_vm_hosts`.
 
 ## mealie (Vorlage fuer weitere `nas`-Apps)
 
@@ -82,7 +96,7 @@ bei Authentik in TECH an. Einmalig einzurichten:
 ### B. Umschalten (kurze Pause fuer die Nutzer)
 
 5. TECH-mealie stoppen **per Git**: `replicaCount: 0` in
-   `argocd/apps/prod/mealie/values.yaml`, pushen (ein `kubectl scale`
+   `argocd/apps/tech/mealie/values.yaml`, pushen (ein `kubectl scale`
    wuerde von selfHeal zurueckgesetzt). Warten bis der Pod weg ist.
 6. Endkopie (PROD-mealie muss dabei auf 0 stehen): Job erneut anwenden (leert das Ziel und kopiert neu). In den
    Logs muss `mealie.db` stehen; danach Job loeschen.
@@ -105,5 +119,5 @@ die seit dem Umschalten in PROD entstanden sind, fehlen dann in TECH.
 
 ### D. Aufraeumen (erst nach einigen Tagen Betrieb)
 
-TECH-Ordner `argocd/apps/prod/mealie/` entfernen. Die alten PVs bleiben
+TECH-Ordner `argocd/apps/tech/mealie/` entfernen. Die alten PVs bleiben
 wegen `Retain` erhalten; das NAS-Verzeichnis erst spaeter von Hand loeschen.

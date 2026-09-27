@@ -1,12 +1,5 @@
 ---
-# ============================================================
-# semaphore_secrets/tasks/main.yml
-# Generates (idempotent) the bootstrap material Semaphore needs and
-# pushes it into k8s as Secret `semaphore-bootstrap` in the `semaphore`
-# namespace. The Semaphore Deployment (managed by ArgoCD) consumes it.
-# ============================================================
 
-# ---- State directory on the home-server ---------------------
 - name: Ensure semaphore state directory exists
   ansible.builtin.file:
     path: "{{ semaphore_state_dir }}"
@@ -15,7 +8,6 @@
     group: root
     mode: '0700'
 
-# ---- Admin password ----------------------------------------
 - name: Check whether the admin password file already exists
   ansible.builtin.stat:
     path: "{{ semaphore_state_dir }}/admin_password"
@@ -48,7 +40,6 @@
     semaphore_admin_password: "{{ semaphore_admin_pw_slurp.content | b64decode | trim }}"
   no_log: true
 
-# ---- Access key encryption key (32 bytes, base64) ----------
 - name: Check whether the access key encryption file already exists
   ansible.builtin.stat:
     path: "{{ semaphore_state_dir }}/access_key_encryption"
@@ -78,7 +69,6 @@
     semaphore_access_key_encryption: "{{ semaphore_aek_slurp.content | b64decode | trim }}"
   no_log: true
 
-# ---- SSH keypair (dedicated for Semaphore → targets) -------
 - name: Generate Semaphore SSH keypair (first run only)
   ansible.builtin.command:
     cmd: "ssh-keygen -t ed25519 -N '' -C 'semaphore@homeserver' -f {{ semaphore_state_dir }}/id_ed25519"
@@ -115,7 +105,6 @@
     semaphore_ssh_public_key: "{{ semaphore_ssh_pub_slurp.content | b64decode | trim }}"
   no_log: true
 
-# ---- k8s namespace ----------------------------------------
 - name: Ensure semaphore namespace exists
   ansible.builtin.shell:
     cmd: |
@@ -128,7 +117,6 @@
   register: semaphore_ns_apply
   changed_when: "'created' in semaphore_ns_apply.stdout"
 
-# ---- Bootstrap Secret -------------------------------------
 - name: Render bootstrap Secret manifest
   ansible.builtin.copy:
     dest: /tmp/semaphore-bootstrap-secret.yaml
@@ -165,7 +153,6 @@
     path: /tmp/semaphore-bootstrap-secret.yaml
     state: absent
 
-# ---- Operator summary -------------------------------------
 - name: Display Semaphore bootstrap summary
   ansible.builtin.debug:
     msg:

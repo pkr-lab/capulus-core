@@ -1,14 +1,4 @@
 ---
-# ============================================================
-# xibo_kiosk role — Raspberry-Pi-Bilder-Slideshow (xibosignage)
-# ============================================================
-# Kein echter Xibo-Player: Xibo unterstützt keinen Raspberry Pi offiziell
-# (docs/3-apps-workloads/300e0-xibosignage.md). Stattdessen mountet der Pi read-only den
-# NFS-Ordner "xibosignage-display" (vom n8n-Workflow befüllt, siehe
-# argocd/apps/tech/n8n/workflows/xibosignage-inbox-to-display.json) und zeigt
-# dessen Inhalt per Chromium-Kiosk gegen einen winzigen lokalen
-# Python-Webserver als Slideshow.
-# ============================================================
 
 - name: Pakete für NFS-Mount + Kiosk installieren
   ansible.builtin.apt:
@@ -26,11 +16,6 @@
   when: xibo_kiosk_enabled | bool
 
 - name: xibosignage-display vor Attribut-Fix ggf. aushängen
-  # Idempotenz bei Wiederholungslaeufen: war der NFS-Mount aus einem
-  # frueheren (ggf. abgebrochenen) Lauf noch aktiv, blockt der read-only
-  # NFS-Export den chown/chmod im naechsten Task ("Das Dateisystem ist nur
-  # lesbar", da die Mountpoint-Attribute dann die des Exports sind statt
-  # der lokalen Verzeichnis-Attribute).
   ansible.posix.mount:
     path: "{{ xibo_kiosk_mount_point }}"
     state: unmounted
@@ -44,11 +29,6 @@
     owner: root
     group: root
     mode: "0755"
-  # Nur anfassen, solange dort noch nichts gemountet ist — ist der NFS-Mount
-  # (von einem vorherigen Lauf oder seit dem letzten Boot) bereits aktiv,
-  # würde chown/chmod auf die read-only NFS-Freigabe selbst durchschlagen
-  # statt auf das darunterliegende lokale Verzeichnis ("Dateisystem ist nur
-  # lesbar").
   when: xibo_kiosk_enabled | bool and xibo_kiosk_mount_point not in (ansible_mounts | map(attribute='mount') | list)
 
 - name: xibosignage-display per NFS mounten (read-only)

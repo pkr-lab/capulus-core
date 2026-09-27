@@ -1,21 +1,5 @@
 name: Build Workload Images
 
-# Builds/pushes the three custom-built workload images (pacman, carplay-api,
-# n8n) to GHCR whenever their build context changes on main. Replaces the
-# previous manual `argo submit --from workflowtemplate/kaniko-build-push`
-# step — see argocd/apps/tech/pacman/README.md#image-bauen.
-#
-# On pull requests the same build runs WITHOUT pushing (Dockerfile/Go-Code
-# muss vor dem Merge bauen; ein kaputter Renovate-Bump fiel sonst erst nach dem
-# Merge im Image-Build auf). Kein Required-Check: der Pfadfilter unten laesst den
-# Workflow bei PRs ohne Image-Aenderung gar nicht erst laufen.
-#
-# Nach dem Push oeffnet der Lauf einen PR, der `image.tag` in der values.yaml der App auf
-# den neuen Tag setzt (scripts/bump-image-tag.py, Branch bump/<app>-image). Es wird nichts
-# direkt auf main committet: der PR laeuft durch die Pflicht-Checks und wird von Hand gemergt
-# (Merge = Rollout in TECH). Braucht ein PAT (PROMOTE_TOKEN, ersatzweise RENOVATE_TOKEN), weil
-# PRs mit dem Standard-GITHUB_TOKEN keine CI ausloesen; ohne PAT bleibt es beim Hinweis im
-# Job-Summary und der Tag wird von Hand eingetragen. Details: f0060-build-images.md
 on:
   push:
     branches: [main]
@@ -53,8 +37,6 @@ permissions:
 
 concurrency:
   group: build-images-${{ github.ref }}
-  # Push auf main: nie abbrechen (ein halb gepushtes Image waere schlimmer).
-  # PR: ein neuer Push macht den alten Probebuild ueberfluessig.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -85,10 +67,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Per-app gate: the workflow-level `paths` filter above only decides
-      # whether the run happens at all, not which of the 3 matrix apps
-      # actually changed - without this, editing just pacman's Dockerfile
-      # would rebuild carplay-api and n8n too.
       - name: Decide whether to build this app
         id: gate
         env:

@@ -1,9 +1,5 @@
 import SwiftUI
 
-/// Tankstellen-Seite im Alltag-Modus: Preise der drei festen Glance-
-/// Stationen (siehe argocd/apps/glance/templates/configmap.yaml) plus die
-/// nächstgelegene Nicht-Shell/Aral-Station zum aktuellen Standort. Zeigt
-/// nur Super (E5) und Super E10 — kein Diesel.
 struct TankstellenView: View {
     @State private var fixedPrices: [String: TankerkoenigPricesResponse.StationPrices] = [:]
     @State private var nearestStation: TankerkoenigListResponse.NearbyStation?
@@ -99,9 +95,6 @@ struct TankstellenView: View {
                 longitude: location.coordinate.longitude,
                 radiusKm: Constants.Tankerkoenig.nearbySearchRadiusKm
             )
-            // `sort=dist` already orders ascending by distance, so the
-            // first station not on the excluded-brands list is the nearest
-            // qualifying one.
             nearestStation = nearby.first { station in
                 !Constants.Tankerkoenig.excludedBrands.contains { $0.caseInsensitiveCompare(station.brand) == .orderedSame }
             }

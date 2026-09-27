@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# Managed by Ansible (thermal_watchdog role) — do not edit manually.
-#
-# Polls /sys/class/hwmon directly (no Prometheus/k8s in the loop) for the
-# hottest sensor on this host. If it stays at/above THRESHOLD_C for
-# SUSTAIN_SECONDS, sends an ntfy notification and powers the host off.
-# Runs independently of the cluster so the safety cutoff still works if
-# the cluster itself is struggling because of the heat.
 set -euo pipefail
 
 THRESHOLD_C="${THRESHOLD_C:?THRESHOLD_C not set}"
@@ -14,8 +7,6 @@ POLL_SECONDS="${POLL_SECONDS:?POLL_SECONDS not set}"
 NTFY_HOST="${NTFY_HOST:?NTFY_HOST not set}"
 NTFY_IP="${NTFY_IP:?NTFY_IP not set}"
 NTFY_TOPIC="${NTFY_TOPIC:?NTFY_TOPIC not set}"
-# Set DRY_RUN=1 (e.g. via `systemctl edit --runtime thermal-watchdog`) to
-# test the full detection → notify path without actually powering off.
 DRY_RUN="${DRY_RUN:-0}"
 
 over_since=0

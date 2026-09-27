@@ -3,11 +3,10 @@
 Architektur- und Rollout-Plan für die Einführung von
 [Authentik](https://goauthentik.io/) als zentralen SSO/Identity-Provider vor
 allen Apps mit eigener Anmeldemaske, LDAP-backed gegen das bestehende
-`lldap`, komplett über Infrastructure-as-Code gesteuert. Noch **nicht
-umgesetzt** — dieses Doc hält den recherchierten und mit dem Nutzer
-abgestimmten Plan fest, bevor der erste Rollout-Batch beginnt. Sobald
-Umsetzung + Verifikation abgeschlossen sind, wandert der Ist-Zustand als
-eigenes Doc nach `d-sicherheit/d0073-authentik-sso.md`, dieses Planungsdoc
+`lldap`, komplett über Infrastructure-as-Code gesteuert. **Umgesetzt (seit 06.09.2026):**
+dieses Doc hält den recherchierten und mit dem Nutzer abgestimmten
+Plan fest, der Ist-Zustand steht in
+[d0073-authentik-sso.md](../d-sicherheit/d0073-authentik-sso.md). Dieses Planungsdoc
 bleibt als historischer Kontext bestehen (Konvention analog zu
 [40000-authelia-sso.md](40000-authelia-sso.md)).
 

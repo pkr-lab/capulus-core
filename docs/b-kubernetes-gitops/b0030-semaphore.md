@@ -10,15 +10,15 @@ nie wieder eine YAML-Datei an, um eine neue Aktion auszulösen.
 
 ## Was du am Ende hast
 
-- **`https://semaphore.homeserver`** im LAN und im Tailnet — dnsmasq
+- **`https://semaphore.tech.homeserver`** im LAN und im Tailnet — dnsmasq
   hört auf der LAN-IP **und** auf `tailscale0`, also kommt jeder
   Tailscale-Client an die `*.homeserver`-Namen ran.
   ([Wichtiger Hintergrund zur DNS-Topologie und warum der Home-Server
   *nicht* der LAN-DNS-Server sein sollte → docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md))
 - Ein-Klick-Run von Playbooks aus beliebigen Git-Repos
-  (z.B. `home-server`, `ugreen-nas`, später beliebig viele mehr).
+  (z.B. `home-server`, `worker-0`, später beliebig viele mehr).
 - Geteilter SSH-Key, der von Ansible verwaltet und automatisch auf alle
-  konfigurierten Targets (Raspberry Pi, UGREEN NAS, …) verteilt wird.
+  konfigurierten Targets (Homeserver, Worker, Raspberry-/Banana-Pi-Kiosks, …) verteilt wird.
 - Geteiltes Ansible-Vault-Password, sicher in einem k8s Secret abgelegt.
 
 ### Zugriff über Tailscale (einmaliger Admin-Schritt)
@@ -49,7 +49,7 @@ dass deine Tailscale-Clients den Home-Server als Nameserver für die
 
 Test (vom Tailscale-Client):
 ```bash
-nslookup semaphore.homeserver
+nslookup semaphore.tech.homeserver
 # Expected: 192.168.178.94  (von dnsmasq aufgelöst)
 ```
 
@@ -107,13 +107,10 @@ raspberry_pis:
       ansible_host: 192.168.178.50
       ansible_user: pi
       ansible_ssh_private_key_file: ~/.ssh/id_ed25519
-
-ugreen_nas:
-  hosts:
-    ugreen:
-      ansible_host: 192.168.178.40
-      ansible_user: ubuntu
 ```
+
+> Die UGREEN NAS (`ugreen_nas` im Inventory) ist kein Semaphore-Target: sie läuft mit der Firmware UGOS, RAID
+> und NFS werden manuell über deren Web-UI eingerichtet, es gibt kein Playbook dafür.
 
 ### 3. Playbook laufen lassen
 
@@ -130,7 +127,7 @@ Ausgabe am Ende:
 ==================================================
 Semaphore UI bootstrap material ready
 ==================================================
-URL:        https://semaphore.homeserver
+URL:        https://semaphore.tech.homeserver
 Username:   admin
 Password:   stored in /etc/semaphore-secrets/admin_password
 SSH pubkey: /etc/semaphore-secrets/id_ed25519.pub
@@ -146,7 +143,7 @@ ssh ubuntu@homeserver "sudo cat /etc/semaphore-secrets/admin_password"
 ### 4. ArgoCD wartet & deployt
 
 Nach max. 3 Minuten erscheint in ArgoCD eine neue Application `semaphore`,
-ein Pod startet, Traefik routet `semaphore.homeserver` darauf.
+ein Pod startet, Traefik routet `semaphore.tech.homeserver` darauf.
 
 ```bash
 kubectl -n semaphore get pods,svc,ingress
@@ -164,11 +161,11 @@ nichts mehr klicken außer ▶ **Run**.
 | Project              | Repository                                                | Inventory   | Template                  | Playbook                  | Schedule       |
 |----------------------|-----------------------------------------------------------|-------------|---------------------------|---------------------------|----------------|
 | `home-server`        | dieses Repo (`argocd_repo_url` aus `group_vars/all.yml`)  | `homeservers` (192.168.178.94) | `Deploy Home Server`      | `ansible/site.yml`        | täglich 06:00  |
-| `ugreen-nas`         | dieses Repo (`argocd_repo_url` aus `group_vars/all.yml`)  | `ugreen_nas` (192.168.178.118)  | `Deploy UGREEN NAS`       | `ansible/ugreen-nas.yml`  | —              |
+| `worker-0`           | dieses Repo (`argocd_repo_url` aus `group_vars/all.yml`)  | `worker_0_only` (192.168.178.95) | `Deploy worker-0`         | `ansible/worker-0.yml`    | —              |
 
 ### Workflow
 
-1. Browser auf `https://semaphore.homeserver`.
+1. Browser auf `https://semaphore.tech.homeserver`.
 2. Login mit `admin` + Passwort aus `/etc/semaphore-secrets/admin_password`:
    ```bash
    ssh ubuntu@homeserver "sudo cat /etc/semaphore-secrets/admin_password"
@@ -189,7 +186,7 @@ erweitern und `make semaphore-bootstrap` laufen lassen:
 semaphore_projects:
   - name: home-server          # existierende Defaults beibehalten
     # ...
-  - name: ugreen-nas
+  - name: worker-0             # existierende Defaults beibehalten
     # ...
   - name: my-new-project       # neu
     repository:
@@ -202,7 +199,7 @@ semaphore_projects:
         ssh_key: semaphore-ssh-key
         content: |
           [targets]
-          host1 ansible_host=192.168.178.99
+          host1 ansible_host=192.168.178.150
     templates:
       - name: "Deploy My Thing"
         playbook: site.yml
@@ -267,7 +264,7 @@ du es per UI anlegen:
 
 | Symptom                           | Check                                                                  |
 |-----------------------------------|------------------------------------------------------------------------|
-| `semaphore.homeserver` löst nicht | `semaphore` in `dnsmasq_hosts` (group_vars/all.yml) eintragen, dann `make dnsmasq` |
+| `semaphore.tech.homeserver` löst nicht | `dig +short semaphore.tech.homeserver @192.168.178.94` prüfen (Wildcard `*.homeserver`), sonst `make dnsmasq` erneut ausführen |
 | Pod CrashLoopBackOff              | `kubectl -n semaphore logs deploy/semaphore` — meist fehlt das Bootstrap-Secret |
 | Playbook scheitert mit "Permission denied (publickey)" | `make semaphore-targets` lief nicht — Public Key fehlt in authorized_keys auf dem Ziel |
 | Vault-Passwort wird nicht erkannt | `semaphore_vault_password` ist leer oder mit falschem PW verschlüsselt; sicherstellen dass `ANSIBLE_VAULT_PASSWORD_FILE` im Semaphore Default-Environment gesetzt ist (wird ab Bootstrap automatisch injiziert) |

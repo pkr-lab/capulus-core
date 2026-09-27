@@ -1,8 +1,4 @@
 ---
-# ============================================================
-# xibosignage-Displays-Playbook (Raspberry Pi 3 B+, Bilder-Slideshow)
-# ============================================================
-
 
 - name: xibosignage-Displays einrichten
   hosts: xibo_displays

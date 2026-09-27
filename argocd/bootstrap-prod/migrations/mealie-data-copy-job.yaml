@@ -1,16 +1,3 @@
-# Kopiert die mealie-Daten aus dem TECH-Verzeichnis auf dem NAS in das
-# neue PROD-Volume (PVC mealie-data). Manuell in PROD anwenden, NICHT per
-# ArgoCD (Ordner argocd/bootstrap-prod/migrations wird von keinem Set gelesen):
-#   kubectl apply -f argocd/bootstrap-prod/migrations/mealie-data-copy-job.yaml   (Kontext PROD / per ssh)
-#   kubectl -n mealie logs job/mealie-data-copy
-#   kubectl -n mealie delete job mealie-data-copy
-# Ablauf siehe README.md in diesem Ordner.
-#
-# Lesen aus dem alten TECH-Verzeichnis nur lesend (readOnly). Laeuft als
-# uid 1000 wie die mealie-Dateien, damit Besitzer/Rechte auch bei NFS-Root-
-# Squash stimmen. Das Zielvolume wird vor dem Kopieren geleert, damit ein
-# wiederholter Lauf exakt den TECH-Stand ergibt (SQLite: nur mit gestopptem
-# TECH-mealie kopieren, sonst ist die DB evtl. inkonsistent).
 apiVersion: batch/v1
 kind: Job
 metadata:

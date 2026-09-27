@@ -1,19 +1,4 @@
 ---
-# ============================================================
-# power_agent — Defaults
-# ============================================================
-# Privilegierter HTTP-Agent auf dem Homeserver-Host (NICHT im k8s-Cluster,
-# siehe carplay-api podSecurityContext) für die Dinge, die der carplay-api-
-# Pod bewusst nicht selbst darf: Bildschirmhelligkeit (sysfs), manuelles
-# Wake-on-LAN und Poweroff für worker-0/worker-1 sowie den eigenen
-# Poweroff des Homeservers.
-#
-# Muss NACH cluster_power_manager im Playbook stehen — nutzt dessen
-# SSH-Key, kubeconfig, State-Dir und Worker-Liste weiter (siehe unten),
-# damit manuelle Aktionen aus der App und der automatische
-# Last-Watchdog dieselbe Buchführung (woke_at-Dateien) teilen statt sich
-# gegenseitig zu widersprechen.
-# ============================================================
 
 power_agent_enabled: true
 
@@ -29,7 +14,6 @@ power_agent_poweroff_bin: /usr/sbin/poweroff
 
 power_agent_node_name: "{{ inventory_hostname }}"
 
-# ---- Wiederverwendet von cluster_power_manager -------------------------
 power_agent_ssh_user: "{{ cluster_power_manager_ssh_user }}"
 power_agent_ssh_key: "{{ cluster_power_manager_ssh_key_path }}"
 power_agent_kubeconfig: "{{ cluster_power_manager_kubeconfig }}"

@@ -9,26 +9,10 @@ image:
 nameOverride: ""
 fullnameOverride: ""
 
-# Ziel-Webhook in n8n, an den erfolgreich authentifizierte Requests 1:1
-# weitergereicht werden (Methode, Query-String und Body bleiben erhalten).
-# Interner Cluster-DNS-Name (Service "n8n" im Namespace "n8n", Port 80) --
-# bewusst NICHT ueber Traefik/n8n.prod.homeserver, das waere ein unnoetiger
-# Umweg ueber den Ingress-Controller fuer einen reinen Server-zu-Server-Call.
 n8nTargetUrl: "http://n8n.n8n.svc.cluster.local/webhook/alamos-einsatz"
 n8nNamespace: n8n
 n8nTargetPort: 5678
 
-# SealedSecret mit dem geheimen Pfad-Token, siehe templates/sealedsecret.yaml.
-# Erzeugen/rotieren -- WICHTIG: "openssl rand -hex 24" haengt selbst ein
-# Newline an, "| kubeseal" wuerde das als Teil des Tokens mitversiegeln.
-# Der Relay-Pfad-Vergleich in configmap-script.yaml ist exakt (kein trim),
-# ein mitversiegeltes "\n" macht den Pfad dauerhaft unmatchbar -> 404 fuer
-# jeden Request, auch mit korrektem Token in der URL (siehe
-# docs/3-apps-workloads/300i0-alamos-relay.md, Fehlerbehebung). Deshalb
-# "tr -d '\n'" nicht vergessen:
-#   openssl rand -hex 24 | tr -d '\n' | kubeseal --raw --namespace alamos-relay \
-#     --name alamos-relay-secrets --controller-namespace sealed-secrets \
-#     --controller-name sealed-secrets-controller --from-file=/dev/stdin
 secrets:
   name: alamos-relay-secrets
   encryptedToken: "AgA829YB+PiiBiM5ybKa1XYkxAsfgpcqzAvkBFkiXGN8kvN15ml05dm54gAGp2ODOfGP45zwI1Y97Y2qv+i9S5a6iLQzid9aroMOS2s/16KhSgzEwXK+5mMpynec2zeh1resSLQHJ/56JiEvUw3V2adsFuAO+ipA8hdFDFvpus5iZKPCBwzE47VjT9Q/bDJBdiMMFRU0N9q2G8w+UHhwUCY+mRHTBqL9S8mu6nigPB1xjGUCYiXq/IBHVA2/dANAKzQyqHN9iIGKyARpdYn2anR1jZ79JdSO1daniZKmoy1BlySszMCV7pivxhpP5uSC3bKcxJvMhJ8bl2kfxyFX7erSOu6QFvsEAp/Yb85KHxJ2WXdmC6dq4CpKsKqDhcFwGc7ED/zl37QA8YGXU7Ihk/st7rR3/m48lvC8wT72BWzi/dqRVlgVe6ndq3Zj0SdcJLCajWeaTp6lGvKUmr9LRcu+QQ4oVXGWI+kL9vjPTdILLB/E4KDbDh0Ak86FSqv+Az6jpV3MJG6tFgtG9Ltey98bxq84AFxMaCeefJllf7NjH6zA/6gQiz2qH6NV13dJEpzMYoyqH4HrdYtjIP3G+bKRLFfjqz6cMsyNYOat6bKVAyiEjtRwtAMv9h63CHgiMezkyj57zwICBmRIEhdYHFLylxk5Ia77BNZrYZsZ1ZQVPrvPKbkXseFv6cTAbezzQR3FJorWyrxHjLyLauHOuuLwEKcs0ulAqmNauWrVOuw423HxJ5CJq8dgguapBq2a1D8="
@@ -46,12 +30,6 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-    # Externer Host -- per Cloudflare-Tunnel-Wildcard (cloudflared) an
-    # Traefik weitergereicht, siehe docs/c-netzwerk-dns/c0040-domain-tiers.md.
-    # Genau DAS ist der Zweck dieser App: dieser eine, oeffentlich erreichbare
-    # Pfad soll existieren, damit ALAMOS AMweb ihn ohne PNA-Blockade und ohne
-    # n8n selbst oeffentlich zu machen aufrufen kann -- siehe
-    # docs/3-apps-workloads/300i0-alamos-relay.md.
     - host: alamos-relay-prod.pke-lab.de
       paths:
         - path: /

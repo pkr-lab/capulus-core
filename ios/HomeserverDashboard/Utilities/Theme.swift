@@ -1,11 +1,5 @@
 import SwiftUI
 
-/// Design tokens ported from github.com/pkr-lab/EDV-Kretzer (css/style.css
-/// custom properties) so the app reads as the same brand as the website:
-/// deep navy + red on a near-black gradient, glassmorphic cards. The app
-/// forces dark mode everywhere (see HomeserverDashboardApp.swift) rather than adapting
-/// to the system appearance — the site itself has no light variant to
-/// match against.
 enum Theme {
     // MARK: Brand colors (--color-* in style.css)
     static let primary = Color(hex: 0x0f3a5d)
@@ -29,8 +23,6 @@ enum Theme {
     static let radiusPill: CGFloat = 999
 
     // MARK: Status colors (semantic, not brand — green/orange/red keep
-    // their universal meaning for online/warning/offline regardless of
-    // brand palette)
     static let statusGood = Color(hex: 0x34c759)
     static let statusWarning = Color(hex: 0xff9500)
     static let statusBad = Color(hex: 0xff3b30)
@@ -56,9 +48,6 @@ extension Color {
     }
 }
 
-/// The glassmorphic card every screen is built from — blurred translucent
-/// background, hairline border, generous corner radius, matching
-/// EDV-Kretzer's --glass-* tokens.
 struct GlassCard<Content: View>: View {
     var padding: CGFloat = 16
     @ViewBuilder var content: () -> Content
@@ -76,8 +65,6 @@ struct GlassCard<Content: View>: View {
     }
 }
 
-/// Titled section wrapper used across Home/Brightness/Power — same visual
-/// language as the phone dashboard's previous SectionCard, now on glass.
 struct SectionCard<Content: View>: View {
     let title: String
     var systemImage: String?
@@ -102,17 +89,12 @@ struct SectionCard<Content: View>: View {
     }
 }
 
-/// Screen-level scaffold: background gradient + scrollable glass content,
-/// reused by every tab so the app reads as one consistent surface.
 struct ScreenBackground<Content: View>: View {
     @ViewBuilder var content: () -> Content
 
     var body: some View {
         ZStack {
             Theme.backgroundGradient.ignoresSafeArea()
-            // Caps content at a phone-like column width so cards don't
-            // stretch edge-to-edge on iPad — has no effect on iPhone,
-            // where the screen is already narrower than the cap.
             content()
                 .frame(maxWidth: 700)
                 .frame(maxWidth: .infinity)

@@ -1,15 +1,4 @@
 ---
-# ============================================================
-# Provision one environment entry inside the current project.
-# Semaphore v2.18+ strips the Pod's container env when spawning
-# ansible tasks — env vars like ANSIBLE_VAULT_PASSWORD_FILE only
-# reach the playbook process if injected via a per-template
-# environment. Without this, vault-encrypted vars cannot be
-# decrypted during a Semaphore-triggered run.
-#
-# `env_spec.env` is a dict; we JSON-encode it because the
-# Semaphore API expects the `env` field as a stringified JSON object.
-# ============================================================
 
 - name: List existing environments in project {{ project_spec.name }}
   ansible.builtin.uri:

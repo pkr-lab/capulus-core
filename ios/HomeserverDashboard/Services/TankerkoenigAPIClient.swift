@@ -14,10 +14,6 @@ enum TankerkoenigError: LocalizedError {
     }
 }
 
-/// Talks to the Tankerkönig API directly from the app — same public API
-/// Glance's "Tankpreise" widget uses (see argocd/apps/glance/templates/
-/// configmap.yaml), just with its own API key in this device's Keychain
-/// instead of the cluster's sealed secret.
 final class TankerkoenigAPIClient {
     private let session = URLSession(configuration: .default)
     private let decoder = JSONDecoder()

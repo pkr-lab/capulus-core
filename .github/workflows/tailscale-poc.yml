@@ -1,16 +1,5 @@
 name: Tailscale Runner PoC
 
-# Diagnose fuer die Promotion-Kette (docs/f-cicd-automatisierung/f00a0-tailscale-runner-poc.md):
-# Erreicht ein GitHub-Runner ueber Tailscale die beiden ArgoCD-Instanzen und die ENTW-Apps?
-# Nur manuell startbar. Der Lauf testet jeden Weg einzeln, gibt eine Tabelle aus und schlaegt
-# erst am Ende fehl, wenn ein fuer die Promotion noetiger Weg nicht funktioniert.
-#
-# Wege (ArgoCD lauscht per NodePort 30080 im Klartext, `server.insecure`; 30443 ist zurueckgesetzt):
-#   hub-lan  Hub-ArgoCD (TECH+PROD) ueber das LAN-Subnetz (Subnet-Route)      -> Grant auf 192.168.178.94:30080  [noetig]
-#   entw     ENTW-ArgoCD auf entw-vm (nur per Subnet-Route erreichbar)         -> Grant auf 192.168.178.100:30080 [noetig]
-#   smoke    ENTW-Ingress (Host whoami.dev.homeserver) fuer Smoke-Tests        -> Grant auf 192.168.178.100:80   [optional]
-#   hub      Hub-ArgoCD ueber die Tailnet-Adresse des Homeservers              -> Grant auf tag:tech-node:30080  [nur Diagnose]
-# Setup: OAuth-Client als Repo-Secrets TS_OAUTH_CLIENT_ID und TS_OAUTH_SECRET (docs/f-cicd-automatisierung/f00b0-promotion-chain.md#netzweg-und-zugriff).
 on:
   workflow_dispatch: {}
 
@@ -27,8 +16,6 @@ jobs:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
-          # Kein `args: --accept-routes`: die Action uebergibt es selbst, ein zweites Mal bricht
-          # `tailscale up` mit "flag provided multiple times" ab (und die Action meldet trotzdem Erfolg).
           version: latest
 
       - name: Verify tailnet connection

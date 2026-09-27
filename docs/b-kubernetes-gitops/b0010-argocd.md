@@ -2,6 +2,18 @@
 
 Dieses Dokument behandelt ArgoCD-Zugriff, Konfiguration und GitOps-Alltag.
 
+## Welche ArgoCD-Instanzen es gibt
+
+| Instanz | Läuft auf | Verwaltet | Liest | UI |
+|---|---|---|---|---|
+| **Hub** | `homeserver` (TECH, `.94`) | den TECH-Cluster **und** den PROD-Cluster (dort als Cluster `prod` registriert) | Branch `main`: `argocd/apps/tech/*` und `argocd/apps/prod/*` | `https://<server-ip>:30443` (HTTPS) |
+| **ENTW** | `entw-vm` (`.100`, KVM-VM auf worker-1) | nur den ENTW-Cluster | Branch `entw`: `argocd/apps/entw/*` | `http://192.168.178.100:30080` |
+
+PROD hat **keine** eigene ArgoCD-Instanz. Im Hub erscheinen PROD-Applications mit dem Präfix `prod-`
+(`argocd app list | grep '^prod-'`). Die Projekte im Einzelnen: [b0020](b0020-argocd-projects.md), die
+ENTW-Instanz: [b0050](b0050-entw-argocd.md). Alles Folgende bezieht sich, wenn nicht anders
+gesagt, auf den **Hub**.
+
 ---
 
 ## Zugriff
@@ -93,7 +105,7 @@ argocd repo add https://github.com/pkr-lab/capulus-core.git \
   --password YOUR_TOKEN
 
 # SSH mit Key
-argocd repo add git@github.com:PKE-Tech/Home-Lab.git \
+argocd repo add git@github.com:pkr-lab/capulus-core.git \
   --ssh-private-key-path ~/.ssh/id_rsa
 
 # Repos prüfen
@@ -126,18 +138,22 @@ kubectl apply -f repo-secret.yaml
 
 ## ApplicationSet-Struktur
 
-Seit [docs/b-kubernetes-gitops/b0020-argocd-projects.md](b0020-argocd-projects.md) gibt es **zwei
-separate Bootstrap-`ApplicationSet`-Ressourcen** statt einer einzigen —
-`home-server-apps-platform` und `home-server-apps-workloads`
-(`argocd/bootstrap/root-applicationset.yaml`, zwei YAML-Dokumente in einer
-Datei). Jede ist strukturell identisch, bis auf Directory-Glob und
-`spec.project`:
+Der Hub kennt **drei** `ApplicationSet`-Ressourcen, je Ordner-Familie eine:
+
+| ApplicationSet | Quelle | Projekt | Ziel-Cluster | Pflege |
+|---|---|---|---|---|
+| `home-server-apps-tech` | `argocd/apps/tech/*` | `tech` | Hub-Cluster (TECH) | **generiert** aus [`bootstrap-applicationset.yaml.j2`](../../ansible/roles/argocd/templates/bootstrap-applicationset.yaml.j2), committet als [`argocd/bootstrap/root-applicationset.yaml`](../../argocd/bootstrap/root-applicationset.yaml) |
+| `home-server-apps-prod` | explizit gelistete Manifest-Ordner unter `argocd/apps/prod/` | `prod` | Cluster `prod` | handgeschrieben in [`argocd/bootstrap-prod/`](../../argocd/bootstrap-prod/README.md) |
+| `home-server-apps-prod-charts` | jeder Ordner mit `Chart.yaml` unter `argocd/apps/prod/` | `prod` | Cluster `prod` | dito |
+
+Das TECH-Set in Kurzform (Auszug aus der generierten Datei):
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: home-server-apps-platform
+  name: home-server-apps-tech
+  namespace: argocd
 spec:
   generators:
     - git:
@@ -146,96 +162,70 @@ spec:
         directories:
           - path: "argocd/apps/tech/*"
   template:
+    metadata:
+      name: "{{.path.basename}}"
     spec:
-      project: platform   # fest codiert, kein Templating
-      # ...
----
-apiVersion: argoproj.io/v1alpha1
-kind: ApplicationSet
-metadata:
-  name: home-server-apps-workloads
-spec:
-  generators:
-    - git:
-        directories:
-          - path: "argocd/apps/tech/*"
-  template:
-    spec:
-      project: workloads   # fest codiert, kein Templating
-      # ...
+      project: tech            # fest codiert, kein Templating
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{.path.basename}}"
+      # ... Sync-Policy, ignoreDifferences, siehe Datei
 ```
-
-> Bewusst **zwei getrennte Ressourcen** statt einer mit zwei Generatoren oder
-> einem aus dem Pfad abgeleiteten Project-Wert — beide Alternativen wurden
-> verworfen, Details und Begründung in
-> [docs/b-kubernetes-gitops/b0020-argocd-projects.md](b0020-argocd-projects.md#wie-es-technisch-funktioniert).
 
 **Funktionsweise:**
 
-- ArgoCD scannt `argocd/apps/tech/` und `argocd/apps/tech/` im
-  Git-Repo (getrennt, je eigenes ApplicationSet).
-- Jedes Unterverzeichnis wird zu einer ArgoCD-**Application**.
-- Application-Name = Verzeichnisname der App (nicht des Tiers).
-- Ziel-Namespace = Verzeichnisname der App — **die zusätzliche
-  Tier-Ebene ändert nichts an Namespaces**, nur an der Pfadstruktur in Git.
-- AppProject = `platform` bzw. `workloads`, je nachdem welches
-  ApplicationSet die App gefunden hat (siehe
-  [docs/b-kubernetes-gitops/b0020-argocd-projects.md](b0020-argocd-projects.md) für die Details der
-  AppProject-`destinations`).
-- ArgoCD synct den Inhalt des Verzeichnisses in den Cluster.
+- ArgoCD scannt die Ordner auf `main`; jedes Unterverzeichnis wird zu einer **Application**.
+- Application-Name = Ordnername (bei PROD mit Präfix `prod-`), Ziel-Namespace = Ordnername.
+- Das `AppProject` (`tech` / `prod`) begrenzt Repo und Namespaces, siehe [b0020](b0020-argocd-projects.md).
+- ArgoCD synct den Inhalt des Verzeichnisses in den jeweiligen Cluster. Die Ordner sind entweder
+  plain Manifeste, Kustomize oder ein Helm-Chart (`Chart.yaml` + `values.yaml`).
 
-**Beispielhafte Verzeichnis-Struktur** (Auszug — vollständige, aktuell gepflegte
-Liste aller Apps: [README.md → Repository-Layout](../../README.md#repository-layout)):
+**Verzeichnisstruktur** (Auszug, die vollständige Liste steht im
+[README → Repository-Layout](../../README.md#repository-layout)):
 
 ```
 argocd/apps/
-├── platform/             → Schicht-3-Plattformdienste (AppProject: platform)
-│   ├── kubeseal-webgui/  → Browser-UI, die Werte mit dem
-│   │                        SealedSecrets-Public-Key des Clusters verschlüsselt
-│   ├── monitoring/       → VictoriaMetrics + Grafana + node-exporter +
-│   │                        kube-state-metrics + Alertmanager
-│   ├── sealed-secrets/   → bitnami-labs SealedSecrets-Controller
-│   │                        (entschlüsselt SealedSecret-CRDs zu Secrets)
-│   └── ...               → und weitere, siehe README.md
-└── workloads/            → Schicht-4-Anwendungen (AppProject: workloads)
-    ├── example-whoami/   → Referenz-Helm-Chart als Wiring-Test
-    ├── vaultwarden/      → Bitwarden-kompatibler Passwort-Manager
-    ├── zammad/           → Helpdesk/Ticket-System
-    └── ...               → und weitere, siehe README.md
+├── tech/                 → TECH-Cluster (Projekt tech), Infrastruktur + Betriebs-Apps
+│   ├── sealed-secrets/   → SealedSecrets-Controller
+│   ├── monitoring/       → VictoriaMetrics + Grafana + Alertmanager
+│   ├── authentik/        → zentrales SSO (siehe d0073)
+│   ├── vaultwarden/      → Passwort-Manager
+│   └── ...
+├── prod/                 → PROD-Cluster (Projekt prod), Familien-/Vereins-Apps
+│   ├── nextcloud/
+│   ├── immich/
+│   ├── paperless-ngx/
+│   └── ...
+└── entw/                 → ENTW-Cluster (eigene ArgoCD-Instanz, Branch entw)
+    ├── demo-app/
+    ├── example-whoami/
+    └── sealed-secrets/
 ```
-
-Jedes Verzeichnis wird zu einer `Application` mit gleichem Namen und Namespace.
-Eine neue App ist vier Schritte entfernt: Tier entscheiden, Verzeichnis unter
-`argocd/apps/tech/<name>/` oder `argocd/apps/tech/<name>/` anlegen
-(plain Manifests, `kustomization.yaml` **oder** Helm-Chart mit `Chart.yaml` +
-`values.yaml`), Namen in `argocd_platform_apps`/`argocd_workloads_apps`
-(`ansible/roles/argocd/defaults/main.yml`) ergänzen, committen, pushen —
-ArgoCD greift in ~3 Minuten zu.
 
 ---
 
 ## Neue Application hinzufügen
 
-Der GitOps-Workflow für neue Apps:
+Erst entscheiden, **in welchem Cluster** die App laufen soll: **TECH** (Infrastruktur, Admin- und
+Betriebsdienste), **PROD** (Apps mit echtem Nutzerkreis: Familie, Verein) oder **ENTW** (Experimente,
+Neuentwicklung). Neue Apps starten in der Regel auf ENTW und wandern über die
+[Promotion-Kette](../f-cicd-automatisierung/f00b0-promotion-chain.md) nach TECH bzw. PROD.
 
-1. Tier entscheiden: **Platform** (Infrastruktur/Admin-Charakter) oder
-   **Workloads** (echter Nutzerkreis) — siehe
-   [docs/b-kubernetes-gitops/b0020-argocd-projects.md](b0020-argocd-projects.md#die-zwei-tiers).
-2. Verzeichnis `argocd/apps/tech/<app-name>/` oder
-   `argocd/apps/tech/<app-name>/` anlegen.
-3. Kubernetes-Manifests oder Helm-Chart hineinlegen.
-4. `<app-name>` in `argocd_platform_apps` bzw. `argocd_workloads_apps`
-   (`ansible/roles/argocd/defaults/main.yml`) ergänzen — sonst fehlt der
-   AppProject-`destinations`-Eintrag und der Sync schlägt mit
-   `application destination namespace ... is not permitted in project ...`
-   fehl.
-5. `make render-bootstrap` laufen lassen (aktualisiert die committeten
-   Kopien unter `argocd/bootstrap/`).
-6. `git add` + `git commit` + `git push`.
-7. ArgoCD erkennt das neue Verzeichnis innerhalb von ~3 Minuten.
-8. ArgoCD erzeugt eine Application im richtigen AppProject und synct sie.
+### TECH
 
-**Beispiel: App mit Plain-Manifest** (hier als Workload-App)
+1. Verzeichnis `argocd/apps/tech/<app-name>/` anlegen, Manifeste oder Helm-Chart hineinlegen.
+2. `<app-name>` in `argocd_platform_apps` (Infrastruktur) oder `argocd_workloads_apps` (Anwendung)
+   in `ansible/roles/argocd/defaults/main.yml` ergänzen. Sonst fehlt der `destinations`-Eintrag im
+   Projekt `tech`, und der Sync schlägt mit
+   `application destination namespace ... is not permitted in project ...` fehl.
+3. `make render-bootstrap` (aktualisiert die committeten Kopien unter `argocd/bootstrap/`).
+4. Committen, per PR nach `main` bringen (`main` ist geschützt, siehe
+   [f0090](../f-cicd-automatisierung/f0090-branch-schutz-main.md)).
+5. Innerhalb von ~3 Minuten erkennt ArgoCD den Ordner, erzeugt die Application und synct sie.
+   Danach `make argocd` laufen lassen, damit die `argocd`-Rolle das Projekt `tech` mit dem neuen
+   Namespace anwendet.
+
+Beispiel mit Plain-Manifest:
 
 ```bash
 mkdir -p argocd/apps/tech/my-app
@@ -262,22 +252,34 @@ spec:
             - containerPort: 80
 EOF
 
-# my-app in argocd_workloads_apps (ansible/roles/argocd/defaults/main.yml) ergänzen,
-# dann: make render-bootstrap
+# my-app in argocd_workloads_apps (ansible/roles/argocd/defaults/main.yml) ergänzen, dann:
+make render-bootstrap
 
 git add argocd/apps/tech/my-app/ ansible/roles/argocd/defaults/main.yml argocd/bootstrap/
-git commit -m "feat: add my-app"
-git push
+git commit -m "feat(apps): add my-app"
+git push   # auf einem Feature-Branch, dann PR nach main
 ```
 
-**Beispiel: App als Helm-Chart**
+Beispiel als Helm-Chart: Ordner `argocd/apps/tech/my-helm-app/` mit `Chart.yaml`, `values.yaml` und
+`templates/` anlegen. ArgoCD erkennt die `Chart.yaml` und behandelt das Verzeichnis als Helm-Chart.
 
-```bash
-mkdir -p argocd/apps/tech/my-helm-app/templates
+### PROD
 
-# Chart.yaml, values.yaml, templates/ — standard Helm-Chart-Struktur
-# ArgoCD erkennt Chart.yaml und behandelt das Verzeichnis als Helm-Chart
-```
+1. Verzeichnis `argocd/apps/prod/<app-name>/` anlegen.
+2. Namespace in [`argocd/bootstrap-prod/appproject.yaml`](../../argocd/bootstrap-prod/appproject.yaml)
+   eintragen und die Datei im Hub anwenden: `kubectl apply -f argocd/bootstrap-prod/appproject.yaml`.
+3. **Nur bei reinen Manifest-Ordnern** (ohne `Chart.yaml`): zusätzlich den Pfad in
+   [`argocd/bootstrap-prod/applicationset.yaml`](../../argocd/bootstrap-prod/applicationset.yaml)
+   ergänzen und anwenden. Helm-Charts werden automatisch gefunden.
+4. Für einen internen Host unter `*.prod.homeserver` den Namen in `dnsmasq_prod_vm_hosts`
+   (`ansible/group_vars/all.yml`) aufnehmen und `make dnsmasq` ausführen, sonst löst der Name auf den
+   TECH-Cluster auf, siehe [c0040](../c-netzwerk-dns/c0040-domain-tiers.md#dns-tier-und-cluster-sind-zwei-verschiedene-dinge).
+5. Per PR nach `main`. In der Hub-UI erscheint die Application als `prod-<app-name>`.
+
+### ENTW
+
+Ordner `argocd/apps/entw/<app-name>/` auf dem **Branch `entw`** anlegen, fertig. Keine Liste, kein
+Projekt, kein Ansible-Lauf. Details: [b0050](b0050-entw-argocd.md#neue-app-auf-entw-deployen).
 
 ---
 
@@ -311,7 +313,7 @@ Für eine App, die manuell kontrolliert werden soll, ein eigenes
 `Application`-Manifest hinterlegen, das die Sync-Policy überschreibt:
 
 ```yaml
-# argocd/apps/tech/my-careful-app/argocd-application.yaml
+# Beispiel: argocd/apps/tech/my-careful-app/argocd-application.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -356,41 +358,41 @@ argocd context
 **Applications:**
 
 ```bash
-# Alle Apps auflisten
+# Alle Apps auflisten (PROD-Apps tragen das Präfix prod-)
 argocd app list
 
 # Details
-argocd app get example-whoami
+argocd app get uptime-kuma
 
 # Manuell syncen
-argocd app sync example-whoami
+argocd app sync uptime-kuma
 
 # Sync mit Prune (überflüssige Resources entfernen)
-argocd app sync example-whoami --prune
+argocd app sync uptime-kuma --prune
 
 # Spezifische Resource syncen
-argocd app sync example-whoami --resource apps:Deployment:whoami
+argocd app sync uptime-kuma --resource apps:Deployment:uptime-kuma
 
 # Auf Sync warten
-argocd app wait example-whoami --sync
+argocd app wait uptime-kuma --sync
 
 # Logs
-argocd app logs example-whoami
+argocd app logs uptime-kuma
 
 # Diff (was würde sich ändern)
-argocd app diff example-whoami
+argocd app diff uptime-kuma
 
 # Rollback auf vorherige Revision
-argocd app rollback example-whoami 1   # Revision-Nummer aus der Historie
+argocd app rollback uptime-kuma 1   # Revision-Nummer aus der Historie
 
 # Historie
-argocd app history example-whoami
+argocd app history uptime-kuma
 
 # App löschen (löscht Default-mäßig KEINE Cluster-Resources)
-argocd app delete example-whoami
+argocd app delete uptime-kuma
 
 # App UND Cluster-Resources löschen
-argocd app delete example-whoami --cascade
+argocd app delete uptime-kuma --cascade
 ```
 
 **Repositories:**

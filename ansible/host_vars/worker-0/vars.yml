@@ -5,42 +5,10 @@ k3s_agent_hostname: worker-0
 
 wake_on_lan_mac_address: "98:fa:9b:28:b0:22"
 
-# worker-0 haengt an einem Fritz-WLAN-Repeater statt direkt an der
-# Fritz!Box und bekommt darueber kein nutzbares DHCPv6-DNS; das eigene
-# /etc/netplan hat "nameservers: []" (Subiquity-Installer-Default) und
-# funktionierte bisher nur, weil ein manuell (NICHT Ansible-verwaltet)
-# installiertes Tailscale per --accept-dns als Resolver einsprang. Sobald
-# dessen Login abgelaufen ist, hat worker-0 GAR KEIN DNS mehr -- sichtbar
-# als "Failed to update apt cache after 5 retries: " (leere Fehlermeldung)
-# im worker_apt_update-Task. Siehe worker_apt_update_dns_fallback_enabled
-# in ansible/roles/worker_apt_update/defaults/main.yml und
-# docs/2-betrieb-hardware/20030-nightly-worker-update.md.
 worker_apt_update_dns_fallback_enabled: true
 
-# ---- Tailscale (Ansible-verwaltet seit 2026-09-15) -----------
-# worker-0 hatte vorher ein manuell/unmanaged installiertes Tailscale, das
-# irgendwann in "Needs login" haengen blieb, ohne dass es automatisch
-# heilte -- Ursache fuer den obigen DNS-Ausfall. Jetzt ueber die
-# tailscale-Rolle verwaltet (siehe worker-0.yml).
-#
-# worker-0 ist reiner Tailnet-Client, kein Subnet-Router (das übernimmt
-# bereits der homeserver für das ganze LAN) -- deshalb KEIN
-# --advertise-routes.
 tailscale_advertise_routes: ""
 
-# Braucht einen EIGENEN Auth-Key -- der globale Default-Key in
-# group_vars/all.yml ist bereits vom homeserver verbraucht (Single-Use
-# ist Policy, siehe docs/c-netzwerk-dns/c0010-tailscale.md#auth-key-besorgen).
-# Einmalig einrichten:
-#   1. https://login.tailscale.com/admin/keys -> Generate auth key
-#      (Reusable: aus, Ephemeral: aus, Expiry: siehe Hinweis unten)
-#   2. https://login.tailscale.com/admin/machines -> worker-0 (nach dem
-#      ersten erfolgreichen Connect) -> "Disable key expiry", damit dieser
-#      unbeaufsichtigte, nachts per WoL geweckte Node nicht erneut
-#      stillschweigend in "Needs login" haengen bleibt
-#   3. ansible-vault encrypt_string 'tskey-auth-...' --name 'tailscale_auth_key'
-#      Ergebnis hier einsetzen (überschreibt den globalen Default nur für
-#      worker-0) oder nach ansible/host_vars/worker-0/vault.yml verschieben.
 tailscale_auth_key: !vault |
           $ANSIBLE_VAULT;1.1;AES256
           34346438396330333336313039363436313564366437646466326634386232653063646230336337
