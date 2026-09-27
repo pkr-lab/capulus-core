@@ -1,0 +1,536 @@
+- id: alamos-apager-stations
+  service: alamos-apager
+  kind: password
+  stored_in:
+    - argocd/apps/tech/alamos-apager/templates/sealedsecret-stations.yaml
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    overlap: true
+  owner: peter
+  blast_radius: "Zugangsdaten je Alamos-Alarmierungsstation (Digitalfunk-Pager-Bridge)."
+
+- id: alamos-relay-token
+  service: alamos-relay
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/alamos-relay/templates/sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    overlap: true
+  owner: peter
+  blast_radius: "Kann Alarmierungen ueber alamos-relay ausloesen und lesen."
+
+- id: argo-workflows-artifact-creds
+  service: argo-workflows
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/argo-workflows/templates/artifact-secret-sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    overlap: true
+  owner: peter
+  blast_radius: "Lese-/Schreibzugriff auf den Artefakt-Speicher von Argo Workflows."
+
+- id: argo-workflows-ghcr-push
+  service: argo-workflows
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/argo-workflows/templates/ghcr-push-sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    overlap: true
+  owner: peter
+  blast_radius: "Kann Images unter ghcr.io im Namen des Repos pushen."
+
+- id: authentik-credentials
+  service: authentik
+  kind: password
+  stored_in:
+    - argocd/apps/tech/authentik/templates/sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/d-sicherheit/d0073-authentik-sso.md
+    overlap: true
+  owner: peter
+  blast_radius: "SSO fuer das gesamte TECH-Cluster (Django-Secret-Key, DB-Passwort, Bootstrap-Login, LDAP-Bind-Passwort gegen lldap)."
+
+- id: carplay-api-token
+  service: carplay-api
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/carplay-api/templates/secret-api-token.yaml
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    overlap: true
+  owner: peter
+  blast_radius: "Zugriff auf die carplay-api, von der iOS-App genutzt."
+
+- id: carplay-api-ntfy-token
+  service: carplay-api
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/carplay-api/templates/secret-ntfy-token.yaml
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    overlap: true
+  owner: peter
+  blast_radius: "Aktuell deaktiviert (enabled: false, Platzhalter-Ciphertext). Wuerde carplay-api das Senden an ntfy erlauben."
+
+- id: carplay-api-power-agent-token
+  service: carplay-api
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/carplay-api/templates/secret-power-agent-token.yaml
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    overlap: true
+  owner: peter
+  blast_radius: "Kann ueber carplay-api den Power-Agent (Worker-Steuerung) ansprechen."
+
+- id: carplay-api-shutdown-code
+  service: carplay-api
+  kind: password
+  stored_in:
+    - argocd/apps/tech/carplay-api/templates/secret-shutdown-code.yaml
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    overlap: true
+  owner: peter
+  blast_radius: "Aktuell deaktiviert (enabled: false). Bestaetigungscode fuer einen Shutdown ueber carplay-api."
+
+- id: cloudflared-tunnel-tech
+  service: cloudflare
+  kind: tunnel-credential
+  stored_in:
+    - argocd/apps/tech/cloudflared/templates/sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: docs/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md#credentials-rotieren
+    overlap: true
+  owner: peter
+  blast_radius: "Kontrolle ueber den Cloudflare-Tunnel homeserver (TECH), damit alle unter *.pke-lab.de erreichbaren TECH-Dienste."
+
+- id: cloudflared-tunnel-prod
+  service: cloudflare
+  kind: tunnel-credential
+  stored_in:
+    - argocd/apps/prod/cloudflared/templates/sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: docs/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md#credentials-rotieren
+    overlap: true
+  owner: peter
+  blast_radius: "Kontrolle ueber den Cloudflare-Tunnel homeserver-prod (PROD)."
+
+- id: github-readonly-pat
+  service: github
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/github-release-watcher/templates/sealedsecret-github-token.yaml
+    - argocd/apps/prod/wiki-docs-sync/templates/sealedsecret-github-token.yaml
+  issued: null
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: scripted
+    runbook: scripts/seal-github-token.sh
+    overlap: true
+  owner: peter
+  blast_radius: "Lesezugriff auf oeffentliche GitHub-Repos, genutzt von github-release-watcher (TECH) und wiki-docs-sync (PROD)."
+
+- id: github-release-watcher-zammad-token
+  service: zammad
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/github-release-watcher/templates/sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/f-cicd-automatisierung/f0040-github-release-watcher.md
+    overlap: true
+  owner: peter
+  blast_radius: "Kann Tickets in Zammad (Gruppe Support::Administration) anlegen."
+
+- id: gotify-admin
+  service: gotify
+  kind: password
+  stored_in:
+    - argocd/apps/tech/gotify/templates/sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/1-benachrichtigungen/10000-gotify.md
+    overlap: true
+  owner: peter
+  blast_radius: "Admin-Zugang zu Gotify (tech.homeserver)."
+
+- id: gotify-app-and-client-tokens
+  service: gotify
+  kind: api-token
+  stored_in:
+    - "gotify.db (Laufzeit-Datenbank in der PVC, nicht im Repo)"
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/1-benachrichtigungen/10000-gotify.md
+    overlap: true
+  owner: peter
+  blast_radius: "App-Token (z. B. gotify-bridge-token) und Client-Token: koennen Nachrichten ueber Gotify senden bzw. lesen."
+
+- id: lldap-secrets
+  service: lldap
+  kind: password
+  stored_in:
+    - argocd/apps/tech/lldap/templates/sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/d-sicherheit/d0072-lldap.md
+    overlap: true
+  owner: peter
+  blast_radius: "JWT-Secret, Key-Seed, Root- und Bind-Passwoerter von lldap, inklusive des Bind-Passworts fuer Authentik."
+
+- id: minio-root-creds
+  service: minio
+  kind: password
+  stored_in:
+    - argocd/apps/tech/minio/templates/root-creds-sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    overlap: true
+  owner: peter
+  blast_radius: "Root-Zugangsdaten des internen MinIO (Artefakt-Speicher)."
+
+- id: pihole-webpassword
+  service: pihole
+  kind: password
+  stored_in:
+    - argocd/apps/tech/pihole/templates/sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    overlap: true
+  owner: peter
+  blast_radius: "Web-Login von Pi-hole (interne DNS-Aufloesung)."
+
+- id: vaultwarden-admin-token
+  service: vaultwarden
+  kind: password
+  stored_in:
+    - argocd/apps/tech/vaultwarden/templates/sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: docs/3-apps-workloads/300a0-vaultwarden.md
+    overlap: true
+  owner: peter
+  blast_radius: "Zugriff auf das Vaultwarden-Admin-Panel (/admin), volle Kontrolle ueber alle Nutzer und Tresore."
+
+- id: vaultwarden-smtp-password
+  service: vaultwarden
+  kind: password
+  stored_in:
+    - argocd/apps/tech/vaultwarden/templates/sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: docs/3-apps-workloads/300a0-vaultwarden.md
+    overlap: true
+  owner: peter
+  blast_radius: "SMTP-Zugang, den Vaultwarden fuer Einladungs- und Benachrichtigungsmails nutzt."
+
+- id: zammad-internal-passwords
+  service: zammad
+  kind: password
+  stored_in:
+    - argocd/apps/tech/zammad/templates/sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    overlap: true
+  owner: peter
+  blast_radius: "Interner Postgres- und Redis-Zugriff des Zammad-Ticketsystems."
+
+- id: immich-db-password
+  service: immich
+  kind: password
+  stored_in:
+    - argocd/apps/prod/immich/templates/sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    overlap: true
+  owner: peter
+  blast_radius: "DB-Zugriff der Immich-Instanz (PROD)."
+
+- id: nextcloud-credentials
+  service: nextcloud
+  kind: password
+  stored_in:
+    - argocd/apps/prod/nextcloud/templates/sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    overlap: true
+  owner: peter
+  blast_radius: "Admin- und DB-Passwort von Nextcloud (PROD)."
+
+- id: wikijs-db-password
+  service: wikijs
+  kind: password
+  stored_in:
+    - argocd/apps/prod/wikijs/templates/sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    overlap: true
+  owner: peter
+  blast_radius: "DB-Zugriff von Wiki.js (PROD)."
+
+- id: wiki-docs-sync-wikijs-token
+  service: wikijs
+  kind: api-token
+  stored_in:
+    - argocd/apps/prod/wiki-docs-sync/templates/sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    overlap: true
+  owner: peter
+  blast_radius: "Kann Seiten unter Github/capulus-core in Wiki.js schreiben."
+
+- id: xibosignage-db-password
+  service: xibosignage
+  kind: password
+  stored_in:
+    - argocd/apps/prod/xibosignage/templates/secret.yaml
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    overlap: true
+  owner: peter
+  blast_radius: "DB-Zugriff von Xibo Signage (PROD)."
+
+- id: ansible-vault-password
+  service: ansible-vault
+  kind: password
+  stored_in:
+    - "Passwort-Manager (nicht im Repo), als semaphore_vault_password in Semaphore hinterlegt"
+  issued: null
+  expires: null
+  max_age_days: 730
+  rotation:
+    mode: manual
+    runbook: docs/d-sicherheit/d0060-secrets-rotation.md
+    overlap: false
+  owner: peter
+  blast_radius: "Schluessel zu allen !vault-Werten im Repo (ansible/group_vars, ansible/host_vars) - kompletter Ansible-Fundus."
+
+- id: tailscale-auth-key
+  service: tailscale
+  kind: auth-key
+  stored_in:
+    - ansible/group_vars/all.yml
+    - ansible/group_vars/banana_pis.yml
+    - ansible/group_vars/xibo_displays.yml
+    - ansible/host_vars/worker-0/vars.yml
+    - ansible/host_vars/worker-1/vars.yml
+  issued: null
+  expires: null
+  max_age_days: 90
+  rotation:
+    mode: manual
+    runbook: docs/2-betrieb-hardware/20030-nightly-worker-update.md
+    overlap: true
+  owner: peter
+  live_check: tailscale-device
+  live_check_ref: worker-0
+  blast_radius: "Kann neue Geraete dem Tailnet hinzufuegen (Ansible-Rolle tailscale). Live ueberwacht stellvertretend am Knoten worker-0 (Anlass: stiller Ablauf 20030). Ziel: Ablösung durch einen getaggten OAuth-Client (siehe Rotation-Regel 1)."
+
+- id: tailscale-ci-oauth-client
+  service: tailscale
+  kind: api-token
+  stored_in:
+    - "GitHub Actions Secret: TS_OAUTH_CLIENT_ID"
+    - "GitHub Actions Secret: TS_OAUTH_SECRET"
+  issued: null
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/f-cicd-automatisierung/f00a0-tailscale-runner-poc.md
+    overlap: true
+  owner: peter
+  blast_radius: "Kann kurzlebige Auth-Keys mit Tag tag:ci erzeugen (Beitritt der GitHub-Runner zum Tailnet)."
+
+- id: argocd-ci-token-hub
+  service: argocd
+  kind: api-token
+  stored_in:
+    - "GitHub Actions Secret: ARGOCD_HUB_TOKEN"
+  issued: null
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: scripted
+    runbook: scripts/create-argocd-ci-token.sh
+    overlap: true
+  owner: peter
+  blast_radius: "Konto 'ci' im Hub-ArgoCD: kann Applications lesen und Sync anstossen (Promotion-Kette)."
+
+- id: argocd-ci-token-entw
+  service: argocd
+  kind: api-token
+  stored_in:
+    - "GitHub Actions Secret: ARGOCD_ENTW_TOKEN"
+  issued: null
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: scripted
+    runbook: scripts/create-argocd-ci-token.sh
+    overlap: true
+  owner: peter
+  blast_radius: "Konto 'ci' im ENTW-ArgoCD: kann Applications lesen und Sync anstossen (Promotion-Kette)."
+
+- id: github-pat-promote
+  service: github
+  kind: api-token
+  stored_in:
+    - "GitHub Actions Secret: PROMOTE_TOKEN"
+  issued: null
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: docs/6-hintergruende/600a0-ci-workflows-und-skripte.md
+    overlap: true
+  owner: peter
+  live_check: github-pat
+  live_check_env: PROMOTE_TOKEN
+  blast_radius: "Kann PRs und Issues im Repo oeffnen/mergen (build-images, promote-entw, sync-entw, promote-chain)."
+
+- id: github-pat-renovate
+  service: github
+  kind: api-token
+  stored_in:
+    - "GitHub Actions Secret: RENOVATE_TOKEN"
+  issued: null
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: docs/6-hintergruende/600a0-ci-workflows-und-skripte.md
+    overlap: true
+  owner: peter
+  live_check: github-pat
+  live_check_env: RENOVATE_TOKEN
+  blast_radius: "Fallback-PAT fuer Renovate und Ersatz fuer PROMOTE_TOKEN. Read/Write auf Contents, PRs, Issues, Workflows."
+
+- id: github-pat-gitlab-mirror
+  service: github
+  kind: api-token
+  stored_in:
+    - "GitHub Actions Secret: GITLAB_MIRROR_TOKEN"
+  issued: null
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: docs/f-cicd-automatisierung/f0050-gitlab-mirror.md
+    overlap: true
+  owner: peter
+  blast_radius: "Push-Zugriff auf das passive GitLab-Mirror-Repo."
+
+- id: sealed-secrets-keys
+  service: sealed-secrets
+  kind: encryption-key
+  stored_in:
+    - "im Cluster (TECH, PROD, ENTW), kein Repo-Pfad"
+  issued: null
+  expires: null
+  max_age_days: 30
+  rotation:
+    mode: auto
+    runbook: docs/d-sicherheit/d0060-secrets-rotation.md
+    overlap: true
+  owner: peter
+  blast_radius: "Kann alle SealedSecrets des jeweiligen Clusters entschluesseln. Rotiert automatisch per Controller, siehe Runbook."

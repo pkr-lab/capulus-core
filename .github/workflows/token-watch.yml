@@ -1,0 +1,38 @@
+name: Token watch
+
+on:
+  schedule:
+    - cron: "5 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: token-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    name: Ablaufdaten pruefen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install PyYAML
+        run: pip install --disable-pip-version-check pyyaml
+
+      - name: Register pruefen und Ablaufdaten melden
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          TS_OAUTH_SECRET: ${{ secrets.TS_OAUTH_SECRET }}
+          PROMOTE_TOKEN: ${{ secrets.PROMOTE_TOKEN }}
+          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+        run: python3 scripts/token-watch.py
