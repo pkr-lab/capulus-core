@@ -37,6 +37,7 @@ ruleset_json() {
           { "context": "helm template | kubeconform" },
           { "context": "go build, vet, test, tidy" },
           { "context": "docs links" },
+          { "context": "token register" },
           { "context": "gitleaks" }
         ]
       }

@@ -170,6 +170,11 @@ Password:   <auto-generiert>
 
 ## Drei Cluster
 
+<p align="center">
+  <img src="docs/assets/cluster-view.png" alt="Kartenansicht der Cluster-Standorte" width="480" /><br/>
+  <sub>Standortübersicht der Cluster-Knoten — wird später um das Standby-HA-Paar mit den Pis erweitert (siehe <a href="docs/4-planung/40090-standby-cluster-ha-paar.md">40090</a>).</sub>
+</p>
+
 Der Stack besteht seit September 2026 aus **drei getrennten k3s-Clustern**
 ([Architektur und Begründung](docs/4-planung/40080-multi-cluster-entw-prod-tech.md),
 [Überblick](docs/a-betriebssystem/a0010-overview.md#1-drei-cluster-im-überblick)):
@@ -232,7 +237,7 @@ capulus-core/
 │   ├── 5-incidents/                  # Vorfallsberichte
 │   ├── 6-hintergruende/              # Begründungen, Fallstricke und Vorfall-Regeln zum Code (der Code selbst ist kommentarfrei)
 │   ├── superpowers/                  # Datierte Plan-/Spec-Docs, eigenes Namensschema
-│   └── assets/                       # Banner, Root-CA-Zertifikat
+│   └── assets/                       # Banner, Cluster-Kartenansicht, Root-CA-Zertifikat
 ├── renovate.json                     # Renovate-Konfiguration (siehe docs/f-cicd-automatisierung/f0020-renovate.md)
 ├── .releaserc.json                   # semantic-release-Konfiguration (siehe docs/f-cicd-automatisierung/f0030-release-automation.md)
 ├── .github/

@@ -3,10 +3,14 @@
 Architektur- und Rollout-Plan für einen zweiten, **externen** k3s-Cluster (Standby),
 der bei einem Ausfall des Hauptstandorts **automatisch** Vaultwarden, n8n, ntfy und
 Gotify samt Cloudflare-Tunnel und Tailscale übernimmt — plus ein Token-Management, das
-Ablaufdaten erfasst, überwacht und die Rotation anstößt. Noch **nicht umgesetzt**; dieses
-Doc hält den mit dem Nutzer abgestimmten Plan fest (Stand 2026-09-26). Nach der Umsetzung
-wandert der Ist-Zustand als eigene Docs in die fachlichen Kategorien, dieses Doc bleibt
-als Kontext bestehen (Konvention wie [40070](40070-authentik-sso-iac.md)).
+Ablaufdaten erfasst, überwacht und die Rotation anstößt. Der Standby-Cluster selbst
+(Phasen 2–6) ist noch **nicht umgesetzt**. Das **Token-Management (Phase 1) ist seit
+2026-09-27 umgesetzt** — Register, tägliche Ablaufüberwachung und CI-Check, unabhängig
+vom Standby nutzbar; Ist-Zustand siehe [d0060](../d-sicherheit/d0060-secrets-rotation.md).
+Dieses Doc hält weiterhin den mit dem Nutzer abgestimmten Gesamtplan fest (Stand
+2026-09-26). Nach der Umsetzung des Standby-Clusters wandert dessen Ist-Zustand als
+eigene Docs in die fachlichen Kategorien, dieses Doc bleibt als Kontext bestehen
+(Konvention wie [40070](40070-authentik-sso-iac.md)).
 
 Bezug: [40080](40080-multi-cluster-entw-prod-tech.md) (Cluster-Aufteilung, Sealed-Secrets
 pro Cluster), [b0050](../b-kubernetes-gitops/b0050-entw-argocd.md) (eigenständige
@@ -509,7 +513,7 @@ Passwort-Manager, wird bei der Umsetzung entsprechend korrigiert.
 
 | Phase | Inhalt | Abnahme |
 |---|---|---|
-| 1 | **Token-Register und `token-watch`** (unabhängig vom Standby, sofort nützlich). Tailscale auf OAuth-Client umstellen, Tag-/Expiry-Prüfung. | Alle 25 SealedSecrets stehen im Register, ein künstlich nahes Ablaufdatum erzeugt ein Issue |
+| 1 | **Token-Register und `token-watch`** (unabhängig vom Standby, sofort nützlich) — **umgesetzt seit 2026-09-27**. Tailscale auf OAuth-Client umstellen, Tag-/Expiry-Prüfung — **offen**, siehe [Offene Punkte](#offene-punkte). | Alle 25 SealedSecrets stehen im Register ✅, ein künstlich nahes Ablaufdatum erzeugt ein Issue (manuell zu testen: `expires` eines Eintrags auf ein nahes Datum setzen, `token-watch.yml` per `workflow_dispatch` starten) |
 | 2 | **Vorarbeiten n8n:** `N8N_ENCRYPTION_KEY` setzen, PVC auf `local-path`. Notfallkit anlegen. | n8n startet mit gesetztem Schlüssel und allen Credentials, Kopie des Schlüssels im Notfallkit |
 | 3 | **Standby aufbauen:** Host mit Tailscale, k3s, eigenem ArgoCD, sealed-secrets, Tunnel `standby`, Overlays, ACL. Replikations-Jobs, Restore-Verify, Alarme. | Tunnel und Tailnet dauerhaft verbunden, Replik ≤ 15 Minuten alt, nächtlicher Restore-Verify grün |
 | 4 | **Alarmweg und Agenten im Beobachtungsmodus:** Watchdog und Fence-Agent laufen mit `--dry-run` („würde übernehmen“), ntfy, Gotify, Mail, Healthchecks eingerichtet. | 14 Tage ohne falsche „würde übernehmen“-Meldung, Standby-Heartbeat und Primary-Herzschlag stabil |
@@ -565,3 +569,9 @@ Passwort-Manager, wird bei der Umsetzung entsprechend korrigiert.
 4. **Standby-Hardware:** Mini-PC oder VPS, dazu Betriebssystem (Ubuntu Server wie bei den
    anderen Hosts) und öffentliche Erreichbarkeit nur ausgehend (keine offenen Ports).
 5. **Replikationstakt:** bei Bedarf von 15 auf 5 Minuten verkürzen.
+6. **Tailscale-OAuth-Client fürs Hostjoin:** Umstellung von `tailscale_auth_key` auf einen
+   getaggten OAuth-Client (Rotation-Regel 1) braucht zuerst einen echten OAuth-Client im
+   Tailscale-Adminpanel (Scope `devices:core:write`, Tag `tag:tech-node` o. ä.) — eine
+   Live-Aktion am echten Tailnet, die der Nutzer selbst anlegt. Bis dahin bleibt
+   `tailscale_auth_key` in Betrieb und wird über das Register (`tailscale-auth-key`) mit
+   Live-Check am Knoten `worker-0` beobachtet.
