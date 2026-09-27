@@ -10,19 +10,26 @@ No CarPlay: the CarPlay scene, its entitlement, and the `CarPlay.framework`
 dependency have all been removed — this is a normal, App-Store-shippable
 app with no special Apple entitlement request needed for any of it.
 
-## Why HTTP, not HTTPS
+## Transport: HTTP in the code, HTTPS in the cluster
 
-Every `*.homeserver` service in this cluster is plain HTTP behind Traefik —
-check any `argocd/apps/*/values.yaml`, `ingress.tls` is empty everywhere.
-Client-cert mTLS was a real, partially-built plan for a handful of admin
-UIs, but it was never merged and the app it was built around (Authentik)
-has since been removed from the cluster entirely — there is currently no
-mTLS migration path targeting this API. `Constants.swift` points at
-`https://carplay-api.homeserver` to match that live reality, with an
-`NSAppTransportSecurity` exception for the `homeserver` domain generated
-into `Info.plist` from `project.yml` (see "Structure" below — this is *not*
-a hand-edited plist file). `MTLSDelegate.swift` documents exactly what to
-change if/when that migration reaches carplay-api.
+`Constants.swift` points at `http://carplay-api.prod.homeserver`, with an
+`NSAppTransportSecurity` exception for the `homeserver` domain generated into
+`Info.plist` from `project.yml` (see "Structure" below — this is *not* a
+hand-edited plist file). The backend runs in the **TECH** cluster
+(`argocd/apps/tech/carplay-api/`), the `prod` in the hostname is only the URL
+tier (see `docs/c-netzwerk-dns/c0040-domain-tiers.md`).
+
+**The cluster has moved on since this was written:** Traefik now redirects
+HTTP → HTTPS globally (`argocd/apps/tech/traefik-config/helmchartconfig.yaml`)
+and serves `*.tech.homeserver` / `*.prod.homeserver` with certificates from a
+private root CA (`docs/d-sicherheit/d0040-internal-tls.md`,
+`docs/assets/homeserver-root-ca.pem`). An `http://` request therefore ends up
+on HTTPS with a certificate iOS only trusts once the root CA is installed and
+enabled on the device (Settings → General → About → Certificate Trust
+Settings). If the app cannot reach the API, check this first: install the CA
+profile and switch `apiBaseURL` to `https://`. `MTLSDelegate.swift` documents
+what to change for client-certificate mTLS, which is still not implemented for
+carplay-api.
 
 ## Structure
 
@@ -95,7 +102,7 @@ output, not a source file.
 
 ### 2. Get an API token
 
-Requires carplay-api already deployed with a sealed `CARPLAY_API_TOKEN` —
+Requires carplay-api already deployed (TECH cluster) with a sealed `CARPLAY_API_TOKEN` —
 see [`docs/3-apps-workloads/300d0-carplay-api.md`](../docs/3-apps-workloads/300d0-carplay-api.md#ersteinrichtung) in
 capulus-core. Run the app, tap the gear icon on any tab → paste the same
 token you sealed for the backend → **Save to Keychain**.
@@ -115,7 +122,7 @@ tunnel as the homeserver.
 
 | Setting | Where | Default |
 |---|---|---|
-| API base URL | `Utilities/Constants.swift` → `apiBaseURL` | `https://carplay-api.homeserver` |
+| API base URL | `Utilities/Constants.swift` → `apiBaseURL` | `http://carplay-api.prod.homeserver` |
 | WoL agent base URL (vereinsheim-alarmmonitor) | `Constants.swift` → `wolAgentBaseURL` | `http://100.123.214.4:9102` (Tailscale IP) |
 | Refresh interval | `Constants.swift` → `refreshInterval` | 30s |
 | Bearer token | Settings screen (gear icon) → iOS Keychain | none until set |
@@ -158,7 +165,7 @@ real request succeeded).
 
 - **`MTLSDelegate.swift`**: kept as the requested filename, but implements
   standard TLS handling + a documented extension point for a *future* client
-  certificate, not active pinning — see "Why HTTP, not HTTPS" above.
+  certificate, not active pinning — see "Transport" above.
 - **Entitlements**: `HomeserverDashboard.entitlements` is empty. The
   original spec's "Keychain Sharing" and "Network Extensions" entries never
   applied (single target, rides on Tailscale's already-active system VPN),

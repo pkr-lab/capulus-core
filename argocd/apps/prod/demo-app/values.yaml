@@ -14,9 +14,6 @@ service:
   port: 80
   targetPort: 5678
 
-# PROD-Kopie (Phase 3.3): der oeffentliche Host demo-prod.pke-lab.de faellt
-# vorerst weg - cloudflared routet *.pke-lab.de auf den Traefik in TECH und
-# kennt PROD noch nicht.
 ingress:
   enabled: true
   className: traefik

@@ -1,5 +1,7 @@
 # Vaultwarden — Passwort-Manager
 
+> **Cluster:** TECH · Ordner `argocd/apps/tech/vaultwarden/` · URL `https://vault.tech.homeserver` und `https://vault-tech.pke-lab.de`. `kubectl`-Befehle in diesem Doc gelten für den TECH-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
+
 [Vaultwarden](https://github.com/dani-garcia/vaultwarden) ist eine
 leichtgewichtige Rust-Implementierung der Bitwarden-Server-API. Alle
 offiziellen Bitwarden-Clients (Browser-Erweiterung, Mobile-Apps, Desktop-App,
@@ -12,7 +14,7 @@ Microservices) betreiben zu müssen.
 ## Architektur
 
 ```
-vault.homeserver        →  Traefik    → vaultwarden (Port 80)
+vault.tech.homeserver        →  Traefik    → vaultwarden (Port 80)
 vault.pke-lab.de         →  Cloudflare Tunnel → vaultwarden (Port 80)
                                             └── PVC: data (2 Gi, local-path)
 ```
@@ -51,7 +53,7 @@ nächsten Schritt versiegeln.
 
 ### 1.2 SealedSecret-Ciphertext erzeugen
 
-Über die Web-UI unter <https://kubeseal-webgui.homeserver>:
+Über die Web-UI unter <https://kubeseal-webgui.tech.homeserver>:
 
 1. Öffnen und ausfüllen:
    - **Namespace**: `vaultwarden`
@@ -131,7 +133,7 @@ Erwartet:
 
 ## 2. Ersten Account anlegen
 
-1. **https://vault.homeserver** öffnen → *Create Account*.
+1. **https://vault.tech.homeserver** öffnen → *Create Account*.
 2. Master-Passwort setzen (idealerweise einen langen Passphrase-Satz, den
    man sich merken kann — das ist der einzige Schlüssel zum ganzen Tresor).
 3. Einloggen, im Web-Vault unter *Account Settings → Security → Two-step
@@ -160,7 +162,7 @@ Alle offiziellen Bitwarden-Clients unterstützen einen "Self-hosted"-Server:
 - **Desktop-App / CLI**: gleiches Prinzip (`bw config server
   https://vault.pke-lab.de` für die CLI)
 
-Intern im LAN funktioniert auch `https://vault.homeserver` als Server-URL,
+Intern im LAN funktioniert auch `https://vault.tech.homeserver` als Server-URL,
 aber nur die `pke-lab.de`-Domain ist von unterwegs erreichbar.
 
 ---
@@ -168,7 +170,7 @@ aber nur die `pke-lab.de`-Domain ist von unterwegs erreichbar.
 ## 4. Admin-Oberfläche
 
 Unter `https://vault.pke-lab.de/admin` (oder intern
-`https://vault.homeserver/admin`) mit dem Klartext-Passwort aus Schritt 1.1
+`https://vault.tech.homeserver/admin`) mit dem Klartext-Passwort aus Schritt 1.1
 einloggen. Dort lassen sich u. a. Nutzer verwalten und Diagnosen einsehen.
 SMTP für E-Mail-Versand (Passwort-Reset, Organisations-Einladungen) ist
 seit dem netcup-Postfach-Setup fest in `values.yaml` hinterlegt (siehe
@@ -261,8 +263,7 @@ StorageClass (wie beim Großteil der übrigen Apps, siehe
 [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md)) wurde erwogen, aber **bewusst
 verworfen**: das NAS erzwingt inzwischen `all_squash` (kein
 `no_root_squash` mehr verfügbar), was bei Vaultwardens SQLite-Datei zu
-Permission-Problemen führt — siehe Kommentar in
-`argocd/apps/tech/vaultwarden/values.yaml`. Die Haupt-PVC bleibt daher auf
+Permission-Problemen führt — siehe [60040](../6-hintergruende/60040-helm-charts-tech.md#vaultwarden). Die Haupt-PVC bleibt daher auf
 `local-path` (Homeserver-System-SSD).
 
 Stattdessen sichert ein nächtlicher `backup`-CronJob (eigene PVC, bewusst

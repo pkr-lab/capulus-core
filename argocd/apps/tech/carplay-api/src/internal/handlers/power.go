@@ -12,11 +12,6 @@ import (
 	"carplay-api/internal/models"
 )
 
-// PowerHandler exposes brightness + wake/shutdown, proxied to power-agent
-// (see clients.PowerAgentClient for why this can't be done from the pod
-// itself). Every handler here maps an *AgentError back to the status code
-// the agent reported, so e.g. an unreachable homeserver screen surfaces as
-// a real error to the app instead of a misleading 200.
 type PowerHandler struct {
 	agent          *clients.PowerAgentClient
 	shutdownCode   string
@@ -65,8 +60,6 @@ func (h *PowerHandler) Wake(c *gin.Context) {
 	}
 
 	if req.Target == models.PowerTargetHomeserver {
-		// The homeserver is the always-on control plane — it has no WoL
-		// path to wake it from, see docs/2-betrieb-hardware/20020-cluster-power-manager.md.
 		c.JSON(http.StatusBadRequest, gin.H{"error": "homeserver has no wake action"})
 		return
 	}

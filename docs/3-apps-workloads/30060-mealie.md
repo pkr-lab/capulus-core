@@ -1,5 +1,7 @@
 # Mealie — Rezeptverwaltung und Wochenplaner
 
+> **Cluster:** PROD · Ordner `argocd/apps/prod/mealie/` · URL `https://mealie.prod.homeserver` und `https://mealie-prod.pke-lab.de`. `kubectl`-Befehle in diesem Doc gelten für den PROD-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
+
 Mealie ist eine selbst gehostete Rezeptverwaltung. Rezepte lassen sich direkt
 per URL von Kochwebseiten importieren (Chefkoch, AllRecipes, BBC Food usw.).
 Integriert ist ein Wochenplaner und eine automatische Einkaufsliste.
@@ -9,7 +11,7 @@ Integriert ist ein Wochenplaner und eine automatische Einkaufsliste.
 ## Architektur
 
 ```
-mealie.homeserver  →  Traefik  →  mealie (Port 9000)
+mealie.prod.homeserver  →  Traefik  →  mealie (Port 9000)
                                       └── PVC: data (5 Gi, nas)
 ```
 
@@ -20,7 +22,7 @@ mealie.homeserver  →  Traefik  →  mealie (Port 9000)
 
 ## Erster Start
 
-Nach dem Deploy läuft Mealie direkt unter **https://mealie.homeserver**.
+Nach dem Deploy läuft Mealie direkt unter **https://mealie.prod.homeserver**.
 
 Standard-Credentials beim ersten Login:
 
@@ -33,14 +35,17 @@ Standard-Credentials beim ersten Login:
 
 ---
 
-## Authentik-SSO (seit Ablösung von Authelia)
+## Authentik-SSO (im PROD-Cluster aktuell zurückgestellt)
 
-`mealie.prod.homeserver` und `mealie-prod.pke-lab.de` verlangen zuerst
-einen Authentik-Login — nur der Nutzer `rdn` hat Zugriff (siehe
+Vorgesehen ist ein Authentik-Login vor `mealie.prod.homeserver` und `mealie-prod.pke-lab.de`
+(Traefik-ForwardAuth, Zugriff für die Gruppen `admins` und `mealie-user`, siehe
 [docs/d-sicherheit/d0073-authentik-sso.md](../d-sicherheit/d0073-authentik-sso.md)).
-Die App-eigene Anmeldung oben (Standard-Admin bzw. eigener Account) bleibt
-unverändert bestehen, ist aber nur noch über den nicht-Authentik-geschützten
-Bypass-Host erreichbar: `https://mealie-native.prod.homeserver`.
+Seit dem Umzug nach PROD ist er **nicht aktiv**: PROD hat noch keinen Authentik-Outpost, deshalb wurde
+die Middleware-Annotation in `argocd/apps/prod/mealie/values.yaml` bewusst entfernt (Wiedereinschalten:
+[`argocd/bootstrap-prod/migrations/sso-outpost/README.md`](../../argocd/bootstrap-prod/migrations/sso-outpost/README.md)).
+Aktuell schützt nur Mealies **eigene** Anmeldung die App (Standard-Admin bzw. eigener Account). Der
+ungeschützte Bypass-Host `https://mealie-native.prod.homeserver` bleibt für den Fall bestehen, dass SSO
+wieder aktiv ist und ausfällt.
 
 ---
 
@@ -57,5 +62,5 @@ Bypass-Host erreichbar: `https://mealie-native.prod.homeserver`.
 | Key | Bedeutung | Default |
 |---|---|---|
 | `env.ALLOW_SIGNUP` | Neue Nutzer erlauben | `false` |
-| `env.BASE_URL` | URL für interne Links | `https://mealie.homeserver` |
+| `env.BASE_URL` | URL für interne Links | `https://mealie.prod.homeserver` |
 | `persistence.size` | Datenspeicher inkl. Bilder | `5Gi` |

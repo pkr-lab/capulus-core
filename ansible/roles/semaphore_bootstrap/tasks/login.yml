@@ -1,8 +1,4 @@
 ---
-# ============================================================
-# Login to Semaphore and capture the session cookie. Subsequent
-# requests pass it back in the `Cookie:` header.
-# ============================================================
 
 - name: Read admin password from disk
   ansible.builtin.slurp:

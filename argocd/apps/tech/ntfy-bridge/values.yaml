@@ -1,9 +1,6 @@
 ---
-# Only used while autoscaling.enabled is false — the HPA takes over
-# replica count once autoscaling is enabled (see below).
 replicaCount: 1
 
-# CPU-only.
 autoscaling:
   enabled: true
   minReplicas: 1
@@ -15,11 +12,8 @@ image:
   tag: "3.14-slim"
   pullPolicy: IfNotPresent
 
-# ntfy connection — URL of the ntfy service (in-cluster or external).
 ntfy:
-  # Base URL without topic, e.g. http://ntfy.ntfy.svc.cluster.local
   url: "http://ntfy.ntfy.svc.cluster.local"
-  # Topic to post alerts to
   topic: "Home-Lab"
 
 service:

@@ -266,7 +266,7 @@ im Node würde ignoriert bzw. durch den forced command überschrieben.
 2. Node „Zammad-Ticket erstellen“ → Credential zuweisen (bestehende
    „Zammad Token Auth (Rotation-Reminder)“ wiederverwenden, siehe
    [../d-sicherheit/d0060-secrets-rotation.md](../d-sicherheit/d0060-secrets-rotation.md), oder neu anlegen:
-   Base URL `https://zammad.homeserver`, Access Token mit Berechtigung
+   Base URL `https://zammad.tech.homeserver`, Access Token mit Berechtigung
    `ticket.agent`)
 3. Workflow **aktivieren** (Import allein reicht nicht)
 4. `nightly_worker_wake_n8n_webhook_url` gegen die tatsächliche n8n-Ingress-

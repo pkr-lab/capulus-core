@@ -1,8 +1,6 @@
 import Foundation
 
 enum FormatterHelper {
-    /// Truncates to `maxLength`, appending "…" if anything was cut — used
-    /// to keep alert rows from wrapping/clipping mid-word.
     static func truncate(_ text: String, maxLength: Int) -> String {
         guard text.count > maxLength else { return text }
         let cutIndex = text.index(text.startIndex, offsetBy: max(0, maxLength - 1))

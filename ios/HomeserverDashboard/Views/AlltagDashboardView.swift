@@ -1,11 +1,5 @@
 import SwiftUI
 
-/// Alltag-Modus-Variante des Dashboards: statt Server-Metriken (siehe
-/// HomeView) zeigt sie Wetter heute + morgen, analog zu Glances
-/// "Wetter — Heute"/"Wetter — Morgen"-Widgets (siehe argocd/apps/glance/
-/// templates/configmap.yaml), nur nativ statt per HTML-Widget-Template.
-/// "Heute" bekommt die anschaulichere, größere Karte — "Morgen" bleibt
-/// kompakt als reiner Ausblick.
 struct AlltagDashboardView: View {
     @State private var forecast: WeatherForecast?
     @State private var isLoading = false
@@ -85,8 +79,6 @@ struct AlltagDashboardView: View {
     }
 }
 
-/// Groß, icon-geführt, mit einer kleinen Kennzahlen-Reihe (Regen, Wind) —
-/// das ist die Karte, die man auf einen Blick lesen soll.
 private struct TodayWeatherCard: View {
     let day: DayForecast?
     let currentTemp: Double?
@@ -137,16 +129,10 @@ private struct TodayWeatherCard: View {
     }
 }
 
-/// Sonnenverlauf als Bogen (Bezier-Kurve statt echter Ellipse — reicht für
-/// den visuellen Eindruck und macht die Positionsberechnung fürs
-/// Sonne/Mond-Symbol trivial, weil dieselbe quadratische Formel zum Zeichnen
-/// und zum Platzieren verwendet wird). Tagsüber wandert eine Sonne entlang
-/// des Bogens, außerhalb der Tageszeit steht ein Mond am jeweiligen Ende.
 private struct SunPathView: View {
     let sunrise: Date
     let sunset: Date
 
-    /// `nil` outside of daylight hours (before sunrise / after sunset).
     private var dayProgress: Double? {
         guard sunset > sunrise else { return nil }
         let now = Date()
@@ -235,8 +221,6 @@ private struct WeatherStatChip: View {
     }
 }
 
-/// Kompakter Ausblick — dieselben Werte wie heute, ohne den großen Icon-
-/// Header, damit sich die Karte optisch klar der "Heute"-Karte unterordnet.
 private struct TomorrowWeatherCard: View {
     let day: DayForecast?
 
@@ -267,9 +251,6 @@ private struct TomorrowWeatherCard: View {
     }
 }
 
-/// Aktueller Rhein-Pegel Andernach (Pegelonline/WSV, siehe
-/// Constants.Pegel) — ergänzt die Wetterkarten um eine zweite,
-/// alltagsrelevante Lage-Info direkt am Rhein.
 private struct PegelCard: View {
     let measurement: PegelMeasurement?
     let error: String?
@@ -300,9 +281,6 @@ private struct PegelCard: View {
     }
 }
 
-/// Kurzlink-Kacheln zu den self-hosted Diensten (siehe
-/// Constants.SelfHostedServices) — reine Link-Liste ohne eigenen Live-
-/// Status, öffnet den jeweiligen Dienst in Safari über Tailscale.
 private struct ServicesCard: View {
     @Environment(\.openURL) private var openURL
 

@@ -1,8 +1,3 @@
-# CronJobs/Backups: Alert, wenn der letzte ERFOLGREICHE Lauf zu lange her ist. Bewusst nicht
-# `kube_job_status_failed > 0`: fehlgeschlagene Jobs bleiben in der Historie stehen und wuerden
-# nach der Reparatur weiter feuern. Anlass: die Authentik-Backups schlugen in den Naechten auf den
-# 17. und 18.09.2026 fehl (BackoffLimitExceeded) und wurden nur zufaellig bemerkt.
-# Gilt fuer den Hub-Cluster (TECH) - kube-state-metrics-Daten anderer Cluster sind hier nicht enthalten.
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMRule
 metadata:
@@ -14,7 +9,6 @@ spec:
       interval: 1m
       rules:
 
-        # Datensicherungen laufen taeglich (Nacht): nach 30 h ohne Erfolg fehlt mindestens eine Sicherung.
         - alert: BackupJobStale
           expr: |
             (time() - kube_cronjob_status_last_successful_time{cronjob=~".*backup.*"}) > 30 * 3600

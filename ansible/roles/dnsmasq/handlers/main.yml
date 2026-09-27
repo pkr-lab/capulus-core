@@ -1,6 +1,4 @@
 ---
-# Handler laufen in der Reihenfolge dieser Datei: erst systemd neu laden (Drop-ins),
-# dann dnsmasq neu starten, damit der Neustart die neuen Unit-Einstellungen bekommt.
 - name: systemd nach dnsmasq-Drop-in neu laden
   ansible.builtin.systemd:
     daemon_reload: true

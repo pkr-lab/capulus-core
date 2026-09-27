@@ -9,11 +9,6 @@ enum NewsError: LocalizedError {
     }
 }
 
-/// One top headline + short summary each from Tagesschau (public JSON),
-/// Heise and WELT (public RSS/Atom feeds). These are unversioned third-
-/// party feeds outside this repo's control — if a provider changes its
-/// schema, that one source fails on its own (NewsView shows "Nicht
-/// verfügbar" for it) rather than taking down the whole News page.
 final class NewsAPIClient {
     private let session = URLSession(configuration: .default)
     private let decoder = JSONDecoder()
@@ -71,9 +66,6 @@ final class NewsAPIClient {
         return NewsHeadline(source: source, title: title, summary: summary, link: link)
     }
 
-    /// Feed descriptions routinely carry HTML markup and entities (`<p>`,
-    /// `&amp;`, …) meant for a browser, not a plain SwiftUI Text — strip
-    /// both down to plain text, then keep it card-sized.
     private static func cleanSummary(_ raw: String) -> String {
         let noTags = raw.replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
         let decoded = noTags
@@ -90,9 +82,6 @@ final class NewsAPIClient {
     }
 }
 
-/// Parses just enough of an RSS 2.0 (`<item>`) or Atom (`<entry>`) feed to
-/// grab the first item's title/link/description, then aborts — we only
-/// ever show one headline per source, no need to parse the whole feed.
 private final class FeedFirstItemParser: NSObject, XMLParserDelegate {
     private(set) var firstItem: (title: String, link: String, description: String)?
 
@@ -113,8 +102,6 @@ private final class FeedFirstItemParser: NSObject, XMLParserDelegate {
         }
         currentElement = elementName
 
-        // Atom's <link> is a self-closing element with an href attribute,
-        // not text content like RSS 2.0's <link>text</link>.
         if insideItem, elementName == "link", currentLink.isEmpty, let href = attributeDict["href"] {
             currentLink = href
         }
@@ -138,16 +125,12 @@ private final class FeedFirstItemParser: NSObject, XMLParserDelegate {
         }
     }
 
-    // Called because of the abortParsing() above once the first item's
-    // been captured — expected, not a real failure.
     func parser(_ parser: XMLParser, parseErrorOccurred parseError: Error) {}
 
     private func appendToCurrentElement(_ string: String) {
         switch currentElement {
         case "title": currentTitle += string
         case "link": currentLink += string
-        // RSS 2.0 uses <description>, Atom uses <summary> (or <content>
-        // for the full body) — both map to the same short-summary field.
         case "description", "summary": currentDescription += string
         default: break
         }

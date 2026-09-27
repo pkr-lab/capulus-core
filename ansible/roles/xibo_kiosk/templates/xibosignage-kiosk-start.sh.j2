@@ -1,10 +1,4 @@
 #!/usr/bin/env bash
-# Managed by Ansible (xibo_kiosk role) — do not edit manually.
-#
-# Startet Chromium im Kiosk-Modus gegen den lokalen Slideshow-Webserver.
-# Anders als alamos_kiosk (docs/3-apps-workloads/30010-alamos-apager.md) gibt es hier keinen
-# Login-Zustand zu erhalten — die Slideshow braucht keine Anmeldung, daher
-# bewusst MIT --incognito (kein Cache-/Profil-Aufbau über Neustarts hinweg).
 set -euo pipefail
 
 export DISPLAY=:0
@@ -13,21 +7,10 @@ xset s off || true
 xset s noblank || true
 xset -dpms || true
 
-# Warten, bis der Webserver wirklich antwortet, statt Chromium blind zu
-# starten — sonst landet Chromium auf Chromiums eigener "nicht erreichbar"-
-# Fehlerseite, die sich nie von selbst neu lädt (nur per manuellem F5).
-# Bewusst unbegrenzt: dank Restart=always/RestartSec=5 im systemd-Unit holt
-# ein Neustart des Skripts das ohnehin nach, ein Timeout hier würde also nur
-# denselben kaputten Zustand (Chromium gegen einen toten Webserver) erzeugen.
 until curl --fail --silent --max-time 2 "http://127.0.0.1:{{ xibo_kiosk_http_port }}/" >/dev/null 2>&1; do
   sleep 1
 done
 
-# Debian Bookworm (aktuelles Raspberry Pi OS) hat das Binary von
-# "chromium-browser" auf "chromium" umbenannt — das APT-Paket
-# "chromium-browser" existiert zwar weiterhin (Transitional-Paket), liefert
-# aber kein Binary mit diesem Namen mehr. Beide Namen unterstützen, damit
-# das Skript auf Bullseye- wie Bookworm-basierten Pis funktioniert.
 if command -v chromium-browser >/dev/null 2>&1; then
   CHROMIUM_BIN=chromium-browser
 elif command -v chromium >/dev/null 2>&1; then

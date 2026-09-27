@@ -23,9 +23,9 @@ HTML_ID = re.compile(r"""<a\s+[^>]*(?:id|name)=["']([^"']+)["']""", re.I)
 
 def slug(heading: str) -> str:
     """GitHub-Slug: Formatierung entfernen, klein, nur Wort-/Leerzeichen/Bindestrich, Leerzeichen -> '-'."""
-    h = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", heading)  # [text](url) -> text
-    h = re.sub(r"<[^>]+>", "", h)  # HTML-Tags
-    h = re.sub(r"[`*~]", "", h)  # Code/Betonung
+    h = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", heading)
+    h = re.sub(r"<[^>]+>", "", h)
+    h = re.sub(r"[`*~]", "", h)
     h = h.strip().lower()
     h = re.sub(r"[^\w\- ]", "", h, flags=re.UNICODE)
     return h.replace(" ", "-")
@@ -77,7 +77,7 @@ def iter_links(path: str):
 def check(path: str) -> list:
     problems = []
     for lineno, target in iter_links(path):
-        if re.match(r"^[a-zA-Z][a-zA-Z0-9+.\-]*:", target):  # http:, https:, mailto:, ...
+        if re.match(r"^[a-zA-Z][a-zA-Z0-9+.\-]*:", target):
             continue
         file_part, _, anchor = target.partition("#")
         file_part = unquote(file_part)

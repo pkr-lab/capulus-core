@@ -12,30 +12,12 @@ import (
 	"time"
 )
 
-// K8sConfigMapClient reads a single ConfigMap key via the in-cluster API
-// using this pod's own ServiceAccount token — no client-go dependency (this
-// binary otherwise has zero Kubernetes API surface, see
-// docs/3-apps-workloads/300d0-carplay-api.md "power-agent" section on why
-// it stays unprivileged). Mirrors the
-// same minimal approach github-release-watcher's Python watcher already
-// uses for its own state ConfigMap (argocd/apps/tech/github-release-watcher/
-// templates/configmap.yaml).
-//
-// Needs the RoleBinding granting this pod's ServiceAccount `get` on that
-// specific ConfigMap in its namespace — see
-// argocd/apps/tech/github-release-watcher/templates/role.yaml
-// ("...-updates-reader").
 type K8sConfigMapClient struct {
 	apiServer  string
 	token      string
 	httpClient *http.Client
 }
 
-// NewK8sConfigMapClient fails if not actually running in-cluster (no
-// mounted ServiceAccount token, or KUBERNETES_SERVICE_HOST/PORT unset) —
-// callers treat that as "feature unavailable" rather than a fatal startup
-// error, same degrade-don't-crash approach as every other upstream in this
-// service.
 func NewK8sConfigMapClient() (*K8sConfigMapClient, error) {
 	const saDir = "/var/run/secrets/kubernetes.io/serviceaccount"
 
@@ -71,9 +53,6 @@ func NewK8sConfigMapClient() (*K8sConfigMapClient, error) {
 	}, nil
 }
 
-// GetConfigMapData fetches one .data key from a ConfigMap in the given
-// namespace. Returns "" (no error) if the key is absent from an otherwise
-// successfully-fetched ConfigMap.
 func (c *K8sConfigMapClient) GetConfigMapData(ctx context.Context, namespace, name, key string) (string, error) {
 	endpoint := fmt.Sprintf("%s/api/v1/namespaces/%s/configmaps/%s", c.apiServer, namespace, name)
 

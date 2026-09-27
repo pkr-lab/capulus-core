@@ -1,16 +1,4 @@
 #!/usr/bin/env bash
-# Erzeugt einen API-Token fuer das ArgoCD-Konto `ci` (Nur-Lese-Rolle) und legt ihn direkt als
-# GitHub-Repo-Secret ab - der Token wird nicht ausgegeben und nirgends gespeichert.
-# Gebraucht von der Promotion-Kette (.github/workflows/promote-chain.yml),
-# Beschreibung: docs/f-cicd-automatisierung/f00b0-promotion-chain.md#einrichtung
-#
-#   scripts/create-argocd-ci-token.sh hub    -> Secret ARGOCD_HUB_TOKEN   (ArgoCD auf dem Homeserver: TECH + PROD)
-#   scripts/create-argocd-ci-token.sh entw   -> Secret ARGOCD_ENTW_TOKEN  (eigene ArgoCD-Instanz auf entw-vm)
-#
-# Voraussetzung: das Konto `ci` existiert (Ansible-Rolle argocd, `argocd_ci_account_enabled: true`, einmal
-# `make argocd` bzw. `ansible-playbook ansible/entw.yml --tags argocd`), `gh` ist als Repo-Admin angemeldet,
-# und das Admin-Passwort ist ueber das Secret argocd-initial-admin-secret lesbar - sonst ARGOCD_ADMIN_PASSWORD setzen.
-# TOKEN_TTL_DAYS (Standard 365) begrenzt die Laufzeit; alte Token bleiben bis zum Ablauf gueltig.
 set -euo pipefail
 
 target=${1:-}

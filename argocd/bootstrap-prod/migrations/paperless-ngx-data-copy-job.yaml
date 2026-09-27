@@ -1,14 +1,3 @@
-# Kopiert die paperless-ngx-Daten aus den TECH-Verzeichnissen auf dem NAS in die neuen
-# PROD-Volumes (PVCs paperless-ngx-data/-media/-consume/-export). Manuell in PROD
-# anwenden, NICHT per ArgoCD (siehe README.md in diesem Ordner):
-#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl apply -f -' < argocd/bootstrap-prod/migrations/paperless-ngx-data-copy-job.yaml
-#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl -n paperless-ngx logs job/paperless-ngx-data-copy'
-#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl -n paperless-ngx delete job paperless-ngx-data-copy'
-#
-# Nur mit GESTOPPTEM TECH-paperless und PROD-paperless auf 0 ausfuehren: die SQLite-DB
-# (db.sqlite3 + -wal/-shm) muss konsistent sein, und das Zielvolume wird vor dem
-# Kopieren geleert. Der Redis-Speicher wird bewusst NICHT kopiert (nur Task-Queue).
-# Laeuft als uid 1000 wie die paperless-Dateien (Besitzer/Rechte auch bei NFS-Squash).
 apiVersion: batch/v1
 kind: Job
 metadata:

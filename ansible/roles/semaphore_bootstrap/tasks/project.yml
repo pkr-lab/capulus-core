@@ -1,12 +1,4 @@
 ---
-# ============================================================
-# Provision one Semaphore project:
-#   1. Project itself
-#   2. Default access keys (SSH + None)
-#   3. Repository
-#   4. Inventories
-#   5. Templates
-# ============================================================
 
 - name: List existing projects for {{ project_spec.name }}
   ansible.builtin.uri:

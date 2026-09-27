@@ -1,4 +1,2 @@
 ---
 node_exporter_enabled: true
-
-node_exporter_port: 9100

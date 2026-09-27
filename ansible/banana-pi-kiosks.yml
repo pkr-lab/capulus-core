@@ -1,8 +1,4 @@
 ---
-# ============================================================
-# Banana-Pi-Alarmmonitor-Playbook (ALAMOS AMweb, Armbian)
-# Vereinsheim-Alarmmonitor
-# ============================================================
 
 - name: Banana-Pi-Alarmmonitore einrichten
   hosts: banana_pis

@@ -1,8 +1,4 @@
 ---
-# ============================================================
-# Provision one task template inside the current project.
-# Wires repository_id + inventory_id + playbook path together.
-# ============================================================
 
 - name: List existing templates in project {{ project_spec.name }}
   ansible.builtin.uri:

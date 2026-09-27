@@ -16,27 +16,14 @@ serviceAccount:
 
 podAnnotations: {}
 
-# Das Image (louislam/uptime-kuma) hat kein USER-Directive und erwartet
-# root: der eigene Entrypoint (/app/extra/entrypoint.sh) chownt /app/data
-# selbst zu $PUID:$PGID und droppt danach per setpriv auf diese UID/GID.
-# Mit erzwungenem runAsUser/runAsNonRoot startet der Container nie als root,
-# der interne chown scheitert dann immer mit "Operation not permitted" —
-# unabhängig von der StorageClass oder der tatsächlichen Volume-Ownership
-# (chown auf 0:0, da PUID/PGID ohne die Env-Vars unten auf 0 defaulten).
 podSecurityContext: {}
 
 securityContext:
   allowPrivilegeEscalation: false
 
-# Steuert den Privilege-Drop im Entrypoint (chown + setpriv), siehe Kommentar
-# oben — läuft am Ende trotzdem als UID/GID 1000, nur der Startprozess ist
-# root.
 env:
   PUID: "1000"
   PGID: "1000"
-  # Damit HTTP(s)-Monitore gegen *.homeserver (interne CA, siehe
-  # docs/d-sicherheit/d0040-internal-tls.md) nicht mit UNABLE_TO_VERIFY_LEAF_SIGNATURE
-  # fehlschlagen — Node.js vertraut sonst nur seinem eingebauten Root-Store.
   NODE_EXTRA_CA_CERTS: "/etc/ssl/homeserver-ca/homeserver-root-ca.pem"
 
 service:
@@ -47,14 +34,6 @@ service:
 ingress:
   enabled: true
   className: traefik
-  # Authentik-SSO (docs/d-sicherheit/d0073-authentik-sso.md, Ablösung von
-  # Authelia siehe docs/4-planung/40070-authentik-sso-iac.md) — nur der
-  # interne Haupt-Host ist geschützt, Zugriff nur für die "admins"-Gruppe
-  # (Policy-Blueprint argocd/apps/tech/authentik/blueprints/apps/uptime-kuma.yaml).
-  # Der externe Status-Host unten bleibt bewusst unverändert. Eine einzige
-  # Middleware reicht für alle Tiers — im Unterschied zu Authelia berechnet
-  # Authentiks eingebetteter Outpost die Rückkehr-URL dynamisch, siehe
-  # argocd/apps/tech/authentik/templates/middleware.yaml.
   annotations:
     traefik.ingress.kubernetes.io/router.middlewares: "authentik-authentik@kubernetescrd"
   hosts:
@@ -64,24 +43,10 @@ ingress:
           pathType: Prefix
   tls: []
 
-# Öffentlich erreichbar über die bestehende *.pke-lab.de-Wildcard-Route von
-# cloudflared (kein Änderung an cloudflared nötig, siehe
-# docs/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md → "Neuen Dienst
-# freigeben"). Bewusst "status" statt "uptime-kuma" im Hostnamen, damit die
-# eingesetzte Software nicht schon aus der URL erkennbar ist. Nur die
-# öffentliche Status-Page-API (/api/status-page/...) wird von der
-# "Updates"-Seite auf edv-kretzer.de per Hintergrund-Request abgefragt
-# (keine direkte Verlinkung, kein iframe) — das restliche Dashboard bleibt
-# hinter dem Admin-Login. Kein ForwardAuth hier (eigener, unveränderter
-# Ingress) — bewusst nicht Teil der Authentik-SSO, siehe oben.
 ingressPublic:
   enabled: true
   host: status-prod.pke-lab.de
 
-# "Knopfdruck zur nativen Anmeldung" — Bypass-Ingress ohne
-# ForwardAuth-Middleware, Ziel des Fallback-Links auf Authentiks Login-Seite
-# (docs/d-sicherheit/d0073-authentik-sso.md). Gleiches Muster wie
-# gotify/values.yaml → ingressApi.
 ingressNative:
   enabled: true
   host: uptime-kuma-native.prod.homeserver
@@ -103,9 +68,6 @@ resources:
 
 affinity: {}
 
-# local-path bindet den Pod an den Node, auf dem die PVC zuerst provisioniert
-# wird — fest auf homeserver, damit es nicht vom Scheduler zufällig auf
-# worker-0/worker-1 landet (docs/2-betrieb-hardware/20000-nas-storage.md → Migrations-Notiz).
 nodeSelector:
   kubernetes.io/hostname: homeserver
 tolerations: []

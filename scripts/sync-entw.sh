@@ -1,21 +1,4 @@
 #!/usr/bin/env bash
-# Sync main -> entw (Logik hinter .github/workflows/sync-entw.yml,
-# Beschreibung in docs/f-cicd-automatisierung/f0080-entw-promotion.md).
-#
-# Haelt `entw` auf dem Stand von `main`, solange entw keine eigenen Commits hat.
-# Eigene Commits = Nicht-Merge-Commits auf entw, die main inhaltlich nicht hat
-# (git cherry, also nach Patch-Id: ein nach main uebergebener Cherry-Pick zaehlt
-# nicht) und die noch nicht mit dem Tag `entw-promoted` uebergeben wurden.
-#
-#   entw hat eigene Commits (es wird gerade dort getestet) -> nichts tun
-#   entw enthaelt schon alles aus main                      -> nichts tun
-#   sonst                                                   -> main in entw mergen
-#                                                              (per PR + Auto-Merge)
-#
-# Ein Merge-Konflikt bricht ab, ohne zu mergen; der Lauf wird rot und entw bleibt unveraendert.
-# Pause per Hand: Repo-Variable ENTW_SYNC_PAUSED=true (Workflow prueft sie).
-#
-# Umgebung: DRY_RUN=1 oeffnet keinen PR.
 set -euo pipefail
 
 TAG="entw-promoted"
@@ -34,7 +17,6 @@ if git merge-base --is-ancestor "origin/${MAIN}" "origin/${ENTW}"; then
   exit 0
 fi
 
-# Bereits uebergebene Commits (bis zum Tag) ausnehmen.
 promoted=$(mktemp)
 if git rev-parse -q --verify "refs/tags/${TAG}^{commit}" >/dev/null; then
   git rev-list "refs/tags/${TAG}" > "$promoted"
@@ -51,9 +33,6 @@ fi
 
 PR_TITLE="chore: sync main into entw"
 
-# Das Ruleset auf entw verlangt Pull Requests (keine Bypass-Actors) -> statt direkt zu pushen
-# wird ein PR main -> entw geoeffnet und per Auto-Merge (Merge-Commit, kein Squash, damit
-# main danach Vorfahre von entw bleibt) gemergt.
 if [ -n "${DRY_RUN:-}" ]; then
   log "DRY_RUN: haette einen PR ${MAIN} -> ${ENTW} geoeffnet und Auto-Merge aktiviert."
   exit 0
@@ -68,8 +47,6 @@ else
   log "PR #${pr} ist schon offen."
 fi
 
-# --auto wartet auf die Pflicht-Checks. Sind keine (mehr) offen, lehnt gh das mit "clean status"
-# ab -> dann direkt mergen. Ein Merge-Konflikt bricht hier mit Fehler ab, entw bleibt unveraendert.
 if ! out=$(gh pr merge "$pr" --auto --merge 2>&1); then
   if echo "$out" | grep -qi "clean status"; then
     gh pr merge "$pr" --merge
