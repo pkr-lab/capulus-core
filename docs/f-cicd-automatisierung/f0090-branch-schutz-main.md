@@ -15,7 +15,7 @@ mergen, wenn die CI-Jobs grün sind.
 | Regel | Wirkung |
 |---|---|
 | Pull Request | Kein Direkt-Push auf `main`. Kein Pflicht-Review (`0` Freigaben), du arbeitest allein — die Sicherheit kommt aus den Checks. |
-| Pflicht-Checks | `make lint (yamllint, ansible-lint, helm lint)`, `helm template \| kubeconform`, `go build, vet, test, tidy`, `docs links`, `gitleaks` — die fünf Jobs aus [`ci.yml`](../../.github/workflows/ci.yml) |
+| Pflicht-Checks | `make lint (yamllint, ansible-lint, helm lint)`, `helm template \| kubeconform`, `go build, vet, test, tidy`, `docs links`, `token register`, `gitleaks` — die sechs Jobs aus [`ci.yml`](../../.github/workflows/ci.yml) |
 | Kein Force-Push, kein Löschen | `main` ist nicht überschreibbar |
 | „Up to date“ nicht verlangt | `strict_required_status_checks_policy: false` — sonst müsste jeder PR nach jedem anderen Merge neu gebaut werden |
 
@@ -74,7 +74,7 @@ Commits) und `mirror-gitlab.yml` (liest `main`).
 - **`GITHUB_TOKEN`-PRs lösen keine CI aus.** Automatisch erzeugte PRs brauchen ein
   PAT (siehe Promotion), sonst sind sie nicht mergbar.
 - **Check-Namen** im Ruleset müssen den `name:` der Jobs in `ci.yml` entsprechen.
-  Wird ein Job umbenannt oder kommt einer dazu (zuletzt `docs links`), in
+  Wird ein Job umbenannt oder kommt einer dazu (zuletzt `token register`), in
   `scripts/setup-main-ruleset.sh` nachziehen und das Skript erneut ausführen: es
   aktualisiert das vorhandene Ruleset.
 - **Lock-out:** Ist das Ruleset aktiv und die CI kaputt, hilft nur der
