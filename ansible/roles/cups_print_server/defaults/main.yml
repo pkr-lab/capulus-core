@@ -35,3 +35,11 @@ cups_print_server_qpdl_repo_version: "f97086c367d926dc4b6f84facabc9c3029729cba"
 cups_print_server_qpdl_build_dir: "/usr/local/src/splix-qpdl"
 
 cups_print_server_extra_queues: []
+
+cups_print_server_tls_names:
+  - homeserver
+  - homeserver.local
+  - homeserver.fritz.box
+  - logs-write.tech.homeserver
+  - ubuntu-26-04-lts.fritz.box
+cups_print_server_tls_ip: "{{ network_static_ip | default('192.168.178.94') }}"
