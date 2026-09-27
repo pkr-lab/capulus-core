@@ -1,15 +1,4 @@
 ---
-# ============================================================
-# banana_pi_kiosk role — Banana-Pi-Alarmmonitor (ALAMOS AMweb, Armbian)
-# ============================================================
-# Wie alamos_kiosk (Raspberry Pi), aber fuer Armbian/Debian statt
-# Raspberry Pi OS: anderer Chromium-Paketname, kein Imager-Autologin-
-# Schalter (wird hier per getty-Drop-in + .bash_profile + startx
-# nachgebildet), und ein lokaler Failover-Supervisor, der bei
-# Nichterreichbarkeit von alamos-apager auf eine lokal hinterlegte,
-# Vault-verschluesselte Fallback-URL umschaltet (siehe
-# docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md und docs/3-apps-workloads/30010-alamos-apager.md).
-# ============================================================
 
 - name: Sicherstellen dass banana_pi_kiosk_station gesetzt ist
   ansible.builtin.assert:
@@ -52,7 +41,6 @@
     cache_valid_time: 3600
   when: banana_pi_kiosk_enabled | bool
 
-# ---- Homeserver-Root-CA vertrauen (https://*.homeserver, siehe docs/d-sicherheit/d0040-internal-tls.md) --
 - name: Homeserver-Root-CA-Zertifikat deployen
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../docs/assets/homeserver-root-ca.pem"
@@ -63,7 +51,6 @@
   when: banana_pi_kiosk_enabled | bool
   notify: Homeserver-CA-Vertrauensspeicher aktualisieren
 
-# ---- Homeserver-Root-CA zusaetzlich in die NSS-Datenbank importieren -----
 - name: NSS-Datenbank-Verzeichnis des Kiosk-Users anlegen
   ansible.builtin.file:
     path: "/home/{{ banana_pi_kiosk_user }}/.pki/nssdb"
@@ -91,13 +78,12 @@
     certutil -d sql:/home/{{ banana_pi_kiosk_user }}/.pki/nssdb
     -A -t "C,," -n homeserver-root-ca
     -i /usr/local/share/ca-certificates/homeserver-root-ca.crt
-  changed_when: true # importiert das Zertifikat, laeuft nur wenn oben noch nicht vorhanden (siehe when)
+  changed_when: true
   when:
     - banana_pi_kiosk_enabled | bool
     - banana_pi_kiosk_nssdb_ca_check.rc != 0
   notify: Reload getty@tty1
 
-# ---- Vorinstallierten Display-Manager deaktivieren -----------------------
 - name: lightdm stoppen und deaktivieren (falls vorhanden)
   ansible.builtin.systemd:
     name: lightdm
@@ -107,7 +93,6 @@
   when: banana_pi_kiosk_enabled | bool
   failed_when: false
 
-# ---- Autologin auf tty1 (kein Raspberry-Pi-Imager-Schalter auf Armbian) --
 - name: Verzeichnis fuer getty@tty1-Drop-in anlegen
   ansible.builtin.file:
     path: /etc/systemd/system/getty@tty1.service.d
@@ -150,7 +135,6 @@
     mode: "0755"
   when: banana_pi_kiosk_enabled | bool
 
-# ---- Kiosk-Supervisor (Normalbetrieb + lokaler Server-Fallback) --------
 - name: Kiosk-Supervisor-Skript deployen
   ansible.builtin.template:
     src: banana-pi-kiosk-supervisor.sh.j2
@@ -161,7 +145,6 @@
   when: banana_pi_kiosk_enabled | bool
   notify: Reload getty@tty1
 
-# ---- On-Demand-Screenshot (manuelle Sichtpruefung, kein Automatismus) ---
 - name: Screenshot-Skript deployen
   ansible.builtin.template:
     src: banana-pi-screenshot.sh.j2
@@ -171,7 +154,6 @@
     mode: "0755"
   when: banana_pi_kiosk_enabled | bool
 
-# ---- Wake-on-LAN-Relay (andere Geraete im Standort-LAN wecken) ---------
 - name: wakeonlan installieren
   ansible.builtin.apt:
     name: wakeonlan
@@ -189,7 +171,6 @@
     mode: "0755"
   when: banana_pi_kiosk_enabled | bool and banana_pi_kiosk_wol_enabled | bool
 
-# ---- Wake-on-LAN-HTTP-Agent (direkter App-Zugriff über Tailscale) ------
 - name: Config-Verzeichnis für WoL-HTTP-Agent anlegen
   ansible.builtin.file:
     path: /etc/banana-pi-wol-agent
@@ -278,7 +259,6 @@
       docs/3-apps-workloads/30020-vereinsheim-alarmmonitor.md.
   when: banana_pi_kiosk_enabled | bool and banana_pi_kiosk_wol_agent_enabled | bool
 
-# ---- Heartbeat (zentraler ntfy-Ausfall-Alarm in alamos-apager) ---------
 - name: Heartbeat-Skript deployen
   ansible.builtin.copy:
     src: banana-pi-heartbeat.sh
@@ -328,7 +308,6 @@
   when: not (banana_pi_kiosk_enabled | bool)
   failed_when: false
 
-# ---- Taeglicher Kiosk-Session-Neustart (kein Kernel-Reboot) --------------
 - name: Daily-Reboot-systemd-Service + Timer deployen
   ansible.builtin.template:
     src: "{{ item }}.j2"

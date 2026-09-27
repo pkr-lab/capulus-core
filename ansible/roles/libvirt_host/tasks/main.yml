@@ -1,51 +1,19 @@
 ---
-# ============================================================
-# libvirt_host role — KVM/libvirt fuer die PROD-VM auf homeserver
-# ============================================================
-# Siehe docs/4-planung/40080-multi-cluster-entw-prod-tech.md, Baustein 5.
-# Bewusst virt-install/virsh statt der community.libvirt-Collection -
-# keine neue Galaxy-Abhaengigkeit fuer eine einzelne Rolle, passt zum
-# sonstigen "kein Tool mehr als noetig"-Muster des Repos.
 
 - name: QEMU/KVM + libvirt-Pakete installieren
   ansible.builtin.apt:
     name:
-      # "qemu-kvm" ist auf Ubuntu 26.04 ("resolute") ein virtuelles Paket
-      # geworden (aufgeteilt in qemu-system-x86 / qemu-system-x86-hwe),
-      # kein direkt installierbares Paket mehr - apt kann bei einem
-      # virtuellen Paketnamen in einer expliziten Liste nicht selbst
-      # entscheiden, welche der beiden Varianten gemeint ist. Die
-      # normale (nicht-HWE) Variante passt zum generic-Kernel, der hier
-      # laeuft (siehe "uname -r": *-generic, keine *-hwe-Kernel-Variante).
       - qemu-system-x86
       - libvirt-daemon-system
       - libvirt-clients
       - bridge-utils
       - virtinst
-      - cloud-image-utils # liefert cloud-localds fuer die Seed-ISO
+      - cloud-image-utils
       - genisoimage
     state: present
     update_cache: true
   when: libvirt_host_enabled | bool
 
-# libvirt-daemon-system legt beim Installieren automatisch
-# /etc/dnsmasq.d/libvirt-daemon an ("bind-interfaces") - kollidiert mit
-# einem eigenen, bewusst auf "bind-dynamic" gestellten System-dnsmasq
-# (siehe ansible/roles/dnsmasq/templates, Kommentar zu automatischem
-# Tailscale-IP-Pickup). Live entdeckt am 2026-09-18: kollabierte den
-# System-dnsmasq auf homeserver komplett ("cannot set --bind-interfaces
-# and --bind-dynamic"), echter DNS-Ausfall fuers ganze LAN, nicht nur
-# ein Lint-/Rollen-Problem. libvirts EIGENES dnsmasq fuer virbr0 braucht
-# diesen System-weiten Snippet nicht - der Ausschluss von virbr0 passiert
-# bei "bind-dynamic" ohnehin implizit ueber die vorhandene
-# interface=/listen-address-Allowlist im System-dnsmasq.
-#
-# Nur Entfernen reicht NICHT: das postinst von libvirt-daemon-config-network
-# legt den Symlink bei jedem Paket-Upgrade neu an ("if [ ! -e ... ]"), auch
-# per unattended-upgrades. Live erneut aufgetreten am 2026-09-24 06:08
-# (Upgrade 12.0.0-1ubuntu5.3 -> .4, dnsmasq danach bis zum Reboot tot,
-# *.homeserver-DNS im LAN weg). Ein leerer Platzhalter als regulaere Datei
-# besteht den "-e"-Test und verhindert die Neuanlage.
 - name: Konfliktenden dnsmasq-Snippet von libvirt-daemon-system entschaerfen
   when: libvirt_host_enabled | bool
   block:
@@ -72,9 +40,6 @@
           # mit "bind-interfaces" an - kollidiert mit "bind-dynamic" in /etc/dnsmasq.conf.
       notify: System-dnsmasq nach Snippet-Entschaerfung neu starten
 
-    # Sofort statt am Play-Ende: war dnsmasq durch den Snippet abgestuerzt, ist
-    # das LAN-DNS weg, bis er neu startet - das soll nicht vom Erfolg der
-    # restlichen Tasks (VM-Setup, Bridge, ...) abhaengen.
     - name: Handler sofort ausfuehren (System-dnsmasq moeglichst schnell wieder hochbringen)
       ansible.builtin.meta: flush_handlers
 
@@ -85,9 +50,6 @@
     state: started
   when: libvirt_host_enabled | bool
 
-# ---- Neustart des Hosts: VMs sauber herunterfahren und in der richtigen ----
-# ---- Reihenfolge wieder starten -----------------------------------------
-# Wirkt beim naechsten Shutdown/Boot; die laufenden VMs werden hier nicht angefasst.
 - name: libvirt-guests - Verhalten beim Host-Shutdown und -Boot festlegen
   ansible.builtin.lineinfile:
     path: /etc/default/libvirt-guests
@@ -100,12 +62,6 @@
     - { key: SHUTDOWN_TIMEOUT, value: "{{ libvirt_host_guests_shutdown_timeout }}" }
   when: libvirt_host_enabled | bool
 
-# libvirt-guests startet die VMs, sobald das Netz steht. Die PROD-VM loest
-# *.homeserver und alle externen Namen ueber den dnsmasq des Hosts auf (host_vars:
-# dns = network_static_ip); ohne laufenden dnsmasq scheitern Image-Pulls und
-# Cluster-Verbindungen der VM. After=/Wants= ist auf Hosts ohne dnsmasq (worker-1)
-# wirkungslos. Beim Herunterfahren gilt die umgekehrte Reihenfolge: die VMs stoppen,
-# solange dnsmasq noch antwortet.
 - name: libvirt-guests - Start nach dnsmasq und Tailscale ordnen (systemd-Drop-in)
   when: libvirt_host_enabled | bool
   block:
@@ -130,18 +86,12 @@
           Wants=dnsmasq.service
       notify: systemd nach libvirt-guests-Drop-in neu laden
 
-# ---- Bridge-Netzwerk (HOHES RISIKO — siehe defaults/main.yml) --------
-# Standardmaessig deaktiviert (libvirt_host_configure_bridge: false).
-# Eigener Tag, damit dieser Task NIE versehentlich als Teil eines
-# generischen "make install"-Laufs mitgezogen wird.
 - name: Bridge-Netzwerk einrichten (nur wenn explizit aktiviert)
   when:
     - libvirt_host_enabled | bool
     - libvirt_host_configure_bridge | bool
   tags: [libvirt-bridge]
   block:
-    # Vor dem Loeschen der alten Netplan-Configs abbrechen: Auto-erkannte
-    # Facts zeigen nach einem Teil-Setup auf br0 (Bridge enslavet sich selbst).
     - name: Sicherstellen, dass die Bridge-Parameter plausibel sind
       ansible.builtin.assert:
         that:
@@ -152,11 +102,6 @@
           In host_vars/<host>/vars.yml libvirt_host_bridge_interface und
           libvirt_host_static_ip explizit setzen.
 
-    # Existiert die NIC nicht (z. B. "eno1" statt "enp4s0" nach einer
-    # Umbenennung durch Kernel/initramfs), entsteht eine Bridge OHNE Uplink,
-    # die trotzdem die Host-IP traegt - der Host ist danach im LAN nicht mehr
-    # erreichbar (Vorfall homeserver, 2026-09-20). Deshalb hier abbrechen,
-    # bevor irgendeine Netplan-Datei angefasst wird.
     - name: Sicherstellen, dass die physische NIC auf dem Host existiert
       ansible.builtin.assert:
         that:
@@ -210,15 +155,9 @@
       become: false
       when: libvirt_host_netplan_bridge.changed or libvirt_host_netplan_existing.files | length > 0
 
-    # Die per ControlMaster gecachte SSH-Verbindung ist nach netplan apply
-    # tot und wuerde sonst minutenlang haengen.
     - name: SSH-Verbindung zuruecksetzen
       ansible.builtin.meta: reset_connection
 
-    # Mit geladenem br_netfilter (k3s/Flannel) laufen Bridge-Pakete durch
-    # iptables. UFW verwirft geroutete Pakete standardmaessig ("deny
-    # (routed)") - dann erreicht das LAN die VM nur per ICMP, TCP laeuft
-    # ins Timeout (Vorfall prod-vm, 2026-09-19).
     - name: UFW installiert?
       ansible.builtin.stat:
         path: /usr/sbin/ufw
@@ -233,7 +172,6 @@
         comment: "libvirt bridge LAN <-> VM"
       when: libvirt_host_ufw_binary.stat.exists
 
-# ---- Storage-Pool + Basis-Image ---------------------------------------
 - name: Storage-Pool-Verzeichnis anlegen
   ansible.builtin.file:
     path: "{{ libvirt_host_pool_dir }}"
@@ -265,13 +203,6 @@
     - "'already active' not in libvirt_host_pool_start.stderr"
   when: libvirt_host_enabled | bool
 
-# NUR herunterladen, wenn die Datei noch fehlt - niemals ersetzen. get_url
-# schickt bei vorhandenem dest ein If-Modified-Since und ueberschreibt die Datei,
-# sobald Canonical unter derselben URL ein neueres Build veroeffentlicht. Das
-# passierte bei jedem taeglichen Semaphore-Lauf (06:00) und hat die Basis der
-# VM-Disks ausgetauscht (Vorfall 2026-09-23, docs/5-incidents/50010-...).
-# Neue VMs kopieren das Image in eine eigene Disk (vm.yml), das Basis-Image
-# dient nur noch als Vorlage fuer NEUE VMs.
 - name: Pruefen, ob das Basis-Cloud-Image schon vorhanden ist
   ansible.builtin.stat:
     path: "{{ libvirt_host_pool_dir }}/{{ libvirt_host_base_image_name }}"
@@ -288,9 +219,6 @@
     - libvirt_host_enabled | bool
     - not libvirt_host_base_image.stat.exists
 
-# ---- Pro VM: Disk + Cloud-Init-Seed + Domain ---------------------------
-# "loop" auf einem "block" existiert in Ansible nicht - deshalb per
-# include_tasks auf eine separate Datei geloopt (tasks/vm.yml).
 - name: Pro VM aus libvirt_host_vms
   ansible.builtin.include_tasks: vm.yml
   loop: "{{ libvirt_host_vms }}"

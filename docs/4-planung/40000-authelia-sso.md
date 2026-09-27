@@ -9,11 +9,10 @@
 
 Architektur- und Rollout-Plan für einen zentralen Single-Sign-On-Layer via
 [Authelia](https://www.authelia.com/) vor jeder App mit eigener Anmeldemaske.
-Noch **nicht umgesetzt** — dieses Doc hält den recherchierten und mit dem
-Nutzer abgestimmten Plan fest, bevor der erste Rollout-Batch beginnt. Sobald
-Umsetzung + Verifikation abgeschlossen sind, wandert der Ist-Zustand als
-eigenes Doc nach `d-sicherheit/` (analog zu den bestehenden Security-Docs),
-dieses Planungsdoc bleibt als historischer Kontext bestehen.
+**Status: umgesetzt und wieder abgelöst.** Authelia wurde eingeführt und später durch
+Authentik ersetzt (siehe Hinweis oben). Dieses Doc hält den ursprünglichen, mit dem
+Nutzer abgestimmten Plan fest und bleibt als historischer Kontext bestehen; die
+Ausgangslage unten beschreibt den Stand vor dem SSO-Rollout.
 
 ---
 
@@ -225,7 +224,7 @@ alles auf einmal eintragen.
 | App | Grund |
 |---|---|
 | **Vaultwarden** | bereits dokumentierte, bestehende Entscheidung — Bitwarden-Clients sprechen die API direkt an, ein Redirect bricht Login/Sync ([300a0-vaultwarden.md](../3-apps-workloads/300a0-vaultwarden.md)). Unverändert lassen. |
-| **Pacman** | öffentliches, absichtlich anmeldefreies Spiel ([300f0-pacman-visitor-tracking.md](../3-apps-workloads/300f0-pacman-visitor-tracking.md)) — ein Login-Wall widerspricht dem Zweck. Separater, von diesem Plan unabhängiger Hinweis: `trainingMode.enabled: true` steht aktuell live im committeten `values.yaml` für die öffentliche Prod-Instanz — laut eigenem Doku-Kommentar dort nur für die Dauer einer Unterrichtsstunde gedacht, lohnt sich unabhängig zu prüfen. |
+| **Pacman** | öffentliches, absichtlich anmeldefreies Spiel ([300f0-pacman-visitor-tracking.md](../3-apps-workloads/300f0-pacman-visitor-tracking.md)) — ein Login-Wall widerspricht dem Zweck. Separater, von diesem Plan unabhängiger Hinweis: `trainingMode.enabled: true` steht aktuell live im committeten `values.yaml` für die öffentliche Prod-Instanz — laut [60090](../6-hintergruende/60090-pacman-schulungsobjekt.md#trainingsmodus) nur für die Dauer einer Unterrichtsstunde gedacht, lohnt sich unabhängig zu prüfen. |
 | **MediaMTX** | eigene HTTP-Basic-Auth für HLS-Viewer, RTMP/RTSP-Publisher brauchen Stream-URL-Auth ohne Browser-Redirect-Fähigkeit — ForwardAuth würde Publisher-Clients brechen. Bleibt wie dokumentiert ("kein IdP nötig"). |
 | **Semaphore-/Gotify-API-Ingress** | bereits bestehende `ingressApi`-Hosts für maschinelle Zugriffe (Ansible-Bootstrap, iOS-App) — bleiben unangetastet, bekommen keine Middleware (unabhängig vom neuen `-native`-Bypass für die Haupt-App). |
 

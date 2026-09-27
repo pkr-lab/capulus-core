@@ -1,14 +1,3 @@
-# Kopiert das aktuelle Postgres-18-Datenverzeichnis von Wiki.js aus dem TECH-Verzeichnis
-# auf dem NAS in das neue PROD-Volume (PVC wikijs-postgresql-data). Manuell in PROD
-# anwenden, NICHT per ArgoCD (siehe README.md in diesem Ordner):
-#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl apply -f -' < argocd/bootstrap-prod/migrations/wikijs-postgres-copy-job.yaml
-#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl -n wikijs logs job/wikijs-postgres-copy'
-#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl -n wikijs delete job wikijs-postgres-copy'
-#
-# NUR mit gestopptem TECH-Postgres (sauber heruntergefahren) und gestopptem PROD-Postgres.
-# Kopiert nur pgdata_fixed_pg18 (PG 18, ~1,8 GB); das alte pgdata_fixed (PG 16, Rueckfall
-# des Major-Upgrades) bleibt in TECH und wird nicht mitgenommen. Laeuft als uid 1000 wie
-# Postgres in diesem Chart (Besitzer/Modus muessen stimmen, PGDATA verlangt 0700).
 apiVersion: batch/v1
 kind: Job
 metadata:

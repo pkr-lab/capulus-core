@@ -1,16 +1,7 @@
 ---
-# ============================================================
-# cups_print_server — Defaults
-# ============================================================
-# Macht einen USB-Drucker, der direkt am Homeserver hängt, per CUPS im
-# Heimnetz + Tailnet verfügbar — IPP/AirPrint für Handys/Tablets, IPP für
-# Windows/Linux-Clients. Vollständige Anleitung: docs/2-betrieb-hardware/20040-printer.md.
-# ============================================================
 
 cups_print_server_enabled: true
 
-# ---- Druckerwarteschlange -----------------------------------
-# Name erscheint in CUPS-/IPP-URLs — keine Leerzeichen/Sonderzeichen.
 cups_print_server_printer_name: "Samsung_M2026"
 cups_print_server_printer_description: "Samsung Xpress M2026 (USB, homeserver)"
 cups_print_server_printer_location: "2.OG Homeserver"
@@ -22,12 +13,10 @@ cups_print_server_media_size: "A4"
 
 cups_print_server_set_default: true
 
-# ---- Sharing / Remote-Zugriff --------------------------------
 cups_print_server_remote_admin: true
 cups_print_server_remote_any: true
 cups_print_server_share_printers: true
 
-# ---- Pakete ---------------------------------------------------
 cups_print_server_packages:
   - cups
   - cups-client
@@ -40,11 +29,9 @@ cups_print_server_packages:
 cups_print_server_admin_users:
   - ubuntu
 
-# ---- Optional: QPDL-Community-Treiber für die M2020/M2026-Serie -------
 cups_print_server_build_qpdl_driver: false
 cups_print_server_qpdl_repo: "https://gitlab.com/ScumCoder/splix.git"
 cups_print_server_qpdl_repo_version: "f97086c367d926dc4b6f84facabc9c3029729cba"
 cups_print_server_qpdl_build_dir: "/usr/local/src/splix-qpdl"
 
-# ---- Weitere Warteschlangen (Netzwerkdrucker) -------------------------
 cups_print_server_extra_queues: []

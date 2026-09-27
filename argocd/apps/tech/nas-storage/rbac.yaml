@@ -35,7 +35,6 @@ subjects:
     name: nas-nfs-subdir-external-provisioner
     namespace: nas-storage
 ---
-# Leader-Election des Provisioners läuft über Endpoints im eigenen Namespace.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:

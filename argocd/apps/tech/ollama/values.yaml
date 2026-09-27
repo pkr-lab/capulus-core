@@ -1,10 +1,4 @@
 ---
-# Wird ausschliesslich vom n8n-Workflow "Zammad Externer KI-Lauf (taeglich)"
-# zwischen 0 und 1 hin- und hergeschaltet (kubectl-scale-aequivalenter PATCH
-# auf die Scale-Subresource, siehe docs/3-apps-workloads/300xx-ollama.md).
-# ArgoCD ignoriert /spec/replicas fuer dieses Deployment bewusst (siehe
-# argocd/bootstrap/root-applicationset.yaml) -- sonst wuerde selfHeal den
-# Pod waehrend eines laufenden KI-Laufs sofort wieder auf 0 zuruecksetzen.
 replicaCount: 0
 
 image:
@@ -15,10 +9,6 @@ image:
 nameOverride: ""
 fullnameOverride: ""
 
-# Name der n8n-ServiceAccount (anderer Namespace) fuer das Scale-RBAC unten
-# (templates/role-n8n-scaler.yaml) -- muss zu
-# argocd/apps/tech/n8n/values.yaml -> serviceAccount.name passen
-# (Default dort ist der Release-Name "n8n").
 n8nNamespace: n8n
 n8nServiceAccountName: n8n
 
@@ -45,23 +35,6 @@ persistence:
   accessMode: ReadWriteOnce
   mountPath: /root/.ollama
 
-# Gegen die tatsaechliche Node-Kapazitaet geprueft (19.08.2026):
-# "kubectl describe node worker-0" -> Allocatable nur 4 CPU / ~7.3Gi RAM
-# (Lenovo M90q). Der alte Default (6 CPU / 8Gi Requests) lag ueber der
-# gesamten Node-Kapazitaet -- der Pod waere nie ueber Pending
-# hinausgekommen. Andere Pods auf worker-0 sind nur kleine DaemonSets
-# (~150m CPU / ~256Mi Requests zusammen), Ollama bekommt also den
-# Grossteil der Node fuer sich.
-#
-# memory NACHTRAEGLICH auf 6Gi/7Gi angehoben (27.08.2026, erster echter
-# End-to-End-Testlauf des n8n-Workflows): mit dem alten Limit (6500Mi)
-# lehnte Ollama den generate-Call fuer llama3.1:8b IMMER mit 500 "model
-# requires more system memory (6.1 GiB) than is available (6.0 GiB)" ab
-# -- das Modell selbst braucht schon mehr als das damalige Limit, unabhaengig
-# von der Node-Kapazitaet. 7Gi Limit passt noch unter die ~7.3Gi
-# Node-Allocatable (siehe oben), bleibt aber knapp -- ein groesseres/
-# weniger stark quantisiertes Modell braeuchte mehr RAM, als dieser Node
-# hergibt (Hardware-Grenze, kein Config-Wert).
 resources:
   requests:
     cpu: "3"

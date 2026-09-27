@@ -1,9 +1,4 @@
 ---
-# Hand-rolled HPA — the upstream zammad chart has no autoscaling/hpa keys in
-# its values schema, so this wrapper defines its own HorizontalPodAutoscaler
-# instead of toggling a chart-native flag. scaleTargetRef.name is the literal
-# Deployment name rendered by the upstream chart (verified via `helm template`),
-# not a Helm include, since we don't own that chart's templates.
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -18,10 +13,6 @@ spec:
     name: zammad-railsserver
   minReplicas: 1
   maxReplicas: 3
-  # Nur CPU als Scaling-Signal — Memory-Utilization triggerte hier ständig
-  # auf maxReplicas hoch, obwohl die CPU-Last einstellig blieb: railsserver
-  # pendelt sich einfach dauerhaft > 80% von request ein (normales
-  # RAM-Verhalten des Rails-Prozesses), das ist kein echtes Lastsignal.
   metrics:
     - type: Resource
       resource:

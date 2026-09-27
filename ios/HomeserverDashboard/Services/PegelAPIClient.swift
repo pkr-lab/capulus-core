@@ -8,10 +8,6 @@ enum PegelError: LocalizedError {
     }
 }
 
-/// Talks to Pegelonline (WSV) directly — public REST API, no key needed,
-/// same data source as the "Rhein-Pegel Andernach"-Idee in
-/// IdeasToDeploy.md. Station UUID is fixed (Andernach), see
-/// Constants.Pegel.
 final class PegelAPIClient {
     private let session = URLSession(configuration: .default)
     private let decoder = JSONDecoder()

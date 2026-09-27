@@ -15,7 +15,6 @@ from dataclasses import dataclass
 import yaml
 from yaml.nodes import MappingNode, ScalarNode, SequenceNode
 
-# Exakte Chart-/Image-Version, keine Bereichs-Ausdruecke.
 EXACT_CHART_VERSION = re.compile(r"^v?\d+(\.\d+)*([-+][0-9A-Za-z.\-]+)?$")
 
 VERSION_FILES = ("values.yaml", "Chart.yaml")
@@ -23,12 +22,12 @@ VERSION_FILES = ("values.yaml", "Chart.yaml")
 
 @dataclass(frozen=True)
 class Field:
-    file: str  # Dateiname relativ zum App-Ordner, z. B. "values.yaml"
-    key: str  # z. B. "sealed-secrets.image.tag" oder "dependencies[sealed-secrets].version"
-    value: str  # Textwert ohne Anfuehrungszeichen
-    start: int  # Zeichenposition im Dokument (inkl. Anfuehrungszeichen)
+    file: str
+    key: str
+    value: str
+    start: int
     end: int
-    quote: str  # '"', "'" oder ""
+    quote: str
 
 
 def _scalar_field(file: str, key: str, node: ScalarNode) -> Field:

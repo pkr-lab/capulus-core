@@ -1,8 +1,6 @@
 import Combine
 import Foundation
 
-/// Single shared source of dashboard state for the app's tabs — one
-/// instance means one 30s polling loop total, not one per screen.
 @MainActor
 final class DashboardViewModel: ObservableObject {
     static let shared = DashboardViewModel()
@@ -46,26 +44,16 @@ final class DashboardViewModel: ObservableObject {
             dashboard = newDashboard
             lastUpdate = Date()
         } catch {
-            // Deliberately keep the last-known `dashboard` value on failure
-            // (see README "Offline-Verhalten") — a stale reading beats a
-            // blank screen.
             self.error = String(describing: error as NSError)
         }
 
         isLoading = false
     }
 
-    /// Not part of the 30s auto-refresh loop — carplay-api caches this for
-    /// 15 min server-side and the watcher behind it only runs every 2h, so
-    /// polling it that often would just hit the cache for nothing. Called
-    /// once per HomeView appearance / pull-to-refresh instead.
     func fetchUpdates() async {
         do {
             appUpdates = try await apiClient.getUpdates().repos
         } catch {
-            // Silent failure by design: this is a "nice to know" card, not
-            // core dashboard data — an error here shouldn't show a banner
-            // on top of the fleet overview. Just keep the last-known list.
         }
     }
 }

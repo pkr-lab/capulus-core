@@ -1,15 +1,4 @@
 ---
-# ============================================================
-# power_agent role — privilegierter HTTP-Agent auf dem Homeserver für
-# Bildschirmhelligkeit + manuelles Wake-on-LAN/Poweroff aus der iOS-App.
-# Läuft NICHT im Cluster — carplay-api ruft ihn über die
-# Homeserver-LAN-IP:Port, siehe argocd/apps/tech/carplay-api/values.yaml
-# config.powerAgent. UFW braucht dafür KEINE neue Regel: "Allow all
-# traffic from k3s pod CIDR" (ansible/roles/common) deckt Pod->Host schon
-# ab, unabhängig davon, auf welchem Node der carplay-api-Pod läuft
-# (Flannel-Overlay). Von außerhalb des Clusters ist Port 9101 dadurch
-# NICHT erreichbar — bewusst, siehe README/Absicherung.
-# ============================================================
 
 - name: Python3 installieren (Laufzeit für power-agent.py)
   ansible.builtin.apt:

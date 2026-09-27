@@ -1,9 +1,5 @@
 ---
-# Values passed through to the sealed-secrets sub-chart.
-# All keys live under `sealed-secrets:` because that is the dependency name.
 sealed-secrets:
-  # Predictable service name so kubeseal CLI and kubeseal-webgui find the
-  # controller without extra flags.
   fullnameOverride: sealed-secrets-controller
 
   image:

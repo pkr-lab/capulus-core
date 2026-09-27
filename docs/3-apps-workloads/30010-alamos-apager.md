@@ -1,5 +1,7 @@
 # Alarmmonitor-Kiosks (ALAMOS AMweb) – DLRG OG Andernach
 
+> **Cluster:** TECH · Ordner `argocd/apps/tech/alamos-apager/` · URL `https://alamos-apager.prod.homeserver`. `kubectl`-Befehle in diesem Doc gelten für den TECH-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
+
 Zentral verwaltete Raspberry-Pi-Alarmmonitore: jeder Pi zeigt im
 Kiosk-Browser die ALAMOS-AMweb-Seite (Cloud-Dienst der Alamos GmbH, eigener
 Account bereits vorhanden) für seinen Standort. Der Pi selbst bleibt
@@ -21,7 +23,7 @@ k3s-Cluster.
 ## Übersicht & Architektur
 
 ```
-Pi (Chromium --kiosk) ──▶ https://alamos-apager.homeserver/start?station=X
+Pi (Chromium --kiosk) ──▶ https://alamos-apager.prod.homeserver/start?station=X
                               │  (Traefik Ingress, *.homeserver Wildcard-DNS)
                               ▼
                      alamos-apager Pod (k3s, Namespace alamos-apager)
@@ -49,7 +51,7 @@ Wichtigste `values.yaml`-Knobs:
 | `ntfy.url` / `ntfy.topic` | Wohin der Ausfall-Alarm gepusht wird (Default: bestehende ntfy-Instanz, Topic `Alarmmonitor`) |
 | `stationsSecretName` | Name des SealedSecret mit den Standort→AMweb-URL-Paaren (Default `alamos-apager-stations`) |
 | `heartbeatTimeoutSeconds` | Ab wann ein Standort als "down" gilt (Default 300s — deutlich über dem Pi-Heartbeat-Intervall) |
-| `ingress.host` | `alamos-apager.homeserver` (Wildcard-DNS, keine manuelle dnsmasq-Änderung nötig) |
+| `ingress.host` | `alamos-apager.prod.homeserver` (Wildcard-DNS, keine manuelle dnsmasq-Änderung nötig) |
 
 Die App selbst kennt **keine echten AMweb-URLs** — die liegen ausschließlich
 im SealedSecret (siehe nächster Abschnitt). Ohne dieses Secret startet der
@@ -142,7 +144,7 @@ Die Rolle `ansible/roles/alamos_kiosk` installiert Chromium im Kiosk-Modus
 einen `alamos-heartbeat.timer` (Default alle 60s, siehe
 `alamos_kiosk_heartbeat_interval`). Zusätzlich laufen `thermal_watchdog` und
 `resource_watchdog` mit (gleiches Bundling wie bei `worker-0`, siehe
-`ansible/homeserver2.yml`) — unbeaufsichtigte Geräte sollen sich bei
+`ansible/worker-0.yml`) — unbeaufsichtigte Geräte sollen sich bei
 Überhitzung/Überlast selbst schützen.
 
 3. **Einmaliger manueller Login am Pi (nach dem ersten Deploy):** AMweb
@@ -185,7 +187,7 @@ Knopfdruck laufen.
 |---|---|
 | Pi zeigt 404 statt AMweb-Seite | `kubectl -n alamos-apager get secret alamos-apager-stations -o jsonpath='{.data}'` — fehlt der Stationsname als Key? |
 | Pi zeigt AMweb-Login-Formular statt Alarmmonitor | Chromium-Session abgelaufen/gelöscht — einmaligen manuellen Login (Passwort + Verschlüsselungspasswort, siehe [Pi-Provisionierung](#pi-provisionierung-ansible)) am Pi wiederholen |
-| `alamos-apager.homeserver` löst nicht auf | Wildcard-DNS prüfen: `nslookup alamos-apager.homeserver` (siehe [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md)) |
+| `alamos-apager.prod.homeserver` löst nicht auf | Wildcard-DNS prüfen: `nslookup alamos-apager.prod.homeserver` (siehe [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md)) |
 | Kein ntfy-Alarm bei Ausfall | `kubectl -n alamos-apager logs deploy/alamos-apager` — `NTFY_URL`/`NTFY_TOPIC` korrekt? ntfy-Topic im Client abonniert? |
 | Chromium startet nicht / schwarzer Bildschirm | Autologin auf dem Pi aktiv? `systemctl status alamos-kiosk` auf dem Pi |
 | `Permission denied (publickey)` bei `make alarm-kiosks` | `make semaphore-targets` lief nicht für den neuen Pi (siehe [docs/b-kubernetes-gitops/b0030-semaphore.md](../b-kubernetes-gitops/b0030-semaphore.md)) |
