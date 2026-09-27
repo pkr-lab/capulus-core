@@ -114,14 +114,13 @@
     - cups_print_server_enabled | bool
     - cups_print_server_build_qpdl_driver | bool
 
-- name: "Patch: Printer::loadInformation() nutzt den PageSize-Fallback (printer.cpp)"
+- name: "Patch: Printer::loadInformation() erzwingt PPD-PageSize (printer.cpp)"
   ansible.builtin.blockinfile:
     path: "{{ cups_print_server_qpdl_build_dir }}/splix/src/printer.cpp"
     marker: "    // {mark} ANSIBLE MANAGED BLOCK — cups_print_server PageSize-Fallback"
     insertbefore: '^    if \(!paperType\) \{$'
     block: |
-        if (!paperType)
-            paperType = request.ppd()->getDefaultChoice("PageSize");
+        paperType = request.ppd()->getDefaultChoice("PageSize");
   when:
     - cups_print_server_enabled | bool
     - cups_print_server_build_qpdl_driver | bool

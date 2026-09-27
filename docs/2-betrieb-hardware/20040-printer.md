@@ -256,6 +256,17 @@ cups-print-server` erneut laufen lassen, um den Queue-Default
 nachzuziehen. Manueller Workaround pro Job, falls weiterhin nötig:
 `lp -o media=A4 ...` (oder `-o PageSize=A4`).
 
+Der Fallback griff nur, wenn der Job **gar keine** PageSize auflöste —
+schickte ein Client stattdessen explizit eine andere/nicht passende
+Größe, blieb der Fehler bestehen. Der Patch in `printer.cpp` erzwingt
+deshalb `paperType` jetzt **immer** aus `*DefaultPageSize` der PPD,
+unabhängig davon, was der Job anfragt. Dadurch druckt die
+`Samsung_M2026`-Warteschlange jeden Job in der in
+`cups_print_server_media_size` konfigurierten Größe — ein Client kann
+für diese Warteschlange keine andere Papiergröße mehr erzwingen. Wer
+gelegentlich ein anderes Format braucht, muss `cups_print_server_media_size`
+ändern und `make cups-print-server` erneut laufen lassen.
+
 **Drucker taucht nicht in `lpinfo -v` auf:**
 USB-Kabel/Steckplatz prüfen, `lsusb` auf dem Homeserver (Paket
 `usbutils` wird von der Rolle installiert) — der M2026 sollte als
