@@ -178,6 +178,25 @@ jobs:
       - name: Check relative links and anchors in Markdown
         run: python3 scripts/check-doc-links.py
 
+  token-register:
+    name: token register
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install PyYAML
+        run: pip install --disable-pip-version-check pyyaml
+
+      - name: Check ops/token-register.yaml
+        run: python3 scripts/check-token-register.py
+
   secret-scan:
     name: gitleaks
     runs-on: ubuntu-latest
