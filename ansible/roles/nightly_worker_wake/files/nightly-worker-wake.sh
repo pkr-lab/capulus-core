@@ -40,7 +40,6 @@ START="$(date +%s)"
 START_ISO="$(date -u -Iseconds)"
 DEADLINE=$(( START + MAX_RUNTIME_SECONDS ))
 
-# ---- Report-Buchführung je Worker -----------------------------------
 declare -A wp_status wp_reason wp_changed wp_recap wp_rebooted
 for name in "${all_names[@]}"; do
   wp_status["$name"]="pending"

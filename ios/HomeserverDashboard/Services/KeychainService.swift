@@ -6,15 +6,6 @@ enum KeychainError: Error {
     case notFound
 }
 
-/// Stores the carplay-api bearer token in the iOS Keychain.
-///
-/// The original spec called for "Secure Enclave" storage — the Secure
-/// Enclave protects private *keys* used for signing/decryption, it has no
-/// API for storing an arbitrary opaque token like a bearer credential.
-/// `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` is the correct primitive
-/// here: device-encrypted, excluded from iCloud/iTunes backups, and
-/// unreadable while the device is locked — the actual security property
-/// the spec was after.
 final class KeychainService {
     static let shared = KeychainService()
     private init() {}
@@ -66,9 +57,6 @@ final class KeychainService {
             kSecAttrAccount as String: account,
         ]
 
-        // Delete-then-add is simpler and just as correct as SecItemUpdate
-        // for a single-value credential that's rewritten wholesale, not
-        // partially updated.
         SecItemDelete(query as CFDictionary)
 
         var newItem = query
@@ -111,11 +99,6 @@ final class KeychainService {
         SecItemDelete(query as CFDictionary)
     }
 
-    /// Extension point for the future mTLS migration (see
-    /// MTLSDelegate.swift) — returns the device's imported client identity
-    /// once one has been provisioned via `SecPKCS12Import` and stored here.
-    /// Not implemented: carplay-api doesn't require a client certificate
-    /// today.
     func clientIdentity() -> SecIdentity? {
         nil
     }

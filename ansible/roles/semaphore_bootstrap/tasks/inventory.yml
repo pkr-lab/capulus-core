@@ -1,13 +1,4 @@
 ---
-# ============================================================
-# Provision one inventory entry inside the current project.
-# `ssh_key` field references a key by name from semaphore_default_keys.
-# Body is built as a single Jinja dict so Python-native types survive
-# into the JSON encoder — same pattern as template.yml. YAML scalars
-# with `"{{ expr | int }}"` wrappers can be stringified before they
-# reach the encoder, causing Semaphore's strict int unmarshaler to
-# return 400 for required integer fields like ssh_key_id.
-# ============================================================
 
 - name: List existing inventories in project {{ project_spec.name }}
   ansible.builtin.uri:

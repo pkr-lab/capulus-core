@@ -1,7 +1,4 @@
 ---
-# ============================================================
-# resource_watchdog role — CPU/RAM-Selbstschutz
-# ============================================================
 
 - name: Deploy resource watchdog script
   ansible.builtin.copy:

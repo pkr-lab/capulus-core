@@ -1,5 +1,7 @@
 # MediaMTX — Live-Streaming (RTMP/RTSP → HLS)
 
+> **Cluster:** TECH · Ordner `argocd/apps/tech/mediamtx/` · URL `https://stream.prod.homeserver` und `https://stream-prod.pke-lab.de`. `kubectl`-Befehle in diesem Doc gelten für den TECH-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
+
 [MediaMTX](https://github.com/bluenviron/mediamtx) ist ein selbst-gehosteter
 Streaming-Server: Encoder (Kamera, OBS, ffmpeg) **publishen** ein Live-Signal
 per RTMP oder RTSP, MediaMTX macht es intern als HLS und WebRTC verfügbar,
@@ -10,7 +12,7 @@ Zuschauer schauen es im Browser.
 | Richtung | Protokoll | Zugriff | Absicherung |
 |---|---|---|---|
 | **Publish** (Kamera/OBS → Server) | RTMP/RTSP | Nur LAN/Tailnet (NodePort) | mediamtx interne Auth — Nutzername/Passwort im Stream-URL |
-| **Read** (Zuschauer → Server) | HLS (HTTP) | Intern (`stream.homeserver`) + öffentlich über Cloudflare Tunnel (`stream.pke-lab.de`) | mediamtx interne Auth — HTTP-Basic-Auth-Dialog im Browser |
+| **Read** (Zuschauer → Server) | HLS (HTTP) | Intern (`stream.prod.homeserver`) + öffentlich über Cloudflare Tunnel (`stream.pke-lab.de`) | mediamtx interne Auth — HTTP-Basic-Auth-Dialog im Browser |
 
 Beide Mechanismen laufen komplett **lokal in mediamtx** (`authMethod:
 internal`, siehe [mediamtx-Doku](https://mediamtx.org/docs/features/authentication))
@@ -28,7 +30,7 @@ OBS / ffmpeg / Kamera ───────────────────�
                                                                     │
                                               ┌─────────────────────┴─────────────────────┐
                                               ▼                                           ▼
-                                https://stream.homeserver                    https://stream.pke-lab.de
+                                https://stream.prod.homeserver                    https://stream.pke-lab.de
                                   HTTP-Basic-Auth (mediamtx)              (Cloudflare Tunnel, HTTP-Basic-Auth)
 ```
 
@@ -226,7 +228,7 @@ ffmpeg -re -i input.mp4 -c copy \
 
 **Playback intern:**
 
-Browser → `https://stream.homeserver/test` → mediamtx fragt per
+Browser → `https://stream.prod.homeserver/test` → mediamtx fragt per
 HTTP-Basic-Auth-Dialog nach den Zugangsdaten aus Schritt 2.2, danach der
 eingebaute HLS-Player.
 
@@ -301,7 +303,7 @@ der `cloudflared`-Pod die neue Config geladen hat (siehe [docs/e-externe-erreich
 ConfigMap-Änderung kommt nicht im Pod
 an](../e-externe-erreichbarkeit/e0010-cloudflare-deploy.md#configmap-änderung-kommt-nicht-im-pod-an)).
 
-**`stream.pke-lab.de`/`stream.homeserver` fragt gar nicht nach Login:**
+**`stream.pke-lab.de`/`stream.prod.homeserver` fragt gar nicht nach Login:**
 
 - Der `viewer`-Eintrag in `authInternalUsers` fehlt `action: read` bzw.
   `action: playback` — ohne die entsprechende Permission behandelt mediamtx

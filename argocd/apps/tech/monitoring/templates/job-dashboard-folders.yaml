@@ -1,42 +1,3 @@
-# Sortiert die von victoria-metrics-k8s-stack automatisch gezogenen
-# Standard-Dashboards ("Kubernetes / ...", "Node Exporter / ...",
-# "VictoriaMetrics - ...", "Prometheus / ...", "Alertmanager / Overview",
-# "Grafana Overview") in eigene Grafana-Ordner ein, statt sie im
-# General-Ordner zu sammeln:
-#   Kubernetes*                                  -> "Kubernetes (TECH)"
-#   Node Exporter*                               -> "Hardware" (Host-Sicht, neben den
-#                                                   Hardware-Dashboards, siehe
-#                                                   dashboards-hardware.yaml)
-#   VictoriaMetrics*/Prometheus*/Alertmanager*/Grafana* -> "Monitoring-Stack"
-# Die Pro-App-Dashboards landen in "Plattform (TECH)" / "Anwendungen (TECH)"
-# (values.yaml `dashboardApps`).
-#
-# Warum ein eigener Job statt einer values.yaml-Einstellung: der
-# eingebaute Sync-Job der Chart (siehe unten, Hook post-install/
-# post-upgrade, Image ghcr.io/victoriametrics/sync-job) unterstützt KEINE
-# Ordner-Zuweisung pro Dashboard — geprüft gegen die deployte Chart-Version
-# 0.91.2 UND die aktuelle Upstream-Version 0.92.1 (`helm show values
-# vm/victoria-metrics-k8s-stack`, Abschnitt `defaultDashboards.dashboards`
-# kennt nur `enabled`/`clusterMetric`, `defaultDashboards.annotations`
-# gilt nur global für ALLE Dashboards gleichzeitig). Eine echte Aufteilung
-# nach Thema braucht daher zwingend einen Nachbearbeitungsschritt.
-#
-# Ablauf: Grafana-Sidecar (searchNamespace: ALL, siehe values.yaml
-# sidecar.dashboards) liest die `grafana_folder`-Annotation auf jeder
-# ConfigMap und legt die Datei entsprechend in einem Unterordner ab
-# (foldersFromFilesStructure: true baut daraus die Grafana-Ordnerstruktur).
-# Dieser Job trägt die Annotation nachträglich anhand des JSON-Feldes
-# `.title` ein (robuster als Namens-/Key-Matching, da sich Upstream-Keys
-# zwischen Chart-Versionen ändern können, das Titel-Präfix aber stabil
-# bleibt) — jede neue "Kubernetes / ..." o.ä. Dashboard landet dadurch
-# automatisch im richtigen Ordner, auch nach einem Chart-Upgrade mit neuen
-# Dashboards.
-#
-# Hook-Weight 5 (> Default-Weight 0 des Sync-Jobs) stellt sicher, dass
-# dieser Job erst NACH dem Sync-Job läuft, der die ConfigMaps überhaupt
-# erst (neu) erzeugt — sonst würde jeder Sync-Job-Lauf (bei jedem
-# Helm-Upgrade dieses Charts, nicht nur beim ersten Install) unsere
-# Annotationen wieder zurücksetzen.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -96,11 +57,6 @@ spec:
       serviceAccountName: monitoring-dashboard-folders
       containers:
         - name: dashboard-folders
-          # Bündelt kubectl + jq, sonst nichts Exotisches nötig — exakte
-          # Version unkritisch, es werden nur get/patch auf ConfigMaps
-          # gebraucht. Tag 1.30.1 existiert auf Docker Hub nicht (ImagePullBackOff
-          # -> der Hook blockierte den ArgoCD-Sync von `monitoring` seit
-          # 2026-09-19), daher 1.30.14.
           image: alpine/k8s:1.30.14
           command:
             - sh

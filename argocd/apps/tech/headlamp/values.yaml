@@ -1,12 +1,5 @@
 ---
-# Values passed through to the headlamp sub-chart.
-# All keys live under `headlamp:` because that is the dependency name.
 headlamp:
-  # null (not omitted) so the upstream template's `replicas: {{ .Values.replicaCount }}`
-  # renders empty → Kubernetes treats the field as unset and defaults to 1 on
-  # create, while leaving it alone afterwards. This keeps ArgoCD's selfHeal
-  # from fighting templates/hpa.yaml every sync (a literal `1` here would make
-  # ArgoCD reset the Deployment back to 1 replica right after the HPA scales up).
   replicaCount: null
 
   ingress:
@@ -28,7 +21,5 @@ headlamp:
       cpu: 200m
       memory: 128Mi
 
-  # The upstream chart creates a ServiceAccount named after the release.
-  # We bind it to cluster-admin in templates/clusterrolebinding.yaml.
   serviceAccount:
     create: true

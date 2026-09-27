@@ -1,14 +1,4 @@
 ---
-# ============================================================
-# node_exporter role — Prometheus/VictoriaMetrics node_exporter fuer
-# Nicht-k3s-Hosts (Banana-Pi-Alarmmonitore, siehe
-# ansible/roles/banana_pi_kiosk). Cluster-Mitglieder (homeserver, worker-0,
-# worker-1) bekommen node_exporter bereits automatisch per DaemonSet aus
-# dem victoria-metrics-k8s-stack Chart — diese Rolle ist nur fuer Hosts
-# ausserhalb des k3s-Clusters noetig (gleiches Prinzip wie die manuell auf
-# ugreen-nas laufenden node-exporter/smartctl-exporter Docker-Container,
-# siehe docs/2-betrieb-hardware/20000-nas-storage.md).
-# ============================================================
 
 - name: prometheus-node-exporter installieren
   ansible.builtin.apt:

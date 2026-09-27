@@ -1,5 +1,13 @@
 # Prüfung: GitLab (self-hosted) + Proxmox als Hypervisor
 
+> **Stand-Hinweis (September 2026):** Die Proxmox-Ablehnung in Teil 2 ist teilweise überholt. Der
+> `homeserver` hat inzwischen ~61 GiB RAM, und der Trigger „zweiter, isolierter Cluster" ist real
+> geworden. Umgesetzt wurde die gestaffelte Variante **ohne Proxmox**: KVM/libvirt-VMs für PROD (auf dem
+> homeserver) und ENTW (auf worker-1), siehe
+> [40080](40080-multi-cluster-entw-prod-tech.md) und
+> [a0010](../a-betriebssystem/a0010-overview.md#1-drei-cluster-im-überblick). Die RAM-/CPU-Zahlen und die
+> GitLab-Bewertung unten sind der Stand vom Erstellungszeitpunkt.
+
 Zwei unabhängige Fragen, gemeinsam geprüft, weil beide auf dieselbe knappe
 Ressource zielen (RAM/CPU auf `homeserver`, 32 GB, siehe
 [docs/a-betriebssystem/a0000-ubuntu-server-install.md](../a-betriebssystem/a0000-ubuntu-server-install.md)):

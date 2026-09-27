@@ -1,18 +1,4 @@
 #!/usr/bin/env bash
-# Legt das Ruleset "main: PR + CI" an (bzw. aktualisiert es): main nur noch per
-# Pull Request, dazu die CI-Jobs aus .github/workflows/ci.yml als Pflicht-Checks.
-# Beschreibung und Begruendung: docs/f-cicd-automatisierung/f0090-branch-schutz-main.md
-#
-#   scripts/setup-main-ruleset.sh --dry-run   zeigt das JSON, aendert nichts
-#   scripts/setup-main-ruleset.sh             legt an / aktualisiert (gh muss als Admin angemeldet sein)
-#
-# ERST AUSFUEHREN, wenn ci.yml mit den vier Jobs schon auf main liegt - sonst verlangt
-# das Ruleset Checks, die es nirgends gibt, und jeder PR bleibt ewig auf "pending".
-# Die Namen unten muessen den `name:` der Jobs in ci.yml entsprechen.
-#
-# Ablauf danach: kein Direkt-Push auf main mehr (auch nicht fuer den Admin). Ausnahme
-# "Notausgang": als Repo-Admin kann ein PR trotz roter/fehlender Checks gemergt werden
-# (bypass_mode "pull_request") - gedacht fuer den Fall, dass die CI selbst kaputt ist.
 set -euo pipefail
 
 NAME="main: PR + CI"

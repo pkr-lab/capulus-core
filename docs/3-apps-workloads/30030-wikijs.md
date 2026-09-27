@@ -1,5 +1,7 @@
 # Wiki.js
 
+> **Cluster:** PROD · Ordner `argocd/apps/prod/wikijs/` und `argocd/apps/prod/wiki-docs-sync/` · URL `https://wiki.prod.homeserver` und `https://wiki-prod.pke-lab.de`. `kubectl`-Befehle in diesem Doc gelten für den PROD-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
+
 Wiki.js ist ein Open-Source-Wiki/Knowledge-Base-System mit Markdown-Editor,
 eingebauten Benutzergruppen und pfadbasierten Zugriffsregeln (Page Rules).
 Die Deployment-Konfiguration liegt unter `argocd/apps/prod/wikijs/`.
@@ -105,15 +107,16 @@ Erwartete Reihenfolge:
 > offline oder die `nas`-StorageClass fehlt — siehe
 > [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md) → Fehlerbehebung.
 
-**DNS:** `wiki.homeserver` ist sofort erreichbar — dank der Wildcard-DNS-Konfiguration
-(`address=/homeserver/<server-ip>` in dnsmasq, siehe [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md))
-ist **kein** manueller DNS-Eintrag nötig.
+**DNS:** Wiki.js läuft im **PROD**-Cluster, deshalb steht `wiki.prod.homeserver` in
+`dnsmasq_prod_vm_hosts` (`ansible/group_vars/all.yml`) und zeigt auf die PROD-VM (`.99`); die
+allgemeine Wildcard `address=/homeserver/<server-ip>` würde auf TECH zeigen (siehe
+[docs/c-netzwerk-dns/c0040-domain-tiers.md](../c-netzwerk-dns/c0040-domain-tiers.md#dns-tier-und-cluster-sind-zwei-verschiedene-dinge)).
 
 ---
 
 ## Schritt 3 — Ersten Admin-Account anlegen
 
-1. Browser öffnen: `https://wiki.homeserver`
+1. Browser öffnen: `https://wiki.prod.homeserver`
 2. Setup-Wizard durchlaufen:
    - **Site-Titel** vergeben
    - **Admin-Account**: E-Mail + Passwort festlegen

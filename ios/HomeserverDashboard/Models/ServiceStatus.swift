@@ -1,6 +1,5 @@
 import Foundation
 
-/// One Uptime-Kuma monitor. Mirrors `models.ServiceStatus` in carplay-api.
 struct ServiceStatus: Codable, Identifiable, Equatable {
     let id: String
     let name: String

@@ -55,7 +55,7 @@ das laufende Image `v8` war nicht betroffen. Beim nächsten Lauf, der pacman bau
 und Entfernen der ungenutzten v2-Zeile; der Probebuild auf PRs und der Job `go-check`
 verhindern eine Wiederholung. Am selben Tag waren Läufe zusätzlich rot, weil der
 Layout-Umzug (`workloads/` → `tech/`) die Pfade im Workflow überholt hatte
-(`path "argocd/apps/workloads/pacman" not found`), behoben mit dem Umzug selbst.
+(`path "argocd/apps/workloads/pacman" not found` (alter Pfad, heute `argocd/apps/tech/pacman`)), behoben mit dem Umzug selbst.
 
 ## Was der Workflow NICHT tut
 
