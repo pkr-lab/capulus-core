@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// Subpage 3: dedicated ntfy alerts overview, split out of Übersicht/Steuerung
-/// into its own tab.
 struct AlertsView: View {
     @ObservedObject private var viewModel = DashboardViewModel.shared
     @State private var selectedAlert: Alert?

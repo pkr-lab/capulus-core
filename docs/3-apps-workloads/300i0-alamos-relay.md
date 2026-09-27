@@ -1,12 +1,14 @@
 # ALAMOS-Webhook-Relay (öffentlicher Proxy vor n8n)
 
+> **Cluster:** TECH · Ordner `argocd/apps/tech/alamos-relay/` · URL `https://alamos-relay-prod.pke-lab.de` (extern), `alamos-relay.prod.homeserver` (intern). `kubectl`-Befehle in diesem Doc gelten für den TECH-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
+
 Kleiner, einzweckiger Proxy: nimmt den ALAMOS-Einsatzalarm-Webhook
 öffentlich unter einem geheimen Pfad entgegen und reicht ihn
 Server-zu-Server an den internen n8n-Webhook weiter (siehe
 [300h0-alamos-einsatz-zammad.md](300h0-alamos-einsatz-zammad.md)). **n8n
 selbst bleibt dabei komplett unerreichbar aus dem Internet** — genau die
 Entscheidung, die für `n8n.prod.homeserver` schon einmal bewusst getroffen
-wurde (Kommentar bei `N8N_HOST` in `argocd/apps/tech/n8n/values.yaml`).
+wurde ([c0030](../c-netzwerk-dns/c0030-port-uebersicht.md): n8n ist aus dem Cloudflare-Tunnel entfernt).
 
 ## Warum dieser Umweg nötig ist
 
@@ -92,7 +94,7 @@ als Base-Image.
 ### Token erzeugen/rotieren
 
 ```bash
-openssl rand -hex 24 | kubeseal --raw \
+openssl rand -hex 24 | tr -d '\n' | kubeseal --raw \
   --namespace alamos-relay \
   --name alamos-relay-secrets \
   --controller-namespace sealed-secrets \
@@ -158,7 +160,7 @@ Relay nur noch 404 (siehe [Fehlerbehebung](#fehlerbehebung)).
 
 | Symptom | Check |
 |---|---|
-| Relay antwortet mit `404` auf die volle URL inkl. Token | Token in `values.yaml`/Alamos-Konfiguration identisch? Nach Rotation beide Stellen aktualisiert? |
+| Relay antwortet mit `404` auf die volle URL inkl. Token | Token in `values.yaml`/Alamos-Konfiguration identisch? Nach Rotation beide Stellen aktualisiert? Wurde beim Versiegeln ein Zeilenumbruch mitversiegelt? Der Pfadvergleich ist exakt, ein mitversiegeltes `\n` macht den Pfad dauerhaft unmatchbar (Befehl oben mit `tr -d '\n'`, siehe [60030](../6-hintergruende/60030-argocd-und-bootstrap.md#sealedsecrets-fallstricke-beim-versiegeln)) |
 | Relay antwortet `502 upstream unavailable` | `kubectl -n alamos-relay logs deploy/alamos-relay` — meist NetworkPolicy-Problem (Schritt 2 aus [Rollout](#rollout-nach-dem-ersten-push) vergessen) oder n8n-Workflow nicht aktiv |
 | `alamos-relay-prod.pke-lab.de` löst nicht auf / liefert 404 von Cloudflare | Cloudflare-Tunnel-Wildcard-DNS prüfen (siehe [e0000-cloudflare-tunnel.md](../e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md)) — `dig +short alamos-relay-prod.pke-lab.de` |
 | Forward kommt bei n8n nie an, Relay selbst loggt aber `200`-Antworten von n8n nicht | `kubectl -n n8n logs deploy/n8n` — Workflow überhaupt aktiv? Gleiche Checks wie in [300h0, Fehlerbehebung](300h0-alamos-einsatz-zammad.md#fehlerbehebung) |

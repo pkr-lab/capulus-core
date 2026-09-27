@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Managed by Ansible (alamos_kiosk role) — do not edit manually.
 set -uo pipefail
 
 BASE_URL="${BASE_URL:?BASE_URL not set}"

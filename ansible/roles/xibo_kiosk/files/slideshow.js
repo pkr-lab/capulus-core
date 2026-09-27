@@ -1,7 +1,3 @@
-// xibosignage Slideshow — liest periodisch manifest.json (vom
-// xibosignage-manifest.timer generiert) und zeigt die enthaltenen Bilder als
-// Crossfade-Slideshow. Kein echter Xibo-Player: reine, robuste
-// Ordner-zu-Bildschirm-Anzeige, siehe docs/3-apps-workloads/300e0-xibosignage.md.
 (function () {
   "use strict";
 
@@ -23,8 +19,6 @@
         manifest = Array.isArray(data) ? data : [];
       })
       .catch(function () {
-        // Manifest kurz nicht lesbar (Timer läuft gerade) — nächster
-        // Versuch kommt automatisch, aktuelle Slideshow läuft unbeeinflusst weiter.
       });
   }
 
@@ -52,8 +46,6 @@
       otherSlide = tmp;
     };
     preload.onerror = function () {
-      // Datei zwischen Manifest-Scan und Anzeige verschwunden/kaputt —
-      // einfach überspringen, der nächste Timer-Tick zeigt das nächste Bild.
     };
     preload.src = url;
   }

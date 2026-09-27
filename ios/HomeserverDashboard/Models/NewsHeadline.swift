@@ -13,8 +13,6 @@ struct NewsHeadline {
     let link: URL?
 }
 
-/// Loose decode of Tagesschau's public (unofficial, unversioned) homepage
-/// JSON — only the first `news` entry's title/summary/link are used.
 struct TagesschauResponse: Decodable {
     let news: [Item]
 

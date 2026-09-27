@@ -1,14 +1,4 @@
 ---
-# ============================================================
-# Provision one access key inside the current project.
-# Type "ssh" carries the Semaphore-owned id_ed25519 private key;
-# type "none" is for public-HTTPS git repositories.
-#
-# body_format: raw + to_json is intentional: Ansible's body_format: json
-# serializes "{{ project_id | int }}" as a JSON string instead of an integer,
-# which causes Semaphore's Go JSON decoder to return HTTP 400. Building the
-# dict literal inside Jinja2 and piping to to_json preserves native int type.
-# ============================================================
 
 - name: List existing keys in project {{ project_spec.name }}
   ansible.builtin.uri:

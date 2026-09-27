@@ -1,19 +1,4 @@
 #!/usr/bin/env bash
-# Versiegelt ein GitHub-Lese-Token fuer wiki-docs-sync (PROD) und github-release-watcher (TECH) und traegt es in die
-# Charts ein (hebt das Limit der unangemeldeten GitHub-API von 60 auf 5000 Anfragen pro Stunde).
-#
-# Das Token wird aus einer Datei gelesen (nie als Argument, nie ausgegeben):
-#   TOKEN_FILE (Standard: ~/.github_readonly_token), Modus 600
-# Erzeugen: GitHub -> Settings -> Developer settings -> Fine-grained personal access tokens ->
-#   "Public repositories (read-only)", keine weiteren Berechtigungen, Ablauf z. B. 1 Jahr. Dann:
-#   read -rs T; printf %s "$T" > ~/.github_readonly_token; chmod 600 ~/.github_readonly_token; unset T
-#
-# Ergebnis (je ein statisches SealedSecret `github-api-token`, Schluessel `token`):
-#   argocd/apps/tech/github-release-watcher/templates/sealedsecret-github-token.yaml  (TECH-Schluessel)
-#   argocd/apps/prod/wiki-docs-sync/templates/sealedsecret-github-token.yaml               (PROD-Schluessel)
-# und setzt in den beiden values.yaml `github.tokenSecretName: github-api-token`.
-# Voraussetzung: kubectl-Kontext = TECH (fuer das TECH-Zertifikat), ~/prod-sealed-secrets.pem (PROD).
-# Test ohne Repo-Aenderung: OUT_ROOT=/tmp/x TOKEN_FILE=/tmp/dummy scripts/seal-github-token.sh
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -32,7 +17,7 @@ kubectl config current-context >/dev/null
 kubeseal --fetch-cert --controller-name sealed-secrets-controller --controller-namespace sealed-secrets > "$tech_cert"
 [[ -s "$tech_cert" ]] || { echo "Fehler: TECH-Zertifikat nicht abrufbar (kubectl-Kontext = TECH?)" >&2; exit 1; }
 
-seal() { # <cert> <namespace> <ausgabedatei> <header>
+seal() {
   local cert="$1" ns="$2" out="$3" hdr="$4"
   mkdir -p "$(dirname "$out")"
   kubectl create secret generic github-api-token --namespace "$ns" \

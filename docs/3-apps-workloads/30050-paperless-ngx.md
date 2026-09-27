@@ -1,5 +1,7 @@
 # Paperless-ngx — Dokumentenmanagement mit OCR
 
+> **Cluster:** PROD · Ordner `argocd/apps/prod/paperless-ngx/` · URL `https://paperless.prod.homeserver`. `kubectl`-Befehle in diesem Doc gelten für den PROD-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
+
 Paperless-ngx digitalisiert Briefe, Rechnungen und Verträge per OCR und macht
 sie volltextdurchsuchbar. Dokumente können per Scanner, Smartphone-Foto oder
 E-Mail eingereicht werden — alles Weitere läuft automatisch.
@@ -9,7 +11,7 @@ E-Mail eingereicht werden — alles Weitere läuft automatisch.
 ## Architektur
 
 ```
-paperless.homeserver  →  Traefik  →  paperless-ngx (Port 8000)
+paperless.prod.homeserver  →  Traefik  →  paperless-ngx (Port 8000)
                                           ├── Redis Sidecar (localhost:6379)
                                           ├── PVC: data   (20 Gi, nas)
                                           ├── PVC: media  (50 Gi, nas)
@@ -33,7 +35,7 @@ kubectl -n paperless-ngx exec -it deploy/paperless-ngx -- \
   python3 manage.py createsuperuser
 ```
 
-Danach ist die Web-UI unter **https://paperless.homeserver** erreichbar.
+Danach ist die Web-UI unter **https://paperless.prod.homeserver** erreichbar.
 
 ---
 
@@ -72,7 +74,7 @@ kubectl -n paperless-ngx cp /lokale/datei.pdf \
 
 ### Web-Upload
 
-Direkt über die Web-UI unter **https://paperless.homeserver/upload**.
+Direkt über die Web-UI unter **https://paperless.prod.homeserver/upload**.
 
 ### E-Mail-Import (optional)
 
@@ -83,7 +85,7 @@ in der Admin-UI unter *Mail* → *E-Mail-Konten*.
 
 ## n8n-Integration
 
-Mit n8n (https://n8n.homeserver) lassen sich Paperless-Ereignisse
+Mit n8n (https://n8n.prod.homeserver) lassen sich Paperless-Ereignisse
 weiterverarbeiten, z. B.:
 
 ```
@@ -92,7 +94,7 @@ Neues Dokument in Paperless (Webhook)
   → ntfy-Push "📄 Neue Rechnung erkannt: {Titel}"
 ```
 
-Paperless bietet eine REST-API unter `https://paperless.homeserver/api/`.
+Paperless bietet eine REST-API unter `https://paperless.prod.homeserver/api/`.
 
 ---
 
@@ -119,5 +121,5 @@ kubectl -n paperless-ngx cp \
 | `persistence.media.size` | Speicher für Originaldokumente | `50Gi` |
 | `persistence.data.size` | Datenbank + Thumbnails + Caches | `20Gi` |
 | `env.PAPERLESS_OCR_LANGUAGE` | Tesseract-Sprachcodes | `deu+eng` |
-| `env.PAPERLESS_URL` | Öffentliche URL für Links | `https://paperless.homeserver` |
+| `env.PAPERLESS_URL` | Öffentliche URL für Links | `https://paperless.prod.homeserver` |
 | `resources.limits.memory` | RAM-Limit (OCR ist speicherhungrig) | `2Gi` |

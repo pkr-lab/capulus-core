@@ -1,10 +1,5 @@
 import SwiftUI
 
-/// Visual overview of every monitored machine — Homeserver, NAS, worker-0,
-/// worker-1 — but only the ones currently on. An offline host (whether
-/// it's a worker that's been scaled down, or the NAS mid-reboot) is
-/// omitted entirely rather than shown grayed out at 0%, since 0% for an
-/// offline host isn't a real reading.
 struct HostCardsView: View {
     let hosts: [HostMetrics]
 

@@ -1,7 +1,4 @@
 ---
-# TinyTeller — vormals Docker-Compose auf worker-0 (ansible/roles/tinyteller),
-# jetzt als reguläre k8s-App. Zustandslos (kein PVC nötig) — läuft auf
-# jedem k3s-Node, keine NodeAffinity.
 
 replicaCount: 1
 
@@ -33,11 +30,6 @@ frontend:
       cpu: 100m
       memory: 128Mi
 
-# TODO: sobald der eigene Fork (pkr-lab/tiny-teller) per CI nach
-# ghcr.io/pkr-lab/tiny-teller-... published wird, hier umstellen.
-# Falls das Package dann privat ist: entweder Sichtbarkeit auf "Public"
-# stellen, oder hier ein imagePullSecrets-Secret (kubernetes.io/dockerconfigjson)
-# referenzieren, z.B. [{name: ghcr-pull}].
 imagePullSecrets: []
 
 nameOverride: ""
@@ -59,11 +51,6 @@ ingress:
   enabled: true
   className: traefik
   annotations: {}
-  # Ein Host, Pfad-Routing: /api -> Backend, alles andere -> Frontend.
-  # ANNAHME: das Frontend ruft die API relativ unter /api auf. Falls das
-  # gebaute Frontend stattdessen eine absolute API-URL erwartet, hier die
-  # CORS_ORIGIN unten anpassen und ggf. auf zwei Hosts (Frontend/API)
-  # umstellen.
   hosts:
     - host: tinyteller.prod.homeserver
       paths:

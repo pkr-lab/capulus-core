@@ -6,8 +6,6 @@ metadata:
   labels:
     {{- include "mediamtx.labels" . | nindent 4 }}
 data:
-  # Nur die von den Defaults abweichenden Keys sind nötig — mediamtx
-  # merged diese Datei über seine eingebauten Standardwerte.
   mediamtx.yml: |
     logLevel: {{ .Values.logLevel | quote }}
 

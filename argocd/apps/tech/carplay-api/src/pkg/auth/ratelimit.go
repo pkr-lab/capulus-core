@@ -13,11 +13,6 @@ type window struct {
 	count int
 }
 
-// RateLimiter is a fixed-window (per calendar minute, not sliding) limiter
-// keyed by client IP. Fixed-window is simpler than sliding/token-bucket and
-// good enough here: this API sits behind Tailscale for a handful of clients,
-// not on the open internet, so precise burst smoothing doesn't matter — just
-// a backstop against a misbehaving client hammering the endpoint.
 type RateLimiter struct {
 	mu         sync.Mutex
 	windows    map[string]*window
@@ -25,9 +20,6 @@ type RateLimiter struct {
 	windowSize time.Duration
 }
 
-// NewRateLimiter builds a limiter allowing `limit` requests per client IP
-// per windowSize, and starts a background sweep to evict stale entries so
-// the map doesn't grow unbounded.
 func NewRateLimiter(limit int, windowSize time.Duration) *RateLimiter {
 	rl := &RateLimiter{
 		windows:    make(map[string]*window),
@@ -70,7 +62,6 @@ func (rl *RateLimiter) allow(ip string) bool {
 	return true
 }
 
-// Middleware rejects requests over the configured rate with 429.
 func (rl *RateLimiter) Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !rl.allow(c.ClientIP()) {

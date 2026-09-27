@@ -1,9 +1,5 @@
 import SwiftUI
 
-/// The app's start screen: a short, visual overview of the fleet's
-/// metrics — Homeserver, NAS, worker-0, worker-1, whichever of those are
-/// currently on — plus service status. Alerts live in their own tab, see
-/// AlertsView.swift.
 struct HomeView: View {
     @ObservedObject private var viewModel = DashboardViewModel.shared
     @ObservedObject private var connectivity = TailscaleConnectivity.shared
@@ -59,18 +55,11 @@ struct HomeView: View {
     }
 }
 
-/// `.sheet(item:)` needs `Identifiable`; this wrapper exists only so two
-/// different sheet bindings (Alert vs ServiceStatus) can coexist without
-/// either optional accidentally satisfying the other's type.
 private struct ServiceStatusDetailItem: Identifiable {
     let status: ServiceStatus
     var id: String { status.id }
 }
 
-/// Horizontaler Balken pro Dienst, absteigend nach Traefik-Request-Rate
-/// sortiert — Näherung für "wie viel Betrieb ist gerade wo", keine echte
-/// Nutzerzählung (Traefik kennt keine Identitäten, siehe
-/// Models/ServiceActivity.swift).
 private struct ServiceActivityCard: View {
     let activity: [ServiceActivity]
 
@@ -133,10 +122,6 @@ private struct ServiceActivityRow: View {
     }
 }
 
-/// Welche self-hosted Apps eine neuere GitHub-Version haben als die in
-/// github-release-watcher/values.yaml hinterlegte currentVersion — siehe
-/// Models/AppUpdate.swift. hasUpdate == nil (noch keine currentVersion
-/// gepflegt) zeigt "unbekannt" statt fälschlich "aktuell".
 private struct UpdatesCard: View {
     let updates: [AppUpdate]
 

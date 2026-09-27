@@ -3,3 +3,4 @@ AGENTS.md
 .claude
 # Python-Bytecode der scripts/ (promotelib wird importiert)
 __pycache__/
+.idea/

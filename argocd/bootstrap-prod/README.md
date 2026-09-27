@@ -1,8 +1,14 @@
-# PROD-Cluster im TECH-Hub (Phase 2.6 / 3.1)
+# PROD-Cluster im TECH-Hub
 
-Handgeschriebene Manifeste, **nicht** vom `argocd`-Ansible-Role generiert.
-Sie beruehren die bestehenden ApplicationSets (`home-server-apps-platform`,
-`-workloads`) nicht.
+Der PROD-Cluster (`prod-vm`, 192.168.178.99) hat **keine eigene ArgoCD-Instanz**: der ArgoCD-Hub auf
+TECH (`homeserver`) verwaltet ihn als registrierten Cluster `prod`. Die Dateien in diesem Ordner sind
+handgeschrieben, **nicht** vom `argocd`-Ansible-Role generiert (anders als `argocd/bootstrap/`), und
+beruehren das ApplicationSet `home-server-apps-tech` nicht. Ueberblick ueber Projekte und
+ApplicationSets: [docs/b-kubernetes-gitops/b0020-argocd-projects.md](../../docs/b-kubernetes-gitops/b0020-argocd-projects.md).
+
+Inhalt: `appproject.yaml` (Projekt `prod`), `applicationset.yaml` (zwei ApplicationSets) und
+`migrations/` (manuelle Hilfsmanifeste fuer den Umzug von Apps samt Daten von TECH nach PROD,
+siehe [migrations/README.md](migrations/README.md)).
 
 ## 1. Cluster "prod" im Hub registrieren
 
@@ -76,9 +82,26 @@ kubectl apply -f argocd/bootstrap-prod/applicationset.yaml
 ## 3. Pruefen
 
 ```bash
-kubectl -n argocd get applications | grep '^prod-'     # prod-sealed-secrets, prod-nas-storage, prod-immich-storage
+kubectl -n argocd get applications | grep '^prod-'     # auf homeserver (TECH-Hub): prod-sealed-secrets, prod-nextcloud, ...
 sudo k3s kubectl get pods -A                            # auf prod-vm
 ```
+
+## Neue PROD-App hinzufuegen
+
+1. Ordner `argocd/apps/prod/<app>/` anlegen (Ordnername = Namespace = Helm-Release-Name).
+2. Namespace in `appproject.yaml` ergaenzen und die Datei im Hub anwenden
+   (`kubectl apply -f argocd/bootstrap-prod/appproject.yaml`). Ohne diesen Schritt meldet die
+   Application `InvalidSpecError`/`Unknown`; danach `argocd.argoproj.io/refresh=hard` auf die Application setzen.
+3. Nur bei einem **reinen Manifest-Ordner** (ohne `Chart.yaml`): `path` in `applicationset.yaml`
+   (Set `home-server-apps-prod`) ergaenzen und anwenden. Ordner mit `Chart.yaml` werden vom Set
+   `home-server-apps-prod-charts` automatisch gefunden.
+4. Fuer einen internen Host unter `*.prod.homeserver`: Name in `dnsmasq_prod_vm_hosts`
+   (`ansible/group_vars/all.yml`) eintragen und `make dnsmasq` ausfuehren, sonst antwortet der
+   TECH-Traefik. Ein oeffentlicher Host braucht zusaetzlich einen DNS-Eintrag auf den PROD-Tunnel:
+   `cloudflared tunnel route dns homeserver-prod <host>`, siehe
+   [docs/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md](../../docs/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md).
+5. SealedSecrets muessen mit dem Zertifikat des **PROD**-sealed-secrets-Controllers versiegelt werden
+   (`scripts/reseal-for-prod.sh`, Kopf des Skripts), die TECH-Versiegelung ist in PROD nicht entschluesselbar.
 
 Rueckbau: `kubectl delete -f argocd/bootstrap-prod/applicationset.yaml`
 (entfernt die Applications samt Ressourcen in PROD, TECH bleibt unberuehrt).

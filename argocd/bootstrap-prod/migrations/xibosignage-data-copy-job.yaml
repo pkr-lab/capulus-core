@@ -1,14 +1,3 @@
-# Kopiert die Xibo-Daten (MySQL ~1,1 GB, CMS-Bibliothek ~14 MB, CMS-State) aus den TECH-Verzeichnissen auf
-# dem NAS in die neuen PROD-Volumes (PVCs xibosignage-mysql-data / -cms-library / -cms-state). Manuell in PROD
-# anwenden, NICHT per ArgoCD (siehe README.md in diesem Ordner):
-#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl apply -f -' < argocd/bootstrap-prod/migrations/xibosignage-data-copy-job.yaml
-#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl -n xibosignage logs job/xibosignage-data-copy'
-#   ssh ubuntu@192.168.178.99 'sudo k3s kubectl -n xibosignage delete job xibosignage-data-copy'
-#
-# NUR mit gestopptem TECH-CMS und -MySQL (cms/mysql replicaCount 0) und PROD auf 0: die MySQL-Dateien muessen
-# konsistent sein. Von MySQL nur das aktuelle Verzeichnis mysql-data-v26 (subPath im Chart); die alten 8.4-Daten
-# (Rueckfall des Upgrades) bleiben in TECH. Ziele werden vor dem Kopieren geleert. Laeuft als uid 1000 / gid 10
-# (NAS all_squash), MySQL verlangt Besitzer uid 1000 und Modus der Dateien/Ordner unveraendert (tar -p).
 apiVersion: batch/v1
 kind: Job
 metadata:

@@ -104,7 +104,7 @@ github:
       notifyZammad: false      # nur in der App-Update-Liste sichtbar, kein Ticket
 
 zammad:
-  url: "https://zammad.homeserver"
+  url: "https://zammad.tech.homeserver"
   group: "Users"                       # Zammad-Gruppe für das Ticket
   requesterEmail: "<empfaenger>@example.com"  # Ticket-Anfrager (customer)
 
@@ -124,7 +124,7 @@ eingetragenen Repo-Eintrag dokumentieren.
 > automatisch an, sondern schlägt mit `HTTP 422 No lookup value found for
 > 'customer'` fehl. Vorhandene User (inkl. exaktem Login/E-Mail-Feld) prüfen:
 > `GET /api/v1/groups` bzw. `GET /api/v1/users` mit dem Zammad-Token
-> (`curl -s -H "Authorization: Token token=$TOKEN" https://zammad.homeserver/api/v1/users`).
+> (`curl -s -H "Authorization: Token token=$TOKEN" https://zammad.tech.homeserver/api/v1/users`).
 > Existiert noch kein passender User, in **Admin → Users → New** einen
 > Customer-Account mit dieser Adresse anlegen. Diese Adresse bestimmt nur
 > den Ticket-"Anfrager", **nicht** direkt den E-Mail-Empfänger der
@@ -236,7 +236,7 @@ kubectl -n github-release-watcher logs -l app.kubernetes.io/name=github-release-
   einem PAT setzen
 - `[ERR] ...: Zammad-Benachrichtigung fehlgeschlagen` — Token ungültig/ohne
   `ticket.agent`-Berechtigung, Gruppe existiert nicht, oder
-  `zammad.homeserver` vom Cluster aus nicht erreichbar
+  `zammad.tech.homeserver` vom Cluster aus nicht erreichbar
 
 ### Ticket wird angelegt, aber keine E-Mail kommt an
 
