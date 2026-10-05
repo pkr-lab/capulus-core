@@ -17,7 +17,7 @@ server:
   image:
     repository: ghcr.io/immich-app/immich-server
     pullPolicy: IfNotPresent
-    tag: "v3.2.2"
+    tag: "v3.2.4"
 
   podSecurityContext: {}
   securityContext:
@@ -83,7 +83,7 @@ machineLearning:
   image:
     repository: ghcr.io/immich-app/immich-machine-learning
     pullPolicy: IfNotPresent
-    tag: "v3.2.2"
+    tag: "v3.2.4"
 
   podSecurityContext: {}
   securityContext:
