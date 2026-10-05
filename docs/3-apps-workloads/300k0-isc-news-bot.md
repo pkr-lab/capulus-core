@@ -250,7 +250,11 @@ curl -s http://127.0.0.1:8080/readyz
 
 Der fertige Workflow liegt unter [`argocd/apps/tech/n8n/workflows/isc-news-veroeffentlichen.json`](../../argocd/apps/tech/n8n/workflows/isc-news-veroeffentlichen.json). Die Schritte nach dem Import stehen auch als Notiz im Workflow.
 
-**Eingang per E-Mail (Hauptweg):** Der Node **E-Mail empfangen** (IMAP) holt ungelesene Mails mit dem Betreff `HOMEPAGE1002011` vom Absender `peter.kretzer@dlrg.org` und markiert sie danach als gelesen. Mails von anderen Absendern lösen keinen Lauf aus. Anhänge:
+**Eingang per E-Mail (Hauptweg):** Der Node **E-Mail empfangen** (IMAP) liest den Ordner **`ISC-News`** und holt ungelesene Mails mit dem Betreff `HOMEPAGE1002011` vom Absender `peter.kretzer@dlrg.org`. Danach werden sie als gelesen markiert. Mails von anderen Absendern lösen keinen Lauf aus.
+
+**Einmalig im Postfach einrichten:** Ordner `ISC-News` anlegen. Regel: Betreff enthält `1002011` → in den Ordner `ISC-News` verschieben. Erst dann landen die News-Mails nicht mehr in der INBOX, in der der WhatsApp-Trigger liest. Solange die Regel fehlt, bleiben die Mails in der INBOX, und der ISC-Workflow sieht sie nicht. Fehlt der Ordner, meldet n8n beim Aktivieren einen Fehler.
+
+Anhänge:
 
 - eine JSON-Datei mit `title`, `subtitle`, `text` (oder `html`), `categories` (Liste aus IDs oder Namen), optional `startDate` (`JJJJ-MM-TTTHH:mm`) und `mode` (`draft` oder `publish`)
 - alle Bilder (jpg, png, webp) als weitere Anhänge. Das erste Bild ist der Teaser.

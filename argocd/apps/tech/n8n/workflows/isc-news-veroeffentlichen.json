@@ -96,7 +96,7 @@
         },
         "options": {}
       },
-      "id": "d1546efd-c4a1-4e09-9e56-c7224371f529",
+      "id": "fad83c2a-07f2-4bc5-bd48-a0818df09e49",
       "name": "Formular",
       "type": "n8n-nodes-base.formTrigger",
       "typeVersion": 2.3,
@@ -104,10 +104,11 @@
         240,
         200
       ],
-      "webhookId": "b8b93c3c-4b42-461f-8bbf-540622a70a41"
+      "webhookId": "843aca57-9ef8-41c9-a43a-67f94211dc5a"
     },
     {
       "parameters": {
+        "mailbox": "ISC-News",
         "postProcessAction": "read",
         "format": "simple",
         "downloadAttachments": true,
@@ -118,7 +119,7 @@
           "trackLastMessageId": true
         }
       },
-      "id": "9f9d1a6a-dc58-4878-965a-7180fd3945b0",
+      "id": "4442b1cd-257c-4798-8759-c3269b3c097b",
       "name": "E-Mail empfangen",
       "type": "n8n-nodes-base.emailReadImap",
       "typeVersion": 2.1,
@@ -138,7 +139,7 @@
         "mode": "runOnceForAllItems",
         "jsCode": "const item = $input.first();\nconst subject = String(item.json.subject || '').trim();\nif (subject !== 'HOMEPAGE1002011') return [];\nconst keys = Object.keys(item.binary || {});\nconst from = typeof item.json.from === 'string' ? item.json.from : ((item.json.from && item.json.from.text) || '');\nconst base = { subject, from };\nif (!from.toLowerCase().includes('peter.kretzer@dlrg.org')) return [];\nconst jsonKey = keys.find((k) => item.binary[k].mimeType === 'application/json' || /\\.json$/i.test(item.binary[k].fileName || ''));\nif (!jsonKey) return [{ json: { ...base, body: {}, mailError: 'Kein JSON-Anhang in der Mail' } }];\nlet data;\ntry {\n  data = JSON.parse((await this.helpers.getBinaryDataBuffer(0, jsonKey)).toString('utf8'));\n} catch (e) {\n  data = null;\n}\nif (!data || typeof data !== 'object' || Array.isArray(data)) {\n  return [{ json: { ...base, body: {}, mailError: 'JSON-Anhang ist nicht lesbar' } }];\n}\nconst pick = (...names) => {\n  for (const name of names) {\n    const v = data[name];\n    if (v !== undefined && v !== null && v !== '') return v;\n  }\n  return undefined;\n};\nconst mimeOf = (fileName, mimeType) => {\n  const byExt = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };\n  const ext = String(fileName || '').split('.').pop().toLowerCase();\n  const wanted = mimeType === 'image/jpg' ? 'image/jpeg' : mimeType;\n  return ['image/jpeg', 'image/png', 'image/webp'].includes(wanted) ? wanted : byExt[ext];\n};\nconst images = [];\nfor (const key of keys) {\n  if (key === jsonKey) continue;\n  const meta = item.binary[key];\n  const mime = mimeOf(meta.fileName, meta.mimeType);\n  if (!mime) continue;\n  const buffer = await this.helpers.getBinaryDataBuffer(0, key);\n  images.push({ fileName: meta.fileName, mimeType: mime, dataBase64: buffer.toString('base64') });\n}\nconst modeRaw = String(pick('mode', 'Modus') || '');\nreturn [{\n  json: {\n    ...base,\n    body: {\n      title: pick('title', 'Überschrift'),\n      subtitle: pick('subtitle', 'Untertitel'),\n      text: pick('text', 'Text'),\n      html: pick('html'),\n      categories: pick('categories', 'Kategorie(n)'),\n      startDate: pick('startDate', 'Veröffentlichung ab'),\n      mode: /publish|veröffentl/i.test(modeRaw) ? 'publish' : 'draft',\n      images\n    }\n  }\n}];\n"
       },
-      "id": "2125dbcf-94d6-4cae-8f10-e6985cee5754",
+      "id": "5dd27382-6f8e-4a3e-a5a5-2869c4c2f6c0",
       "name": "Mail lesen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -154,7 +155,7 @@
         "responseMode": "onReceived",
         "options": {}
       },
-      "id": "45117db8-b5c8-44b5-845f-31cedc5f7542",
+      "id": "436ba669-f990-4a80-9bb8-b05c48ece017",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -162,14 +163,14 @@
         240,
         400
       ],
-      "webhookId": "3fd8b0d9-e25c-40df-b656-9133ea6fe014"
+      "webhookId": "e0fe2b65-2443-4702-8efa-feaed3e3160d"
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
         "jsCode": "const item = $input.first();\nreturn [{\n  json: {\n    ...item.json,\n    testModus: false,\n    ntfyFreigabe: false,\n    ntfyTopic: 'isc-news',\n    ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n    iscNewsBotUrl: 'http://isc-news-bot.isc-news-bot.svc.cluster.local'\n  },\n  binary: item.binary\n}];\n"
       },
-      "id": "42212312-500a-4e91-b2c2-780eb15cc9b7",
+      "id": "cd27e7e3-0d73-45f7-9856-f811cf937067",
       "name": "Konfiguration",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -183,7 +184,7 @@
         "mode": "runOnceForAllItems",
         "jsCode": "const item = $input.first();\nconst src = item.json;\nconst cfg = {\n  testModus: src.testModus === true,\n  ntfyFreigabe: src.ntfyFreigabe === true,\n  ntfyTopic: src.ntfyTopic,\n  ntfyUrl: src.ntfyUrl,\n  iscNewsBotUrl: src.iscNewsBotUrl\n};\nconst isWebhook = src.body !== undefined && typeof src.body === 'object';\nconst body = isWebhook ? src.body : {};\nconst pick = (label, key) => (isWebhook ? body[key] : src[label]);\nconst toText = (v) => (typeof v === 'string' ? v.trim() : '');\nconst toList = (v) => {\n  if (Array.isArray(v)) return v.map((x) => String(x).trim()).filter((x) => x.length > 0);\n  if (typeof v === 'string') return v.split(',').map((x) => x.trim()).filter((x) => x.length > 0);\n  return [];\n};\nconst esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');\nconst link = (s) => s.replace(/(https?:\\/\\/[^\\s<]+[^\\s<.,;:!?)])/g, '<a href=\"$1\">$1</a>');\nconst title = toText(pick('Überschrift', 'title'));\nconst subtitle = toText(pick('Untertitel', 'subtitle'));\nconst text = toText(pick('Text', 'text'));\nconst categories = toList(pick('Kategorie(n)', 'categories'));\nconst startDate = toText(pick('Veröffentlichung ab (leer = sofort, JJJJ-MM-TTTHH:mm)', 'startDate'));\nconst modeRaw = toText(pick('Modus', 'mode'));\nconst mode = isWebhook\n  ? (modeRaw === 'publish' ? 'publish' : 'draft')\n  : (modeRaw === 'Veröffentlichen' ? 'publish' : 'draft');\nconst rawHtml = isWebhook ? toText(body.html) : '';\nconst html = rawHtml || (text\n  ? text.split(/\\n\\s*\\n/).map((p) => '<p>' + link(esc(p.trim()).replace(/\\n/g, '<br>')) + '</p>').join('')\n  : '');\n\nconst images = [];\nif (isWebhook) {\n  for (const img of Array.isArray(body.images) ? body.images : []) {\n    images.push({ fileName: img.fileName, mimeType: img.mimeType, dataBase64: img.dataBase64, keywords: img.keywords });\n  }\n} else {\n  for (const key of Object.keys(item.binary || {})) {\n    const meta = item.binary[key];\n    const buffer = await this.helpers.getBinaryDataBuffer(0, key);\n    images.push({ fileName: meta.fileName, mimeType: meta.mimeType, dataBase64: buffer.toString('base64') });\n  }\n}\n\nconst errors = [];\nif (src.mailError) errors.push(src.mailError);\nif (!title) errors.push('Überschrift fehlt');\nif (!html) errors.push('Text fehlt');\n\nconst payload = { title, subtitle, html, type: 'text', categories, mode, dryRun: cfg.testModus, images };\nif (startDate) payload.startDate = startDate;\n\nreturn [{\n  json: {\n    ...cfg,\n    valid: errors.length === 0,\n    error: errors.join(', '),\n    title,\n    mode,\n    imageCount: images.length,\n    payload\n  }\n}];\n"
       },
-      "id": "27a924c2-2657-42a9-8692-78bc2e74beda",
+      "id": "eded51d6-82fd-477b-88b0-6d4acd363854",
       "name": "Eingaben pruefen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -203,7 +204,7 @@
           },
           "conditions": [
             {
-              "id": "0e423844-48fc-4839-bbfb-9b95cf3906d4",
+              "id": "2c663af1-9c96-4281-bd59-b2f02b4244f8",
               "leftValue": "={{ $json.valid }}",
               "rightValue": "",
               "operator": {
@@ -217,7 +218,7 @@
         },
         "options": {}
       },
-      "id": "b10915dc-d872-445f-a880-f8e889367be5",
+      "id": "a0cb2185-663f-4789-975b-69282f4a4f7e",
       "name": "Eingaben gueltig?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -253,7 +254,7 @@
         "body": "={{ $json.error }}",
         "options": {}
       },
-      "id": "b19c04a1-1869-4814-9e09-7a5f2f68759b",
+      "id": "9f386b0a-7e6f-4d71-9a3a-ff49730028f2",
       "name": "ntfy Eingabefehler",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -273,7 +274,7 @@
           },
           "conditions": [
             {
-              "id": "a40df5ca-90b0-4472-a993-3076a6c9597b",
+              "id": "c7194215-c1ca-4bd9-ba58-574eb725fc67",
               "leftValue": "={{ $('Eingaben pruefen').first().json.ntfyFreigabe }}",
               "rightValue": "",
               "operator": {
@@ -287,7 +288,7 @@
         },
         "options": {}
       },
-      "id": "28b5c9cc-f562-465f-a407-8d211de0ac62",
+      "id": "f59550a8-c4dc-46e7-90d1-5b8bb2920b6c",
       "name": "Freigabe per ntfy?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -327,7 +328,7 @@
         "body": "={{ $json.title + ' | Bilder: ' + $json.imageCount + ' | Modus: ' + $json.mode }}",
         "options": {}
       },
-      "id": "8e32453e-9bbe-46fb-ab8f-c226937aa5b9",
+      "id": "ecee1f4a-3e45-4ffc-ad2f-4cc804e564c0",
       "name": "ntfy Freigabe-Anfrage",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -341,7 +342,7 @@
         "resume": "webhook",
         "options": {}
       },
-      "id": "9acfe015-7905-46f1-923d-9cd1a3e16bf5",
+      "id": "69754d4c-3d44-41d1-b67a-06af44cddf69",
       "name": "Warten auf Freigabe",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
@@ -349,7 +350,7 @@
         1680,
         100
       ],
-      "webhookId": "57d706f7-e6f4-46b4-a2b7-f563d095556f"
+      "webhookId": "a0c6492d-f244-41fd-b298-bd53240e118b"
     },
     {
       "parameters": {
@@ -371,7 +372,7 @@
           }
         }
       },
-      "id": "176a0b0d-85f0-4df6-ac2b-76dd6ddcc2a5",
+      "id": "cb73ef47-02a2-412e-8c8f-cf463a47a282",
       "name": "ISC-News-Bot anlegen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -397,7 +398,7 @@
           },
           "conditions": [
             {
-              "id": "22e16544-99a9-4b28-a596-f16daeb003ae",
+              "id": "abb911bb-c603-44af-95f2-f3aa4702e43b",
               "leftValue": "={{ $json.ok }}",
               "rightValue": "",
               "operator": {
@@ -411,7 +412,7 @@
         },
         "options": {}
       },
-      "id": "1d56a084-9dbb-4bba-87db-02409b707bcc",
+      "id": "35140e21-362d-47d0-b8c2-88e9d3a59476",
       "name": "Erfolgreich?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -443,7 +444,7 @@
         "body": "={{ ($json.duplicate ? 'Bereits vorhanden (Duplikat), nichts angelegt: ' : '') + ($json.dryRun ? 'Probelauf, nichts gespeichert' : 'newsId ' + $json.newsId + ' | Status ' + ($json.status || '-') + ' | ' + ($json.editUrl || '')) }}",
         "options": {}
       },
-      "id": "4bb3bcff-527d-4a0e-986d-0e9bb9cf8cd9",
+      "id": "abf11944-5a03-4f89-9ece-8bafecf3d9f4",
       "name": "ntfy Erfolg",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -463,7 +464,7 @@
           },
           "conditions": [
             {
-              "id": "9cc7bcdf-2699-4cc0-bcbd-e482b995f5c0",
+              "id": "99505d03-964a-4add-a236-da75e01d5396",
               "leftValue": "={{ $json.screenshotBase64 }}",
               "rightValue": "",
               "operator": {
@@ -477,7 +478,7 @@
         },
         "options": {}
       },
-      "id": "1d1a6ea3-3b52-4deb-8b5a-b0f02a20caf7",
+      "id": "1f11f68a-f28d-4f10-b756-049aa9902223",
       "name": "Screenshot vorhanden?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -496,7 +497,7 @@
           "mimeType": "image/png"
         }
       },
-      "id": "91bac33f-12bb-4cd3-8aa3-53081f059008",
+      "id": "261e6845-e857-42bb-81d1-0010872b21bc",
       "name": "Screenshot in Datei",
       "type": "n8n-nodes-base.convertToFile",
       "typeVersion": 1.1,
@@ -539,7 +540,7 @@
         "inputDataFieldName": "screenshot",
         "options": {}
       },
-      "id": "25fd985e-7c2b-4954-b601-b20fc7e427a2",
+      "id": "481049d4-d42d-4b4b-b6ab-9bc893627686",
       "name": "ntfy Fehler mit Screenshot",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -575,7 +576,7 @@
         "body": "={{ 'Fehler ' + $json.errorCode + ' im Schritt ' + ($json.step || '-') + ' | newsId ' + ($json.newsId || '-') + ' | ' + ($json.error || '') }}",
         "options": {}
       },
-      "id": "f3a760e4-839e-408f-8638-5fe6604d6759",
+      "id": "b11c6745-a097-4516-9342-d31e938e0583",
       "name": "ntfy Fehler",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -586,12 +587,12 @@
     },
     {
       "parameters": {
-        "content": "## ISC-News: Schritte NACH DEM IMPORT\n\n0. **IMAP-Credential** anlegen (Postfach, auf das die News-Mails kommen) und dem Node **E-Mail empfangen** zuweisen. Der Node holt nur ungelesene Mails mit dem Betreff `HOMEPAGE1002011` und markiert sie danach als gelesen.\n1. **Credential anlegen**: Typ *Header Auth*, Name `ISC-News-Bot API-Token`, Header `Authorization`, Wert `Bearer <API_TOKEN>` (Klartext nur aus dem Secret `isc-news-bot-secrets`, nie ins Repo). Dann dem Node **ISC-News-Bot anlegen** zuweisen.\n2. **Konfiguration** oeffnen: `testModus` = `true` fuer Probelaeufe (dryRun, nichts wird gespeichert). `ntfyFreigabe` = `true`, wenn jede News vorher per ntfy freigegeben werden soll.\n3. ntfy-Topic `isc-news` in der App abonnieren (Topic-Name steht in **Konfiguration**).\n4. Kategorie-Namen im Formular muessen den Namen im ISC entsprechen (Liste siehe docs/3-apps-workloads/300k0-isc-news-bot.md).\n5. Workflow **aktivieren**. Die Formular-URL steht am Node **Formular**, die Webhook-URL am Node **Webhook** (`/webhook/isc-news`, POST, JSON).\n   Mail-Format: Betreff `HOMEPAGE1002011`. Anhang 1 ist eine JSON-Datei mit `title`, `subtitle`, `text` (oder `html`), `categories` (IDs oder Namen), optional `startDate` (`JJJJ-MM-TTTHH:mm`) und `mode` (`draft` oder `publish`). Alle Bilder (jpg, png, webp) sind weitere Anhänge.\n6. Erster Lauf immer mit `testModus = true`. Erst danach auf `false` stellen.\n\nFreigabe-Link (ntfy-Button) zeigt auf den Wait-Node. Ohne Klick passiert nichts: die Ausfuehrung wartet, bis sie abgebrochen wird.\n",
+        "content": "## ISC-News: Schritte NACH DEM IMPORT\n\n0. **IMAP-Credential** anlegen (Postfach der News-Mails) und dem Node **E-Mail empfangen** zuweisen. Der Node liest nur den Ordner `ISC-News`, nicht die INBOX. Dort landen die Mails über eine Regel im Postfach: Betreff enthaelt `1002011` → Ordner `ISC-News`. Ungelesene Mails mit Betreff `HOMEPAGE1002011` von `peter.kretzer@dlrg.org` werden verarbeitet und danach als gelesen markiert.\n1. **Credential anlegen**: Typ *Header Auth*, Name `ISC-News-Bot API-Token`, Header `Authorization`, Wert `Bearer <API_TOKEN>` (Klartext nur aus dem Secret `isc-news-bot-secrets`, nie ins Repo). Dann dem Node **ISC-News-Bot anlegen** zuweisen.\n2. **Konfiguration** oeffnen: `testModus` = `true` fuer Probelaeufe (dryRun, nichts wird gespeichert). `ntfyFreigabe` = `true`, wenn jede News vorher per ntfy freigegeben werden soll.\n3. ntfy-Topic `isc-news` in der App abonnieren (Topic-Name steht in **Konfiguration**).\n4. Kategorie-Namen im Formular muessen den Namen im ISC entsprechen (Liste siehe docs/3-apps-workloads/300k0-isc-news-bot.md).\n5. Workflow **aktivieren**. Die Formular-URL steht am Node **Formular**, die Webhook-URL am Node **Webhook** (`/webhook/isc-news`, POST, JSON).\n   Mail-Format: Betreff `HOMEPAGE1002011`. Anhang 1 ist eine JSON-Datei mit `title`, `subtitle`, `text` (oder `html`), `categories` (IDs oder Namen), optional `startDate` (`JJJJ-MM-TTTHH:mm`) und `mode` (`draft` oder `publish`). Alle Bilder (jpg, png, webp) sind weitere Anhänge.\n6. Erster Lauf immer mit `testModus = true`. Erst danach auf `false` stellen.\n\nFreigabe-Link (ntfy-Button) zeigt auf den Wait-Node. Ohne Klick passiert nichts: die Ausfuehrung wartet, bis sie abgebrochen wird.\n",
         "height": 460,
         "width": 560,
         "color": 4
       },
-      "id": "862ea1b0-eefe-4b65-83f1-1c76e6b8cc14",
+      "id": "5842a223-dab1-4636-8699-1010f54cd016",
       "name": "Hinweise",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -792,7 +793,7 @@
     "timezone": "Europe/Berlin",
     "saveManualExecutions": true
   },
-  "versionId": "42aa22c2-5a10-45c4-82d7-5dfeb38c0944",
+  "versionId": "2ee656cc-baaa-410a-9b28-87ab24807da7",
   "meta": {
     "templateCredsSetupCompleted": false
   },
