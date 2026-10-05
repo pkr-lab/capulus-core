@@ -41,6 +41,13 @@ Renovate-PR gegen eine generierte Lockdatei.
 - **Dependency Dashboard:** Renovate legt ein offenes GitHub-Issue
   „Dependency Dashboard" an, das den Status aller erkannten Updates auflistet
   (auch die, die z. B. wegen offener Major-Version zurückgehalten werden).
+- **Keine Sicherheits-PRs:** `vulnerabilityAlerts` ist abgeschaltet. PRs für bekannte
+  Sicherheitslücken öffnet Dependabot, der innerhalb von Stunden reagiert statt im
+  Wochenrhythmus des [Fallback-Workflows](#self-hosted-fallback-github-actions)
+  ([d0080](../d-sicherheit/d0080-codeql-dependabot.md)).
+  Umgekehrt macht Dependabot keine Versions-Updates, es gibt also keine doppelten PRs
+  (Ausnahme: ein Sicherheits-Update ist zugleich ein normales Patch-Update, dann einen
+  der beiden PRs mergen, der andere schließt sich).
 
 ## Was Renovate NICHT tut
 
