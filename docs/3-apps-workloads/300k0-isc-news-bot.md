@@ -250,6 +250,15 @@ curl -s http://127.0.0.1:8080/readyz
 
 Der fertige Workflow liegt unter [`argocd/apps/tech/n8n/workflows/isc-news-veroeffentlichen.json`](../../argocd/apps/tech/n8n/workflows/isc-news-veroeffentlichen.json). Die Schritte nach dem Import stehen auch als Notiz im Workflow.
 
+**Eingang per E-Mail (Hauptweg):** Der Node **E-Mail empfangen** (IMAP) holt ungelesene Mails mit dem Betreff `HOMEPAGE1002011` und markiert sie danach als gelesen. Anhänge:
+
+- eine JSON-Datei mit `title`, `subtitle`, `text` (oder `html`), `categories` (Liste aus IDs oder Namen), optional `startDate` (`JJJJ-MM-TTTHH:mm`) und `mode` (`draft` oder `publish`)
+- alle Bilder (jpg, png, webp) als weitere Anhänge. Das erste Bild ist der Teaser.
+
+Die Mail wird im Node **Mail lesen** geprüft und in dieselbe Verarbeitung gegeben wie Formular und Webhook. Ist die JSON-Datei nicht lesbar oder fehlt sie, kommt eine ntfy-Meldung und es wird nichts angelegt. Für das IMAP-Postfach braucht es eine Credential **IMAP** in n8n. Sie liegt in n8n, nicht im Repo.
+
+**Formular und Webhook** bleiben als zusätzliche Wege erhalten.
+
 1. In n8n: *Workflows → Import from file*, die JSON wählen.
 2. Credential **Header Auth** anlegen: Name `ISC-News-Bot API-Token`, Header `Authorization`, Wert `Bearer <API_TOKEN>`. Dem Node **ISC-News-Bot anlegen** zuweisen.
 3. Node **Konfiguration** öffnen:
@@ -260,7 +269,7 @@ Der fertige Workflow liegt unter [`argocd/apps/tech/n8n/workflows/isc-news-veroe
 
 Ablauf: Eingaben prüfen, Text in HTML umwandeln (Absätze, Zeilenumbrüche, Links), Bilder als Base64 anhängen, optional Freigabe per ntfy (Button führt zum n8n-Wait-Node, ohne Klick passiert nichts), `POST /news` mit einem Timeout aus Bildern × 2 min + 2 min, Erfolg oder Fehler per ntfy. Bei einem Fehler mit Screenshot kommt das Bild als Anhang.
 
-Der Workflow importiert ohne Fehler in n8n `2.42.3` (Version im Cluster), die Node-Versionen existieren dort. Noch nicht getestet ist ein Lauf mit echtem Formular, ntfy und ISC: deshalb den ersten Lauf immer mit `testModus = true` machen. Die Formularfelder heißen **Überschrift**, **Untertitel**, **Text**, **Kategorie(n)**, **Veröffentlichung ab (leer = sofort, JJJJ-MM-TTTHH:mm)**, **Bilder**, **Modus** (Entwurf / Veröffentlichen).
+Der Workflow importiert ohne Fehler in n8n `2.42.3` (Version im Cluster), die Node-Versionen existieren dort. Die Mail-Verarbeitung ist mit simulierten Mails getestet. Noch nicht getestet ist ein Lauf mit echten Mails, ntfy und ISC: deshalb den ersten Lauf immer mit `testModus = true` machen. Die Formularfelder heißen **Überschrift**, **Untertitel**, **Text**, **Kategorie(n)**, **Veröffentlichung ab (leer = sofort, JJJJ-MM-TTTHH:mm)**, **Bilder**, **Modus** (Entwurf / Veröffentlichen).
 
 ---
 
