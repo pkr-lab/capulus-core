@@ -241,8 +241,11 @@ capulus-core/
 ├── renovate.json                     # Renovate-Konfiguration (siehe docs/f-cicd-automatisierung/f0020-renovate.md)
 ├── .releaserc.json                   # semantic-release-Konfiguration (siehe docs/f-cicd-automatisierung/f0030-release-automation.md)
 ├── .github/
+│   ├── dependabot.yml                # Dependabot: nur Sicherheits-PRs für Go-Module und Actions (d0080-codeql-dependabot.md)
 │   └── workflows/
 │       ├── ci.yml                    # Pflicht-Gate auf PRs: lint, kubeconform, Go, gitleaks (f0070-ci-lint.md)
+│       ├── codeql.yml                # Code-Scanning: Go, JS, Python, Swift, Workflows (d0080-codeql-dependabot.md)
+│       ├── security-issues.yml       # täglich: offene CodeQL- und Dependabot-Alerts als Issues (d0080)
 │       ├── build-images.yml          # Workload-Images bauen (auf PRs ohne Push, f0060-build-images.md)
 │       ├── entw-trigger.yml          # Push auf entw startet promote-entw.yml sofort
 │       ├── promote-entw.yml          # entw nach grüner CI als PR an main (f0080-entw-promotion.md)
@@ -441,6 +444,7 @@ Jeder Hostname trägt ein Tier-Label (`tech` = Infrastruktur/Admin, `prod` = App
 <tr><td>Secrets</td><td>Ansible-Vault für Host-Werte, Sealed Secrets für Cluster-Werte (je Cluster eigener Schlüssel), k3s-Secrets-Encryption at rest + Audit-Log, Rotations-Checkliste in <a href="docs/d-sicherheit/d0060-secrets-rotation.md">d0060</a></td></tr>
 <tr><td>ArgoCD Read-only</td><td>Hat ausschließlich Read-Access auf das Git-Repo</td></tr>
 <tr><td>ArgoCD-AppProjects</td><td>Je Cluster ein Project (<code>tech</code> / <code>prod</code> / <code>entw</code>) begrenzt Quell-Repo und erlaubte Ziel-Namespaces, siehe <a href="docs/b-kubernetes-gitops/b0020-argocd-projects.md">docs/b-kubernetes-gitops/b0020-argocd-projects.md</a></td></tr>
+<tr><td>Code-Scanning &amp; Abhängigkeiten</td><td>CodeQL prüft jeden PR (Go, JS, Python, Swift, Workflows), Dependabot öffnet Fix-PRs für verwundbare Abhängigkeiten, offene Funde werden täglich zu Issues, siehe <a href="docs/d-sicherheit/d0080-codeql-dependabot.md">docs/d-sicherheit/d0080-codeql-dependabot.md</a></td></tr>
 <tr><td>Geschützter <code>main</code></td><td>Änderungen nur per Pull Request mit grüner CI (lint, kubeconform, gitleaks), siehe <a href="docs/f-cicd-automatisierung/f0090-branch-schutz-main.md">docs/f-cicd-automatisierung/f0090-branch-schutz-main.md</a></td></tr>
 </tbody>
 </table>
@@ -523,6 +527,7 @@ Neu hier? Der beste Einstieg ist der **[Architektur-Überblick](docs/a-betriebss
 | [lldap](docs/d-sicherheit/d0072-lldap.md) | Nutzer- und Gruppenverwaltung als LDAP-Quelle für Authentik |
 | [Authentik SSO](docs/d-sicherheit/d0073-authentik-sso.md) | Zentrale SSO-/2FA-Instanz per Traefik-ForwardAuth, Access-Control, Runbook |
 | [Authentik IaC-Cookbook](docs/d-sicherheit/d0074-authentik-iac-cookbook.md) | Neue Apps und Nutzer per Blueprint anlegen |
+| [CodeQL, Dependabot, Security-Issues](docs/d-sicherheit/d0080-codeql-dependabot.md) | Code-Scanning, Fix-PRs für verwundbare Abhängigkeiten, automatische Security-Issues, Vergleich mit Open-Source-Alternativen (Härtung Phase 10) |
 
 ### Externe Erreichbarkeit (`e-externe-erreichbarkeit/`)
 
@@ -536,7 +541,7 @@ Neu hier? Der beste Einstieg ist der **[Architektur-Überblick](docs/a-betriebss
 | Dokument | Inhalt |
 |---|---|
 | [Argo Workflows](docs/f-cicd-automatisierung/f0000-argo-workflows.md) | Private CI/CD-Pipeline mit MinIO-Artifact-Store |
-| [Renovate](docs/f-cicd-automatisierung/f0020-renovate.md) | Automatische Update-PRs für Helm-Chart-Versionen und Image-Tags |
+| [Renovate](docs/f-cicd-automatisierung/f0020-renovate.md) | Automatische Update-PRs für Helm-Chart-Versionen und Image-Tags (Sicherheits-PRs kommen von Dependabot) |
 | [Release-Automatisierung](docs/f-cicd-automatisierung/f0030-release-automation.md) | GitHub Release + Changelog bei jedem Merge auf `main` via semantic-release |
 | [GitHub Release Watcher](docs/f-cicd-automatisierung/f0040-github-release-watcher.md) | Neue GitHub-Releases erkennen und per Zammad-Ticket eine E-Mail-Benachrichtigung auslösen |
 | [GitLab-Mirror](docs/f-cicd-automatisierung/f0050-gitlab-mirror.md) | Vollspiegelung (alle Branches + Tags) zu GitLab als Redundanz für den Fall eines GitHub-Ausfalls |
@@ -633,7 +638,7 @@ Einstieg und Zuordnung von Dateien zu Docs: **[docs/6-hintergruende/60000-uebers
 | [Authentik und lldap](docs/6-hintergruende/60070-authentik-und-lldap.md) | Blueprint-Fallstricke aus dem Live-Betrieb, Chart, Secrets |
 | [carplay-api und iOS-App](docs/6-hintergruende/60080-carplay-api-und-ios-app.md) | Verträge, Absicherung, Datenquellen, Transport über Tailscale |
 | [pacman (Schulungsobjekt)](docs/6-hintergruende/60090-pacman-schulungsobjekt.md) | Server, Bestenliste, Trainingsmodus, Frontend-Skripte |
-| [CI-Workflows, Skripte und Lint](docs/6-hintergruende/600a0-ci-workflows-und-skripte.md) | Workflows, Promotions- und Sync-Skripte, Ruleset, Lint-Konfiguration |
+| [CI-Workflows, Skripte und Lint](docs/6-hintergruende/600a0-ci-workflows-und-skripte.md) | Workflows, Promotions- und Sync-Skripte, Ruleset, Dependabot/Renovate, Lint-Konfiguration |
 
 Weitere Ordner-READMEs: [argocd/apps/entw/](argocd/apps/entw/README.md) (ENTW-Ordner),
 [argocd/bootstrap-prod/](argocd/bootstrap-prod/README.md) (PROD im Hub anbinden, Umzug mit Daten),
