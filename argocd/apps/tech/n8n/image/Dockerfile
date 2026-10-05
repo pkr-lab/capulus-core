@@ -1,4 +1,4 @@
-FROM node:24.20.0-alpine AS builder
+FROM node:24.21.0-alpine AS builder
 
 RUN apk add --no-cache python3 make g++
 
@@ -13,7 +13,7 @@ WORKDIR /build/wwebjs
 RUN PUPPETEER_SKIP_DOWNLOAD=true PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     npm install whatsapp-web.js@1.34.7 qrcode@1.5.4 --omit=dev --legacy-peer-deps
 
-FROM n8nio/n8n:2.38.4
+FROM n8nio/n8n:2.42.3
 
 COPY --from=builder --chown=node:node /build/n8n-custom-nodes /opt/n8n-custom-nodes
 
