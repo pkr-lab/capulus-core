@@ -291,6 +291,22 @@ ohne den Router anzufassen. Der Port muss `pihole_dns_nodeport` in `ansible/grou
 kein separates dnsmasq im Container. Die Fritz!Box bleibt der eigentliche Resolver und ist DHCP-Server, Pi-hole filtert nur. Zu Root und Capabilities
 siehe oben.
 
+Update-Strategie und Readiness (seit dem Vorfall [50020](../5-incidents/50020-pihole-update-dns-deadlock.md)):
+
+- **`RollingUpdate` mit `maxSurge: 1` / `maxUnavailable: 0`** statt `Recreate`. Pi-hole ist der einzige Upstream von dnsmasq, und darüber
+  lösen auch der homeserver selbst (containerd/Image-Pulls, ArgoCD) und die PROD-VM auf. Mit `Recreate` war bei jedem Update das DNS weg,
+  bevor das neue Image gezogen war, und der Pull scheiterte genau daran. Jetzt läuft der alte Pod weiter, bis der neue bereit ist.
+- **Gemeinsame PVC während des Überlappens:** Die `local-path`-PVC ist `ReadWriteOnce`. RWO erlaubt mehrere Pods auf demselben Node, und
+  ein `local-path`-PV ist per Node-Affinity an genau diesen Node gebunden, also landet der neue Pod immer neben dem alten. Für die
+  wenigen Sekunden, in denen beide laufen, greifen zwei FTL-Instanzen auf dieselben SQLite-Dateien zu. SQLite regelt das über
+  Dateisperren auf demselben Kernel. Die PID-Datei liegt unter `/run` und ist nicht geteilt.
+- **Readiness-Probe per `dig @127.0.0.1 pi.hole`** statt TCP-Check auf Port 53. Das ist derselbe Befehl wie der `HEALTHCHECK` im
+  Upstream-Image (`bind-tools` ist enthalten). `pi.hole` beantwortet FTL lokal, die Probe hängt also nicht an der Fritz!Box. Ein offener
+  TCP-Port hieße nur, dass FTL lauscht, nicht dass es antwortet. Erst wenn diese Probe grün ist und `minReadySeconds: 10` abgelaufen sind,
+  beendet Kubernetes den alten Pod.
+- `replicaCount` bleibt `1`. Zwei dauerhaft laufende Instanzen auf derselben PVC wären nicht sauber (Query-Log, Gravity-Updates),
+  zwei getrennte PVCs bräuchten eine Synchronisation der Listen.
+
 ### semaphore
 
 - Das Image ist auf ein Release gepinnt, um überraschende API-Brüche beim ArgoCD-Sync zu vermeiden: Upgrade = Release prüfen, Tag hier
