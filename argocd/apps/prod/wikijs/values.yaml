@@ -18,7 +18,7 @@ wikijs:
   image:
     repository: ghcr.io/requarks/wiki
     pullPolicy: IfNotPresent
-    tag: "2.5.315"
+    tag: "2.5.316"
 
   service:
     type: ClusterIP
