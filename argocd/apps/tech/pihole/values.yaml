@@ -4,7 +4,7 @@ replicaCount: 1
 image:
   repository: pihole/pihole
   pullPolicy: IfNotPresent
-  tag: "2026.07.2"
+  tag: "2026.09.0"
 
 nameOverride: ""
 fullnameOverride: ""
