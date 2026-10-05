@@ -27,6 +27,10 @@ müsste sonst durch die kaputte CI).
 Die Image-Builds aus [`build-images.yml`](f0060-build-images.md) sind bewusst
 **keine** Pflicht-Checks: der Pfadfilter lässt den Workflow bei PRs ohne
 Image-Änderung gar nicht laufen, ein Pflicht-Check bliebe dann ewig auf „pending“.
+Dasselbe gilt für [CodeQL](../d-sicherheit/d0080-codeql-dependabot.md): der Workflow
+überspringt reine Doku-PRs, und der Swift-Job auf macOS soll einen Merge nicht
+blockieren, wenn er selbst ein Problem hat. Neue Funde ab `high` sieht man trotzdem
+als roten Check „Code scanning results“ im PR.
 
 ## Aktivieren
 
@@ -54,6 +58,7 @@ Wer sonst noch PRs aufmacht:
 |---|---|
 | Renovate (App und [Fallback-Workflow](f0020-renovate.md)) | PRs sind jetzt gegated. Ein kaputter Bump (Major-Sprung mit geändertem Import-Pfad, halb aktualisierte `go.mod`) bleibt rot statt auf `main` zu landen. |
 | [ENTW-Promotion](f0080-entw-promotion.md) | öffnet PRs mit einem PAT (sonst liefe die CI auf dem PR nicht an) und mergt nie selbst |
+| [Dependabot](../d-sicherheit/d0080-codeql-dependabot.md) | nur Sicherheits-PRs (`fix(deps): …`, Labels `dependencies` und `security`). Die CI läuft darauf ohne PAT, Dependabot-PRs lösen Workflows aus. Gemergt wird von Hand. |
 | Kleine GitOps-Schritte (Migration: App stoppen, kopieren, starten) | ebenfalls per PR. Ein Lauf dauert ca. 2 Minuten (der `make lint`-Job ist der längste). Nur im Notfall per Admin-Bypass mergen. |
 
 Nicht betroffen sind `release.yml` (setzt nur Tags und Releases, pusht keine

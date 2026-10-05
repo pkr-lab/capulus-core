@@ -17,6 +17,7 @@ absichtlich so gewählt, dass jede Phase auf der vorherigen aufbaut.
 | 9 | Renovate (automatische Update-PRs) + semantic-release (GitHub Release bei jedem Merge auf `main`) | [docs/f-cicd-automatisierung/f0020-renovate.md](../f-cicd-automatisierung/f0020-renovate.md), [docs/f-cicd-automatisierung/f0030-release-automation.md](../f-cicd-automatisierung/f0030-release-automation.md) |
 | 3 | Cluster-NetworkPolicies — grobe Tier-Policy + vollständige Verfeinerung auf alle 36 App-Namespaces (nur noch eigener Namespace + kube-system + monitoring + cloudflared + gezielte Ausnahmen) | [docs/d-sicherheit/d0030-network-policies.md](d0030-network-policies.md) — **inkl. eines Beinahe-Incidents (Cloudflare-Tunnel-Ausfall während des Rollouts)** |
 | 4 | k3s Secrets-Encryption-at-Rest (AES-CBC, per Byte-Dump verifiziert) + Audit-Log (Metadata-Level, 14 Tage Retention) | [docs/d-sicherheit/d0050-secrets-encryption-audit-log.md](d0050-secrets-encryption-audit-log.md) |
+| 10 | Code-Scanning (CodeQL für Go, JS, Python, Swift, Workflows) + Dependabot (Alerts und Fix-PRs für verwundbare Abhängigkeiten) + automatische Security-Issues; einmalig die Repo-Einstellungen aktivieren | [docs/d-sicherheit/d0080-codeql-dependabot.md](d0080-codeql-dependabot.md) |
 
 ---
 
