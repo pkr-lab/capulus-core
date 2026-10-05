@@ -112,6 +112,9 @@ Lokal: `python3 scripts/check-doc-links.py`.
   Syntax/Best-Practices der Playbooks/Rollen selbst.
 - **Kein Bau der Container-Images** — das macht
   [`build-images.yml`](f0060-build-images.md) (ohne Push auch auf PRs).
+- **Kein Code-Scanning und keine Prüfung auf verwundbare Abhängigkeiten** — das
+  machen CodeQL und Dependabot, beide ohne Pflicht-Check
+  ([d0080](../d-sicherheit/d0080-codeql-dependabot.md)).
 
 ## Unterschiede zwischen lokal und CI
 

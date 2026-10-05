@@ -22,6 +22,9 @@
   "github-actions": {
     "enabled": true
   },
+  "vulnerabilityAlerts": {
+    "enabled": false
+  },
   "packageRules": [
     {
       "description": "Vendored/pulled-in subcharts (Chart.lock, charts/*.tgz) are refreshed manually via `helm dependency update`, not by Renovate opening PRs against generated lockfiles.",
