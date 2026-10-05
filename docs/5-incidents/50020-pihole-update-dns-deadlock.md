@@ -69,6 +69,7 @@ Zeitangaben in UTC. Die Uhrzeiten der manuellen Schritte sind aus den Pod-Altern
 | danach | Diagnose (siehe unten) | Befehlsausgaben |
 | danach | Sofort-Fix: dnsmasq temporär auf Fritz!Box, Pi-hole-Pod neu angelegt, nach 22 s `1/1 Running` | `kubectl get pods -w` |
 | danach | dnsmasq-Konfiguration zurückgestellt, cloudflared neu ausgerollt | Befehlsausgaben |
+| danach | prod-vm kurz heruntergefahren, SSH-Key eingespielt, neu gestartet. PROD-cloudflared mit 4 Pods `Running` bestätigt | `kubectl get pods` auf der prod-vm |
 
 ---
 
@@ -194,7 +195,51 @@ dig @192.168.178.94 +short region2.v2.argotunnel.com
 
 In Cloudflare unter *Zero Trust → Networks → Tunnels* muss `homeserver-prod` wieder als **HEALTHY** mit Connectoren erscheinen.
 
-### Schritt 5: Aufräumen
+### Schritt 5: PROD direkt auf der VM prüfen
+
+Der Zugang zur prod-vm (`ubuntu@192.168.178.99`) funktioniert nur per Key `prod-vm-admin`, der auf dem homeserver nicht lag. Um
+einen Key des homeservers einzuspielen, wurde die VM kurz heruntergefahren. **PROD war dadurch zusätzlich wenige Minuten offline.**
+
+```bash
+ls ~/.ssh/*.pub || ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N ""
+sudo virsh shutdown prod-vm
+until [ "$(sudo virsh domstate prod-vm)" = "shut off" ]; do sleep 2; done
+sudo virt-customize -d prod-vm --ssh-inject ubuntu:file:/home/ubuntu/.ssh/id_ed25519.pub
+sudo virsh start prod-vm
+```
+
+Fallstricke dabei:
+
+- Ohne das Warten auf `shut off` verweigert `virt-customize` die Arbeit (`domain is a live virtual machine`) und `virsh start`
+  läuft ins Leere, weil die VM noch aktiv ist. Die Befehle nicht als Block einfügen.
+- Beim ersten SSH meldet der Client `REMOTE HOST IDENTIFICATION HAS CHANGED`. Ursache ist der Neuaufbau der VM am 23.09.
+  ([50010](50010-prod-vm-basis-image-ersetzt.md)) mit neuen Host-Keys. Vor dem Entfernen des alten Eintrags den Fingerprint
+  direkt von der Disk prüfen (`virt-cat` ist immer read-only, ein `--ro` gibt es dort nicht):
+
+```bash
+sudo virt-cat -d prod-vm /etc/ssh/ssh_host_ed25519_key.pub | ssh-keygen -lf -
+ssh-keygen -f ~/.ssh/known_hosts -R 192.168.178.99
+```
+
+Ergebnis:
+
+```bash
+ssh ubuntu@192.168.178.99 'sudo k3s kubectl get nodes; sudo k3s kubectl -n cloudflared get pods'
+```
+```
+NAME      STATUS   ROLES           AGE   VERSION
+prod-vm   Ready    control-plane   11d   v1.36.4+k3s1
+NAME                           READY   STATUS    RESTARTS       AGE
+cloudflared-7cf756b9b6-6d65t   1/1     Running   0              67s
+cloudflared-7cf756b9b6-bkdqc   1/1     Running   8 (4m9s ago)   25m
+cloudflared-7cf756b9b6-hgj7s   1/1     Running   1 (4m9s ago)   40m
+cloudflared-7cf756b9b6-k2v2q   1/1     Running   1 (4m9s ago)   40m
+```
+
+Die 8 Restarts von `bkdqc` sind die Crash-Schleife während des DNS-Ausfalls, der jeweils letzte Restart der VM-Neustart. Vier
+Replicas statt zwei kommen vom HPA (`maxReplicas: 4`) und bauen sich von selbst wieder ab.
+
+### Schritt 6: Aufräumen
 
 ```bash
 kubectl -n cloudflared delete pod dnstest --ignore-not-found
@@ -261,7 +306,10 @@ aufzuweichen.
 
 ## Offene Punkte
 
-- [ ] PROD-cloudflared im PROD-Kontext explizit als `Running` bestätigen und Tunnel-Status in Cloudflare prüfen.
+- [x] PROD-cloudflared auf der prod-vm als `Running` bestätigt.
+- [ ] Tunnel-Status `homeserver-prod` in Cloudflare als HEALTHY bestätigen.
+- [ ] Zugang zur prod-vm dokumentieren: wo der private Key `prod-vm-admin` liegt, und ob der Key des homeservers dauerhaft per
+      `libvirt_host_admin_ssh_public_key` (Liste statt Einzelwert) hinterlegt werden soll, damit kein Shutdown mehr nötig ist.
 - [ ] Nach dem nächsten Pi-hole-Update von Renovate prüfen, dass alter und neuer Pod kurz parallel laufen und DNS durchgehend antwortet
       (`while true; do dig @192.168.178.94 +short +time=1 github.com; sleep 1; done` während des Syncs).
 - [ ] Renovate-Gruppierung prüfen: Infrastruktur-Images (Pi-hole, cloudflared) nicht am selben Tag mergen, damit ein Ausfall eindeutig
