@@ -185,6 +185,13 @@ drei Wege oben) — ohne Router-Änderung. Fällt Pi-hole aus, liefert dnsmasq
 schlicht keine Antwort für nicht-`*.homeserver`-Namen mehr (kein Fallback auf
 die Fritz!Box), bis der Pod wieder läuft; `*.homeserver` bleibt unberührt.
 
+Das gilt auch für den homeserver selbst und für die PROD-VM: Beide fragen
+dnsmasq, CoreDNS beider Cluster damit indirekt ebenfalls Pi-hole. Ein
+Pi-hole-Ausfall verhindert deshalb auch Image-Pulls und bringt beide
+Cloudflare-Tunnel zum Absturz. Updates laufen darum als `RollingUpdate`
+ohne Unterbrechung, siehe
+[`50020-pihole-update-dns-deadlock.md`](../5-incidents/50020-pihole-update-dns-deadlock.md).
+
 ---
 
 ## Was ist mit der "Local DNS server"-Option in der Fritz!Box?

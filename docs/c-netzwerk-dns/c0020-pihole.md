@@ -1,4 +1,4 @@
-Dan# Pi-hole — Netzwerkweites Werbeblocking
+# Pi-hole — Netzwerkweites Werbeblocking
 
 [Pi-hole](https://pi-hole.net) läuft als ArgoCD-verwaltete App im k3s-Cluster
 (`argocd/apps/tech/pihole/`) und wird von `dnsmasq` auf dem Home-Server als
@@ -267,6 +267,7 @@ ArgoCD es nicht automatisch prunt, dann den Pi-hole-Pod neu starten.
 | Pod `CrashLoopBackOff` nach Erstdeployment | `encryptedPassword` ist noch `REPLACE_ME_WITH_KUBESEAL_OUTPUT` — Schritt 1.3 abschließen |
 | `pihole-webpassword`-Secret fehlt | `kubectl -n pihole describe sealedsecret pihole-webpassword` — Ciphertext muss gegen den Public Key dieses Clusters erzeugt worden sein |
 | Kein Internet mehr auf Geräten, die dnsmasq als DNS nutzen | Pi-hole-Pod down + `make dnsmasq` bereits gelaufen → kein Fallback auf die Fritz!Box (siehe [`c0000-dns-architecture.md`](c0000-dns-architecture.md)). `kubectl -n pihole get pods` prüfen, Pod ggf. neu starten |
+| Pod hängt in `ImagePullBackOff`, gleichzeitig löst nichts mehr auf (auch die Tunnel nicht) | DNS-Deadlock: Ohne laufenden Pi-hole kann der Node das Image nicht ziehen. Notfall-Ablauf siehe [`50020-pihole-update-dns-deadlock.md`](../5-incidents/50020-pihole-update-dns-deadlock.md#notfall-ablauf) |
 | Legitime Seite wird geblockt | Domain in der Pi-hole-Web-UI unter **Domains** auf die Allowlist setzen |
 | `pihole.tech.homeserver` löst nicht auf | `dig +short pihole.tech.homeserver @192.168.178.94` muss die Homeserver-IP liefern (die `*.homeserver`-Wildcard löst automatisch auf, ein Eintrag pro App ist nicht nötig), sonst `make dnsmasq` erneut ausführen |
 | DNS-Antworten kommen doppelt so langsam | NodePort-Hop (`dnsmasq → Pi-hole → Fritz!Box`) fügt einen zusätzlichen Forward hinzu — normal, sollte aber im einstelligen ms-Bereich bleiben. Bei spürbaren Verzögerungen `kubectl -n pihole top pod` prüfen |
