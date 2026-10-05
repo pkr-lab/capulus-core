@@ -250,7 +250,7 @@ curl -s http://127.0.0.1:8080/readyz
 
 Der fertige Workflow liegt unter [`argocd/apps/tech/n8n/workflows/isc-news-veroeffentlichen.json`](../../argocd/apps/tech/n8n/workflows/isc-news-veroeffentlichen.json). Die Schritte nach dem Import stehen auch als Notiz im Workflow.
 
-**Eingang per E-Mail (Hauptweg):** Der Node **E-Mail empfangen** (IMAP) holt ungelesene Mails mit dem Betreff `HOMEPAGE1002011` und markiert sie danach als gelesen. Anhänge:
+**Eingang per E-Mail (Hauptweg):** Der Node **E-Mail empfangen** (IMAP) holt ungelesene Mails mit dem Betreff `HOMEPAGE1002011` vom Absender `peter.kretzer@dlrg.org` und markiert sie danach als gelesen. Mails von anderen Absendern lösen keinen Lauf aus. Anhänge:
 
 - eine JSON-Datei mit `title`, `subtitle`, `text` (oder `html`), `categories` (Liste aus IDs oder Namen), optional `startDate` (`JJJJ-MM-TTTHH:mm`) und `mode` (`draft` oder `publish`)
 - alle Bilder (jpg, png, webp) als weitere Anhänge. Das erste Bild ist der Teaser.
