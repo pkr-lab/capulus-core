@@ -7,8 +7,12 @@ metadata:
     {{- include "pihole.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  minReadySeconds: 10
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       {{- include "pihole.selectorLabels" . | nindent 6 }}
@@ -65,11 +69,18 @@ spec:
             timeoutSeconds: 3
             failureThreshold: 3
           readinessProbe:
-            tcpSocket:
-              port: dns-tcp
+            exec:
+              command:
+                - dig
+                - +short
+                - +norecurse
+                - +retry=0
+                - +time=2
+                - "@127.0.0.1"
+                - pi.hole
             initialDelaySeconds: 5
             periodSeconds: 10
-            timeoutSeconds: 2
+            timeoutSeconds: 5
             failureThreshold: 3
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
