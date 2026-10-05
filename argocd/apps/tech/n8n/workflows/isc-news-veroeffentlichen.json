@@ -1,0 +1,737 @@
+{
+  "id": "iscNewsVeroeff1",
+  "name": "ISC-News veröffentlichen",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "ISC-News veröffentlichen",
+        "formDescription": "Legt eine News im DLRG ISC an (Gliederung Ortsgruppe Andernach). Bilder: jpg, png oder webp, je Datei max. 15 MB.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Überschrift",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Untertitel",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "Text",
+              "fieldType": "textarea",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Kategorie(n)",
+              "fieldType": "dropdown",
+              "multiselect": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "DSM 2017"
+                  },
+                  {
+                    "option": "DLRG Andernach"
+                  },
+                  {
+                    "option": "Einsatzgruppe"
+                  },
+                  {
+                    "option": "Schwimmtraining"
+                  },
+                  {
+                    "option": "Lehrgänge/Kurse"
+                  },
+                  {
+                    "option": "DLRG Jugend"
+                  },
+                  {
+                    "option": "Wasserrettungsdienst"
+                  },
+                  {
+                    "option": "Wachstation frei"
+                  },
+                  {
+                    "option": "Wachstation belegt"
+                  },
+                  {
+                    "option": "Material"
+                  },
+                  {
+                    "option": "Warteliste"
+                  },
+                  {
+                    "option": "EDV"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Veröffentlichung ab (leer = sofort, JJJJ-MM-TTTHH:mm)",
+              "fieldType": "text"
+            },
+            {
+              "fieldLabel": "Bilder",
+              "fieldType": "file",
+              "multipleFiles": true,
+              "acceptFileTypes": ".jpg,.jpeg,.png,.webp"
+            },
+            {
+              "fieldLabel": "Modus",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Entwurf"
+                  },
+                  {
+                    "option": "Veröffentlichen"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a227ca1b-4592-4aac-a735-b73082457b5a",
+      "name": "Formular",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        240,
+        200
+      ],
+      "webhookId": "eb7f4a00-3530-4ffd-84e1-18b33144f2ec"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "isc-news",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "da36dc9d-113b-4419-b33b-4ffc0ef3ba0f",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        400
+      ],
+      "webhookId": "0e090281-bc88-498d-a7a2-22d42d0bc264"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const item = $input.first();\nreturn [{\n  json: {\n    ...item.json,\n    testModus: false,\n    ntfyFreigabe: false,\n    ntfyTopic: 'isc-news',\n    ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n    iscNewsBotUrl: 'http://isc-news-bot.isc-news-bot.svc.cluster.local'\n  },\n  binary: item.binary\n}];\n"
+      },
+      "id": "4d5c4368-f123-4d4b-9754-a3caef8e246a",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const item = $input.first();\nconst src = item.json;\nconst cfg = {\n  testModus: src.testModus === true,\n  ntfyFreigabe: src.ntfyFreigabe === true,\n  ntfyTopic: src.ntfyTopic,\n  ntfyUrl: src.ntfyUrl,\n  iscNewsBotUrl: src.iscNewsBotUrl\n};\nconst isWebhook = src.body !== undefined && typeof src.body === 'object';\nconst body = isWebhook ? src.body : {};\nconst pick = (label, key) => (isWebhook ? body[key] : src[label]);\nconst toText = (v) => (typeof v === 'string' ? v.trim() : '');\nconst toList = (v) => {\n  if (Array.isArray(v)) return v.map((x) => String(x).trim()).filter((x) => x.length > 0);\n  if (typeof v === 'string') return v.split(',').map((x) => x.trim()).filter((x) => x.length > 0);\n  return [];\n};\nconst esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');\nconst link = (s) => s.replace(/(https?:\\/\\/[^\\s<]+[^\\s<.,;:!?)])/g, '<a href=\"$1\">$1</a>');\nconst title = toText(pick('Überschrift', 'title'));\nconst subtitle = toText(pick('Untertitel', 'subtitle'));\nconst text = toText(pick('Text', 'text'));\nconst categories = toList(pick('Kategorie(n)', 'categories'));\nconst startDate = toText(pick('Veröffentlichung ab (leer = sofort, JJJJ-MM-TTTHH:mm)', 'startDate'));\nconst modeRaw = toText(pick('Modus', 'mode'));\nconst mode = isWebhook\n  ? (modeRaw === 'publish' ? 'publish' : 'draft')\n  : (modeRaw === 'Veröffentlichen' ? 'publish' : 'draft');\nconst html = text\n  ? text.split(/\\n\\s*\\n/).map((p) => '<p>' + link(esc(p.trim()).replace(/\\n/g, '<br>')) + '</p>').join('')\n  : '';\n\nconst images = [];\nif (isWebhook) {\n  for (const img of Array.isArray(body.images) ? body.images : []) {\n    images.push({ fileName: img.fileName, mimeType: img.mimeType, dataBase64: img.dataBase64, keywords: img.keywords });\n  }\n} else {\n  for (const key of Object.keys(item.binary || {})) {\n    const meta = item.binary[key];\n    const buffer = await this.helpers.getBinaryDataBuffer(0, key);\n    images.push({ fileName: meta.fileName, mimeType: meta.mimeType, dataBase64: buffer.toString('base64') });\n  }\n}\n\nconst errors = [];\nif (!title) errors.push('Überschrift fehlt');\nif (!html) errors.push('Text fehlt');\n\nconst payload = { title, subtitle, html, type: 'text', categories, mode, dryRun: cfg.testModus, images };\nif (startDate) payload.startDate = startDate;\n\nreturn [{\n  json: {\n    ...cfg,\n    valid: errors.length === 0,\n    error: errors.join(', '),\n    title,\n    mode,\n    imageCount: images.length,\n    payload\n  }\n}];\n"
+      },
+      "id": "65370905-5a24-4f90-afd0-be94f73a371c",
+      "name": "Eingaben pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "feb8e180-f21e-41ae-a5b8-49850b103195",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "264fc332-6eb5-4f42-b750-4a954025e7c0",
+      "name": "Eingaben gueltig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Eingaben pruefen').first().json.ntfyUrl + '/' + $('Eingaben pruefen').first().json.ntfyTopic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "ISC-News: Eingabe ungültig"
+            },
+            {
+              "name": "Tags",
+              "value": "warning"
+            },
+            {
+              "name": "Priority",
+              "value": "default"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.error }}",
+        "options": {}
+      },
+      "id": "5da1dccc-5624-4194-b8c4-c8565887aa3b",
+      "name": "ntfy Eingabefehler",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "adc35c95-6ba0-44bb-ad33-068312ce262f",
+              "leftValue": "={{ $('Eingaben pruefen').first().json.ntfyFreigabe }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bd6fec54-fef9-44a3-887e-3c84c4dc2bae",
+      "name": "Freigabe per ntfy?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Eingaben pruefen').first().json.ntfyUrl + '/' + $('Eingaben pruefen').first().json.ntfyTopic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "ISC-News freigeben?"
+            },
+            {
+              "name": "Tags",
+              "value": "newspaper"
+            },
+            {
+              "name": "Priority",
+              "value": "high"
+            },
+            {
+              "name": "Actions",
+              "value": "=http, Freigeben, {{ $execution.resumeUrl }}, method=POST, clear=true"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.title + ' | Bilder: ' + $json.imageCount + ' | Modus: ' + $json.mode }}",
+        "options": {}
+      },
+      "id": "669401f4-3f2c-4a8c-a8ec-625d291d1434",
+      "name": "ntfy Freigabe-Anfrage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "options": {}
+      },
+      "id": "4cc10a1b-dd00-4cec-a041-2db27a69a08f",
+      "name": "Warten auf Freigabe",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1680,
+        100
+      ],
+      "webhookId": "8e8ebc08-6a28-4df8-af81-5502a349785a"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Eingaben pruefen').first().json.iscNewsBotUrl }}/news",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": false,
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('Eingaben pruefen').first().json.payload) }}",
+        "options": {
+          "timeout": "={{ (120 + $('Eingaben pruefen').first().json.imageCount * 120) * 1000 }}",
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "3ed03aa4-ad0e-4116-ad79-745b290d1d78",
+      "name": "ISC-News-Bot anlegen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        200
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ISC_NEWS_BOT_CREDENTIAL_ID",
+          "name": "ISC-News-Bot API-Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8e91fabb-c4c2-4fc1-89d2-ca5aeb760e00",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9cba5076-85cd-49c8-b1a8-fa1b042354c4",
+      "name": "Erfolgreich?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2160,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Eingaben pruefen').first().json.ntfyUrl + '/' + $('Eingaben pruefen').first().json.ntfyTopic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "=ISC-News: {{ $('Eingaben pruefen').first().json.title }}"
+            },
+            {
+              "name": "Tags",
+              "value": "white_check_mark"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ ($json.duplicate ? 'Bereits vorhanden (Duplikat), nichts angelegt: ' : '') + ($json.dryRun ? 'Probelauf, nichts gespeichert' : 'newsId ' + $json.newsId + ' | Status ' + ($json.status || '-') + ' | ' + ($json.editUrl || '')) }}",
+        "options": {}
+      },
+      "id": "c747f8e2-d9a1-4fc5-88ab-46b2824de916",
+      "name": "ntfy Erfolg",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2400,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "19bab246-9547-4675-9d7f-ff7ee393ba11",
+              "leftValue": "={{ $json.screenshotBase64 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ee91155f-c3ae-493c-85d4-9222b3ee4774",
+      "name": "Screenshot vorhanden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "screenshotBase64",
+        "binaryPropertyName": "screenshot",
+        "options": {
+          "fileName": "isc-news-fehler.png",
+          "mimeType": "image/png"
+        }
+      },
+      "id": "7e340104-d836-4800-b1c6-a1984b1d689c",
+      "name": "Screenshot in Datei",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2640,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Eingaben pruefen').first().json.ntfyUrl + '/' + $('Eingaben pruefen').first().json.ntfyTopic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "=ISC-News fehlgeschlagen: {{ $('Eingaben pruefen').first().json.title }}"
+            },
+            {
+              "name": "Priority",
+              "value": "high"
+            },
+            {
+              "name": "Tags",
+              "value": "x"
+            },
+            {
+              "name": "Filename",
+              "value": "isc-news-fehler.png"
+            },
+            {
+              "name": "Message",
+              "value": "=Fehler {{ $json.errorCode }} im Schritt {{ $json.step || '-' }} | newsId {{ $json.newsId || '-' }} | {{ $json.error || '' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "screenshot",
+        "options": {}
+      },
+      "id": "8b71e0fa-a212-4b70-a961-5edde2db3ece",
+      "name": "ntfy Fehler mit Screenshot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2880,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Eingaben pruefen').first().json.ntfyUrl + '/' + $('Eingaben pruefen').first().json.ntfyTopic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "=ISC-News fehlgeschlagen: {{ $('Eingaben pruefen').first().json.title }}"
+            },
+            {
+              "name": "Tags",
+              "value": "x"
+            },
+            {
+              "name": "Priority",
+              "value": "high"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ 'Fehler ' + $json.errorCode + ' im Schritt ' + ($json.step || '-') + ' | newsId ' + ($json.newsId || '-') + ' | ' + ($json.error || '') }}",
+        "options": {}
+      },
+      "id": "55973d1a-9d20-42da-9e50-58045fa928a1",
+      "name": "ntfy Fehler",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ISC-News: Schritte NACH DEM IMPORT\n\n1. **Credential anlegen**: Typ *Header Auth*, Name `ISC-News-Bot API-Token`, Header `Authorization`, Wert `Bearer <API_TOKEN>` (Klartext nur aus dem Secret `isc-news-bot-secrets`, nie ins Repo). Dann dem Node **ISC-News-Bot anlegen** zuweisen.\n2. **Konfiguration** oeffnen: `testModus` = `true` fuer Probelaeufe (dryRun, nichts wird gespeichert). `ntfyFreigabe` = `true`, wenn jede News vorher per ntfy freigegeben werden soll.\n3. ntfy-Topic `isc-news` in der App abonnieren (Topic-Name steht in **Konfiguration**).\n4. Kategorie-Namen im Formular muessen den Namen im ISC entsprechen (Liste siehe docs/3-apps-workloads/300k0-isc-news-bot.md).\n5. Workflow **aktivieren**. Die Formular-URL steht am Node **Formular**, die Webhook-URL am Node **Webhook** (`/webhook/isc-news`, POST, JSON).\n6. Erster Lauf immer mit `testModus = true`. Erst danach auf `false` stellen.\n\nFreigabe-Link (ntfy-Button) zeigt auf den Wait-Node. Ohne Klick passiert nichts: die Ausfuehrung wartet, bis sie abgebrochen wird.\n",
+        "height": 460,
+        "width": 560,
+        "color": 4
+      },
+      "id": "f4dd8713-2951-454e-8a8d-7360ade76040",
+      "name": "Hinweise",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        -120
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Formular": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Eingaben pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingaben pruefen": {
+      "main": [
+        [
+          {
+            "node": "Eingaben gueltig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingaben gueltig?": {
+      "main": [
+        [
+          {
+            "node": "Freigabe per ntfy?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ntfy Eingabefehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Freigabe per ntfy?": {
+      "main": [
+        [
+          {
+            "node": "ntfy Freigabe-Anfrage",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ISC-News-Bot anlegen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ntfy Freigabe-Anfrage": {
+      "main": [
+        [
+          {
+            "node": "Warten auf Freigabe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Warten auf Freigabe": {
+      "main": [
+        [
+          {
+            "node": "ISC-News-Bot anlegen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ISC-News-Bot anlegen": {
+      "main": [
+        [
+          {
+            "node": "Erfolgreich?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Erfolgreich?": {
+      "main": [
+        [
+          {
+            "node": "ntfy Erfolg",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Screenshot vorhanden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Screenshot vorhanden?": {
+      "main": [
+        [
+          {
+            "node": "Screenshot in Datei",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ntfy Fehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Screenshot in Datei": {
+      "main": [
+        [
+          {
+            "node": "ntfy Fehler mit Screenshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "saveManualExecutions": true
+  },
+  "versionId": "851b3bbb-eb01-4bfe-93d1-4f36ca00eac0",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -1,0 +1,89 @@
+---
+replicaCount: 1
+
+image:
+  repository: ghcr.io/pkr-lab/isc-news-bot
+  tag: "sha-pending"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: ghcr-pull
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 8080
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 1536Mi
+
+tmpSizeLimit: 512Mi
+
+livenessProbe:
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+config:
+  iscBaseUrl: "https://dlrg.net"
+  gliederungEdv: "1002011"
+  defaultAuthor: "DLRG Andernach e.V./cdi"
+  defaultAuthorEmail: "kommunikation@andernach.dlrg.de"
+  defaultMode: "draft"
+  uploadSettleMs: "60000"
+  defaultImageKeywords: "News"
+  maxImageBytes: "15728640"
+  maxBodyBytes: "52428800"
+  stepTimeoutMs: "30000"
+  lockWaitMs: "60000"
+
+n8nNamespace: n8n
+n8nPodName: n8n
+
+secrets:
+  name: isc-news-bot-secrets
+  encryptedData:
+    ISC_USERNAME: "REPLACE_ME_WITH_KUBESEAL_OUTPUT"
+    ISC_PASSWORD: "REPLACE_ME_WITH_KUBESEAL_OUTPUT"
+    API_TOKEN: "REPLACE_ME_WITH_KUBESEAL_OUTPUT"
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

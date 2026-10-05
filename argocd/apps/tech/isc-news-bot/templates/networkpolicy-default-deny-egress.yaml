@@ -1,0 +1,11 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "isc-news-bot.fullname" . }}-default-deny-egress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "isc-news-bot.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
