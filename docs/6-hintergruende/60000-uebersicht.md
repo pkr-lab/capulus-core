@@ -21,7 +21,7 @@ Die Fach-Kategorien (`a`–`f`, `1`–`3`) beschreiben, **was läuft und wie man
 | [60070 Authentik und lldap](60070-authentik-und-lldap.md) | Blueprint-Fallstricke aus dem Live-Betrieb, Chart und Secrets, lldap |
 | [60080 carplay-api und iOS-App](60080-carplay-api-und-ios-app.md) | Verträge, Absicherung, Datenquellen, Transport und Tailscale in der App, Modelle und Bedienung |
 | [60090 pacman (Schulungsobjekt)](60090-pacman-schulungsobjekt.md) | Server, Bestenliste, Zugriffslog, Trainingsmodus, Frontend-Skripte |
-| [600a0 CI-Workflows, Skripte und Lint](600a0-ci-workflows-und-skripte.md) | Alle Workflows, Promotions- und Sync-Skripte, Ruleset, `.ansible-lint`, `.yamllint` |
+| [600a0 CI-Workflows, Skripte und Lint](600a0-ci-workflows-und-skripte.md) | Alle Workflows (inkl. CodeQL und Security-Issues), Promotions- und Sync-Skripte, Ruleset, Dependabot und Renovate, `.ansible-lint`, `.yamllint` |
 
 ## So ist ein Eintrag aufgebaut
 
@@ -48,7 +48,7 @@ siehe [TEMPLATE](../TEMPLATE.md)).
 | `argocd/apps/tech/authentik`, `argocd/apps/tech/lldap` | [60070](60070-authentik-und-lldap.md) |
 | `argocd/apps/tech/carplay-api`, `ios/` | [60080](60080-carplay-api-und-ios-app.md) |
 | `argocd/apps/tech/pacman` | [60090](60090-pacman-schulungsobjekt.md) |
-| `.github/workflows/`, `scripts/`, `Makefile`, `.ansible-lint`, `.yamllint`, `ops/` | [600a0](600a0-ci-workflows-und-skripte.md) |
+| `.github/workflows/`, `.github/dependabot.yml`, `renovate.json`, `scripts/`, `Makefile`, `.ansible-lint`, `.yamllint`, `ops/` | [600a0](600a0-ci-workflows-und-skripte.md) |
 
 ## Sync ins Wiki
 

@@ -1,0 +1,38 @@
+version: 2
+
+updates:
+  - package-ecosystem: gomod
+    directories:
+      - "/argocd/apps/tech/pacman/server"
+      - "/argocd/apps/tech/carplay-api/src"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    labels:
+      - dependencies
+      - security
+    commit-message:
+      prefix: fix
+      include: scope
+    groups:
+      go-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    labels:
+      - dependencies
+      - security
+    commit-message:
+      prefix: fix
+      include: scope
+    groups:
+      actions-security:
+        applies-to: security-updates
+        patterns:
+          - "*"

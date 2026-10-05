@@ -1,0 +1,36 @@
+name: Security issues
+
+on:
+  schedule:
+    - cron: "35 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-issues
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Alerts als Issues abgleichen
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      security-events: read
+      vulnerability-alerts: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Code-Scanning- und Dependabot-Alerts abgleichen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          MIN_SEVERITY: medium
+        run: python3 scripts/security-issues.py
