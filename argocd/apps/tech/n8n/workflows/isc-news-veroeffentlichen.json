@@ -96,7 +96,7 @@
         },
         "options": {}
       },
-      "id": "8a57aedd-7843-40b1-887a-595ae7539f5f",
+      "id": "d1546efd-c4a1-4e09-9e56-c7224371f529",
       "name": "Formular",
       "type": "n8n-nodes-base.formTrigger",
       "typeVersion": 2.3,
@@ -104,7 +104,7 @@
         240,
         200
       ],
-      "webhookId": "bf0a36b4-e4ac-49f4-82fb-c7550ebe6260"
+      "webhookId": "b8b93c3c-4b42-461f-8bbf-540622a70a41"
     },
     {
       "parameters": {
@@ -113,12 +113,12 @@
         "downloadAttachments": true,
         "dataPropertyAttachmentsPrefixName": "attachment_",
         "options": {
-          "customEmailConfig": "[\"UNSEEN\", [\"SUBJECT\", \"HOMEPAGE1002011\"]]",
+          "customEmailConfig": "[\"UNSEEN\", [\"FROM\", \"peter.kretzer@dlrg.org\"], [\"SUBJECT\", \"HOMEPAGE1002011\"]]",
           "forceReconnect": 60,
           "trackLastMessageId": true
         }
       },
-      "id": "7a60ce14-9877-436b-81c1-30cdc58feba6",
+      "id": "9f9d1a6a-dc58-4878-965a-7180fd3945b0",
       "name": "E-Mail empfangen",
       "type": "n8n-nodes-base.emailReadImap",
       "typeVersion": 2.1,
@@ -136,9 +136,9 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const item = $input.first();\nconst subject = String(item.json.subject || '').trim();\nif (subject !== 'HOMEPAGE1002011') return [];\nconst keys = Object.keys(item.binary || {});\nconst from = typeof item.json.from === 'string' ? item.json.from : ((item.json.from && item.json.from.text) || '');\nconst base = { subject, from };\nconst jsonKey = keys.find((k) => item.binary[k].mimeType === 'application/json' || /\\.json$/i.test(item.binary[k].fileName || ''));\nif (!jsonKey) return [{ json: { ...base, body: {}, mailError: 'Kein JSON-Anhang in der Mail' } }];\nlet data;\ntry {\n  data = JSON.parse((await this.helpers.getBinaryDataBuffer(0, jsonKey)).toString('utf8'));\n} catch (e) {\n  data = null;\n}\nif (!data || typeof data !== 'object' || Array.isArray(data)) {\n  return [{ json: { ...base, body: {}, mailError: 'JSON-Anhang ist nicht lesbar' } }];\n}\nconst pick = (...names) => {\n  for (const name of names) {\n    const v = data[name];\n    if (v !== undefined && v !== null && v !== '') return v;\n  }\n  return undefined;\n};\nconst mimeOf = (fileName, mimeType) => {\n  const byExt = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };\n  const ext = String(fileName || '').split('.').pop().toLowerCase();\n  const wanted = mimeType === 'image/jpg' ? 'image/jpeg' : mimeType;\n  return ['image/jpeg', 'image/png', 'image/webp'].includes(wanted) ? wanted : byExt[ext];\n};\nconst images = [];\nfor (const key of keys) {\n  if (key === jsonKey) continue;\n  const meta = item.binary[key];\n  const mime = mimeOf(meta.fileName, meta.mimeType);\n  if (!mime) continue;\n  const buffer = await this.helpers.getBinaryDataBuffer(0, key);\n  images.push({ fileName: meta.fileName, mimeType: mime, dataBase64: buffer.toString('base64') });\n}\nconst modeRaw = String(pick('mode', 'Modus') || '');\nreturn [{\n  json: {\n    ...base,\n    body: {\n      title: pick('title', 'Überschrift'),\n      subtitle: pick('subtitle', 'Untertitel'),\n      text: pick('text', 'Text'),\n      html: pick('html'),\n      categories: pick('categories', 'Kategorie(n)'),\n      startDate: pick('startDate', 'Veröffentlichung ab'),\n      mode: /publish|veröffentl/i.test(modeRaw) ? 'publish' : 'draft',\n      images\n    }\n  }\n}];\n"
+        "jsCode": "const item = $input.first();\nconst subject = String(item.json.subject || '').trim();\nif (subject !== 'HOMEPAGE1002011') return [];\nconst keys = Object.keys(item.binary || {});\nconst from = typeof item.json.from === 'string' ? item.json.from : ((item.json.from && item.json.from.text) || '');\nconst base = { subject, from };\nif (!from.toLowerCase().includes('peter.kretzer@dlrg.org')) return [];\nconst jsonKey = keys.find((k) => item.binary[k].mimeType === 'application/json' || /\\.json$/i.test(item.binary[k].fileName || ''));\nif (!jsonKey) return [{ json: { ...base, body: {}, mailError: 'Kein JSON-Anhang in der Mail' } }];\nlet data;\ntry {\n  data = JSON.parse((await this.helpers.getBinaryDataBuffer(0, jsonKey)).toString('utf8'));\n} catch (e) {\n  data = null;\n}\nif (!data || typeof data !== 'object' || Array.isArray(data)) {\n  return [{ json: { ...base, body: {}, mailError: 'JSON-Anhang ist nicht lesbar' } }];\n}\nconst pick = (...names) => {\n  for (const name of names) {\n    const v = data[name];\n    if (v !== undefined && v !== null && v !== '') return v;\n  }\n  return undefined;\n};\nconst mimeOf = (fileName, mimeType) => {\n  const byExt = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };\n  const ext = String(fileName || '').split('.').pop().toLowerCase();\n  const wanted = mimeType === 'image/jpg' ? 'image/jpeg' : mimeType;\n  return ['image/jpeg', 'image/png', 'image/webp'].includes(wanted) ? wanted : byExt[ext];\n};\nconst images = [];\nfor (const key of keys) {\n  if (key === jsonKey) continue;\n  const meta = item.binary[key];\n  const mime = mimeOf(meta.fileName, meta.mimeType);\n  if (!mime) continue;\n  const buffer = await this.helpers.getBinaryDataBuffer(0, key);\n  images.push({ fileName: meta.fileName, mimeType: mime, dataBase64: buffer.toString('base64') });\n}\nconst modeRaw = String(pick('mode', 'Modus') || '');\nreturn [{\n  json: {\n    ...base,\n    body: {\n      title: pick('title', 'Überschrift'),\n      subtitle: pick('subtitle', 'Untertitel'),\n      text: pick('text', 'Text'),\n      html: pick('html'),\n      categories: pick('categories', 'Kategorie(n)'),\n      startDate: pick('startDate', 'Veröffentlichung ab'),\n      mode: /publish|veröffentl/i.test(modeRaw) ? 'publish' : 'draft',\n      images\n    }\n  }\n}];\n"
       },
-      "id": "6930c090-008f-438f-8465-ddf8776b5e2d",
+      "id": "2125dbcf-94d6-4cae-8f10-e6985cee5754",
       "name": "Mail lesen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -154,7 +154,7 @@
         "responseMode": "onReceived",
         "options": {}
       },
-      "id": "92d27f50-4c81-410a-bd16-28070b080486",
+      "id": "45117db8-b5c8-44b5-845f-31cedc5f7542",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -162,14 +162,14 @@
         240,
         400
       ],
-      "webhookId": "10b4bf0b-9d81-4476-abab-178f0bf92e2f"
+      "webhookId": "3fd8b0d9-e25c-40df-b656-9133ea6fe014"
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
         "jsCode": "const item = $input.first();\nreturn [{\n  json: {\n    ...item.json,\n    testModus: false,\n    ntfyFreigabe: false,\n    ntfyTopic: 'isc-news',\n    ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n    iscNewsBotUrl: 'http://isc-news-bot.isc-news-bot.svc.cluster.local'\n  },\n  binary: item.binary\n}];\n"
       },
-      "id": "6cfb1218-976d-4d41-8d25-3caf55755028",
+      "id": "42212312-500a-4e91-b2c2-780eb15cc9b7",
       "name": "Konfiguration",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -183,7 +183,7 @@
         "mode": "runOnceForAllItems",
         "jsCode": "const item = $input.first();\nconst src = item.json;\nconst cfg = {\n  testModus: src.testModus === true,\n  ntfyFreigabe: src.ntfyFreigabe === true,\n  ntfyTopic: src.ntfyTopic,\n  ntfyUrl: src.ntfyUrl,\n  iscNewsBotUrl: src.iscNewsBotUrl\n};\nconst isWebhook = src.body !== undefined && typeof src.body === 'object';\nconst body = isWebhook ? src.body : {};\nconst pick = (label, key) => (isWebhook ? body[key] : src[label]);\nconst toText = (v) => (typeof v === 'string' ? v.trim() : '');\nconst toList = (v) => {\n  if (Array.isArray(v)) return v.map((x) => String(x).trim()).filter((x) => x.length > 0);\n  if (typeof v === 'string') return v.split(',').map((x) => x.trim()).filter((x) => x.length > 0);\n  return [];\n};\nconst esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');\nconst link = (s) => s.replace(/(https?:\\/\\/[^\\s<]+[^\\s<.,;:!?)])/g, '<a href=\"$1\">$1</a>');\nconst title = toText(pick('Überschrift', 'title'));\nconst subtitle = toText(pick('Untertitel', 'subtitle'));\nconst text = toText(pick('Text', 'text'));\nconst categories = toList(pick('Kategorie(n)', 'categories'));\nconst startDate = toText(pick('Veröffentlichung ab (leer = sofort, JJJJ-MM-TTTHH:mm)', 'startDate'));\nconst modeRaw = toText(pick('Modus', 'mode'));\nconst mode = isWebhook\n  ? (modeRaw === 'publish' ? 'publish' : 'draft')\n  : (modeRaw === 'Veröffentlichen' ? 'publish' : 'draft');\nconst rawHtml = isWebhook ? toText(body.html) : '';\nconst html = rawHtml || (text\n  ? text.split(/\\n\\s*\\n/).map((p) => '<p>' + link(esc(p.trim()).replace(/\\n/g, '<br>')) + '</p>').join('')\n  : '');\n\nconst images = [];\nif (isWebhook) {\n  for (const img of Array.isArray(body.images) ? body.images : []) {\n    images.push({ fileName: img.fileName, mimeType: img.mimeType, dataBase64: img.dataBase64, keywords: img.keywords });\n  }\n} else {\n  for (const key of Object.keys(item.binary || {})) {\n    const meta = item.binary[key];\n    const buffer = await this.helpers.getBinaryDataBuffer(0, key);\n    images.push({ fileName: meta.fileName, mimeType: meta.mimeType, dataBase64: buffer.toString('base64') });\n  }\n}\n\nconst errors = [];\nif (src.mailError) errors.push(src.mailError);\nif (!title) errors.push('Überschrift fehlt');\nif (!html) errors.push('Text fehlt');\n\nconst payload = { title, subtitle, html, type: 'text', categories, mode, dryRun: cfg.testModus, images };\nif (startDate) payload.startDate = startDate;\n\nreturn [{\n  json: {\n    ...cfg,\n    valid: errors.length === 0,\n    error: errors.join(', '),\n    title,\n    mode,\n    imageCount: images.length,\n    payload\n  }\n}];\n"
       },
-      "id": "632ce79a-4e33-4f46-a4f4-5fafb4d98716",
+      "id": "27a924c2-2657-42a9-8692-78bc2e74beda",
       "name": "Eingaben pruefen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -203,7 +203,7 @@
           },
           "conditions": [
             {
-              "id": "95d86356-bfcb-4f2d-8c03-2e61fe283e1d",
+              "id": "0e423844-48fc-4839-bbfb-9b95cf3906d4",
               "leftValue": "={{ $json.valid }}",
               "rightValue": "",
               "operator": {
@@ -217,7 +217,7 @@
         },
         "options": {}
       },
-      "id": "afeac14a-aec7-493e-9e5f-14b65a142aa5",
+      "id": "b10915dc-d872-445f-a880-f8e889367be5",
       "name": "Eingaben gueltig?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -253,7 +253,7 @@
         "body": "={{ $json.error }}",
         "options": {}
       },
-      "id": "a3e9375b-a194-4f1a-907e-e52de6dbf7b4",
+      "id": "b19c04a1-1869-4814-9e09-7a5f2f68759b",
       "name": "ntfy Eingabefehler",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -273,7 +273,7 @@
           },
           "conditions": [
             {
-              "id": "1628c594-e2fc-4911-8055-7cf294c05835",
+              "id": "a40df5ca-90b0-4472-a993-3076a6c9597b",
               "leftValue": "={{ $('Eingaben pruefen').first().json.ntfyFreigabe }}",
               "rightValue": "",
               "operator": {
@@ -287,7 +287,7 @@
         },
         "options": {}
       },
-      "id": "3883f29a-ea3d-4b30-997b-268d33a8d8ce",
+      "id": "28b5c9cc-f562-465f-a407-8d211de0ac62",
       "name": "Freigabe per ntfy?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -327,7 +327,7 @@
         "body": "={{ $json.title + ' | Bilder: ' + $json.imageCount + ' | Modus: ' + $json.mode }}",
         "options": {}
       },
-      "id": "fb218978-ed6f-4a12-bfc2-edd2c01e6009",
+      "id": "8e32453e-9bbe-46fb-ab8f-c226937aa5b9",
       "name": "ntfy Freigabe-Anfrage",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -341,7 +341,7 @@
         "resume": "webhook",
         "options": {}
       },
-      "id": "c3f99801-f344-46e9-874f-43886fb85404",
+      "id": "9acfe015-7905-46f1-923d-9cd1a3e16bf5",
       "name": "Warten auf Freigabe",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
@@ -349,7 +349,7 @@
         1680,
         100
       ],
-      "webhookId": "5a585c2f-8a2a-4c19-bcaa-21e428783cb4"
+      "webhookId": "57d706f7-e6f4-46b4-a2b7-f563d095556f"
     },
     {
       "parameters": {
@@ -371,7 +371,7 @@
           }
         }
       },
-      "id": "b6c220ad-34a1-4c11-92eb-4e6a836b8a4e",
+      "id": "176a0b0d-85f0-4df6-ac2b-76dd6ddcc2a5",
       "name": "ISC-News-Bot anlegen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -397,7 +397,7 @@
           },
           "conditions": [
             {
-              "id": "e73b6cb6-2b0a-4a43-a5e4-d585b196b73a",
+              "id": "22e16544-99a9-4b28-a596-f16daeb003ae",
               "leftValue": "={{ $json.ok }}",
               "rightValue": "",
               "operator": {
@@ -411,7 +411,7 @@
         },
         "options": {}
       },
-      "id": "f113d453-b175-4222-a2c8-020849604c9a",
+      "id": "1d56a084-9dbb-4bba-87db-02409b707bcc",
       "name": "Erfolgreich?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -443,7 +443,7 @@
         "body": "={{ ($json.duplicate ? 'Bereits vorhanden (Duplikat), nichts angelegt: ' : '') + ($json.dryRun ? 'Probelauf, nichts gespeichert' : 'newsId ' + $json.newsId + ' | Status ' + ($json.status || '-') + ' | ' + ($json.editUrl || '')) }}",
         "options": {}
       },
-      "id": "f1f73acb-774a-48ed-a155-09d617e7ace6",
+      "id": "4bb3bcff-527d-4a0e-986d-0e9bb9cf8cd9",
       "name": "ntfy Erfolg",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -463,7 +463,7 @@
           },
           "conditions": [
             {
-              "id": "cd69791a-63c7-479f-a655-3588bb993d73",
+              "id": "9cc7bcdf-2699-4cc0-bcbd-e482b995f5c0",
               "leftValue": "={{ $json.screenshotBase64 }}",
               "rightValue": "",
               "operator": {
@@ -477,7 +477,7 @@
         },
         "options": {}
       },
-      "id": "38bd20a7-955c-4874-9059-a603790ed66d",
+      "id": "1d1a6ea3-3b52-4deb-8b5a-b0f02a20caf7",
       "name": "Screenshot vorhanden?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -496,7 +496,7 @@
           "mimeType": "image/png"
         }
       },
-      "id": "cf3e37c0-f85d-4836-9e02-c32993df5034",
+      "id": "91bac33f-12bb-4cd3-8aa3-53081f059008",
       "name": "Screenshot in Datei",
       "type": "n8n-nodes-base.convertToFile",
       "typeVersion": 1.1,
@@ -539,7 +539,7 @@
         "inputDataFieldName": "screenshot",
         "options": {}
       },
-      "id": "729604e1-a41d-4ce9-9a27-0aeaddcd1e22",
+      "id": "25fd985e-7c2b-4954-b601-b20fc7e427a2",
       "name": "ntfy Fehler mit Screenshot",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -575,7 +575,7 @@
         "body": "={{ 'Fehler ' + $json.errorCode + ' im Schritt ' + ($json.step || '-') + ' | newsId ' + ($json.newsId || '-') + ' | ' + ($json.error || '') }}",
         "options": {}
       },
-      "id": "54b2b32a-6382-4f89-ac46-2037eca9bf10",
+      "id": "f3a760e4-839e-408f-8638-5fe6604d6759",
       "name": "ntfy Fehler",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -591,7 +591,7 @@
         "width": 560,
         "color": 4
       },
-      "id": "b5b8ff68-9f47-43f1-a85d-990f40546159",
+      "id": "862ea1b0-eefe-4b65-83f1-1c76e6b8cc14",
       "name": "Hinweise",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -792,7 +792,7 @@
     "timezone": "Europe/Berlin",
     "saveManualExecutions": true
   },
-  "versionId": "abf80fa2-963f-436e-a4b2-50f2f6ab4e89",
+  "versionId": "42aa22c2-5a10-45c4-82d7-5dfeb38c0944",
   "meta": {
     "templateCredsSetupCompleted": false
   },
