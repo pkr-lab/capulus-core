@@ -295,7 +295,8 @@ capulus-core/
 │       │   ├── zammad/ vaultwarden/ n8n/ ollama/              # Helpdesk, Passwort-Manager, Automatisierung, lokales LLM
 │       │   ├── uptime-kuma/ mediamtx/ pacman/                 # Status-Seite, Live-Streaming, Tracking-Demo
 │       │   ├── alamos-apager/ alamos-relay/                   # Alarmmonitor-Verwaltung, Webhook-Relay
-│       │   └── carplay-api/ github-release-watcher/           # Dashboard-API für die iOS-App (Ordnername historisch), Release-Watcher-CronJob
+│       │   ├── carplay-api/ github-release-watcher/           # Dashboard-API für die iOS-App (Ordnername historisch), Release-Watcher-CronJob
+│       │   └── isc-news-bot/                                  # News im DLRG ISC per API (Playwright-RPA)
 │       ├── prod/                     # PROD-Cluster, Projekt "prod" (vom TECH-Hub synchronisiert)
 │       │   ├── sealed-secrets/ cert-manager/ traefik-config/ cloudflared/   # eigene Plattform-Grundzutaten des Clusters
 │       │   ├── nas-storage/ immich-storage/                   # NFS-StorageClasses auch in PROD
@@ -597,6 +598,7 @@ Die Spalte *Cluster* zeigt, wo die App läuft (Ordner unter `argocd/apps/`).
 | [Ollama](docs/3-apps-workloads/300g0-ollama.md) | TECH | Lokales LLM, nur bei Bedarf hochgefahren (vom n8n-Workflow gesteuert) |
 | [ALAMOS-Einsatzalarm → Zammad](docs/3-apps-workloads/300h0-alamos-einsatz-zammad.md) | TECH | n8n-Workflow: Einsatzalarm wird zum Zammad-Ticket |
 | [ALAMOS-Webhook-Relay](docs/3-apps-workloads/300i0-alamos-relay.md) | TECH | Öffentlicher Mini-Proxy vor n8n, damit ALAMOS den Einsatzalarm-Webhook erreicht, ohne n8n selbst öffentlich zu machen |
+| [ISC-News-Bot](docs/3-apps-workloads/300k0-isc-news-bot.md) | TECH | News im DLRG ISC per API anlegen (Playwright-RPA), aufgerufen aus n8n, cluster-intern |
 | [Zentrales Logging](docs/3-apps-workloads/300j0-logging.md) | TECH | VictoriaLogs: journald aller Hosts und Pod-Logs an einem Ort |
 
 ### Planung (`4-planung/`)

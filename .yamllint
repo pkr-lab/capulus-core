@@ -19,3 +19,4 @@ rules:
 ignore: |
   argocd/apps/*/*/charts/
   argocd/apps/*/*/templates/
+  argocd/apps/tech/isc-news-bot/node_modules/

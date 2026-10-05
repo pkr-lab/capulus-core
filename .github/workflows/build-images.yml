@@ -12,6 +12,14 @@ on:
       - "argocd/apps/tech/carplay-api/src/**"
       - "argocd/apps/tech/carplay-api/.dockerignore"
       - "argocd/apps/tech/n8n/image/Dockerfile"
+      - "argocd/apps/tech/isc-news-bot/Dockerfile"
+      - "argocd/apps/tech/isc-news-bot/.dockerignore"
+      - "argocd/apps/tech/isc-news-bot/package.json"
+      - "argocd/apps/tech/isc-news-bot/package-lock.json"
+      - "argocd/apps/tech/isc-news-bot/tsconfig.json"
+      - "argocd/apps/tech/isc-news-bot/src/**"
+      - "argocd/apps/tech/isc-news-bot/test/**"
+      - "argocd/apps/tech/isc-news-bot/scripts/**"
   pull_request:
     branches: [main]
     paths:
@@ -23,12 +31,20 @@ on:
       - "argocd/apps/tech/carplay-api/src/**"
       - "argocd/apps/tech/carplay-api/.dockerignore"
       - "argocd/apps/tech/n8n/image/Dockerfile"
+      - "argocd/apps/tech/isc-news-bot/Dockerfile"
+      - "argocd/apps/tech/isc-news-bot/.dockerignore"
+      - "argocd/apps/tech/isc-news-bot/package.json"
+      - "argocd/apps/tech/isc-news-bot/package-lock.json"
+      - "argocd/apps/tech/isc-news-bot/tsconfig.json"
+      - "argocd/apps/tech/isc-news-bot/src/**"
+      - "argocd/apps/tech/isc-news-bot/test/**"
+      - "argocd/apps/tech/isc-news-bot/scripts/**"
   workflow_dispatch:
     inputs:
       app:
         description: "App neu bauen (all = alle drei, z.B. nach einem reinen Base-Image-Update ohne Dateiänderung)"
         type: choice
-        options: [all, pacman, carplay-api, n8n]
+        options: [all, pacman, carplay-api, n8n, isc-news-bot]
         default: all
 
 permissions:
@@ -61,6 +77,11 @@ jobs:
             values: argocd/apps/tech/n8n/values.yaml
             dockerfile: argocd/apps/tech/n8n/image/Dockerfile
             image: ghcr.io/pkr-lab/n8n-custom
+          - app: isc-news-bot
+            path: argocd/apps/tech/isc-news-bot
+            values: argocd/apps/tech/isc-news-bot/values.yaml
+            dockerfile: argocd/apps/tech/isc-news-bot/Dockerfile
+            image: ghcr.io/pkr-lab/isc-news-bot
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

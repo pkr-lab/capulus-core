@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "isc-news-bot.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "isc-news-bot.labels" . | nindent 4 }}
+data:
+  ISC_BASE_URL: {{ .Values.config.iscBaseUrl | quote }}
+  GLIEDERUNG_EDV: {{ .Values.config.gliederungEdv | quote }}
+  DEFAULT_AUTHOR: {{ .Values.config.defaultAuthor | quote }}
+  DEFAULT_AUTHOR_EMAIL: {{ .Values.config.defaultAuthorEmail | quote }}
+  DEFAULT_MODE: {{ .Values.config.defaultMode | quote }}
+  UPLOAD_SETTLE_MS: {{ .Values.config.uploadSettleMs | quote }}
+  DEFAULT_IMAGE_KEYWORDS: {{ .Values.config.defaultImageKeywords | quote }}
+  MAX_IMAGE_BYTES: {{ .Values.config.maxImageBytes | quote }}
+  MAX_BODY_BYTES: {{ .Values.config.maxBodyBytes | quote }}
+  STEP_TIMEOUT_MS: {{ .Values.config.stepTimeoutMs | quote }}
+  LOCK_WAIT_MS: {{ .Values.config.lockWaitMs | quote }}
