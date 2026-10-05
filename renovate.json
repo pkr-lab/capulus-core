@@ -4,7 +4,10 @@
     "config:recommended",
     ":dependencyDashboard"
   ],
-  "baseBranches": ["main", "entw"],
+  "baseBranchPatterns": [
+    "main",
+    "entw"
+  ],
   "timezone": "Europe/Berlin",
   "schedule": ["before 6am on monday"],
   "labels": ["dependencies"],
