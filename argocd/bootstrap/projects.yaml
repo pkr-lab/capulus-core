@@ -59,6 +59,8 @@ spec:
     - server: https://kubernetes.default.svc
       namespace: github-release-watcher
     - server: https://kubernetes.default.svc
+      namespace: isc-news-bot
+    - server: https://kubernetes.default.svc
       namespace: mediamtx
     - server: https://kubernetes.default.svc
       namespace: n8n

@@ -61,6 +61,7 @@ Nicht jede App mit LAN-Ingress ist automatisch auch extern erreichbar.
 | Uptime Kuma | prod | TECH | uptime-kuma | uptime-kuma:80 | uptime-kuma.prod.homeserver, uptime-kuma-native.prod.homeserver | status-prod.pke-lab.de |
 | Alamos-Apager | prod | TECH | alamos-apager | alamos-apager:8080 | alamos-apager.prod.homeserver | — |
 | Alamos-Relay | prod | TECH | alamos-relay | alamos-relay:8080 | alamos-relay.prod.homeserver | alamos-relay-prod.pke-lab.de |
+| ISC-News-Bot | tech | TECH | isc-news-bot | isc-news-bot:8080 | — (nur cluster-intern, n8n ruft auf) | — |
 | Homeserver-Dashboard-API | prod | TECH | carplay-api | carplay-api:80 | carplay-api.prod.homeserver | — |
 | pacman | prod | TECH | pacman | pacman:80 | pacman.prod.homeserver | pacman-prod.pke-lab.de |
 | Authentik | tech | TECH | authentik | authentik:80 | authentik.tech.homeserver | authentik-tech.pke-lab.de |

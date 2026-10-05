@@ -534,3 +534,33 @@
     overlap: true
   owner: peter
   blast_radius: "Kann alle SealedSecrets des jeweiligen Clusters entschluesseln. Rotiert automatisch per Controller, siehe Runbook."
+
+- id: isc-news-bot-isc-login
+  service: isc-news-bot
+  kind: password
+  stored_in:
+    - argocd/apps/tech/isc-news-bot/templates/sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: docs/3-apps-workloads/300k0-isc-news-bot.md#secrets-anlegen-und-versiegeln
+    overlap: true
+  owner: peter
+  blast_radius: "Zugang zum ISC-Account der OG Andernach: kann dort News anlegen, bearbeiten und veroeffentlichen. Eigener Account mit News-Rechten, nicht der Hauptaccount."
+
+- id: isc-news-bot-api-token
+  service: isc-news-bot
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/isc-news-bot/templates/sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: docs/3-apps-workloads/300k0-isc-news-bot.md#secrets-anlegen-und-versiegeln
+    overlap: true
+  owner: peter
+  blast_radius: "Bearer-Token der API isc-news-bot: wer es hat, kann ueber den Dienst News im ISC anlegen und veroeffentlichen. Nur n8n kennt es (Header-Auth-Credential)."

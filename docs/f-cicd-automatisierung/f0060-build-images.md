@@ -2,7 +2,7 @@
 
 [`.github/workflows/build-images.yml`](../../.github/workflows/build-images.yml)
 baut und pusht die drei selbst gebauten Workload-Images —
-[`pacman`](../../argocd/apps/tech/pacman/), [`carplay-api`](../../argocd/apps/tech/carplay-api/)
+[`pacman`](../../argocd/apps/tech/pacman/), [`carplay-api`](../../argocd/apps/tech/carplay-api/), [`isc-news-bot`](../../argocd/apps/tech/isc-news-bot/)
 und [`n8n`](../../argocd/apps/tech/n8n/) (dessen `image/Dockerfile`) —
 automatisch nach GHCR, sobald der jeweilige Build-Kontext auf `main`
 geändert wird. Vorher musste dafür manuell das `kaniko-build-push`
