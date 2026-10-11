@@ -58,21 +58,6 @@
   owner: peter
   blast_radius: "Kann Images unter ghcr.io im Namen des Repos pushen."
 
-- id: authentik-credentials
-  service: authentik
-  kind: password
-  stored_in:
-    - argocd/apps/tech/authentik/templates/sealedsecret.yaml
-  issued: null
-  expires: null
-  max_age_days: null
-  rotation:
-    mode: manual
-    runbook: docs/d-sicherheit/d0073-authentik-sso.md
-    overlap: true
-  owner: peter
-  blast_radius: "SSO fuer das gesamte TECH-Cluster (Django-Secret-Key, DB-Passwort, Bootstrap-Login, LDAP-Bind-Passwort gegen lldap)."
-
 - id: carplay-api-token
   service: carplay-api
   kind: api-token
@@ -193,36 +178,6 @@
     overlap: true
   owner: peter
   blast_radius: "Kann Tickets in Zammad (Gruppe Support::Administration) anlegen."
-
-- id: gotify-admin
-  service: gotify
-  kind: password
-  stored_in:
-    - argocd/apps/tech/gotify/templates/sealedsecret.yaml
-  issued: null
-  expires: null
-  max_age_days: null
-  rotation:
-    mode: manual
-    runbook: docs/1-benachrichtigungen/10000-gotify.md
-    overlap: true
-  owner: peter
-  blast_radius: "Admin-Zugang zu Gotify (tech.homeserver)."
-
-- id: gotify-app-and-client-tokens
-  service: gotify
-  kind: api-token
-  stored_in:
-    - "gotify.db (Laufzeit-Datenbank in der PVC, nicht im Repo)"
-  issued: null
-  expires: null
-  max_age_days: null
-  rotation:
-    mode: manual
-    runbook: docs/1-benachrichtigungen/10000-gotify.md
-    overlap: true
-  owner: peter
-  blast_radius: "App-Token (z. B. gotify-bridge-token) und Client-Token: koennen Nachrichten ueber Gotify senden bzw. lesen."
 
 - id: lldap-secrets
   service: lldap

@@ -34,7 +34,7 @@ ausschließlich über den SealedSecret unten).
 
 ### 1.2 SealedSecret-Ciphertext erzeugen
 
-Wie bei Gotify — entweder über die Web-UI unter
+Wie bei jedem SealedSecret im Repo — entweder über die Web-UI unter
 <https://kubeseal-webgui.tech.homeserver>:
 
 - **Namespace**: `pihole`
@@ -253,7 +253,7 @@ Pod-Neustarts, sind aber **nicht** in Git versioniert.
 
 ## 4. Passwort rotieren
 
-Wie bei Gotify: per `kubeseal` aus einem neuen Klartext neu erzeugen,
+Wie bei jedem SealedSecret im Repo: per `kubeseal` aus einem neuen Klartext neu erzeugen,
 `adminSecret.encryptedPassword` in `values.yaml` ersetzen, committen +
 pushen. Das alte `pihole-webpassword`-Secret im Cluster löschen, falls
 ArgoCD es nicht automatisch prunt, dann den Pi-hole-Pod neu starten.

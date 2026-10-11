@@ -85,10 +85,6 @@ victoria-metrics-k8s-stack:
               - alertname=~"InfoInhibitor|Watchdog"
             receiver: blackhole
           - matchers:
-              - severity=~".*"
-            receiver: gotify
-            continue: true
-          - matchers:
               - alertname="BananaPiAlarmmonitorDown"
             receiver: n8n-banana-pi-down
             continue: true
@@ -97,10 +93,6 @@ victoria-metrics-k8s-stack:
             receiver: ntfy
       receivers:
         - name: blackhole
-        - name: gotify
-          webhook_configs:
-            - url: 'http://gotify-bridge.gotify-bridge.svc.cluster.local:8080/alert'
-              send_resolved: true
         - name: ntfy
           webhook_configs:
             - url: 'http://ntfy-bridge.ntfy-bridge.svc.cluster.local:8080/alert'
@@ -284,11 +276,8 @@ dashboardApps:
   - { name: uptime-kuma, namespace: uptime-kuma, folder: "Anwendungen (TECH)", hasIngress: true }
   - { name: vaultwarden, namespace: vaultwarden, folder: "Anwendungen (TECH)", hasIngress: true }
   - { name: argo-workflows, namespace: argo-workflows, folder: "Plattform (TECH)", hasIngress: false }
-  - { name: authentik, namespace: authentik, folder: "Plattform (TECH)", hasIngress: true }
   - { name: cert-manager, namespace: cert-manager, folder: "Plattform (TECH)", hasIngress: false }
   - { name: cloudflared, namespace: cloudflared, folder: "Plattform (TECH)", hasIngress: false }
-  - { name: gotify, namespace: gotify, folder: "Plattform (TECH)", hasIngress: true }
-  - { name: gotify-bridge, namespace: gotify-bridge, folder: "Plattform (TECH)", hasIngress: false }
   - { name: headlamp, namespace: headlamp, folder: "Plattform (TECH)", hasIngress: false }
   - { name: immich-storage, namespace: immich-storage, folder: "Plattform (TECH)", hasIngress: false }
   - { name: kubeseal-webgui, namespace: kubeseal-webgui, folder: "Plattform (TECH)", hasIngress: false }

@@ -188,7 +188,6 @@ argocd/apps/
 ├── tech/                 → TECH-Cluster (Projekt tech), Infrastruktur + Betriebs-Apps
 │   ├── sealed-secrets/   → SealedSecrets-Controller
 │   ├── monitoring/       → VictoriaMetrics + Grafana + Alertmanager
-│   ├── authentik/        → zentrales SSO (siehe d0073)
 │   ├── vaultwarden/      → Passwort-Manager
 │   └── ...
 ├── prod/                 → PROD-Cluster (Projekt prod), Familien-/Vereins-Apps

@@ -60,7 +60,7 @@ OBS / ffmpeg / Kamera ───────────────────�
   Tunnel-Einrichtung nötig.
 - `openssl` lokal verfügbar (zum Hashen der Passwörter, Schritt 2).
 
-Kein Authentik, kein zusätzlicher Identity-Provider nötig — mediamtx
+Kein zusätzlicher Identity-Provider nötig — mediamtx
 verwaltet Publish- und Zuschauer-Zugang komplett selbst.
 
 ---
