@@ -9,8 +9,10 @@ Ablaufdaten erfasst, überwacht und die Rotation anstößt. Der Standby-Cluster 
 vom Standby nutzbar; Ist-Zustand siehe [d0060](../d-sicherheit/d0060-secrets-rotation.md).
 Dieses Doc hält weiterhin den mit dem Nutzer abgestimmten Gesamtplan fest (Stand
 2026-09-26). Nach der Umsetzung des Standby-Clusters wandert dessen Ist-Zustand als
-eigene Docs in die fachlichen Kategorien, dieses Doc bleibt als Kontext bestehen
-(Konvention wie [40070](40070-authentik-sso-iac.md)).
+eigene Docs in die fachlichen Kategorien, dieses Doc bleibt als Kontext bestehen.
+
+> **Hinweis (Oktober 2026):** Gotify ist aus dem Repo entfernt worden (Chart, Bridge, Doc). Alle Gotify-Bezüge in diesem Plan (Umfang, Tabellen,
+> DNS-Umschaltung, Alarmweg) sind damit hinfällig und müssten bei einer Umsetzung gestrichen werden.
 
 Bezug: [40080](40080-multi-cluster-entw-prod-tech.md) (Cluster-Aufteilung, Sealed-Secrets
 pro Cluster), [b0050](../b-kubernetes-gitops/b0050-entw-argocd.md) (eigenständige
@@ -40,7 +42,7 @@ ArgoCD-Instanz als Vorbild), [d0060](../d-sicherheit/d0060-secrets-rotation.md)
 | Vaultwarden | [values.yaml](../../argocd/apps/tech/vaultwarden/values.yaml) | SQLite auf `local-path` (2 Gi). Nachtbackup 01:30 per [CronJob](../../argocd/apps/tech/vaultwarden/templates/backup-cronjob.yaml) auf eine NAS-PVC. | `vault-tech.pke-lab.de` |
 | n8n | [values.yaml](../../argocd/apps/tech/n8n/values.yaml), Custom-Image | SQLite auf **NFS** (`nas`, 5 Gi). `N8N_ENCRYPTION_KEY` ist nicht gesetzt, der Schlüssel liegt zufällig generiert in `/home/node/.n8n/config`. Zwei NFS-Volumes für Xibo. | keiner (nur `n8n.prod.homeserver`) |
 | ntfy | [values.yaml](../../argocd/apps/tech/ntfy/values.yaml) | SQLite (`cache.db`, `auth.db`) auf `local-path` (1 Gi). `upstream-base-url: https://ntfy.sh` für iOS-Push. | `ntfy-tech.pke-lab.de` |
-| Gotify | [values.yaml](../../argocd/apps/tech/gotify/values.yaml) | SQLite auf `local-path` (1 Gi) | keiner (nur `gotify.tech.homeserver`, `gotify-api.tech.homeserver`) |
+| Gotify | `argocd/apps/tech/gotify/values.yaml` (entfernt) | SQLite auf `local-path` (1 Gi) | keiner (nur `gotify.tech.homeserver`, `gotify-api.tech.homeserver`) |
 | cloudflared | [values.yaml](../../argocd/apps/tech/cloudflared/values.yaml), zwei Tunnel: `homeserver` (TECH), `homeserver-prod` (PROD). Wildcard `*.pke-lab.de` → Traefik. | Credentials als SealedSecret | — |
 | Tailscale | Host-Ebene per [Ansible-Rolle](../../ansible/roles/tailscale/tasks/main.yml), Tags `tag:tech-node`, `tag:prod-node`, `tag:entw-node`. Split-DNS nur für `*.homeserver`. | Auth-Key als Ansible-Vault-Wert | — |
 
@@ -467,7 +469,7 @@ Vier Regeln:
 | Healthchecks: Ping-URL, read-only API-Key | Primary-Agent, Standby-Watchdog | keiner | jährlich neu erzeugen. Ping-URL gilt als Secret, denn wer sie kennt, kann Herzschläge fälschen. |
 | Replikations-SSH-Schlüssel (2 Richtungen) | SealedSecret bzw. Host | keiner | jährlich, mit `rrsync`-Beschränkung und Host-Key-Pinning |
 | ntfy-Zugriffstoken, Publisher-Konten | in der `auth.db` (repliziert) | ntfy-Token unterstützen ein Ablaufdatum (`--expires`) | bei Aktivierung der Authentifizierung ([10010](../1-benachrichtigungen/10010-ntfy.md)) Token mit Ablauf anlegen und ins Register eintragen. Heute steht `auth-default-access: read-write`. |
-| Gotify: Admin-Passwort, App-Token (z. B. `gotify-bridge-token`), Client-Token | SealedSecret, `gotify.db` (repliziert) | keiner | jährlich, Vorgehen in [10000](../1-benachrichtigungen/10000-gotify.md). Die Token stehen in der replizierten DB und bleiben nach der Übernahme gültig. |
+| Gotify: Admin-Passwort, App-Token (z. B. `gotify-bridge-token`), Client-Token | SealedSecret, `gotify.db` (repliziert) | keiner | jährlich, Vorgehen war in `10000-gotify.md` (gelöscht). Die Token stehen in der replizierten DB und bleiben nach der Übernahme gültig. |
 | Vaultwarden `ADMIN_TOKEN`, SMTP-Passwort | SealedSecret je Cluster | keiner | jährlich nach [300a0](../3-apps-workloads/300a0-vaultwarden.md), `max_age_days: 365` |
 | `N8N_ENCRYPTION_KEY` | SealedSecret je Cluster | keiner | **nicht rotieren** (analog restic-Passwort: eine Rotation verschlüsselt alle Credentials neu). Einmal setzen, identisch auf beiden Seiten, Kopie im Notfallkit. |
 | n8n-interne Credentials (Zammad, carplay-api, IMAP …) | n8n-DB (repliziert) | je Anbieter | im Register als `n8n-credential:<name>`, Rotation in der n8n-UI |

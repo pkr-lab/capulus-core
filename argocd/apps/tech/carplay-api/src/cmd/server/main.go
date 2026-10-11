@@ -225,7 +225,6 @@ func loadConfig() config {
 				"immich|Immich|immich,"+
 				"vaultwarden|Vaultwarden|vaultwarden,"+
 				"paperless|Paperless-ngx|paperless,"+
-				"mealie|Mealie|mealie,"+
 				"n8n|n8n|n8n,"+
 				"wikijs|Wiki.js|wikijs,"+
 				"zammad|Zammad|zammad",

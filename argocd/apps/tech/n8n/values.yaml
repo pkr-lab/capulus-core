@@ -62,7 +62,7 @@ env:
   N8N_BASIC_AUTH_ACTIVE: "true"
   NODES_EXCLUDE: "[]"
   NODE_FUNCTION_ALLOW_BUILTIN: "child_process"
-  N8N_RESTRICT_FILE_ACCESS_TO: "/data/xibosignage-inbox;/data/xibosignage-display"
+  N8N_RESTRICT_FILE_ACCESS_TO: "/data/xibosignage-inbox;/data/xibosignage-display;/data/instagram-bilder"
 
 resources:
   requests:
@@ -88,3 +88,11 @@ xibosignage:
     nfsPath: "/volume1/k8s-storage/xibosignage-display"
     mountPath: /data/xibosignage-display
     size: 20Gi
+
+instagram:
+  enabled: true
+  publicHost: instagram-bilder-prod.pke-lab.de
+  publicPath: /webhook/instagram-bild
+  bilder:
+    mountPath: /data/instagram-bilder
+    sizeLimit: 512Mi
