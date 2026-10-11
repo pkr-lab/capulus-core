@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "alert-caller.fullname" . }}-script
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "alert-caller.labels" . | nindent 4 }}
+data:
+  caller.py: |
+{{ .Files.Get "src/caller.py" | indent 4 }}
+  config: |
+    module_path /opt/baresip/lib/baresip/modules
+    sip_cafile /etc/ssl/certs/ca-certificates.crt
+    sip_verify_server yes
+    audio_source aufile,/var/lib/alert-caller/msg.wav
+    audio_player aufile,/var/lib/alert-caller/rx.wav
+    audio_alert aufile,/var/lib/alert-caller/alert.wav
+    rtp_ports {{ .Values.config.rtpPortMin }}-{{ .Values.config.rtpPortMax }}
+    module stdio.so
+    module g711.so
+    module opus.so
+    module aufile.so
+    module auresamp.so
+    module menu.so
+    module ice.so
+    module srtp.so
+    module account.so

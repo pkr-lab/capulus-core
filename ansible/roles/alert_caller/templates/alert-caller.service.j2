@@ -1,0 +1,21 @@
+[Unit]
+Description=alert-caller - Alertmanager-Webhook, Piper-Ansage und baresip-Anruf fuer die Telefon-Alarmierung
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+DynamicUser=true
+StateDirectory=alert-caller
+RuntimeDirectory=alert-caller
+SupplementaryGroups=alert-caller-cfg
+EnvironmentFile={{ alert_caller_config_dir }}/alert-caller.env
+ExecStart=/usr/bin/python3 {{ alert_caller_install_dir }}/caller.py
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+PrivateDevices=true
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

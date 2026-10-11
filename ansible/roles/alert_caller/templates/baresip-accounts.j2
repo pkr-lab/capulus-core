@@ -1,0 +1,1 @@
+<sip:{{ alert_caller_sip_user }}@{{ alert_caller_sip_domain }};transport=tls>;auth_pass={{ alert_caller_sip_password }};medianat=ice;stunserver=stun:{{ alert_caller_stun_server }}{% if alert_caller_sip_media_encryption | length > 0 %};mediaenc={{ alert_caller_sip_media_encryption }}{% endif %};regint=600

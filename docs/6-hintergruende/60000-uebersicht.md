@@ -13,11 +13,11 @@ Die Fach-Kategorien (`a`–`f`, `1`–`3`) beschreiben, **was läuft und wie man
 | Doc | Inhalt |
 |---|---|
 | [60010 Ansible: Hosts, VMs und Playbooks](60010-ansible-hosts-und-playbooks.md) | ENTW- und PROD-VM, Rolle `libvirt_host` (Bridge, dnsmasq-Snippet, Basis-Image), DNS der VMs, Worker-Playbooks und ihre Reihenfolge, Tailscale-Auth-Keys, WireGuard-Notzugang |
-| [60020 Ansible: Rollen](60020-ansible-rollen.md) | Kiosk-Geräte (alamos, Banana Pi, Xibo), Energie-Rollen, Watchdogs, vmagent und Exporter, `journal_upload`, Semaphore-Rollen, `wireguard_backup`, `vaultwarden_restore` |
+| [60020 Ansible: Rollen](60020-ansible-rollen.md) | Kiosk-Geräte (alamos, Banana Pi, Xibo), Energie-Rollen, Watchdogs, vmagent und Exporter, `journal_upload`, Semaphore-Rollen, `wireguard_backup`, `alert_caller` (Telefon-Alarm), `vaultwarden_restore` |
 | [60030 ArgoCD, Bootstrap und SealedSecrets](60030-argocd-und-bootstrap.md) | Generierte Bootstrap-Dateien, `ignoreDifferences`, Rolle `argocd`, PROD im Hub, Daten-Migrationen, Promotion-Konfiguration, Fallstricke beim Versiegeln |
 | [60040 Helm-Charts im TECH-Cluster](60040-helm-charts-tech.md) | Gemeinsame Muster (HPA, Speicher, Root-Container), Zertifikate und TLS, Traefik-Metriken, cloudflared, alle TECH-Apps von alamos bis zammad |
 | [60050 Helm-Charts im PROD-Cluster](60050-helm-charts-prod.md) | Regeln für PROD-Kopien, Nextcloud, Immich, Wiki.js und wiki-docs-sync, Xibo, Paperless-ngx |
-| [60060 Monitoring und Alerting](60060-monitoring-und-alerting.md) | Alertmanager-Routing, alle VMRules, Scrapes und Labels, VictoriaMetrics, Grafana-Ordner, Logging |
+| [60060 Monitoring und Alerting](60060-monitoring-und-alerting.md) | Alertmanager-Routing, alle VMRules, Telefon-Alarm (Routen und Paging-Regeln), Scrapes und Labels, VictoriaMetrics, Grafana-Ordner, Logging |
 | [60070 lldap](60070-lldap.md) | Chart-Entscheidungen und Secrets |
 | [60080 carplay-api und iOS-App](60080-carplay-api-und-ios-app.md) | Verträge, Absicherung, Datenquellen, Transport und Tailscale in der App, Modelle und Bedienung |
 | [60090 pacman (Schulungsobjekt)](60090-pacman-schulungsobjekt.md) | Server, Bestenliste, Zugriffslog, Trainingsmodus, Frontend-Skripte |

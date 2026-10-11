@@ -1,0 +1,64 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: paging
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: paging
+      interval: 30s
+      rules:
+        - alert: NodeDownPaging
+          expr: up{job=~".*node-exporter", host=~"homeserver|prod-vm|ugreen-nas"} == 0
+          for: 5m
+          labels:
+            severity: critical
+            page: "true"
+          annotations:
+            summary: "{{`{{ $labels.host }}`}} nicht erreichbar"
+            ansage: "{{`{{ $labels.host }}`}} ist nicht erreichbar"
+            grund: "Der Node Exporter antwortet seit 5 Minuten nicht, Rechner oder Netzwerk sind ausgefallen"
+            kontext: 'max(max_over_time(node_hwmon_temp_celsius{host="{{`{{ $labels.host }}`}}"}[30m]))'
+            kontext_text: "Die höchste gemessene Temperatur der letzten 30 Minuten war {} Grad"
+
+        - alert: PodCrashLoopPaging
+          expr: |
+            (
+              (kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff", namespace=~"vaultwarden"} == 1)
+                * on(namespace, pod, container) group_left(reason)
+              (kube_pod_container_status_last_terminated_reason == 1)
+            )
+            or on(namespace, pod, container)
+            (kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff", namespace=~"vaultwarden"} == 1)
+          for: 10m
+          labels:
+            severity: critical
+            page: "true"
+          annotations:
+            summary: "Pod {{`{{ $labels.pod }}`}} in {{`{{ $labels.namespace }}`}} startet dauernd neu ({{`{{ $labels.reason }}`}})"
+            ansage: "{{`{{ $labels.container }}`}} im Bereich {{`{{ $labels.namespace }}`}} startet dauernd neu"
+            grund: "{{`{{ $labels.reason }}`}}"
+
+        - alert: DiskFailurePaging
+          expr: (smartctl_device_smart_status == 0) or (smartctl_device_critical_warning > 0)
+          for: 10m
+          labels:
+            severity: critical
+            page: "true"
+          annotations:
+            summary: "Laufwerk {{`{{ $labels.device }}`}} in {{`{{ $labels.host }}`}} meldet einen Defekt"
+            ansage: "Die Festplatte {{`{{ $labels.device }}`}} in {{`{{ $labels.host }}`}} meldet einen Defekt"
+            grund: "Die S M A R T Diagnose der Platte ist fehlgeschlagen"
+            kontext: 'max(smartctl_device_temperature{host="{{`{{ $labels.host }}`}}", device="{{`{{ $labels.device }}`}}"})'
+            kontext_text: "Die Platte ist aktuell {} Grad warm"
+
+        - alert: KubeApiDownPaging
+          expr: absent(up{job="apiserver"} == 1)
+          for: 5m
+          labels:
+            severity: critical
+            page: "true"
+          annotations:
+            summary: "Kubernetes-API nicht erreichbar"
+            ansage: "Die Kubernetes A P I antwortet nicht"
+            grund: "Der API Server beantwortet seit 5 Minuten keine Metrik Abfragen"

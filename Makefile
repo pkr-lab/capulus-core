@@ -154,6 +154,15 @@ banana-pi-kiosks-check: ## Dry-run des Banana-Pi-Alarmmonitor-Playbooks (keine Ã
 banana-pi-kiosks-restart-session: ## tty1-Session auf den Banana-Pi-Alarmmonitoren erzwungen neu starten (laedt bereits deployte Skripte/Configs neu ein, ohne dass ein Playbook-Diff noetig ist).
 	ansible -i $(INVENTORY) banana_pis -m ansible.builtin.systemd -a "name=getty@tty1.service state=restarted" --become
 
+.PHONY: alert-caller alert-caller-check
+ALERT_CALLER_PLAYBOOK := $(ANSIBLE_DIR)/alert-caller.yml
+
+alert-caller: ## Telefon-Alarmierung einrichten (alert-caller: baresip, Piper, Tailscale auf der externen VM).
+	ansible-playbook -i $(INVENTORY) $(ALERT_CALLER_PLAYBOOK) $(VAULT_OPTS)
+
+alert-caller-check: ## Dry-run des alert-caller-Playbooks (keine Ã„nderungen).
+	ansible-playbook -i $(INVENTORY) $(ALERT_CALLER_PLAYBOOK) --check --diff $(VAULT_OPTS)
+
 .PHONY: lint
 lint: ## Lint YAML, Ansible, and ALL Helm charts.
 	yamllint -c .yamllint ansible/ argocd/

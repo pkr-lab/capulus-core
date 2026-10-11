@@ -1,0 +1,191 @@
+---
+
+- name: alert-caller einrichten
+  when: alert_caller_enabled | bool
+  block:
+    - name: Pflichtvariablen prüfen
+      ansible.builtin.assert:
+        that:
+          - alert_caller_sip_password | length > 0
+          - alert_caller_sip_password is not search('[;"\s]')
+          - alert_caller_hc_uuid | length > 0
+          - alert_caller_call_targets | length > 0
+          - alert_caller_call_targets | select('search', 'EINTRAGEN') | list | length == 0
+        fail_msg: >-
+          alert_caller_sip_password und alert_caller_hc_uuid müssen im Vault stehen
+          (Passwort ohne ; und "), alert_caller_call_targets braucht echte SIP-Adressen
+          (docs/1-benachrichtigungen/10020-telefon-alarm.md, Abschnitt Vault-Variablen).
+        quiet: true
+
+    - name: Pakete installieren (Sprachausgabe, Build von baresip, Firewall)
+      ansible.builtin.apt:
+        name:
+          - sox
+          - python3
+          - python3-venv
+          - python3-packaging
+          - ca-certificates
+          - build-essential
+          - cmake
+          - pkg-config
+          - git
+          - libssl-dev
+          - libopus-dev
+          - zlib1g-dev
+          - ufw
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Verzeichnisse anlegen
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      loop:
+        - "{{ alert_caller_install_dir }}"
+        - "{{ alert_caller_piper_dir }}"
+        - "{{ alert_caller_config_dir }}"
+        - "{{ alert_caller_baresip_dir }}"
+        - "{{ alert_caller_baresip_build_dir }}"
+
+    - name: Quellen von re und baresip holen
+      ansible.builtin.git:
+        repo: "https://github.com/baresip/{{ item }}.git"
+        dest: "{{ alert_caller_baresip_build_dir }}/{{ item }}"
+        version: "v{{ alert_caller_baresip_version }}"
+        depth: 1
+      loop:
+        - re
+        - baresip
+
+    - name: re und baresip bauen und installieren
+      ansible.builtin.shell:
+        cmd: |
+          set -e
+          cmake -S re -B re/build -DCMAKE_INSTALL_PREFIX={{ alert_caller_baresip_prefix }} -DCMAKE_INSTALL_RPATH={{ alert_caller_baresip_prefix }}/lib -DCMAKE_BUILD_TYPE=Release
+          cmake --build re/build --parallel
+          cmake --install re/build
+          cmake -S baresip -B baresip/build -DCMAKE_INSTALL_PREFIX={{ alert_caller_baresip_prefix }} -DCMAKE_PREFIX_PATH={{ alert_caller_baresip_prefix }} -DCMAKE_INSTALL_RPATH={{ alert_caller_baresip_prefix }}/lib -DCMAKE_BUILD_TYPE=Release -DSTATIC=OFF -DMODULES="{{ alert_caller_baresip_modules }}"
+          cmake --build baresip/build --parallel
+          cmake --install baresip/build
+          touch {{ alert_caller_baresip_prefix }}/.built-{{ build_stamp }}
+        chdir: "{{ alert_caller_baresip_build_dir }}"
+        executable: /bin/bash
+        creates: "{{ alert_caller_baresip_prefix }}/.built-{{ build_stamp }}"
+      vars:
+        build_stamp: "{{ (alert_caller_baresip_version ~ alert_caller_baresip_modules) | hash('sha1') | truncate(8, True, '') }}"
+      notify: Restart alert caller
+
+    - name: Piper in eigener venv installieren
+      ansible.builtin.pip:
+        name: "piper-tts=={{ alert_caller_piper_version }}"
+        virtualenv: "{{ alert_caller_piper_dir }}/venv"
+        virtualenv_command: python3 -m venv
+      notify: Restart alert caller
+
+    - name: Piper-Stimme laden
+      ansible.builtin.command:
+        cmd: "{{ alert_caller_piper_dir }}/venv/bin/python -m piper.download_voices {{ alert_caller_piper_voice }} --download-dir {{ alert_caller_piper_dir }}"
+        creates: "{{ alert_caller_piper_dir }}/{{ alert_caller_piper_voice }}.onnx"
+
+    - name: caller.py deployen
+      ansible.builtin.copy:
+        src: "{{ role_path }}/../../../argocd/apps/tech/alert-caller/src/caller.py"
+        dest: "{{ alert_caller_install_dir }}/caller.py"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart alert caller
+
+    - name: baresip-Konfiguration templaten
+      ansible.builtin.template:
+        src: baresip-config.j2
+        dest: "{{ alert_caller_baresip_dir }}/config"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart alert caller
+
+    - name: Gruppe für den Lesezugriff auf das SIP-Passwort anlegen
+      ansible.builtin.group:
+        name: alert-caller-cfg
+        system: true
+
+    - name: baresip-Konto templaten
+      ansible.builtin.template:
+        src: baresip-accounts.j2
+        dest: "{{ alert_caller_baresip_dir }}/accounts"
+        owner: root
+        group: alert-caller-cfg
+        mode: "0640"
+      no_log: true
+      notify: Restart alert caller
+
+    - name: Umgebungsdatei templaten
+      ansible.builtin.template:
+        src: alert-caller.env.j2
+        dest: "{{ alert_caller_config_dir }}/alert-caller.env"
+        owner: root
+        group: root
+        mode: "0600"
+      no_log: true
+      notify: Restart alert caller
+
+    - name: systemd-Unit deployen
+      ansible.builtin.template:
+        src: alert-caller.service.j2
+        dest: /etc/systemd/system/alert-caller.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart alert caller
+
+    - name: SSH in UFW erlauben
+      community.general.ufw:
+        rule: allow
+        port: "22"
+        proto: tcp
+        comment: "SSH"
+
+    - name: UFW Default für eingehenden Verkehr auf deny
+      community.general.ufw:
+        default: deny
+        direction: incoming
+
+    - name: Webhook-Port nur aus den erlaubten Netzen öffnen
+      community.general.ufw:
+        rule: allow
+        port: "{{ alert_caller_port }}"
+        proto: tcp
+        src: "{{ item }}"
+        comment: "alert-caller webhook"
+      loop: "{{ alert_caller_webhook_sources }}"
+
+    - name: RTP-Portbereich öffnen
+      community.general.ufw:
+        rule: allow
+        port: "{{ alert_caller_rtp_port_min }}:{{ alert_caller_rtp_port_max }}"
+        proto: udp
+        comment: "alert-caller RTP"
+
+    - name: UFW aktivieren
+      community.general.ufw:
+        state: enabled
+
+    - name: alert-caller aktivieren und starten
+      ansible.builtin.systemd:
+        name: alert-caller
+        daemon_reload: true
+        enabled: true
+        state: started
+
+- name: alert-caller deaktivieren, falls alert_caller_enabled false
+  ansible.builtin.systemd:
+    name: alert-caller
+    enabled: false
+    state: stopped
+  when: not (alert_caller_enabled | bool)
+  failed_when: false
