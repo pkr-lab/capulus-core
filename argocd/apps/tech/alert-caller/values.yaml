@@ -67,7 +67,7 @@ config:
   sip:
     user: capulus-core
     domain: sip.linphone.org
-    stunServer: stun.linphone.org
+    stunServer: stun.cloudflare.com:3478
     mediaEncryption: ""
   callTargets: "sip:pkr-lab@sip.linphone.org"
   watchdogTimeout: "600"

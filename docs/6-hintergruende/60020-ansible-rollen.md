@@ -247,10 +247,11 @@ Bedienung, Einrichtung und Testplan: [10020](../1-benachrichtigungen/10020-telef
 - **Modulliste** (`templates/baresip-config.j2`) weicht von der Aufgabe ab, jeweils aus einem Testlauf:
   - `stdio` bleibt drin, aber nur mit einer **Pipe** als stdin. Mit `/dev/null` (Standard unter systemd) scheitert es mit `epoll_ctl: Operation not permitted`. Der Caller startet baresip deshalb mit `stdin=PIPE` und schreibt `/dial …` hinein.
     `-e "/dial …"` taugt nicht: Es wählt sofort beim Start, und vor der Registrierung kann das Medien-Socket keine Adressfamilie bestimmen (`stream: failed to create socket for media 'audio'`, `af=AF_UNSPEC`). Mit IP-Konten ohne Registrierung geht es, mit
-    `sip.linphone.org` nicht. Erkannt wird die Registrierung an der Logzeile `{0/TLS/IPv4} 200 OK`, ihr Scheitern an `reg: … (prio 0): 403 …`.
+    `sip.linphone.org` nicht. Erkannt wird die Registrierung an der Logzeile `{0/TLS/v4} 200 Registration successful` (baresip 4.12 schreibt `v4`, nicht `IPv4`, mit dem echten Konto gesehen), ihr Scheitern an `reg: … (prio 0): 403 …`.
   - `account` ist neu: Seit baresip 1.0 lädt dieses Modul die Datei `accounts`. Ohne es gibt es kein Konto (`could not find UA for sip:…`).
   - `account` steht **zuletzt**: Es legt die Konten beim Laden sofort an, `ice` und `srtp` müssen dann schon geladen sein, sonst `medianat not found: 'ice'`.
   - `auresamp` ist neu: In baresip 4 ist der Resampler ein eigenes Modul. Ohne es bleibt der Anruf **stumm**, weil die Quelle 16 kHz liefert und der Codec PCMU 8 kHz erwartet (RTP-Zähler dauerhaft `audio=0/0`, aufgezeichnete Datei still).
+  - **STUN:** Der Server von Linphone (`stun.linphone.org`, oRTP 0.99) antwortet mit RFC-3489-Attributen, die libre ablehnt (`Protocol error [71]`). Der Standard ist deshalb `stun.cloudflare.com:3478` (`alert_caller_stun_server`).
   - `audio_alert` zeigt ebenfalls auf `aufile`, damit baresip auf der Maschine ohne Soundkarte keinen ALSA-Fehler beim Rufton wirft.
 - **TLS:** `sip_verify_server yes` und `sip_cafile` (System-CA) prüfen das Zertifikat des Servers. Der `transport=tls` der Konto-Adresse gilt auch für den INVITE: baresip hängt ihn an die Ziel-URI (geprüft mit `transport=tcp`, Log
   `connecting to 'sip:…;transport=tcp'`), die Ziele in `CALL_TARGETS` brauchen ihn nicht.
