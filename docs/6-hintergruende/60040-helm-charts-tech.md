@@ -1,8 +1,8 @@
 # Helm-Charts im TECH-Cluster — Hintergründe
 
 Begründungen zu `argocd/apps/tech/*/values.yaml`, zu den Chart-Templates und den Dockerfiles der TECH-Apps. Bedienung der Apps steht in
-den Docs unter `3-apps-workloads/`. Themen mit eigenem Doc: Monitoring in [60060](60060-monitoring-und-alerting.md), Authentik und lldap in
-[60070](60070-authentik-und-lldap.md), carplay-api in [60080](60080-carplay-api-und-ios-app.md), pacman in
+den Docs unter `3-apps-workloads/`. Themen mit eigenem Doc: Monitoring in [60060](60060-monitoring-und-alerting.md), lldap in
+[60070](60070-lldap.md), carplay-api in [60080](60080-carplay-api-und-ios-app.md), pacman in
 [60090](60090-pacman-schulungsobjekt.md). PROD-Apps stehen in [60050](60050-helm-charts-prod.md).
 
 ---
@@ -53,9 +53,8 @@ Diese Images laufen bewusst **als root** oder brauchen einen Root-Start, ein erz
 |---|---|
 | uptime-kuma | Das Image hat kein `USER` und erwartet root: Der Entrypoint (`/app/extra/entrypoint.sh`) `chown`t `/app/data` selbst nach `$PUID:$PGID` und wechselt danach per `setpriv`. Mit erzwungenem Nicht-root-Start scheitert der `chown` immer mit „Operation not permitted“, unabhängig von StorageClass und Volume-Ownership. `PUID`/`PGID` steuern den Privilege-Drop (läuft am Ende als 1000:1000). |
 | lldap | Der Entrypoint startet als root, `chown`t `/app` und `/data` auf UID/GID (Default 1000) und wechselt per `gosu` (gleiches Muster wie uptime-kuma). |
-| vaultwarden | Das offizielle Image läuft als root (kein `USER`), anders als n8n/gotify. |
+| vaultwarden | Das offizielle Image läuft als root (kein `USER`), anders als n8n. |
 | pihole | FTL braucht root plus Capabilities (`NET_ADMIN`/`NET_RAW` laut Upstream-Doku, auch ohne DHCP), um Port 53 zu binden. Kein `drop: ALL` mehr: Der Entrypoint braucht das normale Docker-Default-Set (u. a. `CHOWN`, `SETGID`, `SETUID`, `FOWNER`), um auf den internen `pihole`-User zu wechseln und Volume-Dateien zu `chown`en. Mit `drop: ALL` brach der Start mit einer Kette von „Operation not permitted“ ab. Da der Container ohnehin als root läuft (Single-Tenant-Node), bringt selektives Droppen hier keinen relevanten Gewinn. |
-| gotify | Läuft nicht-root: `GOTIFY_SERVER_PORT` steht auf 8080, damit der Container mit einer UID ohne Root-Rechte einen Port ≥ 1024 bindet. |
 | pacman | Distroless-Image: Das Basis-Image `:nonroot` hat bereits die numerische UID 65532. `USER nonroot` (symbolisch) im Dockerfile würde einen nicht-numerischen User in die OCI-Config schreiben, den die `runAsNonRoot`-Prüfung des kubelet ablehnt („image has non-numeric user (nonroot)“). |
 
 Die Dockerfiles von carplay-api und pacman sind Multi-Stage-Builds: Ein statisches Go-Binary kommt auf ein Distroless-Image ohne Shell,
@@ -77,17 +76,16 @@ die im Image gesetzte UID nur der Image-Default, das `securityContext` des Deplo
 
 - Externe Hosts hängen am Cloudflare-Tunnel-Wildcard (`*.pke-lab.de`) und werden an Traefik weitergereicht
   ([c0040](../c-netzwerk-dns/c0040-domain-tiers.md)). Externe Namen tragen einen **Bindestrich** statt Punkt (Cloudflares kostenloses
-  Universal-SSL deckt nur eine Label-Ebene ab), z. B. `mealie-prod.pke-lab.de`. Zwei Namen weichen bewusst vom App-Namen ab: `status`
+  Universal-SSL deckt nur eine Label-Ebene ab), z. B. `wiki-prod.pke-lab.de`. Zwei Namen weichen bewusst vom App-Namen ab: `status`
   statt `uptime-kuma` (damit die eingesetzte Software nicht aus der URL erkennbar ist) und `support` statt `zammad` (so lautet der
   öffentliche Hostname in cloudflared).
-- **Nicht** hinter Authentik-ForwardAuth stehen: Vaultwarden (die Bitwarden-Apps und Browser-Erweiterungen sprechen die API direkt,
-  Master-Passwort und eigenes 2FA sichern sie, ein Redirect würde Login/Sync brechen), Grafana (keine wichtigen Daten dahinter, eigener
-  Login reicht, Nutzerentscheidung 22.08.2026 auch nach der Authentik-Ablösung), der externe Status-Host von Uptime Kuma und Xibo (nur das
-  CMS-Login), mediamtx (eigene interne Auth, siehe unten) und lldap (nur intern).
-- **Zweite Ingresses ohne ForwardAuth:** Bei Uptime Kuma und Mealie als „Knopfdruck zur nativen Anmeldung“ (Bypass-Ingress, Ziel des
-  Fallback-Links auf Authentiks Login-Seite, bei Mealie auch für die Mobile-App), bei Gotify als `gotify-api.tech.homeserver` für native
-  App-Zugriffe wie iGotify und bei Semaphore als `semaphore-api.tech.homeserver`, weil die Rolle `semaphore_bootstrap` die REST-API ohne
-  Browser-Session-Cookie anspricht. Alle vom `*.homeserver`-Wildcard automatisch aufgelöst.
+- **Kein zentrales SSO:** Authentik-ForwardAuth ist im Oktober 2026 entfernt worden, jede App sichert sich mit ihrem eigenen Login. Das war für
+  Vaultwarden (die Bitwarden-Apps und Browser-Erweiterungen sprechen die API direkt, Master-Passwort und eigenes 2FA sichern sie, ein Redirect würde
+  Login/Sync brechen), Grafana (keine wichtigen Daten dahinter, Nutzerentscheidung 22.08.2026), den externen Status-Host von Uptime Kuma, Xibo (nur das
+  CMS-Login), mediamtx (eigene interne Auth, siehe unten) und lldap (nur intern) schon vorher so.
+- **Zweite Ingresses:** Bei Semaphore als `semaphore-api.tech.homeserver`, weil die Rolle `semaphore_bootstrap` die REST-API ohne
+  Browser-Session-Cookie anspricht. Uptime Kuma hat weiterhin den `-native`-Ingress aus der Authentik-Zeit, der ohne SSO nur ein zweiter Host auf
+  dieselbe App ist. Alle vom `*.homeserver`-Wildcard automatisch aufgelöst.
 - **Admin-Tools bleiben intern** (lldap, Headlamp, Semaphore, MinIO: „Nicht freigeben“ in
   [e0000](../e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md)). Ein Dienst wird nur öffentlich, wenn sein `ingress.hosts` einen
   eigenen `*-pke-lab.de`-Host enthält.
@@ -229,7 +227,7 @@ leitet alle `*.homeserver`-Anfragen an dnsmasq weiter.
   keinen Zugriff auf die State-ConfigMap oder sonst etwas ([60080](60080-carplay-api-und-ios-app.md)). Der ServiceAccount-Name muss zu
   `carplay-api` passen (`kubectl get sa -n carplay-api`).
 
-### Benachrichtigungen: ntfy, ntfy-bridge, gotify, gotify-bridge
+### Benachrichtigungen: ntfy, ntfy-bridge
 
 - **ntfy `base-url` muss der extern erreichbare HTTPS-Host sein**, nicht der interne `.tech.homeserver`-Name. Für iOS relayt ntfy.sh nur einen
   stillen „Wake-up“-Push, den Nachrichtentext holt das Handy danach über die Notification-Service-Extension per GET auf `${base-url}/…`. Ist
@@ -238,9 +236,7 @@ leitet alle `*.homeserver`-Anfragen an dnsmasq weiter.
   Live bestätigt am 2026-09-15 (Tausende `messages_published`, `base-url` stand noch auf dem internen Host).
 - `auth-default-access: read-write` heißt: Jeder darf ohne Auth publizieren und abonnieren. Für Auth auf `deny-all` stellen und Nutzer über
   die ntfy-CLI anlegen (dann muss carplay-api ein Zugriffstoken bekommen).
-- **gotify-bridge** braucht das App-Token aus der Gotify-UI (Apps → + App) als Secret `gotify-bridge-token`, **bevor** deployt wird
-  (`kubectl -n gotify-bridge create secret generic gotify-bridge-token --from-literal=token=…` oder versiegelt mit `kubeseal --raw`).
-  **ntfy-bridge** bekommt die Basis-URL **ohne Topic**, z. B. `http://ntfy.ntfy.svc.cluster.local`.
+- **ntfy-bridge** bekommt die Basis-URL **ohne Topic**, z. B. `http://ntfy.ntfy.svc.cluster.local`.
 
 ### mediamtx
 
@@ -265,6 +261,28 @@ leitet alle `*.homeserver`-Anfragen an dnsmasq weiter.
 - Der Code-Node „An WhatsApp senden“ startet `whatsapp-web.js`/Chromium in einem **eigenen Node-Prozess** (`child_process`), weil der Task-Runner
   alle Prototypen einfriert und Puppeteer darin scheitert. Externe npm-Module braucht der Code-Node deshalb nicht, `whatsapp-web.js` lädt nur der
   Kindprozess.
+- **Instagram-Bilder** (`instagram.*` in der `values.yaml`, Workflow `instagram-post-per-mail.json`, [300l0](../3-apps-workloads/300l0-instagram-post-per-mail.md)):
+  - **Öffentlicher Pfad statt Upload.** Die Graph API nimmt für Bilder nur eine `image_url`, die Meta selbst abruft. Deshalb beantwortet n8n für genau diesen
+    Zweck Anfragen aus dem Internet. Das ist die einzige Abweichung vom Grundsatz „n8n bleibt unerreichbar“ (siehe alamos-relay unten). Ein eigener Relay-Dienst
+    wurde bewusst nicht gebaut: Er bräuchte Image, Chart, NetworkPolicy und einen Upload von n8n dorthin, für Dateien, die nach Sekunden wieder gelöscht werden.
+  - **Zweiter Ingress mit `pathType: Exact`.** Der bestehende Ingress `n8n.prod.homeserver` bleibt unverändert. Der neue Host `instagram-bilder-prod.pke-lab.de` routet
+    nur `/webhook/instagram-bild`, alles andere auf diesem Host hat keine Regel und endet bei Traefik mit 404. Mit `Prefix` würde jeder spätere Webhook, dessen Pfad so
+    beginnt, mitveröffentlicht. Der Wildcard `*.pke-lab.de` zeigt schon auf den TECH-Tunnel, deshalb ist kein DNS-Eintrag nötig.
+  - **`emptyDir` statt PVC.** Die Bilder sind kurzlebig und dürfen einen Pod-Neustart nicht überleben. Auf dem NFS-PVC lägen öffentlich abrufbare Dateien neben der n8n-
+    Datenbank. Der Mount stellt zugleich sicher, dass der Ordner existiert und für uid 1000 beschreibbar ist (`fsGroup`), ohne dass der Workflow sich darum kümmern muss.
+  - **`N8N_RESTRICT_FILE_ACCESS_TO`** enthält jetzt `/data/instagram-bilder`. Die Variable ersetzt den n8n-Standard (`~/.n8n-files`), nicht ergänzt ihn: Wer sie setzt, muss alle
+    erlaubten Ordner aufzählen. Der Lese-Node im öffentlichen Zweig kann damit nichts außerhalb des Bilderordners lesen, auch wenn der Pfadcheck im Code-Node versagte.
+  - **Token statt Dateiname.** Die Datei heißt `<32 Hex-Zeichen>-<Nr>.jpg`. Der Code-Node lässt nur dieses Muster zu und baut den Pfad selbst, nie aus der Anfrage. Ein
+    erratbarer Name (Zähler, Zeitstempel) wäre öffentlich lesbar.
+  - **Wait-Node mit POST.** Der n8n-Wait-Node nimmt den Fortsetzungs-Aufruf standardmäßig per GET an, der ntfy-Button `method=POST` sendet aber POST und bekäme `404`. Der Node
+    „Warten auf Freigabe“ steht deshalb auf `httpMethod: POST`, in `instagram-post-per-mail.json` und in `isc-news-veroeffentlichen.json` (dort am 11.10.2026 nachgezogen, vorher
+    lief der Button ins Leere).
+  - **Zuschnitt rechnet in der EXIF-ausgerichteten Ansicht.** Edit Image dreht ein EXIF-gedrehtes JPEG vor dem Zuschnitt. Rechnet man den Zuschnitt im ungedrehten Raum, wird ein
+    Hochkantfoto falsch beschnitten (beobachtet mit n8n `2.42.3`).
+  - **Zuschnitt mit Sicherheitsabstand** (`0,805` statt `0,8`, `1,905` statt `1,91`): Nach dem Skalieren rundet das Bild auf ganze Pixel und könnte sonst knapp außerhalb
+    von 4:5 bis 1,91:1 landen, was Meta ablehnt.
+  - **Betreff `INSTAGRAM` ohne `1002011`.** Die Postfachregel für ISC-News verschiebt jeden Betreff mit `1002011` in `ISC-News`. Ein Betreff mit dieser Zahl landete dort und
+    der Instagram-Trigger sähe ihn nie.
 
 ### ollama
 
@@ -323,8 +341,8 @@ Update-Strategie und Readiness (seit dem Vorfall [50020](../5-incidents/50020-pi
 
 - Zusätzlich zu den Root-Hinweisen: `NODE_EXTRA_CA_CERTS` bindet die interne Root-CA ein und ist nötig, damit HTTP(S)-Monitore gegen
   `*.homeserver` nicht mit `UNABLE_TO_VERIFY_LEAF_SIGNATURE` scheitern (Node.js vertraut sonst nur seinem eingebauten Root-Store).
-- **Authentik-SSO** schützt nur den **internen Haupt-Host**, Zugriff für die Gruppe `admins` ([60070](60070-authentik-und-lldap.md)). Der
-  **externe Status-Host bleibt bewusst unverändert** (eigener Ingress ohne ForwardAuth): Öffentlich erreichbar über die bestehende
+- Der interne Haupt-Host hängt nicht mehr hinter Authentik-SSO (im Oktober 2026 entfernt), es gilt der eigene Login von Uptime Kuma. Der
+  **externe Status-Host** hat einen eigenen Ingress: Öffentlich erreichbar über die bestehende
   `*.pke-lab.de`-Wildcard-Route (kein Cloudflare-Umbau nötig, „Neuen Dienst freigeben“ in [e0010](../e-externe-erreichbarkeit/e0010-cloudflare-deploy.md)),
   mit „status“ statt „uptime-kuma“ im Namen. Nur die öffentliche Status-Page-API (`/api/status-page/…`) wird von der „Updates“-Seite der Firmenwebsite per
   Hintergrund-Request abgefragt (keine direkte Verlinkung, kein iframe), der Rest des Dashboards bleibt hinter dem Admin-Login.

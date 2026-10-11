@@ -41,7 +41,7 @@ existieren und bei einer Rotation mitzudenken sind:
 | **Cluster-Token `argocd-manager` (PROD im Hub)** | Secret `cluster-prod` im Hub, ServiceAccount-Token in der `prod-vm` | Berechtigt den Hub zu Cluster-Admin in PROD, bei Verdacht neu ausstellen ([argocd/bootstrap-prod/README.md](../../argocd/bootstrap-prod/README.md)) |
 | **Cloudflare-Tunnel-Credentials** | Tunnel `homeserver` (TECH) und `homeserver-prod` (PROD), je als SealedSecret | Rotation je Tunnel, siehe [e0010](../e-externe-erreichbarkeit/e0010-cloudflare-deploy.md#credentials-rotieren) |
 | **Interne CA** | Root-CA-Schlüssel (nur lokal) und PROD-Intermediate-CA | Siehe [d0040](d0040-internal-tls.md#prod-cluster-phase-28-multi-cluster-plan) |
-| **Authentik-/lldap-Secrets** | `authentik-credentials` u. a. als SealedSecrets in TECH | Aufbau und Betrieb: [d0073](d0073-authentik-sso.md), [d0072](d0072-lldap.md); beim Neu-Versiegeln auf die Base64-Fallen im Rollout-Log von d0073 achten |
+| **lldap-Secrets** | `lldap-secrets` als SealedSecret in TECH | Aufbau und Betrieb: [d0072](d0072-lldap.md) |
 
 ---
 

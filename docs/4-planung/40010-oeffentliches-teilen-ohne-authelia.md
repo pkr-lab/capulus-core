@@ -1,7 +1,7 @@
 # Öffentliches Teilen (Immich/Nextcloud) ohne Gast-Accounts
 
-> **Historischer Kontext (Stand nach Ablösung von Authelia durch Authentik,
-> siehe [40070-authentik-sso-iac.md](40070-authentik-sso-iac.md)):**
+> **Historischer Kontext (Stand nach Ablösung von Authelia durch Authentik;
+> Authentik ist im Oktober 2026 ebenfalls entfernt worden):**
 > Authelia wurde vollständig entfernt, dieses Doc bleibt als
 > recherchierter Stand bestehen — die ForwardAuth-vs-OIDC-Analyse unten
 > gilt strukturell unverändert für Authentik (dieselbe Domain-Gating-
