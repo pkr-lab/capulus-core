@@ -261,6 +261,27 @@ leitet alle `*.homeserver`-Anfragen an dnsmasq weiter.
 - Der Code-Node „An WhatsApp senden“ startet `whatsapp-web.js`/Chromium in einem **eigenen Node-Prozess** (`child_process`), weil der Task-Runner
   alle Prototypen einfriert und Puppeteer darin scheitert. Externe npm-Module braucht der Code-Node deshalb nicht, `whatsapp-web.js` lädt nur der
   Kindprozess.
+- **Instagram-Bilder** (`instagram.*` in der `values.yaml`, Workflow `instagram-post-per-mail.json`, [300l0](../3-apps-workloads/300l0-instagram-post-per-mail.md)):
+  - **Öffentlicher Pfad statt Upload.** Die Graph API nimmt für Bilder nur eine `image_url`, die Meta selbst abruft. Deshalb beantwortet n8n für genau diesen
+    Zweck Anfragen aus dem Internet. Das ist die einzige Abweichung vom Grundsatz „n8n bleibt unerreichbar“ (siehe alamos-relay unten). Ein eigener Relay-Dienst
+    wurde bewusst nicht gebaut: Er bräuchte Image, Chart, NetworkPolicy und einen Upload von n8n dorthin, für Dateien, die nach Sekunden wieder gelöscht werden.
+  - **Zweiter Ingress mit `pathType: Exact`.** Der bestehende Ingress `n8n.prod.homeserver` bleibt unverändert. Der neue Host `instagram-bilder-prod.pke-lab.de` routet
+    nur `/webhook/instagram-bild`, alles andere auf diesem Host hat keine Regel und endet bei Traefik mit 404. Mit `Prefix` würde jeder spätere Webhook, dessen Pfad so
+    beginnt, mitveröffentlicht. Der Wildcard `*.pke-lab.de` zeigt schon auf den TECH-Tunnel, deshalb ist kein DNS-Eintrag nötig.
+  - **`emptyDir` statt PVC.** Die Bilder sind kurzlebig und dürfen einen Pod-Neustart nicht überleben. Auf dem NFS-PVC lägen öffentlich abrufbare Dateien neben der n8n-
+    Datenbank. Der Mount stellt zugleich sicher, dass der Ordner existiert und für uid 1000 beschreibbar ist (`fsGroup`), ohne dass der Workflow sich darum kümmern muss.
+  - **`N8N_RESTRICT_FILE_ACCESS_TO`** enthält jetzt `/data/instagram-bilder`. Die Variable ersetzt den n8n-Standard (`~/.n8n-files`), nicht ergänzt ihn: Wer sie setzt, muss alle
+    erlaubten Ordner aufzählen. Der Lese-Node im öffentlichen Zweig kann damit nichts außerhalb des Bilderordners lesen, auch wenn der Pfadcheck im Code-Node versagte.
+  - **Token statt Dateiname.** Die Datei heißt `<32 Hex-Zeichen>-<Nr>.jpg`. Der Code-Node lässt nur dieses Muster zu und baut den Pfad selbst, nie aus der Anfrage. Ein
+    erratbarer Name (Zähler, Zeitstempel) wäre öffentlich lesbar.
+  - **Wait-Node mit POST.** Der n8n-Wait-Node nimmt den Fortsetzungs-Aufruf standardmäßig per GET an, der ntfy-Button `method=POST` sendet aber POST und bekäme `404`. Der Node
+    steht deshalb auf `httpMethod: POST`.
+  - **Zuschnitt rechnet in der EXIF-ausgerichteten Ansicht.** Edit Image dreht ein EXIF-gedrehtes JPEG vor dem Zuschnitt. Rechnet man den Zuschnitt im ungedrehten Raum, wird ein
+    Hochkantfoto falsch beschnitten (beobachtet mit n8n `2.42.3`).
+  - **Zuschnitt mit Sicherheitsabstand** (`0,805` statt `0,8`, `1,905` statt `1,91`): Nach dem Skalieren rundet das Bild auf ganze Pixel und könnte sonst knapp außerhalb
+    von 4:5 bis 1,91:1 landen, was Meta ablehnt.
+  - **Betreff `INSTAGRAM` ohne `1002011`.** Die Postfachregel für ISC-News verschiebt jeden Betreff mit `1002011` in `ISC-News`. Ein Betreff mit dieser Zahl landete dort und
+    der Instagram-Trigger sähe ihn nie.
 
 ### ollama
 
