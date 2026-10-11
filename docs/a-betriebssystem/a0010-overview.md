@@ -395,7 +395,7 @@ flowchart TB
 | `common` | homeserver, prod-vm, entw-vm | Basis-OS, UFW, Pakete, sysctl, chrony, Swap aus, optional statische IP |
 | `crowdsec` | homeserver | Brute-Force-Schutz für SSH und Traefik-Logs |
 | `dnsmasq` | homeserver | Split-DNS `*.homeserver` (inkl. `*.dev.homeserver` → ENTW und PROD-Einzelhosts), Weiterleitung an Pi-hole |
-| `tailscale` | homeserver, worker-0/-1, xibosignage-Displays, Banana Pi | WireGuard-Mesh-VPN, Auth-Key aus Ansible Vault; nur der homeserver ist Subnet-Router |
+| `tailscale` | homeserver, worker-0/-1, xibosignage-Displays, Banana Pi, alert-caller-VM | WireGuard-Mesh-VPN, Auth-Key aus Ansible Vault; nur der homeserver ist Subnet-Router |
 | `wireguard_backup` | homeserver | Notfall-Tunnel, falls die Tailscale-Control-Plane ausfällt ([c0011](../c-netzwerk-dns/c0011-wireguard-backup.md)) |
 | `k3s` | homeserver, prod-vm, entw-vm | Kubernetes-Server + Helm, je Cluster eigene CIDRs |
 | `k3s_agent` | worker-0, worker-1 | Cluster-Beitritt (TECH) per Join-Token vom Control-Plane |
@@ -420,6 +420,7 @@ flowchart TB
 | `cups_print_server` | homeserver | Druckserver, QPDL-Treiber-Build, zweite Warteschlange |
 | `alamos_kiosk` / `banana_pi_kiosk` | Raspberry Pis / Banana Pi | Chromium-Kiosk + Heartbeat-Timer |
 | `xibo_kiosk` | xibosignage-Displays | NFS-Mount, Manifest-Timer, Chromium-Slideshow-Kiosk |
+| `alert_caller` | externe VM `alert-caller-vm` (noch nicht ausgerollt, heute läuft der Caller als Pod) | Telefon-Alarm: Webhook-Server, Piper-Ansage, baresip-Anruf ([10020](../1-benachrichtigungen/10020-telefon-alarm.md)) |
 | `vaultwarden_restore` | homeserver | Wiederherstellung der Vaultwarden-Daten aus dem NAS-Backup |
 
 **Reihenfolge beim ersten Rollout:**
