@@ -289,7 +289,7 @@ Stand 2026-10-11. „Lokal“ heißt: Entwicklungsrechner und Docker-Container (
 
 ---
 
-## Notfall-Caller auf dem Vereinsheim-Pi (vorbereitet, nicht ausgerollt)
+## Notfall-Caller auf dem Vereinsheim-Pi (ausgerollt, Anruf vom Pi noch nicht getestet)
 
 Fällt der Cluster oder der Homeserver aus, ruft der Caller im Cluster nicht mehr an. Deshalb gibt es eine zweite, kleine Instanz auf dem Vereinsheim-Pi (`vereinsheim-alarmmonitor`, anderer Standort, hängt nur am Tailnet). Sie bekommt den Watchdog und ruft an, wenn er 10 Minuten ausbleibt.
 Das deckt auch einen Strom- oder Internetausfall im Haus ab. Fällt umgekehrt der Pi aus, kann der Cluster-Caller anrufen (siehe unten, noch nicht eingestellt).
@@ -318,7 +318,10 @@ Der Text muss zur Watchdog-Ansage in `caller.py` passen (`über {minutes} Minute
 2. `make alert-caller-pi-check`, dann `make alert-caller-pi`. Gruppe `alert_caller_pi`, Variablen in `ansible/group_vars/alert_caller_pi.yml`. Der erste Lauf **baut baresip auf dem Pi aus den Quellen** (2 parallele Jobs, wegen 2 GB RAM und laufendem Kiosk), das dauert deutlich länger als auf einem x86-Rechner.
 3. Auf dem Pi prüfen: `journalctl -u alert-caller -n 20` zeigt `listening on :9310 … static announcement /opt/alert-caller/cluster-down.wav`.
 
-**Erst danach den Alertmanager umstellen.** Voraussetzung ist, dass der Alertmanager-Pod den Pi erreicht: Pod-Verkehr kommt am Pi als `homeserver` (100.74.0.59, Tag `tagged-devices`) an. Vom Homeserver aus antworten die Ports 22 und 9100 des Pi aber nicht (2026-10-11), die ACL lässt ihn
+**Stand 2026-10-11:** Die Rolle ist auf dem Pi ausgerollt (`make alert-caller-pi`). Die Tailscale-ACL hat eine Regel `tag:tech-node → 100.123.214.4:9310` (`tcp:9310`, nur dieser Port). Der Test aus dem Alertmanager-Pod lieferte `ok` auf `/watchdog` und `404` auf `/alert` (statischer Modus). Die zweite URL ist im Receiver `watchdog` eingetragen (siehe unten).
+**Noch offen:** ein echter Anruf vom Pi. Test: auf dem Pi `sudo iptables -I INPUT -p tcp --dport 9310 -j DROP` setzen, dann bleibt der Watchdog aus, und nach rund 11 Minuten muss das Telefon mit der festen Ansage klingeln. Danach die Regel wieder entfernen (`sudo iptables -D INPUT -p tcp --dport 9310 -j DROP`). Im Log des Pi (`journalctl -u alert-caller`) steht `no watchdog for …, calling`.
+
+**Der Alertmanager wurde erst nach dem Test umgestellt (Reihenfolge einhalten).** Voraussetzung ist, dass der Alertmanager-Pod den Pi erreicht: Pod-Verkehr kommt am Pi als `homeserver` (100.74.0.59, Tag `tagged-devices`) an. Vom Homeserver aus antworten die Ports 22 und 9100 des Pi aber nicht (2026-10-11), die ACL lässt ihn
 offenbar nicht durch. Dann in der Tailscale-ACL den Homeserver auf `vereinsheim-alarmmonitor:9310` zulassen und prüfen:
 
 ```bash
