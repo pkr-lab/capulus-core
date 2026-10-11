@@ -1,0 +1,26 @@
+{
+  "name": "isc-news-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HTTP-API, die News im DLRG ISC per headless Chromium (Playwright) anlegt",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test --test-concurrency=1 dist/test/unit/*.test.js dist/test/e2e/*.test.js",
+    "test:unit": "npm run build && node --test dist/test/unit/*.test.js",
+    "test:e2e": "npm run build && node --test --test-concurrency=1 dist/test/e2e/*.test.js",
+    "start": "node dist/src/main.js",
+    "smoke": "npm run build && node dist/scripts/smoke.js"
+  },
+  "dependencies": {
+    "playwright": "1.63.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "typescript": "5.9.3"
+  }
+}

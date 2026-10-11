@@ -16,9 +16,9 @@ Die Fach-Kategorien (`a`–`f`, `1`–`3`) beschreiben, **was läuft und wie man
 | [60020 Ansible: Rollen](60020-ansible-rollen.md) | Kiosk-Geräte (alamos, Banana Pi, Xibo), Energie-Rollen, Watchdogs, vmagent und Exporter, `journal_upload`, Semaphore-Rollen, `wireguard_backup`, `vaultwarden_restore` |
 | [60030 ArgoCD, Bootstrap und SealedSecrets](60030-argocd-und-bootstrap.md) | Generierte Bootstrap-Dateien, `ignoreDifferences`, Rolle `argocd`, PROD im Hub, Daten-Migrationen, Promotion-Konfiguration, Fallstricke beim Versiegeln |
 | [60040 Helm-Charts im TECH-Cluster](60040-helm-charts-tech.md) | Gemeinsame Muster (HPA, Speicher, Root-Container), Zertifikate und TLS, Traefik-Metriken, cloudflared, alle TECH-Apps von alamos bis zammad |
-| [60050 Helm-Charts im PROD-Cluster](60050-helm-charts-prod.md) | Regeln für PROD-Kopien, Nextcloud, Immich, Wiki.js und wiki-docs-sync, Xibo, Paperless-ngx, Mealie, TinyTeller |
+| [60050 Helm-Charts im PROD-Cluster](60050-helm-charts-prod.md) | Regeln für PROD-Kopien, Nextcloud, Immich, Wiki.js und wiki-docs-sync, Xibo, Paperless-ngx |
 | [60060 Monitoring und Alerting](60060-monitoring-und-alerting.md) | Alertmanager-Routing, alle VMRules, Scrapes und Labels, VictoriaMetrics, Grafana-Ordner, Logging |
-| [60070 Authentik und lldap](60070-authentik-und-lldap.md) | Blueprint-Fallstricke aus dem Live-Betrieb, Chart und Secrets, lldap |
+| [60070 lldap](60070-lldap.md) | Chart-Entscheidungen und Secrets |
 | [60080 carplay-api und iOS-App](60080-carplay-api-und-ios-app.md) | Verträge, Absicherung, Datenquellen, Transport und Tailscale in der App, Modelle und Bedienung |
 | [60090 pacman (Schulungsobjekt)](60090-pacman-schulungsobjekt.md) | Server, Bestenliste, Zugriffslog, Trainingsmodus, Frontend-Skripte |
 | [600a0 CI-Workflows, Skripte und Lint](600a0-ci-workflows-und-skripte.md) | Alle Workflows (inkl. CodeQL und Security-Issues), Promotions- und Sync-Skripte, Ruleset, Dependabot und Renovate, `.ansible-lint`, `.yamllint` |
@@ -42,10 +42,10 @@ siehe [TEMPLATE](../TEMPLATE.md)).
 | `ansible/host_vars/`, `ansible/group_vars/`, `ansible/inventory/`, `ansible/*.yml`, `ansible/roles/libvirt_host`, `ansible/roles/dnsmasq`, `ansible/roles/disable_eee` | [60010](60010-ansible-hosts-und-playbooks.md) |
 | `ansible/roles/*` (übrige Rollen) | [60020](60020-ansible-rollen.md) |
 | `ansible/roles/argocd`, `argocd/bootstrap/`, `argocd/bootstrap-prod/`, `argocd/promotion.yaml`, SealedSecrets | [60030](60030-argocd-und-bootstrap.md) |
-| `argocd/apps/tech/*` (ohne monitoring, authentik, lldap, carplay-api, pacman) | [60040](60040-helm-charts-tech.md) |
+| `argocd/apps/tech/*` (ohne monitoring, lldap, carplay-api, pacman) | [60040](60040-helm-charts-tech.md) |
 | `argocd/apps/prod/*`, `argocd/apps/entw/*` | [60050](60050-helm-charts-prod.md) |
 | `argocd/apps/tech/monitoring`, `argocd/apps/tech/logging` | [60060](60060-monitoring-und-alerting.md) |
-| `argocd/apps/tech/authentik`, `argocd/apps/tech/lldap` | [60070](60070-authentik-und-lldap.md) |
+| `argocd/apps/tech/lldap` | [60070](60070-lldap.md) |
 | `argocd/apps/tech/carplay-api`, `ios/` | [60080](60080-carplay-api-und-ios-app.md) |
 | `argocd/apps/tech/pacman` | [60090](60090-pacman-schulungsobjekt.md) |
 | `.github/workflows/`, `.github/dependabot.yml`, `renovate.json`, `scripts/`, `Makefile`, `.ansible-lint`, `.yamllint`, `ops/` | [600a0](600a0-ci-workflows-und-skripte.md) |

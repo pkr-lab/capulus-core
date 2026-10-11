@@ -3,7 +3,7 @@
 Zwei Regelgruppen im Monitoring-Chart melden Störungen, die bisher nur von Hand aufgefallen sind:
 ArgoCD-Anwendungen, die nicht gesund werden oder hängen, und CronJobs (vor allem Datensicherungen), die
 nicht mehr erfolgreich laufen. Beide laufen über die vorhandene Alertmanager-Route und erreichen damit
-[Gotify](../1-benachrichtigungen/10000-gotify.md) und [ntfy](../1-benachrichtigungen/10010-ntfy.md).
+[ntfy](../1-benachrichtigungen/10010-ntfy.md), allerdings nur mit `severity: critical`. Regeln mit `severity: warning` (die meisten unten) werden seit dem Entfernen von Gotify im Oktober 2026 nicht mehr zugestellt, siehe [60060](../6-hintergruende/60060-monitoring-und-alerting.md#alertmanager-routing).
 
 Anlass waren zwei reale Vorfälle:
 
@@ -19,7 +19,7 @@ Anlass waren zwei reale Vorfälle:
 Beide Gruppen gehören zur Hub-Instanz (TECH). Der **Hub-ArgoCD** verwaltet auch die PROD-Applications
 (`prod-<app>`), sie sind mit erfasst. **Nicht** erfasst: die eigenständige ENTW-ArgoCD-Instanz (Trainingsumgebung) und
 CronJobs im PROD-Cluster, etwa das Immich-Backup: in der Hub-VictoriaMetrics existieren nur die drei TECH-CronJobs
-(`authentik-postgres-backup`, `vaultwarden-backup`, `github-release-watcher`, geprüft am 2026-09-20).
+(damals `authentik-postgres-backup`, `vaultwarden-backup`, `github-release-watcher`, geprüft am 2026-09-20; Authentik ist inzwischen entfernt).
 
 ## ArgoCD ([vmrule-argocd.yaml](../../argocd/apps/tech/monitoring/templates/vmrule-argocd.yaml))
 
@@ -49,7 +49,7 @@ bleiben in der Historie und würden nach der Reparatur weiter feuern.
 | `CronJobStale` | alle anderen CronJobs, letzter Erfolg älter als 36 h | warning |
 
 Ausgesetzte CronJobs (`suspend: true`, z. B. der wöchentliche `zammad-cronjob-reindex`) sind ausgenommen. Die
-Schwellen passen zu täglichen Nachtläufen (Authentik 01:45, Vaultwarden 01:30): eine ausgefallene Nacht meldet sich
+Schwellen passen zu täglichen Nachtläufen (Vaultwarden 01:30): eine ausgefallene Nacht meldet sich
 am Vormittag danach. Erfasst sind nur CronJobs, die schon einmal erfolgreich waren; ein CronJob, der nie lief,
 erzeugt keine Serie.
 

@@ -225,7 +225,7 @@ von früh/sanft bis spät/hart:
 
 1. **VMRule/Alertmanager-Warnung** (RAM ≥ 70% / CPU ≥ 80%, 2 Minuten,
    [vmrule-resources.yaml](../../argocd/apps/tech/monitoring/templates/vmrule-resources.yaml))
-   — nur Gotify-Push, kein Eingriff. Läuft **im** Cluster und kann daher
+   — kein Eingriff (Push nur bei `critical` über ntfy). Läuft **im** Cluster und kann daher
    selbst betroffen sein, wenn genau der Ressourcendruck, vor dem sie
    warnen soll, den Monitoring-Stack mit ausbremst.
 2. **resource_watchdog-Frühwarnung** (RAM ≥ 80% / CPU ≥ 85%, 60s,

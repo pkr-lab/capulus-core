@@ -1,12 +1,14 @@
-# lldap — Nutzer-/Gruppenverwaltung für Authentik
+# lldap — Nutzer-/Gruppenverwaltung
 
 [lldap](https://github.com/lldap/lldap) ist ein leichtgewichtiger
-LDAP-Server (SQLite, ein Container, eigene Web-UI) — die Nutzerquelle für
-[Authentik](d0073-authentik-sso.md) (ursprünglich für Authelia aufgesetzt,
-das inzwischen vollständig durch Authentik abgelöst wurde, siehe
-[docs/4-planung/40070-authentik-sso-iac.md](../4-planung/40070-authentik-sso-iac.md)).
-lldap selbst ist von der Ablösung unberührt — nur der bindende Client
-wechselt von `authelia-bind` auf `authentik-bind` (siehe Abschnitt 2.3).
+LDAP-Server (SQLite, ein Container, eigene Web-UI). Er war die Nutzerquelle
+für Authentik (ursprünglich für Authelia aufgesetzt).
+
+> **Stand Oktober 2026:** Authentik ist aus dem Repo entfernt, lldap läuft
+> ohne angebundenen Dienst weiter. Die Abschnitte unten beschreiben das
+> frühere Setup mit Authentik als Konsument (Docs `d0073`, `d0074` und `40070`
+> sind gelöscht und nur noch in der Git-Historie) und bleiben als Referenz für
+> einen späteren Anschluss eines anderen Dienstes stehen.
 
 ---
 
@@ -74,8 +76,7 @@ Passwort einloggen.
 
 - `admins` — Vollzugriff mit 2FA (aktuell: `pke`)
 - `dlrg-einsatz` — ursprünglich für Grafana-Zugriff gedacht, seit 22.08.2026
-  ohne aktive Zugriffsregel (Grafana bewusst nicht hinter SSO, siehe
-  [d0073-authentik-sso.md](d0073-authentik-sso.md) → Access-Control) —
+  ohne aktive Zugriffsregel (Grafana bewusst nicht hinter SSO) —
   Gruppe bleibt für spätere Verwendung bestehen
 
 (Die eingebauten Gruppen `lldap_admin`, `lldap_password_manager`,
@@ -96,13 +97,11 @@ Danach den Nutzer öffnen → **Groups** → Mitglied von
 **`lldap_strict_readonly`** machen (read-only, **nicht** `lldap_admin` —
 Least Privilege, gleiches Prinzip wie zuvor bei `authelia-bind`). Passwort
 setzen: **muss exakt dem `authentik-bind-password`-Wert aus Schritt 1
-entsprechen** (einmalig im Chat mitgeteilt, siehe
-[d0073-authentik-sso.md](d0073-authentik-sso.md)), sonst schlägt Authentiks
+entsprechen** (einmalig im Chat mitgeteilt), sonst schlägt Authentiks
 LDAP-Source-Sync fehl (Symptom siehe Troubleshooting unten).
 
 **Aufräumen nach vollständig verifiziertem Rollout** (letzter Schritt der
-Ablösung, siehe [40070-authentik-sso-iac.md](../4-planung/40070-authentik-sso-iac.md)
-→ Rollout, Batch 7): alten Service-Account `authelia-bind` löschen
+Ablösung von Authelia, Rollout-Batch 7): alten Service-Account `authelia-bind` löschen
 (**User Management** → `authelia-bind` → **Delete**) und den verwaisten Key
 `bind-password` aus `argocd/apps/tech/lldap/values.yaml` +
 `templates/sealedsecret.yaml` entfernen.
@@ -128,7 +127,7 @@ nötig**, die Gruppen-Synchronisierung + Policy greift automatisch.
 ### 2.5 2FA für `pke` einrichten
 
 `pke` braucht TOTP, weil er/sie Mitglied der `admins`-Gruppe ist (siehe
-[01-admin-2fa-policy.yaml](../../argocd/apps/tech/authentik/blueprints/01-admin-2fa-policy.yaml))
+`argocd/apps/tech/authentik/blueprints/01-admin-2fa-policy.yaml`, gelöscht, nur in der Git-Historie)
 — das passiert **nicht** in lldap, sondern beim ersten Login über Authentiks
 eigenes Portal (`https://authentik.tech.homeserver`, QR-Code-Enrollment).
 
@@ -145,8 +144,7 @@ ldapsearch -x -H ldap://lldap.tech.homeserver:3890 \
 
 - `kubectl -n authentik logs deploy/authentik-server -c server | grep -i ldap`
   — bei Startup/Sync sollte kein LDAP-Fehler erscheinen.
-- Login-Test je Identität über das jeweils zugewiesene App-Frontend (siehe
-  [d0073-authentik-sso.md](d0073-authentik-sso.md) → Access-Control-Tabelle).
+- Login-Test je Identität über das jeweils zugewiesene App-Frontend (siehe die Access-Control-Tabelle in `d0073`, nur in der Git-Historie).
 - Negativ-Test: `ake` darf **nicht** auf Mealie kommen, `rdn` **nicht** auf
   Immich usw. — jede Policy erlaubt nur die explizit zugewiesene Identität.
 
