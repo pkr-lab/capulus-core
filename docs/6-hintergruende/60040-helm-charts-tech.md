@@ -63,7 +63,7 @@ die im Image gesetzte UID nur der Image-Default, das `securityContext` des Deplo
 
 ### Images und Build
 
-- Tags sind zur Reproduzierbarkeit **gepinnt**. Selbst gebaute Images (pacman, carplay-api, n8n) baut
+- Tags sind zur Reproduzierbarkeit **gepinnt**. Selbst gebaute Images (pacman, carplay-api, n8n, isc-news-bot, alert-caller) baut
   `.github/workflows/build-images.yml` bei jeder Änderung an `Dockerfile`/`src`; der Lauf öffnet einen PR, der `image.tag` setzt
   ([600a0](600a0-ci-workflows-und-skripte.md), [f0060](../f-cicd-automatisierung/f0060-build-images.md)).
 - Ist das GHCR-Package privat, braucht der Namespace ein Pull-Secret:
@@ -237,6 +237,26 @@ leitet alle `*.homeserver`-Anfragen an dnsmasq weiter.
 - `auth-default-access: read-write` heißt: Jeder darf ohne Auth publizieren und abonnieren. Für Auth auf `deny-all` stellen und Nutzer über
   die ntfy-CLI anlegen (dann muss carplay-api ein Zugriffstoken bekommen).
 - **ntfy-bridge** bekommt die Basis-URL **ohne Topic**, z. B. `http://ntfy.ntfy.svc.cluster.local`.
+
+### alert-caller
+
+Telefon-Alarm im Cluster, Bedienung in [10020](../1-benachrichtigungen/10020-telefon-alarm.md). Der Anrufer wurde zuerst für eine externe VM gebaut ([60020](60020-ansible-rollen.md#alert_caller)), läuft aber vorerst als Pod,
+weil ein Ausfall des Clusters (und damit kein Anruf) bewusst in Kauf genommen wird.
+
+- **`hostNetwork: true`, `dnsPolicy: ClusterFirstWithHostNet`, `strategy: Recreate`, `nodeSelector` auf `homeserver`.** baresip handelt mit ICE und STUN eine Adresse für den Medienstrom aus. Im Pod-Netzwerk maskiert Flannel jeden neuen Fluss mit
+  `MASQUERADE --random-fully` und wählt den Quellport zufällig, die per STUN gesehene Adresse und der Port zur Gegenstelle können dann auseinanderfallen (Überlegung aus den iptables-Regeln des Homeservers, nicht mit Linphone gemessen). Im Host-Netzwerk benutzt baresip den
+  Port des Hosts, die Zuordnung übernimmt dann nur noch der Heimrouter (üblicherweise unabhängig vom Ziel, nicht geprüft). Folgen: Zwei Pods würden um Port 9310 und 10000–10100 streiten (deshalb `Recreate` statt Rolling), der Pod gehört auf den `homeserver` (Worker schlafen, dort gäbe es den Pod nicht),
+  und `NetworkPolicy`s gelten für Pods im Host-Netzwerk nicht. Deshalb hat das Chart keine eigenen Policies. Den Port 9310 erreichen Pods über den Service, von außen blockiert UFW ihn (nur der Pod-CIDR ist erlaubt).
+  Der Webhook hat keine Authentifizierung: Jeder Pod im Cluster könnte einen Anruf auslösen. Das ist wegen des Aufwands für einen Angreifer und des geringen Schadens (ein Anruf) in Kauf genommen. Ändert sich das, bekommt der Webhook ein Bearer-Token (`http_config.authorization` im Alertmanager).
+- **`caller.py` liegt im Chart (`src/caller.py`) und kommt per ConfigMap in den Pod** (`.Files.Get`), nicht ins Image. So braucht eine Änderung am Skript keinen Image-Build, nur einen Merge: Die Prüfsumme der ConfigMap (`checksum/script`) startet den Pod neu. Das Image enthält die Werkzeuge,
+  die sich selten ändern: `baresip` 4.12.0 (selbst gebaut, siehe 60020 für den Grund), Piper samt Stimme und sox. Das Dockerfile und `.dockerignore` sind die einzigen Pfade, die `build-images.yml` auslösen. Dieselbe `caller.py` benutzt die Ansible-Rolle für die VM.
+- **Das Dockerfile baut zweistufig** (Build-Stage mit Compiler, Laufzeit-Stage nur mit Bibliotheken) und kopiert `/opt/baresip` und `/opt/piper` (venv samt Stimme) herüber. Beides hängt an absoluten Pfaden, deshalb müssen beide Stages dieselbe Basis (`ubuntu:24.04`, Python 3.12) haben.
+  `CMAKE_INSTALL_RPATH` ist nötig, sonst findet `baresip` seine Bibliotheken in `/opt/baresip/lib` nicht. Das Image läuft als Nutzer 1000 mit schreibgeschütztem Dateisystem. Beschreibbar sind nur `emptyDir`s: `/var/lib/alert-caller` (Ansage, Aufnahme), `/run/alert-caller` (Konfiguration von baresip, das in sein Verzeichnis schreibt) und `/tmp`.
+- **Das SIP-Konto entsteht aus Umgebungsvariablen** (`SIP_USER`, `SIP_DOMAIN`, `SIP_PASSWORD`, …). Im Secret steht deshalb nur das Passwort statt einer ganzen Kontozeile, die man von Hand versiegeln müsste. Das Passwort darf kein `;`, `"` oder Leerzeichen enthalten, der Caller prüft das beim Start.
+- **Probes sind `tcpSocket`.** Der Webhook-Server hat keinen eigenen Health-Pfad.
+- **`HC_PING_URL` ist ein optionaler Schlüssel** (`secretKeyRef.optional: true`): Ohne ihn läuft der Caller ohne healthchecks.io.
+- Der Pod findet VictoriaMetrics über den Service-Namen (`config.vmUrl`), die Kontext-Abfragen der Paging-Regeln laufen also nur, solange VictoriaMetrics läuft.
+- Registrierung: `alert-caller` steht in `argocd_platform_apps` und `argocd_network_policy_refined_namespaces` (`ansible/roles/argocd/defaults/main.yml`), `argocd/bootstrap/projects.yaml` wird mit `make render-bootstrap` erzeugt. Die Tier-Policy aus `make argocd` greift nicht auf den Pod, weil er im Host-Netzwerk läuft.
 
 ### mediamtx
 

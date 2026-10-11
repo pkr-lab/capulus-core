@@ -1,0 +1,5 @@
+---
+alert_caller_sip_password: "{{ vault_alert_caller_sip_password }}"
+alert_caller_hc_uuid: "{{ vault_alert_caller_hc_uuid }}"
+alert_caller_call_targets:
+  - sip:EINTRAGEN@sip.linphone.org

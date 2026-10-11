@@ -1,0 +1,90 @@
+---
+replicaCount: 1
+
+image:
+  repository: ghcr.io/pkr-lab/alert-caller
+  tag: "sha-pending"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: ghcr-pull
+
+nameOverride: ""
+fullnameOverride: ""
+
+hostNetwork: true
+
+service:
+  type: ClusterIP
+  port: 9310
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 384Mi
+  limits:
+    cpu: "2"
+    memory: 1Gi
+
+stateSizeLimit: 64Mi
+tmpSizeLimit: 64Mi
+
+livenessProbe:
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+config:
+  sip:
+    user: capulus-core
+    domain: sip.linphone.org
+    stunServer: stun.linphone.org
+    mediaEncryption: ""
+  callTargets: "sip:pkr-lab@sip.linphone.org"
+  watchdogTimeout: "600"
+  callCooldown: "900"
+  callRingTimeout: "45"
+  registerTimeout: "15"
+  vmUrl: "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428"
+  rtpPortMin: 10000
+  rtpPortMax: 10100
+  piperVoice: de_DE-thorsten-high
+
+secrets:
+  name: alert-caller-secrets
+  encryptedData:
+    SIP_PASSWORD: "AgBclkwgeXZ53dQlvi9WRAqzogjd/W1nOZSV4zPhAYUW02lx2Nyit4Y7A0C9aJ04EYSo2pHHqGW1sgX2JQzcrFfudeAqsAiAqlDQjRPAqkZ25b/bV7537yLw2+1tKSksLvaynzZU3i8HfDoqShJISM5T6Gj+rF8WdEIem5VeB/Aubpf1j/tqsyM/paUoN1qTxDYesKoWewWfQCxFHDk+sMnalw6YnvNWKUerF2/h6XhRZNXbRsBRyCZR1rxQnbS8o4HXthBGtj50i5YOoBw6J7uPHwfT9JNjGUJjNLvtMmaIE7lZgRgyykqYEgw3InORJSHwRiuRD3s2EEe6mku0DXmrjekQj0Fx52ILY7otvAP5nuzKU+DQ0o/AilWwcOWJ/9jpAg8L1XVcEC6Ds/jo9Z9vJtOUgSnfw4qdF1+LU2JDwjupJBhX+0DnLOu/oRukZy3qmev4OOEQh+mzyiJyS/vnEifcauk8MUCklmz0/7M81U18ENoUaSNVGCM8+2Xjwty531c2f4Q9M4AXSNezZxpQAqAa+WOTauU+xbboKLCgPmX7l5g5ixuyzkz3Ff+ehqijCKCQNIMvkYmfSwLjcqx4XOFf5ewnOKepV3K5MudFudtNPY4nCIY71yAYL6JbgcrOFV/XpmjruRgKbJ+I2V7bEavkj00batMSaU8co+MESBSyTb/+OiHbcJmnEQ+dq6hM+syYEx8e86LjdrFwEv8GK3LPsg=="
+
+nodeSelector:
+  kubernetes.io/hostname: homeserver
+tolerations: []
+affinity: {}

@@ -1,0 +1,41 @@
+---
+
+alert_caller_enabled: true
+
+alert_caller_port: 9310
+
+alert_caller_install_dir: /opt/alert-caller
+alert_caller_config_dir: /etc/alert-caller
+alert_caller_baresip_dir: /etc/alert-caller/baresip
+
+alert_caller_baresip_version: "4.12.0"
+alert_caller_baresip_prefix: /opt/baresip
+alert_caller_baresip_build_dir: /usr/local/src/alert-caller
+alert_caller_baresip_modules: "stdio;g711;opus;aufile;auresamp;menu;ice;srtp;account"
+
+alert_caller_piper_dir: /opt/piper
+alert_caller_piper_version: "1.8.0"
+alert_caller_piper_voice: de_DE-thorsten-high
+
+alert_caller_sip_user: capulus-core
+alert_caller_sip_domain: sip.linphone.org
+alert_caller_sip_password: ""
+alert_caller_sip_media_encryption: ""
+alert_caller_stun_server: stun.linphone.org
+
+alert_caller_call_targets: []
+
+alert_caller_watchdog_timeout: 600
+alert_caller_call_cooldown: 900
+alert_caller_call_ring_timeout: 45
+alert_caller_register_timeout: 15
+
+alert_caller_hc_uuid: ""
+
+alert_caller_vm_url: ""
+
+alert_caller_rtp_port_min: 10000
+alert_caller_rtp_port_max: 10100
+
+alert_caller_webhook_sources:
+  - 100.64.0.0/10
