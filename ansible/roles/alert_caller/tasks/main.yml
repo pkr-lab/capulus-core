@@ -8,12 +8,11 @@
         that:
           - alert_caller_sip_password | length > 0
           - alert_caller_sip_password is not search('[;"\s]')
-          - alert_caller_hc_uuid | length > 0
           - alert_caller_call_targets | length > 0
           - alert_caller_call_targets | select('search', 'EINTRAGEN') | list | length == 0
         fail_msg: >-
-          alert_caller_sip_password und alert_caller_hc_uuid müssen im Vault stehen
-          (Passwort ohne ; und "), alert_caller_call_targets braucht echte SIP-Adressen
+          alert_caller_sip_password muss im Vault stehen (Passwort ohne ; und "),
+          alert_caller_call_targets braucht echte SIP-Adressen
           (docs/1-benachrichtigungen/10020-telefon-alarm.md, Abschnitt Vault-Variablen).
         quiet: true
 
@@ -33,10 +32,15 @@
           - libssl-dev
           - libopus-dev
           - zlib1g-dev
-          - ufw
         state: present
         update_cache: true
         cache_valid_time: 3600
+
+    - name: ufw installieren
+      ansible.builtin.apt:
+        name: ufw
+        state: present
+      when: alert_caller_manage_firewall | bool
 
     - name: Verzeichnisse anlegen
       ansible.builtin.file:
@@ -82,10 +86,10 @@
         cmd: |
           set -e
           cmake -S re -B re/build -DCMAKE_INSTALL_PREFIX={{ alert_caller_baresip_prefix }} -DCMAKE_INSTALL_RPATH={{ alert_caller_baresip_prefix }}/lib -DCMAKE_BUILD_TYPE=Release
-          cmake --build re/build --parallel
+          cmake --build re/build --parallel {{ alert_caller_build_jobs }}
           cmake --install re/build
           cmake -S baresip -B baresip/build -DCMAKE_INSTALL_PREFIX={{ alert_caller_baresip_prefix }} -DCMAKE_PREFIX_PATH={{ alert_caller_baresip_prefix }} -DCMAKE_INSTALL_RPATH={{ alert_caller_baresip_prefix }}/lib -DCMAKE_BUILD_TYPE=Release -DSTATIC=OFF -DMODULES="{{ alert_caller_baresip_modules }}"
-          cmake --build baresip/build --parallel
+          cmake --build baresip/build --parallel {{ alert_caller_build_jobs }}
           cmake --install baresip/build
           touch {{ alert_caller_baresip_prefix }}/.built-{{ build_stamp }}
         chdir: "{{ alert_caller_baresip_build_dir }}"
@@ -104,12 +108,24 @@
         name: "piper-tts=={{ alert_caller_piper_version }}"
         virtualenv: "{{ alert_caller_piper_dir }}/venv"
         virtualenv_command: python3 -m venv
+      when: not (alert_caller_static_announcement | bool)
       notify: Restart alert caller
 
     - name: Piper-Stimme laden
       ansible.builtin.command:
         cmd: "{{ alert_caller_piper_dir }}/venv/bin/python -m piper.download_voices {{ alert_caller_piper_voice }} --download-dir {{ alert_caller_piper_dir }}"
         creates: "{{ alert_caller_piper_dir }}/{{ alert_caller_piper_voice }}.onnx"
+      when: not (alert_caller_static_announcement | bool)
+
+    - name: Feste Ansage deployen
+      ansible.builtin.copy:
+        src: cluster-down.wav
+        dest: "{{ alert_caller_install_dir }}/cluster-down.wav"
+        owner: root
+        group: root
+        mode: "0644"
+      when: alert_caller_static_announcement | bool
+      notify: Restart alert caller
 
     - name: caller.py deployen
       ansible.builtin.copy:
@@ -163,37 +179,40 @@
         mode: "0644"
       notify: Restart alert caller
 
-    - name: SSH in UFW erlauben
-      community.general.ufw:
-        rule: allow
-        port: "22"
-        proto: tcp
-        comment: "SSH"
+    - name: Firewall einrichten
+      when: alert_caller_manage_firewall | bool
+      block:
+        - name: SSH in UFW erlauben
+          community.general.ufw:
+            rule: allow
+            port: "22"
+            proto: tcp
+            comment: "SSH"
 
-    - name: UFW Default für eingehenden Verkehr auf deny
-      community.general.ufw:
-        default: deny
-        direction: incoming
+        - name: UFW Default für eingehenden Verkehr auf deny
+          community.general.ufw:
+            default: deny
+            direction: incoming
 
-    - name: Webhook-Port nur aus den erlaubten Netzen öffnen
-      community.general.ufw:
-        rule: allow
-        port: "{{ alert_caller_port }}"
-        proto: tcp
-        src: "{{ item }}"
-        comment: "alert-caller webhook"
-      loop: "{{ alert_caller_webhook_sources }}"
+        - name: Webhook-Port nur aus den erlaubten Netzen öffnen
+          community.general.ufw:
+            rule: allow
+            port: "{{ alert_caller_port }}"
+            proto: tcp
+            src: "{{ item }}"
+            comment: "alert-caller webhook"
+          loop: "{{ alert_caller_webhook_sources }}"
 
-    - name: RTP-Portbereich öffnen
-      community.general.ufw:
-        rule: allow
-        port: "{{ alert_caller_rtp_port_min }}:{{ alert_caller_rtp_port_max }}"
-        proto: udp
-        comment: "alert-caller RTP"
+        - name: RTP-Portbereich öffnen
+          community.general.ufw:
+            rule: allow
+            port: "{{ alert_caller_rtp_port_min }}:{{ alert_caller_rtp_port_max }}"
+            proto: udp
+            comment: "alert-caller RTP"
 
-    - name: UFW aktivieren
-      community.general.ufw:
-        state: enabled
+        - name: UFW aktivieren
+          community.general.ufw:
+            state: enabled
 
     - name: alert-caller aktivieren und starten
       ansible.builtin.systemd:

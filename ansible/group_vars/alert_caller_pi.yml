@@ -1,0 +1,7 @@
+---
+alert_caller_static_announcement: true
+alert_caller_manage_firewall: false
+alert_caller_build_jobs: 2
+alert_caller_sip_password: "{{ vault_alert_caller_sip_password }}"
+alert_caller_call_targets:
+  - sip:pkr-lab@sip.linphone.org
