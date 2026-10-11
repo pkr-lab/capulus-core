@@ -59,7 +59,7 @@ Beide Zweige müssen im selben, **aktiven** Workflow stehen: Die Datei muss beim
 
 Betreff genau `INSTAGRAM`, Absender die freigegebene Adresse (Standard `peter.kretzer@dlrg.org`, einstellbar im Node **Konfiguration**). Der Betreff darf **nicht** `1002011` enthalten ([Warum, siehe Einrichtung](#1-postfach-vorbereiten)).
 
-**Anhang 1: JSON-Datei.** Der Workflow nimmt die erste Datei mit `application/json` oder Endung `.json`.
+**Anhang 1: JSON-Datei.** Der Workflow nimmt die erste Datei mit `application/json` oder Endung `.json`. Sie darf als Klartext-JSON oder Base64-kodiert ankommen (Power Automate liefert sie Base64-kodiert).
 
 ```json
 {
@@ -78,7 +78,7 @@ Betreff genau `INSTAGRAM`, Absender die freigegebene Adresse (Standard `peter.kr
 | `caption` | nein | fertige Caption. Ersetzt die Zusammensetzung aus `title`, `subtitle` und `text` |
 | `hashtags` | nein | Liste oder Text (`"dlrg, #andernach"`). Doppelte entfallen, `#` wird ergänzt, Sonderzeichen werden entfernt. Die Hashtags stehen nach einer Leerzeile am Ende |
 
-Mindestens einer der Texte (`title`, `text`, `html` oder `caption`) muss vorhanden sein, sonst bricht der Workflow ab. Die deutschen Feldnamen des ISC-Workflows (`Überschrift`, `Untertitel`, `Text`) werden ebenfalls verstanden. Weitere Felder wie `categories`, `startDate` und `mode` werden **ignoriert**: Instagram kennt weder Entwurf noch zeitversetztes Veröffentlichen über diesen Weg, der Beitrag erscheint sofort.
+Mindestens einer der Texte (`title`, `text`, `html` oder `caption`) muss vorhanden sein, sonst bricht der Workflow ab. Die deutschen Feldnamen (`titel`, `untertitel`, `Überschrift`, `Untertitel`, `Text`) werden ebenfalls verstanden, damit dieselbe JSON-Datei wie beim ISC-Workflow funktioniert. Weitere Felder wie `categories`, `startDate` und `mode` werden **ignoriert**: Instagram kennt weder Entwurf noch zeitversetztes Veröffentlichen über diesen Weg, der Beitrag erscheint sofort.
 
 **Weitere Anhänge: die Bilder.** JPEG, PNG oder WebP, höchstens 10, Reihenfolge wie in der Mail. Das erste Bild bestimmt das Format des Karussells. Alles, was kein Bild ist (z. B. PDF), wird nicht übernommen und in der ntfy-Meldung genannt.
 
@@ -275,7 +275,7 @@ Das widerspricht dem sonst geltenden Grundsatz „n8n bleibt aus dem Internet“
 | Nichts passiert bei neuen Mails | Workflow aktiv? Liegt die Mail im Ordner `Instagram` (Regel!), ist sie ungelesen, stimmt Absender und Betreff exakt? Execution-Liste ansehen. Der IMAP-Trigger holt nur `UNSEEN` |
 | Mail landet in INBOX oder im WhatsApp-Kanal | Postfachregel `INSTAGRAM → Instagram` fehlt oder greift nicht. Die Mail im Ordner `Instagram` prüfen |
 | Mail landet im Ordner `ISC-News` | Betreff enthält `1002011`. Betreff ändern |
-| ntfy: Schritt `Eingabe`, „Kein JSON-Anhang“ oder „JSON-Anhang ist nicht lesbar“ | Datei fehlt, ist keine gültige JSON oder die Wurzel ist kein Objekt (Liste) |
+| ntfy: Schritt `Eingabe`, „Kein JSON-Anhang“ oder „JSON-Anhang ist nicht lesbar“ | Datei fehlt, ist weder gültiges JSON noch Base64-kodiertes JSON oder die Wurzel ist kein Objekt (Liste). Die Mail ist danach gelesen und muss neu gesendet werden |
 | ntfy: „Keine Caption“ | `title`, `text`, `html` und `caption` fehlen oder sind leer |
 | ntfy: „Mehr als 30 Hashtags“ / „20 @-Erwähnungen“ | Grenzen der Graph API. Text kürzen |
 | ntfy: Schritt `Bildverarbeitung` | Edit Image oder das Schreiben ist gescheitert, etwa weil das Bild beschädigt ist oder `/data/instagram-bilder` fehlt. `kubectl -n n8n exec deploy/n8n -- ls -ld /data/instagram-bilder`. Ist der Ordner nicht beschreibbar, `N8N_RESTRICT_FILE_ACCESS_TO` prüfen |

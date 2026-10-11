@@ -12,8 +12,9 @@ RUN apt-get update \
 COPY patches/ /patches/
 
 RUN git clone --depth 1 --branch "v${BARESIP_VERSION}" https://github.com/baresip/re.git /src/re \
- && patch -p1 -d /src/re < /patches/libre-sips-route.patch \
+ && for patch_file in /patches/libre-*.patch; do patch -p1 -d /src/re < "$patch_file" || exit 1; done \
  && git clone --depth 1 --branch "v${BARESIP_VERSION}" https://github.com/baresip/baresip.git /src/baresip \
+ && for patch_file in /patches/baresip-*.patch; do patch -p1 -d /src/baresip < "$patch_file" || exit 1; done \
  && cmake -S /src/re -B /src/re/build -DCMAKE_INSTALL_PREFIX=/opt/baresip -DCMAKE_INSTALL_RPATH=/opt/baresip/lib -DCMAKE_BUILD_TYPE=Release \
  && cmake --build /src/re/build --parallel \
  && cmake --install /src/re/build \
