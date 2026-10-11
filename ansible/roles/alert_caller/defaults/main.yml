@@ -18,6 +18,11 @@ alert_caller_baresip_patches:
   - baresip-srtp-no-gcm.patch
 alert_caller_baresip_modules: "stdio;g711;opus;aufile;auresamp;menu;ice;srtp;account"
 
+alert_caller_build_jobs: ""
+
+alert_caller_static_announcement: false
+alert_caller_manage_firewall: true
+
 alert_caller_piper_dir: /opt/piper
 alert_caller_piper_version: "1.8.0"
 alert_caller_piper_voice: de_DE-thorsten-high
