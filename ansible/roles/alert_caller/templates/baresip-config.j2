@@ -1,0 +1,16 @@
+module_path {{ alert_caller_baresip_prefix }}/lib/baresip/modules
+sip_cafile /etc/ssl/certs/ca-certificates.crt
+sip_verify_server yes
+audio_source aufile,/var/lib/alert-caller/msg.wav
+audio_player aufile,/var/lib/alert-caller/rx.wav
+audio_alert aufile,/var/lib/alert-caller/alert.wav
+rtp_ports {{ alert_caller_rtp_port_min }}-{{ alert_caller_rtp_port_max }}
+module stdio.so
+module g711.so
+module opus.so
+module aufile.so
+module auresamp.so
+module menu.so
+module ice.so
+module srtp.so
+module account.so
