@@ -1,0 +1,7 @@
+---
+- name: Restart alert caller
+  ansible.builtin.systemd:
+    name: alert-caller
+    daemon_reload: true
+    state: restarted
+  when: alert_caller_enabled | bool
