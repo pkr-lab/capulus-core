@@ -21,7 +21,7 @@ alert_caller_sip_user: capulus-core
 alert_caller_sip_domain: sip.linphone.org
 alert_caller_sip_password: ""
 alert_caller_sip_media_encryption: ""
-alert_caller_stun_server: stun.linphone.org
+alert_caller_stun_server: stun.cloudflare.com:3478
 
 alert_caller_call_targets: []
 
