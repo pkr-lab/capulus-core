@@ -10,12 +10,9 @@ argocd_ui_host: ""
 argocd_platform_apps:
   - sealed-secrets
   - kubeseal-webgui
-  - authentik
   - lldap
   - monitoring
   - logging
-  - gotify
-  - gotify-bridge
   - ntfy
   - ntfy-bridge
   - cloudflared
@@ -56,14 +53,11 @@ argocd_network_policy_refined_namespaces:
   - uptime-kuma
   - vaultwarden
   - zammad
-  - authentik
   - lldap
   - sealed-secrets
   - kubeseal-webgui
   - monitoring
   - logging
-  - gotify
-  - gotify-bridge
   - ntfy
   - ntfy-bridge
   - cloudflared
@@ -81,8 +75,6 @@ argocd_network_policy_excluded_apps:
   - ollama
 
 argocd_network_policy_extra_ingress:
-  lldap:
-    - authentik
   n8n:
     - alamos-relay
   ntfy:
@@ -96,10 +88,6 @@ argocd_network_policy_extra_ingress:
     - argo-workflows
   uptime-kuma:
     - carplay-api
-  gotify:
-    - gotify-bridge
-  gotify-bridge:
-    - monitoring
   ntfy-bridge:
     - monitoring
   minio:

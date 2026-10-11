@@ -38,11 +38,6 @@ github:
       repo: "paperless-ngx/paperless-ngx"
       currentVersion: "v3.0.5"
       notifyZammad: false
-    - id: mealie
-      name: "Mealie"
-      repo: "mealie-recipes/mealie"
-      currentVersion: "v3.22.0"
-      notifyZammad: false
     - id: n8n
       name: "n8n"
       repo: "n8n-io/n8n"

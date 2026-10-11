@@ -39,7 +39,7 @@ Zwei Varianten, je nachdem, ob wir das Deployment-Template selbst
 besitzen:
 
 - **Eigene (hand-geschriebene) Chart-Templates** (immich, cloudflared,
-  nextcloud, wikijs, example-whoami, gotify-bridge, ntfy-bridge,
+  nextcloud, wikijs, example-whoami, ntfy-bridge,
   mediamtx): `replicas:` wird im Template komplett weggelassen, sobald
   Autoscaling aktiv ist:
   ```yaml
@@ -123,7 +123,7 @@ sie haben schlicht kein PVC (Wiki.js speichert alles in PostgreSQL).
 | [wikijs](../3-apps-workloads/30030-wikijs.md) | App-Tier | 1–3 | CPU 75% / RAM 80% | kein PVC, kein Affinity-Trick nötig |
 | [cloudflared](../e-externe-erreichbarkeit/e0010-cloudflare-deploy.md) | — | 2–4 | CPU 70% | Minimum bleibt 2 (zwei unabhängige Edge-Verbindungen) |
 | example-whoami | — | 1–3 | CPU 70% | Test-App |
-| gotify-bridge, ntfy-bridge | — | 1–3 | CPU 75% | stateless Webhook-Übersetzer |
+| ntfy-bridge | — | 1–3 | CPU 75% | stateless Webhook-Übersetzer |
 | [mediamtx](../3-apps-workloads/30040-mediamtx.md) | — | 1–2 | CPU 75% | hilft nur bei neuen Verbindungen — ein laufender RTMP/RTSP-Stream bleibt am ursprünglichen Pod hängen (kein Rebalancing) |
 | headlamp | — | 1–3 | CPU 75% | hand-geschriebener HPA, Upstream-Chart hat kein natives Autoscaling |
 | kubeseal-webgui | — | 1–2 | CPU 75% | hand-geschriebener HPA |
@@ -142,9 +142,9 @@ einzige durchgehend laufende Node ist (siehe
 **SQLite/embedded Datenbank auf RWO-Storage** — mehrere Pods würden sich
 dieselbe DB-Datei zerschießen:
 
-- mealie, n8n, paperless-ngx, vaultwarden (alle explizit SQLite,
+- n8n, paperless-ngx, vaultwarden (alle explizit SQLite,
   siehe jeweilige Doku)
-- ntfy, gotify (Cache-/Auth-Datei auf der PVC)
+- ntfy (Cache-/Auth-Datei auf der PVC)
 - uptime-kuma (zusätzlich hart auf den Homeserver-Node gepinnt)
 - semaphore (embedded BoltDB)
 - monitoring/Grafana — läuft mit `persistence.type: pvc` (RWO,

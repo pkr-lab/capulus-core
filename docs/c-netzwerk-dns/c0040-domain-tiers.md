@@ -30,8 +30,8 @@ zusammenhängt. Die ArgoCD-Trennung (Projekte, Ordner) ist ein anderes Thema, si
 
 | Tier | Bedeutung | Cluster | Beispiele |
 |---|---|---|---|
-| **tech** | Infrastruktur/Admin-Dienste, auf denen andere Apps aufbauen (Monitoring, Secrets-Tooling, SSO, DNS, CI/CD) | TECH | `grafana.tech.homeserver`, `semaphore.tech.homeserver`, `authentik.tech.homeserver` |
-| **prod** | Apps mit echtem Nutzerkreis (Familie, Vereinsmitglieder) | überwiegend PROD, einige noch TECH (s. u.) | `nextcloud.prod.homeserver`, `mealie.prod.homeserver`, `immich.prod.homeserver` |
+| **tech** | Infrastruktur/Admin-Dienste, auf denen andere Apps aufbauen (Monitoring, Secrets-Tooling, DNS, CI/CD) | TECH | `grafana.tech.homeserver`, `semaphore.tech.homeserver`, `headlamp.tech.homeserver` |
+| **prod** | Apps mit echtem Nutzerkreis (Familie, Vereinsmitglieder) | überwiegend PROD, einige noch TECH (s. u.) | `nextcloud.prod.homeserver`, `paperless.prod.homeserver`, `immich.prod.homeserver` |
 | **dev** | Entwicklung und Tests vor dem Rollout | ENTW | `whoami.dev.homeserver`, `demo.dev.homeserver` |
 
 Hostnamen der Form `<app>.<tier>.homeserver` gelten intern (LAN/Tailnet). Die Zuordnung eines
@@ -58,7 +58,7 @@ nach dem Prinzip „spezifischer gewinnt" auf:
 
 Ein Host unter `*.prod.homeserver` landet also **nur dann im PROD-Cluster**, wenn er einzeln in
 `dnsmasq_prod_vm_hosts` steht; sonst antwortet weiterhin der TECH-Traefik. Aktuell sind das
-`demo`, `tinyteller`, `whoami`, `mealie`, `mealie-native`, `paperless`, `wiki`, `nextcloud`, `xibo`
+`demo`, `whoami`, `paperless`, `wiki`, `nextcloud`, `xibo`
 und `immich` (jeweils `.prod.homeserver`). Nach dem Ändern der Liste: `make dnsmasq`.
 
 Konsequenzen für neue Hosts:
@@ -147,7 +147,6 @@ Aktuell tragen diese Apps zusätzlich einen `*-pke-lab.de`-Host:
 
 | App | Extern | Tier | Cluster |
 |---|---|---|---|
-| Authentik | `authentik-tech.pke-lab.de` | tech | TECH |
 | Grafana | `grafana-tech.pke-lab.de` | tech | TECH |
 | ntfy | `ntfy-tech.pke-lab.de` | tech | TECH |
 | Zammad | `support-tech.pke-lab.de` (abweichendes Label!) | tech | TECH |
@@ -157,12 +156,11 @@ Aktuell tragen diese Apps zusätzlich einen `*-pke-lab.de`-Host:
 | pacman | `pacman-prod.pke-lab.de` (öffentlich, ohne Auth, Schulungsobjekt) | prod | TECH |
 | alamos-relay | `alamos-relay-prod.pke-lab.de` (einziger Zweck ist die externe Erreichbarkeit, siehe [docs/3-apps-workloads/300i0-alamos-relay.md](../3-apps-workloads/300i0-alamos-relay.md)) | prod | TECH |
 | Wiki.js | `wiki-prod.pke-lab.de` | prod | PROD |
-| Mealie | `mealie-prod.pke-lab.de` | prod | PROD |
 | Nextcloud | `nextcloud-prod.pke-lab.de` | prod | PROD |
 | Immich | `immich-prod.pke-lab.de` | prod | PROD |
 | Xibo CMS | `xibo-prod.pke-lab.de` | prod | PROD |
 
-Alle anderen Apps (Semaphore, Pi-hole, MinIO, Gotify, Headlamp, Paperless-ngx, n8n, ...) bleiben
+Alle anderen Apps (Semaphore, Pi-hole, MinIO, Headlamp, Paperless-ngx, n8n, ...) bleiben
 ausschließlich LAN/Tailscale-erreichbar, auch wenn ihr Hostname theoretisch unter die Wildcard-Regel
 fiele, weil ihnen schlicht der zweite Ingress-Host fehlt.
 
