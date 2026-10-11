@@ -340,6 +340,7 @@
     {
       "parameters": {
         "resume": "webhook",
+        "httpMethod": "POST",
         "options": {}
       },
       "id": "69754d4c-3d44-41d1-b67a-06af44cddf69",

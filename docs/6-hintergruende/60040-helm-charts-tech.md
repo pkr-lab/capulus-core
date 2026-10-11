@@ -275,7 +275,8 @@ leitet alle `*.homeserver`-Anfragen an dnsmasq weiter.
   - **Token statt Dateiname.** Die Datei heißt `<32 Hex-Zeichen>-<Nr>.jpg`. Der Code-Node lässt nur dieses Muster zu und baut den Pfad selbst, nie aus der Anfrage. Ein
     erratbarer Name (Zähler, Zeitstempel) wäre öffentlich lesbar.
   - **Wait-Node mit POST.** Der n8n-Wait-Node nimmt den Fortsetzungs-Aufruf standardmäßig per GET an, der ntfy-Button `method=POST` sendet aber POST und bekäme `404`. Der Node
-    steht deshalb auf `httpMethod: POST`.
+    „Warten auf Freigabe“ steht deshalb auf `httpMethod: POST`, in `instagram-post-per-mail.json` und in `isc-news-veroeffentlichen.json` (dort am 11.10.2026 nachgezogen, vorher
+    lief der Button ins Leere).
   - **Zuschnitt rechnet in der EXIF-ausgerichteten Ansicht.** Edit Image dreht ein EXIF-gedrehtes JPEG vor dem Zuschnitt. Rechnet man den Zuschnitt im ungedrehten Raum, wird ein
     Hochkantfoto falsch beschnitten (beobachtet mit n8n `2.42.3`).
   - **Zuschnitt mit Sicherheitsabstand** (`0,805` statt `0,8`, `1,905` statt `1,91`): Nach dem Skalieren rundet das Bild auf ganze Pixel und könnte sonst knapp außerhalb
