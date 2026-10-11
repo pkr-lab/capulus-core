@@ -34,7 +34,7 @@ RUNTIME_DIR = os.environ.get("RUNTIME_DIRECTORY", "/run/alert-caller")
 SIP_USER = os.environ.get("SIP_USER", "")
 SIP_DOMAIN = os.environ.get("SIP_DOMAIN", "sip.linphone.org")
 SIP_PASSWORD = os.environ.get("SIP_PASSWORD", "")
-SIP_STUN_SERVER = os.environ.get("SIP_STUN_SERVER", "stun.linphone.org")
+SIP_STUN_SERVER = os.environ.get("SIP_STUN_SERVER", "stun.cloudflare.com:3478")
 SIP_MEDIA_ENCRYPTION = os.environ.get("SIP_MEDIA_ENCRYPTION", "")
 
 MAX_SPOKEN_ALERTS = 3
@@ -77,7 +77,7 @@ SPOKEN_REASONS = {
 HOST_PORT = re.compile(r"\b([A-Za-z][A-Za-z0-9._-]*|\d{1,3}(?:\.\d{1,3}){3}):\d{2,5}\b")
 SEPARATOR = re.compile(r"(?<=[A-Za-z0-9])[-_](?=[A-Za-z0-9])")
 TIMESTAMP = re.compile(r"(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)(\.\d+)?(Z|[+-]\d\d:\d\d)")
-REGISTERED = re.compile(r"\{\d+/\w+/IPv[46]\} 2\d\d ")
+REGISTERED = re.compile(r"\{\d+/\w+/\w*[46]\} 2\d\d ")
 REGISTER_FAILED = re.compile(r"reg: \S+ \(prio \d+\): (?:[3-5]\d\d |Register:)")
 CALL_ESTABLISHED = re.compile(r"Call established")
 CALL_TERMINATED = re.compile(r"Call with \S+ terminated")
