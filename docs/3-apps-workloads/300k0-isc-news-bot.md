@@ -256,7 +256,7 @@ Der fertige Workflow liegt unter [`argocd/apps/tech/n8n/workflows/isc-news-veroe
 
 Anhänge:
 
-- eine JSON-Datei mit `title`, `subtitle`, `text` (oder `html`), `categories` (Liste aus IDs oder Namen), optional `startDate` (`JJJJ-MM-TTTHH:mm`) und `mode` (`draft` oder `publish`). Die deutschen Namen `titel`, `untertitel` und `kategorien` gelten ebenso. Die Datei darf als Klartext-JSON oder Base64-kodiert ankommen. Weitere Felder (`autor`, `freigegebenVon`, `datum`, `bilder`) werden ignoriert
+- eine JSON-Datei mit `title`, `subtitle`, `text` (oder `html`), `categories` (Liste aus IDs oder Namen), optional `startDate` (`JJJJ-MM-TTTHH:mm`) und `mode` (`draft` oder `publish`; fehlt er, wird per Mail **veröffentlicht**, Formular und Webhook bleiben bei `draft`). Die deutschen Namen `titel`, `untertitel` und `kategorien` gelten ebenso. Die Datei darf als Klartext-JSON oder Base64-kodiert ankommen. Weitere Felder (`autor`, `freigegebenVon`, `datum`, `bilder`) werden ignoriert
 - alle Bilder (jpg, png, webp) als weitere Anhänge. Das erste Bild ist der Teaser.
 
 Die Mail wird im Node **Mail lesen** geprüft und in dieselbe Verarbeitung gegeben wie Formular und Webhook. Ist die JSON-Datei nicht lesbar oder fehlt sie, kommt eine ntfy-Meldung und es wird nichts angelegt. Für das IMAP-Postfach braucht es eine Credential **IMAP** in n8n. Sie liegt in n8n, nicht im Repo.
