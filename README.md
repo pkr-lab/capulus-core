@@ -230,7 +230,7 @@ capulus-core/
 │   ├── d-sicherheit/                 # Härtung, CrowdSec, NetworkPolicies, TLS, Secrets, lldap
 │   ├── e-externe-erreichbarkeit/     # Cloudflare Tunnel
 │   ├── f-cicd-automatisierung/       # CI, Promotion ENTW → TECH → PROD, Renovate, Releases, Mirror
-│   ├── 1-benachrichtigungen/         # ntfy
+│   ├── 1-benachrichtigungen/         # ntfy, Telefon-Alarm
 │   ├── 2-betrieb-hardware/           # NAS, Backup, Power-Manager, Drucker, Alerts, Hardware-Monitoring
 │   ├── 3-apps-workloads/             # Doku je App
 │   ├── 4-planung/                    # Pläne und Analysen (teils umgesetzt, siehe Statuszeile im Doc)
@@ -261,6 +261,7 @@ capulus-core/
 │   ├── worker-0.yml / worker-1.yml   # TECH-Worker (worker-1 ist zusätzlich ENTW-Hypervisor)
 │   ├── prod.yml / entw.yml           # k3s in der PROD- bzw. ENTW-VM (+ ArgoCD auf ENTW)
 │   ├── alarm-kiosks.yml / banana-pi-kiosks.yml / xibo-kiosks.yml   # Kiosk-Geräte
+│   ├── alert-caller.yml              # Telefon-Alarm auf der externen VM (make alert-caller)
 │   ├── vaultwarden-restore.yml       # Vaultwarden aus dem NAS-Backup wiederherstellen
 │   ├── render-bootstrap.yml          # rendert argocd/bootstrap/ aus den Templates (make render-bootstrap)
 │   ├── requirements.yml              # Galaxy-Collections
@@ -278,6 +279,7 @@ capulus-core/
 │       ├── node_exporter/ smartctl_exporter/ vmagent/ journal_upload/             # Metriken und Logs
 │       ├── cups_print_server/                                                     # USB-Drucker per IPP/AirPrint
 │       ├── alamos_kiosk/ banana_pi_kiosk/ xibo_kiosk/                             # Raspberry-Pi-/Banana-Pi-Kiosks
+│       ├── alert_caller/                                                          # Telefon-Alarm: Webhook, Piper-Ansage, baresip-Anruf
 │       └── vaultwarden_restore/                                                   # Vaultwarden aus dem NAS-Backup wiederherstellen
 ├── argocd/
 │   ├── promotion.yaml                # Konfiguration der Promotion-Kette (Gates, Smoke-Checks), von keinem ApplicationSet gelesen
@@ -289,6 +291,7 @@ capulus-core/
 │       │   ├── lldap/                                         # LDAP-Nutzerverzeichnis
 │       │   ├── monitoring/ logging/                           # VictoriaMetrics + Grafana, VictoriaLogs
 │       │   ├── ntfy/ ntfy-bridge/                             # Push-Notifications + Alertmanager-Brücke
+│       │   ├── alert-caller/                                  # Telefon-Alarm: Anruf mit Sprachansage (SIP, Piper)
 │       │   ├── cloudflared/ pihole/                           # Cloudflare Tunnel, DNS-Filter
 │       │   ├── nas-storage/ immich-storage/ minio/            # NFS-StorageClasses, S3-Artifact-Store
 │       │   ├── argo-workflows/ semaphore/ headlamp/           # CI/CD, Ansible-UI, Kubernetes-Dashboard
@@ -552,6 +555,7 @@ Neu hier? Der beste Einstieg ist der **[Architektur-Überblick](docs/a-betriebss
 | Dokument | Inhalt |
 |---|---|
 | [ntfy iOS-Push](docs/1-benachrichtigungen/10010-ntfy.md) | Self-hosted ntfy mit iOS APNs-Relay |
+| [Telefon-Alarm](docs/1-benachrichtigungen/10020-telefon-alarm.md) | Anruf mit deutscher Sprachansage bei schweren Ausfällen (SIP über Linphone, baresip, Piper). Läuft als Pod in TECH, eine externe VM (Ansible-Rolle) ist vorbereitet |
 
 ### Betrieb & Hardware (`2-betrieb-hardware/`)
 

@@ -1,0 +1,155 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "alert-caller.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "alert-caller.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "alert-caller.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/script: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ toYaml .Values.secrets.encryptedData | sha256sum }}
+      labels:
+        {{- include "alert-caller.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "alert-caller.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      {{- if .Values.hostNetwork }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: alert-caller
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python3
+            - /opt/alert-caller/caller.py
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          env:
+            - name: PORT
+              value: {{ .Values.service.port | quote }}
+            - name: CALL_TARGETS
+              value: {{ .Values.config.callTargets | quote }}
+            - name: WATCHDOG_TIMEOUT
+              value: {{ .Values.config.watchdogTimeout | quote }}
+            - name: CALL_COOLDOWN
+              value: {{ .Values.config.callCooldown | quote }}
+            - name: CALL_RING_TIMEOUT
+              value: {{ .Values.config.callRingTimeout | quote }}
+            - name: REGISTER_TIMEOUT
+              value: {{ .Values.config.registerTimeout | quote }}
+            - name: VM_URL
+              value: {{ .Values.config.vmUrl | quote }}
+            - name: PIPER_PYTHON
+              value: /opt/piper/venv/bin/python
+            - name: PIPER_VOICE
+              value: {{ .Values.config.piperVoice | quote }}
+            - name: PIPER_DIR
+              value: /opt/piper
+            - name: BARESIP_BIN
+              value: /opt/baresip/bin/baresip
+            - name: BARESIP_CONFIG
+              value: /etc/alert-caller/baresip
+            - name: SIP_USER
+              value: {{ .Values.config.sip.user | quote }}
+            - name: SIP_DOMAIN
+              value: {{ .Values.config.sip.domain | quote }}
+            - name: SIP_STUN_SERVER
+              value: {{ .Values.config.sip.stunServer | quote }}
+            - name: SIP_MEDIA_ENCRYPTION
+              value: {{ .Values.config.sip.mediaEncryption | quote }}
+            - name: SIP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: SIP_PASSWORD
+            - name: HC_PING_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: HC_PING_URL
+                  optional: true
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          volumeMounts:
+            - name: script
+              mountPath: /opt/alert-caller
+              readOnly: true
+            - name: baresip-config
+              mountPath: /etc/alert-caller/baresip
+              readOnly: true
+            - name: state
+              mountPath: /var/lib/alert-caller
+            - name: run
+              mountPath: /run/alert-caller
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: script
+          configMap:
+            name: {{ include "alert-caller.fullname" . }}-script
+            items:
+              - key: caller.py
+                path: caller.py
+        - name: baresip-config
+          configMap:
+            name: {{ include "alert-caller.fullname" . }}-script
+            items:
+              - key: config
+                path: config
+        - name: state
+          emptyDir:
+            sizeLimit: {{ .Values.stateSizeLimit }}
+        - name: run
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
+        - name: tmp
+          emptyDir:
+            sizeLimit: {{ .Values.tmpSizeLimit }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -82,6 +82,20 @@ victoria-metrics-k8s-stack:
         repeat_interval: 12h
         routes:
           - matchers:
+              - alertname="Watchdog"
+            receiver: watchdog
+            group_wait: 0s
+            group_interval: 1m
+            repeat_interval: 1m
+          - matchers:
+              - alertname="InfoInhibitor"
+            receiver: blackhole
+          - matchers:
+              - page="true"
+            receiver: phone
+            repeat_interval: 15m
+            continue: true
+          - matchers:
               - alertname=~"InfoInhibitor|Watchdog"
             receiver: blackhole
           - matchers:
@@ -93,10 +107,18 @@ victoria-metrics-k8s-stack:
             receiver: ntfy
       receivers:
         - name: blackhole
+        - name: watchdog
+          webhook_configs:
+            - url: 'http://alert-caller.alert-caller.svc.cluster.local:9310/watchdog'
+              send_resolved: false
+        - name: phone
+          webhook_configs:
+            - url: 'http://alert-caller.alert-caller.svc.cluster.local:9310/alert'
+              send_resolved: false
         - name: ntfy
           webhook_configs:
             - url: 'http://ntfy-bridge.ntfy-bridge.svc.cluster.local:8080/alert'
-              send_resolved: true
+              send_resolved: false
         - name: n8n-banana-pi-down
           webhook_configs:
             - url: 'http://n8n.n8n.svc.cluster.local/webhook/banana-pi-down'
@@ -113,6 +135,12 @@ victoria-metrics-k8s-stack:
 
   defaultRules:
     create: true
+    rules:
+      TooHighMemoryUsage:
+        spec:
+          for: 15m
+          labels:
+            severity: warning
     groups:
       etcd:
         create: false
@@ -275,6 +303,7 @@ dashboardApps:
   - { name: pacman, namespace: pacman, folder: "Anwendungen (TECH)", hasIngress: true }
   - { name: uptime-kuma, namespace: uptime-kuma, folder: "Anwendungen (TECH)", hasIngress: true }
   - { name: vaultwarden, namespace: vaultwarden, folder: "Anwendungen (TECH)", hasIngress: true }
+  - { name: alert-caller, namespace: alert-caller, folder: "Plattform (TECH)", hasIngress: false }
   - { name: argo-workflows, namespace: argo-workflows, folder: "Plattform (TECH)", hasIngress: false }
   - { name: cert-manager, namespace: cert-manager, folder: "Plattform (TECH)", hasIngress: false }
   - { name: cloudflared, namespace: cloudflared, folder: "Plattform (TECH)", hasIngress: false }

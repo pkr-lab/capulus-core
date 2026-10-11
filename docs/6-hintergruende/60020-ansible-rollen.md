@@ -125,7 +125,7 @@ Bildschirmhelligkeit (sysfs), manuelles Wake-on-LAN und Poweroff für worker-0/w
 - Der `thermal_watchdog` liest `/sys/class/hwmon` **direkt** (ohne Prometheus/k8s) und fährt den Host herunter, wenn der heißeste
   Sensor `THRESHOLD_C` für `SUSTAIN_SECONDS` erreicht (90 s = Mitte der gewünschten 1–2 Minuten), vorher geht eine ntfy-Meldung raus.
   Er läuft bewusst **unabhängig vom Cluster**, damit der Schutz auch greift, wenn der Cluster wegen der Hitze schon klemmt. Er
-  ergänzt den Alert ab 80 °C ([60060](60060-monitoring-und-alerting.md)).
+  ergänzt den Alert ab 95 °C über 3 Minuten ([60060](60060-monitoring-und-alerting.md#lautstärke-der-ntfy-meldungen)).
 - Die ntfy-Meldung wird per `curl --resolve` direkt auf die statische Server-IP aufgelöst, damit sie auch rausgeht, wenn auf dem
   Host kein `*.homeserver`-DNS eingerichtet ist.
 - `DRY_RUN=1` (z. B. `systemctl edit --runtime thermal-watchdog`) testet den kompletten Pfad Erkennung → Meldung, ohne auszuschalten.
@@ -229,6 +229,46 @@ DERP-Servern). Er dient nur als Notzugang, falls die Tailscale-Control-Plane aus
 - Warum Port 51888 und nicht 443: [60010](60010-ansible-hosts-und-playbooks.md#zugang-und-notfallzugang).
 
 ---
+
+## Alarmierung
+
+### alert_caller
+
+Telefon-Alarm für eine **externe VM** (noch nicht ausgerollt, heute läuft der Caller als Pod, siehe [60040](60040-helm-charts-tech.md#alert-caller)): systemd-Dienst `alert-caller` (Python, nur Standardbibliothek), der Alertmanager-Webhooks in einen Anruf per SIP verwandelt. `caller.py` liegt
+im Chart `argocd/apps/tech/alert-caller/src/` und wird von der Rolle von dort kopiert (eine Quelle für beide Betriebsarten). Playbook `ansible/alert-caller.yml`, Inventar-Gruppe `alert_callers`, Make-Targets `alert-caller` und `alert-caller-check`.
+Bedienung, Einrichtung und Testplan: [10020](../1-benachrichtigungen/10020-telefon-alarm.md). Routing und Regeln: [60060](60060-monitoring-und-alerting.md#telefon-alarm).
+
+- **Playbook und Tailscale:** Die Overrides für Tailscale (`tailscale_hostname`, keine Subnetz-Route) stehen in `host_vars/alert-caller-vm`, **nicht** in `group_vars/alert_callers.yml`. Der `homeserver` kann als Fallback in der Gruppe stehen, und ein
+  `tailscale_advertise_routes: ""` auf Gruppenebene würde ihm beim nächsten Lauf die Subnetz-Route nehmen.
+- **`baresip` wird aus den Quellen gebaut** (`re` und `baresip` im selben Tag `alert_caller_baresip_version`, Installation nach `/opt/baresip`). Das Paket aus Ubuntu (1.1.0 in 26.04, getestet, und 1.0.0 in 22.04/24.04 mit demselben `libre`-Stand von 2021, nicht getestet) kann sich bei
+  `sip.linphone.org` nicht anmelden: Der Flexisip-Server (2.6.1) schickt zwei `WWW-Authenticate`-Header, SHA-256 vor MD5. Die alte `libre` beherrscht nur MD5, verweigert die erste Challenge mit `ENOSYS`, und die Registrierung endet mit
+  „Function not implemented“. `re` ab Version 4 kann SHA-256 (geprüft am 2026-10-11 mit v4.12.0: der Server antwortet auf einen erfundenen Benutzer mit `403 Forbidden`). Die Stempeldatei `/opt/baresip/.built-<hash aus Version und Modulliste>` macht den Build
+  idempotent, Löschen erzwingt einen Neubau. `CMAKE_INSTALL_RPATH` ist nötig, sonst findet die Binärdatei `libbaresip.so` nur mit `LD_LIBRARY_PATH`. `-DMODULES` baut nur die benötigten Module.
+- **Modulliste** (`templates/baresip-config.j2`) weicht von der Aufgabe ab, jeweils aus einem Testlauf:
+  - `stdio` bleibt drin, aber nur mit einer **Pipe** als stdin. Mit `/dev/null` (Standard unter systemd) scheitert es mit `epoll_ctl: Operation not permitted`. Der Caller startet baresip deshalb mit `stdin=PIPE` und schreibt `/dial …` hinein.
+    `-e "/dial …"` taugt nicht: Es wählt sofort beim Start, und vor der Registrierung kann das Medien-Socket keine Adressfamilie bestimmen (`stream: failed to create socket for media 'audio'`, `af=AF_UNSPEC`). Mit IP-Konten ohne Registrierung geht es, mit
+    `sip.linphone.org` nicht. Erkannt wird die Registrierung an der Logzeile `{0/TLS/IPv4} 200 OK`, ihr Scheitern an `reg: … (prio 0): 403 …`.
+  - `account` ist neu: Seit baresip 1.0 lädt dieses Modul die Datei `accounts`. Ohne es gibt es kein Konto (`could not find UA for sip:…`).
+  - `account` steht **zuletzt**: Es legt die Konten beim Laden sofort an, `ice` und `srtp` müssen dann schon geladen sein, sonst `medianat not found: 'ice'`.
+  - `auresamp` ist neu: In baresip 4 ist der Resampler ein eigenes Modul. Ohne es bleibt der Anruf **stumm**, weil die Quelle 16 kHz liefert und der Codec PCMU 8 kHz erwartet (RTP-Zähler dauerhaft `audio=0/0`, aufgezeichnete Datei still).
+  - `audio_alert` zeigt ebenfalls auf `aufile`, damit baresip auf der Maschine ohne Soundkarte keinen ALSA-Fehler beim Rufton wirft.
+- **TLS:** `sip_verify_server yes` und `sip_cafile` (System-CA) prüfen das Zertifikat des Servers. Der `transport=tls` der Konto-Adresse gilt auch für den INVITE: baresip hängt ihn an die Ziel-URI (geprüft mit `transport=tcp`, Log
+  `connecting to 'sip:…;transport=tcp'`), die Ziele in `CALL_TARGETS` brauchen ihn nicht.
+- **Auflegen:** baresip 1.1 legt am Ende der Audiodatei auf, baresip 4.12 **nicht**. Der Caller legt deshalb selbst auf (Länge der Ansage plus 3 s nach der Annahme). `-t` ist nur die Obergrenze (`CALL_RING_TIMEOUT` + Länge + 5 s). Ein festes `-t 60` würde
+  lange Ansagen abschneiden: Drei Alarme in dreifacher Wiederholung sind rund 50 s. Annahme und Ende erkennt der Caller an den Logzeilen `Call established` und `Call with … terminated`, einen fehlgeschlagenen Verbindungsaufbau an `ua_connect failed`. Bei einem baresip-Update prüfen, ob der Wortlaut gleich geblieben ist. Ein Ziel darf höchstens
+  `CALL_RING_TIMEOUT` klingeln, dann kommt das nächste.
+- **Geheimnisse:** Die Umgebungsdatei liegt `root:root` mit `0600`, `accounts` (mit Passwort) `root:alert-caller-cfg` mit `0640`. Der Dienst läuft als `DynamicUser` und liest `accounts` über `SupplementaryGroups=alert-caller-cfg`, `caller.py` kopiert beide Dateien beim
+  Start nach `/run/alert-caller/baresip` (`RuntimeDirectory`), weil baresip in sein Konfigurationsverzeichnis schreibt. Die Gruppe darf **nicht** `alert-caller` heißen: `DynamicUser=` legt selbst eine Gruppe mit dem Namen der Unit an, eine gleichnamige statische Gruppe
+  endet mit `status=217/USER` (`User or group with specified name already exists`). `LoadCredential=` wurde verworfen, weil es im Testcontainer nicht funktionierte (`/run/credentials/…` blieb leer), auf einem echten Host wäre es vermutlich gegangen. Das Passwort darf kein `;`, `"` oder Leerzeichen enthalten, die Kontozeile wird nicht maskiert (die Rolle prüft das).
+- **Webhook:** Die Antwort kommt sofort, Synthese und Anruf laufen in eigenen Threads, weil Alertmanager Webhooks nach 10 s abbricht und erneut sendet. Ein Lock macht die Anrufe sequenziell. Der Port hat keine Authentifizierung, der Schutz ist wie beim `power_agent`
+  die Netzgrenze: UFW lässt 9310 nur aus `alert_caller_webhook_sources` (Tailnet) durch.
+- **Pause und Alarm-Gruppen:** Die Pause (`CALL_COOLDOWN`) gilt je `groupKey` und zieht 30 s Toleranz ab. Alertmanager wiederholt in Takten von `group_interval`, der Zeitstempel kann um Millisekunden vor dem Ablauf liegen, und der Anruf käme sonst erst
+  eine Runde (5 min) später. Ein Alarm mit unbekanntem Fingerprint in der Gruppe hebt die Pause auf, sonst bliebe ein zweiter Ausfall bis zu 15 min stumm.
+- **Watchdog:** Der Startzeitpunkt zählt als letzter Ping, nach einem Neustart des Callers hat der Cluster also 10 min Zeit. Pro Ausfall gibt es genau einen Anruf, ein neuer Watchdog setzt zurück. Der Ping an healthchecks.io wird nur weitergegeben, wenn ein Watchdog
+  ankommt: Fällt der Cluster **oder** der Caller aus, bleibt der Ping aus.
+- **Label-Fallback:** `ansage`, `grund`, `summary` und `kontext*` werden auch aus den Labels gelesen. `amtool alert add … summary="…"` legt sie als Labels an, nur `--annotation=` erzeugt Annotationen. So funktioniert der manuelle Test wie dokumentiert.
+- **Ohne Sprachsynthese:** Schlägt Piper fehl, spielt der Caller einen Warnton (`sox synth`). Ein Anruf ohne Text ist besser als keiner.
+- **Firewall:** Die Rolle setzt UFW (SSH zuerst, dann `default deny incoming`, damit sich niemand aussperrt). Der RTP-Bereich in UFW, in `baresip-config.j2` und in der Oracle-Security-List muss derselbe sein.
 
 ## Sonstiges
 

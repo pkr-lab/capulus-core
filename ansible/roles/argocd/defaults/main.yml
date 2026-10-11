@@ -8,6 +8,7 @@ argocd_ingress_enabled: false
 argocd_ui_host: ""
 
 argocd_platform_apps:
+  - alert-caller
   - sealed-secrets
   - kubeseal-webgui
   - lldap
@@ -43,6 +44,7 @@ argocd_workloads_apps:
 argocd_apply_network_policies: true
 
 argocd_network_policy_refined_namespaces:
+  - alert-caller
   - n8n
   - alamos-apager
   - alamos-relay
