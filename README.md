@@ -591,6 +591,7 @@ Die Spalte *Cluster* zeigt, wo die App läuft (Ordner unter `argocd/apps/`).
 | [ALAMOS-Einsatzalarm → Zammad](docs/3-apps-workloads/300h0-alamos-einsatz-zammad.md) | TECH | n8n-Workflow: Einsatzalarm wird zum Zammad-Ticket |
 | [ALAMOS-Webhook-Relay](docs/3-apps-workloads/300i0-alamos-relay.md) | TECH | Öffentlicher Mini-Proxy vor n8n, damit ALAMOS den Einsatzalarm-Webhook erreicht, ohne n8n selbst öffentlich zu machen |
 | [ISC-News-Bot](docs/3-apps-workloads/300k0-isc-news-bot.md) | TECH | News im DLRG ISC per API anlegen (Playwright-RPA), aufgerufen aus n8n, cluster-intern |
+| [Instagram-Post per Mail](docs/3-apps-workloads/300l0-instagram-post-per-mail.md) | TECH | n8n-Workflow: Mail mit JSON und Bildern wird zum Instagram-Beitrag (Graph API), Bilder kurz über einen einzelnen öffentlichen Pfad für Meta |
 | [Zentrales Logging](docs/3-apps-workloads/300j0-logging.md) | TECH | VictoriaLogs: journald aller Hosts und Pod-Logs an einem Ort |
 
 ### Planung (`4-planung/`)

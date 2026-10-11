@@ -54,7 +54,7 @@ Nicht jede App mit LAN-Ingress ist automatisch auch extern erreichbar.
 | example-whoami | prod | PROD | example-whoami | example-whoami:80 | whoami.prod.homeserver | — |
 | Vaultwarden | tech (Ausnahme) | TECH | vaultwarden | vaultwarden:80 | vault.tech.homeserver | vault-tech.pke-lab.de |
 | Zammad | tech (Ausnahme) | TECH | zammad | zammad-nginx:8080 | zammad.tech.homeserver | support-tech.pke-lab.de |
-| n8n | prod | TECH | n8n | n8n:80 | n8n.prod.homeserver | – (aus Cloudflare Tunnel entfernt, Security) |
+| n8n | prod | TECH | n8n | n8n:80 | n8n.prod.homeserver | nur `instagram-bilder-prod.pke-lab.de/webhook/instagram-bild` (Bild-Abruf durch Meta, [300l0](../3-apps-workloads/300l0-instagram-post-per-mail.md)); sonst aus Cloudflare Tunnel entfernt, Security |
 | MediaMTX (Playback) | prod | TECH | mediamtx | mediamtx:8888 (HLS) | stream.prod.homeserver | stream-prod.pke-lab.de |
 | Uptime Kuma | prod | TECH | uptime-kuma | uptime-kuma:80 | uptime-kuma.prod.homeserver, uptime-kuma-native.prod.homeserver | status-prod.pke-lab.de |
 | Alamos-Apager | prod | TECH | alamos-apager | alamos-apager:8080 | alamos-apager.prod.homeserver | — |
