@@ -1,0 +1,36 @@
+diff --git a/src/sip/request.c b/src/sip/request.c
+index 7ff0fb4..c398d74 100644
+--- a/src/sip/request.c
++++ b/src/sip/request.c
+@@ -646,12 +646,14 @@ static int sip_request_alloc(struct sip_request **reqp,
+ {
+ 	struct sip_request *req;
+ 	struct pl pl;
++	bool secure;
+ 	int err;
+ 
+ 	if (!sip || !met || !uri || !route || !mb)
+ 		return EINVAL;
+ 
+-	if (pl_strcasecmp(&route->scheme, "sip"))
++	secure = !pl_strcasecmp(&route->scheme, "sips");
++	if (!secure && pl_strcasecmp(&route->scheme, "sip"))
+ 		return ENOSYS;
+ 
+ 	req = mem_zalloc(sizeof(*req), destructor);
+@@ -686,6 +688,15 @@ static int sip_request_alloc(struct sip_request **reqp,
+ 	if (tp != SIP_TRANSP_NONE) {
+ 		req->tp = tp;
+ 	}
++	else if (secure) {
++		if (!sip_transp_supported(sip, SIP_TRANSP_TLS, AF_UNSPEC)) {
++			err = EPROTONOSUPPORT;
++			goto out;
++		}
++
++		req->tp = SIP_TRANSP_TLS;
++		req->tp_selected = true;
++	}
+ 	else if (!msg_param_decode(&route->params, "transport", &pl)) {
+ 
+ 		req->tp = sip_transp_decode(&pl);
