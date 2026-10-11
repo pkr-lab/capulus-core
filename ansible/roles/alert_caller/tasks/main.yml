@@ -29,6 +29,7 @@
           - cmake
           - pkg-config
           - git
+          - patch
           - libssl-dev
           - libopus-dev
           - zlib1g-dev
@@ -57,9 +58,16 @@
         dest: "{{ alert_caller_baresip_build_dir }}/{{ item }}"
         version: "v{{ alert_caller_baresip_version }}"
         depth: 1
+        force: true
       loop:
         - re
         - baresip
+
+    - name: libre für sips-Routen patchen
+      ansible.posix.patch:
+        src: "{{ alert_caller_libre_patch }}"
+        basedir: "{{ alert_caller_baresip_build_dir }}/re"
+        strip: 1
 
     - name: re und baresip bauen und installieren
       ansible.builtin.shell:
@@ -76,7 +84,7 @@
         executable: /bin/bash
         creates: "{{ alert_caller_baresip_prefix }}/.built-{{ build_stamp }}"
       vars:
-        build_stamp: "{{ (alert_caller_baresip_version ~ alert_caller_baresip_modules) | hash('sha1') | truncate(8, True, '') }}"
+        build_stamp: "{{ (alert_caller_baresip_version ~ alert_caller_baresip_modules ~ (lookup('ansible.builtin.file', alert_caller_libre_patch) | hash('sha1'))) | hash('sha1') | truncate(8, True, '') }}"
       notify: Restart alert caller
 
     - name: Piper in eigener venv installieren
