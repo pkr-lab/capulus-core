@@ -10,13 +10,16 @@ Die Push-Seite auf den Hosts (Rolle `vmagent`) steht in [60020](60020-ansible-ro
 
 ## Alertmanager-Routing
 
-`InfoInhibitor`/`Watchdog` landen im Blackhole. Alle übrigen Alerts werden nur zugestellt, wenn eine der folgenden Routen passt:
+`InfoInhibitor` landet im Blackhole, `Watchdog` geht an den Telefon-Caller. Alle übrigen Alerts werden nur zugestellt, wenn eine der folgenden Routen passt:
 
 | Bedingung | Empfänger |
 |---|---|
+| **nur** `alertname=Watchdog` | Webhook `/watchdog` am Telefon-Caller ([10020](../1-benachrichtigungen/10020-telefon-alarm.md)), jede Minute |
+| `page=true` | Webhook `/alert` am Telefon-Caller (Anruf), **zusätzlich** zu den folgenden Routen (`continue: true`) |
 | `severity=critical` | ntfy `/Home-Lab` (iOS-Push, der Alertmanager-Webhook wird direkt von ntfy empfangen) |
 | **nur** `alertname=BananaPiAlarmmonitorDown` | n8n-Webhook des Workflows „Banana-Pi-Down → Zammad-Ticket“ ([30020](../3-apps-workloads/30020-vereinsheim-alarmmonitor.md)) |
 
+- **Keine Entwarnungen:** Der ntfy-Receiver hat `send_resolved: false`. Eine Meldung „✅ erledigt“ gibt es nicht mehr, nur noch die Meldung beim Auftreten (siehe [Lautstärke der ntfy-Meldungen](#lautstärke-der-ntfy-meldungen)).
 - **Warnungen werden nicht zugestellt:** Gotify (früher Empfänger für alle Alerts) ist im Oktober 2026 samt Bridge entfernt worden. Alerts mit `severity=warning`/`info`
   sind seitdem nur in Alertmanager und Grafana sichtbar, nur `critical` löst einen Push aus.
 - Der n8n-Pfad ist **rein additiv**: Die anderen Alamos-Raspberry-Pis bekommen bewusst weiterhin **kein** Ticket pro Ausfall
@@ -27,14 +30,61 @@ Die Push-Seite auf den Hosts (Rolle `vmagent`) steht in [60020](60020-ansible-ro
 - **Reihenfolge:** Die n8n-Route (nur dieser Alertname) muss **vor** der `severity=critical`-Route stehen. Die hat kein `continue: true` und würde die Auswertung sonst
   dort beenden.
 
+## Lautstärke der ntfy-Meldungen
+
+Anlass am 2026-10-11: Auf dem Handy kamen rund 65 bis 175 ntfy-Nachrichten am Tag an (Zähler `messages_published` des ntfy-Servers). Im Cache des Topics `Home-Lab` standen 64 Nachrichten aus knapp 10 Stunden: 32 `DeploymentUnavailable`, 18 `TooHighMemoryUsage`,
+8 `HostHighTemperature`, 4 `worker-*Down`, 2 `ArgoAppDegraded`, davon rund 40 % „✅ erledigt“. Gewünscht ist: nur melden, was wirklich kritisch ist, nicht kurze Spitzen. Folgende Stellschrauben wurden gedreht:
+
+| Änderung | Begründung |
+|---|---|
+| `HostHighTemperature`: `max by (host) (node_hwmon_temp_celsius) >= 95` für 3 Minuten (vorher: je Sensor, ab 80 °C für 1 Minute) | Der Homeserver hat rund 17 Sensoren, jeder konnte einzeln auslösen, und der Alertmanager-Webhook wird von der ntfy-Bridge **pro Alarm** in eine Nachricht aufgelöst. Gemessen über 7 Tage (VictoriaMetrics, 30-s-Auflösung, höchster Sensor): ab 80 °C gab es 704 Phasen von mindestens 1 Minute (die CPU springt kurz auf Spitzen und fällt wieder), ab 90 °C und 3 Minuten 7, ab 93 °C 1, **ab 95 °C und 3 Minuten keine**. Der `thermal_watchdog` schaltet bei 100 °C nach 90 Sekunden ab und schickt davor eine eigene ntfy-Meldung (Topic `Home-Lab-System`). 95 °C über 3 Minuten ist also die Vorwarnung, die nur bei einer echten Dauerlage kommt. Der NAS erreicht höchstens 63 °C. |
+| `DeploymentUnavailable` und `StatefulSetUnavailable`: `for` von 1 auf 5 Minuten | Jeder Rollout einer App mit `strategy: Recreate` (isc-news-bot, alert-caller, …) hat kurz keinen verfügbaren Pod und löste nach 1 Minute aus, dazu kam das Auf und Ab beim Abbau von Authentik. Fünf Minuten ohne Pod sind ein echter Ausfall. Die Erkennung verzögert sich um 4 Minuten. |
+| Standardregel `TooHighMemoryUsage` (VictoriaMetrics): `severity: warning`, `for: 15m` (vorher `critical`, 5 min) über `defaultRules.rules.TooHighMemoryUsage.spec` in `values.yaml` | Die Regel hat nicht fälschlich ausgelöst, sondern lag an ihrer Schwelle: Der `vmsingle`-Pod nutzte am Testtag 906 MiB von 1024 MiB (83 %, Spitze der letzten 24 h: 91 %) und die Regel springt bei 80 %. Als `warning` erscheint sie weiter in Alertmanager und Grafana, geht aber nicht mehr als Push raus. **Das Grundproblem bleibt:** `vmsingle` sitzt knapp unter seinem Speicherlimit. VictoriaMetrics richtet seine Caches nach dem Limit (`memory.allowedPercent: 60`), mehr Limit kann deshalb zu mehr Verbrauch führen. Entweder `resources.limits.memory` erhöhen und beobachten, oder `allowedPercent` senken. Der Override kommt über den Sync-Job des Charts (`rules.rules` in dessen ConfigMap), erst der nächste Sync wendet ihn auf die VMRule `…-rule-vm-health` an. |
+| ntfy-Receiver: `send_resolved: false` | Die „✅ erledigt“-Nachrichten machten rund 40 % der Menge aus. Wer wissen will, ob ein Alarm vorbei ist, sieht es in Grafana oder im Alertmanager. Wieder einschalten: `send_resolved: true` beim Receiver `ntfy`. |
+
+Nicht angefasst, aber als Hebel vorhanden: Die ntfy-Bridge schickt bei jeder Änderung einer Alarm-Gruppe **alle** Alarme der Gruppe erneut (eine Nachricht je Alarm im Webhook-Body), auch die bereits gemeldeten. Ein Zwischenspeicher nach Fingerprint in `ntfy-bridge` würde das abstellen. Der Telefon-Weg (`phone`)
+ist davon nicht betroffen: Er meldet je Gruppe erst nach der Pause (`CALL_COOLDOWN`) erneut.
+
+## Telefon-Alarm
+
+Bedienung und Einrichtung: [10020](../1-benachrichtigungen/10020-telefon-alarm.md). Der Caller als Chart: [60040](60040-helm-charts-tech.md#alert-caller), als Ansible-Rolle für eine externe VM: [60020](60020-ansible-rollen.md#alert_caller).
+
+**Routing** (`argocd/apps/tech/monitoring/values.yaml`)
+
+- Die drei neuen Routen stehen **vor** den bestehenden, die bestehenden sind unverändert. Die alte Route `InfoInhibitor|Watchdog` → `blackhole` bleibt stehen und ist für `Watchdog` jetzt unerreichbar, sie fängt weiterhin
+  `InfoInhibitor` ab.
+- `Watchdog` hat eigene Takte (`group_wait: 0s`, `group_interval: 1m`, `repeat_interval: 1m`), damit der Caller jede Minute einen Ping bekommt. Der Wachhund-Timeout am Caller ist 10 min, ein einzelner verspäteter Ping stört also nicht.
+- `page=true` hat `continue: true`: Der Anruf kommt **zusätzlich** zu ntfy (`severity=critical`) und, beim Banana-Pi-Alarm, zu n8n. `send_resolved: false`, weil das Telefon bei Entwarnung nicht klingeln soll.
+- Geprüft mit `amtool config routes test` gegen Alertmanager 0.32.1: `Watchdog` → nur `watchdog`; `page=true` + `critical` → `phone`, `ntfy`; Banana-Pi mit `page=true` → `phone`, `n8n-banana-pi-down`, `ntfy`; alles ohne `page` unverändert.
+- Beide Receiver zeigen auf den Service des Callers im Cluster (`http://alert-caller.alert-caller.svc.cluster.local:9310/watchdog` und `/alert`). Läuft der Pod nicht, ruft Alertmanager jede Minute ins Leere (Warnung `AlertmanagerFailedToSendAlerts`, die nirgends zugestellt wird).
+  Der Caller läuft vorerst **im selben Cluster**, ein Totalausfall führt deshalb zu keinem Anruf (Entscheidung, siehe 10020). Für eine externe VM zeigen die URLs auf deren Tailscale-IP. Der Weg Pod → Tailnet funktioniert dafür (Flannel maskiert auf die Tailnet-IP des Homeservers,
+  mit `tcpdump` auf `tailscale0` nachgewiesen), die Pods kommen bei der Gegenstelle als `homeserver` an. Offen ist nur die ACL zur VM.
+  Das relativiert die Aussage zum Alarmmonitor unter [Scrapes und Labels](#scrapes-und-labels): Der Pi wird per Push angebunden, weil seine Ports vom Homeserver aus nicht antworten, nicht weil der Pod-Pfad fehlt.
+
+**Regeln in `vmrule-paging.yaml`** (alle vier am 2026-10-11 gegen den Live-VictoriaMetrics abgefragt, keine feuerte)
+
+- Alle Ausdrücke nutzen das Label `host`, nicht `job` oder `instance`: Der DaemonSet-Scrape hat `job="node-exporter"`, die statischen Scrapes tragen ihren `jobName` (`prod-vm-node-exporter`, `ugreen-nas-node-exporter`), obwohl in der
+  `VMStaticScrape` ein anderes `job` steht. `instance` ist beim DaemonSet IP:Port, bei den statischen Scrapes der Hostname. Nur `host` ist überall gleich.
+- **`NodeDownPaging`** erfasst nur `homeserver`, `prod-vm` und `ugreen-nas`. Die Worker schlafen im Normalbetrieb (cordoned, `up == 0`), `entw-vm` läuft auf worker-1, `infotafel` ist ein Kiosk. Ohne den Filter hätte die Regel am Testtag
+  vier Alarme geliefert. `homeserver` ist trotzdem drin: Es deckt den Fall, dass nur der Exporter ausfällt. Fällt der ganze Homeserver aus, sterben vmalert und Alertmanager mit, das erkennt der Watchdog.
+- **`PodCrashLoopPaging`:** `group_left(reason)` ersetzt das Label `reason` der linken Seite (`CrashLoopBackOff`) durch die letzte Abbruchursache (`OOMKilled`, `Error`, …), weil `group_left` gleichnamige Labels der linken Seite überschreibt.
+  Beim Test mit dem real abstürzenden `vlagent`-Pod wurde aus `CrashLoopBackOff` korrekt `Error`. Der Zweig `or on(namespace, pod, container)` liefert den Alarm trotzdem, falls es keine letzte Abbruchursache gibt, dann bleibt `reason` bei
+  `CrashLoopBackOff`. Erfasst ist nur `vaultwarden`: Authentik, das zweite Ziel aus der Aufgabe, gibt es im Repo nicht mehr. Weitere Namespaces kommen in den Regex `namespace=~"…"` (beide Stellen).
+- **`DiskFailurePaging`:** `smartctl_device_smart_status` ist 1 bei „bestanden“. `smartctl_device_critical_warning` gibt es nur bei NVMe. Beide Metriken tragen `host` und `device`. Ein schlafender Worker liefert nach dem Staleness-Zeitraum keine Reihe mehr und
+  löst nichts aus.
+- **`KubeApiDownPaging`:** `absent(up{job="apiserver"} == 1)` deckt „Ziel auf 0“ und „Ziel verschwunden“ ab. Die Default-Regel `KubeAPIDown` bleibt unverändert und geht weiter nur an ntfy.
+- **Helm-Escaping:** vmalert-Platzhalter stehen in `templates/` als `{{`{{ $labels.host }}`}}`. Die Rohstring-Schreibweise braucht keine Maskierung der `"` in PromQL (`host="…"`), anders als die `{{ "…" }}`-Form der älteren Regeln.
+- Die Annotationen `ansage`, `grund`, `kontext` und `kontext_text` liest nur der Caller. Der ntfy-Pfad kennt sie nicht und zeigt weiter `summary`.
+
 ## Regeln (VMRule)
 
 | Regel | Begründung |
 |---|---|
+| `vmrule-paging` (Telefon-Alarm) | Die einzigen Regeln mit dem Label `page: "true"`. Begründungen je Regel: Abschnitt [Telefon-Alarm](#telefon-alarm). |
 | `vmrule-argocd` (GitOps-Gesundheit) | Anlass: Die Sync-Operation von `monitoring` hing vom 2026-09-15 bis 2026-09-19 unbemerkt (sie wartete auf einen nie gesunden DaemonSet), aufgefallen ist es nur von Hand. Grundlage sind die Metriken des `application-controller` (`argocd_app_info` mit `health_status`, `sync_status`, `operation`, Scrape in `vmscrape-argocd.yaml`). Das Label `operation` ist leer, solange keine Sync-Operation läuft. Der Controller-Pod öffnet den Port `metrics` (8082) immer, und die NetworkPolicy `argocd-application-controller` erlaubt Zugriff aus jedem Namespace, dafür ist keine Änderung an ArgoCD nötig. Erfasst wird der **Hub (TECH + PROD)**, der separate ENTW-ArgoCD (eigener Cluster) nicht. Alle Alerts laufen über die vorhandene Route (Gotify + ntfy). |
 | `vmrule-cronjobs` (Backups) | Alert, wenn der letzte **erfolgreiche** Lauf zu lange her ist. Bewusst **nicht** `kube_job_status_failed > 0`: Fehlgeschlagene Jobs bleiben in der Historie stehen und würden nach der Reparatur weiter feuern. Anlass: Die Authentik-Backups schlugen in den Nächten auf den 17. und 18.09.2026 fehl (`BackoffLimitExceeded`) und wurden nur zufällig bemerkt. Datensicherungen laufen täglich (nachts), nach **30 h** ohne Erfolg fehlt mindestens eine Sicherung. Gilt für den Hub-Cluster (TECH), `kube-state-metrics`-Daten anderer Cluster sind nicht enthalten. |
 | `vmrule-banana-pi` (Ausfall des Alarmmonitors) | Host-Ebene, unabhängig vom App-Level-Heartbeat in alamos-apager (der nur ntfy auslöst). **`absent_over_time` statt `up == 0`:** Der Pi wird nicht vom Cluster gescrapt (Pods haben keinen Pfad zu Tailscale-Peers), sondern pusht seine Metriken per `remote_write`. Fällt er aus, wird `up` nicht auf 0 gesetzt (das setzte eine laufende Scrape-Verbindung voraus), die Zeitreihe hört einfach auf und gilt nach der Staleness-Frist als fehlend. `up == 0` würde deshalb **nie** feuern. `absent_over_time` erkennt „seit 10 Minuten kein einziger Sample mehr“ (Pi **oder** Push-Pfad down). `for: 10m` ist bewusst träge (deutlich über einem kurzen Reboot), damit nicht jeder Neustart ein Ticket erzeugt. `severity=critical` löst die bestehenden Routen (Gotify, ntfy) **und** die n8n-Route aus. |
-| `vmrule-temperature` | Warnung, wenn irgendein Sensor mindestens 1 Minute lang 80 °C erreicht (`for: 1m` entprellt kurze Sensor-Spitzen). `severity: critical` geht an ntfy. Das eigentliche Herunterfahren bei 100 °C läuft **nicht** über diesen Alert, sondern über den lokalen `thermal_watchdog` auf dem Host, der auch dann noch funktioniert, wenn der Cluster wegen der Hitze schon klemmt ([60020](60020-ansible-rollen.md#thermal_watchdog-und-resource_watchdog)). |
+| `vmrule-temperature` | Vorwarnung kurz vor dem Abschalten: Der heißeste Sensor eines Hosts (`max by (host)`, **eine** Meldung je Host statt einer je Sensor) liegt mindestens 3 Minuten lang bei 95 °C. Vorher stand die Schwelle bei 80 °C für 1 Minute, das löste bei den Lastspitzen des Homeservers dauernd aus (Begründung: [Lautstärke der ntfy-Meldungen](#lautstärke-der-ntfy-meldungen)). `severity: critical` geht an ntfy. Das eigentliche Herunterfahren bei 100 °C läuft **nicht** über diesen Alert, sondern über den lokalen `thermal_watchdog` auf dem Host, der auch dann noch funktioniert, wenn der Cluster wegen der Hitze schon klemmt ([60020](60020-ansible-rollen.md#thermal_watchdog-und-resource_watchdog)). |
 | `vmrule-resources` | Reine Warnstufen (`severity: warning`, werden seit dem Entfernen von Gotify nirgends zugestellt). Die Shutdown-Schwellen für CPU/RAM (90 %) laufen **nicht** über Alertmanager, sondern über den lokalen `resource_watchdog`. |
 | k3s-Komponenten | Regeln für controller-manager, scheduler und etcd sind **deaktiviert**: Sie laufen im einen k3s-Serverprozess und sind nicht als eigene Pods erreichbar (an `127.0.0.1` gebunden, kube-proxy ist eingebaut, k3s nutzt eine eingebettete SQLite-Datenbank, es gibt kein etcd). Gescrapt wird nur, was k3s tatsächlich exponiert. |
 
