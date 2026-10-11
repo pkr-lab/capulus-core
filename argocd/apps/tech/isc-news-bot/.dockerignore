@@ -1,0 +1,9 @@
+node_modules
+dist
+coverage
+templates
+Chart.yaml
+values.yaml
+README.md
+.dockerignore
+Dockerfile

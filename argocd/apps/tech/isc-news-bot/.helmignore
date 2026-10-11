@@ -1,0 +1,15 @@
+.git
+.gitignore
+.dockerignore
+.helmignore
+Dockerfile
+README.md
+package.json
+package-lock.json
+tsconfig.json
+src/
+test/
+scripts/
+node_modules/
+dist/
+coverage/

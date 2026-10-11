@@ -15,17 +15,11 @@ spec:
     - server: https://kubernetes.default.svc
       namespace: kubeseal-webgui
     - server: https://kubernetes.default.svc
-      namespace: authentik
-    - server: https://kubernetes.default.svc
       namespace: lldap
     - server: https://kubernetes.default.svc
       namespace: monitoring
     - server: https://kubernetes.default.svc
       namespace: logging
-    - server: https://kubernetes.default.svc
-      namespace: gotify
-    - server: https://kubernetes.default.svc
-      namespace: gotify-bridge
     - server: https://kubernetes.default.svc
       namespace: ntfy
     - server: https://kubernetes.default.svc
@@ -58,6 +52,8 @@ spec:
       namespace: carplay-api
     - server: https://kubernetes.default.svc
       namespace: github-release-watcher
+    - server: https://kubernetes.default.svc
+      namespace: isc-news-bot
     - server: https://kubernetes.default.svc
       namespace: mediamtx
     - server: https://kubernetes.default.svc

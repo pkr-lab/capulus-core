@@ -1,0 +1,1753 @@
+{
+  "id": "instagramPostMail1",
+  "name": "Instagram-Post per Mail",
+  "nodes": [
+    {
+      "parameters": {
+        "mailbox": "Instagram",
+        "postProcessAction": "read",
+        "format": "simple",
+        "downloadAttachments": true,
+        "dataPropertyAttachmentsPrefixName": "attachment_",
+        "options": {
+          "customEmailConfig": "[\"UNSEEN\", [\"FROM\", \"peter.kretzer@dlrg.org\"], [\"SUBJECT\", \"INSTAGRAM\"]]",
+          "forceReconnect": 60,
+          "trackLastMessageId": true
+        }
+      },
+      "id": "d26d8693-6466-5cda-a93a-76984b9eb6f5",
+      "name": "E-Mail empfangen",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        300
+      ],
+      "credentials": {
+        "imap": {
+          "id": "INSTAGRAM_IMAP_CREDENTIAL_ID",
+          "name": "Instagram Postfach (IMAP)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const item = $input.first();\nreturn [{\n  json: {\n    ...item.json,\n    cfg: {\n      testModus: true,\n      ntfyFreigabe: false,\n      ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n      ntfyTopic: 'instagram',\n      graphUrl: 'https://graph.facebook.com/v23.0',\n      igUserId: 'CHANGE-ME-IG-USER-ID',\n      bildBasisUrl: 'https://instagram-bilder-prod.pke-lab.de/webhook/instagram-bild',\n      bildVerzeichnis: '/data/instagram-bilder',\n      sender: 'peter.kretzer@dlrg.org',\n      betreff: 'INSTAGRAM',\n      maxBilder: 10,\n      minVerhaeltnis: 0.8,\n      maxVerhaeltnis: 1.91,\n      maxCaptionZeichen: 2200,\n      maxHashtags: 30,\n      maxErwaehnungen: 20\n    }\n  },\n  binary: item.binary\n}];\n"
+      },
+      "id": "53ff2547-519b-5b78-bbdb-076f84c0914c",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const item = $input.first();\nconst cfg = item.json.cfg;\nconst subject = String(item.json.subject || '').trim();\nconst from = typeof item.json.from === 'string' ? item.json.from : ((item.json.from && item.json.from.text) || '');\nif (subject !== cfg.betreff) return [];\nif (!from.toLowerCase().includes(cfg.sender.toLowerCase())) return [];\nconst binary = item.binary || {};\nconst keys = Object.keys(binary);\nconst isJson = (k) => binary[k].mimeType === 'application/json' || /\\.json$/i.test(binary[k].fileName || '');\nconst isImage = (k) => /^image\\//.test(binary[k].mimeType || '') || /\\.(jpe?g|png|webp)$/i.test(binary[k].fileName || '');\nconst jsonKey = keys.find(isJson);\nconst imageKeys = keys.filter((k) => k !== jsonKey && isImage(k));\nconst ignored = keys.filter((k) => k !== jsonKey && !isImage(k)).map((k) => binary[k].fileName || k);\nconst base = { cfg, subject, from, imageKeys, ignored };\nif (!jsonKey) return [{ json: { ...base, post: {}, mailError: 'Kein JSON-Anhang in der Mail' }, binary }];\nlet post = null;\ntry {\n  post = JSON.parse((await this.helpers.getBinaryDataBuffer(0, jsonKey)).toString('utf8').replace(/^﻿/, ''));\n} catch (e) {\n  post = null;\n}\nif (!post || typeof post !== 'object' || Array.isArray(post)) {\n  return [{ json: { ...base, post: {}, mailError: 'JSON-Anhang ist nicht lesbar' }, binary }];\n}\nreturn [{ json: { ...base, post }, binary }];\n"
+      },
+      "id": "295e4a32-1409-55cc-b3c3-7c3e5444444c",
+      "name": "Mail lesen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const item = $input.first();\nconst { cfg, post, mailError, imageKeys } = item.json;\nconst binary = item.binary || {};\nconst ignored = [...(item.json.ignored || [])];\nconst errors = [];\nif (mailError) errors.push(mailError);\n\nconst pick = (...names) => {\n  for (const name of names) {\n    const v = post[name];\n    if (v !== undefined && v !== null && v !== '') return v;\n  }\n  return undefined;\n};\nconst toText = (v) => (typeof v === 'string' ? v.trim() : '');\nconst plain = (html) => html\n  .replace(/<\\s*br\\s*\\/?>/gi, '\\n')\n  .replace(/<\\/\\s*(p|div|h[1-6]|li|tr)\\s*>/gi, '\\n\\n')\n  .replace(/<[^>]*>/g, '')\n  .replace(/&nbsp;/g, ' ')\n  .replace(/&lt;/g, '<')\n  .replace(/&gt;/g, '>')\n  .replace(/&quot;/g, '\"')\n  .replace(/&#39;/g, \"'\")\n  .replace(/&amp;/g, '&')\n  .replace(/[ \\t]+\\n/g, '\\n')\n  .replace(/\\n{3,}/g, '\\n\\n')\n  .trim();\nconst newToken = () => {\n  const uuid = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : '';\n  return uuid || Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');\n};\n\nconst tagsRaw = pick('hashtags', 'Hashtags');\nconst tagList = Array.isArray(tagsRaw) ? tagsRaw : (typeof tagsRaw === 'string' ? tagsRaw.split(/[\\s,]+/) : []);\nconst hashtags = [...new Set(tagList.map((t) => String(t).trim().replace(/^#+/, '').replace(/[^\\p{L}\\p{N}_]/gu, '')).filter(Boolean))].map((t) => '#' + t);\nconst tagLine = hashtags.join(' ');\n\nconst titel = toText(pick('title', 'Überschrift'));\nconst htmlRaw = toText(pick('html'));\nconst body = toText(pick('caption', 'Caption')) || [\n  titel,\n  toText(pick('subtitle', 'Untertitel')),\n  htmlRaw ? plain(htmlRaw) : toText(pick('text', 'Text'))\n].filter(Boolean).join('\\n\\n');\n\nconst room = cfg.maxCaptionZeichen - (tagLine ? Array.from(tagLine).length + 2 : 0);\nconst bodyChars = Array.from(body);\nconst truncated = bodyChars.length > room;\nconst bodyFinal = truncated ? bodyChars.slice(0, Math.max(room - 1, 0)).join('').trimEnd() + '…' : body;\nconst caption = [bodyFinal, tagLine].filter(Boolean).join('\\n\\n');\nif (!body) errors.push('Keine Caption (title, text oder caption fehlt im JSON)');\nconst tagCount = (caption.match(/#[\\p{L}\\p{N}_]+/gu) || []).length;\nif (tagCount > cfg.maxHashtags) errors.push('Mehr als ' + cfg.maxHashtags + ' Hashtags (' + tagCount + ')');\nconst mentionCount = (caption.match(/@[\\p{L}\\p{N}_.]+/gu) || []).length;\nif (mentionCount > cfg.maxErwaehnungen) errors.push('Mehr als ' + cfg.maxErwaehnungen + ' @-Erwähnungen (' + mentionCount + ')');\nif (!cfg.testModus && /CHANGE-ME/.test(cfg.igUserId)) errors.push('igUserId im Node Konfiguration nicht gesetzt');\n\nconst exifOrientation = (buf, start, end) => {\n  const le = buf.toString('latin1', start, start + 2) === 'II';\n  const u16 = (o) => (le ? buf.readUInt16LE(o) : buf.readUInt16BE(o));\n  const u32 = (o) => (le ? buf.readUInt32LE(o) : buf.readUInt32BE(o));\n  if (start + 8 > end) return 1;\n  const ifd = start + u32(start + 4);\n  if (ifd + 2 > end) return 1;\n  const count = u16(ifd);\n  for (let i = 0; i < count; i++) {\n    const entry = ifd + 2 + i * 12;\n    if (entry + 12 > end) break;\n    if (u16(entry) === 0x0112) {\n      const v = u16(entry + 8);\n      return v >= 1 && v <= 8 ? v : 1;\n    }\n  }\n  return 1;\n};\nconst imageInfo = (buf) => {\n  if (buf.length > 24 && buf.readUInt32BE(0) === 0x89504e47) {\n    return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20), orientation: 1 };\n  }\n  if (buf.length > 4 && buf[0] === 0xff && buf[1] === 0xd8) {\n    let o = 2;\n    let orientation = 1;\n    while (o + 4 <= buf.length) {\n      if (buf[o] !== 0xff) { o++; continue; }\n      const marker = buf[o + 1];\n      if (marker === 0xff) { o++; continue; }\n      if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) { o += 2; continue; }\n      const len = buf.readUInt16BE(o + 2);\n      if (marker === 0xe1 && buf.toString('latin1', o + 4, o + 10) === 'Exif\\0\\0') {\n        orientation = exifOrientation(buf, o + 10, o + 2 + len);\n      }\n      if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {\n        return { width: buf.readUInt16BE(o + 7), height: buf.readUInt16BE(o + 5), orientation };\n      }\n      o += 2 + len;\n    }\n    return null;\n  }\n  if (buf.length > 30 && buf.toString('latin1', 0, 4) === 'RIFF' && buf.toString('latin1', 8, 12) === 'WEBP') {\n    const kind = buf.toString('latin1', 12, 16);\n    if (kind === 'VP8 ') return { width: buf.readUInt16LE(26) & 0x3fff, height: buf.readUInt16LE(28) & 0x3fff, orientation: 1 };\n    if (kind === 'VP8L') {\n      const b = buf.subarray(21, 25);\n      return { width: 1 + (b[0] | ((b[1] & 0x3f) << 8)), height: 1 + ((b[1] >> 6) | (b[2] << 2) | ((b[3] & 0x0f) << 10)), orientation: 1 };\n    }\n    if (kind === 'VP8X') {\n      return { width: 1 + (buf[24] | (buf[25] << 8) | (buf[26] << 16)), height: 1 + (buf[27] | (buf[28] << 8) | (buf[29] << 16)), orientation: 1 };\n    }\n  }\n  return null;\n};\n\nconst usable = imageKeys.slice(0, cfg.maxBilder);\nfor (const k of imageKeys.slice(cfg.maxBilder)) ignored.push((binary[k].fileName || k) + ' (mehr als ' + cfg.maxBilder + ' Bilder)');\nif (!imageKeys.length) errors.push('Keine Bilder in der Mail');\n\nconst lo = cfg.minVerhaeltnis + 0.005;\nconst hi = cfg.maxVerhaeltnis - 0.005;\nconst images = [];\nfor (const key of usable) {\n  const meta = binary[key];\n  const name = meta.fileName || key;\n  const info = imageInfo(await this.helpers.getBinaryDataBuffer(0, key));\n  if (!info || !info.width || !info.height) { errors.push('Bild ' + name + ': Format nicht lesbar (erlaubt: JPEG, PNG, WebP)'); continue; }\n  const swapped = info.orientation >= 5;\n  const dw = swapped ? info.height : info.width;\n  const dh = swapped ? info.width : info.height;\n  let cw = dw;\n  let ch = dh;\n  const ratio = dw / dh;\n  if (ratio < cfg.minVerhaeltnis) ch = Math.floor(dw / lo);\n  else if (ratio > cfg.maxVerhaeltnis) cw = Math.floor(dh * hi);\n  images.push({\n    fileName: name,\n    binary: meta,\n    breite: dw,\n    hoehe: dh,\n    zuschnitt: { breite: cw, hoehe: ch, x: Math.floor((dw - cw) / 2), y: Math.floor((dh - ch) / 2), zugeschnitten: cw !== dw || ch !== dh }\n  });\n}\n\nif (errors.length) return [{ json: { valid: false, error: errors.join('; '), cfg, caption } }];\n\nconst token = newToken();\nreturn images.map((img, index) => ({\n  json: {\n    valid: true,\n    error: '',\n    cfg,\n    token,\n    index,\n    total: images.length,\n    titel,\n    caption,\n    truncated,\n    ignored,\n    fileName: img.fileName,\n    breite: img.breite,\n    hoehe: img.hoehe,\n    zuschnitt: img.zuschnitt\n  },\n  binary: { data: img.binary }\n}));\n"
+      },
+      "id": "5e1eb077-3d3e-506d-bc99-20aa5be6f67a",
+      "name": "Beitrag pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "aa21e478-040e-57d5-bccd-e959a4acfaea",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3ab260af-4bea-56b3-bf7c-6d5572d11581",
+      "name": "Eingaben gueltig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "multiStep",
+        "dataPropertyName": "data",
+        "operations": {
+          "operations": [
+            {
+              "operation": "crop",
+              "width": "={{ $json.zuschnitt.breite }}",
+              "height": "={{ $json.zuschnitt.hoehe }}",
+              "positionX": "={{ $json.zuschnitt.x }}",
+              "positionY": "={{ $json.zuschnitt.y }}"
+            },
+            {
+              "operation": "resize",
+              "width": 1440,
+              "height": 1440,
+              "resizeOption": "onlyIfLarger"
+            }
+          ]
+        },
+        "options": {
+          "format": "jpeg",
+          "quality": 90
+        }
+      },
+      "id": "9a30259d-3df6-5fba-825e-613cf4c5590b",
+      "name": "Bild konvertieren",
+      "type": "n8n-nodes-base.editImage",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        200
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ $json.cfg.bildVerzeichnis + '/' + $json.token + '-' + $json.index + '.jpg' }}",
+        "dataPropertyName": "data",
+        "options": {}
+      },
+      "id": "273abe3b-ac74-5b53-9a31-e3cc1c7c8538",
+      "name": "Bilder ablegen",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        1560,
+        200
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all();\nconst erwartet = $('Beitrag pruefen').all().length;\nconst fehler = items.find((it) => it.json.error);\nif (fehler || items.length !== erwartet) {\n  return [{ json: { ok: false, schritt: 'Bildverarbeitung', antwort: { error: fehler ? fehler.json.error : 'Bild fehlt nach der Verarbeitung' } } }];\n}\nconst first = $('Beitrag pruefen').first().json;\nconst urls = items.map((it, i) => first.cfg.bildBasisUrl + '?t=' + first.token + '&n=' + i);\nreturn [{\n  json: {\n    ok: true,\n    cfg: first.cfg,\n    token: first.token,\n    caption: first.caption,\n    truncated: first.truncated,\n    ignored: first.ignored,\n    total: items.length,\n    imageUrls: urls\n  }\n}];\n"
+      },
+      "id": "5001743b-addf-5a2a-8890-93869c7dc3f6",
+      "name": "Beitrag buendeln",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "271e1889-682e-5cd4-bee0-29f6c6ebebd4",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "71bd3aeb-b57b-556f-8a51-01562e630486",
+      "name": "Bilder bereit?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2000,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.imageUrls[0] }}",
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "34850f34-be8e-5036-8acc-016a02ac3b6a",
+      "name": "Bild-URL pruefen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2220,
+        200
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const j = $input.first().json;\nconst code = j.statusCode;\nconst type = String((j.headers && j.headers['content-type']) || '');\nif (code === 200 && type.startsWith('image/jpeg')) return [{ json: { ok: true } }];\nconst grund = code\n  ? 'HTTP ' + code + (type ? ' (' + type + ')' : '')\n  : (typeof j.error === 'string' ? j.error : JSON.stringify(j.error || j).slice(0, 300));\nreturn [{ json: { ok: false, schritt: 'Bild-URL', antwort: { error: 'Bild unter ' + $('Beitrag buendeln').first().json.imageUrls[0] + ' nicht abrufbar: ' + grund } } }];\n"
+      },
+      "id": "3dc3b1e4-29ab-59f2-ae10-4c87a9d02535",
+      "name": "Bild-URL bewerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2440,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fbdb3a52-3a20-513a-86fe-594492fca9a4",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e09cb388-dbda-5f18-bf1c-1f1ff3d497cf",
+      "name": "Bild-URL ok?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2660,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9255118d-ae90-5824-850c-d6df6a77e4cd",
+              "leftValue": "={{ $('Beitrag buendeln').first().json.cfg.testModus }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1c9000d9-27f6-518b-b677-b2874b70dcb0",
+      "name": "Probelauf?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2880,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.cfg.ntfyUrl + '/' + $('Konfiguration').first().json.cfg.ntfyTopic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "Instagram Probelauf (nichts gepostet)"
+            },
+            {
+              "name": "Tags",
+              "value": "test_tube"
+            },
+            {
+              "name": "Priority",
+              "value": "default"
+            },
+            {
+              "name": "Attach",
+              "value": "={{ $('Beitrag buendeln').first().json.imageUrls[0] }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ 'Bilder: ' + $('Beitrag buendeln').first().json.total + ' (Bild-URL von außen abrufbar)\\n' + ($('Beitrag buendeln').first().json.truncated ? 'Caption wurde gekürzt\\n' : '') + ($('Beitrag buendeln').first().json.ignored.length ? 'Nicht übernommen: ' + $('Beitrag buendeln').first().json.ignored.join(', ') + '\\n' : '') + '\\nCaption:\\n' + $('Beitrag buendeln').first().json.caption }}",
+        "options": {}
+      },
+      "id": "12ce908b-5128-510d-9f26-a07602ef9660",
+      "name": "ntfy Probelauf",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3100,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7f2759e4-d144-53a5-815f-69b0ac7280de",
+              "leftValue": "={{ $('Beitrag buendeln').first().json.cfg.ntfyFreigabe }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "49bdb193-bc65-5e15-adb7-94c586e3294d",
+      "name": "Freigabe per ntfy?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.cfg.ntfyUrl + '/' + $('Konfiguration').first().json.cfg.ntfyTopic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "Instagram-Post freigeben?"
+            },
+            {
+              "name": "Tags",
+              "value": "camera"
+            },
+            {
+              "name": "Priority",
+              "value": "high"
+            },
+            {
+              "name": "Actions",
+              "value": "=http, Freigeben, {{ $execution.resumeUrl }}, method=POST, clear=true"
+            },
+            {
+              "name": "Attach",
+              "value": "={{ $('Beitrag buendeln').first().json.imageUrls[0] }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ 'Bilder: ' + $('Beitrag buendeln').first().json.total + '\\n\\n' + $('Beitrag buendeln').first().json.caption }}",
+        "options": {}
+      },
+      "id": "d9ae98ef-989e-5b92-9a0f-dc8cd1ce44a2",
+      "name": "ntfy Freigabe-Anfrage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3320,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "httpMethod": "POST",
+        "options": {}
+      },
+      "id": "a31a3b55-da82-5703-89f4-6a8c5f2c875e",
+      "name": "Warten auf Freigabe",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3540,
+        200
+      ],
+      "webhookId": "cd85991d-6c9a-5342-8759-98e07e73aadb"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const b = $('Beitrag buendeln').first().json;\nreturn b.imageUrls.map((url, i) => ({\n  json: {\n    imageUrl: url,\n    index: i,\n    total: b.imageUrls.length,\n    caption: b.caption,\n    apiBase: b.cfg.graphUrl + '/' + b.cfg.igUserId\n  }\n}));\n"
+      },
+      "id": "2c53c385-b05a-5b45-9203-5e5673e293a5",
+      "name": "Bilder aufteilen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3760,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.apiBase }}/media",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.total > 1 ? { image_url: $json.imageUrl, is_carousel_item: true } : { image_url: $json.imageUrl, caption: $json.caption }) }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "47b46093-6e13-5431-947b-0300b134bfd4",
+      "name": "Bild-Container anlegen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3980,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "INSTAGRAM_GRAPH_CREDENTIAL_ID",
+          "name": "Instagram Graph API (Seiten-Token)"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all();\nconst ctx = $('Bilder aufteilen').first().json;\nconst ids = [];\nlet fehler = null;\nitems.forEach((it, i) => {\n  if (it.json.id) ids.push(String(it.json.id));\n  else if (!fehler) fehler = { bild: i + 1, antwort: it.json };\n});\nif (fehler || ids.length !== ctx.total) {\n  return [{ json: { ok: false, schritt: 'Bild-Container' + (fehler ? ' (Bild ' + fehler.bild + ')' : ''), antwort: fehler ? fehler.antwort : {} } }];\n}\nreturn [{\n  json: {\n    ok: true,\n    apiBase: ctx.apiBase,\n    caption: ctx.caption,\n    total: ctx.total,\n    childIds: ids,\n    creationId: ctx.total === 1 ? ids[0] : undefined\n  }\n}];\n"
+      },
+      "id": "ba94cd65-078d-5040-a260-440a3059f6b7",
+      "name": "Container sammeln",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9802e0ac-50d4-5d17-931c-7e06ea8bdf93",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2081af0f-88c8-57e9-ac22-c966d352fbb5",
+      "name": "Container ok?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1092a4cf-36df-52d1-8f9d-a7f1f639a21c",
+              "leftValue": "={{ $json.total }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6a890457-5025-55aa-aa6e-e1ed32b3dc6a",
+      "name": "Karussell?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 5,
+        "unit": "seconds"
+      },
+      "id": "fa2f0410-eef3-5b11-ab74-a0fa11b3054d",
+      "name": "Warten auf Bilder",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        4860,
+        200
+      ],
+      "webhookId": "8fe049c5-bec6-5c75-b3bf-63c548104cad"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.apiBase }}/media",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ media_type: 'CAROUSEL', children: $json.childIds.join(','), caption: $json.caption }) }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "12294eef-1a73-5833-b11f-e654552e7ca9",
+      "name": "Karussell-Container anlegen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5080,
+        200
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "INSTAGRAM_GRAPH_CREDENTIAL_ID",
+          "name": "Instagram Graph API (Seiten-Token)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const j = $input.first().json;\nconst id = j.creationId || j.id;\nif (!id) return [{ json: { ok: false, schritt: 'Karussell-Container', antwort: j } }];\nreturn [{ json: { ok: true, creationId: String(id), apiBase: $('Container sammeln').first().json.apiBase } }];\n"
+      },
+      "id": "63cb1a62-a7f2-579d-91ff-14f814e54921",
+      "name": "Container-ID bestimmen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7798b167-7790-55be-8acc-f1a7ef809bd7",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2ce43be4-e849-5d75-b24f-0db8f9353fee",
+      "name": "Container-ID ok?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 5,
+        "unit": "seconds"
+      },
+      "id": "7c3d21ca-8ed5-5064-9951-6e54e88e2509",
+      "name": "Warten auf Meta",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        5740,
+        300
+      ],
+      "webhookId": "61b881ac-3cf6-5497-ab0c-7461c0f02efa"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.apiBase }}/{{ $json.creationId }}?fields=status_code,status",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": false,
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "1a4ac902-eabf-5350-8be4-71995474e313",
+      "name": "Status abfragen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5960,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "INSTAGRAM_GRAPH_CREDENTIAL_ID",
+          "name": "Instagram Graph API (Seiten-Token)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const j = $input.first().json;\nconst ctx = $('Container-ID bestimmen').first().json;\nconst status = j.status_code;\nif (status === 'FINISHED') return [{ json: { ...ctx, state: 'FINISHED' } }];\nif (status === 'ERROR' || status === 'EXPIRED') {\n  return [{ json: { ...ctx, state: 'FAIL', schritt: 'Container-Status', antwort: { error: status + (j.status ? ': ' + j.status : '') } } }];\n}\nif ($runIndex >= 36) {\n  return [{ json: { ...ctx, state: 'FAIL', schritt: 'Container-Status', antwort: { error: 'Meta meldet nach 3 Minuten noch nicht FINISHED (' + (status || JSON.stringify(j.error || j).slice(0, 300)) + ')' } } }];\n}\nreturn [{ json: { ...ctx, state: 'WAIT' } }];\n"
+      },
+      "id": "1a986c7e-4909-54d9-8f26-1a78cde33757",
+      "name": "Status auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5daa1c7e-e091-5f88-9af2-b4e3cc5763c6",
+              "leftValue": "={{ $json.state }}",
+              "rightValue": "FINISHED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e4640e8e-2282-5713-baed-c38a6059f049",
+      "name": "Fertig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "53e61be6-4061-503b-94d9-2dca24f74e34",
+              "leftValue": "={{ $json.state }}",
+              "rightValue": "WAIT",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e47360d3-bb6a-5757-989b-b636c3b60e73",
+      "name": "Weiter warten?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6400,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.apiBase }}/media_publish",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ creation_id: $json.creationId }) }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "2d8a39cf-9cd7-51af-9da4-6b23161aad97",
+      "name": "Veroeffentlichen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6620,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "INSTAGRAM_GRAPH_CREDENTIAL_ID",
+          "name": "Instagram Graph API (Seiten-Token)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const j = $input.first().json;\nif (!j.id) return [{ json: { ok: false, schritt: 'Veröffentlichen', antwort: j } }];\nreturn [{ json: { ok: true, mediaId: String(j.id), apiBase: $('Container-ID bestimmen').first().json.apiBase } }];\n"
+      },
+      "id": "15c06989-339f-51ad-b102-305f48756da6",
+      "name": "Veroeffentlichung pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6840,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "90a753df-78d9-5fd4-8efb-62f869499543",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "fac51373-3b07-59fa-87ef-be221454b4a4",
+      "name": "Veroeffentlicht?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7060,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.apiBase }}/{{ $json.mediaId }}?fields=permalink",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": false,
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "5e405197-c77f-5ea0-8759-e1a8833f2fa3",
+      "name": "Permalink holen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7280,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "INSTAGRAM_GRAPH_CREDENTIAL_ID",
+          "name": "Instagram Graph API (Seiten-Token)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.cfg.ntfyUrl + '/' + $('Konfiguration').first().json.cfg.ntfyTopic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "Instagram-Post veroeffentlicht"
+            },
+            {
+              "name": "Tags",
+              "value": "white_check_mark"
+            },
+            {
+              "name": "Priority",
+              "value": "default"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ 'Veröffentlicht: ' + ($json.permalink || ('Media-ID ' + $('Veroeffentlichung pruefen').first().json.mediaId)) + '\\n\\n' + $('Beitrag buendeln').first().json.caption + ($('Beitrag buendeln').first().json.truncated ? '\\n\\n(Caption wurde gekürzt)' : '') + ($('Beitrag buendeln').first().json.ignored.length ? '\\n\\nNicht übernommen: ' + $('Beitrag buendeln').first().json.ignored.join(', ') : '') }}",
+        "options": {}
+      },
+      "id": "5aecae89-e93a-58d2-a0d2-b805e7efd4c3",
+      "name": "ntfy Erfolg",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const j = $input.first().json;\nconst fmt = (e) => {\n  if (!e) return '';\n  if (typeof e === 'string') return e;\n  const parts = [e.message, e.error_user_title, e.error_user_msg, e.description];\n  if (e.code) parts.push('Code ' + e.code);\n  if (e.error_subcode) parts.push('Subcode ' + e.error_subcode);\n  const text = parts.filter(Boolean).join(' | ');\n  return text || JSON.stringify(e).slice(0, 500);\n};\nconst schritt = j.schritt || 'Eingabe';\nconst grund = fmt(j.error) || fmt(j.antwort && j.antwort.error) || (j.antwort ? JSON.stringify(j.antwort).slice(0, 500) : 'unbekannt');\nconst caption = String($('Beitrag pruefen').first().json.caption || '');\nconst zeilen = ['Schritt: ' + schritt, 'Grund: ' + grund];\nif (schritt === 'Veröffentlichen') zeilen.push('Unklar, ob der Post erschienen ist. Zuerst auf Instagram nachsehen, bevor die Mail erneut gesendet wird (sonst Dublette).');\nif (caption) zeilen.push('', 'Post: ' + Array.from(caption.split('\\n')[0]).slice(0, 80).join(''));\nreturn [{ json: { text: zeilen.join('\\n') } }];\n"
+      },
+      "id": "f00522c6-ecf9-5145-9172-e1dafe512ac6",
+      "name": "Fehler aufbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4000,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.cfg.ntfyUrl + '/' + $('Konfiguration').first().json.cfg.ntfyTopic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "Instagram-Post fehlgeschlagen"
+            },
+            {
+              "name": "Tags",
+              "value": "x"
+            },
+            {
+              "name": "Priority",
+              "value": "high"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.text }}",
+        "options": {}
+      },
+      "id": "531569b3-1f61-5f7b-911f-e08f373c5730",
+      "name": "ntfy Fehler",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4220,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "command": "={{ 'find ' + $('Konfiguration').first().json.cfg.bildVerzeichnis + \" -type f -name '\" + ($('Beitrag pruefen').first().json.token || 'kein-token') + \"-*.jpg' -delete; find \" + $('Konfiguration').first().json.cfg.bildVerzeichnis + ' -type f -mmin +720 -delete' }}"
+      },
+      "id": "b0fcba61-7cfe-555a-9482-ebe73d638fff",
+      "name": "Bilder loeschen",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        7720,
+        520
+      ],
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "instagram-bild",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "d3c3234a-76c5-5795-8dc8-abffe2467505",
+      "name": "Bild abrufen",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        1000
+      ],
+      "webhookId": "4e33de86-73f0-533f-8304-42e6a5f6993e"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const q = $input.first().json.query || {};\nconst t = String(q.t || '');\nconst n = String(q.n || '');\nconst ok = /^[0-9a-f]{32}$/.test(t) && /^[0-9]{1,2}$/.test(n);\nreturn [{ json: { ok, datei: ok ? '/data/instagram-bilder/' + t + '-' + n + '.jpg' : '' } }];\n"
+      },
+      "id": "906a14a9-ecbb-5dd5-8688-7a1a72944325",
+      "name": "Bild-Anfrage pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d47ad589-9e6a-5f69-9dfc-77cf06f986bc",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "58482175-82fa-5f64-9858-9e5ef517bd46",
+      "name": "Anfrage gueltig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        680,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $json.datei }}",
+        "options": {}
+      },
+      "id": "edf5e777-b7ce-5522-b114-2229cf95414f",
+      "name": "Bilddatei lesen",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        940
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "binary",
+        "responseDataSource": "automatically",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "image/jpeg"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "53265eac-c37d-573c-8d9f-f499a8636a1d",
+      "name": "Bild ausliefern",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1120,
+        880
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Nicht gefunden",
+        "options": {
+          "responseCode": 404
+        }
+      },
+      "id": "cc90d9b7-d1e9-5f53-8b22-6e80e1d52b0e",
+      "name": "Nicht gefunden",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1120,
+        1080
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Instagram-Post per Mail: Schritte NACH DEM IMPORT\n\n0. **Postfach:** Ordner `Instagram` anlegen. Regel: Betreff enthält `INSTAGRAM` → Ordner `Instagram`. Der Betreff darf `1002011` nicht enthalten, sonst greift die ISC-News-Regel. **IMAP-Credential** dem Node **E-Mail empfangen** zuweisen. Der Node liest nur den Ordner `Instagram`, nur ungelesene Mails mit Betreff `INSTAGRAM` von `peter.kretzer@dlrg.org`.\n1. **Credential anlegen:** Typ *Header Auth*, Name `Instagram Graph API (Seiten-Token)`, Header `Authorization`, Wert `Bearer <Seiten-Zugriffstoken>` (nie ins Repo). Zuweisen an: **Bild-Container anlegen**, **Karussell-Container anlegen**, **Status abfragen**, **Veroeffentlichen**, **Permalink holen**.\n2. **Konfiguration** öffnen: `igUserId` (ID des Instagram-Kontos), `sender`, `betreff`. `testModus` bleibt `true`, bis der Probelauf gelungen ist. `ntfyFreigabe` = `true`: jeder Post wartet vorher auf einen Klick in ntfy.\n3. ntfy-Topic `instagram` in der App abonnieren.\n4. Workflow **aktivieren**. Ohne aktiven Workflow liefert der Bild-Zweig (unten) nichts aus, Meta kann die Bilder dann nicht abrufen.\n5. **Probelauf:** Testmail senden. Die ntfy-Meldung „Instagram Probelauf“ zeigt die Caption und bestätigt, dass die Bild-URL von außen erreichbar ist. Erst danach `testModus` auf `false`.\n\n**Mail:** Betreff `INSTAGRAM`. Anhang 1 ist eine JSON-Datei mit `title`, `subtitle`, `text` (oder `html`), optional `caption` (ersetzt die Zusammensetzung aus Titel, Untertitel und Text) und `hashtags` (Liste oder Text). Weitere Felder (`categories`, `startDate`, `mode`) werden ignoriert. Alle Bilder (jpg, png, webp) sind weitere Anhänge, höchstens 10, Reihenfolge wie in der Mail. Ein Bild wird ein Einzelpost, mehrere ein Karussell. Alles wird als JPEG ausgeliefert, auf höchstens 1440 px verkleinert und bei Bedarf auf das erlaubte Seitenverhältnis (4:5 bis 1,91:1) zugeschnitten.\n",
+        "height": 540,
+        "width": 620,
+        "color": 4
+      },
+      "id": "09624cd8-7a6e-5b72-a8e3-65e9c50bd237",
+      "name": "Hinweise",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Bild-Auslieferung\n\nDieser Zweig liefert die vorbereiteten JPEGs an Meta aus, denn Instagram holt jedes Bild per URL ab. Er ist die einzige öffentlich erreichbare Stelle von n8n: Host `instagram-bilder-prod.pke-lab.de`, nur der Pfad `/webhook/instagram-bild`. Die Dateien heißen `<Token>-<Nr>.jpg` mit einem 128-Bit-Zufallstoken und liegen nur kurz im Ordner `/data/instagram-bilder`. Aufräumen macht der Node **Bilder loeschen** am Ende jedes Laufs.",
+        "height": 200,
+        "width": 620,
+        "color": 5
+      },
+      "id": "41c96e78-0a15-584d-9c6e-04f24e251a72",
+      "name": "Hinweis Bildzweig",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        740
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "E-Mail empfangen": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Mail lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mail lesen": {
+      "main": [
+        [
+          {
+            "node": "Beitrag pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Beitrag pruefen": {
+      "main": [
+        [
+          {
+            "node": "Eingaben gueltig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingaben gueltig?": {
+      "main": [
+        [
+          {
+            "node": "Bild konvertieren",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fehler aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bild konvertieren": {
+      "main": [
+        [
+          {
+            "node": "Bilder ablegen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bilder ablegen": {
+      "main": [
+        [
+          {
+            "node": "Beitrag buendeln",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Beitrag buendeln": {
+      "main": [
+        [
+          {
+            "node": "Bilder bereit?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bilder bereit?": {
+      "main": [
+        [
+          {
+            "node": "Bild-URL pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fehler aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bild-URL pruefen": {
+      "main": [
+        [
+          {
+            "node": "Bild-URL bewerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bild-URL bewerten": {
+      "main": [
+        [
+          {
+            "node": "Bild-URL ok?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bild-URL ok?": {
+      "main": [
+        [
+          {
+            "node": "Probelauf?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fehler aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Probelauf?": {
+      "main": [
+        [
+          {
+            "node": "ntfy Probelauf",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Freigabe per ntfy?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ntfy Probelauf": {
+      "main": [
+        [
+          {
+            "node": "Bilder loeschen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Freigabe per ntfy?": {
+      "main": [
+        [
+          {
+            "node": "ntfy Freigabe-Anfrage",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Bilder aufteilen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ntfy Freigabe-Anfrage": {
+      "main": [
+        [
+          {
+            "node": "Warten auf Freigabe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Warten auf Freigabe": {
+      "main": [
+        [
+          {
+            "node": "Bilder aufteilen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bilder aufteilen": {
+      "main": [
+        [
+          {
+            "node": "Bild-Container anlegen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bild-Container anlegen": {
+      "main": [
+        [
+          {
+            "node": "Container sammeln",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Container sammeln": {
+      "main": [
+        [
+          {
+            "node": "Container ok?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Container ok?": {
+      "main": [
+        [
+          {
+            "node": "Karussell?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fehler aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Karussell?": {
+      "main": [
+        [
+          {
+            "node": "Warten auf Bilder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Container-ID bestimmen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Warten auf Bilder": {
+      "main": [
+        [
+          {
+            "node": "Karussell-Container anlegen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Karussell-Container anlegen": {
+      "main": [
+        [
+          {
+            "node": "Container-ID bestimmen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Container-ID bestimmen": {
+      "main": [
+        [
+          {
+            "node": "Container-ID ok?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Container-ID ok?": {
+      "main": [
+        [
+          {
+            "node": "Warten auf Meta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fehler aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Warten auf Meta": {
+      "main": [
+        [
+          {
+            "node": "Status abfragen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status abfragen": {
+      "main": [
+        [
+          {
+            "node": "Status auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status auswerten": {
+      "main": [
+        [
+          {
+            "node": "Fertig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fertig?": {
+      "main": [
+        [
+          {
+            "node": "Veroeffentlichen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Weiter warten?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weiter warten?": {
+      "main": [
+        [
+          {
+            "node": "Warten auf Meta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fehler aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Veroeffentlichen": {
+      "main": [
+        [
+          {
+            "node": "Veroeffentlichung pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Veroeffentlichung pruefen": {
+      "main": [
+        [
+          {
+            "node": "Veroeffentlicht?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Veroeffentlicht?": {
+      "main": [
+        [
+          {
+            "node": "Permalink holen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fehler aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Permalink holen": {
+      "main": [
+        [
+          {
+            "node": "ntfy Erfolg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ntfy Erfolg": {
+      "main": [
+        [
+          {
+            "node": "Bilder loeschen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fehler aufbereiten": {
+      "main": [
+        [
+          {
+            "node": "ntfy Fehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ntfy Fehler": {
+      "main": [
+        [
+          {
+            "node": "Bilder loeschen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bild abrufen": {
+      "main": [
+        [
+          {
+            "node": "Bild-Anfrage pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bild-Anfrage pruefen": {
+      "main": [
+        [
+          {
+            "node": "Anfrage gueltig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anfrage gueltig?": {
+      "main": [
+        [
+          {
+            "node": "Bilddatei lesen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nicht gefunden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bilddatei lesen": {
+      "main": [
+        [
+          {
+            "node": "Bild ausliefern",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nicht gefunden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "saveManualExecutions": true
+  },
+  "versionId": "0287f535-a518-5d48-9a73-009970422233",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

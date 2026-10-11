@@ -89,20 +89,19 @@ Login-Fehlschläge auf den geschützten Diensten).
    Zammad-Node) eröffnet automatisch ein Ticket in `Support::Administration`.
    Muss noch manuell in n8n importiert + aktiviert werden (siehe docs/d-sicherheit/d0060-secrets-rotation.md).
 2. **[Offen]** CrowdSec-Ban-Events (aus Phase 1) über den bestehenden
-   Gotify/ntfy-Bridge-Mechanismus ausliefern — keine neue Infrastruktur
+   ntfy-Bridge-Mechanismus ausliefern — keine neue Infrastruktur
    nötig, nur eine weitere Alert-Quelle an den bestehenden Stack anhängen.
 
 **Risiko:** gering, additiv zum bestehenden Monitoring.
 
 ### Phase 8 — Authentik SSO vor allen Apps mit Login
 
-**Status: umgesetzt (Authentik seit 06.09.2026 live).** Authelia lief als Zwischenlösung
+**Status: umgesetzt (Authentik seit 06.09.2026 live), im Oktober 2026 wieder aus dem Repo entfernt.** Authelia lief als Zwischenlösung
 (SQLite, kein Postgres/Redis wie beim ursprünglichen Authentik-Setup),
 schützte Uptime Kuma und Mealie per Traefik-ForwardAuth und wurde
-vollständig durch Authentik ersetzt (Begründung, Architektur und
-Rollout-Batches: [docs/4-planung/40070-authentik-sso-iac.md](../4-planung/40070-authentik-sso-iac.md)).
+vollständig durch Authentik ersetzt.
 Historischer Kontext zu Authelia: [docs/4-planung/40000-authelia-sso.md](../4-planung/40000-authelia-sso.md).
-Laufender Ist-Zustand: [d0073-authentik-sso.md](d0073-authentik-sso.md).
+Es gibt aktuell kein zentrales SSO, jede App nutzt ihren eigenen Login.
 
 **Ziel:** Eine zentrale Anmeldung (+2FA für Admin-Tools) statt pro App
 eigener, unabhängiger Zugangsdaten — inkl. der Möglichkeit, bei Verdacht auf

@@ -352,7 +352,7 @@ absent_over_time(up{...}[10m]) für vereinsheim-alarmmonitor
     info@edv-kretzer.de (kein separater E-Mail-Node in n8n nötig)
 ```
 
-Die bestehenden gotify-/ntfy-Routen bleiben für diesen Alert (und alle
+Die bestehende ntfy-Route bleibt für diesen Alert (und alle
 anderen) unverändert bestehen — die n8n-Route kommt rein additiv dazu
 (`continue: true`, siehe [60060](../6-hintergruende/60060-monitoring-und-alerting.md#alertmanager-routing)).
 

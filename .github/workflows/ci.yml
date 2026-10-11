@@ -167,6 +167,33 @@ jobs:
           done
           exit $fail
 
+  isc-news-bot:
+    name: isc-news-bot (typecheck, unit und Mock-Tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: argocd/apps/tech/isc-news-bot
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: argocd/apps/tech/isc-news-bot/package-lock.json
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Playwright-Chromium installieren
+        run: npx playwright install --with-deps chromium
+
+      - name: Typecheck, Unit- und Mock-Tests (kein Zugriff auf das echte ISC)
+        run: npm test
+
   docs-links:
     name: docs links
     runs-on: ubuntu-latest

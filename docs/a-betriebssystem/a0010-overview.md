@@ -17,7 +17,6 @@ Repo: `pkr-lab/capulus-core` · drei k3s-Cluster (TECH, PROD, ENTW) auf drei Rec
 | **L** | Daten lokal auf der Knoten-SSD bzw. VM-Disk, StorageClass `local-path` |
 | **C** | öffentlich erreichbar über den Cloudflare Tunnel |
 | **D** | bringt eine eigene Datenbank mit (PostgreSQL / Redis / Elasticsearch) |
-| **SSO** | Login über Authentik (Traefik-ForwardAuth), siehe [d0073](../d-sicherheit/d0073-authentik-sso.md) |
 
 Pfeile bedeuten durchgehend **„baut auf / braucht"**: Jede Schicht funktioniert nur,
 wenn die Schicht darunter läuft. Schicht 0 ist echte Hardware, Schicht 1–4 ist Software.
@@ -48,13 +47,13 @@ flowchart TB
     subgraph TECH["TECH — homeserver (bare metal) + worker-0/-1"]
         direction LR
         T1["ArgoCD-Hub<br/>verwaltet TECH + PROD"]
-        T2["sealed-secrets · authentik · lldap<br/>monitoring · logging · pihole · minio<br/>argo-workflows · semaphore · headlamp"]
+        T2["sealed-secrets · lldap<br/>monitoring · logging · pihole · minio<br/>argo-workflows · semaphore · headlamp"]
         T3["n8n · zammad · vaultwarden · mediamtx<br/>alamos-* · carplay-api · uptime-kuma · pacman"]
     end
 
     subgraph PROD["PROD — prod-vm (KVM-VM auf homeserver)"]
         direction LR
-        P1["Nextcloud · Immich · Paperless-ngx<br/>Wiki.js · Mealie · xibosignage"]
+        P1["Nextcloud · Immich · Paperless-ngx<br/>Wiki.js · xibosignage"]
         P2["sealed-secrets · cert-manager<br/>cloudflared (eigener Tunnel)"]
     end
 
@@ -71,8 +70,8 @@ flowchart TB
 ```
 
 Gemeinsam genutzt werden das **NAS** (NFS, `nas` / `immich-nas`), die **interne Root-CA** (PROD hat eine eigene
-Intermediate-CA), **dnsmasq** auf dem homeserver als Namensauflösung für alle drei und **Authentik/lldap**
-als zentrales Login. Bei einem NAS-Ausfall trifft das alle drei Cluster.
+Intermediate-CA), **dnsmasq** auf dem homeserver als Namensauflösung für alle drei.
+Bei einem NAS-Ausfall trifft das alle drei Cluster.
 
 **Welcher Cluster hinter einem Namen steckt**, entscheidet das DNS, nicht das Tier-Label im Hostnamen,
 siehe [c0040](../c-netzwerk-dns/c0040-domain-tiers.md#dns-tier-und-cluster-sind-zwei-verschiedene-dinge).
@@ -113,15 +112,15 @@ flowchart TB
 
     subgraph L4["SCHICHT 4 — ANWENDUNGEN"]
         direction LR
-        P1["PROD: Nextcloud · Immich · Paperless-ngx<br/>Wiki.js · Mealie · xibosignage"]
+        P1["PROD: Nextcloud · Immich · Paperless-ngx<br/>Wiki.js · xibosignage"]
         P2["TECH: Zammad · Vaultwarden · n8n · Uptime Kuma<br/>MediaMTX · alamos-apager · carplay-api · pacman"]
     end
 
     subgraph L3["SCHICHT 3 — PLATTFORMDIENSTE (TECH)"]
         direction LR
-        S1["authentik · lldap<br/>sealed-secrets · kubeseal-webgui"]
+        S1["lldap<br/>sealed-secrets · kubeseal-webgui"]
         S3["monitoring · logging<br/>VictoriaMetrics/-Logs + Grafana"]
-        S4["gotify · ntfy<br/>+ Alert-Brücken"]
+        S4["ntfy<br/>+ Alert-Brücke"]
         S5["cloudflared · pihole<br/>coredns-custom · cert-manager"]
         S6["nas-storage<br/>immich-storage"]
         S7["minio · argo-workflows<br/>semaphore · headlamp"]
@@ -196,7 +195,7 @@ flowchart LR
 
     CP --- AG0
     CP --- AG1
-    SC1 --> APPS["Nextcloud, Paperless, Wiki.js, Mealie (PROD)<br/>Zammad, n8n, MinIO, Vaultwarden (TECH)"]
+    SC1 --> APPS["Nextcloud, Paperless, Wiki.js (PROD)<br/>Zammad, n8n, MinIO, Vaultwarden (TECH)"]
     SC2 --> IMM["Immich (PROD)"]
 ```
 
@@ -261,11 +260,9 @@ Aufgaben und die Adressen.
 |---|---|---|
 | `sealed-secrets` | entschlüsselt SealedSecrets im Cluster | — |
 | `kubeseal-webgui` | Weboberfläche zum Verschlüsseln von Secrets | — |
-| `authentik` | zentrales SSO/2FA, Traefik-ForwardAuth | L · S · D · C |
-| `lldap` | Nutzer-/Gruppenverzeichnis (LDAP) für Authentik | L · S |
+| `lldap` | Nutzer-/Gruppenverzeichnis (LDAP) | L · S |
 | `monitoring` | VictoriaMetrics, vmagent, vmalert, Alertmanager, Grafana | L · S · C |
 | `logging` | zentrale Log-Aggregation (VictoriaLogs) | L · S |
-| `gotify` / `gotify-bridge` | Push an Android, Brücke von Alertmanager | L · S |
 | `ntfy` / `ntfy-bridge` | Push an iOS + Android, Brücke von Alertmanager | L · C |
 | `cloudflared` | Cloudflare Tunnel `homeserver`, ausgehende Verbindung nach außen | S |
 | `pihole` | Werbe- und Trackerfilter im DNS, NodePort 30053 | L · S |
@@ -304,9 +301,7 @@ Aufgaben und die Adressen.
 | `paperless-ngx` | papierlose Dokumentenverwaltung | N · S · D | `paperless.prod.homeserver` |
 | `wikijs` | Wiki, auch öffentlich | N · S · D · C | `wiki.prod.homeserver` |
 | `wiki-docs-sync` | `docs/` aus Git → Wiki.js, alle 15 Min. | S | — (CronJob) |
-| `mealie` | Rezepte und Essensplanung | N · C | `mealie.prod.homeserver` |
 | `xibosignage` | Xibo CMS: Medien-/Asset-Verwaltung für die Raspberry-Pi-Bilder-Slideshow | N · S · D · C | `xibo.prod.homeserver` |
-| `tinyteller` | kleine Diktier- und Story-App | — | `tinyteller.prod.homeserver` |
 | `example-whoami` / `demo-app` | Referenz-Apps, belegen, dass GitOps und Routing laufen | — | `whoami.prod.homeserver` / `demo.prod.homeserver` |
 | `sealed-secrets`, `cert-manager`, `cloudflared` | eigene Plattform-Grundzutaten des Clusters (eigene SealedSecrets-Schlüssel, Intermediate-CA, Tunnel `homeserver-prod`) | S | — |
 | `nas-storage`, `immich-storage`, `traefik-config` | StorageClasses `nas` / `immich-nas` und Traefik-Konfiguration/TLSStore in PROD | — | — |
@@ -328,10 +323,9 @@ flowchart TB
     LP["StorageClass local-path"]
     CF["cloudflared<br/>je Cluster ein Tunnel"]
     MIN["minio"]
-    GO["gotify"]
     NT["ntfy"]
     TR["Traefik"]
-    AUTH["authentik<br/>+ lldap"]
+    LDAP["lldap"]
 
     SS --> MON["monitoring"]
     SS --> MIN
@@ -345,37 +339,32 @@ flowchart TB
     SS --> VW["vaultwarden"]
     SS --> PH["pihole"]
     SS --> ALA["alamos-apager"]
-    SS --> AUTH
+    SS --> LDAP
 
     NASSC --> NC
     NASSC --> PL
     NASSC --> WIKI
     NASSC --> ZAM
     NASSC --> VW
-    NASSC --> MEA["mealie"]
     NASSC --> N8N["n8n"]
     NASSC --> MIN
     NASSC --> XIBO["xibosignage"]
     IMSC --> IMMICH
     LP --> MON
-    LP --> GO
     LP --> NT
     LP --> PH
     LP --> UK["uptime-kuma"]
     LP --> SEM["semaphore"]
-    LP --> AUTH
+    LP --> LDAP
 
-    AUTH -->|"ForwardAuth"| TR
     MIN -->|"S3-Artefakte"| AW
-    GO --> GB["gotify-bridge<br/>Alertmanager-Webhook"]
     NT --> NB["ntfy-bridge<br/>Alertmanager-Webhook"]
-    MON --> GB
     MON --> NB
     NT --> ALA
     WIKI --> WDS["wiki-docs-sync<br/>CronJob alle 15 Min."]
     ZAM --> GRW["github-release-watcher<br/>CronJob alle 2 h"]
     TR --> ALLE["alle *.homeserver-Adressen"]
-    CF --> OEFF["wiki · nextcloud · immich · mealie · xibo (PROD-Tunnel)<br/>grafana · ntfy · support · vault · authentik · stream (TECH-Tunnel)<br/>.pke-lab.de"]
+    CF --> OEFF["wiki · nextcloud · immich · xibo (PROD-Tunnel)<br/>grafana · ntfy · support · vault · stream (TECH-Tunnel)<br/>.pke-lab.de"]
 ```
 
 ---
@@ -499,13 +488,13 @@ zusätzlich die ArgoCD-UI auf `:30080` (HTTP). Details je App: [c0030](../c-netz
 ## 10. Abhängigkeitsketten im Klartext
 
 **Speicher**
-- UGREEN NAS (RAID1) → NFS `/volume1` → `nas-storage` (in TECH **und** PROD) → StorageClass `nas` → Nextcloud, Paperless, Wiki.js, Mealie (PROD); Zammad, n8n, MinIO, Vaultwarden (TECH)
+- UGREEN NAS (RAID1) → NFS `/volume1` → `nas-storage` (in TECH **und** PROD) → StorageClass `nas` → Nextcloud, Paperless, Wiki.js (PROD); Zammad, n8n, MinIO, Vaultwarden (TECH)
 - UGREEN NAS → `/volume2` → `immich-storage` → `immich-nas` → Immich, bewusst getrennt vom übrigen Cluster-Speicher
-- Steht das NAS, starten diese Apps nicht mehr. Apps auf `local-path` (Grafana, Gotify, ntfy, Pi-hole, Uptime Kuma, Semaphore, Authentik) laufen weiter.
+- Steht das NAS, starten diese Apps nicht mehr. Apps auf `local-path` (Grafana, ntfy, Pi-hole, Uptime Kuma, Semaphore) laufen weiter.
 - Sicherung: NAS → restic → WD Elements 8 TB. Ohne diese Platte existiert keine Kopie der Nutzdaten. Das restic-Passwort ist der einzige Schlüssel — ohne es ist auch das Backup wertlos.
 
 **Anmeldung und Geheimnisse**
-- **Authentik** (mit lldap als Nutzerquelle) ist der zentrale Identity-Provider (`authentik.tech.homeserver`) und schützt ausgewählte Apps per Traefik-ForwardAuth, siehe [d0073](../d-sicherheit/d0073-authentik-sso.md). Aktuell geschützt ist Uptime Kuma; bei Mealie ist die Middleware nach dem Umzug nach PROD zurückgestellt, weil PROD noch keinen Authentik-Outpost hat (`argocd/bootstrap-prod/migrations/README.md`). Jede geschützte App behält einen ungeschützten `-native`-Host als Fallback. Alle anderen Apps (Immich, Nextcloud, Grafana, Zammad, Vaultwarden, …) nutzen ihren eigenen Login.
+- Es gibt kein zentrales SSO: jede App nutzt ihren eigenen Login (Immich, Nextcloud, Grafana, Zammad, Vaultwarden, Uptime Kuma, …). lldap läuft als Nutzerverzeichnis, hat aber aktuell keinen angebundenen Dienst.
 - `sealed-secrets` muss **je Cluster** vor allen Apps laufen, die ein SealedSecret mitbringen — sonst bleiben deren Pods ohne Zugangsdaten. Jeder Cluster hat eigene Schlüssel; ein Secret muss für den Ziel-Cluster versiegelt sein (`scripts/reseal-for-prod.sh`).
 - Ansible Vault schützt die Host-Geheimnisse (Tailscale-Key, sudo-Passwörter, SMB-Passwort); Sealed Secrets schützt die Cluster-Geheimnisse. Zwei getrennte Mechanismen, beide im Git-Repo.
 
@@ -520,7 +509,7 @@ zusätzlich die ArgoCD-UI auf `:30080` (HTTP). Details je App: [c0030](../c-netz
 - Erst `make install` auf dem Homeserver (erzeugt Join-Token und Shutdown-Schlüssel), dann `make worker-0` / `make worker-1` — sonst können die Worker nicht beitreten.
 - Die VMs brauchen zuerst die Bridge (`libvirt_host` mit `libvirt_host_configure_bridge`); ein falsch gepinntes Interface hat schon einmal den Homeserver vom LAN getrennt, die Rolle prüft das jetzt per `assert`. Nach jeder Netzwerkumstellung einen Reboot-Test machen.
 - Wake-on-LAN braucht zusätzlich die BIOS-Einstellung auf den Workern und die richtige MAC-Adresse in `ansible/host_vars/`.
-- Argo Workflows braucht MinIO als Artefaktspeicher; die Alarm-Brücken brauchen Gotify bzw. ntfy; `wiki-docs-sync` (PROD) braucht Wiki.js; `github-release-watcher` braucht Zammad.
+- Argo Workflows braucht MinIO als Artefaktspeicher; die Alarm-Brücke braucht ntfy; `wiki-docs-sync` (PROD) braucht Wiki.js; `github-release-watcher` braucht Zammad.
 - `cluster_power_manager` misst absichtlich ohne Prometheus: er liest `/proc/stat` und `/proc/meminfo` direkt, damit die Entscheidung auch dann funktioniert, wenn der Monitoring-Stack selbst unter Last steht.
 
 ---
@@ -555,12 +544,12 @@ ZUGRIFF     LAN-Gerät      Tailscale-VPN      Internet (Cloudflare)      git pu
 EINTRITT   dnsmasq:53      Traefik:80/443      k3s-API:6443      ArgoCD:30080   CUPS:631
                                    |
                                    v
-SCHICHT 4  PROD:  Nextcloud  Immich  Paperless  Wiki.js  Mealie  xibosignage  + wiki-docs-sync
+SCHICHT 4  PROD:  Nextcloud  Immich  Paperless  Wiki.js  xibosignage  + wiki-docs-sync
            TECH:  Zammad  Vaultwarden  n8n  Uptime-Kuma  MediaMTX  alamos-*  carplay-api  pacman
            ENTW:  demo-app  example-whoami
                                    |  braucht
                                    v
-SCHICHT 3  authentik  lldap  sealed-secrets  monitoring  logging  gotify/ntfy  cloudflared
+SCHICHT 3  lldap  sealed-secrets  monitoring  logging  ntfy  cloudflared
            pihole  nas-storage  immich-storage  minio  argo-workflows  semaphore  headlamp  cert-manager
                                    |  läuft in
                                    v

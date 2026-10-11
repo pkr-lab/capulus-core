@@ -10,19 +10,20 @@ Die Push-Seite auf den Hosts (Rolle `vmagent`) steht in [60020](60020-ansible-ro
 
 ## Alertmanager-Routing
 
-Alle Alerts außer `InfoInhibitor`/`Watchdog` gehen an **gotify-bridge** (übersetzt Alertmanager-JSON in Gotifys Message-API, Token als Secret
-`gotify-bridge-token`). Zusätzlich:
+`InfoInhibitor`/`Watchdog` landen im Blackhole. Alle übrigen Alerts werden nur zugestellt, wenn eine der folgenden Routen passt:
 
-| Bedingung | Zusätzlicher Empfänger |
+| Bedingung | Empfänger |
 |---|---|
 | `severity=critical` | ntfy `/Home-Lab` (iOS-Push, der Alertmanager-Webhook wird direkt von ntfy empfangen) |
 | **nur** `alertname=BananaPiAlarmmonitorDown` | n8n-Webhook des Workflows „Banana-Pi-Down → Zammad-Ticket“ ([30020](../3-apps-workloads/30020-vereinsheim-alarmmonitor.md)) |
 
-- Der Pfad ist **rein additiv**: Die anderen Alamos-Raspberry-Pis bekommen bewusst weiterhin **kein** Ticket pro Ausfall
+- **Warnungen werden nicht zugestellt:** Gotify (früher Empfänger für alle Alerts) ist im Oktober 2026 samt Bridge entfernt worden. Alerts mit `severity=warning`/`info`
+  sind seitdem nur in Alertmanager und Grafana sichtbar, nur `critical` löst einen Push aus.
+- Der n8n-Pfad ist **rein additiv**: Die anderen Alamos-Raspberry-Pis bekommen bewusst weiterhin **kein** Ticket pro Ausfall
   ([30010](../3-apps-workloads/30010-alamos-apager.md)), nur dieser eine Alertname bekommt den zusätzlichen Weg.
 - **Warum explizite Geschwister-Routen:** Ein nacktes Top-Level-Receiver wird **nicht** mit einer passenden Kind-Route kombiniert, Alertmanager fällt nur darauf
-  zurück, wenn gar keine Kind-Route passt. Der Fan-out „Default + critical (+ Banana Pi)“ ist deshalb als explizite Geschwister-Routen modelliert. Die
-  Match-all-Route an gotify hat `continue: true` und fällt so zur nächsten passenden Route durch.
+  zurück, wenn gar keine Kind-Route passt. Der Fan-out „critical (+ Banana Pi)“ ist deshalb als explizite Geschwister-Routen modelliert. Die
+  n8n-Route hat `continue: true` und fällt so zur nächsten passenden Route durch.
 - **Reihenfolge:** Die n8n-Route (nur dieser Alertname) muss **vor** der `severity=critical`-Route stehen. Die hat kein `continue: true` und würde die Auswertung sonst
   dort beenden.
 
@@ -33,8 +34,8 @@ Alle Alerts außer `InfoInhibitor`/`Watchdog` gehen an **gotify-bridge** (übers
 | `vmrule-argocd` (GitOps-Gesundheit) | Anlass: Die Sync-Operation von `monitoring` hing vom 2026-09-15 bis 2026-09-19 unbemerkt (sie wartete auf einen nie gesunden DaemonSet), aufgefallen ist es nur von Hand. Grundlage sind die Metriken des `application-controller` (`argocd_app_info` mit `health_status`, `sync_status`, `operation`, Scrape in `vmscrape-argocd.yaml`). Das Label `operation` ist leer, solange keine Sync-Operation läuft. Der Controller-Pod öffnet den Port `metrics` (8082) immer, und die NetworkPolicy `argocd-application-controller` erlaubt Zugriff aus jedem Namespace, dafür ist keine Änderung an ArgoCD nötig. Erfasst wird der **Hub (TECH + PROD)**, der separate ENTW-ArgoCD (eigener Cluster) nicht. Alle Alerts laufen über die vorhandene Route (Gotify + ntfy). |
 | `vmrule-cronjobs` (Backups) | Alert, wenn der letzte **erfolgreiche** Lauf zu lange her ist. Bewusst **nicht** `kube_job_status_failed > 0`: Fehlgeschlagene Jobs bleiben in der Historie stehen und würden nach der Reparatur weiter feuern. Anlass: Die Authentik-Backups schlugen in den Nächten auf den 17. und 18.09.2026 fehl (`BackoffLimitExceeded`) und wurden nur zufällig bemerkt. Datensicherungen laufen täglich (nachts), nach **30 h** ohne Erfolg fehlt mindestens eine Sicherung. Gilt für den Hub-Cluster (TECH), `kube-state-metrics`-Daten anderer Cluster sind nicht enthalten. |
 | `vmrule-banana-pi` (Ausfall des Alarmmonitors) | Host-Ebene, unabhängig vom App-Level-Heartbeat in alamos-apager (der nur ntfy auslöst). **`absent_over_time` statt `up == 0`:** Der Pi wird nicht vom Cluster gescrapt (Pods haben keinen Pfad zu Tailscale-Peers), sondern pusht seine Metriken per `remote_write`. Fällt er aus, wird `up` nicht auf 0 gesetzt (das setzte eine laufende Scrape-Verbindung voraus), die Zeitreihe hört einfach auf und gilt nach der Staleness-Frist als fehlend. `up == 0` würde deshalb **nie** feuern. `absent_over_time` erkennt „seit 10 Minuten kein einziger Sample mehr“ (Pi **oder** Push-Pfad down). `for: 10m` ist bewusst träge (deutlich über einem kurzen Reboot), damit nicht jeder Neustart ein Ticket erzeugt. `severity=critical` löst die bestehenden Routen (Gotify, ntfy) **und** die n8n-Route aus. |
-| `vmrule-temperature` | Warnung, wenn irgendein Sensor mindestens 1 Minute lang 80 °C erreicht (`for: 1m` entprellt kurze Sensor-Spitzen). `severity: critical` geht an Gotify **und** ntfy. Das eigentliche Herunterfahren bei 100 °C läuft **nicht** über diesen Alert, sondern über den lokalen `thermal_watchdog` auf dem Host, der auch dann noch funktioniert, wenn der Cluster wegen der Hitze schon klemmt ([60020](60020-ansible-rollen.md#thermal_watchdog-und-resource_watchdog)). |
-| `vmrule-resources` | Reine Warnstufen (`severity: warning`, nur Gotify). Die Shutdown-Schwellen für CPU/RAM (90 %) laufen **nicht** über Alertmanager, sondern über den lokalen `resource_watchdog`. |
+| `vmrule-temperature` | Warnung, wenn irgendein Sensor mindestens 1 Minute lang 80 °C erreicht (`for: 1m` entprellt kurze Sensor-Spitzen). `severity: critical` geht an ntfy. Das eigentliche Herunterfahren bei 100 °C läuft **nicht** über diesen Alert, sondern über den lokalen `thermal_watchdog` auf dem Host, der auch dann noch funktioniert, wenn der Cluster wegen der Hitze schon klemmt ([60020](60020-ansible-rollen.md#thermal_watchdog-und-resource_watchdog)). |
+| `vmrule-resources` | Reine Warnstufen (`severity: warning`, werden seit dem Entfernen von Gotify nirgends zugestellt). Die Shutdown-Schwellen für CPU/RAM (90 %) laufen **nicht** über Alertmanager, sondern über den lokalen `resource_watchdog`. |
 | k3s-Komponenten | Regeln für controller-manager, scheduler und etcd sind **deaktiviert**: Sie laufen im einen k3s-Serverprozess und sind nicht als eigene Pods erreichbar (an `127.0.0.1` gebunden, kube-proxy ist eingebaut, k3s nutzt eine eingebettete SQLite-Datenbank, es gibt kein etcd). Gescrapt wird nur, was k3s tatsächlich exponiert. |
 
 ## Scrapes und Labels
@@ -67,7 +68,7 @@ Alle Alerts außer `InfoInhibitor`/`Watchdog` gehen an **gotify-bridge** (übers
   weil die CRD `monitoring.coreos.com/v1` im Cluster nicht installiert ist (Lehre aus der Authentik-Runde, dort erst nachträglich korrigiert).
 - **Grafana:** Erreichbar unter `https://grafana.tech.homeserver` über Traefik. Das Admin-Passwort wird automatisch erzeugt und liegt im Secret `monitoring-grafana`
   (`kubectl -n monitoring get secret monitoring-grafana -o jsonpath='{.data.admin-password}' | base64 -d; echo`). **Bewusst kein SSO** davor (Nutzerentscheidung
-  22.08.2026, gilt nach der Authentik-Ablösung unverändert): keine wichtigen Daten hinter Grafana, der eigene Login reicht ([d0073](../d-sicherheit/d0073-authentik-sso.md)).
+  22.08.2026, gilt unverändert, auch nach dem Entfernen von Authentik): keine wichtigen Daten hinter Grafana, der eigene Login reicht.
   Plugins: **Infinity** (direkte HTTP/JSON-Abfragen in Panels, für die Dashboards Pegelonline, DWD, ELWIS), die VictoriaLogs-Datasource und **Polystat** (Waben-Übersicht im
   Ordner „Hardware“).
 - **Speicher:** 512Mi waren zu knapp (OOMKilled am 2026-09-19, RSS 488 MB beim Kill). Grafana 12 baut Suchindizes (bleve) im Speicher auf und startet vier Plugin-Prozesse

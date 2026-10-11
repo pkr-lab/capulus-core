@@ -66,6 +66,10 @@ spec:
             - name: xibosignage-display
               mountPath: {{ .Values.xibosignage.display.mountPath }}
             {{- end }}
+            {{- if .Values.instagram.enabled }}
+            - name: instagram-bilder
+              mountPath: {{ .Values.instagram.bilder.mountPath }}
+            {{- end }}
       volumes:
         - name: data
           {{- if .Values.persistence.enabled }}
@@ -81,6 +85,11 @@ spec:
         - name: xibosignage-display
           persistentVolumeClaim:
             claimName: xibosignage-display-data
+        {{- end }}
+        {{- if .Values.instagram.enabled }}
+        - name: instagram-bilder
+          emptyDir:
+            sizeLimit: {{ .Values.instagram.bilder.sizeLimit }}
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

@@ -107,7 +107,7 @@ den Tag umlegen) und `report-ci-failure` (meldet ein rotes CI auf `entw` als Iss
 **`.yamllint`:**
 
 - Helm-Templates (`argocd/apps/*/*/templates/`) und vendorte `charts/` sind **ausgenommen**: Sie enthalten Go-Template-Ausdrücke (`{{ … }}`), die yamllint teils als `truthy`-/`comments`-Verstoß wertet. Die Regeln sind
-  hier bewusst entspannt, echte Fehler fängt `helm lint`/`helm template`. Alles andere unter `ansible/` und `argocd/` wird gelintet, auch die Authentik-Blueprints unter `argocd/apps/tech/authentik/blueprints/`.
+  hier bewusst entspannt, echte Fehler fängt `helm lint`/`helm template`. Alles andere unter `ansible/` und `argocd/` wird gelintet.
 - `comments-indentation: false` ist **nicht optional**: ansible-lint verlangt diese Mindesteinstellungen von jeder eigenen yamllint-Config, sonst verweigert es seine YAML-Prüfung komplett („Found incompatible custom yamllint
   configuration“).
 - Die Regel `empty-lines` gilt weiter: Eine YAML-Datei endet mit **genau einem** Zeilenumbruch, eine Leerzeile am Dateiende ist ein Fehler.

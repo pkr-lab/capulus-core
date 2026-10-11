@@ -55,10 +55,7 @@ entw_vm_ip: "192.168.178.100"
 prod_vm_ip: "192.168.178.99"
 dnsmasq_prod_vm_hosts:
   - demo.prod.homeserver
-  - tinyteller.prod.homeserver
   - whoami.prod.homeserver
-  - mealie-native.prod.homeserver
-  - mealie.prod.homeserver
   - paperless.prod.homeserver
   - wiki.prod.homeserver
   - nextcloud.prod.homeserver
@@ -258,16 +255,6 @@ scanner_smb_password: !vault |
           31653863353437633462656237356332666233326465386637363235343337323733346364366235
           3233363763343830650a613038653936323431313035656165323733613939313137383563396662
           3031
-
-scanner_gotify_enabled: true
-scanner_gotify_url: "http://gotify.tech.homeserver"
-scanner_gotify_token: !vault |
-          $ANSIBLE_VAULT;1.1;AES256
-          62323337393866356461663234313232393032613734613861366534356533393963386330323936
-          3863363131353930303365316538353330336530373461620a623434383036326133666663303935
-          34646334303639373339353265366635346464353532663162626537366563386534643764323732
-          6638346364623337390a643262646631393332623861373737616666363931656434303366373963
-          3037
 
 cups_print_server_device_uri: "usb://Samsung/M2020%20Series?serial=08HVB8GM1B0870W"
 cups_print_server_build_qpdl_driver: true

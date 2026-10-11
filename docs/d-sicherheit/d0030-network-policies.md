@@ -433,8 +433,6 @@ Intra-Tier stillschweigend erlaubt, jetzt durch je eine gezielte
 
 | Ziel | Erlaubt zusätzlich aus | Grund |
 |---|---|---|
-| `gotify` | `gotify-bridge` | `gotify-bridge/values.yaml` |
-| `gotify-bridge` | `monitoring` | vmalertmanager-Webhook |
 | `ntfy-bridge` | `monitoring` | vmalertmanager-Webhook |
 | `ntfy` | (+ `ntfy-bridge`, zusätzlich zu `carplay-api`/`alamos-apager` aus Batch 3) | `ntfy-bridge/values.yaml` |
 | `ntfy` | (+ `n8n`) | Push-Nodes in den n8n-Workflows (`zammad-tickets-verarbeiten`, `email-to-whatsapp-kanal`); ohne die Freigabe meldet n8n `ECONNREFUSED` auf den ntfy-Service, gefunden am 26.09.2026 |

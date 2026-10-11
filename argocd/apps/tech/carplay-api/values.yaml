@@ -115,9 +115,6 @@ config:
     - id: paperless
       name: "Paperless-ngx"
       match: "paperless"
-    - id: mealie
-      name: "Mealie"
-      match: "mealie"
     - id: n8n
       name: "n8n"
       match: "n8n"

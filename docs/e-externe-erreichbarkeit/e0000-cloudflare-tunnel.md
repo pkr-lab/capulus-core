@@ -285,9 +285,8 @@ tunnel:
   # komplettes Label matchen, keine Tier-spezifischen Muster wie
   # "*.tech.deine-domain.de" — Details/Begründung: docs/c-netzwerk-dns/c0040-domain-tiers.md).
   #
-  # HTTPS (443), nicht Klartext-Port 80: seit dem SSO-Rollout (ursprünglich
-  # Authelia, jetzt Authentik — docs/d-sicherheit/d0073-authentik-sso.md)
-  # werden Session-Cookies über eine als "unsicher" gemeldete Verbindung
+  # HTTPS (443), nicht Klartext-Port 80: seit dem früheren SSO-Rollout
+  # (Authelia, später Authentik) werden Session-Cookies über eine als "unsicher" gemeldete Verbindung
   # abgelehnt — auf Port 80 setzte Traefik X-Forwarded-Proto: http, obwohl
   # TLS längst an der Cloudflare-Edge terminiert war (401 statt Redirect für
   # jeden extern exponierten, SSO-geschützten Host).
@@ -403,7 +402,7 @@ curl -sI https://grafana-tech.pke-lab.de | head -1
 | **Wiki.js** | Freigeben | SOPs, Alarm-/Ausrückeordnung, Checklisten — genau die Inhalte, die im Wachdienst *unterwegs*, ohne VPN gebraucht werden. Reiner Lesezugriff für die meisten Nutzer, geringes Risiko. Mit Cloudflare Access (Option B) auf DLRG-Mitglieder einschränken. |
 | **ntfy** | Freigeben | Push-Benachrichtigungen (z. B. Unwetterwarnung, Alarmmonitor offline) müssen genau dann ankommen, wenn das Handy *nicht* im Heimnetz/Tailnet hängt. Ohne externe Erreichbarkeit verpuffen Alerts im Ernstfall. |
 | **Zammad** | Freigeben (mit Access-Policy) | Sinnvoll, wenn Tickets/Support-Anfragen auch von Leuten ohne VPN-Zugang reinkommen sollen. Cloudflare Access oder mindestens ein Rate-Limit vorschalten, da das Formular öffentlich erreichbar ist. |
-| **Grafana** | Optional | Praktisch, um Pegel-/Wetter-Dashboards unterwegs zu checken. Login läuft über den lokalen Grafana-Account (kein Authentik mehr). Zusätzlich mit Cloudflare-Access-Policy auf den eigenen Account freigeben — sonst sind Cluster-/Infra-Metriken hinter nur einem Passwort öffentlich erreichbar. |
+| **Grafana** | Optional | Praktisch, um Pegel-/Wetter-Dashboards unterwegs zu checken. Login läuft über den lokalen Grafana-Account (kein SSO). Zusätzlich mit Cloudflare-Access-Policy auf den eigenen Account freigeben — sonst sind Cluster-/Infra-Metriken hinter nur einem Passwort öffentlich erreichbar. |
 | **Immich** | Freigeben | Kernanwendungsfall ist automatisches Foto-Backup vom Handy — ohne externe Erreichbarkeit synct die App nur im WLAN. Absicherung über den eigenen Immich-Login (E-Mail + Passwort, optional 2FA). |
 | **Nextcloud** | Freigeben | Datei-Sync/Kalender/Kontakte sind für Mobile-/Desktop-Clients unterwegs gedacht. Eigener Login schützt den Zugriff, siehe [docs/3-apps-workloads/300b0-nextcloud.md](../3-apps-workloads/300b0-nextcloud.md). |
 | **ArgoCD** | Nicht freigeben | Voller GitOps-Controller-Zugriff auf den Cluster. Bleibt Tailscale-only. |

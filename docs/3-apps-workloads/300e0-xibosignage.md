@@ -129,8 +129,8 @@ Nach dem Sync ist Xibo unter **https://xibo.prod.homeserver** (intern) und
 **https://xibo-prod.pke-lab.de** (extern, über den Cloudflare-Tunnel des PROD-Clusters —
 der externe Host braucht einen DNS-Eintrag auf den Tunnel `homeserver-prod`, siehe
 [docs/e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md](../e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md))
-erreichbar. Bewusst **ohne** zusätzliche Authentik-ForwardAuth-Middleware
-(anders als mealie/uptime-kuma) — nur das CMS-eigene Login schützt den
+erreichbar. Bewusst **ohne** zusätzliche ForwardAuth-Middleware
+— nur das CMS-eigene Login schützt den
 externen Host. Das CMS-Image führt beim allerersten Start automatisch
 DB-Migrationen + Installation durch — das kann einige Minuten dauern
 (`kubectl -n xibosignage logs deploy/xibosignage-cms -f`).

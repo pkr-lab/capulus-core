@@ -140,7 +140,7 @@ grafana:
 > `cloudflared tunnel route dns homeserver grafana-tech.deine-domain.de`
 > ausführen.
 
-> **Läuft die App im PROD-Cluster** (z. B. Nextcloud, Immich, Mealie, Wiki.js, Xibo), reicht der
+> **Läuft die App im PROD-Cluster** (z. B. Nextcloud, Immich, Wiki.js, Xibo), reicht der
 > Wildcard-Record **nicht**: er zeigt auf den TECH-Tunnel, dessen Traefik die PROD-App nicht kennt
 > (404). Den Host stattdessen einzeln auf den PROD-Tunnel legen:
 > `cloudflared tunnel route dns homeserver-prod nextcloud-prod.deine-domain.de`

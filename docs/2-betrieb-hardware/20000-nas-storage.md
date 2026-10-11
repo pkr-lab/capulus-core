@@ -178,7 +178,7 @@ Metrik-Namen (`smartctl_device_smart_status`, `smartctl_device_temperature`,
 
 Aktuell auf `nas`: `n8n`, `paperless-ngx` (5× — data/media/consume/export/
 redis), `wikijs` (postgresql), `zammad` (nur redis, nicht die primary DB —
-siehe unten), `mealie`, `minio` — insgesamt 10 PVCs über 6 Apps.
+siehe unten) und `minio` — Stand der Migration; `mealie` ist inzwischen entfernt.
 
 **Nicht (mehr) auf `nas`, bewusst auf `local-path`:** `monitoring` (vmsingle)
 und `uptime-kuma` wurden versuchsweise migriert, dann aber zurück auf
@@ -280,14 +280,6 @@ argocd app set $NS --sync-policy automated --auto-prune --self-heal
 >
 > **Hinweis MinIO:** PVC- und Deployment-Name sind im Standalone-Modus
 > üblicherweise schlicht `minio` (`kubectl -n minio get pvc,deploy`).
-
-### Sonderfall: tinyteller
-
-Lief vorher **nicht** über die `hdd`-StorageClass, sondern als
-Docker-Compose direkt auf worker-0 (`/opt/...`, System-SSD). Ist jetzt eine
-eigene ArgoCD-App (`argocd/apps/prod/tinyteller`) und braucht kein
-PVC-Migrations-Runbook wie oben — **tinyteller** ist zustandslos, nichts zu
-migrieren, einfach die neue App syncen lassen.
 
 ---
 
