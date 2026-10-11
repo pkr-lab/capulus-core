@@ -3,7 +3,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/pkr-lab/isc-news-bot
-  tag: "sha-pending"
+  tag: "sha-04f6d88"
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
