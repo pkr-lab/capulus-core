@@ -2,7 +2,7 @@
 
 Eigenständiger Dienst, der News inkl. Bildern im DLRG-ISC (`https://dlrg.net`, App „News“) anlegt. Er steuert einen headless Chromium über Playwright. n8n ist nur Auftraggeber: n8n ruft den Dienst per HTTP auf, im n8n-Pod läuft kein Browser. Die Kategorien liefert n8n mit.
 
-> **Cluster:** TECH · Ordner `argocd/apps/tech/isc-news-bot/` · kein Ingress, nur cluster-intern unter `http://isc-news-bot.isc-news-bot.svc.cluster.local`. `kubectl`-Befehle in diesem Doc gelten für den TECH-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
+> **Cluster:** TECH · Ordner `argocd/apps/tech/isc-news-bot/` · kein Ingress, nur cluster-intern unter `http://isc-news-bot.isc-news-bot.svc.cluster.local:8080`. `kubectl`-Befehle in diesem Doc gelten für den TECH-Cluster ([Zugriff je Cluster](../a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
 
 ---
 
@@ -256,7 +256,7 @@ Der fertige Workflow liegt unter [`argocd/apps/tech/n8n/workflows/isc-news-veroe
 
 Anhänge:
 
-- eine JSON-Datei mit `title`, `subtitle`, `text` (oder `html`), `categories` (Liste aus IDs oder Namen), optional `startDate` (`JJJJ-MM-TTTHH:mm`) und `mode` (`draft` oder `publish`)
+- eine JSON-Datei mit `title`, `subtitle`, `text` (oder `html`), `categories` (Liste aus IDs oder Namen), optional `startDate` (`JJJJ-MM-TTTHH:mm`) und `mode` (`draft` oder `publish`). Die deutschen Namen `titel`, `untertitel` und `kategorien` gelten ebenso. Die Datei darf als Klartext-JSON oder Base64-kodiert ankommen. Weitere Felder (`autor`, `freigegebenVon`, `datum`, `bilder`) werden ignoriert
 - alle Bilder (jpg, png, webp) als weitere Anhänge. Das erste Bild ist der Teaser.
 
 Die Mail wird im Node **Mail lesen** geprüft und in dieselbe Verarbeitung gegeben wie Formular und Webhook. Ist die JSON-Datei nicht lesbar oder fehlt sie, kommt eine ntfy-Meldung und es wird nichts angelegt. Für das IMAP-Postfach braucht es eine Credential **IMAP** in n8n. Sie liegt in n8n, nicht im Repo.
@@ -321,6 +321,8 @@ Image lokal bauen: `docker build -t isc-news-bot:local .` in `argocd/apps/tech/i
 | `UPLOAD_FAILED` mit „Schlagworte“ | Tokens wurden nicht übernommen. Schlagwort-Eingabe im ISC-Formular prüfen |
 | `TIMEOUT` bei vielen Bildern | Gesamt-Timeout (`120 s + Bilder × (uploadSettleMs + 60 s)`) reicht nicht. n8n-Timeout entsprechend setzen |
 | `BUSY` | Ein Lauf läuft noch. Bei Dauerbetrieb nicht parallel senden |
+| ntfy meldet „JSON-Anhang ist nicht lesbar“ | Der Anhang ist weder gültiges JSON noch Base64-kodiertes JSON. Datei aus der Mail öffnen und prüfen. Die Mail ist danach als gelesen markiert und muss neu gesendet werden |
+| ntfy meldet „Überschrift fehlt“ oder „Text fehlt“ trotz Anhang | Im JSON heißt das Feld weder `title`/`titel` noch `text`/`html`. Feldnamen im Absender-Flow prüfen |
 | n8n-Workflow bleibt beim Freigabe-Schritt hängen | Ohne Klick auf „Freigeben“ wartet der Wait-Node bewusst. Freigabe-Button oder Ausführung in n8n prüfen |
 | Klick auf „Freigeben“ in ntfy liefert `404` | Ältere Workflow-Version: Der Wait-Node „Warten auf Freigabe“ erwartete GET, der Button sendet POST. Aktuelle JSON importieren (Node steht auf `httpMethod: POST`). Die wartende Ausführung der alten Version bleibt hängen und muss in n8n abgebrochen werden |
 

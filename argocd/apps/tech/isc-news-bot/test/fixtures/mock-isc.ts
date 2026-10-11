@@ -130,10 +130,10 @@ document.getElementById('uploadRibbonButton').addEventListener('click', function
 });
 (function () {
   var hidden = document.getElementById('mainUploadUploadKeywordTk');
-  var typed = document.querySelector('#mainUpload input.token-input-input-token');
+  var typed = document.getElementById('token-input-mainUploadUploadKeywordTk');
   var list = typed.parentElement.parentElement;
   function refresh() {
-    hidden.value = Array.prototype.map.call(document.querySelectorAll('#mainUpload li.token-input-token'), function (li) {
+    hidden.value = Array.prototype.map.call(document.querySelectorAll('#mainUpload li.token-input-token-facebook'), function (li) {
       return li.getAttribute('data-value');
     }).join(',');
   }
@@ -143,15 +143,15 @@ document.getElementById('uploadRibbonButton').addEventListener('click', function
     var value = typed.value.trim();
     if (!value) return;
     var li = document.createElement('li');
-    li.className = 'token-input-token';
+    li.className = 'token-input-token-facebook';
     li.setAttribute('data-value', value);
-    li.innerHTML = '<p>' + value + '</p><span class="token-input-delete-token">x</span>';
+    li.innerHTML = '<p>' + value + '</p><span class="token-input-delete-token-facebook">x</span>';
     list.insertBefore(li, typed.parentElement);
     typed.value = '';
     refresh();
   });
   document.addEventListener('click', function (e) {
-    if (e.target && e.target.classList && e.target.classList.contains('token-input-delete-token')) {
+    if (e.target && e.target.classList && e.target.classList.contains('token-input-delete-token-facebook')) {
       e.target.parentElement.remove();
       refresh();
     }
@@ -285,8 +285,7 @@ ${locked}
     <button type="button" id="uploadRibbonButton">Medien hochladen</button>
     <div id="uploadRibbon" style="display:none">
       <div id="mainUpload">
-        <input type="hidden" id="mainUploadUploadKeywordTk" name="uploadKeywords" value="">
-        <ul class="token-input-list"><li class="token-input-input-li"><input class="token-input-input-token" type="text"></li></ul>
+        <ul class="token-input-list-facebook"><li class="token-input-input-token-facebook"><input type="text" autocomplete="off" id="token-input-mainUploadUploadKeywordTk"></li></ul><input class="form-control" id="mainUploadUploadKeywordTk" name="uploadKeywords" style="display: none;">
         <input type="hidden" id="mainUploadUploadFolderId" name="folderId" value="">
       </div>
       <div id="mainUploaduploadMessages"></div>

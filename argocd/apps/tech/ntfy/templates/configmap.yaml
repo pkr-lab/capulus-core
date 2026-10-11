@@ -14,3 +14,6 @@ data:
     cache-file: {{ index .Values.config "cache-file" | quote }}
     auth-file: {{ index .Values.config "auth-file" | quote }}
     auth-default-access: {{ index .Values.config "auth-default-access" | quote }}
+    attachment-cache-dir: {{ index .Values.config "attachment-cache-dir" | quote }}
+    attachment-file-size-limit: {{ index .Values.config "attachment-file-size-limit" | quote }}
+    attachment-total-size-limit: {{ index .Values.config "attachment-total-size-limit" | quote }}
