@@ -84,6 +84,7 @@ CALL_ESTABLISHED = re.compile(r"Call established")
 MEDIA_READY = re.compile(r"connectivity check is complete")
 CALL_TERMINATED = re.compile(r"Call with \S+ terminated")
 CALL_FAILED = re.compile(r"ua_connect failed")
+SUMMARY_LINE = re.compile(r"warning|error|fail|SRTP|srtp|ice:|aufile|rtprecv|dropping|Call (answered|established)|session closed|decrypt|audio:", re.IGNORECASE)
 
 CALL_LOCK = threading.Lock()
 STATE_LOCK = threading.Lock()
@@ -263,17 +264,38 @@ def send_dial(proc, uri):
 
 def stop_process(proc):
     if proc.poll() is None:
-        proc.terminate()
+        try:
+            proc.stdin.write(b"/hangup\n/quit\n")
+            proc.stdin.flush()
+        except OSError:
+            pass
         try:
             proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.wait()
+            for stop in (proc.terminate, proc.kill):
+                try:
+                    stop()
+                    proc.wait(timeout=3)
+                    break
+                except (OSError, subprocess.TimeoutExpired):
+                    continue
     for stream in (proc.stdin, proc.stdout):
         try:
             stream.close()
         except OSError:
             pass
+
+
+def call_summary(output):
+    clean = re.sub(r"\x1b\[[0-9;]*m", "", output).replace("\r", "\n")
+    keep = []
+    for line in clean.splitlines():
+        line = line.strip()
+        if "bit/s" in line or "FSM:" in line or not line:
+            continue
+        if SUMMARY_LINE.search(line) and line not in keep:
+            keep.append(line[:140])
+    return " | ".join(keep[-14:])
 
 
 def dial(uri, seconds):
@@ -313,7 +335,7 @@ def dial(uri, seconds):
             chunk = os.read(proc.stdout.fileno(), 4096)
             if not chunk:
                 break
-            output = (output + chunk.decode("utf-8", "replace"))[-4000:]
+            output = (output + chunk.decode("utf-8", "replace"))[-40000:]
             if dialed_at is None:
                 if REGISTERED.search(output):
                     dialed_at = send_dial(proc, uri)
@@ -334,6 +356,7 @@ def dial(uri, seconds):
         stop_process(proc)
     if answered:
         log(f"call to {uri} finished, rx.wav peak: {rx_peak(rx_path)}")
+        log(f"baresip: {call_summary(output)}")
     else:
         tail = re.sub(r"\x1b\[[0-9;]*m", "", output).strip().splitlines()[-5:]
         log(f"{uri} not answered: {' | '.join(tail)}")

@@ -11,8 +11,13 @@ alert_caller_baresip_dir: /etc/alert-caller/baresip
 alert_caller_baresip_version: "4.12.0"
 alert_caller_baresip_prefix: /opt/baresip
 alert_caller_baresip_build_dir: /usr/local/src/alert-caller
-alert_caller_libre_patch: "{{ role_path }}/../../../argocd/apps/tech/alert-caller/patches/libre-sips-route.patch"
-alert_caller_baresip_patch: "{{ role_path }}/../../../argocd/apps/tech/alert-caller/patches/baresip-srtp-no-gcm.patch"
+alert_caller_patch_dir: "{{ role_path }}/../../../argocd/apps/tech/alert-caller/patches"
+alert_caller_libre_patches:
+  - libre-sips-route.patch
+  - libre-ice-retransmit.patch
+  - libre-ice-pacing.patch
+alert_caller_baresip_patches:
+  - baresip-srtp-no-gcm.patch
 alert_caller_baresip_modules: "stdio;g711;opus;aufile;auresamp;menu;ice;srtp;account"
 
 alert_caller_piper_dir: /opt/piper
