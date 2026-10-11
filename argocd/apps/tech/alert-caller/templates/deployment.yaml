@@ -56,6 +56,8 @@ spec:
               value: {{ .Values.config.callRingTimeout | quote }}
             - name: REGISTER_TIMEOUT
               value: {{ .Values.config.registerTimeout | quote }}
+            - name: ICE_TIMEOUT
+              value: {{ .Values.config.iceTimeout | quote }}
             - name: VM_URL
               value: {{ .Values.config.vmUrl | quote }}
             - name: PIPER_PYTHON

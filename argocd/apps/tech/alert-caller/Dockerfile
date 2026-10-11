@@ -14,6 +14,7 @@ COPY patches/ /patches/
 RUN git clone --depth 1 --branch "v${BARESIP_VERSION}" https://github.com/baresip/re.git /src/re \
  && patch -p1 -d /src/re < /patches/libre-sips-route.patch \
  && git clone --depth 1 --branch "v${BARESIP_VERSION}" https://github.com/baresip/baresip.git /src/baresip \
+ && patch -p1 -d /src/baresip < /patches/baresip-srtp-no-gcm.patch \
  && cmake -S /src/re -B /src/re/build -DCMAKE_INSTALL_PREFIX=/opt/baresip -DCMAKE_INSTALL_RPATH=/opt/baresip/lib -DCMAKE_BUILD_TYPE=Release \
  && cmake --build /src/re/build --parallel \
  && cmake --install /src/re/build \
