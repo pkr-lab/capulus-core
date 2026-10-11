@@ -519,3 +519,18 @@
     overlap: true
   owner: peter
   blast_radius: "Bearer-Token der API isc-news-bot: wer es hat, kann ueber den Dienst News im ISC anlegen und veroeffentlichen. Nur n8n kennt es (Header-Auth-Credential)."
+
+- id: alert-caller-sip-password
+  service: alert-caller
+  kind: password
+  stored_in:
+    - argocd/apps/tech/alert-caller/templates/sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: docs/1-benachrichtigungen/10020-telefon-alarm.md#3-secrets-anlegen-und-versiegeln
+    overlap: true
+  owner: peter
+  blast_radius: "Passwort des Linphone-Kontos capulus-core: wer es hat, kann damit auf sip.linphone.org anrufen und Anrufe als capulus-core ausloesen. Das Konto hat keine weiteren Rechte."

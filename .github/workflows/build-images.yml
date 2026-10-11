@@ -12,6 +12,8 @@ on:
       - "argocd/apps/tech/carplay-api/src/**"
       - "argocd/apps/tech/carplay-api/.dockerignore"
       - "argocd/apps/tech/n8n/image/Dockerfile"
+      - "argocd/apps/tech/alert-caller/Dockerfile"
+      - "argocd/apps/tech/alert-caller/.dockerignore"
       - "argocd/apps/tech/isc-news-bot/Dockerfile"
       - "argocd/apps/tech/isc-news-bot/.dockerignore"
       - "argocd/apps/tech/isc-news-bot/package.json"
@@ -31,6 +33,8 @@ on:
       - "argocd/apps/tech/carplay-api/src/**"
       - "argocd/apps/tech/carplay-api/.dockerignore"
       - "argocd/apps/tech/n8n/image/Dockerfile"
+      - "argocd/apps/tech/alert-caller/Dockerfile"
+      - "argocd/apps/tech/alert-caller/.dockerignore"
       - "argocd/apps/tech/isc-news-bot/Dockerfile"
       - "argocd/apps/tech/isc-news-bot/.dockerignore"
       - "argocd/apps/tech/isc-news-bot/package.json"
@@ -44,7 +48,7 @@ on:
       app:
         description: "App neu bauen (all = alle drei, z.B. nach einem reinen Base-Image-Update ohne Dateiänderung)"
         type: choice
-        options: [all, pacman, carplay-api, n8n, isc-news-bot]
+        options: [all, pacman, carplay-api, n8n, isc-news-bot, alert-caller]
         default: all
 
 permissions:
@@ -82,6 +86,11 @@ jobs:
             values: argocd/apps/tech/isc-news-bot/values.yaml
             dockerfile: argocd/apps/tech/isc-news-bot/Dockerfile
             image: ghcr.io/pkr-lab/isc-news-bot
+          - app: alert-caller
+            path: argocd/apps/tech/alert-caller
+            values: argocd/apps/tech/alert-caller/values.yaml
+            dockerfile: argocd/apps/tech/alert-caller/Dockerfile
+            image: ghcr.io/pkr-lab/alert-caller
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

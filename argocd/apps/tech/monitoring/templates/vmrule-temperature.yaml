@@ -9,12 +9,13 @@ spec:
       interval: 30s
       rules:
         - alert: HostHighTemperature
-          expr: node_hwmon_temp_celsius >= 80
-          for: 1m
+          expr: max by (host) (node_hwmon_temp_celsius) >= 95
+          for: 3m
           labels:
             severity: critical
           annotations:
-            summary: "Hohe Temperatur auf {{ "{{ $labels.instance }}" }}"
+            summary: "{{ "{{ $labels.host }}" }} ist kurz vor der Hitze-Abschaltung"
             description: >-
-              {{ "{{ $labels.chip }}" }}/{{ "{{ $labels.sensor }}" }} auf {{ "{{ $labels.instance }}" }}
-              hat {{ "{{ $value }}" }}°C erreicht (Schwelle: 80°C).
+              Der heißeste Sensor auf {{ "{{ $labels.host }}" }} liegt seit mindestens 3 Minuten bei
+              {{ `{{ $value | printf "%.0f" }}` }}°C (Schwelle: 95°C). Der thermal_watchdog fährt den Host
+              ab 100°C über 90 Sekunden herunter.

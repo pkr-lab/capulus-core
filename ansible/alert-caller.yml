@@ -1,0 +1,10 @@
+---
+
+- name: Telefon-Alarmierung (alert-caller) einrichten
+  hosts: alert_callers
+  become: true
+  roles:
+    - role: tailscale
+      tags: [tailscale, vpn]
+    - role: alert_caller
+      tags: [alert-caller, alerting]
