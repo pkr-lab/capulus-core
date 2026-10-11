@@ -322,6 +322,7 @@ Image lokal bauen: `docker build -t isc-news-bot:local .` in `argocd/apps/tech/i
 | `TIMEOUT` bei vielen Bildern | Gesamt-Timeout (`120 s + Bilder × (uploadSettleMs + 60 s)`) reicht nicht. n8n-Timeout entsprechend setzen |
 | `BUSY` | Ein Lauf läuft noch. Bei Dauerbetrieb nicht parallel senden |
 | n8n-Workflow bleibt beim Freigabe-Schritt hängen | Ohne Klick auf „Freigeben“ wartet der Wait-Node bewusst. Freigabe-Button oder Ausführung in n8n prüfen |
+| Klick auf „Freigeben“ in ntfy liefert `404` | Ältere Workflow-Version: Der Wait-Node „Warten auf Freigabe“ erwartete GET, der Button sendet POST. Aktuelle JSON importieren (Node steht auf `httpMethod: POST`). Die wartende Ausführung der alten Version bleibt hängen und muss in n8n abgebrochen werden |
 
 ---
 
