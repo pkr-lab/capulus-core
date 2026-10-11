@@ -236,6 +236,9 @@ leitet alle `*.homeserver`-Anfragen an dnsmasq weiter.
   Live bestätigt am 2026-09-15 (Tausende `messages_published`, `base-url` stand noch auf dem internen Host).
 - `auth-default-access: read-write` heißt: Jeder darf ohne Auth publizieren und abonnieren. Für Auth auf `deny-all` stellen und Nutzer über
   die ntfy-CLI anlegen (dann muss carplay-api ein Zugriffstoken bekommen).
+- **Anhänge sind nur mit `attachment-cache-dir` erlaubt.** Ohne den Eintrag lehnt ntfy jeden PUT mit Datei ab (`invalid request: attachments not allowed`). Das traf am
+  11.10.2026 den Fehler-Screenshot des ISC-News-Workflows. Das Verzeichnis liegt auf dem Daten-PVC (1 Gi), deshalb sind Datei- und Gesamtgröße begrenzt (5 MB, 100 MB). Ein Anhang
+  hat Ablaufzeit, ntfy räumt ihn selbst auf.
 - **ntfy-bridge** bekommt die Basis-URL **ohne Topic**, z. B. `http://ntfy.ntfy.svc.cluster.local`.
 
 ### alert-caller
@@ -303,6 +306,18 @@ weil ein Ausfall des Clusters (und damit kein Anruf) bewusst in Kauf genommen wi
     von 4:5 bis 1,91:1 landen, was Meta ablehnt.
   - **Betreff `INSTAGRAM` ohne `1002011`.** Die Postfachregel für ISC-News verschiebt jeden Betreff mit `1002011` in `ISC-News`. Ein Betreff mit dieser Zahl landete dort und
     der Instagram-Trigger sähe ihn nie.
+- **ISC-News-Mail kommt aus Power Automate** (Workflow `isc-news-veroeffentlichen.json`, Node „Mail lesen“, [300k0](../3-apps-workloads/300k0-isc-news-bot.md#n8n-workflow-einrichten)):
+  - **Base64-JSON wird akzeptiert.** Der Anhang `homepage.json` kam beim ersten echten Lauf (11.10.2026) Base64-kodiert an (`eyJ0aXRlbCI6…`), vermutlich doppelt kodiert.
+    `JSON.parse` scheiterte und der Lauf endete mit „JSON-Anhang ist nicht lesbar“. Der Node versucht erst Klartext-JSON, dann Base64. So funktionieren beide Absenderseiten, auch
+    wenn der Flow in Power Automate später korrigiert wird.
+  - **Deutsche Feldnamen `titel`, `untertitel`, `kategorien`.** Der Power-Automate-Flow liefert sie klein und deutsch. Ohne die zusätzlichen Namen fehlte nach der Dekodierung die
+    Überschrift. Weitere Felder aus dem Flow (`autor`, `freigegebenVon`, `datum`, `bilder`) werden ignoriert, der Autor kommt aus `DEFAULT_AUTHOR` des Dienstes.
+  - **HTML wird bereinigt.** Outlook hängt `<attachment id="…"></attachment>` an und füllt leere Zeilen mit `<p>&nbsp;</p>`. Beides fliegt raus, bevor der Text in den
+    ISC-Editor geht. Der Mail-Text selbst taugt nicht als Quelle: Er enthält dasselbe JSON mit rohen Zeilenumbrüchen in einem String und ist damit ungültig.
+  - **Schlagwort-Feld im ISC ist jQuery tokenInput mit Theme `facebook`.** Der erste echte Lauf (11.10.2026) scheiterte im Bot mit `FORM_CHANGED` am Selektor `input.token-input-input-token`, der nur im Mock
+    existierte. Im echten HTML heißt das sichtbare Feld `#token-input-mainUploadUploadKeywordTk` (Klassen tragen das Suffix `-facebook`), der Wert landet im versteckten `#mainUploadUploadKeywordTk`.
+    Der Mock bildet das jetzt so nach. Der Dropzone-Datei-Input (`input.dz-hidden-input`) hängt Dropzone an `body`, nicht in `#mainUpload`: Der Bot nimmt deshalb den Fallback über den Dateidialog (Klick auf die Dropzone).
+  - **Die Mail wird nach dem ersten Lesen nicht wiederholt.** Der IMAP-Trigger filtert auf `UNSEEN` und markiert gelesen. Nach einem Fehlschlag muss die Mail neu gesendet werden.
 
 ### ollama
 

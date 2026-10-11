@@ -63,6 +63,9 @@ config:
   cache-file: /var/lib/ntfy/cache.db
   auth-file: /var/lib/ntfy/auth.db
   auth-default-access: "read-write"
+  attachment-cache-dir: /var/lib/ntfy/attachments
+  attachment-file-size-limit: "5M"
+  attachment-total-size-limit: "100M"
 
 resources:
   requests:
