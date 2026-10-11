@@ -289,6 +289,62 @@ Stand 2026-10-11. „Lokal“ heißt: Entwicklungsrechner und Docker-Container (
 
 ---
 
+## Notfall-Caller auf dem Vereinsheim-Pi (vorbereitet, nicht ausgerollt)
+
+Fällt der Cluster oder der Homeserver aus, ruft der Caller im Cluster nicht mehr an. Deshalb gibt es eine zweite, kleine Instanz auf dem Vereinsheim-Pi (`vereinsheim-alarmmonitor`, anderer Standort, hängt nur am Tailnet). Sie bekommt den Watchdog und ruft an, wenn er 10 Minuten ausbleibt.
+Das deckt auch einen Strom- oder Internetausfall im Haus ab. Fällt umgekehrt der Pi aus, kann der Cluster-Caller anrufen (siehe unten, noch nicht eingestellt).
+
+| Eigenschaft | Pi | Cluster |
+|---|---|---|
+| Hardware | Banana Pi M2 Ultra, **armv7l (32 Bit)**, 2 GB RAM, 4 Kerne, 9 GB frei (Stand 2026-10-11, aus den Metriken) | `homeserver` |
+| Ansage | **feste WAV** `ansible/roles/alert_caller/files/cluster-down.wav` („Achtung, Cluster Alarm. Der Cluster meldet sich seit über 10 Minuten nicht mehr.“, 4,6 s, 16 kHz mono) | Piper, dynamisch je Alarm |
+| Piper | nicht installiert: `onnxruntime` hat für 32-Bit-ARM keine Pakete | im Image |
+| Webhooks | nur `/watchdog` (`/alert` liefert 404, es gäbe sonst die falsche feste Ansage) | `/alert` und `/watchdog` |
+| Firewall | Rolle fasst sie nicht an (`alert_caller_manage_firewall: false`, der Pi hat bisher keine UFW-Konfiguration aus Ansible) | Rolle bzw. UFW des Hosts |
+| Konto | dasselbe Linphone-Konto `capulus-core` (mehrere Registrierungen gleichzeitig sind erlaubt) | |
+
+**Die WAV neu erzeugen** (z. B. bei geändertem Text), im Pod des Callers mit derselben Stimme:
+
+```bash
+kubectl -n alert-caller exec deploy/alert-caller -- sh -c 'cd /tmp && /opt/piper/venv/bin/python -m piper -m de_DE-thorsten-high --data-dir /opt/piper -f /tmp/cd-raw.wav -- "Achtung, Cluster Alarm. Der Cluster meldet sich seit über 10 Minuten nicht mehr." && sox /tmp/cd-raw.wav -r 16000 -c 1 -b 16 /tmp/cd.wav norm -3'
+kubectl -n alert-caller cp $(kubectl -n alert-caller get pod -o jsonpath='{.items[0].metadata.name}'):/tmp/cd.wav ansible/roles/alert_caller/files/cluster-down.wav
+```
+
+Der Text muss zur Watchdog-Ansage in `caller.py` passen (`über {minutes} Minuten`, hier 10).
+
+**Ausrollen** (von einem Rechner, der den Pi per Tailscale erreicht):
+
+1. Das Passwort von `capulus-core` in den Vault: `ansible-vault encrypt_string --ask-vault-pass --name vault_alert_caller_sip_password '<Passwort>'`, Ausgabe in `ansible/group_vars/all.yml` einfügen (dieselbe Variable wie für die VM-Variante).
+2. `make alert-caller-pi-check`, dann `make alert-caller-pi`. Gruppe `alert_caller_pi`, Variablen in `ansible/group_vars/alert_caller_pi.yml`. Der erste Lauf **baut baresip auf dem Pi aus den Quellen** (2 parallele Jobs, wegen 2 GB RAM und laufendem Kiosk), das dauert deutlich länger als auf einem x86-Rechner.
+3. Auf dem Pi prüfen: `journalctl -u alert-caller -n 20` zeigt `listening on :9310 … static announcement /opt/alert-caller/cluster-down.wav`.
+
+**Erst danach den Alertmanager umstellen.** Voraussetzung ist, dass der Alertmanager-Pod den Pi erreicht: Pod-Verkehr kommt am Pi als `homeserver` (100.74.0.59, Tag `tagged-devices`) an. Vom Homeserver aus antworten die Ports 22 und 9100 des Pi aber nicht (2026-10-11), die ACL lässt ihn
+offenbar nicht durch. Dann in der Tailscale-ACL den Homeserver auf `vereinsheim-alarmmonitor:9310` zulassen und prüfen:
+
+```bash
+kubectl -n monitoring exec vmalertmanager-monitoring-victoria-metrics-k8s-stack-0 -c alertmanager -- \
+  wget -T 5 -qO- --post-data='{}' http://100.123.214.4:9310/watchdog
+```
+
+Die Antwort `ok` heißt, der Weg steht. Dann in `argocd/apps/tech/monitoring/values.yaml` beim Receiver `watchdog` eine **zweite** Zeile ergänzen (die erste, den Cluster-Caller, behalten):
+
+```yaml
+        - name: watchdog
+          webhook_configs:
+            - url: 'http://alert-caller.alert-caller.svc.cluster.local:9310/watchdog'
+              send_resolved: false
+            - url: 'http://100.123.214.4:9310/watchdog'
+              send_resolved: false
+```
+
+Fällt der Alertmanager aus, während der Cluster läuft, rufen dann beide Caller an (zwei Anrufe). Das ist bewusst in Kauf genommen, solange der Pi-Weg nicht erprobt ist.
+
+**Pi ausgefallen → Cluster ruft an:** Die Regel `BananaPiAlarmmonitorDown` (`vmrule-banana-pi.yaml`, 10 min ohne Metriken, löst bisher ntfy und das Zammad-Ticket aus) bekommt dafür das Label `page: "true"`. Das ist **nicht eingestellt**: Mit der Route `phone` würde der Cluster-Caller dann bei jedem Pi-Ausfall alle 15 Minuten anrufen, bis eine Silence gesetzt ist.
+
+**Offen:** Die Rolle ist gelintet und syntaxgeprüft, der statische Modus im Pod ohne Anruf getestet. Der Build von baresip auf armv7, die Registrierung vom Pi aus und ein echter Anruf vom Pi sind **nicht** geprüft. Der Pi hatte am 27.09. einen mehrtägigen Ausfall (Tailscale antwortete nicht), als Notfall-Caller ist er nur so verlässlich wie er selbst.
+
+---
+
 ## Später: externe VM
 
 Soll der Anruf auch bei Ausfall des Clusters, des Homeservers, des Stroms oder des Internets im Haus kommen, muss der Anrufer **außerhalb** laufen (Oracle Cloud Always Free, öffentliche IP, per Tailscale im Tailnet).

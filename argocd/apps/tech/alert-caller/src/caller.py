@@ -23,6 +23,7 @@ CALL_COOLDOWN = int(os.environ.get("CALL_COOLDOWN", "900"))
 CALL_RING_TIMEOUT = int(os.environ.get("CALL_RING_TIMEOUT", "45"))
 REGISTER_TIMEOUT = int(os.environ.get("REGISTER_TIMEOUT", "15"))
 ICE_TIMEOUT = int(os.environ.get("ICE_TIMEOUT", "40"))
+STATIC_ANNOUNCEMENT = os.environ.get("STATIC_ANNOUNCEMENT", "")
 HC_PING_URL = os.environ.get("HC_PING_URL", "")
 VM_URL = os.environ.get("VM_URL", "").rstrip("/")
 PIPER_PYTHON = os.environ.get("PIPER_PYTHON", "/opt/piper/venv/bin/python")
@@ -225,11 +226,14 @@ def synthesize(text):
     pending = os.path.join(STATE_DIR, "msg.tmp.wav")
     message = os.path.join(STATE_DIR, "msg.wav")
     try:
-        subprocess.run(
-            [PIPER_PYTHON, "-m", "piper", "-m", PIPER_VOICE, "--data-dir", PIPER_DIR, "-f", raw, "--", text],
-            check=True,
-            timeout=120,
-        )
+        if STATIC_ANNOUNCEMENT:
+            shutil.copyfile(STATIC_ANNOUNCEMENT, raw)
+        else:
+            subprocess.run(
+                [PIPER_PYTHON, "-m", "piper", "-m", PIPER_VOICE, "--data-dir", PIPER_DIR, "-f", raw, "--", text],
+                check=True,
+                timeout=120,
+            )
         subprocess.run(
             ["sox", raw, "-r", "16000", "-c", "1", pending, "pad", "1.5", "1", "repeat", "2"],
             check=True,
@@ -456,6 +460,8 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/watchdog":
             handle_watchdog()
             return self._reply(200, "ok")
+        if self.path == "/alert" and STATIC_ANNOUNCEMENT:
+            return self._reply(404, "alerts are disabled in static mode")
         if self.path == "/alert":
             try:
                 payload = json.loads(raw or b"{}")
@@ -480,7 +486,8 @@ def main():
     prepare_baresip_dir()
     threading.Thread(target=watchdog_loop, daemon=True).start()
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
-    log(f"listening on :{PORT}, targets={CALL_TARGETS}, watchdog timeout {WATCHDOG_TIMEOUT}s")
+    mode = f"static announcement {STATIC_ANNOUNCEMENT}" if STATIC_ANNOUNCEMENT else "speech synthesis"
+    log(f"listening on :{PORT}, targets={CALL_TARGETS}, watchdog timeout {WATCHDOG_TIMEOUT}s, {mode}")
     server.serve_forever()
 
 
