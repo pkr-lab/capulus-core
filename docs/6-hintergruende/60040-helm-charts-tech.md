@@ -318,6 +318,8 @@ weil ein Ausfall des Clusters (und damit kein Anruf) bewusst in Kauf genommen wi
   - **Schlagwort-Feld im ISC ist jQuery tokenInput mit Theme `facebook`.** Der erste echte Lauf (11.10.2026) scheiterte im Bot mit `FORM_CHANGED` am Selektor `input.token-input-input-token`, der nur im Mock
     existierte. Im echten HTML heißt das sichtbare Feld `#token-input-mainUploadUploadKeywordTk` (Klassen tragen das Suffix `-facebook`), der Wert landet im versteckten `#mainUploadUploadKeywordTk`.
     Der Mock bildet das jetzt so nach. Der Dropzone-Datei-Input (`input.dz-hidden-input`) hängt Dropzone an `body`, nicht in `#mainUpload`: Der Bot nimmt deshalb den Fallback über den Dateidialog (Klick auf die Dropzone).
+  - **Mail ohne `mode` veröffentlicht.** Der Power-Automate-Flow liefert kein `mode`, schickt die Mail aber erst nach der Freigabe (`freigegebenVon`). Mit Standard `draft` blieb die News nach dem ersten echten Lauf (11.10.2026, News 142386) gesperrt.
+    Für Mails gilt deshalb `publish`, außer das JSON sagt `draft` oder `entwurf`. Formular und Webhook behalten `draft`.
   - **Die Mail wird nach dem ersten Lesen nicht wiederholt.** Der IMAP-Trigger filtert auf `UNSEEN` und markiert gelesen. Nach einem Fehlschlag muss die Mail neu gesendet werden.
 
 ### ollama
