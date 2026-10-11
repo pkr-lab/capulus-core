@@ -154,7 +154,7 @@ banana-pi-kiosks-check: ## Dry-run des Banana-Pi-Alarmmonitor-Playbooks (keine �
 banana-pi-kiosks-restart-session: ## tty1-Session auf den Banana-Pi-Alarmmonitoren erzwungen neu starten (laedt bereits deployte Skripte/Configs neu ein, ohne dass ein Playbook-Diff noetig ist).
 	ansible -i $(INVENTORY) banana_pis -m ansible.builtin.systemd -a "name=getty@tty1.service state=restarted" --become
 
-.PHONY: alert-caller alert-caller-check
+.PHONY: alert-caller alert-caller-check alert-caller-pi alert-caller-pi-check
 ALERT_CALLER_PLAYBOOK := $(ANSIBLE_DIR)/alert-caller.yml
 
 alert-caller: ## Telefon-Alarmierung einrichten (alert-caller: baresip, Piper, Tailscale auf der externen VM).
@@ -162,6 +162,12 @@ alert-caller: ## Telefon-Alarmierung einrichten (alert-caller: baresip, Piper, T
 
 alert-caller-check: ## Dry-run des alert-caller-Playbooks (keine Änderungen).
 	ansible-playbook -i $(INVENTORY) $(ALERT_CALLER_PLAYBOOK) --check --diff $(VAULT_OPTS)
+
+alert-caller-pi: ## Notfall-Caller (feste Ansage, ruft bei ausbleibendem Watchdog an) auf dem Vereinsheim-Pi einrichten.
+	ansible-playbook -i $(INVENTORY) $(ALERT_CALLER_PLAYBOOK) --limit alert_caller_pi $(VAULT_OPTS)
+
+alert-caller-pi-check: ## Dry-run des Pi-Notfall-Callers (keine Änderungen).
+	ansible-playbook -i $(INVENTORY) $(ALERT_CALLER_PLAYBOOK) --limit alert_caller_pi --check --diff $(VAULT_OPTS)
 
 .PHONY: lint
 lint: ## Lint YAML, Ansible, and ALL Helm charts.

@@ -1,0 +1,13 @@
+diff --git a/modules/srtp/srtp.c b/modules/srtp/srtp.c
+index ffd1ea1..8eae3e9 100644
+--- a/modules/srtp/srtp.c
++++ b/modules/srtp/srtp.c
+@@ -92,8 +92,6 @@ static bool cryptosuite_issupported(const struct pl *suite)
+ {
+ 	if (0 == pl_strcasecmp(suite, aes_cm_128_hmac_sha1_32)) return true;
+ 	if (0 == pl_strcasecmp(suite, aes_cm_128_hmac_sha1_80)) return true;
+-	if (0 == pl_strcasecmp(suite, aes_128_gcm))             return true;
+-	if (0 == pl_strcasecmp(suite, aes_256_gcm))             return true;
+ 
+ 	return false;
+ }

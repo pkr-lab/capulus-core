@@ -22,6 +22,8 @@ WATCHDOG_TIMEOUT = int(os.environ.get("WATCHDOG_TIMEOUT", "600"))
 CALL_COOLDOWN = int(os.environ.get("CALL_COOLDOWN", "900"))
 CALL_RING_TIMEOUT = int(os.environ.get("CALL_RING_TIMEOUT", "45"))
 REGISTER_TIMEOUT = int(os.environ.get("REGISTER_TIMEOUT", "15"))
+ICE_TIMEOUT = int(os.environ.get("ICE_TIMEOUT", "40"))
+STATIC_ANNOUNCEMENT = os.environ.get("STATIC_ANNOUNCEMENT", "")
 HC_PING_URL = os.environ.get("HC_PING_URL", "")
 VM_URL = os.environ.get("VM_URL", "").rstrip("/")
 PIPER_PYTHON = os.environ.get("PIPER_PYTHON", "/opt/piper/venv/bin/python")
@@ -80,8 +82,10 @@ TIMESTAMP = re.compile(r"(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)(\.\d+)?(Z|[+
 REGISTERED = re.compile(r"\{\d+/\w+/\w*[46]\} 2\d\d ")
 REGISTER_FAILED = re.compile(r"reg: \S+ \(prio \d+\): (?:[3-5]\d\d |Register:)")
 CALL_ESTABLISHED = re.compile(r"Call established")
+MEDIA_READY = re.compile(r"connectivity check is complete")
 CALL_TERMINATED = re.compile(r"Call with \S+ terminated")
 CALL_FAILED = re.compile(r"ua_connect failed")
+SUMMARY_LINE = re.compile(r"warning|error|fail|SRTP|srtp|ice:|aufile|rtprecv|dropping|Call (answered|established)|session closed|decrypt|audio:", re.IGNORECASE)
 
 CALL_LOCK = threading.Lock()
 STATE_LOCK = threading.Lock()
@@ -222,11 +226,14 @@ def synthesize(text):
     pending = os.path.join(STATE_DIR, "msg.tmp.wav")
     message = os.path.join(STATE_DIR, "msg.wav")
     try:
-        subprocess.run(
-            [PIPER_PYTHON, "-m", "piper", "-m", PIPER_VOICE, "--data-dir", PIPER_DIR, "-f", raw, "--", text],
-            check=True,
-            timeout=120,
-        )
+        if STATIC_ANNOUNCEMENT:
+            shutil.copyfile(STATIC_ANNOUNCEMENT, raw)
+        else:
+            subprocess.run(
+                [PIPER_PYTHON, "-m", "piper", "-m", PIPER_VOICE, "--data-dir", PIPER_DIR, "-f", raw, "--", text],
+                check=True,
+                timeout=120,
+            )
         subprocess.run(
             ["sox", raw, "-r", "16000", "-c", "1", pending, "pad", "1.5", "1", "repeat", "2"],
             check=True,
@@ -261,12 +268,21 @@ def send_dial(proc, uri):
 
 def stop_process(proc):
     if proc.poll() is None:
-        proc.terminate()
+        try:
+            proc.stdin.write(b"/hangup\n/quit\n")
+            proc.stdin.flush()
+        except OSError:
+            pass
         try:
             proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.wait()
+            for stop in (proc.terminate, proc.kill):
+                try:
+                    stop()
+                    proc.wait(timeout=3)
+                    break
+                except (OSError, subprocess.TimeoutExpired):
+                    continue
     for stream in (proc.stdin, proc.stdout):
         try:
             stream.close()
@@ -274,8 +290,20 @@ def stop_process(proc):
             pass
 
 
+def call_summary(output):
+    clean = re.sub(r"\x1b\[[0-9;]*m", "", output).replace("\r", "\n")
+    keep = []
+    for line in clean.splitlines():
+        line = line.strip()
+        if "bit/s" in line or "FSM:" in line or not line:
+            continue
+        if SUMMARY_LINE.search(line) and line not in keep:
+            keep.append(line[:140])
+    return " | ".join(keep[-14:])
+
+
 def dial(uri, seconds):
-    limit = REGISTER_TIMEOUT + CALL_RING_TIMEOUT + int(seconds) + 5
+    limit = REGISTER_TIMEOUT + CALL_RING_TIMEOUT + ICE_TIMEOUT + int(seconds) + 5
     rx_path = os.path.join(STATE_DIR, "rx.wav")
     if os.path.exists(rx_path):
         os.remove(rx_path)
@@ -289,6 +317,7 @@ def dial(uri, seconds):
     started = time.monotonic()
     dialed_at = None
     answered = False
+    media_ready = False
     hangup_at = None
     output = ""
     deadline = started + limit + 15
@@ -310,7 +339,7 @@ def dial(uri, seconds):
             chunk = os.read(proc.stdout.fileno(), 4096)
             if not chunk:
                 break
-            output = (output + chunk.decode("utf-8", "replace"))[-4000:]
+            output = (output + chunk.decode("utf-8", "replace"))[-40000:]
             if dialed_at is None:
                 if REGISTERED.search(output):
                     dialed_at = send_dial(proc, uri)
@@ -319,14 +348,19 @@ def dial(uri, seconds):
                 continue
             if not answered and CALL_ESTABLISHED.search(output):
                 answered = True
-                hangup_at = time.monotonic() + seconds + HANGUP_GRACE
+                hangup_at = time.monotonic() + ICE_TIMEOUT + seconds + HANGUP_GRACE
                 log(f"{uri} answered")
+            if answered and not media_ready and MEDIA_READY.search(output):
+                media_ready = True
+                hangup_at = time.monotonic() + seconds + HANGUP_GRACE
+                log(f"{uri} media ready, playing announcement")
             if CALL_TERMINATED.search(output) or CALL_FAILED.search(output):
                 break
     finally:
         stop_process(proc)
     if answered:
         log(f"call to {uri} finished, rx.wav peak: {rx_peak(rx_path)}")
+        log(f"baresip: {call_summary(output)}")
     else:
         tail = re.sub(r"\x1b\[[0-9;]*m", "", output).strip().splitlines()[-5:]
         log(f"{uri} not answered: {' | '.join(tail)}")
@@ -426,6 +460,8 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/watchdog":
             handle_watchdog()
             return self._reply(200, "ok")
+        if self.path == "/alert" and STATIC_ANNOUNCEMENT:
+            return self._reply(404, "alerts are disabled in static mode")
         if self.path == "/alert":
             try:
                 payload = json.loads(raw or b"{}")
@@ -450,7 +486,8 @@ def main():
     prepare_baresip_dir()
     threading.Thread(target=watchdog_loop, daemon=True).start()
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
-    log(f"listening on :{PORT}, targets={CALL_TARGETS}, watchdog timeout {WATCHDOG_TIMEOUT}s")
+    mode = f"static announcement {STATIC_ANNOUNCEMENT}" if STATIC_ANNOUNCEMENT else "speech synthesis"
+    log(f"listening on :{PORT}, targets={CALL_TARGETS}, watchdog timeout {WATCHDOG_TIMEOUT}s, {mode}")
     server.serve_forever()
 
 

@@ -8,3 +8,10 @@
       tags: [tailscale, vpn]
     - role: alert_caller
       tags: [alert-caller, alerting]
+
+- name: Notfall-Caller auf dem Vereinsheim-Pi einrichten
+  hosts: alert_caller_pi
+  become: true
+  roles:
+    - role: alert_caller
+      tags: [alert-caller, alerting]
