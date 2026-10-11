@@ -180,6 +180,7 @@ Alles in `argocd/apps/tech/alert-caller/values.yaml`:
 | `config.callCooldown` | `900` | Pause je Alarm-Gruppe zwischen zwei Anrufen |
 | `config.callRingTimeout` | `45` | Sekunden, die ein Ziel klingeln darf, bevor das nächste drankommt |
 | `config.registerTimeout` | `15` | Sekunden, die der Caller auf die SIP-Registrierung wartet, bevor er trotzdem wählt |
+| `config.iceTimeout` | `40` | Sekunden, die der Caller nach dem Abheben auf den Medienstart (ICE) wartet, bevor er aufgibt |
 | `config.vmUrl` | VictoriaMetrics-Service im Cluster | Basis-URL für den Kontext. Leer = Kontext aus |
 | `config.rtpPortMin` / `rtpPortMax` | `10000` / `10100` | RTP-Portbereich von baresip |
 | `hostNetwork` | `true` | Pod im Host-Netzwerk (Begründung: [60040](../6-hintergruende/60040-helm-charts-tech.md#alert-caller)) |
@@ -247,6 +248,9 @@ Stand 2026-10-11. „Lokal“ heißt: Entwicklungsrechner und Docker-Container (
 | Wählt `baresip -e "/dial …"` direkt nach dem Start, auch vor der Registrierung? | **Nein.** Bei einem Konto mit Domain (`sip.linphone.org`) scheitert der Anruf vor der Registrierung mit `failed to create socket for media 'audio' (Cannot assign requested address)`: Die Adressfamilie des Medien-Sockets steht erst nach der ersten erfolgreichen Registrierung fest (`reg->af` in baresip). Deshalb startet der Caller baresip ohne `-e`, gibt ihm eine Pipe als stdin, wartet auf die Registrierung und sendet dann `/dial …`. Mit einem Konto, das eine IP statt einer Domain trägt (Loopback-Test), geht auch `-e`. **Mit dem echten Konto geprüft am 2026-10-11:** Die Registrierung läuft durch (`200 Registration successful`), das Passwort stimmt. Der Caller erkennt sie an der Logzeile `{0/TLS/v4} 200 Registration successful` (die erste Fassung erwartete `IPv4` aus dem Quelltext und wartete deshalb jedes Mal die vollen 15 s). Bleibt die Bestätigung aus, wählt er nach 15 s trotzdem. `pjsua` war als Ausweg vorgesehen und wurde nicht gebraucht. |
 | STUN-Server | **`stun.linphone.org` geht mit baresip 4.12 nicht.** Er antwortet mit veralteten RFC-3489-Attributen (`SOURCE-ADDRESS`, `CHANGED-ADDRESS`, Software `oRTP 0.99`), libre lehnt solche Antworten nach RFC 5389 ab (`ice: STUN Request failed: Protocol error [71]`, `gather error`), und der erste echte Testanruf am 2026-10-11 scheiterte daran. Deshalb ist `stun.cloudflare.com:3478` eingetragen (`config.sip.stunServer`). Im Pod geprüft: ICE sammelt Kandidaten mit der öffentlichen Adresse des Heimrouters, der INVITE erreicht Linphone (`404 Not Found` für einen erfundenen Benutzer, es klingelte nichts). Cloudflare und Google antworten beide mit nur `XOR-MAPPED-ADDRESS`. Das Linphone-iPhone braucht davon nichts, es nutzt seinen eigenen STUN. |
 | `sips:` im Record-Route von Linphone | **Gefunden und gepatcht (2026-10-11).** Nach dem Abheben schickt Linphone `Record-Route: <sips:sip11.linphone.org:5061;lr>`. `libre` (v4.12.0, auch in `main`) akzeptiert in `sip_request_alloc` nur das Schema `sip` und liefert für `sips` `ENOSYS`: Der ACK wird nie gesendet, im Log steht `Call answered`, `stream: update 'audio'` und dann `session closed: Function not implemented [38]`, nach der Annahme wird einfach aufgelegt. Der Patch `argocd/apps/tech/alert-caller/patches/libre-sips-route.patch` (12 Zeilen) lässt `sips` zu und nimmt dafür TLS. Mit ihm im Pod getestet: ACK geht raus, `Call established`, ICE-Prüfung abgeschlossen, SRTP aktiv (`AES_CM_128_HMAC_SHA1_80`, danach `AEAD_AES_128_GCM`), die Ansage ist zu hören. Das Image und die Ansible-Rolle wenden den Patch beim Bauen an. Fällt der Patch bei einem `re`-Update weg (neue Version), taucht derselbe Fehler wieder auf. |
+| Stille nach dem Abheben (SRTP-Suitenwechsel) | **Gefunden und gepatcht (2026-10-11).** Der erste Austausch einigt sich auf `AES_CM_128_HMAC_SHA1_80`. Kurz darauf schickt Linphone ein eigenes re-INVITE mit `AEAD_AES_128_GCM` an erster Stelle, baresip wählt GCM und meldet es in der Antwort. Beim Wechsel der Suite setzt `modules/srtp/srtp.c` aber nur den **Empfangs**-Zustand zurück, `start_srtp` legt den Sende-Zustand nur an, wenn es noch keinen gibt: Der Caller sendet weiter mit AES-CM, sagt aber „GCM“. Das iPhone kann nichts entschlüsseln und gibt Stille aus, im Log stehen `srtp: failed to decrypt RTP packet with 182 bytes` und `SRTP is Enabled (cryptosuite=AEAD_AES_128_GCM)`. Der Patch `patches/baresip-srtp-no-gcm.patch` lässt baresip die GCM-Suiten nicht annehmen, die Suite bleibt `AES_CM_128_HMAC_SHA1_80`. |
+| Ansage beginnt erst nach rund 16 bis 24 s | **Bekannt, bewusst nicht „beschleunigt“ (2026-10-11).** Die Audiozähler stehen nach dem Abheben bis Sekunde 16 bis 21 auf `0/0`, die Ansage startet erst, wenn die ICE-Prüfung (`connectivity check is complete`) durch ist. Ursache: Das iPhone nennt rund 12 Adressen, baresip bildet mit seinen 9 Schnittstellen etwa 90 Kandidatenpaare, die vielen nicht erreichbaren (Gastnetz, Mobilfunk-IPv6, Relay) müssen erst auslaufen. Schon nach 1 s ist das erste Paar gültig (über das Tailnet, die Medien kommen von `100.105.126.15`). **Versuch und Rückzug:** Zwei Patches an `libre` (alle 20 ms eine neue Prüfung statt kettenartig, und 4 statt 7 Wiederholungen) brachten ICE auf 3,3 s, machten die Ansage aber **unzuverlässig**: Das iPhone antwortet erst einige Sekunden nach dem Abheben auf die Prüfungen, das Paar lief vorher in den Timeout (`Failed`) und wurde später doch noch gültig und nominiert (`icecomp: set_selected: invalid state 'Failed'`). Mal kam die Ansage, mal nicht. Beide Patches sind wieder entfernt. Der Caller richtet sein Auflegen nach dem Medienstart (Ansagelänge plus 3 s) und wartet höchstens `ICE_TIMEOUT` (40 s). Eine Verkürzung ginge nur über weniger Kandidaten (`net_interface` schränkt auf eine Schnittstelle ein, dann hängt der Weg vom Tailnet des iPhones ab) oder eine saubere Korrektur der Statusübergänge in `libre`. |
+| Auflegen im Pod | **Gefunden und behoben (2026-10-11).** Im Pod darf ein Prozess seinen eigenen Kindprozessen keine Signale schicken (`PermissionError` bei `terminate()` und `kill()`, AppArmor-Profil `cri-containerd.apparmor.d`). Der Caller konnte baresip nach der Ansage deshalb nicht beenden und brach mit `Permission denied` ab. `stop_process` beendet baresip jetzt über dessen eigene Befehle (`/hangup`, `/quit` per stdin) und versucht Signale nur noch als abgesichertes Notfallmittel. Mit dem vollständigen Pfad im Pod getestet: Ansage, Auflegen, kein hängender Prozess. |
 | Verlangt Linphone Medienverschlüsselung? | **Ja.** Der erste Anruf am 2026-10-11 klingelte (Push, ICE und Registrierung liefen), das iPhone lehnte das Angebot danach mit `488 Not acceptable here` ab, die Ansage wurde nie gespielt. Deshalb ist `config.sip.mediaEncryption: srtp-mand` gesetzt (baresip bietet `RTP/SAVP` mit `a=crypto` an, `srtp` allein wäre nur optional verschlüsselt). SRTP und ICE zwischen zwei baresip-Instanzen funktionieren lokal. **Ob `srtp-mand` das iPhone zufriedenstellt, zeigt der nächste Testanruf.** Hilft es nicht, kommen Codec (der Anruf bietet PCMU, PCMA und Opus an) oder die Linphone-Einstellung „Medienverschlüsselung“ in Frage. |
 | Kommt das Audio an? | **Lokal ja**: Die Ansage kommt über PCMU am Ziel an (Spitzenwert 32124 von 32767), auch im fertigen Image als Nutzer 1000 mit schreibgeschütztem Dateisystem. Der Caller loggt nach jedem Anruf `rx.wav peak`, das ist der Spitzenwert dessen, was **vom Telefon** zurückkam (Hintergrundgeräusche). 0 heißt: nichts empfangen. **Mit Linphone und über das Heimnetz-NAT offen** (siehe nächste Zeile). |
 | NAT aus dem Heimnetz | **Offen.** Der Pod läuft im Host-Netzwerk, damit baresip die Ports des Hosts benutzt. Im Pod-Netzwerk maskiert Flannel jeden neuen Fluss mit `MASQUERADE --random-fully` (gesehen in `iptables -t nat -S FLANNEL-POSTRTG`) und würfelt dabei den Quellport. Die per STUN ermittelte Adresse für ICE passte dann vermutlich nicht mehr zum tatsächlichen Port zur Gegenstelle (Überlegung, nicht gemessen). Ob es mit Linphone über das Heimnetz sauber klappt, zeigt erst der erste echte Anruf, `rx.wav peak` im Log. Schlägt es fehl, ist ein TURN-Server oder die externe VM ([unten](#später-externe-vm)) der Ausweg. |
@@ -272,6 +276,8 @@ Stand 2026-10-11. „Lokal“ heißt: Entwicklungsrechner und Docker-Container (
 | Log `registration not confirmed in time, dialing anyway` | Die Registrierung kam nicht innerhalb von `registerTimeout`. Ausgehendes TCP 5061 und DNS prüfen. Folgt `failed to create socket for media`, ist der Caller nicht registriert |
 | Log `SIP_USER is empty or SIP_PASSWORD contains …` | Das Passwort enthält `;`, `"` oder ein Leerzeichen, oder `config.sip.user` ist leer. Das Passwort bei Linphone ändern und neu versiegeln |
 | Log `ice: … STUN Request failed: Protocol error [71]` oder `medianat 'ice' failed` | Der STUN-Server antwortet nicht RFC-5389-konform (so der von Linphone) oder ist nicht erreichbar (ausgehend UDP 3478). `config.sip.stunServer` prüfen |
+| Das iPhone nimmt an, aber es ist nur Stille zu hören, im Log `failed to decrypt RTP packet` | SRTP-Suite wurde mitten im Gespräch gewechselt (Linphones re-INVITE mit GCM). Der Patch `patches/baresip-srtp-no-gcm.patch` fehlt im gebauten Image |
+| Log `call to … failed: [Errno 13] Permission denied` nach der Ansage | Das Beenden von baresip per Signal ist im Pod nicht erlaubt (AppArmor). Die Fassung von `stop_process`, die `/hangup` und `/quit` schickt, fehlt oder ist nicht ausgerollt |
 | Log `Call answered`, dann `session closed: Function not implemented [38]` | Der ACK konnte nicht gesendet werden, weil `libre` das `sips:`-Schema in Linphones Record-Route nicht kennt. Der Patch `patches/libre-sips-route.patch` fehlt im gebauten Image (Dockerfile, Abschnitt `patch -p1`) oder wurde bei einem `re`-Update nicht mehr angewendet |
 | Log `session closed: 488 Not acceptable here` | Das iPhone lehnt das Medienangebot ab. Medienverschlüsselung prüfen (`config.sip.mediaEncryption`, Standard `srtp-mand`), danach Codec und die Einstellung „Medienverschlüsselung“ in Linphone |
 | Es klingelt, aber das Telefon hört nichts | NAT/ICE (siehe „Geprüft und offen“). `rx.wav peak: 0` bestätigt, dass nichts vom Telefon ankommt |
@@ -280,6 +286,62 @@ Stand 2026-10-11. „Lokal“ heißt: Entwicklungsrechner und Docker-Container (
 | Ansage spricht einen Namen falsch aus | Eintrag in `SPOKEN_NAMES` oder `SPOKEN_REASONS` in `caller.py`, mergen, der Pod startet neu |
 | Anruf „Cluster meldet sich nicht“, obwohl der Cluster läuft | Alertmanager erreicht den Caller nicht (siehe oben), oder der Watchdog fehlt: `amtool alert query alertname=Watchdog` im Alertmanager-Pod |
 | healthchecks.io meldet sich, obwohl alles läuft | Pings kommen nicht an: Log auf `healthcheck ping failed` prüfen, ausgehendes HTTPS, versiegelte URL |
+
+---
+
+## Notfall-Caller auf dem Vereinsheim-Pi (vorbereitet, nicht ausgerollt)
+
+Fällt der Cluster oder der Homeserver aus, ruft der Caller im Cluster nicht mehr an. Deshalb gibt es eine zweite, kleine Instanz auf dem Vereinsheim-Pi (`vereinsheim-alarmmonitor`, anderer Standort, hängt nur am Tailnet). Sie bekommt den Watchdog und ruft an, wenn er 10 Minuten ausbleibt.
+Das deckt auch einen Strom- oder Internetausfall im Haus ab. Fällt umgekehrt der Pi aus, kann der Cluster-Caller anrufen (siehe unten, noch nicht eingestellt).
+
+| Eigenschaft | Pi | Cluster |
+|---|---|---|
+| Hardware | Banana Pi M2 Ultra, **armv7l (32 Bit)**, 2 GB RAM, 4 Kerne, 9 GB frei (Stand 2026-10-11, aus den Metriken) | `homeserver` |
+| Ansage | **feste WAV** `ansible/roles/alert_caller/files/cluster-down.wav` („Achtung, Cluster Alarm. Der Cluster meldet sich seit über 10 Minuten nicht mehr.“, 4,6 s, 16 kHz mono) | Piper, dynamisch je Alarm |
+| Piper | nicht installiert: `onnxruntime` hat für 32-Bit-ARM keine Pakete | im Image |
+| Webhooks | nur `/watchdog` (`/alert` liefert 404, es gäbe sonst die falsche feste Ansage) | `/alert` und `/watchdog` |
+| Firewall | Rolle fasst sie nicht an (`alert_caller_manage_firewall: false`, der Pi hat bisher keine UFW-Konfiguration aus Ansible) | Rolle bzw. UFW des Hosts |
+| Konto | dasselbe Linphone-Konto `capulus-core` (mehrere Registrierungen gleichzeitig sind erlaubt) | |
+
+**Die WAV neu erzeugen** (z. B. bei geändertem Text), im Pod des Callers mit derselben Stimme:
+
+```bash
+kubectl -n alert-caller exec deploy/alert-caller -- sh -c 'cd /tmp && /opt/piper/venv/bin/python -m piper -m de_DE-thorsten-high --data-dir /opt/piper -f /tmp/cd-raw.wav -- "Achtung, Cluster Alarm. Der Cluster meldet sich seit über 10 Minuten nicht mehr." && sox /tmp/cd-raw.wav -r 16000 -c 1 -b 16 /tmp/cd.wav norm -3'
+kubectl -n alert-caller cp $(kubectl -n alert-caller get pod -o jsonpath='{.items[0].metadata.name}'):/tmp/cd.wav ansible/roles/alert_caller/files/cluster-down.wav
+```
+
+Der Text muss zur Watchdog-Ansage in `caller.py` passen (`über {minutes} Minuten`, hier 10).
+
+**Ausrollen** (von einem Rechner, der den Pi per Tailscale erreicht):
+
+1. Das Passwort von `capulus-core` in den Vault: `ansible-vault encrypt_string --ask-vault-pass --name vault_alert_caller_sip_password '<Passwort>'`, Ausgabe in `ansible/group_vars/all.yml` einfügen (dieselbe Variable wie für die VM-Variante).
+2. `make alert-caller-pi-check`, dann `make alert-caller-pi`. Gruppe `alert_caller_pi`, Variablen in `ansible/group_vars/alert_caller_pi.yml`. Der erste Lauf **baut baresip auf dem Pi aus den Quellen** (2 parallele Jobs, wegen 2 GB RAM und laufendem Kiosk), das dauert deutlich länger als auf einem x86-Rechner.
+3. Auf dem Pi prüfen: `journalctl -u alert-caller -n 20` zeigt `listening on :9310 … static announcement /opt/alert-caller/cluster-down.wav`.
+
+**Erst danach den Alertmanager umstellen.** Voraussetzung ist, dass der Alertmanager-Pod den Pi erreicht: Pod-Verkehr kommt am Pi als `homeserver` (100.74.0.59, Tag `tagged-devices`) an. Vom Homeserver aus antworten die Ports 22 und 9100 des Pi aber nicht (2026-10-11), die ACL lässt ihn
+offenbar nicht durch. Dann in der Tailscale-ACL den Homeserver auf `vereinsheim-alarmmonitor:9310` zulassen und prüfen:
+
+```bash
+kubectl -n monitoring exec vmalertmanager-monitoring-victoria-metrics-k8s-stack-0 -c alertmanager -- \
+  wget -T 5 -qO- --post-data='{}' http://100.123.214.4:9310/watchdog
+```
+
+Die Antwort `ok` heißt, der Weg steht. Dann in `argocd/apps/tech/monitoring/values.yaml` beim Receiver `watchdog` eine **zweite** Zeile ergänzen (die erste, den Cluster-Caller, behalten):
+
+```yaml
+        - name: watchdog
+          webhook_configs:
+            - url: 'http://alert-caller.alert-caller.svc.cluster.local:9310/watchdog'
+              send_resolved: false
+            - url: 'http://100.123.214.4:9310/watchdog'
+              send_resolved: false
+```
+
+Fällt der Alertmanager aus, während der Cluster läuft, rufen dann beide Caller an (zwei Anrufe). Das ist bewusst in Kauf genommen, solange der Pi-Weg nicht erprobt ist.
+
+**Pi ausgefallen → Cluster ruft an:** Die Regel `BananaPiAlarmmonitorDown` (`vmrule-banana-pi.yaml`, 10 min ohne Metriken, löst bisher ntfy und das Zammad-Ticket aus) bekommt dafür das Label `page: "true"`. Das ist **nicht eingestellt**: Mit der Route `phone` würde der Cluster-Caller dann bei jedem Pi-Ausfall alle 15 Minuten anrufen, bis eine Silence gesetzt ist.
+
+**Offen:** Die Rolle ist gelintet und syntaxgeprüft, der statische Modus im Pod ohne Anruf getestet. Der Build von baresip auf armv7, die Registrierung vom Pi aus und ein echter Anruf vom Pi sind **nicht** geprüft. Der Pi hatte am 27.09. einen mehrtägigen Ausfall (Tailscale antwortete nicht), als Notfall-Caller ist er nur so verlässlich wie er selbst.
 
 ---
 
