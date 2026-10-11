@@ -22,10 +22,6 @@ spec:
     - name: prod
       namespace: cloudflared
     - name: prod
-      namespace: authentik
-    - name: prod
-      namespace: mealie
-    - name: prod
       namespace: paperless-ngx
     - name: prod
       namespace: wikijs
@@ -39,8 +35,6 @@ spec:
       namespace: xibosignage
     - name: prod
       namespace: example-whoami
-    - name: prod
-      namespace: tinyteller
     - name: prod
       namespace: cert-manager
     - name: prod

@@ -49,10 +49,8 @@ Nicht jede App mit LAN-Ingress ist automatisch auch extern erreichbar.
 | Immich | prod | PROD | immich | immich-server:80 | immich.prod.homeserver | immich-prod.pke-lab.de |
 | Nextcloud | prod | PROD | nextcloud | nextcloud:80 | nextcloud.prod.homeserver | nextcloud-prod.pke-lab.de |
 | Paperless-ngx | prod | PROD | paperless-ngx | paperless-ngx:80 | paperless.prod.homeserver | — (nur LAN/Tailnet) |
-| Mealie | prod | PROD | mealie | mealie:80 | mealie.prod.homeserver, mealie-native.prod.homeserver | mealie-prod.pke-lab.de |
 | Wiki.js | prod | PROD | wikijs | wikijs:80 | wiki.prod.homeserver | wiki-prod.pke-lab.de |
 | Xibo CMS | prod | PROD | xibosignage | xibosignage-cms:80 | xibo.prod.homeserver | xibo-prod.pke-lab.de |
-| Tinyteller | prod | PROD | tinyteller | tinyteller-frontend:80 | tinyteller.prod.homeserver | — |
 | example-whoami | prod | PROD | example-whoami | example-whoami:80 | whoami.prod.homeserver | — |
 | Vaultwarden | tech (Ausnahme) | TECH | vaultwarden | vaultwarden:80 | vault.tech.homeserver | vault-tech.pke-lab.de |
 | Zammad | tech (Ausnahme) | TECH | zammad | zammad-nginx:8080 | zammad.tech.homeserver | support-tech.pke-lab.de |
@@ -64,11 +62,9 @@ Nicht jede App mit LAN-Ingress ist automatisch auch extern erreichbar.
 | ISC-News-Bot | tech | TECH | isc-news-bot | isc-news-bot:8080 | — (nur cluster-intern, n8n ruft auf) | — |
 | Homeserver-Dashboard-API | prod | TECH | carplay-api | carplay-api:80 | carplay-api.prod.homeserver | — |
 | pacman | prod | TECH | pacman | pacman:80 | pacman.prod.homeserver | pacman-prod.pke-lab.de |
-| Authentik | tech | TECH | authentik | authentik:80 | authentik.tech.homeserver | authentik-tech.pke-lab.de |
 | lldap (Web-UI) | tech | TECH | lldap | lldap:17170 (LDAP: 3890) | lldap.tech.homeserver | — |
 | ntfy | tech | TECH | ntfy | ntfy:80 | ntfy.tech.homeserver | ntfy-tech.pke-lab.de |
 | Grafana | tech | TECH | monitoring | monitoring-grafana:80 | grafana.tech.homeserver | grafana-tech.pke-lab.de |
-| Gotify | tech | TECH | gotify | gotify:80 | gotify.tech.homeserver, gotify-api.tech.homeserver | — (nur LAN/Tailnet) |
 | Semaphore | tech | TECH | semaphore | semaphore:3000 | semaphore.tech.homeserver, semaphore-api.tech.homeserver | — |
 | Pi-hole (Web-UI) | tech | TECH | pihole | pihole:80 | pihole.tech.homeserver | — |
 | Argo Workflows | tech | TECH | argo-workflows | argo-workflows-server:2746 | argo-workflows.tech.homeserver | — |
@@ -120,7 +116,6 @@ angesprochen (Datenbanken, Caches, interne Bridges, Batch-Jobs):
 
 | App/Komponente | Namespace | Port |
 |---|---|---|
-| gotify-bridge | gotify-bridge | 8080 |
 | ntfy-bridge | ntfy-bridge | 8080 |
 | Immich Postgres | immich | 5432 |
 | Immich Redis | immich | 6379 |

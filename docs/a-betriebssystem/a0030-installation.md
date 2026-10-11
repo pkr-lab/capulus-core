@@ -89,7 +89,6 @@ $EDITOR ansible/group_vars/all.yml
 | `hostname`                  | `homeserver`  | Hostname des Servers                                                   |
 | `dnsmasq_prod_vm_hosts`     | Hostliste     | Hosts unter `*.prod.homeserver`, die auf die PROD-VM (`.99`) statt auf den TECH-Cluster zeigen |
 | `semaphore_vault_password`  | Vault-Block   | Ansible-Vault-Passwort, das Semaphore zur Laufzeit zum Decrypten nutzt |
-| `gotify_admin_password`     | Vault-Block   | Optional: Gotify-Admin-Passwort als Vault-Eintrag aufbewahren          |
 
 > **Tipp.** `auto_upgrade: false` setzen, wenn Reproduzierbarkeit wichtig ist
 > (CI, Lab-Snapshots) — Ansible installiert dann nur fehlende Pakete und respektiert alle Pins.

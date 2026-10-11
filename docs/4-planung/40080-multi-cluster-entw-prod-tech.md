@@ -5,8 +5,7 @@ Architektur- und Rollout-Plan für den Umbau des bestehenden **einen**
 Aufteilung der bestehenden ArgoCD-Struktur. Das Doc beantwortet die vom Nutzer
 gestellten Kernfragen (Machbarkeit, ArgoCD-Modell, Cluster-zu-Cluster-Kommunikation,
 Hardware, Nutzen, Kubernetes-Aktualität) und hält den daraus abgeleiteten,
-gestaffelten Plan fest — analog zur Konvention aus
-[40070-authentik-sso-iac.md](40070-authentik-sso-iac.md).
+gestaffelten Plan fest.
 
 > **Umsetzungsstand (21.09.2026): weitgehend umgesetzt.** Die Ausgangslage und die
 > Schritt-Tabellen unten sind der Plan- und Rollout-Text vom 18.–19.09.2026 und werden
@@ -642,8 +641,7 @@ den Restore selbst gebraucht wird:
   siehe `ansible/group_vars/user_inventory_vault.yml`, `make
   user-inventory-edit`"), statt das Inventar nur an dieser
   Migrationsseite hängen zu lassen — sonst findet es niemand mehr, sobald
-  dieser Plan als historischer Kontext gilt (Konvention wie in
-  [40070](40070-authentik-sso-iac.md)).
+  dieser Plan als historischer Kontext gilt.
 - **Vor dem PROD-Rebuild** (Baustein 5 Phase 2) einmal gegen den
   tatsächlichen Live-Stand beider Apps abgeglichen (`/admin`-Oberfläche
   Immich bzw. Vaultwarden) — danach bei jeder Account-Änderung

@@ -4,7 +4,7 @@
 
 Uptime Kuma ist eine schlanke, selbst gehostete Status-Seite. Sie prüft
 regelmäßig ob Dienste erreichbar sind und schickt Alerts bei Ausfällen —
-via ntfy, Gotify, E-Mail oder anderen Kanälen.
+via ntfy, E-Mail oder anderen Kanälen.
 
 ---
 
@@ -36,7 +36,7 @@ anlegen (erscheint beim ersten Besuch automatisch).
    - **TCP Port** — für Ports (k3s-API Port 6443)
    - **Ping** — für Hosts (homeserver, worker-0)
 2. URL / Host und Intervall eintragen
-3. Notification hinzufügen (ntfy oder Gotify)
+3. Notification hinzufügen (z. B. ntfy)
 
 ### Empfohlene Monitore für den Stack
 
@@ -47,7 +47,6 @@ anlegen (erscheint beim ersten Besuch automatisch).
 | ntfy | https://ntfy.tech.homeserver | HTTP |
 | Semaphore | https://semaphore.tech.homeserver | HTTP |
 | Paperless | https://paperless.prod.homeserver | HTTP |
-| Mealie | https://mealie.prod.homeserver | HTTP |
 | n8n | https://n8n.prod.homeserver | HTTP |
 | worker-0 (Ping) | 192.168.178.95 | Ping |
 
@@ -61,12 +60,6 @@ anlegen (erscheint beim ersten Besuch automatisch).
 2. Server: `https://ntfy.tech.homeserver`
 3. Topic: z. B. `homelab-uptime`
 4. Priorität: `urgent` für Ausfälle
-
-### Gotify
-
-1. In Gotify eine neue App anlegen, Token kopieren
-2. Uptime Kuma: Benachrichtigung → *Gotify*
-3. URL: `https://gotify.tech.homeserver`, Token eintragen
 
 ---
 
@@ -104,15 +97,13 @@ Kuma-UI (nicht Teil von Git/Helm):
 
 ---
 
-## Authentik-SSO
+## Anmeldung
 
-Der interne Host (`uptime-kuma.prod.homeserver`) verlangt jetzt zuerst einen
-Authentik-Login, nur die `admins`-Gruppe hat Zugriff (siehe
-[docs/d-sicherheit/d0073-authentik-sso.md](../d-sicherheit/d0073-authentik-sso.md)).
-Der externe Status-Host (`status-prod.pke-lab.de`) ist davon **nicht**
-betroffen — bewusst unverändert. Für native Anmeldung ohne Authentik (z. B.
-falls Authentik mal nicht erreichbar ist):
-`https://uptime-kuma-native.prod.homeserver`.
+Der interne Host (`uptime-kuma.prod.homeserver`) steht nicht mehr hinter
+Authentik-SSO (im Oktober 2026 entfernt), es gilt nur der eigene Login von
+Uptime Kuma. Der externe Status-Host (`status-prod.pke-lab.de`) war nie
+betroffen. Der frühere Bypass-Host `https://uptime-kuma-native.prod.homeserver`
+zeigt weiterhin auf dieselbe App.
 
 ---
 

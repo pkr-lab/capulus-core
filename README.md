@@ -67,7 +67,7 @@ make install
 <tr><td>Virtualisierung</td><td><strong>KVM/libvirt</strong></td><td>PROD-VM auf dem Homeserver, ENTW-VM auf worker-1, Bridge-Netz direkt im LAN</td></tr>
 <tr><td>GitOps</td><td><strong>ArgoCD</strong> + ApplicationSets</td><td>Ein Hub für TECH + PROD, eine eigene Instanz für ENTW. Ordner unter <code>argocd/apps/&lt;cluster&gt;/</code> anlegen → mergen → deployed</td></tr>
 <tr><td>Promotion</td><td><strong>GitHub Actions</strong></td><td>Version läuft erst auf ENTW (24 h), dann TECH (2 h), dann PROD — jeweils als PR mit Gesundheits-Gate</td></tr>
-<tr><td>Identität</td><td><strong>Authentik + lldap</strong></td><td>Zentrales SSO/2FA per Traefik-ForwardAuth, Nutzer im LDAP-Verzeichnis</td></tr>
+<tr><td>Identität</td><td><strong>lldap</strong></td><td>Nutzer im LDAP-Verzeichnis</td></tr>
 <tr><td>Split-DNS</td><td><strong>dnsmasq</strong> auf <code>tailscale0</code></td><td><code>*.homeserver</code> aus LAN und Tailnet auflösbar, verteilt auf TECH, PROD und ENTW</td></tr>
 <tr><td>Werbeblocking</td><td><strong>Pi-hole</strong></td><td>Filtert DNS-Anfragen für alle Geräte, die dnsmasq bereits als DNS nutzen — kein Router-Eingriff nötig</td></tr>
 <tr><td>Web-Ansible</td><td><strong>Semaphore UI</strong></td><td>Ein-Klick-<code>git pull &amp;&amp; ansible-playbook</code> gegen das eigene LAN</td></tr>
@@ -75,7 +75,7 @@ make install
 <tr><td>Kubernetes-UI</td><td><strong>Headlamp</strong></td><td>Browser-Dashboard für den TECH-Cluster</td></tr>
 <tr><td>Secrets</td><td><strong>Sealed Secrets + kubeseal-webgui</strong></td><td>Verschlüsselte Secrets in Git, je Cluster nur dort entschlüsselbar</td></tr>
 <tr><td>Internes TLS</td><td><strong>cert-manager</strong></td><td>Eigene Root-CA, HTTPS auf <code>*.tech</code>/<code>*.prod.homeserver</code></td></tr>
-<tr><td>Notifications</td><td><strong>Gotify</strong> + <strong>ntfy</strong></td><td>Self-hosted Push — Gotify (Android), ntfy (iOS + Android)</td></tr>
+<tr><td>Notifications</td><td><strong>ntfy</strong></td><td>Self-hosted Push — ntfy (iOS + Android)</td></tr>
 <tr><td>Live-Streaming</td><td><strong>MediaMTX</strong></td><td>RTMP/RTSP-Ingest → HLS-Playback; Publish/Zuschauer per interner mediamtx-Auth (Nutzername/Passwort)</td></tr>
 <tr><td>Speicher</td><td><strong>UGREEN NAS (NFS)</strong></td><td>RAID1, StorageClasses <code>nas</code> und <code>immich-nas</code> für alle Cluster, restic-Backup auf USB-Platte</td></tr>
 <tr><td>Remote-Access</td><td><strong>Tailscale</strong></td><td>WireGuard-Mesh-VPN — keine Portfreigaben, keine öffentliche IP</td></tr>
@@ -182,7 +182,7 @@ Der Stack besteht seit September 2026 aus **drei getrennten k3s-Clustern**
 | Cluster | Läuft auf | IP | Für | ArgoCD | Ordner |
 |---|---|---|---|---|---|
 | **TECH** | `homeserver` (bare metal, 24/7) + Worker `worker-0`/`worker-1` | `192.168.178.94` | Infrastruktur und Betriebsdienste: Identität, Secrets, Monitoring, CI/CD, DNS, Zammad, Vaultwarden, n8n | **Hub**, verwaltet TECH **und** PROD | `argocd/apps/tech/` |
-| **PROD** | KVM-VM `prod-vm` auf dem Homeserver (6 vCPU / 24 GiB) | `192.168.178.99` | Apps mit echtem Nutzerkreis: Nextcloud, Immich, Paperless-ngx, Wiki.js, Mealie, Xibo | — (vom Hub verwaltet) | `argocd/apps/prod/` |
+| **PROD** | KVM-VM `prod-vm` auf dem Homeserver (6 vCPU / 24 GiB) | `192.168.178.99` | Apps mit echtem Nutzerkreis: Nextcloud, Immich, Paperless-ngx, Wiki.js, Xibo | — (vom Hub verwaltet) | `argocd/apps/prod/` |
 | **ENTW** | KVM-VM `entw-vm` auf `worker-1` (3 vCPU / 12 GiB) | `192.168.178.100` | Entwicklung und Tests, absichtlich verwundbare Trainingsumgebung | eigene, isolierte Instanz (Branch `entw`) | `argocd/apps/entw/` |
 
 ```
@@ -206,7 +206,7 @@ make worker-1-libvirt-host    # KVM + Bridge auf worker-1, legt entw-vm an
 make entw                     # k3s + ArgoCD in der entw-vm
 ```
 
-> Ein Hostname wie `mealie.prod.homeserver` sagt nur etwas über das **Tier**, nicht über den Cluster: welcher
+> Ein Hostname wie `n8n.prod.homeserver` sagt nur etwas über das **Tier**, nicht über den Cluster: welcher
 > Cluster antwortet, entscheidet das DNS ([c0040](docs/c-netzwerk-dns/c0040-domain-tiers.md#dns-tier-und-cluster-sind-zwei-verschiedene-dinge)).
 > `kubectl`-Befehle in den App-Docs gelten für den Cluster, in dem die App läuft
 > ([Zugriff je Cluster](docs/a-betriebssystem/a0010-overview.md#kubectl-zugriff-je-cluster)).
@@ -227,10 +227,10 @@ capulus-core/
 │   ├── a-betriebssystem/             # Betriebssystem, Architektur-Überblick, Installation
 │   ├── b-kubernetes-gitops/          # k3s, ArgoCD, AppProjects, Semaphore, HPA, ENTW-ArgoCD
 │   ├── c-netzwerk-dns/               # DNS, Tailscale, WireGuard-Backup, Pi-hole, Ports, Domain-Tiers
-│   ├── d-sicherheit/                 # Härtung, CrowdSec, NetworkPolicies, TLS, Secrets, lldap + Authentik
+│   ├── d-sicherheit/                 # Härtung, CrowdSec, NetworkPolicies, TLS, Secrets, lldap
 │   ├── e-externe-erreichbarkeit/     # Cloudflare Tunnel
 │   ├── f-cicd-automatisierung/       # CI, Promotion ENTW → TECH → PROD, Renovate, Releases, Mirror
-│   ├── 1-benachrichtigungen/         # Gotify, ntfy
+│   ├── 1-benachrichtigungen/         # ntfy
 │   ├── 2-betrieb-hardware/           # NAS, Backup, Power-Manager, Drucker, Alerts, Hardware-Monitoring
 │   ├── 3-apps-workloads/             # Doku je App
 │   ├── 4-planung/                    # Pläne und Analysen (teils umgesetzt, siehe Statuszeile im Doc)
@@ -286,9 +286,9 @@ capulus-core/
 │   └── apps/                         # Ein Ordner pro ArgoCD-Application, je Cluster
 │       ├── tech/                     # TECH-Cluster, Projekt "tech" — siehe docs/b-kubernetes-gitops/b0020-argocd-projects.md
 │       │   ├── sealed-secrets/ kubeseal-webgui/ cert-manager/ traefik-config/ coredns-custom/   # Secrets, TLS, Ingress/DNS-Konfiguration
-│       │   ├── authentik/ lldap/                              # SSO/2FA und LDAP-Nutzerverzeichnis
+│       │   ├── lldap/                                         # LDAP-Nutzerverzeichnis
 │       │   ├── monitoring/ logging/                           # VictoriaMetrics + Grafana, VictoriaLogs
-│       │   ├── gotify/ gotify-bridge/ ntfy/ ntfy-bridge/      # Push-Notifications + Alertmanager-Brücken
+│       │   ├── ntfy/ ntfy-bridge/                             # Push-Notifications + Alertmanager-Brücke
 │       │   ├── cloudflared/ pihole/                           # Cloudflare Tunnel, DNS-Filter
 │       │   ├── nas-storage/ immich-storage/ minio/            # NFS-StorageClasses, S3-Artifact-Store
 │       │   ├── argo-workflows/ semaphore/ headlamp/           # CI/CD, Ansible-UI, Kubernetes-Dashboard
@@ -301,8 +301,8 @@ capulus-core/
 │       │   ├── sealed-secrets/ cert-manager/ traefik-config/ cloudflared/   # eigene Plattform-Grundzutaten des Clusters
 │       │   ├── nas-storage/ immich-storage/                   # NFS-StorageClasses auch in PROD
 │       │   ├── nextcloud/ immich/ paperless-ngx/              # Dateien/Kalender, Fotos, Dokumente
-│       │   ├── wikijs/ wiki-docs-sync/ mealie/ xibosignage/   # Wiki (+ Sync-CronJob), Rezepte, Digital Signage
-│       │   └── tinyteller/ example-whoami/ demo-app/          # Kleine App, Referenz-Apps
+│       │   ├── wikijs/ wiki-docs-sync/ xibosignage/           # Wiki (+ Sync-CronJob), Digital Signage
+│       │   └── example-whoami/ demo-app/                      # Referenz-Apps
 │       └── entw/                     # ENTW-Cluster, Projekt "entw" — nur die ENTW-ArgoCD-Instanz liest das (Branch entw), siehe b0050
 │           ├── sealed-secrets/ demo-app/ example-whoami/
 │           └── README.md
@@ -326,7 +326,7 @@ Ein schlanker VictoriaMetrics-+-Grafana-Stack lebt unter `argocd/apps/tech/monit
 | **Scrapers** | VMAgent scrapet alle `VMServiceScrape`/`VMPodScrape` + Prometheus `ServiceMonitor`-CRDs |
 | **Host-Metriken** | `prometheus-node-exporter` als DaemonSet auf den TECH-Knoten, `node_exporter` auf `prod-vm`/`entw-vm`, smartctl-Exporter für die Platten |
 | **Cluster-Metriken** | kubelet/cAdvisor, kube-apiserver, kube-state-metrics, CoreDNS |
-| **Alerts** | Default-kube-prometheus-Rules; Gotify- und ntfy-Alertmanager-Bridges |
+| **Alerts** | Default-kube-prometheus-Rules; ntfy-Alertmanager-Bridge |
 | **Dashboards** | Ordner *Hardware* (Übersicht mit Waben, Server-Detail, Speicher & S.M.A.R.T.), *Plattform (TECH)* und *Anwendungen (TECH)*, Node Exporter Full, VictoriaMetrics + Kubernetes Views, siehe [Hardware-Monitoring](docs/2-betrieb-hardware/20060-hardware-monitoring.md) |
 
 </details>
@@ -388,9 +388,7 @@ Jeder Hostname trägt ein Tier-Label (`tech` = Infrastruktur/Admin, `prod` = App
 | ArgoCD ENTW | – | ENTW | http://192.168.178.100:30080 |
 | Headlamp | tech | TECH | https://headlamp.tech.homeserver |
 | Semaphore | tech | TECH | https://semaphore.tech.homeserver |
-| Authentik (SSO) | tech | TECH | https://authentik.tech.homeserver |
 | lldap (Nutzerverwaltung) | tech | TECH | https://lldap.tech.homeserver |
-| Gotify | tech | TECH | https://gotify.tech.homeserver |
 | ntfy | tech | TECH | https://ntfy.tech.homeserver |
 | Pi-hole | tech | TECH | https://pihole.tech.homeserver |
 | Argo Workflows | tech | TECH | https://argo-workflows.tech.homeserver |
@@ -407,7 +405,6 @@ Jeder Hostname trägt ein Tier-Label (`tech` = Infrastruktur/Admin, `prod` = App
 | Nextcloud | prod | PROD | https://nextcloud.prod.homeserver |
 | Immich | prod | PROD | https://immich.prod.homeserver |
 | Paperless-ngx | prod | PROD | https://paperless.prod.homeserver |
-| Mealie | prod | PROD | https://mealie.prod.homeserver |
 | Wiki.js | prod | PROD | https://wiki.prod.homeserver |
 | Xibo CMS (xibosignage) | prod | PROD | https://xibo.prod.homeserver |
 | Demo-Apps | dev | ENTW | http://whoami.dev.homeserver, http://demo.dev.homeserver |
@@ -419,8 +416,8 @@ Jeder Hostname trägt ein Tier-Label (`tech` = Infrastruktur/Admin, `prod` = App
 > [docs/c-netzwerk-dns/c0040-domain-tiers.md](docs/c-netzwerk-dns/c0040-domain-tiers.md#warum-punkt-intern-bindestrich-extern))
 > — ohne VPN, ohne offene Ports. TECH und PROD haben je einen eigenen Tunnel. Setup:
 > **[docs/e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md](docs/e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md)**.
-> Welche Dienste aktuell extern erreichbar sind (u. a. Nextcloud, Immich, Wiki.js, Mealie, Xibo,
-> Vaultwarden, Grafana, ntfy, Authentik, Status-Seite), steht in der Tabelle unter
+> Welche Dienste aktuell extern erreichbar sind (u. a. Nextcloud, Immich, Wiki.js, Xibo,
+> Vaultwarden, Grafana, ntfy, Status-Seite), steht in der Tabelle unter
 > [Externe Erreichbarkeit](docs/c-netzwerk-dns/c0040-domain-tiers.md#externe-erreichbarkeit-wildcard-routing-über-traefik) —
 > bei Immich nötig für Handy-Auto-Backup unterwegs.
 > Der Live-Stream (`https://stream-prod.pke-lab.de`) ist per mediamtx-eigenem HTTP-Basic-Login
@@ -438,7 +435,6 @@ Jeder Hostname trägt ein Tier-Label (`tech` = Infrastruktur/Admin, `prod` = App
 <tr><td>Getrennte Cluster</td><td>TECH, PROD und ENTW haben eigene Pod-/Service-Netze und eigene SealedSecrets-Schlüssel; PROD und ENTW laufen als KVM-VMs, ENTW hat keine Route zu TECH/PROD und keinen ArgoCD-Zugriff vom Hub, siehe <a href="docs/4-planung/40080-multi-cluster-entw-prod-tech.md">40080</a></td></tr>
 <tr><td>UFW-Firewall</td><td>Erlaubt nur SSH, HTTP/HTTPS, k3s-API, ArgoCD-NodePort (HTTPS-only), Flannel, Tailscale-UDP</td></tr>
 <tr><td>Opt-in externe Erreichbarkeit</td><td>Nur Dienste mit einem eigenen <code>*-pke-lab.de</code>-Host in ihrer <code>ingress.hosts</code>-Liste sind öffentlich erreichbar, alles andere bleibt intern</td></tr>
-<tr><td>Zentrales Login</td><td>Authentik + lldap (SSO/2FA per Traefik-ForwardAuth) für ausgewählte Apps, siehe <a href="docs/d-sicherheit/d0073-authentik-sso.md">docs/d-sicherheit/d0073-authentik-sso.md</a></td></tr>
 <tr><td>Brute-Force-Schutz</td><td>CrowdSec beobachtet SSH- und Traefik-Logs und lässt einen Firewall-Bouncer auffällige IPs sperren, siehe <a href="docs/d-sicherheit/d0020-crowdsec.md">docs/d-sicherheit/d0020-crowdsec.md</a></td></tr>
 <tr><td>NetworkPolicies</td><td>Default-Deny je Namespace im TECH-Cluster mit expliziten Ausnahmen, siehe <a href="docs/d-sicherheit/d0030-network-policies.md">docs/d-sicherheit/d0030-network-policies.md</a></td></tr>
 <tr><td>Internes TLS</td><td>cert-manager mit eigener Root-CA (PROD: eigene Intermediate-CA), HTTP wird auf HTTPS umgeleitet, siehe <a href="docs/d-sicherheit/d0040-internal-tls.md">docs/d-sicherheit/d0040-internal-tls.md</a></td></tr>
@@ -525,9 +521,7 @@ Neu hier? Der beste Einstieg ist der **[Architektur-Überblick](docs/a-betriebss
 | [Internes TLS](docs/d-sicherheit/d0040-internal-tls.md) | cert-manager + eigene CA für HTTPS auf `*.homeserver`, PROD mit eigener Intermediate-CA (Härtung Phase 5) |
 | [Secrets-Encryption + Audit-Log](docs/d-sicherheit/d0050-secrets-encryption-audit-log.md) | k3s Secrets-at-Rest-Verschlüsselung + API-Audit-Log (Härtung Phase 4) |
 | [Secrets-Rotation-Checkliste](docs/d-sicherheit/d0060-secrets-rotation.md) | Checkliste zur regelmäßigen Rotation aller Cluster-Secrets (Härtung Phase 7) |
-| [lldap](docs/d-sicherheit/d0072-lldap.md) | Nutzer- und Gruppenverwaltung als LDAP-Quelle für Authentik |
-| [Authentik SSO](docs/d-sicherheit/d0073-authentik-sso.md) | Zentrale SSO-/2FA-Instanz per Traefik-ForwardAuth, Access-Control, Runbook |
-| [Authentik IaC-Cookbook](docs/d-sicherheit/d0074-authentik-iac-cookbook.md) | Neue Apps und Nutzer per Blueprint anlegen |
+| [lldap](docs/d-sicherheit/d0072-lldap.md) | Nutzer- und Gruppenverwaltung (LDAP) |
 | [CodeQL, Dependabot, Security-Issues](docs/d-sicherheit/d0080-codeql-dependabot.md) | Code-Scanning, Fix-PRs für verwundbare Abhängigkeiten, automatische Security-Issues, Vergleich mit Open-Source-Alternativen (Härtung Phase 10) |
 
 ### Externe Erreichbarkeit (`e-externe-erreichbarkeit/`)
@@ -557,7 +551,6 @@ Neu hier? Der beste Einstieg ist der **[Architektur-Überblick](docs/a-betriebss
 
 | Dokument | Inhalt |
 |---|---|
-| [Gotify-Push](docs/1-benachrichtigungen/10000-gotify.md) | Self-hosted Push-Notifications aus dem Stack |
 | [ntfy iOS-Push](docs/1-benachrichtigungen/10010-ntfy.md) | Self-hosted ntfy mit iOS APNs-Relay |
 
 ### Betrieb & Hardware (`2-betrieb-hardware/`)
@@ -585,7 +578,6 @@ Die Spalte *Cluster* zeigt, wo die App läuft (Ordner unter `argocd/apps/`).
 | [Wiki.js](docs/3-apps-workloads/30030-wikijs.md) | PROD | Team-Wiki, `docs/` wird per wiki-docs-sync automatisch gespiegelt |
 | [MediaMTX Live-Streaming](docs/3-apps-workloads/30040-mediamtx.md) | TECH | RTMP/RTSP-Ingest → HLS, Publish- und Zuschauer-Autorisierung über mediamtx' eingebaute interne Benutzerverwaltung (HTTP Basic Auth) |
 | [Paperless-ngx](docs/3-apps-workloads/30050-paperless-ngx.md) | PROD | Dokumentenmanagement mit OCR — Briefe, Rechnungen, Verträge scannen und durchsuchen |
-| [Mealie](docs/3-apps-workloads/30060-mealie.md) | PROD | Rezeptverwaltung + Wochenplaner mit URL-Import |
 | [n8n](docs/3-apps-workloads/30070-n8n.md) | TECH | Low-Code-Automatisierung — Dienste verknüpfen ohne Programmieren |
 | [Uptime Kuma](docs/3-apps-workloads/30080-uptime-kuma.md) | TECH | Status-Seite und Alerting für alle Dienste |
 | [Rhein-Dashboard](docs/3-apps-workloads/30090-rhein-dashboard.md) | TECH | Grafana: Pegelonline, DWD-Warnungen, ELWIS, Hochwasservorhersage RLP |
@@ -607,14 +599,13 @@ Pläne und Analysen. Ein Doc trägt in seiner Statuszeile, wie weit es umgesetzt
 
 | Dokument | Inhalt |
 |---|---|
-| [Authelia-SSO](docs/4-planung/40000-authelia-sso.md) | Ursprünglicher SSO-Plan mit Authelia, abgelöst durch Authentik |
+| [Authelia-SSO](docs/4-planung/40000-authelia-sso.md) | Ursprünglicher SSO-Plan mit Authelia, wieder abgelöst |
 | [Öffentliches Teilen ohne Gast-Accounts](docs/4-planung/40010-oeffentliches-teilen-ohne-authelia.md) | Immich/Nextcloud: Teilen von Inhalten ohne Gast-Accounts |
 | [Vereinsheim WoL + Router-VPN](docs/4-planung/40020-vereinsheim-wol-router-vpn.md) | Wake-on-LAN am Standort Vereinsheim, Router-VPN als Fallback |
 | [GitLab + Proxmox — Prüfung](docs/4-planung/40030-gitlab-hosting-proxmox-pruefung.md) | Analyse: GitLab self-hosted und Proxmox als Hypervisor |
 | [Zammad-Kalender → Nextcloud](docs/4-planung/40040-zammad-kalender-n8n-nextcloud-ios-sync.md) | Kalendereinladung aus Zammad über n8n nach Nextcloud und iOS |
 | [GitHub-Repos versionieren](docs/4-planung/40050-github-repos-versionierung.md) | Versionierung für alle GitHub-Repos |
 | [Einsatz-Alarm per E-Mail](docs/4-planung/40060-alamos-einsatz-email-benachrichtigung.md) | E-Mail mit den wichtigsten Einsatzdaten |
-| [Authentik via IaC](docs/4-planung/40070-authentik-sso-iac.md) | Plan und Rollout von Authentik als SSO-Layer (Ablösung von Authelia) |
 | [Multi-Cluster ENTW/PROD/TECH](docs/4-planung/40080-multi-cluster-entw-prod-tech.md) | Architektur und Umsetzungsplan der Drei-Cluster-Umstellung, Phasen und offene Punkte |
 
 ### Incidents (`5-incidents/`)
@@ -638,7 +629,7 @@ Einstieg und Zuordnung von Dateien zu Docs: **[docs/6-hintergruende/60000-uebers
 | [Helm-Charts im TECH-Cluster](docs/6-hintergruende/60040-helm-charts-tech.md) | Gemeinsame Muster, Zertifikate und TLS, Traefik-Metriken, alle TECH-Apps |
 | [Helm-Charts im PROD-Cluster](docs/6-hintergruende/60050-helm-charts-prod.md) | PROD-Kopien, Nextcloud, Immich, Wiki.js und wiki-docs-sync, Xibo, Paperless-ngx |
 | [Monitoring und Alerting](docs/6-hintergruende/60060-monitoring-und-alerting.md) | Alertmanager-Routing, VMRules, Scrapes und Labels, Grafana-Ordner, Logging |
-| [Authentik und lldap](docs/6-hintergruende/60070-authentik-und-lldap.md) | Blueprint-Fallstricke aus dem Live-Betrieb, Chart, Secrets |
+| [lldap](docs/6-hintergruende/60070-lldap.md) | Chart-Entscheidungen und Secrets |
 | [carplay-api und iOS-App](docs/6-hintergruende/60080-carplay-api-und-ios-app.md) | Verträge, Absicherung, Datenquellen, Transport über Tailscale |
 | [pacman (Schulungsobjekt)](docs/6-hintergruende/60090-pacman-schulungsobjekt.md) | Server, Bestenliste, Trainingsmodus, Frontend-Skripte |
 | [CI-Workflows, Skripte und Lint](docs/6-hintergruende/600a0-ci-workflows-und-skripte.md) | Workflows, Promotions- und Sync-Skripte, Ruleset, Dependabot/Renovate, Lint-Konfiguration |

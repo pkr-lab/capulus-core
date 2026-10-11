@@ -19,11 +19,11 @@ Quellen im Repo: [argocd/apps/tech/monitoring/dashboards/hardware/](../../argocd
 | **Hardware** | die drei Dashboards oben + die "Node Exporter …"-Standard-Dashboards | `dashboards-hardware.yaml`; Node-Exporter-Dashboards per Hook-Job |
 | **Kubernetes (TECH)** | "Kubernetes / …" (Compute Resources, Networking, Kubelet, …) — zeigen den TECH-Cluster | Hook-Job `monitoring-dashboard-folders` (nach Titel-Präfix) |
 | **Monitoring-Stack** | VictoriaMetrics, Prometheus, Alertmanager, Grafana Overview | dito |
-| **Plattform (TECH)** | Pro-App-Dashboards der Infrastruktur-Dienste (authentik, cert-manager, minio, semaphore, …) | `values.yaml` `dashboardApps` (`folder:`) |
+| **Plattform (TECH)** | Pro-App-Dashboards der Infrastruktur-Dienste (cert-manager, minio, semaphore, …) | `values.yaml` `dashboardApps` (`folder:`) |
 | **Anwendungen (TECH)** | Pro-App-Dashboards der TECH-Anwendungen (n8n, vaultwarden, uptime-kuma, …), Zammad, Pacman, Pegel-Dashboard, "1002011-pis" | `dashboardApps` bzw. `grafana_folder`-Annotation im jeweiligen Template |
 
-Apps, die nach PROD umgezogen sind (immich, nextcloud, paperless-ngx, mealie,
-wikijs, xibosignage, tinyteller, demo-app, example-whoami), haben **keine**
+Apps, die nach PROD umgezogen sind (immich, nextcloud, paperless-ngx,
+wikijs, xibosignage, demo-app, example-whoami), haben **keine**
 Dashboards mehr: PROD/ENTW werden von diesem VictoriaMetrics nicht gescrapt,
 die Dashboards blieben leer. Wer PROD-Monitoring aufbaut, ergänzt die Einträge
 in `dashboardApps` wieder.
