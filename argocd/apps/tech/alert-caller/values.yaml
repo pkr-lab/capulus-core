@@ -74,6 +74,7 @@ config:
   callCooldown: "900"
   callRingTimeout: "45"
   registerTimeout: "15"
+  iceTimeout: "40"
   vmUrl: "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428"
   rtpPortMin: 10000
   rtpPortMax: 10100

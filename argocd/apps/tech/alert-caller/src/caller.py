@@ -22,6 +22,7 @@ WATCHDOG_TIMEOUT = int(os.environ.get("WATCHDOG_TIMEOUT", "600"))
 CALL_COOLDOWN = int(os.environ.get("CALL_COOLDOWN", "900"))
 CALL_RING_TIMEOUT = int(os.environ.get("CALL_RING_TIMEOUT", "45"))
 REGISTER_TIMEOUT = int(os.environ.get("REGISTER_TIMEOUT", "15"))
+ICE_TIMEOUT = int(os.environ.get("ICE_TIMEOUT", "40"))
 HC_PING_URL = os.environ.get("HC_PING_URL", "")
 VM_URL = os.environ.get("VM_URL", "").rstrip("/")
 PIPER_PYTHON = os.environ.get("PIPER_PYTHON", "/opt/piper/venv/bin/python")
@@ -80,6 +81,7 @@ TIMESTAMP = re.compile(r"(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)(\.\d+)?(Z|[+
 REGISTERED = re.compile(r"\{\d+/\w+/\w*[46]\} 2\d\d ")
 REGISTER_FAILED = re.compile(r"reg: \S+ \(prio \d+\): (?:[3-5]\d\d |Register:)")
 CALL_ESTABLISHED = re.compile(r"Call established")
+MEDIA_READY = re.compile(r"connectivity check is complete")
 CALL_TERMINATED = re.compile(r"Call with \S+ terminated")
 CALL_FAILED = re.compile(r"ua_connect failed")
 
@@ -275,7 +277,7 @@ def stop_process(proc):
 
 
 def dial(uri, seconds):
-    limit = REGISTER_TIMEOUT + CALL_RING_TIMEOUT + int(seconds) + 5
+    limit = REGISTER_TIMEOUT + CALL_RING_TIMEOUT + ICE_TIMEOUT + int(seconds) + 5
     rx_path = os.path.join(STATE_DIR, "rx.wav")
     if os.path.exists(rx_path):
         os.remove(rx_path)
@@ -289,6 +291,7 @@ def dial(uri, seconds):
     started = time.monotonic()
     dialed_at = None
     answered = False
+    media_ready = False
     hangup_at = None
     output = ""
     deadline = started + limit + 15
@@ -319,8 +322,12 @@ def dial(uri, seconds):
                 continue
             if not answered and CALL_ESTABLISHED.search(output):
                 answered = True
-                hangup_at = time.monotonic() + seconds + HANGUP_GRACE
+                hangup_at = time.monotonic() + ICE_TIMEOUT + seconds + HANGUP_GRACE
                 log(f"{uri} answered")
+            if answered and not media_ready and MEDIA_READY.search(output):
+                media_ready = True
+                hangup_at = time.monotonic() + seconds + HANGUP_GRACE
+                log(f"{uri} media ready, playing announcement")
             if CALL_TERMINATED.search(output) or CALL_FAILED.search(output):
                 break
     finally:
