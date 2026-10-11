@@ -63,17 +63,19 @@
         - re
         - baresip
 
-    - name: libre für sips-Routen patchen
+    - name: libre patchen (sips-Routen, ICE-Takt)
       ansible.posix.patch:
-        src: "{{ alert_caller_libre_patch }}"
+        src: "{{ alert_caller_patch_dir }}/{{ item }}"
         basedir: "{{ alert_caller_baresip_build_dir }}/re"
         strip: 1
+      loop: "{{ alert_caller_libre_patches }}"
 
-    - name: baresip für SRTP ohne GCM-Wechsel patchen
+    - name: baresip patchen (SRTP-Suitenwechsel)
       ansible.posix.patch:
-        src: "{{ alert_caller_baresip_patch }}"
+        src: "{{ alert_caller_patch_dir }}/{{ item }}"
         basedir: "{{ alert_caller_baresip_build_dir }}/baresip"
         strip: 1
+      loop: "{{ alert_caller_baresip_patches }}"
 
     - name: re und baresip bauen und installieren
       ansible.builtin.shell:
@@ -90,7 +92,11 @@
         executable: /bin/bash
         creates: "{{ alert_caller_baresip_prefix }}/.built-{{ build_stamp }}"
       vars:
-        build_stamp: "{{ (alert_caller_baresip_version ~ alert_caller_baresip_modules ~ (lookup('ansible.builtin.file', alert_caller_libre_patch) | hash('sha1')) ~ (lookup('ansible.builtin.file', alert_caller_baresip_patch) | hash('sha1'))) | hash('sha1') | truncate(8, True, '') }}"
+        build_stamp: "{{ (alert_caller_baresip_version ~ alert_caller_baresip_modules ~ patch_hashes) | hash('sha1') | truncate(8, True, '') }}"
+        patch_hashes: >-
+          {%- for f in alert_caller_libre_patches + alert_caller_baresip_patches -%}
+          {{ lookup('ansible.builtin.file', alert_caller_patch_dir ~ '/' ~ f) | hash('sha1') }}
+          {%- endfor -%}
       notify: Restart alert caller
 
     - name: Piper in eigener venv installieren
