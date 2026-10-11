@@ -6,10 +6,13 @@ ARG PIPER_VERSION=1.8.0
 ARG PIPER_VOICE=de_DE-thorsten-high
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends build-essential cmake pkg-config git ca-certificates libssl-dev libopus-dev zlib1g-dev python3 python3-venv \
+ && apt-get install -y --no-install-recommends build-essential cmake pkg-config git patch ca-certificates libssl-dev libopus-dev zlib1g-dev python3 python3-venv \
  && rm -rf /var/lib/apt/lists/*
 
+COPY patches/ /patches/
+
 RUN git clone --depth 1 --branch "v${BARESIP_VERSION}" https://github.com/baresip/re.git /src/re \
+ && patch -p1 -d /src/re < /patches/libre-sips-route.patch \
  && git clone --depth 1 --branch "v${BARESIP_VERSION}" https://github.com/baresip/baresip.git /src/baresip \
  && cmake -S /src/re -B /src/re/build -DCMAKE_INSTALL_PREFIX=/opt/baresip -DCMAKE_INSTALL_RPATH=/opt/baresip/lib -DCMAKE_BUILD_TYPE=Release \
  && cmake --build /src/re/build --parallel \
