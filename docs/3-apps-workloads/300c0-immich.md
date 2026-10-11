@@ -262,7 +262,7 @@ Ergänzend zum nächtlichen Datei-Level-restic-Backup von `immich-nas`
 das ist **kein** transaktions-konsistenter Snapshot, siehe dort
 "Hinweis: Konsistenz laufender Datenbanken") läuft täglich um 01:50 Uhr
 ein eigener `pg_dump`-CronJob (`immich-postgres-backup`, Muster wie
-[Authentik](../d-sicherheit/d0073-authentik-sso.md)), der einen
+das frühere Authentik-Backup), der einen
 transaktions-konsistenten Dump auf eine separate NAS-gestützte PVC
 (`immich-postgres-backup`, StorageClass `immich-nas`) schreibt — die
 letzten 7 Dumps bleiben erhalten, ältere werden automatisch entfernt.

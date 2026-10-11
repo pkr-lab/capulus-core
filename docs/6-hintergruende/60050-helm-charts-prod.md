@@ -8,7 +8,7 @@ Die Datenmigration von TECH nach PROD steht in [60030](60030-argocd-und-bootstra
 
 ## Regeln für alle PROD-Kopien
 
-- **Nie mit leeren Volumes starten.** Die PROD-Kopien (Nextcloud, Immich, Paperless-ngx, Wiki.js, Mealie, Xibo) sind am **2026-09-19** aus TECH
+- **Nie mit leeren Volumes starten.** Die PROD-Kopien (Nextcloud, Immich, Paperless-ngx, Wiki.js, Xibo) sind am **2026-09-19** aus TECH
   übernommen worden ([migrations/README](../../argocd/bootstrap-prod/migrations/README.md)). Ein Start mit leerem Volume legt eine neue
   Datenbank, neue Konten und neue Secrets an. Beim Umschalten (Teil B der Migration) steht die App während der Endkopie auf `0`, weil der
   Kopier-Job das Zielvolume leert, danach auf `1`. Die Postgres-/MySQL-Deployments haben einen eigenen Schalter (`replicas: 0` = gestoppt, für
@@ -20,11 +20,7 @@ Die Datenmigration von TECH nach PROD steht in [60030](60030-argocd-und-bootstra
 - **Keine Node-Vorgabe.** TECH pinnt `local-path`-Apps auf `homeserver`, in PROD gibt es nur die `prod-vm`.
 - **Externe Hosts** laufen über den eigenen PROD-Tunnel (`homeserver-prod`, [60040](60040-helm-charts-tech.md#cloudflared)). Bei der PROD-Kopie von
   `demo-app` fiel `demo-prod.pke-lab.de` vorerst weg, weil cloudflared `*.pke-lab.de` auf den Traefik in TECH routet und PROD (noch) nicht kannte.
-- Wer eine PROD-App **ohne** Authentik-Middleware betreibt, muss das wissen: Die Middleware ist in PROD-Kopien wie Mealie **bewusst ausgebaut**, solange PROD
-  keinen Authentik-Outpost hat ([60030](60030-argocd-und-bootstrap.md#sso-outpost-in-prod-migrationssso-outpost)). Ohne SSO schützt nur die eigene
-  Anmeldung der App (Mealie: `ALLOW_SIGNUP=false`), die Zugriffsbeschränkung über die Authentik-Policy (`admins`/`mealie-user`) entfällt. Zum
-  Wiedereinbau die Annotation `traefik.ingress.kubernetes.io/router.middlewares: "authentik-authentik@kubernetescrd"` zurück in `annotations`
-  setzen.
+- PROD-Apps haben kein zentrales SSO, weder Authentik-Middleware noch -Outpost (beides im Oktober 2026 entfernt). Es schützt nur die eigene Anmeldung der App.
 
 ---
 
@@ -120,25 +116,17 @@ Die Datenmigration von TECH nach PROD steht in [60030](60030-argocd-und-bootstra
 - `custom`, `backup`, `userscripts` und `ca-certs` (aus dem offiziellen `docker-compose.yml`) teilen sich **eine kleine PVC** mit unterschiedlichen `subPath`s (spart drei winzige PVCs).
 - **Zwei verschiedene Ordner nicht verwechseln:** Xibo verwaltet seine Medien-Bibliothek (interne Dateinamen und Hashes) **exklusiv selbst**. Das ist **nicht** der Ordner, in den
   n8n/OnlineSync Rohdateien legt (`xibosignage-inbox`/`-display` in `argocd/apps/tech/n8n`, [300e0](../3-apps-workloads/300e0-xibosignage.md)).
-- Der externe Host läuft **ohne** Authentik-ForwardAuth (anders als Mealie/Uptime Kuma): Nur das CMS-Login schützt ihn, analog zum früheren n8n-Setup. Der n8n-Playlist-Sync
+- Der externe Host läuft **ohne** ForwardAuth-SSO: Nur das CMS-Login schützt ihn, analog zum früheren n8n-Setup. Der n8n-Playlist-Sync
   braucht per NetworkPolicy eine Ingress-Ausnahme auf `cms-web`. Die Ausnahme gilt nur in TECH, in PROD gibt es keine Standard-Policy, sie hätte das CMS sonst auf einen
   nicht vorhandenen `n8n`-Namespace isoliert ([40080](../4-planung/40080-multi-cluster-entw-prod-tech.md)).
 
-## Paperless-ngx, Mealie, TinyTeller
+## Paperless-ngx
 
 - **Paperless-ngx** wurde am 2026-09-19 von TECH kopiert. Der v3-Sprung ging von `2.20.15` (Zwischenschritt, siehe `git log`) aus: Die Konfiguration war schon sauber
   für v3 (`PAPERLESS_SECRET_KEY` und `PAPERLESS_DBENGINE` gesetzt, keine deprecated Env-Vars, keine Verschlüsselung im Einsatz), der Such-Index baut sich beim ersten
   Start automatisch neu auf (Whoosh → tantivy). `PAPERLESS_URL` (öffentliche Adresse hinter dem Reverse-Proxy) setzt `CSRF_TRUSTED_ORIGINS` und `ALLOWED_HOSTS`. Ohne sie scheitert das Login
   mit „CSRF verification failed / Origin checking failed“ (TLS endet im Traefik, Django sieht HTTP). OCR: Deutsch plus Englisch (`deu+eng`, weitere per `deu+eng+fra`), ein
   Worker/Thread reicht für den Heimbetrieb. Der `SECRET_KEY` gehört in ein SealedSecret, ein fester Platzhalter ist nur vorläufig und nach dem Deploy sofort zu ersetzen.
-- **Mealie:** siehe oben (Authentik-Middleware in PROD ausgebaut, Kopier-Job nur mit gestopptem TECH-Mealie, weil SQLite). Ein Worker reicht für den Heimbetrieb.
-- **TinyTeller** war früher Docker-Compose auf worker-0 (eigene Ansible-Rolle, inzwischen entfernt) und ist jetzt eine reguläre k8s-App. Zustandslos (keine PVC), läuft auf jedem Node, keine NodeAffinity.
-  - Das Frontend-Image (`ghcr.io/jaydee94/tiny-teller-frontend`) hat den Upstream-Host `backend` **fest in seiner nginx-Config** (Docker-Compose-Erbe). Der Service
-    `backend-alias-service` existiert nur, damit `backend` im Namespace per DNS auflöst. Er ist kein eigenständiger Endpoint und zeigt auf dieselben Pods wie der eigentliche `-backend`-Service.
-  - Ein Host, Pfad-Routing: `/api` → Backend, alles andere → Frontend. **Annahme:** Das Frontend ruft die API relativ unter `/api` auf. Erwartet das gebaute Frontend stattdessen eine
-    absolute API-URL, muss `CORS_ORIGIN` angepasst und ggf. auf zwei Hosts (Frontend/API) umgestellt werden.
-  - **Offen:** Sobald der eigene Fork (`pkr-lab/tiny-teller`) per CI nach `ghcr.io/pkr-lab/tiny-teller-…` veröffentlicht wird, hier umstellen. Ist das Package dann privat: entweder Sichtbarkeit auf
-    „Public“ stellen oder ein `imagePullSecrets`-Secret (`kubernetes.io/dockerconfigjson`, z. B. `ghcr-pull`) referenzieren.
 
 ## Sonstiges
 

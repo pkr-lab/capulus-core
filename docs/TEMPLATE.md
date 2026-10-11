@@ -91,7 +91,7 @@ Zwang.
 ### Typ A — Setup/Runbook
 
 Für App- und Komponenten-Dokus mit einem konkreten Einrichtungsablauf
-(Beispiele: `300a0-vaultwarden.md`, `30060-mealie.md`, `300b0-nextcloud.md`).
+(Beispiele: `300a0-vaultwarden.md`, `30080-uptime-kuma.md`, `300b0-nextcloud.md`).
 
 ```markdown
 # <Titel> — <Kurzbeschreibung>

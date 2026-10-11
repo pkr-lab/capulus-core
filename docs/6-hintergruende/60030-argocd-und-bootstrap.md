@@ -125,24 +125,10 @@ starten, das legt eine neue Datenbank, neue Konten und neue Secrets an. Der Job 
 | App | Besonderheiten |
 |---|---|
 | Immich | **Zwei Läufe** mit demselben Manifest: 1. Vorlauf bei **laufendem** TECH (Bibliothek ~74 GB, ändert sich kaum, dauert lange, Nutzer merken nichts, die dabei kopierten Postgres-Dateien sind inkonsistent), 2. Endsync mit **gestopptem** TECH (server, machineLearning, postgresql auf 0), nur noch das Delta, `--delete` gleicht das Ziel exakt an. Kopiert von Postgres nur `pgdata_fixed_pg16`, das alte `pgdata_fixed` (PG 14, Rückfall des Upgrades) bleibt in TECH, der ML-Modell-Cache wird nicht kopiert (lädt neu). Läuft als root, `rsync` ohne Besitzer-/Gruppenübernahme (`--no-o --no-g`), der Modus `0700` für PGDATA wird danach gesetzt. |
-| Mealie | SQLite: nur mit **gestopptem** TECH-Mealie kopieren, sonst ist die DB evtl. inkonsistent. |
 | Nextcloud | Dateien (`data` ~11 GB, `html` ~1 GB). Nur mit gestoppter TECH-App und PROD-App auf 0. Die Datenbank wird separat per `pg_dumpall`/`pg_dump` übernommen (sie liegt auf `local-path`, nicht auf dem NAS). `config.php` (Modus 640, Besitzer 1000) und `data` (770, Gruppe 10) bleiben so lesbar. |
 | Paperless-ngx | SQLite (`db.sqlite3` plus `-wal`/`-shm`) muss konsistent sein, also TECH gestoppt. Der Redis-Speicher wird bewusst **nicht** kopiert (nur Task-Queue). |
 | Wiki.js | Nur mit sauber heruntergefahrenem TECH-Postgres und gestopptem PROD-Postgres. Kopiert nur `pgdata_fixed_pg18` (PG 18, ~1,8 GB), das alte `pgdata_fixed` (PG 16, Rückfall) bleibt in TECH. PGDATA verlangt `0700`, uid 1000 wie Postgres im Chart. |
 | Xibo | MySQL (~1,1 GB), CMS-Bibliothek (~14 MB), CMS-State. TECH-CMS und -MySQL auf 0, damit die MySQL-Dateien konsistent sind. Nur das aktuelle `mysql-data-v26` (subPath im Chart), die alten 8.4-Daten (Rückfall) bleiben in TECH. MySQL verlangt Besitzer uid 1000 und unveränderte Modi (`tar -p`). |
-
-### SSO-Outpost in PROD (`migrations/sso-outpost/`)
-
-- Die Middleware ruft den **Remote-Outpost in PROD** (`outpost.yaml`) auf, **nicht** den eingebetteten Outpost in TECH. Ein Aufruf über
-  den Traefik in TECH scheitert mit 404, weil dieser `X-Forwarded-Host` für fremde Absender überschreibt und Authentik die App nicht
-  mehr zuordnen kann. Ein direkter Zugriff auf den Authentik-Service scheidet wegen NetworkPolicy und der maskierten Quell-IP
-  (ServiceLB) aus.
-- Der Name `authentik` im Namespace `authentik` entspricht dem Annotationswert `authentik-authentik@kubernetescrd`, den die
-  App-Ingresses aus TECH schon verwenden, sie müssen in PROD nicht geändert werden.
-- Der Outpost meldet sich mit einem Token bei Authentik in TECH an und bekommt von dort die zugeordneten Provider. Outpost-Eintrag und
-  Token entstehen in Authentik (Outposts → Erstellen, Typ „Proxy“, Integration: keine), das Token kommt als SealedSecret
-  `authentik-outpost-token` (Schlüssel `token`). Die **Version muss zur Authentik-Version in TECH passen** (`image.tag` in
-  `argocd/apps/tech/authentik/values.yaml`).
 
 ## Promotion (`argocd/promotion.yaml`)
 
@@ -184,6 +170,6 @@ starten, das legt eine neue Datenbank, neue Konten und neue Secrets an. Der Job 
   Repo-Änderung: `OUT_ROOT=/tmp/x TOKEN_FILE=/tmp/dummy scripts/seal-github-token.sh`.
 - **Der CA-Private-Key liegt bewusst nicht als SealedSecret im Repo**, sondern wird einmalig per `kubectl create secret` importiert
   (Begründung in [60040](60040-helm-charts-tech.md#zertifikate-und-tls)).
-- `lldap` `key-seed`: **einmalig, niemals rotieren**, sonst werden alle gesetzten Passwörter ungültig ([60070](60070-authentik-und-lldap.md)).
+- `lldap` `key-seed`: **einmalig, niemals rotieren**, sonst werden alle gesetzten Passwörter ungültig ([60070](60070-lldap.md)).
 - Im Repo stehen nur SealedSecret-Chiffretexte (Werte wie `encryptedPassword`). Klartext gehört nie ins Repo: gitleaks lässt
   Chiffretext anhand seines Präfixes `Ag` passieren und meldet Klartext-Tokens weiterhin ([f0070](../f-cicd-automatisierung/f0070-ci-lint.md)).
