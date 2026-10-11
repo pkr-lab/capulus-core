@@ -111,6 +111,8 @@ victoria-metrics-k8s-stack:
           webhook_configs:
             - url: 'http://alert-caller.alert-caller.svc.cluster.local:9310/watchdog'
               send_resolved: false
+            - url: 'http://100.123.214.4:9310/watchdog'
+              send_resolved: false
         - name: phone
           webhook_configs:
             - url: 'http://alert-caller.alert-caller.svc.cluster.local:9310/alert'
