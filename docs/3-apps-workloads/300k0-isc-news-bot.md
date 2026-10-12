@@ -56,6 +56,7 @@ Alle Endpunkte außer `/healthz` und `/readyz` verlangen `Authorization: Bearer 
 |---|---|
 | `POST /news` | News anlegen (Body siehe unten), Antwort mit `ok`, `newsId`, `editUrl`, `status` |
 | `GET /categories` | Kategorie-Optionen der aktiven Gliederung, live aus dem ISC |
+| `GET /urkunden` | Urkunden aus der Urkunden-App, gefiltert nach Abzeichen, siehe [300m0](300m0-isc-urkunden-melden.md) |
 | `GET /healthz` | Lebenszeichen, ohne Browser, ohne Token |
 | `GET /readyz` | Browser vorhanden? Ohne Token |
 
@@ -135,6 +136,10 @@ Nach dem ersten Speichern liefert jede Fehlerantwort die `newsId` mit. So bleibt
 ### `GET /categories`
 
 Liest die Optionen von `select#CATEGORIES__` live aus. Ergebnis: `{ "ok": true, "categories": [{ "value": "4", "name": "DLRG Andernach" }, …] }`.
+
+### `GET /urkunden`
+
+Liest die Urkunden der Gliederung über die Aktion `ladeUrkundenListe` der Urkunden-App und gibt nur Seepferdchen, Schwimmabzeichen Bronze/Silber/Gold und Juniorretter zurück (Parameter `jahr`, `ausbildungen`). Wird vom n8n-Workflow `isc-urkunden-melden.json` donnerstagabends genutzt. Details, Antwortformat und Einrichtung: [300m0](300m0-isc-urkunden-melden.md).
 
 ---
 

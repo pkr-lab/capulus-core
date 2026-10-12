@@ -596,6 +596,7 @@ Die Spalte *Cluster* zeigt, wo die App läuft (Ordner unter `argocd/apps/`).
 | [ALAMOS-Webhook-Relay](docs/3-apps-workloads/300i0-alamos-relay.md) | TECH | Öffentlicher Mini-Proxy vor n8n, damit ALAMOS den Einsatzalarm-Webhook erreicht, ohne n8n selbst öffentlich zu machen |
 | [ISC-News-Bot](docs/3-apps-workloads/300k0-isc-news-bot.md) | TECH | News im DLRG ISC per API anlegen (Playwright-RPA), aufgerufen aus n8n, cluster-intern |
 | [Instagram-Post per Mail](docs/3-apps-workloads/300l0-instagram-post-per-mail.md) | TECH | n8n-Workflow: Mail mit JSON und Bildern wird zum Instagram-Beitrag (Graph API), Bilder kurz über einen einzelnen öffentlichen Pfad für Meta |
+| [ISC-Urkunden melden](docs/3-apps-workloads/300m0-isc-urkunden-melden.md) | TECH | n8n-Workflow + ISC-News-Bot: donnerstags 17:30–20:00 neue Seepferdchen-, Schwimmabzeichen- und Juniorretter-Urkunden per Mail |
 | [Zentrales Logging](docs/3-apps-workloads/300j0-logging.md) | TECH | VictoriaLogs: journald aller Hosts und Pod-Logs an einem Ort |
 
 ### Planung (`4-planung/`)
