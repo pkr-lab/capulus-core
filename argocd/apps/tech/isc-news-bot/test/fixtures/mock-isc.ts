@@ -51,12 +51,15 @@ export type MockOptions = {
   socialText?: string;
   formError?: string;
   startNewsId?: number;
+  urkunden?: unknown[];
+  urkundenOhneService?: boolean;
 };
 
 export type MockIsc = {
   baseUrl: string;
   news: MockNews[];
   requests: string[];
+  urkundenAnfragen: unknown[];
   close: () => Promise<void>;
 };
 
@@ -299,6 +302,20 @@ ${locked}
   );
 }
 
+function urkundenPage(ohneService: boolean): string {
+  const script = ohneService
+    ? ""
+    : `
+window.dlrg_DoPost = function (url, aktion, data, ok, fehler) {
+  fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aktion: aktion, data: data }) })
+    .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(function (json) { ok(json); })
+    .catch(function () { if (fehler) fehler(); });
+};
+`;
+  return layout(`<h1>Urkunden</h1><table id="qualifikationen"></table>`, script);
+}
+
 function successAlert(text: string): string {
   return `<div class="alert alert-success">${text}</div>`;
 }
@@ -306,6 +323,7 @@ function successAlert(text: string): string {
 export async function startMockIsc(options: MockOptions = {}): Promise<MockIsc> {
   const news: MockNews[] = [];
   const requests: string[] = [];
+  const urkundenAnfragen: unknown[] = [];
   let nextId = options.startNewsId ?? 1000;
   let nextAsset = 1;
 
@@ -352,6 +370,20 @@ export async function startMockIsc(options: MockOptions = {}): Promise<MockIsc> 
     }
     if (!loggedIn) {
       return send(200, loginPage(false));
+    }
+    if (url.pathname === "/apps/urkunden" && url.searchParams.get("page") === "uebersicht" && req.method === "GET") {
+      return send(200, urkundenPage(options.urkundenOhneService === true));
+    }
+    if (url.pathname === "/apps/urkunden" && url.searchParams.get("page") === "service" && req.method === "POST") {
+      const chunks: Buffer[] = [];
+      req.on("data", (c: Buffer) => chunks.push(c));
+      req.on("end", () => {
+        const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as { aktion?: string; data?: unknown };
+        urkundenAnfragen.push(body);
+        if (body.aktion !== "ladeUrkundenListe") return sendJson(400, { messages: ["Unbekannte Aktion"] });
+        return sendJson(200, options.urkunden ?? []);
+      });
+      return;
     }
     if (url.pathname === "/apps/news" && url.searchParams.get("page") === "uebersicht" && url.searchParams.has("create") && req.method === "GET") {
       return send(200, newsPage(undefined, options));
@@ -431,6 +463,7 @@ export async function startMockIsc(options: MockOptions = {}): Promise<MockIsc> 
     baseUrl: `http://127.0.0.1:${port}`,
     news,
     requests,
+    urkundenAnfragen,
     close: () => new Promise<void>((resolve) => server.close(() => resolve())),
   };
 }

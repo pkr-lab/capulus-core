@@ -4,12 +4,14 @@ import type { Config } from "./config.js";
 import { isAuthorized } from "./auth.js";
 import { IscBotError, HTTP_STATUS_BY_CODE, ValidationError } from "./errors.js";
 import { logger as defaultLogger, type Logger } from "./logger.js";
-import type { NewsResult, CategoriesResult } from "./runner.js";
+import type { NewsResult, CategoriesResult, UrkundenResult } from "./runner.js";
+import { parseUrkundenQuery, type UrkundenQuery } from "./urkunden.js";
 import { validateNewsRequest } from "./validation.js";
 
 export type NewsApi = {
   createNews(news: ReturnType<typeof validateNewsRequest>): Promise<NewsResult>;
   listCategories(): Promise<CategoriesResult>;
+  listUrkunden(query: UrkundenQuery): Promise<UrkundenResult>;
 };
 
 export type ServerDeps = {
@@ -78,6 +80,12 @@ export function createServer(deps: ServerDeps): http.Server {
       }
       if (req.method === "GET" && url.pathname === "/categories") {
         const result = await runner.listCategories();
+        if (result.ok) return sendJson(res, 200, result);
+        return sendJson(res, HTTP_STATUS_BY_CODE[result.errorCode], result);
+      }
+      if (req.method === "GET" && url.pathname === "/urkunden") {
+        const query = parseUrkundenQuery(url.searchParams);
+        const result = await runner.listUrkunden(query);
         if (result.ok) return sendJson(res, 200, result);
         return sendJson(res, HTTP_STATUS_BY_CODE[result.errorCode], result);
       }
