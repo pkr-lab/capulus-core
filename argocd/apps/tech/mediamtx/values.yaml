@@ -11,7 +11,7 @@ autoscaling:
 image:
   repository: bluenviron/mediamtx
   pullPolicy: IfNotPresent
-  tag: "1.21.1"
+  tag: "1.21.2"
 
 nameOverride: ""
 fullnameOverride: ""
