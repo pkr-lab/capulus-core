@@ -14,6 +14,8 @@ import { findDuplicate } from "./isc/duplicates.js";
 import { publishNews } from "./isc/publish.js";
 import { SEL, editUrl } from "./isc/selectors.js";
 import { isPlaywrightTimeout, logoutQuietly } from "./isc/helpers.js";
+import { ladeUrkundenListe } from "./isc/urkunden.js";
+import { filtereUrkunden, type Urkunde, type UrkundenQuery } from "./urkunden.js";
 
 export type BrowserLauncher = () => Promise<Browser>;
 
@@ -40,6 +42,10 @@ export type NewsResult = {
 
 export type CategoriesResult =
   | { ok: true; categories: CategoryOption[]; durationMs: number }
+  | { ok: false; errorCode: ErrorCode; error: string; step?: string; durationMs: number };
+
+export type UrkundenResult =
+  | { ok: true; jahr: string; poNummern: string[]; gelesen: number; urkunden: Urkunde[]; durationMs: number }
   | { ok: false; errorCode: ErrorCode; error: string; step?: string; durationMs: number };
 
 type RunState = { step: string; newsId: number | undefined };
@@ -138,6 +144,49 @@ export class IscNewsRunner {
       return { ok: true, categories, durationMs: Date.now() - started };
     } catch (error) {
       this.log.error("Kategorien konnten nicht gelesen werden", { step: state.step, errorCode: errorCodeOf(error) });
+      return {
+        ok: false,
+        errorCode: errorCodeOf(error),
+        error: this.log.redact(error instanceof Error ? error.message : String(error)),
+        step: (error as IscBotError).step ?? state.step,
+        durationMs: Date.now() - started,
+      };
+    } finally {
+      await this.cleanup(page, context, browser);
+      releaseLock();
+    }
+  }
+
+  async listUrkunden(query: UrkundenQuery): Promise<UrkundenResult> {
+    const started = Date.now();
+    const releaseLock = await this.lock.acquire();
+    const state: RunState = { step: "start", newsId: undefined };
+    let browser: Browser | undefined;
+    let context: BrowserContext | undefined;
+    let page: Page | undefined;
+    try {
+      browser = await this.launch();
+      context = await browser.newContext({ locale: "de-DE", timezoneId: "Europe/Berlin" });
+      page = await context.newPage();
+      page.setDefaultTimeout(this.cfg.stepTimeoutMs);
+      const liste = await withDeadline(
+        (async () => {
+          state.step = "login";
+          await login(page as Page, this.cfg);
+          state.step = "gliederung";
+          await ensureGliederung(page as Page, this.cfg);
+          state.step = "urkunden";
+          return ladeUrkundenListe(page as Page, this.cfg, query.jahr);
+        })(),
+        overallTimeoutMs(0, this.cfg.uploadSettleMs),
+      );
+      await logoutQuietly(page);
+      const urkunden = filtereUrkunden(liste, query.poNummern);
+      const durationMs = Date.now() - started;
+      this.log.info("Urkunden gelesen", { jahr: query.jahr, gelesen: liste.length, passend: urkunden.length, durationMs });
+      return { ok: true, jahr: query.jahr, poNummern: query.poNummern, gelesen: liste.length, urkunden, durationMs };
+    } catch (error) {
+      this.log.error("Urkunden konnten nicht gelesen werden", { step: state.step, errorCode: errorCodeOf(error) });
       return {
         ok: false,
         errorCode: errorCodeOf(error),

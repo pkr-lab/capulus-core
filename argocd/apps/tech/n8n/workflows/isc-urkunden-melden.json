@@ -1,0 +1,310 @@
+{
+  "name": "ISC-Urkunden melden",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 25,30,40,50 17 * * 4"
+            },
+            {
+              "field": "cronExpression",
+              "expression": "0 0,10,20,30,40,50 18-19 * * 4"
+            },
+            {
+              "field": "cronExpression",
+              "expression": "0 0 20 * * 4"
+            }
+          ]
+        }
+      },
+      "id": "e5e5e5e5-0001-4000-8000-000000000001",
+      "name": "Donnerstag 17:25 bis 20:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "e5e5e5e5-0002-4000-8000-000000000002",
+      "name": "Manuell testen",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = {\n  testModus: false,\n  mailAn: 'EMPFAENGER_EINTRAGEN',\n  mailVon: 'ABSENDER_EINTRAGEN',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'isc-urkunden',\n  iscNewsBotUrl: 'http://isc-news-bot.isc-news-bot.svc.cluster.local:8080',\n  wochentag: 4,\n  startAb: '17:25',\n  endeBis: '20:00'\n};\nif (!cfg.mailAn.includes('@') || !cfg.mailVon.includes('@')) {\n  throw new Error('mailAn und mailVon im Node Konfiguration eintragen');\n}\nconst teile = Object.fromEntries(\n  new Intl.DateTimeFormat('en-GB', {\n    timeZone: 'Europe/Berlin',\n    weekday: 'short',\n    year: 'numeric',\n    month: '2-digit',\n    day: '2-digit',\n    hour: '2-digit',\n    minute: '2-digit',\n    hourCycle: 'h23'\n  }).formatToParts(new Date()).map((p) => [p.type, p.value])\n);\nconst tage = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };\nconst heute = `${teile.year}-${teile.month}-${teile.day}`;\nconst zeit = `${teile.hour}:${teile.minute}`;\nconst imFenster = tage[teile.weekday] === cfg.wochentag && zeit >= cfg.startAb && zeit <= cfg.endeBis;\nif (!cfg.testModus && !imFenster) return [];\nreturn [{ json: { ...cfg, heute, zeit, jahr: teile.year } }];\n"
+      },
+      "id": "e5e5e5e5-0003-4000-8000-000000000003",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Konfiguration').first().json.iscNewsBotUrl }}/urkunden?jahr={{ $('Konfiguration').first().json.jahr }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 180000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "e5e5e5e5-0004-4000-8000-000000000004",
+      "name": "Urkunden abrufen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ISC_NEWS_BOT_CREDENTIAL_ID",
+          "name": "ISC-News-Bot API-Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = $('Konfiguration').first().json;\nconst antwort = $input.first().json || {};\nif (antwort.ok !== true || !Array.isArray(antwort.urkunden)) {\n  const text = 'Fehler ' + (antwort.errorCode || '-') + ' im Schritt ' + (antwort.step || '-') + ' | ' + (antwort.error || 'keine Antwort vom ISC-News-Bot');\n  return [{ json: { art: 'fehler', text } }];\n}\nconst urkunden = antwort.urkunden;\nif (cfg.testModus) {\n  return urkunden.length > 0 ? [{ json: { art: 'mail', urkunden } }] : [];\n}\nconst speicher = $getWorkflowStaticData('global');\nconst stand = speicher.urkundenStand;\nif (!stand || stand.datum !== cfg.heute) {\n  speicher.urkundenStand = { datum: cfg.heute, ids: urkunden.map((u) => u.uid) };\n  return [];\n}\nconst bekannt = new Set(stand.ids);\nconst neue = urkunden.filter((u) => !bekannt.has(u.uid));\nif (neue.length === 0) return [];\nspeicher.urkundenStand = { datum: cfg.heute, ids: [...bekannt, ...neue.map((u) => u.uid)] };\nreturn [{ json: { art: 'mail', urkunden: neue } }];\n"
+      },
+      "id": "e5e5e5e5-0005-4000-8000-000000000005",
+      "name": "Neue ermitteln",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e5e5e5e5-0011-4000-8000-000000000011",
+              "leftValue": "={{ $json.art }}",
+              "rightValue": "fehler",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e5e5e5e5-0006-4000-8000-000000000006",
+      "name": "Fehler?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.ntfyUrl + '/' + $('Konfiguration').first().json.ntfyTopic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "ISC-Urkunden: Abruf fehlgeschlagen"
+            },
+            {
+              "name": "Tags",
+              "value": "x"
+            },
+            {
+              "name": "Priority",
+              "value": "high"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.text }}",
+        "options": {}
+      },
+      "id": "e5e5e5e5-0007-4000-8000-000000000007",
+      "name": "ntfy Fehler",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = $('Konfiguration').first().json;\nconst urkunden = $input.first().json.urkunden;\nconst de = (iso) => (/^\\d{4}-\\d{2}-\\d{2}$/.test(iso || '') ? `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}` : '-');\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst name = (u) => u.name || [u.vorname, u.nachname].filter(Boolean).join(' ') || '-';\nconst zeilen = (u) => [\n  ['Name', name(u)],\n  ['Geburtsdatum', de(u.geburtsdatum)],\n  ['Abzeichen', u.abzeichen || '-'],\n  ['Prüfer', `${u.prueferName || '-'} (${u.prueferNummer || '-'})`],\n  ['Registriernummer', u.registriernummer || '-']\n];\nconst text = urkunden.map((u) => zeilen(u).map(([k, v]) => `${k}: ${v}`).join('\\n')).join('\\n\\n');\nconst html = urkunden\n  .map((u) => '<table style=\"border-collapse:collapse;margin-bottom:16px\">' + zeilen(u).map(([k, v]) => `<tr><td style=\"padding:2px 12px 2px 0\"><b>${esc(k)}</b></td><td>${esc(v)}</td></tr>`).join('') + '</table>')\n  .join('');\nconst betreff = (cfg.testModus ? '[TEST] ' : '') + (urkunden.length === 1\n  ? `Neue Urkunde: ${urkunden[0].abzeichen || '-'} – ${name(urkunden[0])}`\n  : `${urkunden.length} neue Urkunden im ISC`);\nreturn [{ json: { mailAn: cfg.mailAn, mailVon: cfg.mailVon, betreff, text, html } }];\n"
+      },
+      "id": "e5e5e5e5-0008-4000-8000-000000000008",
+      "name": "Mail bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $json.mailVon }}",
+        "toEmail": "={{ $json.mailAn }}",
+        "subject": "={{ $json.betreff }}",
+        "emailFormat": "both",
+        "text": "={{ $json.text }}",
+        "html": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "e5e5e5e5-0009-4000-8000-000000000009",
+      "name": "Mail senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1680,
+        420
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "SMTP_CREDENTIAL_ID",
+          "name": "SMTP"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Donnerstag 17:25 bis 20:00": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manuell testen": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Urkunden abrufen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Urkunden abrufen": {
+      "main": [
+        [
+          {
+            "node": "Neue ermitteln",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Neue ermitteln": {
+      "main": [
+        [
+          {
+            "node": "Fehler?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fehler?": {
+      "main": [
+        [
+          {
+            "node": "ntfy Fehler",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mail bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mail bauen": {
+      "main": [
+        [
+          {
+            "node": "Mail senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "saveManualExecutions": true
+  },
+  "versionId": "7a1c5e2d-3b4f-4c6a-9d8e-1f2a3b4c5d6e",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "iscUrkundenMeld1",
+  "tags": []
+}
