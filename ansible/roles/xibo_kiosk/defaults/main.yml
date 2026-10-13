@@ -10,6 +10,6 @@ xibo_kiosk_web_root: "/var/www/xibosignage-slideshow"
 
 xibo_kiosk_manifest_interval_seconds: 30
 
-xibo_kiosk_slide_duration_ms: 10000
+xibo_kiosk_slide_duration_ms: 20000
 
 xibo_kiosk_user: "pi"

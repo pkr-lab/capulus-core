@@ -458,6 +458,12 @@ Vier Regeln:
 4. **Danach Nachweis:** die dauerhaft laufenden Standby-Komponenten und der nächtliche
    Restore-Verify zeigen, dass alles noch funktioniert.
 
+**Rotation per `cubi`:** Der Bereich `cubi tokens` (Repo `cubi`) liest das Register, zeigt Alter und
+Ablauf und führt durch die Rotation. Bei `mode: scripted` startet er das Skript aus
+`rotation.command` (optional `rotation.hint` mit Voraussetzungen), bei `manual` zeigt er Ablageorte,
+Überlappungsregeln und das Runbook. Nach der Rotation trägt er `issued` (und optional `expires`) im
+Register ein. Committen und der PR bleiben von Hand (Regel 3).
+
 ### Inventar
 
 | Token | Ablage | Ablauf | Strategie |

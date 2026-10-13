@@ -400,7 +400,7 @@ Das Playbook `ansible/xibo-kiosks.yml` führt pro Pi aus:
   liefert die Slideshow-Seite (`index.html`/`slideshow.js`) + Bilder aus.
 - `slideshow.js` liest die `manifest.json` periodisch neu ein und zeigt die
   Bilder als Crossfade-Slideshow (`xibo_kiosk_slide_duration_ms`, Default
-  10s pro Bild).
+  20s pro Bild).
 - Chromium läuft im Kiosk-Modus (`--kiosk --incognito`) gegen
   `http://127.0.0.1:8080/`.
 

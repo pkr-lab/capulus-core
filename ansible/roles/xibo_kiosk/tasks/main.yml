@@ -78,6 +78,7 @@
     group: "{{ xibo_kiosk_user }}"
     mode: "0644"
   when: xibo_kiosk_enabled | bool
+  notify: Restart xibosignage kiosk
 
 - name: Leere manifest.json anlegen (bis der erste Timer-Lauf sie ersetzt)
   ansible.builtin.copy:

@@ -160,6 +160,8 @@
   rotation:
     mode: scripted
     runbook: scripts/seal-github-token.sh
+    command: "scripts/seal-github-token.sh"
+    hint: "Vorher neuen fine-grained PAT (read-only, nur oeffentliche Repos) nach ~/.github_readonly_token schreiben (chmod 600), PROD-Zertifikat unter ~/prod-sealed-secrets.pem ablegen, kubectl-Kontext auf TECH. Das Skript schreibt die SealedSecrets im Repo neu, danach committen."
     overlap: true
   owner: peter
   blast_radius: "Lesezugriff auf oeffentliche GitHub-Repos, genutzt von github-release-watcher (TECH) und wiki-docs-sync (PROD)."
@@ -407,6 +409,8 @@
   rotation:
     mode: scripted
     runbook: scripts/create-argocd-ci-token.sh
+    command: "scripts/create-argocd-ci-token.sh hub"
+    hint: "Hub-ArgoCD erreichbar (Tailscale/LAN), kubectl-Kontext TECH und gh im Repo angemeldet. Das Skript erzeugt das Token und setzt das GitHub-Secret ARGOCD_HUB_TOKEN selbst."
     overlap: true
   owner: peter
   blast_radius: "Konto 'ci' im Hub-ArgoCD: kann Applications lesen und Sync anstossen (Promotion-Kette)."
@@ -422,6 +426,8 @@
   rotation:
     mode: scripted
     runbook: scripts/create-argocd-ci-token.sh
+    command: "scripts/create-argocd-ci-token.sh entw"
+    hint: "ENTW-ArgoCD erreichbar, SSH auf entw-vm moeglich und gh im Repo angemeldet. Das Skript erzeugt das Token und setzt das GitHub-Secret ARGOCD_ENTW_TOKEN selbst."
     overlap: true
   owner: peter
   blast_radius: "Konto 'ci' im ENTW-ArgoCD: kann Applications lesen und Sync anstossen (Promotion-Kette)."

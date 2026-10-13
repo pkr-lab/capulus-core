@@ -2,7 +2,9 @@
 """Prueft ops/token-register.yaml: Pflichtfelder, Datumsformat, Vollstaendigkeit gegen die
 SealedSecrets im Repo. Exit-Code 1 bei jedem Fehler. Beschreibung: docs/f-cicd-automatisierung/f0070-ci-lint.md
 """
+import os
 import re
+import shlex
 import subprocess
 import sys
 
@@ -41,6 +43,18 @@ def check_entry(e, problems):
         problems.append(f"{id_}: rotation.mode fehlt oder unbekannt: {rotation.get('mode')!r} (erlaubt: {', '.join(sorted(MODES))})")
     if not rotation.get("runbook"):
         problems.append(f"{id_}: rotation.runbook fehlt")
+
+    command = rotation.get("command")
+    if rotation.get("mode") == "scripted" and not command:
+        problems.append(f"{id_}: rotation.mode scripted verlangt rotation.command")
+    if command is not None:
+        if not isinstance(command, str) or not command.strip():
+            problems.append(f"{id_}: rotation.command muss ein nichtleerer String sein")
+        elif not os.access(shlex.split(command)[0], os.X_OK):
+            problems.append(f"{id_}: rotation.command zeigt auf keine ausfuehrbare Datei: {command!r}")
+    hint = rotation.get("hint")
+    if hint is not None and not isinstance(hint, str):
+        problems.append(f"{id_}: rotation.hint muss ein String sein")
 
     for field in ("issued", "expires"):
         check_date(e.get(field), field, id_, problems)
