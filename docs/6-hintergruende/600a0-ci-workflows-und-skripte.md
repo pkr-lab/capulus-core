@@ -116,7 +116,8 @@ den Tag umlegen) und `report-ci-failure` (meldet ein rotes CI auf `entw` als Iss
 ## `CLAUDE.md` und `.gitignore`
 
 `CLAUDE.md` im Repo-Root hält die Arbeitsregeln für Claude Code (keine Kommentare im Code, Doku-Pflicht, Secrets nur als SealedSecret, lokale
-Prüfbefehle der CI, Commit-Stil). Sie stand früher in `.gitignore` und wird jetzt versioniert, damit jede Session, auch in der Cloud-Sandbox mit
+Prüfbefehle der CI, Commit-Stil). Claude committet, pusht und öffnet PRs nicht selbst, sondern bereitet Änderungen nur vor; das Einchecken
+bleibt beim Nutzer, damit nichts ungeprüft auf `main` und damit in TECH/PROD landet. Sie stand früher in `.gitignore` und wird jetzt versioniert, damit jede Session, auch in der Cloud-Sandbox mit
 frischem Klon, dieselben Regeln lädt. `AGENTS.md` und `.claude/` bleiben ignoriert, weil sie lokale, persönliche Einstellungen enthalten.
 Ändert sich eine Konvention (neuer CI-Job, neue Kategorie in `docs/`, neuer Pflichtschritt beim Anlegen einer App), wird `CLAUDE.md` im selben PR
 mitgezogen.
