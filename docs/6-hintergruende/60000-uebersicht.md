@@ -48,7 +48,7 @@ siehe [TEMPLATE](../TEMPLATE.md)).
 | `argocd/apps/tech/lldap` | [60070](60070-lldap.md) |
 | `argocd/apps/tech/carplay-api`, `ios/` | [60080](60080-carplay-api-und-ios-app.md) |
 | `argocd/apps/tech/pacman` | [60090](60090-pacman-schulungsobjekt.md) |
-| `.github/workflows/`, `.github/dependabot.yml`, `renovate.json`, `scripts/`, `Makefile`, `.ansible-lint`, `.yamllint`, `ops/` | [600a0](600a0-ci-workflows-und-skripte.md) |
+| `.github/workflows/`, `.github/dependabot.yml`, `renovate.json`, `scripts/`, `Makefile`, `.ansible-lint`, `.yamllint`, `ops/`, `CLAUDE.md`, `.gitignore` | [600a0](600a0-ci-workflows-und-skripte.md) |
 
 ## Sync ins Wiki
 
