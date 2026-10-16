@@ -101,6 +101,9 @@ Nur die betroffenen Teile prüfen, nicht immer alles.
 
 ## Commits und PRs
 
+- **Claude committet und pusht nicht.** Commits, Pushes und PRs macht ausschließlich der Nutzer. Änderungen nur im
+  Arbeitsverzeichnis vorbereiten, am Ende kurz zusammenfassen und einen passenden Commit-Text vorschlagen.
+  Ausnahme nur, wenn der Nutzer es in der jeweiligen Anfrage ausdrücklich verlangt.
 - Conventional Commits mit Scope = App/Bereich, Beschreibung auf Deutsch:
   `feat(isc-news-bot): …`, `fix(monitoring): …`, `chore(<app>): image.tag auf sha-…`, `docs(…): …`.
   `feat`/`fix` lösen über semantic-release ein Release aus.
