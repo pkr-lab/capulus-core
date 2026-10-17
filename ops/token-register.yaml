@@ -73,6 +73,21 @@
   owner: peter
   blast_radius: "Kann Nightly-Update-Tickets im Webhook nightly-worker-update ausloesen. Gleicher Wert im n8n-Credential Webhook nightly-worker-update (Vault-Variable vault_n8n_nightly_webhook_token)."
 
+- id: entw-argocd-ingress-cert
+  service: argocd
+  kind: certificate
+  stored_in:
+    - ansible/host_vars/entw-vm/vars.yml
+  issued: "2026-10-17"
+  expires: "2027-10-17"
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: docs/d-sicherheit/d0040-internal-tls.md#zertifikat-für-argocd-auf-der-entw-vm
+    overlap: false
+  owner: peter
+  blast_radius: "TLS-Zertifikat des ENTW-ArgoCD-Ingress (argocd.dev.homeserver). Bei Ablauf blockiert das Gate der ENTW-Stufe in der Promotion-Kette."
+
 - id: argo-workflows-artifact-creds
   service: argo-workflows
   kind: api-token

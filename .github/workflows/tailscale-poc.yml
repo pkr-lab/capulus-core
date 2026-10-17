@@ -10,6 +10,8 @@ jobs:
   tailscale-connect:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
+
       - name: Connect runner to tailnet
         uses: tailscale/github-action@v4
         with:
@@ -36,28 +38,30 @@ jobs:
           echo "homeserver (Tailnet-IP): ${hub_ip:-nicht gefunden}"
           echo
 
+          printf '%s\n' "192.168.178.94 argocd.tech.homeserver" "192.168.178.100 argocd.dev.homeserver" | sudo tee -a /etc/hosts >/dev/null
+          ca="$GITHUB_WORKSPACE/docs/assets/homeserver-root-ca.pem"
+
           tcp() { timeout 6 bash -c "</dev/tcp/$1/$2" 2>/dev/null && echo offen || echo "zu/gefiltert"; }
-          http() { curl -s -m 8 -o /dev/null -w '%{http_code}' "$@" 2>/dev/null || true; }
-          version() { curl -s -m 8 "$1/api/version" 2>/dev/null | grep -o '"Version":"[^"]*"' | head -1 || true; }
+          http() { curl -s -m 8 --cacert "$ca" -o /dev/null -w '%{http_code}' "$@" 2>/dev/null || true; }
+          version() { curl -s -m 8 --cacert "$ca" "$1/api/version" 2>/dev/null | grep -o '"Version":"[^"]*"' | head -1 || true; }
 
           fail=0
           row() { printf '%-9s %-34s TCP %-13s HTTP %-4s %s\n' "$1" "$2" "$3" "$4" "$5"; }
 
           echo "== Ergebnis =="
-          # hub: Tailnet-Adresse des Homeservers (Diagnose)
           if [ -n "$hub_ip" ]; then
-            t=$(tcp "$hub_ip" 30080); h=$(http "http://$hub_ip:30080/api/version")
-            row hub "$hub_ip:30080" "$t" "$h" "(nur Diagnose)"
+            t=$(tcp "$hub_ip" 443)
+            row hub "$hub_ip:443" "$t" "-" "(nur Diagnose)"
           else
             row hub "homeserver" "-" "-" "Peer nicht im Tailnet gefunden (nur Diagnose)"
           fi
           # hub-lan: Hub-ArgoCD ueber die Subnet-Route (so fragt promote-chain.yml ab)
-          t=$(tcp 192.168.178.94 30080); h=$(http "http://192.168.178.94:30080/api/version")
-          row hub-lan "192.168.178.94:30080" "$t" "$h" "$(version "http://192.168.178.94:30080")"
+          t=$(tcp 192.168.178.94 443); h=$(http "https://argocd.tech.homeserver/api/version")
+          row hub-lan "argocd.tech.homeserver:443" "$t" "$h" "$(version "https://argocd.tech.homeserver")"
           [ "$h" = 200 ] || fail=1
           # entw: ENTW-ArgoCD
-          t=$(tcp 192.168.178.100 30080); h=$(http "http://192.168.178.100:30080/api/version")
-          row entw "192.168.178.100:30080" "$t" "$h" "$(version "http://192.168.178.100:30080")"
+          t=$(tcp 192.168.178.100 443); h=$(http "https://argocd.dev.homeserver/api/version")
+          row entw "argocd.dev.homeserver:443" "$t" "$h" "$(version "https://argocd.dev.homeserver")"
           [ "$h" = 200 ] || fail=1
           # smoke: ENTW-Ingress mit Host-Header (kein Heim-DNS auf dem Runner)
           h=$(http -H 'Host: whoami.dev.homeserver' "http://192.168.178.100:80/")

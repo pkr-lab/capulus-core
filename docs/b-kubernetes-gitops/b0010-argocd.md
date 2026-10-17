@@ -7,7 +7,7 @@ Dieses Dokument behandelt ArgoCD-Zugriff, Konfiguration und GitOps-Alltag.
 | Instanz | Läuft auf | Verwaltet | Liest | UI |
 |---|---|---|---|---|
 | **Hub** | `homeserver` (TECH, `.94`) | den TECH-Cluster **und** den PROD-Cluster (dort als Cluster `prod` registriert) | Branch `main`: `argocd/apps/tech/*` und `argocd/apps/prod/*` | `https://<server-ip>:30443` (HTTPS) |
-| **ENTW** | `entw-vm` (`.100`, KVM-VM auf worker-1) | nur den ENTW-Cluster | Branch `entw`: `argocd/apps/entw/*` | `http://192.168.178.100:30080` |
+| **ENTW** | `entw-vm` (`.100`, KVM-VM auf worker-1) | nur den ENTW-Cluster | Branch `entw`: `argocd/apps/entw/*` | `https://argocd.dev.homeserver` |
 
 PROD hat **keine** eigene ArgoCD-Instanz. Im Hub erscheinen PROD-Applications mit dem Präfix `prod-`
 (`argocd app list | grep '^prod-'`). Die Projekte im Einzelnen: [b0020](b0020-argocd-projects.md), die
@@ -32,19 +32,19 @@ Konfiguriert ist der Ingress in `ansible/roles/argocd` (`argocd_ingress_enabled`
 `argocd_ui_host`, gesetzt in `ansible/host_vars/homeserver/vars.yml`) — als Wert der Rolle,
 damit der tägliche Semaphore-Lauf (`helm upgrade`) ihn nicht zurückdreht.
 
-**Klartext-Zugang für CLI und CI:** Der ArgoCD-Server läuft mit `server.insecure: true`
-(TLS endet im Traefik). Deshalb sprechen beide NodePorts **Klartext-HTTP**:
-`https://<server-ip>:30443` wird zurückgesetzt und ist **nicht** nutzbar. Für `argocd`-CLI und
-die Promotion-Kette gilt:
+**CLI und CI:** Die API läuft über denselben HTTPS-Ingress wie die Web-UI. Der Service
+`argocd-server` ist `ClusterIP`, es gibt keinen NodePort mehr (Variable
+`argocd_server_nodeport_enabled`, in `host_vars/homeserver` auf `false`). Der Server läuft mit
+`server.insecure: true`, TLS endet im Traefik, der letzte Hop bleibt HTTP innerhalb des Nodes.
+Die `argocd`-CLI nutzt `--grpc-web`, weil Traefik gRPC nicht durchreicht:
 
 ```
-http://<server-ip>:30080          (LAN)
-http://homeserver:30080           (via Tailscale-MagicDNS)
+argocd login argocd.tech.homeserver --grpc-web
 ```
 
-UFW lässt Port 30080 nur aus dem LAN, dem Tailnet (`100.64.0.0/10`) und dem WireGuard-Notzugang
-(`10.99.99.0/24`) zu, nicht aus dem Internet. Da der Port Klartext spricht, das Admin-Passwort
-bitte nur in der Web-UI (HTTPS) eingeben und für die CLI ein API-Token verwenden.
+Die Promotion-Kette ruft `https://argocd.tech.homeserver` und prüft das Zertifikat gegen
+[`docs/assets/homeserver-root-ca.pem`](../assets/homeserver-root-ca.pem). Für das Admin-Passwort
+gilt weiter: nur in der Web-UI eingeben, für die CLI ein API-Token verwenden.
 
 ### Initial-Credentials
 
@@ -344,11 +344,11 @@ brew install argocd
 **Authentifizierung:**
 
 ```bash
-# Login (--plaintext: der NodePort spricht Klartext-HTTP, kein TLS)
-argocd login 192.168.178.94:30080 --username admin --password <password> --plaintext
+# Login (--grpc-web: Traefik reicht gRPC nicht durch)
+argocd login argocd.tech.homeserver --username admin --password <password> --grpc-web
 
-# Via Tailscale
-argocd login homeserver:30080 --username admin --password <password> --plaintext
+# ENTW-Instanz
+argocd login argocd.dev.homeserver --username admin --password <password> --grpc-web
 
 # Aktueller Context
 argocd context
@@ -459,7 +459,7 @@ wird der Sync sofort nach jedem Push ausgelöst:
 
 1. GitHub-Repo → **Settings → Webhooks**.
 2. **Add webhook**.
-3. Payload-URL: `http://<tailscale-ip>:30080/api/webhook` (nur sinnvoll, wenn GitHub den Hub erreichen kann; ohne offenen Port bleibt es beim Polling).
+3. Payload-URL: `https://argocd.tech.homeserver/api/webhook` (nur sinnvoll, wenn GitHub den Hub erreichen kann; der Host ist nicht öffentlich, es bleibt beim Polling).
 4. Content type: `application/json`.
 5. **Just the push event**.
 6. **Add webhook**.

@@ -64,7 +64,7 @@ gelöscht (`prune: true`).
 
 | | |
 |---|---|
-| URL | `http://192.168.178.100:30080` (NodePort, HTTP — `server.insecure: true`) |
+| URL | `https://argocd.dev.homeserver` (Traefik-Ingress der ENTW-VM, Zertifikat aus der Homeserver-Root-CA, Service `ClusterIP`, `server.insecure: true`) |
 | Benutzer | `admin` |
 | Passwort | `kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' \| base64 -d` auf der ENTW-VM (`ssh ubuntu@192.168.178.100 'sudo k3s kubectl …'`) |
 

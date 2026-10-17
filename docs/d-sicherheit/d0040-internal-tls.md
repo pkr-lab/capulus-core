@@ -353,3 +353,36 @@ Der Test mit `curl` funktioniert erst, wenn ein Host in PROD tatsächlich
 läuft (Phase 3) — bis dahin liefert Traefik in PROD sein Standardzertifikat
 bzw. einen 404, das Zertifikat selbst ist aber bereits prüfbar
 (`kubectl get secret homeserver-wildcard-tls -n kube-system`).
+
+---
+
+## Zertifikat für ArgoCD auf der ENTW-VM
+
+Die ENTW-VM hat kein cert-manager. Das Zertifikat für `argocd.dev.homeserver` stellt der Betreiber von Hand mit der Homeserver-Root-CA aus (Gültigkeit 365 Tage) und legt
+es als Vault-Variablen in `ansible/host_vars/entw-vm/vars.yml` ab. Grund und Einbindung: [60030](../6-hintergruende/60030-argocd-und-bootstrap.md#rolle-argocd).
+
+```bash
+kubectl -n cert-manager get secret homeserver-ca-keypair -o jsonpath='{.data.tls\.crt}' | base64 -d > ca.crt
+kubectl -n cert-manager get secret homeserver-ca-keypair -o jsonpath='{.data.tls\.key}' | base64 -d > ca.key
+
+openssl req -new -newkey rsa:2048 -nodes -keyout leaf.key -subj "/CN=argocd.dev.homeserver" -out leaf.csr
+printf 'subjectAltName=DNS:argocd.dev.homeserver\nbasicConstraints=CA:FALSE\nkeyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\n' > ext.cnf
+openssl x509 -req -in leaf.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days 365 -extfile ext.cnf -out leaf.crt
+openssl verify -CAfile ca.crt leaf.crt
+
+ansible-vault encrypt_string --vault-password-file ~/.vault_pass --name argocd_ingress_tls_crt < leaf.crt
+ansible-vault encrypt_string --vault-password-file ~/.vault_pass --name argocd_ingress_tls_key < leaf.key
+
+shred -u ca.key leaf.key; rm -f ca.crt leaf.csr leaf.crt ext.cnf ca.srl
+```
+
+Die zwei Ausgaben ersetzen die gleichnamigen Einträge in `host_vars/entw-vm/vars.yml`. Danach:
+
+```bash
+ansible-playbook -i ansible/inventory/hosts.yml ansible/entw.yml --tags argocd --vault-password-file ~/.vault_pass
+curl -s --cacert docs/assets/homeserver-root-ca.pem https://argocd.dev.homeserver/api/version
+```
+
+Das Ablaufdatum steht in `ops/token-register.yaml` (`entw-argocd-ingress-cert`). Läuft das Zertifikat ab, antwortet der Ingress weiter, aber die
+Promotion-Kette lehnt es ab und das Gate der ENTW-Stufe blockiert. **Rollback:** die Variablen entfernen, der Ingress rendert dann ohne TLS.
+

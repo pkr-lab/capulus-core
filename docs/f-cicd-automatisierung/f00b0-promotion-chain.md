@@ -127,12 +127,15 @@ Tailnet bewirbt. Damit kommen beide ArgoCD-Instanzen über ihre LAN-Adresse, ohn
 
 | Ziel | Adresse | Zweck |
 |---|---|---|
-| Hub-ArgoCD (TECH + PROD) | `http://192.168.178.94:30080` | Gate der TECH-Stufe; PROD-Applications heißen `prod-<app>` |
-| ENTW-ArgoCD (`entw-vm`) | `http://192.168.178.100:30080` | Gate der ENTW-Stufe |
+| Hub-ArgoCD (TECH + PROD) | `https://argocd.tech.homeserver` (→ `192.168.178.94:443`) | Gate der TECH-Stufe; PROD-Applications heißen `prod-<app>` |
+| ENTW-ArgoCD (`entw-vm`) | `https://argocd.dev.homeserver` (→ `192.168.178.100:443`) | Gate der ENTW-Stufe |
 | ENTW-Ingress | `192.168.178.100:80` (Host-Header) | Smoke-Checks |
 
-ArgoCD lauscht per NodePort im **Klartext** (`server.insecure`): `https://…:30443` wird zurückgesetzt. Der
-erste PoC-Lauf zeigte genau deshalb `HTTP 000` (siehe [f00a0](f00a0-tailscale-runner-poc.md)).
+Der Runner hat kein Heim-DNS. Der Workflow trägt die beiden ArgoCD-Hosts in `/etc/hosts` ein und kopiert
+`docs/assets/homeserver-root-ca.pem` nach `$RUNNER_TEMP/argocd-ca.pem`; `promote-chain.py` prüft das Zertifikat
+dagegen (Umgebungsvariable `ARGOCD_CA_FILE`). Die Zertifikatsprüfung ist nicht abschaltbar: Ist die CA nicht passend
+oder das Zertifikat abgelaufen, gilt ArgoCD als nicht erreichbar und das Gate blockiert. Die Gründe der Umstellung
+von `http://…:30080`: [60030](../6-hintergruende/60030-argocd-und-bootstrap.md#rolle-argocd).
 
 Die Tailscale-ACL (`grants`) verbietet standardmäßig alles, was nicht erlaubt ist. Der Runner braucht einen
 Grant. Empfehlung: ein eigenes Tag für den Runner, damit die Rechte nicht an einem Benutzer hängen:
@@ -143,7 +146,7 @@ Grant. Empfehlung: ein eigenes Tag für den Runner, damit die Rechte nicht an ei
   {
     "src": ["tag:ci"],
     "dst": ["192.168.178.94", "192.168.178.100"],
-    "ip":  ["tcp:30080", "tcp:80"]
+    "ip":  ["tcp:443", "tcp:80"]
   }
 ]
 ```

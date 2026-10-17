@@ -6,6 +6,9 @@ argocd_ci_account_enabled: true
 
 argocd_ingress_enabled: false
 argocd_ui_host: ""
+argocd_ingress_tls_crt: ""
+argocd_ingress_tls_key: ""
+argocd_server_nodeport_enabled: true
 
 argocd_platform_apps:
   - alert-caller
