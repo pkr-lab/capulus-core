@@ -166,6 +166,12 @@ Sekunden eintreffen, nicht nach einem Neustart).
    "Zammad-Ticket erstellen" die Credential aus Schritt 1 zuweisen —
    Credential-IDs werden beim Import nicht übernommen, normaler
    Post-Import-Schritt.
+   In den beiden Webhook-Nodes („Webhook (GET)“, „Webhook (POST)“) das
+   Credential `Webhook alamos-einsatz` (Header Auth) zuweisen. Es enthält
+   dasselbe Bearer-Token wie der Schlüssel `n8nToken` im Secret von
+   [alamos-relay](300i0-alamos-relay.md), siehe
+   [30070](30070-n8n.md#webhook-authentifizierung). Ohne gültigen Header
+   antwortet der Webhook mit `403`.
 3. Workflow in n8n **aktivieren** (Import allein reicht nicht).
 4. [alamos-relay](300i0-alamos-relay.md) ausrollen (eigener Chart, eigenes
    Token) und die öffentliche Relay-URL zusammensetzen:

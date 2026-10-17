@@ -27,6 +27,18 @@
     mode: "0600"
   when: nightly_worker_wake_enabled | bool
 
+- name: n8n-auth-header-datei schreiben
+  ansible.builtin.copy:
+    content: "Authorization: Bearer {{ nightly_worker_wake_n8n_token }}\n"
+    dest: /etc/nightly-worker-wake/n8n-auth-header
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  when:
+    - nightly_worker_wake_enabled | bool
+    - nightly_worker_wake_n8n_token | length > 0
+
 - name: systemd-Service (oneshot) deployen
   ansible.builtin.template:
     src: nightly-worker-wake.service.j2
