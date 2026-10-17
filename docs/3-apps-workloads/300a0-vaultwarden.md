@@ -169,9 +169,13 @@ aber nur die `pke-lab.de`-Domain ist von unterwegs erreichbar.
 
 ## 4. Admin-Oberfläche
 
-Unter `https://vault.pke-lab.de/admin` (oder intern
-`https://vault.tech.homeserver/admin`) mit dem Klartext-Passwort aus Schritt 1.1
-einloggen. Dort lassen sich u. a. Nutzer verwalten und Diagnosen einsehen.
+Unter `https://vault.tech.homeserver/admin` (LAN oder Tailnet) mit dem Klartext-Passwort
+aus Schritt 1.1 einloggen. Auf dem öffentlichen Host `vault-tech.pke-lab.de` liefert
+`/admin` `403`: Ein zweiter Ingress mit einer Traefik-Middleware lässt dort nur
+LAN und Tailnet zu (`adminRestriction` in `values.yaml`), Anfragen über den
+Cloudflare-Tunnel kommen von der cloudflared-Pod-IP und werden abgewiesen. Alle
+anderen Pfade (Web-Tresor, `/api`, `/identity`, Websocket) bleiben öffentlich.
+Dort lassen sich u. a. Nutzer verwalten und Diagnosen einsehen.
 SMTP für E-Mail-Versand (Passwort-Reset, Organisations-Einladungen) ist
 seit dem netcup-Postfach-Setup fest in `values.yaml` hinterlegt (siehe
 Abschnitt 4a) und muss dort **nicht** zusätzlich in der `/admin`-UI
@@ -239,6 +243,7 @@ Port 465) schlägt der Verbindungsaufbau fehl und landet dort als Fehler.
 | `env.SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURITY` | Mailserver für Einladungs-/Reset-Mails | `mxe9f8.netcup.net` / `465` / `force_tls` |
 | `env.SMTP_FROM` / `SMTP_USERNAME` | Absenderadresse = Postfach-Login | `info@edv-kretzer.de` |
 | `adminSecret.encryptedAdminToken` | Versiegelter Argon2-Hash für `/admin` | — (Schritt 1) |
+| `adminRestriction.enabled` / `hosts` / `sourceRange` | Sperrt `/admin` auf den öffentlichen Hosts für alle Quellen außerhalb von `sourceRange` | `true` / `vault-tech.pke-lab.de` / LAN und Tailnet |
 | `smtpSecret.encryptedSmtpPassword` | Versiegeltes netcup-Postfach-Passwort | — (Abschnitt 4a) |
 | `persistence.size` | Datenspeicher (SQLite + Anhänge + Icon-Cache) | `2Gi` |
 
@@ -333,5 +338,7 @@ Pfad wird nicht automatisiert.
 | `vaultwarden-admin`-Secret fehlt | `kubectl -n vaultwarden describe sealedsecret vaultwarden-admin` — Ciphertext muss gegen den Public Key dieses Clusters erzeugt worden sein |
 | Browser-Erweiterung/App kann sich nicht verbinden | `env.DOMAIN` muss exakt zur benutzten Server-URL passen (Schema + Host), sonst schlägt der WebAuthn-Origin-Check fehl |
 | Kein Live-Sync zwischen Geräten | `env.WEBSOCKET_ENABLED` prüfen; Traefik/Cloudflare müssen Websocket-Upgrades durchreichen (Standard bei beiden, kein Extra-Konfig nötig) |
+| `/admin` auf `vault-tech.pke-lab.de` liefert `403` | Gewollt. Die Admin-Oberfläche nur über `https://vault.tech.homeserver/admin` aufrufen. Liefert auch der interne Host `403`, `kubectl -n vaultwarden get middleware,ingress` prüfen |
+| `/admin` ist über `vault-tech.pke-lab.de` trotzdem erreichbar (`200`) | Die Middleware fehlt oder der Name in der Annotation des Ingress `vaultwarden-admin` stimmt nicht: Traefik verwirft dann den Router stillschweigend, und `/admin` fällt auf den offenen `/`-Router zurück. `kubectl -n vaultwarden get middleware vaultwarden-admin-nur-intern` |
 | `/admin` liefert 404/Fehler trotz korrektem Token | `ADMIN_TOKEN` env im Pod prüfen (`kubectl -n vaultwarden exec deploy/vaultwarden -- env \| grep ADMIN_TOKEN`) — muss aus dem Secret injiziert worden sein |
 | Keine Einladungs-/Reset-Mail kommt an | `kubectl -n vaultwarden logs deploy/vaultwarden \| grep -i smtp` prüfen — häufigste Ursache: falsche `SMTP_SECURITY`/`SMTP_PORT`-Kombination (Port 465 braucht `force_tls`, Port 587 braucht `starttls`) oder `vaultwarden-smtp`-Secret fehlt (siehe Abschnitt 4a) |
