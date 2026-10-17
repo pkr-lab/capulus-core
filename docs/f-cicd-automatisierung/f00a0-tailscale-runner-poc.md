@@ -45,7 +45,7 @@ Workflow, dass der Runner wirklich verbunden ist (`BackendState` = `Running`).
 
 | Was | Wo |
 |---|---|
-| Repo-Secrets `TS_OAUTH_CLIENT_ID` und `TS_OAUTH_SECRET` | GitHub → Settings → Secrets. OAuth-Client aus dem Tailscale-Admin-Panel, Einrichtung siehe [Promotion-Kette → Netzweg](f00b0-promotion-chain.md#netzweg-und-zugriff). Ein Auth-Key taugt hier nicht: einmalig verwendbare Keys sind nach dem ersten Lauf verbraucht, alle anderen laufen nach höchstens 90 Tagen ab (der Beitritt scheiterte danach dauerhaft mit `NeedsLogin`). |
+| Repo-Secrets `TS_OAUTH_CLIENT_ID` und `TS_AUDIENCE` | GitHub → Settings → Secrets. Client ID und Audience einer Federated Identity (Trust credentials) aus dem Tailscale-Admin-Panel, Einrichtung siehe [Promotion-Kette → Netzweg](f00b0-promotion-chain.md#netzweg-und-zugriff). Ein Auth-Key taugt hier nicht: einmalig verwendbare Keys sind nach dem ersten Lauf verbraucht, alle anderen laufen nach höchstens 90 Tagen ab (der Beitritt scheiterte danach dauerhaft mit `NeedsLogin`). |
 | ACL-Grant für den Runner | siehe [Promotion-Kette → Netzweg](f00b0-promotion-chain.md#netzweg-und-zugriff): empfohlen ein Tag `tag:ci` mit Grant auf die beiden LAN-Adressen; Grundlagen in [c0010 → ACL-Konfiguration](../c-netzwerk-dns/c0010-tailscale.md#acl-konfiguration) |
 | Freigegebene Subnet-Route `192.168.178.0/24` des Homeservers | Tailscale-Admin-Panel (ist freigegeben) |
 
