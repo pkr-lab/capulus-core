@@ -27,6 +27,7 @@ nightly_worker_wake_ntfy_host: "{{ cluster_power_manager_ntfy_host }}"
 nightly_worker_wake_ntfy_ip: "{{ cluster_power_manager_ntfy_ip }}"
 nightly_worker_wake_ntfy_topic: "{{ cluster_power_manager_ntfy_topic }}"
 
-nightly_worker_wake_n8n_webhook_url: "http://n8n.prod.homeserver/webhook/nightly-worker-update"
+nightly_worker_wake_n8n_webhook_url: "https://n8n.prod.homeserver/webhook/nightly-worker-update"
+nightly_worker_wake_n8n_token: "{{ vault_n8n_nightly_webhook_token | default('') }}"
 
 nightly_worker_wake_workers: "{{ cluster_power_manager_workers }}"

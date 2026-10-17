@@ -51,7 +51,8 @@ Pod im eigenen Namespace "alamos-relay"
 http://n8n.n8n.svc.cluster.local/webhook/alamos-einsatz
    (Server-zu-Server-Call innerhalb des Clusters — kein Browser, kein PNA)
    ▼
-bestehender n8n-Workflow alamos-einsatz-to-zammad.json (unverändert)
+bestehender n8n-Workflow alamos-einsatz-to-zammad.json
+   (Webhook prüft den Header "Authorization: Bearer <n8nToken>", den der Relay mitsendet)
 ```
 
 Die Antwort von n8n (Status + Body) wird 1:1 an ALAMOS zurückgegeben, damit
@@ -85,6 +86,7 @@ Wichtigste `values.yaml`-Knobs:
 | `n8nTargetUrl` | Internes n8n-Webhook-Ziel, an das weitergereicht wird (Default: `http://n8n.n8n.svc.cluster.local/webhook/alamos-einsatz`) |
 | `n8nNamespace` / `n8nTargetPort` | Für die NetworkPolicy-Egress-Ausnahme — muss zu n8ns tatsächlichem Namespace/`targetPort` passen |
 | `secrets.encryptedToken` | SealedSecret mit dem geheimen Pfad-Token (Key `token`) |
+| `secrets.encryptedN8nToken` | Selber SealedSecret, Key `n8nToken`: Bearer-Token, das der Relay als `Authorization`-Header an den n8n-Webhook sendet (Credential `Webhook alamos-einsatz` in n8n, siehe [30070](30070-n8n.md#webhook-authentifizierung)) |
 | `ingress.hosts` | Interner Host (`alamos-relay.prod.homeserver`) + externer Host (`alamos-relay-prod.pke-lab.de`, per Cloudflare-Tunnel-Wildcard erreichbar) |
 
 Tech-Stack identisch zu [alamos-apager](30010-alamos-apager.md): reines
@@ -150,7 +152,7 @@ Relay nur noch 404 (siehe [Fehlerbehebung](#fehlerbehebung)).
    Alamos-Account eintragen (nicht "Allgemeine Webhooks" — Begründung dazu
    unverändert in [300h0, Architektur](300h0-alamos-einsatz-zammad.md#architektur)).
    Der n8n-seitige Workflow (`alamos-einsatz-to-zammad.json`) braucht dafür
-   **keine** Änderung — er lauscht weiterhin auf
+   keine Änderung am Pfad — er lauscht weiterhin auf
    `http://n8n.prod.homeserver/webhook/alamos-einsatz`, nur der Aufrufer
    hat sich geändert (Relay statt Alamos direkt).
 4. Testauslösung wie in

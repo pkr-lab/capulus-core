@@ -39,7 +39,8 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "banana-pi-down",
-        "options": {}
+        "options": {},
+        "authentication": "headerAuth"
       },
       "id": "8379fd5c-e1cc-4389-aff3-7a26968dccfc",
       "name": "Alertmanager Webhook",
@@ -49,7 +50,13 @@
         3872,
         464
       ],
-      "webhookId": "banana-pi-down"
+      "webhookId": "banana-pi-down",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "QnbMhuZMfMzCreP7",
+          "name": "Webhook banana-pi-down"
+        }
+      }
     },
     {
       "parameters": {

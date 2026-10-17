@@ -185,7 +185,7 @@ bei [`cluster_power_manager`](20020-cluster-power-manager.md)).
 
 `nightly-worker-wake.sh` schickt am Ende **jedes** Laufs ein JSON an
 `nightly_worker_wake_n8n_webhook_url`
-(Default `http://n8n.prod.homeserver/webhook/nightly-worker-update`) —
+(Default `https://n8n.prod.homeserver/webhook/nightly-worker-update`) —
 egal ob alles glatt lief, ein Worker nicht aufgewacht ist, ein Update
 fehlschlug, das Zeitbudget erreicht wurde, oder das Skript selbst
 unerwartet abbrach. Der n8n-Workflow
@@ -268,8 +268,14 @@ im Node würde ignoriert bzw. durch den forced command überschrieben.
    [../d-sicherheit/d0060-secrets-rotation.md](../d-sicherheit/d0060-secrets-rotation.md), oder neu anlegen:
    Base URL `https://zammad.tech.homeserver`, Access Token mit Berechtigung
    `ticket.agent`)
-3. Workflow **aktivieren** (Import allein reicht nicht)
-4. `nightly_worker_wake_n8n_webhook_url` gegen die tatsächliche n8n-Ingress-
+3. Im Node „Nightly Worker Update Webhook“ das Credential
+   `Webhook nightly-worker-update` (Header Auth, Name `Authorization`, Wert
+   `Bearer <Token>`) zuweisen. Dasselbe Token steht in der Vault-Variable
+   `vault_n8n_nightly_webhook_token`, die Rolle schreibt es als Header-Datei
+   `/etc/nightly-worker-wake/n8n-auth-header` (`0600`). Ohne Token sendet das
+   Skript keinen Header und der Webhook antwortet mit `403`.
+4. Workflow **aktivieren** (Import allein reicht nicht)
+5. `nightly_worker_wake_n8n_webhook_url` gegen die tatsächliche n8n-Ingress-
    Adresse prüfen (Default passt zu `n8n.prod.homeserver`, siehe
    [../3-apps-workloads/30070-n8n.md](../3-apps-workloads/30070-n8n.md))
 
