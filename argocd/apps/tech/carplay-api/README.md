@@ -74,7 +74,7 @@ access of its own, see [docs/3-apps-workloads/300d0-carplay-api.md](../../../../
 | `NTFY_LIMIT` | `10` | Max alerts returned. |
 | `UPTIME_KUMA_URL` | `http://uptime-kuma.uptime-kuma.svc.cluster.local` | Uptime-Kuma base URL. |
 | `UPTIME_KUMA_SLUG` | `homeserver` | Status-page slug to read. |
-| `POWER_AGENT_URL` | `http://192.168.178.94:9101` | Base URL of the power-agent daemon on the Homeserver host. |
+| `POWER_AGENT_URL` | `http://192.168.178.94:9101` | Base URL of the power-agent daemon on the Homeserver host. The chart sets `http://10.42.2.1:9101` (the `cni0` address of the Homeserver). |
 | `POWER_AGENT_TOKEN` | *(empty)* | Bearer token for power-agent. Unset = every brightness/power request fails with 502. |
 | `POWER_AGENT_TIMEOUT` | `8` | Timeout for power-agent calls, seconds — poweroff/WoL can take longer than the 3s VictoriaMetrics budget. |
 | `SHUTDOWN_CONFIRMATION_CODE` | *(empty)* | Required to match `code` on `POST /api/power/shutdown` with `target: "homeserver"`. Unset = homeserver shutdown always rejected with 503. |
