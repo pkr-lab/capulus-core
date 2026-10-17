@@ -8,6 +8,11 @@ POLL_SECONDS="${POLL_SECONDS:?POLL_SECONDS not set}"
 NTFY_HOST="${NTFY_HOST:?NTFY_HOST not set}"
 NTFY_IP="${NTFY_IP:?NTFY_IP not set}"
 NTFY_TOPIC="${NTFY_TOPIC:?NTFY_TOPIC not set}"
+NTFY_AUTH_HEADER_FILE="${NTFY_AUTH_HEADER_FILE:-/etc/ntfy-publisher/auth-header}"
+ntfy_auth_args=()
+if [ -r "$NTFY_AUTH_HEADER_FILE" ]; then
+  ntfy_auth_args=(-H "@${NTFY_AUTH_HEADER_FILE}")
+fi
 WARN_THRESHOLD="${WARN_THRESHOLD:-}"
 WARN_SUSTAIN_SECONDS="${WARN_SUSTAIN_SECONDS:-60}"
 DRY_RUN="${DRY_RUN:-0}"
@@ -54,6 +59,7 @@ notify_shutdown() {
   fi
   curl --fail --silent --show-error --max-time 5 \
     --resolve "${NTFY_HOST}:80:${NTFY_IP}" \
+    "${ntfy_auth_args[@]}" \
     -H "Title: ${title}" \
     -H "Priority: 5" \
     -H "Tags: rotating_light,stop_sign" \
@@ -66,6 +72,7 @@ notify_warning() {
   local body="$(hostname): ${METRIC} >= ${WARN_THRESHOLD}% seit ${WARN_SUSTAIN_SECONDS}s. Bei Anstieg auf ${THRESHOLD}% fuer ${SUSTAIN_SECONDS}s schaltet sich der Host automatisch ab."
   curl --fail --silent --show-error --max-time 5 \
     --resolve "${NTFY_HOST}:80:${NTFY_IP}" \
+    "${ntfy_auth_args[@]}" \
     -H "Title: ${title}" \
     -H "Priority: 4" \
     -H "Tags: warning" \

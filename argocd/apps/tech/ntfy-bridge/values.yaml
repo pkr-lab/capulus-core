@@ -16,6 +16,13 @@ ntfy:
   url: "http://ntfy.ntfy.svc.cluster.local"
   topic: "Home-Lab"
 
+secrets:
+  ntfyToken:
+    enabled: true
+    secretName: ntfy-bridge-ntfy-token
+    secretKey: token
+    encryptedData: "AgB8tbO7XvE4xejjMOe8ofg7cLWKuxXAQHiPIlI1irbwjjkiU9BeuUQcKjjrITf/CR3CAAcNgoH0dhHI5Filn5BGuVnCcdJUtDCSX1+WzL6ArJJZxmNshFGMzw/uOJ9/2Fb4geS2k8uWWDSFfrSRMSjGrO7WFjejep/7DR8gOyNwd3N1vUKwel3rPdCEqsbOg6AcvhIC3oWVes4awTvrZNJolaNXblQtFPluztKmYmWG9jpzhZOn0HHIxjeOJDfHIkBI8x8ErNGIU75ygM3rSvUFzLKpY9MmbptaiBRh8mQ5WTvhGB0UP8SaRXH3qzcfXWRbtMi49mgBX+9HNAwmZtRxCRz/nMdBNflYQV70AlSZ7VPec3Mu4w3u4xsjvoEnMuC1gMn33FlCzPlPgUXWbmZTSBTk8fK0PC8uccHFtR0lAsAuewR5GeljDQAskUN7uWL1Tgpv3k6liMzVEzAaSuKIwje+IHI2wgSDSzbPJeYQlvifjJ7LGDaeTlO6LnAkKvq+J9sRI0Iy3AqRisvq52+A7cZqUUCQoppOZiXBWyc7KLGEOcRXbx5RZ1cGcdGV/Ojg6N2SUFxOwS6rp5defnm8rHf0uSLktKDuYkc2s4OXH+gJ/jzE9k59MbW40dMAKDCXdTB6N5fnLk6c3AgQnMSpJeGDlnSOu0MrpSR3MaQQxS7mZbdPQ9/wbEp5VSUr7j8qw1awZSqI3KoROwVPJiHQ8xumSdu8FpqyHxeS0sgFZw=="
+
 service:
   type: ClusterIP
   port: 8080

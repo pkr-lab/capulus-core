@@ -14,6 +14,8 @@
       tags: [journal-upload, logging]
     - role: banana_pi_kiosk
       tags: [banana-pi-kiosk, kiosk]
+    - role: ntfy_publisher
+      tags: [ntfy-publisher, thermal]
     - role: thermal_watchdog
       tags: [thermal-watchdog, thermal]
     - role: resource_watchdog
