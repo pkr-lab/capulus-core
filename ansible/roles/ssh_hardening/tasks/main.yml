@@ -9,7 +9,7 @@
         owner: root
         group: root
         mode: "0644"
-      register: ssh_hardening_result
+      notify: sshd neu laden
 
     - name: sshd-konfiguration prüfen
       ansible.builtin.command: sshd -t
@@ -30,11 +30,8 @@
           Das Drop-in {{ ssh_hardening_dropin }} wird von einer früher geladenen
           Datei übersteuert. Der Dateiname muss alphabetisch vor 50-cloud-init.conf liegen.
 
-    - name: sshd neu laden
-      ansible.builtin.systemd:
-        name: ssh
-        state: reloaded
-      when: ssh_hardening_result is changed
+    - name: sshd-handler ausführen
+      ansible.builtin.meta: flush_handlers
 
   rescue:
     - name: fehlerhaftes sshd-drop-in entfernen
