@@ -299,11 +299,9 @@ https://argocd.tech.homeserver
 ```
 
 Direkt nach der Erstinstallation existiert der Ingress noch nicht (der Hostname greift erst, wenn das
-Zertifikat den Eintrag `argocd.tech.homeserver` enthält). Bis dahin (und für die CLI) geht der Klartext-NodePort:
-
-```
-http://<server-ip>:30080
-```
+Zertifikat den Eintrag `argocd.tech.homeserver` enthält). Bis dahin geht der NodePort `http://<server-ip>:30080`
+(Standard der Rolle: `argocd_server_nodeport_enabled: true`). Sobald der Ingress läuft, setzt
+`host_vars/homeserver` den Wert auf `false` und der NodePort entfällt.
 
 Das Zertifikat ist selbstsigniert — Browser-Warnung bestätigen.
 
@@ -335,7 +333,7 @@ brew install argocd
 Login:
 
 ```bash
-argocd login <server-ip>:30080 --username admin --password <initial-passwort> --plaintext
+argocd login argocd.tech.homeserver --username admin --password <initial-passwort> --grpc-web
 ```
 
 ### kubectl von der Control-Machine
