@@ -21,6 +21,11 @@ if [ -r "$NTFY_AUTH_HEADER_FILE" ]; then
   ntfy_auth_args=(-H "@${NTFY_AUTH_HEADER_FILE}")
 fi
 N8N_WEBHOOK_URL="${N8N_WEBHOOK_URL:?not set}"
+N8N_AUTH_HEADER_FILE="${N8N_AUTH_HEADER_FILE:-/etc/nightly-worker-wake/n8n-auth-header}"
+n8n_auth_args=()
+if [ -r "$N8N_AUTH_HEADER_FILE" ]; then
+  n8n_auth_args=(-H "@${N8N_AUTH_HEADER_FILE}")
+fi
 WORKERS="${WORKERS:?WORKERS not set (Format: name:ip:mac name:ip:mac ...)}"
 DRY_RUN="${DRY_RUN:-0}"
 
@@ -97,8 +102,9 @@ send_report() {
     --argjson workers "$workers_json" \
     '{started_at:$started_at, finished_at:$finished_at, elapsed_seconds:$elapsed_seconds, note:$note, dry_run:$dry_run, workers:$workers}')"
 
-  curl --silent --show-error --max-time 15 \
+  curl --silent --show-error --fail --max-time 15 \
     -H "Content-Type: application/json" \
+    "${n8n_auth_args[@]}" \
     -d "$payload" \
     "$N8N_WEBHOOK_URL" > /dev/null || \
     logger -t nightly-worker-wake "WARNUNG: n8n-Webhook (${N8N_WEBHOOK_URL}) nicht erreichbar -- kein Zammad-Ticket für diesen Lauf"

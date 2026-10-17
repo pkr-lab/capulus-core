@@ -403,6 +403,11 @@ gleichermaßen, nicht nur diesen.
    Value `Token token=<ZAMMAD_TOKEN>` aus Schritt 2) — Credential-IDs
    werden beim Import nicht mit übernommen, das ist ein normaler
    Post-Import-Schritt.
+   Im Node „Alertmanager Webhook“ das Credential `Webhook banana-pi-down`
+   (Header Auth) zuweisen. Alertmanager sendet das Token als
+   `Authorization: Bearer` aus dem Secret `n8n-webhook-token`
+   (Namespace `monitoring`), siehe
+   [30070](30070-n8n.md#webhook-authentifizierung).
 4. Workflow in n8n aktivieren (`active: true` in der UI).
 
 ## Sichtprüfung ohne physischen Zugriff

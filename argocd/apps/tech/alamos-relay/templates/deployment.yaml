@@ -20,7 +20,7 @@ spec:
         # der schon laufende Pod würde aber weiter mit dem alten Token-Wert
         # laufen, bis er aus anderem Grund neu startet. Aenderung von
         # encryptedToken aendert diesen Hash -> neues Pod-Template -> Rollout.
-        checksum/secret: {{ .Values.secrets.encryptedToken | sha256sum }}
+        checksum/secret: {{ printf "%s%s" .Values.secrets.encryptedToken .Values.secrets.encryptedN8nToken | sha256sum }}
       labels:
         {{- include "alamos-relay.selectorLabels" . | nindent 8 }}
     spec:
@@ -44,6 +44,11 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.secrets.name }}
                   key: token
+            - name: N8N_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: n8nToken
           livenessProbe:
             tcpSocket:
               port: http

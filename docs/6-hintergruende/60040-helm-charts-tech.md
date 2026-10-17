@@ -296,6 +296,21 @@ weil ein Ausfall des Clusters (und damit kein Anruf) bewusst in Kauf genommen wi
 - Der Code-Node „An WhatsApp senden“ startet `whatsapp-web.js`/Chromium in einem **eigenen Node-Prozess** (`child_process`), weil der Task-Runner
   alle Prototypen einfriert und Puppeteer darin scheitert. Externe npm-Module braucht der Code-Node deshalb nicht, `whatsapp-web.js` lädt nur der
   Kindprozess.
+- **Webhook-Authentifizierung und Absicherung (Incident 012, 2026-10-17)** ([30070](../3-apps-workloads/30070-n8n.md#webhook-authentifizierung)):
+  - **Header Auth mit `Authorization: Bearer`.** Alertmanager setzt diesen Header nativ (`http_config.authorization`, wie beim alert-caller), und alamos-relay sowie das Shell-Skript brauchen
+    keinen eigenen Headernamen. Je Sender ein eigenes Credential, damit eine Rotation nur einen Sender trifft.
+  - **Reihenfolge beim Einschalten: erst die Sender, dann n8n.** Ein Webhook mit Header Auth lehnt Anfragen ohne Header mit `403` ab. Würde n8n zuerst umgestellt, gingen Einsatzalarme (Relay)
+    und Banana-Pi-Meldungen (Alertmanager) verloren, bis die Sender nachgezogen haben. Die Sender schicken den Header vorher schon mit, n8n ignoriert ihn solange.
+  - **Der Relay reicht den Header selbst an.** Er kennt das Token aus dem Schlüssel `n8nToken` desselben SealedSecret wie das Pfad-Token. Alamos selbst kann keinen Header setzen und ruft weiter nur die
+    geheime Relay-URL.
+  - **Nightly-Wake: `https://` statt `http://` und `curl --fail`.** Traefik leitet HTTP mit `301` auf HTTPS um, curl folgt nicht, der Bericht kam mit der alten URL nicht an und die Journal-Warnung
+    erschien nur bei Verbindungsfehlern. Mit `--fail` löst jetzt auch ein `403` oder `301` die Warnung aus.
+  - **`N8N_PROTOCOL` bleibt `http`.** Der Pod-Listener spricht HTTP, TLS endet an Traefik, Liveness- und Readiness-Probe sind HTTP. Ein `https` würde n8n ohne eigenes Zertifikat nicht sinnvoll bedienen
+    und ein ausgefallenes n8n verliert Einsatzalarme. Die Links in Oberfläche und Webhook-URLs kommen aus `WEBHOOK_URL` und `N8N_EDITOR_BASE_URL`, beide auf HTTPS.
+  - **`N8N_SECURE_COOKIE: "true"`.** Die Oberfläche ist per `301` ohnehin nur über HTTPS erreichbar. `N8N_BASIC_AUTH_ACTIVE` ist seit n8n 1.0 wirkungslos und wurde entfernt, die Anmeldung läuft über die Benutzerverwaltung.
+  - **`child_process` und Execute Command bleiben bewusst.** Der WhatsApp-Sendeprozess (siehe oben), die Aufräumjobs von Xibo und Instagram (`find -delete`, `rm`) und der KI-Lauf (liest das ServiceAccount-Token zum Skalieren von Ollama) brauchen sie. Ersatz
+    durch CronJobs würde laufende Workflows umbauen und eigene Rechte für NFS und Ollama verlangen. Das Restrisiko (Codeausführung durch jeden, der Workflows bearbeiten darf) wird durch 2FA am Owner-Konto begrenzt.
+  - **`/webhook/isc-news` ist nicht abgesichert.** Aufrufer ist eine externe Website, deren Fähigkeit zum Senden eines Headers (und Geheimhaltung des Tokens) offen ist. Ein Token im Browser-Code wäre öffentlich.
 - **Instagram-Bilder** (`instagram.*` in der `values.yaml`, Workflow `instagram-post-per-mail.json`, [300l0](../3-apps-workloads/300l0-instagram-post-per-mail.md)):
   - **Öffentlicher Pfad statt Upload.** Die Graph API nimmt für Bilder nur eine `image_url`, die Meta selbst abruft. Deshalb beantwortet n8n für genau diesen
     Zweck Anfragen aus dem Internet. Das ist die einzige Abweichung vom Grundsatz „n8n bleibt unerreichbar“ (siehe alamos-relay unten). Ein eigener Relay-Dienst
