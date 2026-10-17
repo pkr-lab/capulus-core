@@ -68,12 +68,23 @@
     src: "{{ hostvars[k3s_server_host]['ansible_host'] }}"
     comment: "k3s kubelet API from control-plane"
 
-- name: Allow Flannel VXLAN (UDP 8472) for pod overlay
+- name: flannel-vxlan (udp 8472) nur aus dem lan erlauben
   community.general.ufw:
     rule: allow
     port: "8472"
     proto: udp
+    src: "{{ local_subnet }}"
     comment: "Flannel VXLAN pod overlay network"
+
+- name: offene regeln für flannel-vxlan und die api (6443) auf dem agent entfernen
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    delete: true
+  loop:
+    - {port: "8472", proto: udp}
+    - {port: "6443", proto: tcp}
 
 - name: Allow all traffic from k3s pod CIDR
   community.general.ufw:
