@@ -231,6 +231,8 @@
       "parameters": {
         "method": "POST",
         "url": "={{ $('Eingaben pruefen').first().json.ntfyUrl + '/' + $('Eingaben pruefen').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -261,7 +263,13 @@
       "position": [
         1200,
         460
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      }
     },
     {
       "parameters": {
@@ -301,6 +309,8 @@
       "parameters": {
         "method": "POST",
         "url": "={{ $('Eingaben pruefen').first().json.ntfyUrl + '/' + $('Eingaben pruefen').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -335,7 +345,13 @@
       "position": [
         1440,
         100
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      }
     },
     {
       "parameters": {
@@ -426,6 +442,8 @@
       "parameters": {
         "method": "POST",
         "url": "={{ $('Eingaben pruefen').first().json.ntfyUrl + '/' + $('Eingaben pruefen').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -452,7 +470,13 @@
       "position": [
         2400,
         100
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      }
     },
     {
       "parameters": {
@@ -511,6 +535,8 @@
       "parameters": {
         "method": "PUT",
         "url": "={{ $('Eingaben pruefen').first().json.ntfyUrl + '/' + $('Eingaben pruefen').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -548,12 +574,20 @@
       "position": [
         2880,
         120
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      }
     },
     {
       "parameters": {
         "method": "POST",
         "url": "={{ $('Eingaben pruefen').first().json.ntfyUrl + '/' + $('Eingaben pruefen').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -584,7 +618,13 @@
       "position": [
         2640,
         400
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      }
     },
     {
       "parameters": {

@@ -78,15 +78,61 @@
   kind: api-token
   stored_in:
     - argocd/apps/tech/carplay-api/templates/secret-ntfy-token.yaml
-  issued: null
+  issued: "2026-10-17"
   expires: null
   max_age_days: null
   rotation:
     mode: manual
-    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    runbook: docs/1-benachrichtigungen/10010-ntfy.md#zugangsdaten-und-token-rotation
     overlap: true
   owner: peter
-  blast_radius: "Aktuell deaktiviert (enabled: false, Platzhalter-Ciphertext). Wuerde carplay-api das Senden an ntfy erlauben."
+  blast_radius: "Lesezugriff (reader) auf die ntfy-Topics, darunter Alarmtexte aus dem Vereins-/Feuerwehrumfeld."
+
+- id: ntfy-bridge-ntfy-token
+  service: ntfy-bridge
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/ntfy-bridge/templates/secret-ntfy-token.yaml
+  issued: "2026-10-17"
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/1-benachrichtigungen/10010-ntfy.md#zugangsdaten-und-token-rotation
+    overlap: true
+  owner: peter
+  blast_radius: "Schreibzugriff (publisher) auf die ntfy-Topics: gefaelschte Alarme und Entwarnungen."
+
+- id: alamos-apager-ntfy-token
+  service: alamos-apager
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/alamos-apager/templates/secret-ntfy-token.yaml
+  issued: "2026-10-17"
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/1-benachrichtigungen/10010-ntfy.md#zugangsdaten-und-token-rotation
+    overlap: true
+  owner: peter
+  blast_radius: "Schreibzugriff (publisher) auf die ntfy-Topics: gefaelschte Alarme und Entwarnungen."
+
+- id: ntfy-publisher-host-token
+  service: ntfy
+  kind: api-token
+  stored_in:
+    - ansible/group_vars/all.yml
+    - ansible/roles/ntfy_publisher/tasks/main.yml
+  issued: "2026-10-17"
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/1-benachrichtigungen/10010-ntfy.md#zugangsdaten-und-token-rotation
+    overlap: true
+  owner: peter
+  blast_radius: "Schreibzugriff (publisher) auf die ntfy-Topics von Host-Skripten und n8n: gefaelschte Alarme und Entwarnungen. Liegt als Vault-Variable ntfy_publisher_token und im n8n-Credential ntfy-publisher."
 
 - id: carplay-api-power-agent-token
   service: carplay-api

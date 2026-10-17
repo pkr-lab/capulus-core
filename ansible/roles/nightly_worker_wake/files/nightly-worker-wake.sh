@@ -15,6 +15,11 @@ SEMAPHORE_ADMIN_PASSWORD_PATH="${SEMAPHORE_ADMIN_PASSWORD_PATH:?not set}"
 NTFY_HOST="${NTFY_HOST:?not set}"
 NTFY_IP="${NTFY_IP:?not set}"
 NTFY_TOPIC="${NTFY_TOPIC:?not set}"
+NTFY_AUTH_HEADER_FILE="${NTFY_AUTH_HEADER_FILE:-/etc/ntfy-publisher/auth-header}"
+ntfy_auth_args=()
+if [ -r "$NTFY_AUTH_HEADER_FILE" ]; then
+  ntfy_auth_args=(-H "@${NTFY_AUTH_HEADER_FILE}")
+fi
 N8N_WEBHOOK_URL="${N8N_WEBHOOK_URL:?not set}"
 WORKERS="${WORKERS:?WORKERS not set (Format: name:ip:mac name:ip:mac ...)}"
 DRY_RUN="${DRY_RUN:-0}"
@@ -56,6 +61,7 @@ notify() {
   fi
   curl --fail --silent --show-error --max-time 5 \
     --resolve "${NTFY_HOST}:80:${NTFY_IP}" \
+    "${ntfy_auth_args[@]}" \
     -H "Title: ${title}" \
     -H "Priority: 3" \
     -H "Tags: package,zap" \

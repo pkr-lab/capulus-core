@@ -131,6 +131,13 @@ Bildschirmhelligkeit (sysfs), manuelles Wake-on-LAN und Poweroff für worker-0/w
 - `DRY_RUN=1` (z. B. `systemctl edit --runtime thermal-watchdog`) testet den kompletten Pfad Erkennung → Meldung, ohne auszuschalten.
 - Der `resource_watchdog` ist das Gegenstück für CPU/RAM (Schwelle 90 %): Ist `WARN_THRESHOLD` leer, entfällt die Vorwarnstufe.
   Auch diese Schwelle läuft **nicht** über Alertmanager, sondern lokal.
+- Die Meldung an ntfy trägt einen Publisher-Token, falls `/etc/ntfy-publisher/auth-header` lesbar ist. Die Skripte (`thermal-watchdog`, `resource-watchdog`,
+  `cluster-power-manager`, `nightly-worker-wake`) geben den Header per `curl -H @Datei` mit, nicht als Argument oder Umgebungsvariable: so steht der Token weder in `ps`
+  noch in `systemctl show`. Fehlt die Datei, senden sie anonym weiter (sonst hinge die Reihenfolge Rolle → ntfy-Umstellung an einem Zeitpunkt). Die Datei schreibt die Rolle
+  `ntfy_publisher` aus der Vault-Variable `ntfy_publisher_token`, sie ist in allen Playbooks mit Watchdogs vor diesen eingetragen (Tag `ntfy-publisher`). Ist die Variable
+  nicht gesetzt, überspringt die Rolle den Schreib-Task, ein bestehender Header bleibt liegen.
+- Der Token läuft über `http://ntfy.tech.homeserver` (Port 80) im Klartext durch LAN bzw. Tailscale. Das ist beabsichtigt, weil `--resolve` auf die statische Server-IP
+  auch ohne DNS funktioniert. Der Publisher darf nur schreiben, ein Mitschnitt erlaubt also gefälschte Meldungen, kein Mitlesen.
 - Mehrere Rollen haben einen Kill-Switch (`*_enabled: false`, z. B. in `host_vars`), um sie auf einem Host abzuschalten, ohne die
   Rolle aus dem Playbook zu nehmen: `thermal_watchdog`, `vmagent`, `node_exporter`, `smartctl_exporter`, `wake_on_lan`,
   `worker_apt_update`, `alamos_kiosk` und `xibo_kiosk`.

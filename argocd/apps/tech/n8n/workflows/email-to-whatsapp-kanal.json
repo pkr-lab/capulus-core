@@ -91,6 +91,8 @@
       "parameters": {
         "method": "POST",
         "url": "http://ntfy.ntfy.svc.cluster.local/whatsapp-relay",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -121,7 +123,13 @@
       "position": [
         1120,
         520
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      }
     }
   ],
   "pinData": {},

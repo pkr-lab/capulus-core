@@ -134,6 +134,8 @@
       "parameters": {
         "method": "POST",
         "url": "={{ $('Konfiguration').first().json.ntfyUrl + '/' + $('Konfiguration').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -164,7 +166,13 @@
       "position": [
         1440,
         180
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      }
     },
     {
       "parameters": {

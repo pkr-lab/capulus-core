@@ -17,6 +17,7 @@ data:
 
     NTFY_URL = os.environ.get("NTFY_URL", "").rstrip("/")
     NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "")
+    NTFY_TOKEN = os.environ.get("NTFY_TOKEN", "")
     HEARTBEAT_TIMEOUT_SECONDS = int(os.environ.get("HEARTBEAT_TIMEOUT_SECONDS", "300"))
     CHECK_INTERVAL_SECONDS = 30
 
@@ -36,14 +37,17 @@ data:
         if not (NTFY_URL and NTFY_TOPIC):
             print(f"[ntfy nicht konfiguriert] {title}: {message}")
             return
+        headers = {
+            "Title": title.encode("utf-8"),
+            "Priority": str(priority).encode("utf-8"),
+            "Tags": tags.encode("utf-8"),
+        }
+        if NTFY_TOKEN:
+            headers["Authorization"] = f"Bearer {NTFY_TOKEN}"
         req = urllib.request.Request(
             f"{NTFY_URL}/{NTFY_TOPIC}",
             data=message.encode("utf-8"),
-            headers={
-                "Title": title.encode("utf-8"),
-                "Priority": str(priority).encode("utf-8"),
-                "Tags": tags.encode("utf-8"),
-            },
+            headers=headers,
             method="POST",
         )
         urllib.request.urlopen(req, timeout=5)
