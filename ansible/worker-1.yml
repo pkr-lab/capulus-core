@@ -6,6 +6,8 @@
   roles:
     - role: worker_apt_update
       tags: [apt-update, updates]
+    - role: ssh_hardening
+      tags: [ssh-hardening, security]
     - role: tailscale
       tags: [tailscale, vpn]
     - role: k3s_agent

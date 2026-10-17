@@ -279,6 +279,8 @@ Bedienung, Einrichtung und Testplan: [10020](../1-benachrichtigungen/10020-telef
 - **Statischer Modus für den Pi** (`alert_caller_static_announcement: true`, Gruppe `alert_caller_pi`): Der Caller spielt statt Piper die vorab erzeugte WAV `files/cluster-down.wav` ab (`STATIC_ANNOUNCEMENT`), denn `onnxruntime` und damit Piper gibt es für armv7l nicht. `/alert` antwortet in diesem Modus mit 404, weil jeder Alarm sonst die feste Ansage bekäme. `alert_caller_manage_firewall: false` lässt UFW unberührt (der Pi hat bisher keine UFW-Konfiguration aus Ansible, ein erstmaliges Einschalten wäre ein Risiko für den Kiosk), `alert_caller_build_jobs: 2` schont den Speicher beim Bauen von baresip. `alert_caller_hc_uuid` ist optional. Details und Ausrollen: [10020](../1-benachrichtigungen/10020-telefon-alarm.md#notfall-caller-auf-dem-vereinsheim-pi-ausgerollt-anruf-vom-pi-noch-nicht-getestet).
 - **Ohne Sprachsynthese:** Schlägt Piper fehl, spielt der Caller einen Warnton (`sox synth`). Ein Anruf ohne Text ist besser als keiner.
 - **Firewall:** Die Rolle setzt UFW (SSH zuerst, dann `default deny incoming`, damit sich niemand aussperrt). Der RTP-Bereich in UFW, in `baresip-config.j2` und in der Oracle-Security-List muss derselbe sein.
+- **Zugriffsschutz auf dem Pi:** `alert_caller_token` (aus `vault_alert_caller_token`, Standard leer) und `alert_caller_auth_mode` (`log` oder `enforce`) landen in `alert-caller.env` (`0600`). Die Rolle bricht ab, wenn der Modus `enforce` ohne Token gesetzt ist. Der Pi bekommt
+  vom Alertmanager nur `/watchdog` und ist der Totmann bei einem Totalausfall des Clusters. Ist der Token im Modus `enforce` falsch, bleibt der Timer unberührt, und der Pi ruft nach `WATCHDOG_TIMEOUT` selbst an (ein lauter Fehler, kein stiller). Einführung und Rotation: [10020](../1-benachrichtigungen/10020-telefon-alarm.md#zugriffsschutz-token).
 
 ## Sonstiges
 
@@ -311,6 +313,26 @@ ArgoCD läuft mit `server.insecure` (`argocd_server_insecure`): **Beide** NodePo
 bleibt für CLI und CI: Die Promotion-Kette und der Tailscale-Runner greifen auf `192.168.178.94:30080` zu
 ([f00b0](../f-cicd-automatisierung/f00b0-promotion-chain.md)). Er ist nur aus LAN und Tailnet erreichbar. Die Freigabe stand früher nur
 von Hand in UFW und nicht im Repo, ein Neuaufbau hätte die CI stillgelegt, deshalb steht sie jetzt in der Rolle `common`.
+
+### ssh_hardening
+
+- **Das Drop-in heißt `00-hardening.conf`, nicht `99-…`.** `sshd` übernimmt für jedes Schlüsselwort den **ersten** gefundenen Wert, und `Include /etc/ssh/sshd_config.d/*.conf` steht oben in der Hauptdatei. Die cloud-init-Datei
+  `50-cloud-init.conf` setzt `PasswordAuthentication yes`. Ein Drop-in mit höherer Nummer würde übersteuert und nichts bewirken. Die Rolle prüft deshalb nach dem Ablegen mit `sshd -T`, ob die neuen Werte tatsächlich gelten
+  (`passwordauthentication no`, `permitrootlogin no`, `allowagentforwarding no`), und bricht sonst ab.
+- **Ablauf mit Selbstschutz:** Drop-in ablegen, `sshd -t`, `sshd -T` prüfen, dann `systemctl reload ssh`. Schlägt einer der Schritte fehl, entfernt die Rolle das Drop-in wieder und lädt **nicht** neu, damit ein späterer Neustart nicht
+  mit einer kaputten Konfiguration anläuft. Nie `restart`: Ubuntu startet `sshd` per Socket-Aktivierung (`ssh.socket`), ein Reload behält laufende Sitzungen.
+- **Werte:** `PermitRootLogin no`, `PasswordAuthentication no`, `KbdInteractiveAuthentication no`, `MaxAuthTries 4`, `LoginGraceTime 20`, `X11Forwarding no`, `AllowAgentForwarding no`, `AllowTcpForwarding no`. Vier statt drei Versuche, weil ein
+  Agent mit mehreren Schlüsseln und die Standard-Identitäten schon drei Fehlversuche erzeugen können („Too many authentication failures“). `AllowTcpForwarding no` bricht `ssh -L`, `-D`, `ProxyJump` und VS-Code-Remote: Wer das braucht,
+  setzt `ssh_hardening_allow_tcp_forwarding: true` in den `host_vars`.
+- **Wer sich anmeldet:** Auf keinem Host liegt ein Schlüssel für `root`, und alle Dienste (Semaphore, `cluster-power-manager`, der n8n-Trigger, Ansible) melden sich als `ubuntu` per Schlüssel an. Die Vault-Dateien enthalten nur
+  `become`-Passwörter (sudo). Die Härtung ändert nichts an der Schlüssel-Anmeldung.
+- **Neue Hosts:** Den Schlüssel vor dem ersten Rollenlauf hinterlegen (`ssh-copy-id`, siehe [a0020](../a-betriebssystem/a0020-prerequisites.md)), sonst sperrt sich der Admin mit dem Rollenlauf selbst aus.
+- **Aufgenommen sind** homeserver, worker-0, worker-1, prod-vm, entw-vm und die Kiosk-Pis (alarmmonitor, infotafel) über `banana-pi-kiosks.yml` und `xibo-kiosks.yml` (Tag `ssh-hardening`, `make ssh-hardening`). Auf dem Alarmmonitor stand
+  zuvor `PermitRootLogin yes` und Passwort-Login in der Hauptdatei hinter dem `Include`: Das Drop-in gewinnt trotzdem, weil der `Include` oben steht. Der Alarmmonitor hängt nur am Tailnet und hat keinen LAN-Fallback, ein Reboot ist
+  unzuverlässig ([banana_pi_kiosk](#banana_pi_kiosk-vereinsheim-alarmmonitor)). Ein Fehler hieße Besuch vor Ort: Änderungen dort immer mit Rollback-Timer und geöffneter zweiter Sitzung.
+- **Schlüssel mit `command=` nie zum Testen aufrufen.** Der Schlüssel des `cluster-power-manager` ist auf den Workern fest auf `sudo poweroff` gesetzt, ein Testaufruf mit beliebigem Befehl fährt den Worker herunter
+  ([20020](../2-betrieb-hardware/20020-cluster-power-manager.md)). Den Dienstweg belegt man über „Accepted publickey“ im Journal bei einem natürlichen Lauf, nicht durch einen eigenen Aufruf.
+- **Änderungen an `sshd` mit Netz:** Kopie von `/etc/ssh`, Rollback-Timer (`systemd-run --on-active=… sh -c 'rm -f …/00-hardening.conf && systemctl reload ssh'`), eine zweite Sitzung offen halten, in einer neuen testen, erst dann den Timer stoppen.
 
 ### vaultwarden_restore
 

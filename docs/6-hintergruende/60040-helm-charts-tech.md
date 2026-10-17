@@ -269,6 +269,9 @@ weil ein Ausfall des Clusters (und damit kein Anruf) bewusst in Kauf genommen wi
 - **`HC_PING_URL` ist ein optionaler Schlüssel** (`secretKeyRef.optional: true`): Ohne ihn läuft der Caller ohne healthchecks.io.
 - Der Pod findet VictoriaMetrics über den Service-Namen (`config.vmUrl`), die Kontext-Abfragen der Paging-Regeln laufen also nur, solange VictoriaMetrics läuft.
 - Registrierung: `alert-caller` steht in `argocd_platform_apps` und `argocd_network_policy_refined_namespaces` (`ansible/roles/argocd/defaults/main.yml`), `argocd/bootstrap/projects.yaml` wird mit `make render-bootstrap` erzeugt. Die Tier-Policy aus `make argocd` greift nicht auf den Pod, weil er im Host-Netzwerk läuft.
+- **`caller.py` kommt über die ConfigMap, nicht über das Image** (`.Files.Get "src/caller.py"` mit `checksum/script` am Deployment). Eine Code-Änderung braucht deshalb nur einen Merge, keinen Image-Build.
+- **Zugriffsschutz:** `ALERT_CALLER_TOKEN` kommt aus dem SealedSecret `alert-caller-secrets` (`optional: true`, der Pod startet auch ohne Schlüssel), `ALERT_CALLER_AUTH_MODE` aus `config.auth.mode` (`log` oder `enforce`). Ablauf und Gründe:
+  [10020](../1-benachrichtigungen/10020-telefon-alarm.md#zugriffsschutz-token). `hostNetwork` bleibt: SIP/ICE und der RTP-Bereich `10000`–`10100` laufen direkt auf dem Host, und eine NetworkPolicy greift dort nicht.
 
 ### mediamtx
 
