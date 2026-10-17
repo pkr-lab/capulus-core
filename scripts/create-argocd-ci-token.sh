@@ -4,12 +4,12 @@ set -euo pipefail
 target=${1:-}
 case "$target" in
   hub)
-    url=http://192.168.178.94:30080
+    url=https://argocd.tech.homeserver
     secret=ARGOCD_HUB_TOKEN
     admin_pw() { kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; }
     ;;
   entw)
-    url=http://192.168.178.100:30080
+    url=https://argocd.dev.homeserver
     secret=ARGOCD_ENTW_TOKEN
     admin_pw() {
       ssh -o BatchMode=yes ubuntu@192.168.178.100 \
