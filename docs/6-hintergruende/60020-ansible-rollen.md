@@ -312,6 +312,25 @@ bleibt für CLI und CI: Die Promotion-Kette und der Tailscale-Runner greifen auf
 ([f00b0](../f-cicd-automatisierung/f00b0-promotion-chain.md)). Er ist nur aus LAN und Tailnet erreichbar. Die Freigabe stand früher nur
 von Hand in UFW und nicht im Repo, ein Neuaufbau hätte die CI stillgelegt, deshalb steht sie jetzt in der Rolle `common`.
 
+### ssh_hardening
+
+- **Das Drop-in heißt `00-hardening.conf`, nicht `99-…`.** `sshd` übernimmt für jedes Schlüsselwort den **ersten** gefundenen Wert, und `Include /etc/ssh/sshd_config.d/*.conf` steht oben in der Hauptdatei. Die cloud-init-Datei
+  `50-cloud-init.conf` setzt `PasswordAuthentication yes`. Ein Drop-in mit höherer Nummer würde übersteuert und nichts bewirken. Die Rolle prüft deshalb nach dem Ablegen mit `sshd -T`, ob die neuen Werte tatsächlich gelten
+  (`passwordauthentication no`, `permitrootlogin no`, `allowagentforwarding no`), und bricht sonst ab.
+- **Ablauf mit Selbstschutz:** Drop-in ablegen, `sshd -t`, `sshd -T` prüfen, dann `systemctl reload ssh`. Schlägt einer der Schritte fehl, entfernt die Rolle das Drop-in wieder und lädt **nicht** neu, damit ein späterer Neustart nicht
+  mit einer kaputten Konfiguration anläuft. Nie `restart`: Ubuntu startet `sshd` per Socket-Aktivierung (`ssh.socket`), ein Reload behält laufende Sitzungen.
+- **Werte:** `PermitRootLogin no`, `PasswordAuthentication no`, `KbdInteractiveAuthentication no`, `MaxAuthTries 4`, `LoginGraceTime 20`, `X11Forwarding no`, `AllowAgentForwarding no`, `AllowTcpForwarding no`. Vier statt drei Versuche, weil ein
+  Agent mit mehreren Schlüsseln und die Standard-Identitäten schon drei Fehlversuche erzeugen können („Too many authentication failures“). `AllowTcpForwarding no` bricht `ssh -L`, `-D`, `ProxyJump` und VS-Code-Remote: Wer das braucht,
+  setzt `ssh_hardening_allow_tcp_forwarding: true` in den `host_vars`.
+- **Wer sich anmeldet:** Auf keinem Host liegt ein Schlüssel für `root`, und alle Dienste (Semaphore, `cluster-power-manager`, der n8n-Trigger, Ansible) melden sich als `ubuntu` per Schlüssel an. Die Vault-Dateien enthalten nur
+  `become`-Passwörter (sudo). Die Härtung ändert nichts an der Schlüssel-Anmeldung.
+- **Neue Hosts:** Den Schlüssel vor dem ersten Rollenlauf hinterlegen (`ssh-copy-id`, siehe [a0020](../a-betriebssystem/a0020-prerequisites.md)), sonst sperrt sich der Admin mit dem Rollenlauf selbst aus.
+- **Aufgenommen sind** homeserver, worker-0, worker-1, prod-vm und entw-vm (Tag `ssh-hardening`, `make ssh-hardening`). **Nicht aufgenommen sind die Kiosk-Pis** (alarmmonitor, infotafel): Der Alarmmonitor hat keinen LAN-Fallback und einen
+  unzuverlässigen Reboot, ein Fehler hieße Besuch vor Ort. Sie stehen noch auf Passwort-Login, der Alarmmonitor zusätzlich auf `PermitRootLogin yes` (Incident 009).
+- **Schlüssel mit `command=` nie zum Testen aufrufen.** Der Schlüssel des `cluster-power-manager` ist auf den Workern fest auf `sudo poweroff` gesetzt, ein Testaufruf mit beliebigem Befehl fährt den Worker herunter
+  ([20020](../2-betrieb-hardware/20020-cluster-power-manager.md)). Den Dienstweg belegt man über „Accepted publickey“ im Journal bei einem natürlichen Lauf, nicht durch einen eigenen Aufruf.
+- **Änderungen an `sshd` mit Netz:** Kopie von `/etc/ssh`, Rollback-Timer (`systemd-run --on-active=… sh -c 'rm -f …/00-hardening.conf && systemctl reload ssh'`), eine zweite Sitzung offen halten, in einer neuen testen, erst dann den Timer stoppen.
+
 ### vaultwarden_restore
 
 Die Rolle stellt `db.sqlite3`, `rsa_key.pem`, Attachments und Sends aus der `vaultwarden-backup`-PVC (nachts vom Backup-CronJob auf

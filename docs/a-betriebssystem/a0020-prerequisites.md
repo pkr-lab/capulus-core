@@ -76,6 +76,9 @@ ssh -i ~/.ssh/id_ed25519 ubuntu@192.168.1.100 "echo 'SSH-Key-Login funktioniert'
 Liegt der Private Key woanders, in `ansible/inventory/hosts.yml` entsprechend
 `ansible_ssh_private_key_file` anpassen.
 
+Der Schlüssel-Login ist die einzige Anmeldeart: Die Rolle `ssh_hardening` schaltet Passwort-Login und `root`-Login auf homeserver, Workern, prod-vm und entw-vm ab
+([60020](../6-hintergruende/60020-ansible-rollen.md#ssh_hardening)). Der Schlüssel muss deshalb **vor** dem ersten Lauf der Rolle auf dem Host liegen.
+
 ### Python 3 auf dem Server
 
 Ubuntu 26.04 bringt Python 3.12 mit:
