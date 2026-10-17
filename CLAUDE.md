@@ -8,6 +8,7 @@ GitOps-Homelab: Ansible provisioniert Ubuntu-Hosts und drei k3s-Cluster (TECH, P
 ## Harte Regeln
 
 - **Keine Kommentare im Code.** Gilt für YAML, Helm-Templates, Ansible, Shell, Python, Go, TS, Swift, Workflows.
+  Einzige Ausnahme: der Versions-Kommentar `# vX.Y.Z` hinter der Commit-SHA in `uses:`-Zeilen der Workflows (Renovate und Dependabot lesen ihn).
   Begründungen, Fallstricke und Vorfall-Regeln gehören im **selben PR** in das passende Doc unter
   `docs/6-hintergruende/` (Zuordnung Pfad → Doc: `docs/6-hintergruende/60000-uebersicht.md`, Tabelle „Von der Datei zum Eintrag“).
 - **Jede Codeänderung bekommt Doku unter `docs/`.** Fach-Doc (was/wie) in der passenden Kategorie aktualisieren oder
