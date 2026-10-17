@@ -82,7 +82,7 @@ siehe [c0040](../c-netzwerk-dns/c0040-domain-tiers.md#dns-tier-und-cluster-sind-
 |---|---|
 | TECH | `kubectl` auf dem homeserver bzw. mit der kubeconfig vom homeserver ([a0030](a0030-installation.md#kubectl-von-der-control-machine)) |
 | PROD | `ssh ubuntu@192.168.178.99` und dort `sudo k3s kubectl …` (bzw. eine eigene kubeconfig von der prod-vm). Die Applications siehst du im **TECH**-Hub: `kubectl -n argocd get applications \| grep '^prod-'` |
-| ENTW | `ssh ubuntu@192.168.178.100 'sudo k3s kubectl …'`; eigene ArgoCD-UI auf `http://192.168.178.100:30080` |
+| ENTW | `ssh ubuntu@192.168.178.100 'sudo k3s kubectl …'`; eigene ArgoCD-UI auf `https://argocd.dev.homeserver` |
 
 Alle `kubectl -n <app> …`-Befehle in den App-Docs gelten für den Cluster, in dem die App läuft
 (siehe [Abschnitt 5](#5-app-matrix)).
@@ -106,7 +106,7 @@ flowchart TB
         E1["dnsmasq :53<br/>Split-DNS *.homeserver"]
         E2["Traefik :80/:443<br/>Ingress (je Cluster)"]
         E3["k3s-API :6443"]
-        E4["ArgoCD :30080"]
+        E4["ArgoCD (über Traefik :443)"]
         E5["CUPS :631<br/>IPP / AirPrint"]
     end
 
@@ -470,11 +470,10 @@ flowchart LR
 | 8472 | UDP | Flannel VXLAN | nur zwischen den TECH-Knoten |
 | 10250 | TCP | kubelet-API | nur zwischen den TECH-Knoten |
 | 30053 | TCP/UDP | Pi-hole NodePort | LAN |
-| 30080 | TCP | ArgoCD-Hub-API/CLI/CI (Klartext-HTTP; die Web-UI läuft per HTTPS über Traefik: `argocd.tech.homeserver`) | LAN + Tailnet |
 | 41641 | UDP | Tailscale/WireGuard | **ausgehend** ins Internet |
 
-Die Ports 80/443/6443 gelten je Cluster für dessen eigene IP (`.94`, `.99`, `.100`); ENTW bietet
-zusätzlich die ArgoCD-UI auf `:30080` (HTTP). Details je App: [c0030](../c-netzwerk-dns/c0030-port-uebersicht.md).
+Die Ports 80/443/6443 gelten je Cluster für dessen eigene IP (`.94`, `.99`, `.100`); ArgoCD (Hub und ENTW) hat
+keinen eigenen Port, UI und API laufen über Traefik auf `:443`. Details je App: [c0030](../c-netzwerk-dns/c0030-port-uebersicht.md).
 
 | Netz | CIDR |
 |---|---|
@@ -543,7 +542,7 @@ und Traefik-Logs und sperrt auffällige IPs per Firewall-Bouncer
 ZUGRIFF     LAN-Gerät      Tailscale-VPN      Internet (Cloudflare)      git push / PR
                |                 |                     |                    |
                v                 v                     v                    v
-EINTRITT   dnsmasq:53      Traefik:80/443      k3s-API:6443      ArgoCD:30080   CUPS:631
+EINTRITT   dnsmasq:53      Traefik:80/443      k3s-API:6443      CUPS:631
                                    |
                                    v
 SCHICHT 4  PROD:  Nextcloud  Immich  Paperless  Wiki.js  xibosignage  + wiki-docs-sync
