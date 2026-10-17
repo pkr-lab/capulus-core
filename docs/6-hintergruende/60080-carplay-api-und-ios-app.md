@@ -63,6 +63,19 @@ Der Verzeichnisname `carplay-api` ist historisch (aus der CarPlay-Vorversion), d
   Steuerungsebene und hat **keinen WoL-Pfad** (nur worker-0/worker-1 lassen sich wecken, [20020](../2-betrieb-hardware/20020-cluster-power-manager.md)). Sein Shutdown nimmt den ganzen Cluster samt dieser API mit,
   deshalb hat er einen zusätzlichen Bestätigungsschritt.
 
+### Abhängigkeiten und Schwachstellen (Incident 016, 2026-10-17)
+
+`carplay-api` hat nur `gin` als direkte Abhängigkeit, alles andere (`golang.org/x/net`, `x/crypto`, `x/text`, `x/sys`, `quic-go`) kommt indirekt über `gin` und steht in `go.mod` nur als `// indirect`.
+
+- **Zwei Quellen, zwei Stände.** Dependabot meldet nach den GitHub-Advisories, `govulncheck` nach der Go-Datenbank (vuln.go.dev) und nur für Code, den das Programm erreicht. Der Dependabot-PR hob
+  `x/net` auf 0.54.0 und `x/crypto` auf 0.52.0. `govulncheck` verlangte danach weiter `x/net` 0.60.0 und `x/text` 0.39.0, also wurde nachgezogen. Beide Werkzeuge laufen nebeneinander.
+- **Die Mindestversionen müssen zueinander passen.** `go get` mit den Zahlen aus der Meldung scheiterte: `x/net` 0.60.0 verlangt `x/crypto` 0.57.0, und `x/crypto` 0.55.0 verlangt `x/text` 0.41.0.
+  Es genügt, nur `x/net@v0.60.0` und `quic-go@v0.59.1` anzufordern, Go zieht den Rest auf die kleinste konsistente Menge (`x/crypto` 0.57.0, `x/sys` 0.48.0, `x/text` 0.42.0).
+- **Die `go`-Direktive in `go.mod` steigt dabei auf 1.26.0**, weil `x/net` 0.60.0 sie verlangt. Die CI nimmt `go-version: stable` und das Dockerfile `golang:1.27-alpine`, beides erfüllt das.
+- **Prüfen:** `cd argocd/apps/tech/carplay-api/src && govulncheck ./...` muss „No vulnerabilities found“ melden, dazu `go build ./... && go vet ./... && go test ./... && go mod tidy -diff`
+  (der Dienst hat noch keine Unit-Tests, `go test` übersetzt nur). `govulncheck` installiert man mit `go install golang.org/x/vuln/cmd/govulncheck@latest`.
+- **Dependabot-Folge-PRs** für einzelne Pakete (z. B. `x/net` 0.55.0) sind nach einem Bump auf eine höhere Version überholt und werden geschlossen.
+
 ### Datenquellen und ihre Eigenheiten
 
 | Quelle | Hintergrund |
