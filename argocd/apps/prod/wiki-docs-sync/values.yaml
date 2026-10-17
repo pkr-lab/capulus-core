@@ -57,3 +57,7 @@ resources:
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
+networkPolicy:
+  enabled: true
+  extraIngressNamespaces: []
