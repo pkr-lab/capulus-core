@@ -44,6 +44,14 @@ ingress:
           pathType: Prefix
   tls: []
 
+adminRestriction:
+  enabled: true
+  hosts:
+    - vault-tech.pke-lab.de
+  sourceRange:
+    - 192.168.178.0/24
+    - 100.64.0.0/10
+
 persistence:
   enabled: true
   storageClassName: local-path
