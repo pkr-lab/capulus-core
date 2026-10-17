@@ -518,8 +518,9 @@ zusätzlich die ArgoCD-UI auf `:30080` (HTTP). Details je App: [c0030](../c-netz
 ## 11. Sicherheitsmodell in einem Absatz
 
 Kein eingehender Port aus dem Internet. Fernzugriff läuft über Tailscale, öffentliche Dienste
-ausschließlich über ausgehende Cloudflare-Verbindungen. UFW erlaubt 22, 53, 80, 443, 631, 6443
-und 30080 nur im LAN und im Tailnet, nach außen nur 41641/UDP. Die drei Cluster sind getrennt:
+ausschließlich über ausgehende Cloudflare-Verbindungen. UFW auf dem homeserver lässt aus dem LAN nur 22, 53, 6443, 631 und 6566 durch (Worker, NAS, prod-vm und entw-vm dürfen alles),
+aus dem Tailnet entscheidet allein die Tailscale-ACL (Tailscale nimmt den Verkehr auf `tailscale0` vor UFW an). Für alle Quellen offen sind 22, 80, 443 und die VPN-Ports
+41641/UDP, 443/UDP und 51888/UDP. NodePorts und LoadBalancer laufen an UFW vorbei ([c0030](../c-netzwerk-dns/c0030-port-uebersicht.md)). Die drei Cluster sind getrennt:
 eigene Pod-/Service-Netze, eigene SealedSecrets-Schlüssel, PROD und ENTW als KVM-VMs mit
 Hypervisor-Grenze zum jeweiligen Host, und ENTW bekommt bewusst keine Route zu TECH/PROD und keinen
 ArgoCD-Zugriff vom Hub. ArgoCD hat ausschließlich Leserechte auf das Git-Repo. Innerhalb von ArgoCD
