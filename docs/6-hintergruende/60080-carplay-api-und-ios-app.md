@@ -56,7 +56,7 @@ Der Verzeichnisname `carplay-api` ist historisch (aus der CarPlay-Vorversion), d
     nötig). Stattdessen wird er **manuell auf denselben Wert wie das aktuelle ArgoCD-Admin-Passwort** gesetzt ([b0010](../b-kubernetes-gitops/b0010-argocd.md)) und bei jeder Passwort-Rotation erneuert
     (`echo -n "<passwort>" | kubeseal --raw --namespace carplay-api --name carplay-api-shutdown-code --cert … --from-file=/dev/stdin`). Bleibt es `enabled: false`, blockiert `POST /api/power/shutdown` für
     `target=homeserver` mit 503, statt einen leeren Code stillschweigend zu akzeptieren.
-  - Ein ntfy-Zugriffstoken ist nur nötig, falls ntfy von `auth-default-access: read-write` auf `deny-all` umgestellt wird.
+  - Das ntfy-Zugriffstoken (`secrets.ntfyToken`, Nutzer `reader`, nur Lesen) wird mit `scripts/seal-ntfy-tokens.sh` versiegelt. Ohne Token liest carplay-api nur, solange ntfy `auth-default-access: read-write` hat; mit `deny-all` liefert der ntfy-Teil des Dashboards sonst einen Fehler im Body.
 - **power-agent:** Ein privilegierter Dienst direkt auf dem Homeserver ([60020](60020-ansible-rollen.md#power_agent)). Der Pod hat bewusst **keinen** Host-Zugriff (sysfs-Backlight, `sudo poweroff`, SSH-Key des
   `cluster_power_manager`), deshalb wird jede Helligkeits-/Wake-/Shutdown-Anfrage über das LAN an den Agenten weitergereicht, authentifiziert mit dessen eigenem Token. Der `PowerHandler` gibt den vom
   Agenten gemeldeten Statuscode zurück, damit z. B. ein nicht erreichbarer Homeserver-Bildschirm als echter Fehler in der App ankommt statt als irreführendes 200. Der Homeserver ist die dauerhaft laufende
