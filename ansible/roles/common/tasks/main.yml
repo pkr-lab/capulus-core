@@ -185,12 +185,14 @@
     proto: tcp
     comment: "HTTPS Traefik ingress"
 
-- name: Allow k3s API server (port 6443)
+- name: k3s-api (6443) nur von den freigegebenen quellen erlauben
   community.general.ufw:
     rule: allow
     port: "6443"
     proto: tcp
-    comment: "k3s Kubernetes API"
+    src: "{{ item }}"
+    comment: "k3s API ({{ item }})"
+  loop: "{{ common_ufw_k3s_api_sources }}"
 
 - name: Allow ArgoCD NodePort HTTP (port 30080) from LAN and Tailnet only
   community.general.ufw:
@@ -225,19 +227,27 @@
     proto: udp
     comment: "Tailscale WireGuard VPN"
 
-- name: Allow Flannel VXLAN overlay network (UDP 8472)
+- name: flannel-vxlan (udp 8472) und kubelet (10250) nur aus dem lan erlauben
   community.general.ufw:
     rule: allow
-    port: "8472"
-    proto: udp
-    comment: "Flannel VXLAN pod overlay network"
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    src: "{{ local_subnet }}"
+  loop:
+    - {port: "8472", proto: udp}
+    - {port: "10250", proto: tcp}
+  when: common_ufw_lan_allow_all | bool
 
-- name: Allow kubelet API (port 10250)
+- name: offene k3s-regeln für alle quellen entfernen (6443, 10250, 8472)
   community.general.ufw:
     rule: allow
-    port: "10250"
-    proto: tcp
-    comment: "k3s kubelet API"
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    delete: true
+  loop:
+    - {port: "6443", proto: tcp}
+    - {port: "10250", proto: tcp}
+    - {port: "8472", proto: udp}
 
 - name: Allow all traffic from k3s pod CIDR
   community.general.ufw:
@@ -256,12 +266,46 @@
     rule: allow
     src: "{{ local_subnet }}"
     comment: "Local LAN subnet access"
+  when: common_ufw_lan_allow_all | bool
 
 - name: Allow all traffic from Tailscale network
   community.general.ufw:
     rule: allow
     src: "100.64.0.0/10"
     comment: "Tailscale VPN network"
+  when: common_ufw_tailnet_allow_all | bool
+
+- name: infrastruktur-hosts mit vollzugriff erlauben
+  community.general.ufw:
+    rule: allow
+    src: "{{ item }}"
+    comment: "Infrastruktur-Host (Vollzugriff)"
+  loop: "{{ common_ufw_trusted_hosts }}"
+  when: not (common_ufw_lan_allow_all | bool)
+
+- name: dienste für das lan freigeben
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    src: "{{ local_subnet }}"
+    comment: "{{ item.comment }}"
+  loop: "{{ common_ufw_lan_services }}"
+  when: not (common_ufw_lan_allow_all | bool)
+
+- name: pauschale lan-regel entfernen
+  community.general.ufw:
+    rule: allow
+    src: "{{ local_subnet }}"
+    delete: true
+  when: not (common_ufw_lan_allow_all | bool)
+
+- name: pauschale tailnet-regel entfernen
+  community.general.ufw:
+    rule: allow
+    src: "100.64.0.0/10"
+    delete: true
+  when: not (common_ufw_tailnet_allow_all | bool)
 
 - name: Enable UFW
   community.general.ufw:

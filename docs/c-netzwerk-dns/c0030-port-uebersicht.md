@@ -99,14 +99,16 @@ alles an Traefik weiter (`argocd/apps/tech/cloudflared/values.yaml` bzw.
 | MediaMTX Publish (RTSP) | 8554 | NodePort `homeserver:31554` | s.o., nur LAN/Tailnet |
 | MediaMTX WebRTC | 8889 | Nur ClusterIP intern | Kein eigener Ingress-Host, wird intern vom HLS-Player-Frontend genutzt |
 | MediaMTX API | 9997 | Nur ClusterIP intern | Kein externer Zugriff |
-| ArgoCD-Hub (CLI/CI) | 30080 (HTTP) | NodePort `homeserver:30080` | **Klartext** (`server.insecure`), UFW nur für LAN, Tailnet und WireGuard-Notzugang. `https://…:30443` funktioniert nicht (Klartext-Port), keine UFW-Freigabe mehr. Die Web-UI läuft per HTTPS über Traefik: `argocd.tech.homeserver` |
+| ArgoCD-Hub (CLI/CI) | 30080 (HTTP) | NodePort `homeserver:30080` | **Klartext** (`server.insecure`). Die UFW-Regeln für `30080` (LAN, Tailnet, WireGuard-Notzugang) greifen bei NodePorts nicht, siehe unten. `https://…:30443` funktioniert nicht (Klartext-Port), keine UFW-Freigabe mehr. Die Web-UI läuft per HTTPS über Traefik: `argocd.tech.homeserver` |
 | ArgoCD ENTW | 80 | NodePort `entw-vm:30080` (HTTP, `server.insecure`) | Eigene Instanz, Zugriff aus dem LAN, siehe [b0050](../b-kubernetes-gitops/b0050-entw-argocd.md#argocd-oberfläche) |
 | Tailscale (SSH/Admin) | — | Tailnet-IP des Nodes | Siehe [docs/c-netzwerk-dns/c0010-tailscale.md](c0010-tailscale.md) |
 | WireGuard Backup-VPN | UDP, `wireguard_backup_port` (Default 51888) | Router-Portforward → Homeserver-LAN-IP | Notfall-Fallback falls Tailscale ausfällt, genau 1 Peer, kein LAN-Routing. Siehe [docs/c-netzwerk-dns/c0011-wireguard-backup.md](c0011-wireguard-backup.md) |
 
-NodePorts sind laut bestehenden UFW-Regeln bereits auf LAN/Tailnet beschränkt
-(siehe README.md#networking--security) — keine zusätzliche Firewall-Änderung
-nötig, wenn ein neuer NodePort in diesem Bereich dazukommt.
+**NodePorts und LoadBalancer laufen an UFW vorbei.** Der Verkehr wird in `PREROUTING` auf den Pod umgeschrieben und läuft dann durch die
+`FORWARD`-Kette, wo `KUBE-ROUTER-FORWARD` und `KUBE-FORWARD` ihn vor UFW annehmen. Die UFW-Regeln für `80`, `443` und `30080` hatten über Wochen 0 Treffer
+(belegt am 2026-10-17). Beschränkt wird ein NodePort deshalb nur dadurch, dass die Node-IP nur aus dem LAN und über die Tailscale-Subnet-Route erreichbar
+ist, und durch die NetworkPolicies im Ziel-Namespace. Ein neuer NodePort braucht keine UFW-Regel, sie würde auch nichts bewirken. UFW wirkt nur auf Dienste, die
+direkt auf dem Host lauschen (SSH, DNS, CUPS, SANE, k3s-API, Exporter).
 
 ---
 
