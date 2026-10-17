@@ -4,6 +4,10 @@ power_agent_enabled: true
 
 power_agent_port: 9101
 
+power_agent_bind_address: "0.0.0.0"
+
+power_agent_known_hosts_path: /etc/power-agent/known_hosts
+
 power_agent_token_path: /etc/power-agent/token
 
 power_agent_backlight_path: /sys/class/backlight/intel_backlight/brightness

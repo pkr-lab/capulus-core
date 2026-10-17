@@ -8,6 +8,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 TOKEN = os.environ["TOKEN"]
 PORT = int(os.environ.get("PORT", "9102"))
+BIND_ADDRESS = os.environ.get("BIND_ADDRESS", "0.0.0.0")
+MAX_BODY = 4096
+REQUEST_TIMEOUT = 10
 WOL_SCRIPT = os.environ.get("WOL_SCRIPT", "/usr/local/bin/banana-pi-wol.sh")
 ALIASES = {a for a in os.environ.get("ALIASES", "").split(",") if a}
 
@@ -18,6 +21,7 @@ def log(msg):
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "banana-pi-wol-agent/1.0"
+    timeout = REQUEST_TIMEOUT
 
     def _authorized(self):
         header = self.headers.get("Authorization", "")
@@ -35,7 +39,12 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _read_json_body(self):
-        length = int(self.headers.get("Content-Length", "0") or "0")
+        try:
+            length = int(self.headers.get("Content-Length", "0") or "0")
+        except ValueError:
+            return None
+        if length < 0 or length > MAX_BODY:
+            return None
         if length == 0:
             return {}
         raw = self.rfile.read(length)
@@ -69,8 +78,8 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
-    log(f"listening on :{PORT}, aliases={sorted(ALIASES)}")
+    server = ThreadingHTTPServer((BIND_ADDRESS, PORT), Handler)
+    log(f"listening on {BIND_ADDRESS}:{PORT}, aliases={sorted(ALIASES)}")
     server.serve_forever()
 
 
