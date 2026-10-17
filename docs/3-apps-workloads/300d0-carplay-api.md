@@ -61,7 +61,8 @@ kein Host-Zugriff). Stattdessen proxied carplay-api jede
 Helligkeits-/Wake-/Shutdown-Anfrage an **power-agent**
 (`ansible/roles/power_agent`), einen kleinen privilegierten HTTP-Daemon,
 der direkt auf dem nackten Homeserver-Host läuft (systemd-Service, NICHT
-im Cluster) und:
+im Cluster), ist aus Pods über die Adresse der Bridge `cni0` des homeservers
+(`POWER_AGENT_URL=http://10.42.2.1:9101`) erreichbar und:
 
 - die Bildschirmhelligkeit über `/sys/class/backlight/intel_backlight/`
   liest/schreibt (HP ProBook 450 G9, siehe `docs/a-betriebssystem/a0010-overview.md`),
