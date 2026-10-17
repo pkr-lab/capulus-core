@@ -33,3 +33,4 @@ common_ufw_trusted_hosts:
 common_ufw_lan_services:
   - {port: "631", proto: tcp, comment: "CUPS (LAN)"}
   - {port: "6566", proto: tcp, comment: "SANE (LAN)"}
+power_agent_bind_address: "10.42.2.1"
