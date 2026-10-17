@@ -4,6 +4,10 @@ alert_caller_enabled: true
 
 alert_caller_port: 9310
 
+alert_caller_token: "{{ vault_alert_caller_token | default('') }}"
+
+alert_caller_auth_mode: log
+
 alert_caller_install_dir: /opt/alert-caller
 alert_caller_config_dir: /etc/alert-caller
 alert_caller_baresip_dir: /etc/alert-caller/baresip

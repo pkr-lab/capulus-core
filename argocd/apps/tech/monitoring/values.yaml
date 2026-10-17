@@ -73,6 +73,8 @@ victoria-metrics-k8s-stack:
     enabled: true
     spec:
       replicaCount: 1
+      secrets:
+        - alert-caller-token
     config:
       route:
         receiver: blackhole
@@ -111,12 +113,24 @@ victoria-metrics-k8s-stack:
           webhook_configs:
             - url: 'http://alert-caller.alert-caller.svc.cluster.local:9310/watchdog'
               send_resolved: false
+              http_config:
+                authorization:
+                  type: Bearer
+                  credentials_file: /etc/vm/secrets/alert-caller-token/token
             - url: 'http://100.123.214.4:9310/watchdog'
               send_resolved: false
+              http_config:
+                authorization:
+                  type: Bearer
+                  credentials_file: /etc/vm/secrets/alert-caller-token/token
         - name: phone
           webhook_configs:
             - url: 'http://alert-caller.alert-caller.svc.cluster.local:9310/alert'
               send_resolved: false
+              http_config:
+                authorization:
+                  type: Bearer
+                  credentials_file: /etc/vm/secrets/alert-caller-token/token
         - name: ntfy
           webhook_configs:
             - url: 'http://ntfy-bridge.ntfy-bridge.svc.cluster.local:8080/alert'
@@ -295,6 +309,11 @@ victoria-metrics-k8s-stack:
     enabled: false
   kubeEtcd:
     enabled: false
+
+alertCallerToken:
+  enabled: true
+  secretName: alert-caller-token
+  encryptedData: "AgBaGIhkH0woesOnHmm5edJZtO/UMFfibeFXcxT92J75EJo/hcObt6LXd/Ppjt3ecXv4KnWPNW2+CctS043LkNtScm/HS9YxM4xu3sDJv4s8WXXuNuZEAwvardCbEjivE6dEWnIxzJbHmsUj9DOL+NjFEmWGGPuWNUXeQ/jxVyUpB7FRnhV589WjoBuoYEGf/EcBkzNanRad6kQddZqkKaeIJu+9SvdVbR/bIFlCP8k2RBBKesFloijM147uDoRR3Rg9QgZJ1eZsYtr4BqzIbmCo50BhOUTqzDtOK+L6Kpxf7SCTcDvj0Xtqlrjincq6j1tdQj8FI6kfe5nTZ06w5g/AreHQLaICWIbq/jJ9VLIASWbXTu7PHpozc2sLhQbH89h6+mgLbv+lXPmSLuzzrGt/kU7R3tZtNWKoGyycUwYDVVGGcEZ/RiZSR2bV6yrsePACAvFwh8Iu5S61DgeE3Zuu0aJeX5J8JZ7fjq88q/91tiHdImFMeOrf3+ZljTyoVcdaSWLA3TocNlNuCrDDsL3y1Wk3cB4PbdDjjVgA5QBDJ3ifWyI2JYfve3/rs1h4aF1Zs2M0KnZ+R1Y3+egNtgY9+ZOwvyqbu5nYpX4UEN/vqFr0+aBgYKfmFQTuGfCHqmXnvQH+clTfXynjVq/26ykdRVz0CXIGTzUkpZ2UlqeFSfz36FS0SKQmZuvSfDLk4C9PkiezrGzi6a1CcpqCvO3mKkSIPQZ0WiHim5yJHugHnoyL0SUl4MDLDppU/SexpjopUe8OojbzAPB1Nt4P9Dno"
 
 dashboardApps:
   - { name: alamos-apager, namespace: alamos-apager, folder: "Anwendungen (TECH)", hasIngress: true }
