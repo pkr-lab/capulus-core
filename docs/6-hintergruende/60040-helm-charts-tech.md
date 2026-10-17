@@ -409,6 +409,11 @@ Update-Strategie und Readiness (seit dem Vorfall [50020](../5-incidents/50020-pi
 - Die Sicherung läuft **vor** dem täglichen restic-Lauf des NAS (02:00 Uhr), damit dieser eine frische Kopie snapshotet. `db.sqlite3` läuft im
   WAL-Modus, eine einfache Dateikopie wäre inkonsistent, deshalb `sqlite3 .backup` (SQLites Online-Backup-API, sicher gegen einen parallel
   schreibenden Prozess). Die übrigen Dateien (`rsa_key.pem`, Attachments, Sends) gehen per `rsync`. Ziel ist eine eigene, kleine PVC.
+- **`/admin` ist auf dem öffentlichen Host gesperrt** (`adminRestriction`, Ingress `vaultwarden-admin` plus Middleware `vaultwarden-admin-nur-intern`). Der Admin-Token ist der einzige Schutz
+  der Oberfläche, und Vaultwarden hat für `/admin` kein eigenes Lockout. Der Pfad `/admin` am Host `vault-tech.pke-lab.de` ist länger als `/` und gewinnt deshalb die Router-Priorität, der
+  interne Host `vault.tech.homeserver` bleibt unverändert. Die Middleware nutzt die Quelladresse des Verbindungsaufbaus (kein `ipStrategy.depth`): `X-Forwarded-For` kann der Client selbst setzen
+  und würde die Sperre aushebeln. Anfragen durch den Cloudflare-Tunnel kommen von der cloudflared-Pod-IP und sind damit nie im erlaubten Bereich. **Fehlerbild:** Fehlt die Middleware oder stimmt
+  der Name in der Annotation nicht, verwirft Traefik den Router stillschweigend, und `/admin` ist wieder offen (fail-open), nach jeder Änderung deshalb von außen testen.
 - `domain` ist die öffentliche Basis-URL und wird für Links (E-Mails, Icons) und den U2F/WebAuthn-Origin-Check genutzt, sie muss zur
   extern erreichbaren Domain passen. Seit Vaultwarden 1.30 läuft der Websocket auf demselben Port wie die HTTP-API. Die Registrierung steht
   fest auf `false` (Anlage bleibt über `/admin` möglich, der Server ist im Internet nicht dauerhaft offen für neue Nutzer), die öffentliche
