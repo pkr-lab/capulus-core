@@ -411,7 +411,7 @@ Update-Strategie und Readiness (seit dem Vorfall [50020](../5-incidents/50020-pi
   schreibenden Prozess). Die übrigen Dateien (`rsa_key.pem`, Attachments, Sends) gehen per `rsync`. Ziel ist eine eigene, kleine PVC.
 - **`/admin` ist auf dem öffentlichen Host gesperrt** (`adminRestriction`, Ingress `vaultwarden-admin` plus Middleware `vaultwarden-admin-nur-intern`). Der Admin-Token ist der einzige Schutz
   der Oberfläche, und Vaultwarden hat für `/admin` kein eigenes Lockout. Der Pfad `/admin` am Host `vault-tech.pke-lab.de` ist länger als `/` und gewinnt deshalb die Router-Priorität, der
-  interne Host `vault.tech.homeserver` bleibt unverändert. Die Middleware nutzt die Quelladresse des Verbindungsaufbaus (kein `ipStrategy.depth`): `X-Forwarded-For` kann der Client selbst setzen
+  interne Host `vault.tech.homeserver` bleibt unverändert. Traefik matcht `Prefix` als reinen String-Präfix, gesperrt ist also alles unter `/admin…` (auch `/administrator`), in Vaultwarden liegt dort keine Route. Die Middleware nutzt die Quelladresse des Verbindungsaufbaus (kein `ipStrategy.depth`): `X-Forwarded-For` kann der Client selbst setzen
   und würde die Sperre aushebeln. Anfragen durch den Cloudflare-Tunnel kommen von der cloudflared-Pod-IP und sind damit nie im erlaubten Bereich. **Fehlerbild:** Fehlt die Middleware oder stimmt
   der Name in der Annotation nicht, verwirft Traefik den Router stillschweigend, und `/admin` ist wieder offen (fail-open), nach jeder Änderung deshalb von außen testen.
 - `domain` ist die öffentliche Basis-URL und wird für Links (E-Mails, Icons) und den U2F/WebAuthn-Origin-Check genutzt, sie muss zur
