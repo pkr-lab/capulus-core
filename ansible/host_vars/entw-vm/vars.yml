@@ -15,6 +15,7 @@ argocd_repo_revision: entw
 argocd_entw_layout: true
 argocd_ingress_enabled: true
 argocd_ui_host: argocd.dev.homeserver
+argocd_server_nodeport_enabled: false
 argocd_platform_apps:
   - sealed-secrets
 argocd_workloads_apps:

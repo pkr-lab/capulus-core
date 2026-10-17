@@ -17,6 +17,7 @@ libvirt_host_vms:
 
 argocd_ingress_enabled: true
 argocd_ui_host: argocd.tech.homeserver
+argocd_server_nodeport_enabled: false
 
 common_ufw_lan_allow_all: false
 common_ufw_tailnet_allow_all: false
