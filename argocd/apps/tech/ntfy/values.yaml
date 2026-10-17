@@ -62,7 +62,7 @@ config:
   behind-proxy: true
   cache-file: /var/lib/ntfy/cache.db
   auth-file: /var/lib/ntfy/auth.db
-  auth-default-access: "read-write"
+  auth-default-access: "deny-all"
   attachment-cache-dir: /var/lib/ntfy/attachments
   attachment-file-size-limit: "5M"
   attachment-total-size-limit: "100M"
