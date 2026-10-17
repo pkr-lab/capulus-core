@@ -57,7 +57,7 @@ ausgeführt (dort gilt keine Runner-ACL, die Tailnet-Adresse filtert aber trotzd
 ```
 hub       100.74.0.59:443                    TCP zu/gefiltert  HTTP -    (nur Diagnose)
 hub-lan   argocd.tech.homeserver:443         TCP offen         HTTP 200  "Version":"v3.5.5"
-entw      argocd.dev.homeserver:443          TCP offen         HTTP 200  "Version":"<ENTW-Version>"
+entw      argocd.dev.homeserver:443          TCP offen         HTTP 200  "Version":"v3.5.5"
 smoke     192.168.178.100:80 (whoami.dev)    TCP offen         HTTP 200  (Smoke-Tests, optional)
 
 OK: hub-lan und entw erreichbar - die Promotion-Kette kann die Gates auswerten.
