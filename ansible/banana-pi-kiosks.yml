@@ -14,6 +14,8 @@
       tags: [journal-upload, logging]
     - role: banana_pi_kiosk
       tags: [banana-pi-kiosk, kiosk]
+    - role: ssh_hardening
+      tags: [ssh-hardening, security]
     - role: ntfy_publisher
       tags: [ntfy-publisher, thermal]
     - role: thermal_watchdog
