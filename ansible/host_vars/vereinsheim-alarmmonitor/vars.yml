@@ -3,3 +3,4 @@ hostname: vereinsheim-alarmmonitor
 banana_pi_kiosk_fallback_url: "{{ vault_vereinsheim_alarmmonitor_fallback_url }}"
 banana_pi_kiosk_wol_devices:
   windows-pc: "E4:54:E8:5F:23:85"
+banana_pi_kiosk_wol_agent_bind_address: "{{ ansible_host }}"

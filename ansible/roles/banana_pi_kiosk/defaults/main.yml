@@ -25,5 +25,6 @@ banana_pi_kiosk_wol_devices: {}
 
 banana_pi_kiosk_wol_agent_enabled: true
 banana_pi_kiosk_wol_agent_port: 9102
+banana_pi_kiosk_wol_agent_bind_address: "0.0.0.0"
 
 banana_pi_kiosk_wol_agent_token_path: /etc/banana-pi-wol-agent/token
