@@ -17,7 +17,7 @@ Eingaben:
   --status entw=datei.json / hub=datei.json   ArgoCD-Anwendungsliste (API-Antwort oder `kubectl get applications -o json`)
   --argocd entw=URL / hub=URL                 stattdessen live abfragen (Token in ARGOCD_ENTW_TOKEN / ARGOCD_HUB_TOKEN)
 Umgebung: PROMOTE_NOW (ISO-Zeit, fuer Tests), DRY_RUN=1 (keine `gh`-Aufrufe), AUTOMERGE_TECH,
-          SMOKE_IP_ENTW / SMOKE_IP_TECH, GITHUB_STEP_SUMMARY, GITHUB_OUTPUT, GITHUB_REPOSITORY.
+          SMOKE_IP_ENTW / SMOKE_IP_TECH, ARGOCD_CA_FILE (CA-Datei fuer https-URLs), GITHUB_STEP_SUMMARY, GITHUB_OUTPUT, GITHUB_REPOSITORY.
 """
 import argparse
 import json
@@ -371,8 +371,8 @@ def fetch_argocd(url: str, token: str):
         "?fields=items.metadata.name,items.status.health,items.status.sync.status,items.status.sync.revision",
         headers={"Authorization": f"Bearer {token}"},
     )
-    ctx = ssl._create_unverified_context() if url.startswith("https") else None  # noqa: SLF001 - internes Netz
     try:
+        ctx = ssl.create_default_context(cafile=os.environ.get("ARGOCD_CA_FILE") or None) if url.startswith("https") else None
         with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
             return index_items(json.load(resp))
     except (urllib.error.URLError, OSError, ValueError) as exc:
@@ -388,7 +388,7 @@ def sticky_issue(unreachable: list, dry: bool) -> None:
         gh("label", "create", "promotion-gate", "--color", "d93f0b", "--description", "Promotion-Kette blockiert", dry=dry, check=False)
         body = (
             f"ArgoCD nicht erreichbar: {', '.join(unreachable)}. Die Gates dieser Umgebung sind blockiert, es wird nichts "
-            "promotet. Pruefen: Tailscale-Verbindung/ACL, Token-Secrets, NodePort 30080 "
+            "promotet. Pruefen: Tailscale-Verbindung/ACL (tcp:443), Token-Secrets, Zertifikat und Host des ArgoCD-Ingress "
             "(docs/f-cicd-automatisierung/f00b0-promotion-chain.md#voraussetzungen). Schliesst sich selbst."
         )
         gh("issue", "create", "--label", "promotion-gate", "--title", title, "--body", body, dry=dry)
