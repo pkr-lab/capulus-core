@@ -31,12 +31,13 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
+      id-token: write
     env:
       PROMOTE_PAT: ${{ secrets.PROMOTE_TOKEN || secrets.RENOVATE_TOKEN }}
       ARGOCD_ENTW_TOKEN: ${{ secrets.ARGOCD_ENTW_TOKEN }}
       ARGOCD_HUB_TOKEN: ${{ secrets.ARGOCD_HUB_TOKEN }}
       TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-      TS_OAUTH_SECRET: ${{ secrets.TS_OAUTH_SECRET }}
+      TS_AUDIENCE: ${{ secrets.TS_AUDIENCE }}
     steps:
       - name: Konfiguration pruefen
         id: cfg
@@ -45,7 +46,7 @@ jobs:
           [ -n "$ARGOCD_ENTW_TOKEN" ] || missing="$missing ARGOCD_ENTW_TOKEN"
           [ -n "$ARGOCD_HUB_TOKEN" ] || missing="$missing ARGOCD_HUB_TOKEN"
           [ -n "$TS_OAUTH_CLIENT_ID" ] || missing="$missing TS_OAUTH_CLIENT_ID"
-          [ -n "$TS_OAUTH_SECRET" ] || missing="$missing TS_OAUTH_SECRET"
+          [ -n "$TS_AUDIENCE" ] || missing="$missing TS_AUDIENCE"
           [ -n "$PROMOTE_PAT" ] || missing="$missing PROMOTE_TOKEN/RENOVATE_TOKEN"
           if [ -n "$missing" ]; then
             echo "configured=false" >> "$GITHUB_OUTPUT"
@@ -54,7 +55,7 @@ jobs:
             echo "configured=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.cfg.outputs.configured == 'true'
         with:
           fetch-depth: 0
@@ -66,12 +67,12 @@ jobs:
 
       - name: Connect runner to tailnet
         if: steps.cfg.outputs.configured == 'true'
-        uses: tailscale/github-action@v4
+        uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4.2.0
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          audience: ${{ secrets.TS_AUDIENCE }}
           tags: tag:ci
-          version: latest
+          version: 1.104.1
 
       - name: Verify tailnet connection
         if: steps.cfg.outputs.configured == 'true'

@@ -15,7 +15,8 @@ Sicherheitsupdates.
 |---|---|---|
 | `argocd/apps/*/values.yaml` | `helm-values` | Image-Tags wie `vaultwarden/server:1.37.1` |
 | `argocd/apps/*/Chart.yaml` | `helmv3` | `dependencies[].version` (Subchart-Versionen) |
-| `.github/workflows/*.yml` | `github-actions` | `uses: actions/checkout@vX` |
+| `.github/workflows/*.yml` | `github-actions` | `uses: actions/checkout@<Commit-SHA> # vX.Y.Z` (gepinnt, Preset `helpers:pinGitHubActionDigests`) |
+| `.github/workflows/promote-chain.yml`, `tailscale-poc.yml` | `customManagers` (Regex) | Tailscale-Client hinter `tags: tag:ci` (`version: 1.104.1`), nur Stable-Releases |
 
 Config liegt in [`renovate.json`](../../renovate.json) im Repo-Root.
 
