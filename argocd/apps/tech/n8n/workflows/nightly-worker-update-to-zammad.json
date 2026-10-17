@@ -5,7 +5,8 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "nightly-worker-update",
-        "options": {}
+        "options": {},
+        "authentication": "headerAuth"
       },
       "id": "fd129f7d-ab01-4fbd-be06-298a61a010c1",
       "name": "Nightly Worker Update Webhook",
@@ -15,7 +16,13 @@
         224,
         -176
       ],
-      "webhookId": "nightly-worker-update"
+      "webhookId": "nightly-worker-update",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "UEvc7va6zJbdewvE",
+          "name": "Webhook nightly-worker-update"
+        }
+      }
     },
     {
       "parameters": {

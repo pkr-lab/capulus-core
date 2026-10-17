@@ -117,10 +117,11 @@ Bildschirmhelligkeit (sysfs), manuelles Wake-on-LAN und Poweroff für worker-0/w
   teilen manuelle Aktionen aus der App und der automatische Last-Watchdog dieselbe Buchführung (`woke_at`-Dateien), statt sich zu
   widersprechen.
 - UFW braucht **keine** neue Regel: „Allow all traffic from k3s pod CIDR“ (Rolle `common`) deckt Pod → Host ab, unabhängig davon, auf
-  welchem Node der carplay-api-Pod läuft (Flannel-Overlay). Das restliche LAN erreicht Port 9101 seit der Firewall-Umstellung nicht mehr
-  ([60010](60010-ansible-hosts-und-playbooks.md#firewall-ufw-rolle-common)). Offen bleiben die Infrastruktur-Hosts mit Vollzugriff und das Tailnet (Tailscale nimmt den Verkehr vor UFW an).
-  `power_agent_bind_address` legt fest, auf welcher Adresse der Agent lauscht (Standard `0.0.0.0`). Auf der Adresse der Pod-Bridge `cni0` des homeservers wäre er nur aus Pods erreichbar, das braucht aber
-  die gleichzeitig angepasste `powerAgent.url` in `carplay-api`.
+  welchem Node der carplay-api-Pod läuft (Flannel-Overlay).
+- **Der Agent lauscht nur auf der Adresse der Pod-Bridge `cni0` des homeservers** (`power_agent_bind_address: "10.42.2.1"` in `host_vars/homeserver`, das Pod-Netz `10.42.2.0/24` ist dem Node fest zugewiesen), `carplay-api` ruft
+  `http://10.42.2.1:9101` auf. Er ist damit weder aus dem LAN noch aus dem Tailnet noch von den Workern oder über `127.0.0.1` erreichbar, und der Token läuft nur über die Bridge des eigenen Nodes, nicht über das LAN. Das ersetzt HTTPS und
+  die Firewall-Freigabe für diesen Port. **Tests vom Host aus** gehen deshalb nur gegen `10.42.2.1`. **Beim Start nach einem Reboot** gibt es `cni0` erst, wenn die erste Pod-Sandbox angelegt ist: Bis dahin scheitert das Binden, und
+  `Restart=always` (`RestartSec=10`) probiert es alle zehn Sekunden erneut. **Ändert sich die Adresse** (Node neu registriert), startet der Agent nicht mehr: `ip -4 addr show cni0` prüfen, `power_agent_bind_address` und `powerAgent.url` in `carplay-api` angleichen.
 - **Hostschlüssel der Worker sind festgelegt.** Der Agent ruft `ssh` mit `StrictHostKeyChecking=yes` und `UserKnownHostsFile=/etc/power-agent/known_hosts` auf, nicht mehr mit `accept-new`. Die Rolle schreibt die Datei aus
   den Einträgen in `/root/.ssh/known_hosts` des homeservers (`ssh-keygen -F`), fehlt ein Worker dort, holt sie seinen `ed25519`-Schlüssel einmalig mit `ssh-keyscan` (so war es vorher bei der ersten Verbindung auch). Findet sie gar keine
   Schlüssel, lässt sie die Datei unverändert und warnt. **Fehlerbild:** Hat ein Worker einen neuen Hostschlüssel (Neuinstallation), scheitert der Poweroff über die App mit `Host key verification failed`. Dann den alten Eintrag aus
