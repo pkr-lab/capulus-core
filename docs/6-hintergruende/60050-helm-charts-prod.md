@@ -18,6 +18,13 @@ Die Datenmigration von TECH nach PROD steht in [60030](60030-argocd-und-bootstra
 - **SealedSecrets sind mit dem PROD-Schlüssel versiegelt**, nicht mit dem TECH-Schlüssel (`scripts/reseal-for-prod.sh`, siehe
   [60030](60030-argocd-und-bootstrap.md#sealedsecrets-fallstricke-beim-versiegeln)).
 - **Keine Node-Vorgabe.** TECH pinnt `local-path`-Apps auf `homeserver`, in PROD gibt es nur die `prod-vm`.
+- **NetworkPolicy `default-ingress` je App-Namespace** (`templates/networkpolicy.yaml`, Schalter `networkPolicy.enabled`). PROD hatte bis zum 2026-10-17 keine einzige Policy, ein kompromittierter Pod
+  erreichte jeden anderen Pod. Die Policy erlaubt Ingress nur aus dem eigenen Namespace, aus `kube-system` (Traefik) und aus den Namespaces in `networkPolicy.extraIngressNamespaces`. Anders als in TECH
+  fehlen `monitoring` (PROD hat keinen) und `cloudflared`: Der PROD-Tunnel ruft nur Traefik auf, nie einen App-Service direkt. In TECH war genau diese Annahme der Grund für den Tunnel-Ausfall vom
+  13.08.2026 ([d0030](../d-sicherheit/d0030-network-policies.md#incident-während-des-rollouts-cloudflare-tunnel-ausfall)). **Wer einen Pod hinzufügt, der einen anderen Namespace direkt aufruft** (wie
+  `wiki-docs-sync` → `wikijs`), trägt dessen Namespace im Ziel-Chart unter `extraIngressNamespaces` ein, sonst kommt der Aufruf ohne Fehlermeldung nicht an (Timeout). Nach jeder Änderung beide Wege testen:
+  den internen Host (`*.prod.homeserver`) und den öffentlichen über den Tunnel (`*.pke-lab.de`). Ohne Policy bleiben bewusst `kube-system`, `cert-manager` (der API-Server ruft den Webhook auf),
+  `sealed-secrets`, `cloudflared` und die beiden NFS-Provisioner.
 - **Externe Hosts** laufen über den eigenen PROD-Tunnel (`homeserver-prod`, [60040](60040-helm-charts-tech.md#cloudflared)). Bei der PROD-Kopie von
   `demo-app` fiel `demo-prod.pke-lab.de` vorerst weg, weil cloudflared `*.pke-lab.de` auf den Traefik in TECH routet und PROD (noch) nicht kannte.
 - PROD-Apps haben kein zentrales SSO, weder Authentik-Middleware noch -Outpost (beides im Oktober 2026 entfernt). Es schützt nur die eigene Anmeldung der App.
