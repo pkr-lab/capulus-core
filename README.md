@@ -159,7 +159,7 @@ ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --ask-vault-pas
 **Ergebnis:**
 
 ```
-ArgoCD UI:  https://argocd.tech.homeserver   (CLI/CI: http://<server-ip>:30080)
+ArgoCD UI:  https://argocd.tech.homeserver   (CLI/CI: argocd login argocd.tech.homeserver --grpc-web)
 Username:   admin
 Password:   <auto-generiert>
 ```
@@ -388,7 +388,7 @@ Jeder Hostname trägt ein Tier-Label (`tech` = Infrastruktur/Admin, `prod` = App
 |---|---|---|---|
 | Grafana | tech | TECH | https://grafana.tech.homeserver |
 | ArgoCD-Hub | – | TECH | https://argocd.tech.homeserver |
-| ArgoCD ENTW | – | ENTW | http://192.168.178.100:30080 |
+| ArgoCD ENTW | – | ENTW | https://argocd.dev.homeserver |
 | Headlamp | tech | TECH | https://headlamp.tech.homeserver |
 | Semaphore | tech | TECH | https://semaphore.tech.homeserver |
 | lldap (Nutzerverwaltung) | tech | TECH | https://lldap.tech.homeserver |
@@ -460,12 +460,11 @@ Jeder Hostname trägt ein Tier-Label (`tech` = Infrastruktur/Admin, `prod` = App
 | 443 | TCP | LAN + Tailnet | Traefik HTTPS |
 | 631 | TCP | LAN + Tailnet | CUPS (IPP/AirPrint) |
 | 6443 | TCP | LAN + Tailnet | k3s-API |
-| 30080 | TCP | LAN + Tailnet | ArgoCD-API/CLI/CI (HTTP, Klartext; die UI läuft per HTTPS über Traefik) |
 | 41641 | UDP | Internet | Tailscale-WireGuard |
 
 Die Regeln der `common`-Rolle gelten auch in `prod-vm` und `entw-vm` (dort jeweils mit den eigenen Pod-/Service-CIDRs).
 Zusätzlich lässt UFW jeden Verkehr aus dem LAN-Subnetz und dem Tailnet zu, deshalb ist z. B. die ArgoCD-UI der
-ENTW-VM (30080, HTTP) aus dem LAN erreichbar. Die vollständige Port-Übersicht je App steht in
+ENTW-VM (`https://argocd.dev.homeserver`) aus dem LAN erreichbar. Die vollständige Port-Übersicht je App steht in
 [docs/c-netzwerk-dns/c0030-port-uebersicht.md](docs/c-netzwerk-dns/c0030-port-uebersicht.md).
 
 </details>

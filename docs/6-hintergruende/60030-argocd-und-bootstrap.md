@@ -60,12 +60,25 @@ Sync (z. B. victoria-metrics-operator installiert die CRD `VMSingle` und ein `VM
   `ansible-playbook ansible/entw.yml --tags argocd`), `gh` ist als Repo-Admin angemeldet, und das Admin-Passwort ist über das Secret
   `argocd-initial-admin-secret` lesbar (sonst `ARGOCD_ADMIN_PASSWORD` setzen). `TOKEN_TTL_DAYS` (Standard 365) begrenzt die Laufzeit,
   alte Token bleiben bis zum Ablauf gültig.
-- **Web-UI und NodePorts:** ArgoCD läuft mit `server.insecure`. Beide NodePorts (30080/30443) sprechen Klartext-HTTP, `https://…:30443`
-  wird zurückgesetzt. Die Web-UI läuft per HTTPS über den Traefik-Ingress (internes Zertifikat, Host im SAN-Eintrag von
-  `certificate-homeserver-wildcard.yaml`). 30080 dient CLI und CI. Der Ingress ist **Wert der Rolle** (`argocd_ingress_enabled`,
-  `argocd_ui_host`), damit der tägliche Semaphore-Lauf (`helm upgrade`) ihn nicht zurückdreht. Standard aus: Die ENTW-Instanz hat keinen
-  eigenen Ingress-Host, der Hub aktiviert ihn in `host_vars/homeserver`. Ist `argocd_ui_host` gesetzt, leitet der Chart daraus auch
-  `configs.cm.url` ab (Links, SSO-Callbacks).
+- **Web-UI, API und kein NodePort (Incident 013, 2026-10-17):** UI, CLI und CI erreichen ArgoCD über den Traefik-Ingress per HTTPS. Der Service
+  `argocd-server` ist `ClusterIP` (`argocd_server_nodeport_enabled: false` in `host_vars/homeserver` und `host_vars/entw-vm`, Standard der Rolle bleibt
+  `true` für eine Erstinstallation vor dem Ingress). Grund: Ein NodePort läuft an UFW vorbei (`KUBE-ROUTER-FORWARD` nimmt ihn vor UFW an, belegt in 008), die
+  Firewall-Regel für 30080 hat nie etwas begrenzt, und über den Port gingen Admin-Login und CI-Token im Klartext. Beschränken lässt sich das nur, indem der Port
+  nicht existiert.
+  - **`server.insecure` bleibt `true`.** TLS endet im Traefik, der Hop Traefik → `argocd-server` ist HTTP im selben Node. Mit `false` spräche der Server selbst TLS
+    und der Ingress bräuchte ein Backend-HTTPS mit Vertrauen zum selbstsignierten Zertifikat von ArgoCD, die UI wäre sonst `502`.
+  - **CLI mit `--grpc-web`.** Traefik reicht gRPC nicht durch, `argocd login argocd.tech.homeserver --grpc-web` läuft über HTTP/1.1.
+  - **Zertifikat Hub:** aus dem Wildcard-Secret von cert-manager (SAN `argocd.tech.homeserver`), erneuert sich selbst. **ENTW:** Die ENTW-VM hat kein cert-manager.
+    Das Blatt-Zertifikat für `argocd.dev.homeserver` stellt der Betreiber mit der Homeserver-Root-CA aus (365 Tage, Skript-Ablauf in [d0040](../d-sicherheit/d0040-internal-tls.md#zertifikat-für-argocd-auf-der-entw-vm)),
+    legt Zertifikat und Schlüssel als Vault-Variablen `argocd_ingress_tls_crt`/`argocd_ingress_tls_key` in `host_vars/entw-vm/vars.yml` ab, die Rolle schreibt daraus das Secret
+    `argocd-server-tls`. Ohne diese Variablen rendert der Ingress ohne TLS (`tls: false`), Traefik liefert dann sein Standardzertifikat. Der Ablauf muss jährlich erneuert werden
+    (Eintrag `entw-argocd-ingress-cert` in `ops/token-register.yaml`).
+  - **Der Runner prüft das Zertifikat.** `promote-chain.py` nutzte `ssl._create_unverified_context()`, sobald eine `https`-URL gesetzt war. Jetzt `ssl.create_default_context(cafile=ARGOCD_CA_FILE)`.
+    Der Runner hat kein Heim-DNS, `/etc/hosts` bekommt die beiden Hosts, die Root-CA liegt öffentlich im Repo. Die Datei wird vor dem Lauf nach `$RUNNER_TEMP` kopiert, weil die
+    Engine Branches wechselt und `docs/assets/` auf einem anderen Stand fehlen könnte.
+  - **Tailscale-ACL.** `tag:ci` braucht `tcp:443` auf `192.168.178.94` und `192.168.178.100` statt `tcp:30080`. Die ACL liegt im Admin-Panel und nicht im Repo.
+  - Der Ingress ist **Wert der Rolle** (`argocd_ingress_enabled`, `argocd_ui_host`), damit der tägliche Semaphore-Lauf (`helm upgrade`) ihn nicht zurückdreht. Standard aus, der
+    Hub und die ENTW-Instanz aktivieren ihn in ihren `host_vars`. Ist `argocd_ui_host` gesetzt, leitet der Chart daraus auch `configs.cm.url` ab (Links, SSO-Callbacks).
 - **Eigene DaemonSet-Gesundheitsprüfung** (`resource.customizations.health.apps_DaemonSet` in `configs.cm`, Lua): Der DaemonSet `monitoring-prometheus-node-exporter` läuft absichtlich
   auch auf den per Wake-on-LAN geschalteten Workern, die oft aus sind. Er ist dadurch dauerhaft „nicht vollständig bereit“ und blockierte jeden Sync von `monitoring` (die Operation lief vier Tage
   lang, 2026-09-15 bis 2026-09-19). Seine Gesundheit wird deshalb ignoriert, für alle anderen DaemonSets gilt das ArgoCD-Standardverhalten. Die Lua-Sandbox von ArgoCD hat **keine**

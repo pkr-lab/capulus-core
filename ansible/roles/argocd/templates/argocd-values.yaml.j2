@@ -4,15 +4,19 @@ global:
 server:
   insecure: {{ argocd_server_insecure | lower }}
   service:
+{% if argocd_server_nodeport_enabled | bool %}
     type: NodePort
     nodePortHttp: 30080
     nodePortHttps: 30443
+{% else %}
+    type: ClusterIP
+{% endif %}
 {% if argocd_ingress_enabled | bool %}
   ingress:
     enabled: true
     ingressClassName: traefik
     hostname: {{ argocd_ui_host }}
-    tls: false
+    tls: {{ (argocd_ingress_tls_crt | length > 0) | lower }}
 {% endif %}
 
 configs:

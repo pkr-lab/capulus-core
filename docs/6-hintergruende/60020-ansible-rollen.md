@@ -323,11 +323,9 @@ CrowdSec läuft. LAN und Tailscale stehen auf der Whitelist, damit sich niemand 
 
 ### common: ArgoCD-NodePort in UFW
 
-ArgoCD läuft mit `server.insecure` (`argocd_server_insecure`): **Beide** NodePorts (30080/30443) sprechen Klartext-HTTP,
-`https://…:30443` wird zurückgesetzt. Die Web-UI läuft per HTTPS über Traefik (`argocd.tech.homeserver`). Der Klartext-NodePort **30080**
-bleibt für CLI und CI: Die Promotion-Kette und der Tailscale-Runner greifen auf `192.168.178.94:30080` zu
-([f00b0](../f-cicd-automatisierung/f00b0-promotion-chain.md)). Er ist nur aus LAN und Tailnet erreichbar. Die Freigabe stand früher nur
-von Hand in UFW und nicht im Repo, ein Neuaufbau hätte die CI stillgelegt, deshalb steht sie jetzt in der Rolle `common`.
+ArgoCD hat keinen NodePort mehr (`argocd_server_nodeport_enabled: false`, siehe [60030](60030-argocd-und-bootstrap.md#rolle-argocd)). Die Rolle `common` löscht deshalb die früheren
+UFW-Freigaben für `30080` (LAN, Tailnet, WireGuard-Notzugang) und `30443`. Die Regeln hatten auch vorher nichts begrenzt, weil NodePort-Verkehr an UFW vorbeiläuft
+([c0030](../c-netzwerk-dns/c0030-port-uebersicht.md)).
 
 ### ssh_hardening
 

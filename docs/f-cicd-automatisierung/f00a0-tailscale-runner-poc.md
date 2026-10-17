@@ -32,10 +32,10 @@ klarer Meldung ab, wenn der Runner nicht `Running` ist. Aussagen zur ACL sind au
 
 | Weg | Ziel | Nötig? | Nötiger Grant |
 |---|---|---|---|
-| `hub-lan` | Hub-ArgoCD `192.168.178.94:30080`, `/api/version` | ja | `192.168.178.94`, `tcp:30080` |
-| `entw` | ENTW-ArgoCD `192.168.178.100:30080`, `/api/version` | ja | `192.168.178.100`, `tcp:30080` |
+| `hub-lan` | Hub-ArgoCD `https://argocd.tech.homeserver/api/version` (Zertifikat gegen die Root-CA geprüft) | ja | `192.168.178.94`, `tcp:443` |
+| `entw` | ENTW-ArgoCD `https://argocd.dev.homeserver/api/version` (Zertifikat gegen die Root-CA geprüft) | ja | `192.168.178.100`, `tcp:443` |
 | `smoke` | ENTW-Ingress `192.168.178.100:80` mit Host `whoami.dev.homeserver` | optional (Smoke-Checks) | `192.168.178.100`, `tcp:80` |
-| `hub` | Hub über die Tailnet-Adresse des Homeservers | nur Diagnose | `tag:tech-node`, `tcp:30080` |
+| `hub` | Hub über die Tailnet-Adresse des Homeservers, nur TCP-Probe auf 443 | nur Diagnose | `tag:tech-node`, `tcp:443` |
 
 Die Tailscale-Action nimmt Subnet-Routen selbst an (`--accept-routes`). Ein zusätzliches `args: --accept-routes` im
 Workflow ist ein Fehler, siehe unten. `/api/version` ist bei ArgoCD ohne Anmeldung erreichbar. Vor der Probe prüft der
@@ -55,9 +55,9 @@ GitHub → Actions → „Tailscale Runner PoC“ → *Run workflow*. Ausgabe de
 ausgeführt (dort gilt keine Runner-ACL, die Tailnet-Adresse filtert aber trotzdem):
 
 ```
-hub       100.74.0.59:30080                  TCP zu/gefiltert  HTTP 000  (nur Diagnose)
-hub-lan   192.168.178.94:30080               TCP offen         HTTP 200  "Version":"v3.5.3"
-entw      192.168.178.100:30080              TCP offen         HTTP 200  "Version":"v3.5.3"
+hub       100.74.0.59:443                    TCP zu/gefiltert  HTTP -    (nur Diagnose)
+hub-lan   argocd.tech.homeserver:443         TCP offen         HTTP 200  "Version":"v3.5.5"
+entw      argocd.dev.homeserver:443          TCP offen         HTTP 200  "Version":"<ENTW-Version>"
 smoke     192.168.178.100:80 (whoami.dev)    TCP offen         HTTP 200  (Smoke-Tests, optional)
 
 OK: hub-lan und entw erreichbar - die Promotion-Kette kann die Gates auswerten.
@@ -74,7 +74,7 @@ Netzweg des Runners ist also weiter unbestätigt.
 | Schritt „Connect runner to tailnet“ scheitert mit Auth-Fehler | OAuth-Client gelöscht, Secret falsch kopiert oder Scope `auth_keys:write` bzw. Tag `tag:ci` fehlt am Client: Client prüfen, Secrets ersetzen. |
 | Schritt „Connect …“ grün, aber `NeedsLogin` / `Logged out` / „Tailscale nicht verbunden“ | `tailscale up` ist im Log des Verbindungsschritts still gescheitert (Action meldet trotzdem Erfolg). Dort nach der Fehlermeldung suchen: doppeltes Flag (`args:` nicht für `--accept-routes` nutzen), OAuth-Client ohne Recht auf `tag:ci`, `tag:ci` nicht in `tagOwners`. |
 | `hub-lan`/`entw`: `TCP zu/gefiltert` (Timeout) | ACL erlaubt den Runner nicht: Grant auf die LAN-Adresse und den Port ergänzen. Ein Timeout (statt sofortiger Ablehnung) ist typisch für gefilterten Verkehr. |
-| `hub-lan`/`entw`: sofort abgelehnt | Die Route kommt an, aber der Dienst antwortet nicht: läuft ArgoCD (`server.insecure`, NodePort 30080)? Bei ENTW: `ssh ubuntu@192.168.178.96 'sudo virsh list --all'`, VM muss `running` sein. |
+| `hub-lan`/`entw`: sofort abgelehnt | Die Route kommt an, aber der Dienst antwortet nicht: läuft ArgoCD, antwortet der Traefik-Ingress (`argocd.tech.homeserver`, `argocd.dev.homeserver`) mit gültigem Zertifikat? Bei ENTW: `ssh ubuntu@192.168.178.96 'sudo virsh list --all'`, VM muss `running` sein. |
 | Route nicht sichtbar (Fehler „no route“) | Die Subnet-Route ist im Admin-Panel nicht freigegeben oder der Runner ist nicht verbunden (siehe Zeile darüber). |
 | `hub` (Tailnet-Adresse) filtert, `hub-lan` geht | erwartbar, wenn nur das Subnetz freigegeben ist. Die Kette nutzt `hub-lan`. |
 | Workflow bricht mit „FEHLGESCHLAGEN“ ab | Meldung des letzten Schritts: mindestens `hub-lan` oder `entw` ist nicht erreichbar, siehe die Zeilen darüber. |
