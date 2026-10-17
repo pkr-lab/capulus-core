@@ -1,0 +1,6 @@
+---
+ssh_hardening_dropin: /etc/ssh/sshd_config.d/00-hardening.conf
+
+ssh_hardening_max_auth_tries: 4
+
+ssh_hardening_allow_tcp_forwarding: false

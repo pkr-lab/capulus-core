@@ -17,6 +17,8 @@
   roles:
     - role: common
       tags: [common, base]
+    - role: ssh_hardening
+      tags: [ssh-hardening, security]
     - role: crowdsec
       tags: [crowdsec, security]
     - role: dnsmasq

@@ -1,0 +1,9 @@
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PubkeyAuthentication yes
+MaxAuthTries {{ ssh_hardening_max_auth_tries }}
+LoginGraceTime 20
+X11Forwarding no
+AllowAgentForwarding no
+AllowTcpForwarding {{ 'yes' if ssh_hardening_allow_tcp_forwarding | bool else 'no' }}

@@ -6,6 +6,8 @@
   roles:
     - role: common
       tags: [common, base]
+    - role: ssh_hardening
+      tags: [ssh-hardening, security]
     - role: node_exporter
       tags: [node-exporter, monitoring]
     - role: k3s
