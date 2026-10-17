@@ -36,6 +36,13 @@ spec:
               value: {{ .Values.ntfy.url | quote }}
             - name: NTFY_TOPIC
               value: {{ .Values.ntfy.topic | quote }}
+            {{- if .Values.secrets.ntfyToken.enabled }}
+            - name: NTFY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.ntfyToken.secretName }}
+                  key: {{ .Values.secrets.ntfyToken.secretKey }}
+            {{- end }}
           livenessProbe:
             tcpSocket:
               port: http
