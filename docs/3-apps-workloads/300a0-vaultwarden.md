@@ -176,6 +176,14 @@ LAN und Tailnet zu (`adminRestriction` in `values.yaml`), Anfragen über den
 Cloudflare-Tunnel kommen von der cloudflared-Pod-IP und werden abgewiesen. Alle
 anderen Pfade (Web-Tresor, `/api`, `/identity`, Websocket) bleiben öffentlich.
 Dort lassen sich u. a. Nutzer verwalten und Diagnosen einsehen.
+
+**Weitere Schichten für `/admin`:**
+
+| Maßnahme | Stand |
+|---|---|
+| Admin-Token als Argon2-PHC-Hash (Schritt 1.1) | umgesetzt |
+| 2FA für alle Konten | aktiv |
+| Cloudflare-WAF-Regel „URI Path starts with `/admin`“ für `vault-tech.pke-lab.de` auf Block | **bewusst nicht gesetzt**. Sie würde `/admin` schon am Cloudflare-Rand abweisen, bevor die Anfrage den Cluster erreicht. Die Traefik-Sperre (`adminRestriction`) deckt dasselbe ab. Die WAF-Regel ist eine optionale zweite Schicht, die im Cloudflare-Dashboard gesetzt wird (nicht im Repo), und gehört zur Zugangskontrolle des Tunnels ([e0000](../e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md)) |
 SMTP für E-Mail-Versand (Passwort-Reset, Organisations-Einladungen) ist
 seit dem netcup-Postfach-Setup fest in `values.yaml` hinterlegt (siehe
 Abschnitt 4a) und muss dort **nicht** zusätzlich in der `/admin`-UI

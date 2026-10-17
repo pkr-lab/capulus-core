@@ -5,10 +5,10 @@ grobe Default-Deny-NetworkPolicy je `security-tier`, damit ein
 kompromittierter Pod (z. B. n8n) nicht mehr uneingeschränkt auf
 Postgres/Redis/Services in fremden Namespaces zugreifen kann.
 
-> **Geltungsbereich (September 2026):** Die Default-Deny-Policies je Namespace werden von der `argocd`-Rolle
+> **Geltungsbereich (Oktober 2026):** Die Default-Deny-Policies je Namespace werden von der `argocd`-Rolle
 > auf den **TECH**-Hub angewendet (und auf ENTW für dessen drei Bestands-Namespaces). Für die nach PROD
-> umgezogenen Apps gibt es keinen entsprechenden Rollen-Lauf; PROD-Apps bringen ihre NetworkPolicies bei
-> Bedarf selbst mit (z. B. `xibosignage`). Die Zahlen und Namespaces unten beschreiben den Stand vom 13.08.2026,
+> umgezogenen Apps gibt es keinen entsprechenden Rollen-Lauf; PROD-Apps bringen ihre Ingress-Policy `default-ingress`
+> selbst im Chart mit (siehe [PROD](#prod-ingress-default-deny)). Die Zahlen und Namespaces weiter unten beschreiben den Stand vom 13.08.2026,
 > als es noch einen einzigen Cluster gab.
 
 **Status (13.08.2026): Fertig.** Schritt 1 + Schritt 2 komplett live, alle
@@ -20,6 +20,23 @@ HTTP-Stichproben lokal (`*.homeserver`) **und** extern über den
 Cloudflare-Tunnel (`*.pke-lab.de`) erfolgreich, `cloudflared`-Logs sauber.
 `argocd_apply_network_policies: true` ist dauerhafter Default in
 [ansible/roles/argocd/defaults/main.yml](../../ansible/roles/argocd/defaults/main.yml).
+
+---
+
+## PROD: Ingress-Default-Deny
+
+Der PROD-Cluster (`prod-vm`, Pod-Netz `10.46.0.0/16`) hatte bis zum 2026-10-17 keine NetworkPolicy. Seitdem bringt jeder App-Chart in `argocd/apps/prod/` eine Policy `default-ingress` mit
+(`templates/networkpolicy.yaml`, Schalter `networkPolicy.enabled`). Sie erlaubt Ingress auf alle Pods des Namespaces nur aus dem eigenen Namespace, aus `kube-system` (Traefik) und aus den
+Namespaces in `networkPolicy.extraIngressNamespaces`. Egress bleibt wie in TECH unbeschränkt.
+
+| Namespace | Stand | Extra-Ingress |
+|---|---|---|
+| wikijs, wiki-docs-sync, xibosignage | aktiv | wikijs: `wiki-docs-sync` |
+| paperless-ngx, immich, nextcloud | folgen im zweiten Batch | |
+| kube-system, cert-manager, sealed-secrets, cloudflared, nas-storage, immich-storage | bewusst ohne Policy | |
+
+Warum `cloudflared` hier keine Ausnahme braucht und warum die Cluster-Grundlagen keine Policy tragen, steht in [60050](../6-hintergruende/60050-helm-charts-prod.md). Rollback: `networkPolicy.enabled: false` im
+betroffenen Chart (ein PR), denn die PROD-Apps laufen mit `selfHeal`, eine von Hand gelöschte Policy wird sofort zurückgespielt.
 
 ---
 
