@@ -318,6 +318,8 @@
       "parameters": {
         "method": "POST",
         "url": "={{ $('Konfiguration').first().json.cfg.ntfyUrl + '/' + $('Konfiguration').first().json.cfg.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -352,7 +354,13 @@
       "position": [
         3100,
         40
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      }
     },
     {
       "parameters": {
@@ -392,6 +400,8 @@
       "parameters": {
         "method": "POST",
         "url": "={{ $('Konfiguration').first().json.cfg.ntfyUrl + '/' + $('Konfiguration').first().json.cfg.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -430,7 +440,13 @@
       "position": [
         3320,
         200
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      }
     },
     {
       "parameters": {
@@ -927,6 +943,8 @@
       "parameters": {
         "method": "POST",
         "url": "={{ $('Konfiguration').first().json.cfg.ntfyUrl + '/' + $('Konfiguration').first().json.cfg.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -957,7 +975,13 @@
       "position": [
         7500,
         300
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      }
     },
     {
       "parameters": {
@@ -977,6 +1001,8 @@
       "parameters": {
         "method": "POST",
         "url": "={{ $('Konfiguration').first().json.cfg.ntfyUrl + '/' + $('Konfiguration').first().json.cfg.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -1007,7 +1033,13 @@
       "position": [
         4220,
         760
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      }
     },
     {
       "parameters": {

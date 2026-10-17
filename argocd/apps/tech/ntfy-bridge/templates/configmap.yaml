@@ -21,6 +21,7 @@ data:
 
     NTFY_URL   = os.environ["NTFY_URL"].rstrip("/")
     NTFY_TOPIC = os.environ["NTFY_TOPIC"]
+    NTFY_TOKEN = os.environ.get("NTFY_TOKEN", "")
 
     # ntfy priority: 5=urgent 4=high 3=default 2=low 1=min
     SEVERITY_PRIORITY = {"critical": 5, "warning": 4, "info": 3}
@@ -35,14 +36,17 @@ data:
         # http.client encodes str header values as latin-1, which can't
         # represent the emoji in `title` — pass UTF-8 bytes instead, which
         # http.client forwards unchanged.
+        headers = {
+            "Title":    title.encode("utf-8"),
+            "Priority": str(priority).encode("utf-8"),
+            "Tags":     tags.encode("utf-8"),
+        }
+        if NTFY_TOKEN:
+            headers["Authorization"] = f"Bearer {NTFY_TOKEN}"
         req = urllib.request.Request(
             f"{NTFY_URL}/{NTFY_TOPIC}",
             data=message.encode(),
-            headers={
-                "Title":    title.encode("utf-8"),
-                "Priority": str(priority).encode("utf-8"),
-                "Tags":     tags.encode("utf-8"),
-            },
+            headers=headers,
             method="POST",
         )
         urllib.request.urlopen(req, timeout=5)

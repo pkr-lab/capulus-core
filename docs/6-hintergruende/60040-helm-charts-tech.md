@@ -234,8 +234,13 @@ leitet alle `*.homeserver`-Anfragen an dnsmasq weiter.
   die `base-url` ein LAN-only-Name (außerhalb WLAN/Tailscale nicht auflösbar) oder reines HTTP (von iOS App Transport Security geblockt),
   scheitert der Abruf still: Die Benachrichtigung kommt an (der APNs-Relay-Teil funktioniert), aber **ohne Inhalt**, und in der App wird nichts nachgeladen.
   Live bestätigt am 2026-09-15 (Tausende `messages_published`, `base-url` stand noch auf dem internen Host).
-- `auth-default-access: read-write` heißt: Jeder darf ohne Auth publizieren und abonnieren. Für Auth auf `deny-all` stellen und Nutzer über
-  die ntfy-CLI anlegen (dann muss carplay-api ein Zugriffstoken bekommen).
+- `auth-default-access: read-write` heißt: Jeder darf ohne Auth publizieren und abonnieren, auch von außen über `ntfy-tech.pke-lab.de`. Der Default
+  darf erst auf `deny-all`, wenn **alle** Sender und Leser Zugangsdaten haben ([10010](../1-benachrichtigungen/10010-ntfy.md#authentifizierung-und-zugangsdaten)).
+  Der Default gilt auch für Aufrufe aus dem Cluster (`http://ntfy.ntfy.svc.cluster.local`): ntfy-bridge, alamos-apager, n8n und carplay-api brauchen deshalb alle einen
+  Token, ein Sender ohne Token verstummt mit `403`, ohne dass ein Pod ausfällt. Die Token-Umgebungsvariable `NTFY_TOKEN` ist in den Charts optional
+  (`secrets.ntfyToken.enabled`), ohne Token sendet das Skript wie bisher anonym, damit die Reihenfolge Chart → Umstellung nicht an einem Deploy-Zeitpunkt hängt.
+- Nutzer, ACLs und Tokens liegen in `auth.db` im Daten-PVC (`local-path`, ein Node). Geht das PVC verloren, sind sie weg und mit `deny-all` kommt nichts mehr an.
+  Vor jeder Änderung `auth.db` aus dem Pod sichern.
 - **Anhänge sind nur mit `attachment-cache-dir` erlaubt.** Ohne den Eintrag lehnt ntfy jeden PUT mit Datei ab (`invalid request: attachments not allowed`). Das traf am
   11.10.2026 den Fehler-Screenshot des ISC-News-Workflows. Das Verzeichnis liegt auf dem Daten-PVC (1 Gi), deshalb sind Datei- und Gesamtgröße begrenzt (5 MB, 100 MB). Ein Anhang
   hat Ablaufzeit, ntfy räumt ihn selbst auf.
