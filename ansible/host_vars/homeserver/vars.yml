@@ -17,3 +17,19 @@ libvirt_host_vms:
 
 argocd_ingress_enabled: true
 argocd_ui_host: argocd.tech.homeserver
+
+common_ufw_lan_allow_all: false
+common_ufw_tailnet_allow_all: false
+common_ufw_k3s_api_sources:
+  - "{{ local_subnet }}"
+  - "100.64.0.0/10"
+  - "10.99.99.0/24"
+common_ufw_trusted_hosts:
+  - "{{ hostvars['worker-0']['ansible_host'] }}"
+  - "{{ hostvars['worker-1']['ansible_host'] }}"
+  - "{{ hostvars['ugreen-nas']['ansible_host'] }}"
+  - "{{ hostvars['prod-vm']['ansible_host'] }}"
+  - "{{ hostvars['entw-vm']['ansible_host'] }}"
+common_ufw_lan_services:
+  - {port: "631", proto: tcp, comment: "CUPS (LAN)"}
+  - {port: "6566", proto: tcp, comment: "SANE (LAN)"}

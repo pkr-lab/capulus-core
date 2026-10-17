@@ -1,0 +1,11 @@
+---
+common_ufw_lan_allow_all: true
+
+common_ufw_tailnet_allow_all: true
+
+common_ufw_k3s_api_sources:
+  - "{{ local_subnet }}"
+
+common_ufw_trusted_hosts: []
+
+common_ufw_lan_services: []

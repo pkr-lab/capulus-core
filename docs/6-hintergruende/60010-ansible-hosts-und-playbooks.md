@@ -191,6 +191,30 @@ Shutdown). `semaphore_targets` verteilt danach den Semaphore-SSH-Key auf alle Zi
 stehen), und `semaphore_bootstrap` legt anschließend Projekte, Keys, Repositories, Inventories und Templates über die REST-API an,
 damit die UI ohne Klicks benutzbar ist.
 
+## Firewall (UFW, Rolle `common`)
+
+Die Rolle `common` setzt die Regeln, die Variablen stehen in `ansible/roles/common/defaults/main.yml`. Der homeserver überschreibt sie in `host_vars/homeserver/vars.yml`, alle anderen Hosts behalten die
+bisherigen Defaults (pauschale Freigabe für LAN und Tailnet, `6443` nur aus dem LAN).
+
+| Variable | Bedeutung | homeserver |
+|---|---|---|
+| `common_ufw_lan_allow_all` | pauschale Regel „alles aus dem LAN“ | `false` |
+| `common_ufw_tailnet_allow_all` | pauschale Regel „alles aus `100.64.0.0/10`“ | `false` |
+| `common_ufw_k3s_api_sources` | Quellen für `6443` | LAN, Tailnet, `10.99.99.0/24` (WireGuard-Notzugang) |
+| `common_ufw_trusted_hosts` | Hosts mit Vollzugriff (nur wenn die LAN-Pauschale aus ist) | worker-0, worker-1, NAS, prod-vm, entw-vm |
+| `common_ufw_lan_services` | Ports, die das restliche LAN erreichen darf | CUPS `631`, SANE `6566` |
+
+- **`6443`, `10250` und `8472/udp` stehen nie für „Anywhere“ offen.** Sie waren für alle Quellen inklusive IPv6 offen, obwohl LAN und Tailnet ohnehin pauschal erlaubt waren. Die Rolle löscht die offenen Regeln bei jedem Lauf.
+- **Die Tailnet-Pauschale ist wirkungslos.** Tailscale nimmt den Verkehr auf `tailscale0` in der Kette `ts-input` vor UFW an, die UFW-Regel hatte 0 Treffer. Was das Tailnet erreicht, entscheidet allein die Tailscale-ACL ([036](../c-netzwerk-dns/c0010-tailscale.md#acl-konfiguration)).
+- **Die Pod- und Service-CIDR-Regeln bleiben.** Pods erreichen Host-Dienste mit ihrer Pod-IP als Quelle (power-agent `9101`, alert-caller `9310`, Exporter `9100`/`9633`, kubelet `10250`). Ohne diese Regeln fehlen Metriken, die App meldet Fehler beim Wake und Shutdown, und der Telefon-Alarm geht nicht raus.
+- **NodePorts und LoadBalancer sind von UFW unabhängig** ([c0030](../c-netzwerk-dns/c0030-port-uebersicht.md)). Eine Freigabe für `80`, `443`, `30080`, `31935` oder `31554` ändert nichts. Wer einen neuen LAN-Dienst direkt auf dem Host betreibt, trägt den Port unter `common_ufw_lan_services` ein, sonst erreicht ihn nur ein Infrastruktur-Host.
+- **Testen von einem Admin-PC mit `accept-routes`:** Tailscale routet `192.168.178.0/24` dann über `tailscale0` (Tabelle 52), und der Test kommt als Tailnet-Verkehr an, den UFW nie sieht. Für einen echten LAN-Test die Quelle an die physische Schnittstelle binden (`curl --interface enp7s0`, in Python `SO_BINDTODEVICE`).
+- **UFW-Regeln ändern ohne `ufw reload`.** Nach einem Neuaufbau durch UFW fehlte einmal `-A ufw-before-input -i lo -j ACCEPT` ([c0000](../c-netzwerk-dns/c0000-dns-architecture.md#nachtrag-2026-09-06-ufw-blockierte-loopback-dns)). Nach jeder Änderung `sudo iptables -C ufw-before-input -i lo -j ACCEPT` prüfen. Ein Rollback-Timer stellt `user.rules` und `user6.rules` aus einer Kopie von `/etc/ufw` wieder her und lädt mit `ufw disable && ufw --force enable` statt `ufw reload` neu. Bei jeder Regeländerung an SSH, Firewall oder Netzwerk gilt: Timer setzen, in einer zweiten Verbindung testen, erst danach den Timer stoppen.
+- **Harmloser Lärm im Log:** Antworten von LAN-Geräten auf eine SSDP-Suche des Hosts (`SPT=1900`, `DPT=<Zufallsport>`) und IPv6-Router-Solicitations im Pod-Netz erscheinen als `UFW BLOCK`. Auf den Dienst wirkt sich das nicht aus.
+- **worker-1 hat keine aktive Firewall** (Incident 035), worker-0, prod-vm und entw-vm behalten die LAN-Pauschale, bis ihre Nutzer einzeln belegt sind.
+
+---
+
 ## Zugang und Notfallzugang
 
 - **WireGuard-Backup-Port ist 51888**, nicht 443. Port 443 wurde probiert und scheitert am AppArmor-Profil von `wg-quick`
