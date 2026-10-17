@@ -22,6 +22,7 @@ data:
     # URL-Pfad passen, unabhaengig vom Token in der Request-URL.
     RELAY_TOKEN = os.environ.get("RELAY_TOKEN", "").strip()
     N8N_TARGET_URL = os.environ.get("N8N_TARGET_URL", "").rstrip("/")
+    N8N_AUTH_TOKEN = os.environ.get("N8N_AUTH_TOKEN", "").strip()
     EXPECTED_PATH = f"/relay/{RELAY_TOKEN}"
     TIMEOUT_SECONDS = 10
 
@@ -61,6 +62,8 @@ data:
             content_type = self.headers.get("Content-Type")
             if content_type:
                 headers["Content-Type"] = content_type
+            if N8N_AUTH_TOKEN:
+                headers["Authorization"] = f"Bearer {N8N_AUTH_TOKEN}"
 
             req = urllib.request.Request(
                 target_url, data=body, headers=headers, method=method
