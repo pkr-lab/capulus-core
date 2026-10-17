@@ -13,6 +13,13 @@ ntfy:
   url: "http://ntfy.ntfy.svc.cluster.local"
   topic: "Alarmmonitor"
 
+secrets:
+  ntfyToken:
+    enabled: true
+    secretName: alamos-apager-ntfy-token
+    secretKey: token
+    encryptedData: "AgBa3H6VW8+SGgw6giyAuy7dxXBFC20tUbxwL/JUlUV6CW4n/KxAPz23Q5YcuG2IKYMR6V/JUhS5QmWXqn5bnhpJUaISEd8tzVyiZrvnaWVKLEnbp5aBBgQNXVFINyCkwJGhkaD4HAJjgjnwZRZVMy1Zexy4qNsDpDtQ8NnGkbxysZ4nxXY99Y6iq+p1mYvWy7FY9i9bumda0/lj8Ye4ZuHw2KdQb9BS4NsAWHlK/Wr3Ytogwm5oL3KFQ1tlzUN/WOCAqvW/Ad946tJhC5QfN0CNIiNO7YCjHIEwtwWas0rZ7gdoX7ihlDqmFUA8kI94Vu7KKCMrYVgfrng6CKgsz3VxQOTnv44LH1swoJXMZ9wYXXlrO0qfiFA82LXL4Dtwnwb3mjnNPi99lKKa6z2QDHmkp707Ikry7Jy1FLqhTFzz6NcpTYPGY/Rx+nIqojDk+y2Ci8WB+Lsq213RoH7x6QgTHmI7L7xu3Q2ewYPJdCnKoDRLal1dEJNP8/wTe03eq/WOceBRVLwmFEMFrELEkwgl9P0kElZGQ4iptbVWr+6Dxy8gm0YB/nuP/PvnEiQnaNeeqRxF8OaxoYGoaNLSksDOXr8NWZC1Ujc63XACXTbMTKuL0U5EnAUzbanw3uT3Dc/Bj2gdZlW21zQDs2chYUT3rjjQmng6zOj8Owb7kN0Cuc3w4caM96neR4mtJddgUm38aTHS6QvpwZr2s5631oYxQyCnVwjmdHYSJYtrJOnTwQ=="
+
 stationsSecretName: alamos-apager-stations
 
 heartbeatTimeoutSeconds: 300

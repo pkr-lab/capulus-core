@@ -96,8 +96,12 @@ Lokal: `python3 scripts/check-doc-links.py`.
   **Zwei sind echte Altlasten und gelten als kompromittiert**, weil das Repo öffentlich ist: ein OpenSSH-Private-Key
   der Banana Pis (Commit vom 2026-08-10, in `8625d54` entfernt) und ein `clientSecret` in einer alten MinIO-`values.yaml`
   (Klartext, im aktuellen Stand nicht mehr vorhanden). Zugehörige Zugangsdaten rotieren, sofern noch in Benutzung
-  (Schlüssel aus den `authorized_keys` der Pis entfernen; MinIO-Client in Authentik neu erzeugen). Die Datei nennt das
-  bei den Einträgen.
+  (MinIO-Client in Authentik neu erzeugen). Der Banana-Pi-Schlüssel (Fingerprint `SHA256:G+1ezIam4dN0UiJW3CTXSUKj6L4LPrI89LZH0BFIKqw`)
+  war am 2026-10-17 auf keinem erreichbaren Host autorisiert (homeserver, worker-1, prod-vm, entw-vm, vereinsheim-alarmmonitor,
+  infotafel), ein Login mit ihm wird auf beiden Pis abgewiesen. Er bleibt im Git-Verlauf und deshalb in der Ignore-Liste; wer
+  ihn auf einem neuen oder wieder eingeschalteten Host findet, entfernt den Eintrag aus `authorized_keys`
+  (`ssh-keygen -lf ~/.ssh/authorized_keys | grep 'G+1ezIam4dN0UiJW3CTXSUKj6L4LPrI89LZH0BFIKqw'`). Die Datei nennt das bei den
+  Einträgen.
 
 ---
 

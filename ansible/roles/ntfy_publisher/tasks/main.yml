@@ -1,0 +1,21 @@
+---
+
+- name: verzeichnis für ntfy-zugangsdaten anlegen
+  ansible.builtin.file:
+    path: "{{ ntfy_publisher_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: ntfy-auth-header-datei schreiben
+  ansible.builtin.copy:
+    content: "Authorization: Bearer {{ ntfy_publisher_token }}\n"
+    dest: "{{ ntfy_publisher_dir }}/auth-header"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  when:
+    - ntfy_publisher_token is defined
+    - ntfy_publisher_token | length > 0
