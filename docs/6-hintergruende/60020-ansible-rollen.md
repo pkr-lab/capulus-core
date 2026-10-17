@@ -282,6 +282,15 @@ Bedienung, Einrichtung und Testplan: [10020](../1-benachrichtigungen/10020-telef
 
 ## Sonstiges
 
+### k3s: Modus der Kubeconfig
+
+- **`write-kubeconfig-mode: "0600"`.** `/etc/rancher/k3s/k3s.yaml` enthält ein Client-Zertifikat samt Schlüssel der Gruppe `system:masters` (cluster-admin). Mit `0644` machte ein Lesezugriff jeden lokalen Account
+  oder jeden Container mit Host-Mount zum Cluster-Admin. Die Rolle kopiert die Datei außerdem für den Ansible-Benutzer nach `~/.kube/config` (Modus `0600`), und `/etc/environment` setzt `KUBECONFIG` darauf.
+  Interaktiv und in Skripten läuft deshalb alles über diese Kopie oder über `sudo k3s kubectl`, nicht über die Systemdatei. `cluster-power-manager`, `nightly-worker-wake` und `power-agent` laufen als root.
+- **Die Rolle startet k3s nicht neu.** k3s liest `config.yaml` und schreibt `k3s.yaml` nur beim Start. Eine Änderung des Modus über den Ansible-Lauf allein greift deshalb erst beim nächsten Neustart. Für die sofortige Wirkung
+  das `chmod 0600` einmal von Hand setzen (und die Zeile in `config.yaml` angleichen, damit ein späterer Start nicht wieder `0644` schreibt), statt k3s dafür neu zu starten.
+- **Wer sonst die Datei lesen muss,** braucht `sudo` oder eine eigene Kopie (`sudo install -m 0600 -o <user> /etc/rancher/k3s/k3s.yaml ~/.kube/config`). Eine Sicherungskopie der Datei darf nie weiter geöffnet sein als das Original.
+
 ### cups_print_server
 
 Macht einen USB-Drucker am Homeserver per CUPS im Heimnetz und Tailnet verfügbar (IPP/AirPrint für Handys und Tablets, IPP für Windows/Linux, Anleitung in
