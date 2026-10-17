@@ -503,12 +503,12 @@
   live_check_ref: worker-0
   blast_radius: "Kann neue Geraete dem Tailnet hinzufuegen (Ansible-Rolle tailscale). Live ueberwacht stellvertretend am Knoten worker-0 (Anlass: stiller Ablauf 20030). Ziel: Ablösung durch einen getaggten OAuth-Client (siehe Rotation-Regel 1)."
 
-- id: tailscale-ci-oauth-client
+- id: tailscale-ci-federated-identity
   service: tailscale
   kind: api-token
   stored_in:
     - "GitHub Actions Secret: TS_OAUTH_CLIENT_ID"
-    - "GitHub Actions Secret: TS_OAUTH_SECRET"
+    - "GitHub Actions Secret: TS_AUDIENCE"
   issued: null
   expires: null
   max_age_days: null
@@ -517,7 +517,7 @@
     runbook: docs/f-cicd-automatisierung/f00a0-tailscale-runner-poc.md
     overlap: true
   owner: peter
-  blast_radius: "Kann kurzlebige Auth-Keys mit Tag tag:ci erzeugen (Beitritt der GitHub-Runner zum Tailnet)."
+  blast_radius: "Kann kurzlebige Auth-Keys mit Tag tag:ci erzeugen (Beitritt der GitHub-Runner zum Tailnet). Federated Identity ohne dauerhaftes Secret, nur fuer Laeufe von main in pkr-lab/capulus-core."
 
 - id: argocd-ci-token-hub
   service: argocd

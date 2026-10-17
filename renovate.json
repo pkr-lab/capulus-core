@@ -2,6 +2,7 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended",
+    "helpers:pinGitHubActionDigests",
     ":dependencyDashboard"
   ],
   "baseBranchPatterns": [
@@ -25,10 +26,26 @@
   "github-actions": {
     "enabled": true
   },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Tailscale-Client in den Workflows (Eingabe `version` von tailscale/github-action), siehe docs/6-hintergruende/600a0-ci-workflows-und-skripte.md.",
+      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
+      "matchStrings": ["tags: tag:ci\\s+version: (?<currentValue>[0-9.]+)"],
+      "depNameTemplate": "tailscale/tailscale",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.+)$"
+    }
+  ],
   "vulnerabilityAlerts": {
     "enabled": false
   },
   "packageRules": [
+    {
+      "description": "Tailscale-Client nur auf Stable-Releases (gerade Minor-Nummer) anheben, ungerade Minor-Versionen sind Unstable.",
+      "matchPackageNames": ["tailscale/tailscale"],
+      "allowedVersions": "/^1\\.[0-9]*[02468]\\.[0-9]+$/"
+    },
     {
       "description": "Vendored/pulled-in subcharts (Chart.lock, charts/*.tgz) are refreshed manually via `helm dependency update`, not by Renovate opening PRs against generated lockfiles.",
       "matchFileNames": ["**/charts/**", "**/Chart.lock"],

@@ -151,11 +151,25 @@ Grant. Empfehlung: ein eigenes Tag für den Runner, damit die Rechte nicht an ei
 ]
 ```
 
-Der Workflow meldet sich mit einem **OAuth-Client** an (Secrets `TS_OAUTH_CLIENT_ID` und `TS_OAUTH_SECRET`) und
-tritt mit dem Tag `tag:ci` bei. Die Action erzeugt dabei pro Lauf einen frischen, kurzlebigen Key: nichts läuft
-ab, nichts wird verbraucht. Der Runner ist ein getaggtes, kurzlebiges Gerät und sieht nichts außer diesen Zielen.
-Der OAuth-Client entsteht im Tailscale-Admin-Panel unter *Settings → OAuth clients → Generate*, mit Scope
-`auth_keys` (Write) und Tag `tag:ci`; das Secret wird nur einmal angezeigt. Die Subnet-Route des
+Der Workflow meldet sich per **Workload Identity Federation** (Federated Identity) an: Der Runner holt von GitHub ein kurzlebiges OIDC-Token (Berechtigung `id-token: write`
+im Job) und tauscht es bei Tailscale gegen den Zugang. Es gibt **kein dauerhaftes Secret**. In GitHub liegen nur `TS_OAUTH_CLIENT_ID` (Client ID) und `TS_AUDIENCE` (Audience), beide sind
+keine Geheimnisse. Der Runner tritt mit dem Tag `tag:ci` bei, die Action erzeugt dabei pro Lauf einen frischen, kurzlebigen Key: nichts läuft ab, nichts wird verbraucht. Der Runner ist
+ein getaggtes, kurzlebiges Gerät und sieht nichts außer den ACL-Zielen.
+
+Die Federated Identity entsteht im Tailscale-Admin-Panel unter *Settings → Trust credentials → Credential → OpenID Connect*
+([console.tailscale.com/admin/settings/trust-credentials](https://console.tailscale.com/admin/settings/trust-credentials)):
+
+| Feld | Wert |
+|---|---|
+| Issuer | GitHub |
+| Subject | `repo:pkr-lab/capulus-core:ref:refs/heads/main` (nur dieses Repo, nur der Branch `main`; dort laufen `schedule` und `workflow_dispatch` der Kette) |
+| Scope | nur `auth_keys` mit **Write**, ohne weitere Scopes |
+| Tags | nur `tag:ci` |
+
+Danach *Generate credential* und die Werte **Client ID** und **Audience** kopieren. Damit kann nur ein Lauf von `main` im eigenen Repo Geräte mit dem Tag `tag:ci` erzeugen; ein Lauf von einem
+anderen Branch oder Fork bekommt das Token nicht, und die ID und die Audience allein sind wertlos. Gelegentlich im Admin-Panel die Spalte „Last used“ prüfen und die Credential bei einem unbekannten
+Zeitpunkt widerrufen. Der Tailscale-Client im Runner ist in den Workflows fest gepinnt (`version: 1.104.1`) und wird von Renovate aktualisiert, siehe
+[600a0](../6-hintergruende/600a0-ci-workflows-und-skripte.md#dependabot-und-renovate). Die Subnet-Route des
 Homeservers muss im Admin-Panel freigegeben sein (sie ist es: der Homeserver zeigt `PrimaryRoutes: 192.168.178.0/24`).
 
 ## Einrichtung
@@ -170,8 +184,8 @@ Reihenfolge (nach dem Merge der Änderungen, die diese Pipeline einführen):
 3. **Tokens erzeugen und als Secret hinterlegen** (nichts wird ausgegeben):
    `scripts/create-argocd-ci-token.sh hub` und `scripts/create-argocd-ci-token.sh entw`
    → Secrets `ARGOCD_HUB_TOKEN`, `ARGOCD_ENTW_TOKEN` (365 Tage gültig).
-4. **Tailscale:** ACL-Grant (oben) speichern, OAuth-Client mit Scope `auth_keys` (Write) und Tag `tag:ci` erzeugen und
-   als `TS_OAUTH_CLIENT_ID` und `TS_OAUTH_SECRET` ablegen. Ein Auth-Key als Secret taugt nicht (einmalig oder nach
+4. **Tailscale:** ACL-Grant (oben) speichern, Federated Identity wie oben anlegen und Client ID und Audience als `TS_OAUTH_CLIENT_ID` und `TS_AUDIENCE` ablegen
+   (`gh secret set TS_OAUTH_CLIENT_ID`, `gh secret set TS_AUDIENCE`). Ein Auth-Key als Secret taugt nicht (einmalig oder nach
    höchstens 90 Tagen abgelaufen): der Beitritt scheitert dann dauerhaft mit `BackendState=NeedsLogin`.
    Fehlen die beiden Secrets, läuft die Kette als „inaktiv“ (Hinweis statt Fehler).
 5. **PoC ausführen** (*Actions → Tailscale Runner PoC*): muss `OK` melden.

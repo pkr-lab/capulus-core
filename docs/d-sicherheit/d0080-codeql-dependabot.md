@@ -199,10 +199,17 @@ Seitenleiste, früher „Code security“):
 | Grouped security updates | egal | die Gruppen stehen bereits in `dependabot.yml` |
 | Code scanning → CodeQL analysis | **nicht** auf „Default setup“ stellen | die erweiterte Einrichtung per Workflow ist aktiv; mit „Default setup“ weist GitHub die Uploads des Workflows ab |
 | Copilot Autofix | an | Fix-Vorschläge im PR, kostenlos für öffentliche Repos |
-| Secret Protection (Secret Scanning, Push Protection) | an | kostenlos für öffentliche Repos, ergänzt gitleaks |
+| Secret Protection: Secret Scanning und Push Protection | an | kostenlos für öffentliche Repos, ergänzt gitleaks. Push Protection lehnt einen Push ab, der ein erkanntes Token enthält (auch über die API); umgehen geht nur mit Begründung im Dialog. |
+| Secret Scanning: Non-Provider-Patterns, Validity Checks | aus | Non-Provider-Patterns lassen sich für dieses Repo nicht einschalten (die API setzt den Wert nach `enabled` auf `disabled` zurück), Validity Checks sind bewusst aus, weil sie gefundene Schlüssel bei den Anbietern auf Gültigkeit prüfen |
 
 Danach einmal **Actions → CodeQL → Run workflow** (füllt die Alerts für `main`) und anschließend
 **Actions → Security issues → Run workflow** starten, statt auf den nächsten Zeitplan zu warten.
+
+**Stand seit 2026-10-17** (Incident 014): Secret Scanning, Push Protection, Dependabot alerts und Dependabot security updates sind aktiv
+(`gh api repos/pkr-lab/capulus-core --jq '.security_and_analysis'`, `vulnerability-alerts` liefert `204`, `automated-security-fixes` `enabled: true`).
+Vorher standen alle Funktionen auf `disabled`, obwohl dieses Dokument sie als aktiv beschrieb; `security-issues.yml` lief deshalb seit Tagen rot.
+**Der Workflow `security-issues.yml` ist bewusst manuell deaktiviert** (`gh workflow disable security-issues.yml`), damit keine öffentlichen Issues zu
+Abhängigkeitslücken entstehen, bevor die Fix-PRs eingespielt sind. Wieder einschalten: `gh workflow enable security-issues.yml`.
 
 ---
 
@@ -213,9 +220,9 @@ Danach einmal **Actions → CodeQL → Run workflow** (füllt die Alerts für `m
 | **Container-Images** (Drittanbieter-Images aus den `values.yaml`, eigene Images pacman, carplay-api, n8n-custom samt der im Dockerfile installierten npm-Pakete wie `whatsapp-web.js`) | Dependabot und CodeQL sehen keine Images. Option: Image-Scan mit Grype oder (per SHA gepinntem) Trivy nach dem Build in [`build-images.yml`](../f-cicd-automatisierung/f0060-build-images.md). |
 | **Fehlkonfigurationen in Helm-Charts, Manifesten, Ansible** | kubeconform prüft nur das Schema ([f0070](../f-cicd-automatisierung/f0070-ci-lint.md)). Option: Checkov, KICS oder kube-linter. |
 | **Vendorte Bibliotheken**: [`jquery-1.10.2.min.js`](../../argocd/apps/tech/pacman/src/js/jquery-1.10.2.min.js) im pacman-Frontend | jQuery 1.10.2 hat bekannte XSS-Lücken (CVE-2015-9251, CVE-2019-11358, CVE-2020-11022, CVE-2020-11023). Kein Scanner sieht vendorte Dateien, CodeQL überspringt `*.min.js`. Von Hand aktualisieren oder ersetzen. |
-| **Nicht gepinnte Actions** in den bestehenden Workflows (Tags statt Commit-SHAs) | CodeQL meldet das erst mit `security-extended`, zizmor in jedem Workflow. Nach den Vorfällen um `tj-actions` (2025) und Trivy (2026) empfohlen: Renovate-Preset `helpers:pinGitHubActionDigests`, das SHAs setzt und aktuell hält. |
+| **Gepinnte Actions** (Incident 015) | Seit 2026-10-17 zeigen alle `uses:` auf Commit-SHAs, Renovate hält sie mit `helpers:pinGitHubActionDigests` aktuell ([600a0](../6-hintergruende/600a0-ci-workflows-und-skripte.md#dependabot-und-renovate)). Nicht gepinnt bleiben `npx`- und `pip install`-Aufrufe in den Workflows (Incident 031). |
 | **n8n-Workflows** (JavaScript in JSON-Dateien) | werden nicht analysiert |
-| **Secret-Scanning-Alerts** | landen nicht als Issue (der `GITHUB_TOKEN` darf sie nicht lesen); GitHub benachrichtigt selbst, gitleaks prüft jeden PR |
+| **Secret-Scanning-Alerts** | landen nicht als Issue (der `GITHUB_TOKEN` darf sie nicht lesen); GitHub benachrichtigt selbst, gitleaks prüft jeden PR. Abfrage: `gh api 'repos/pkr-lab/capulus-core/secret-scanning/alerts?state=open'` (enthält die Klartextwerte, nicht in Logs oder Chats ausgeben) |
 | **Go-Standardbibliothek** | Dependabot meldet keine Lücken der Go-Version. Die Images bauen mit `golang:1.27-alpine`, Renovate hält das Basis-Image aktuell. |
 
 ---
