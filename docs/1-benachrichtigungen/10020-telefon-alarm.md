@@ -224,6 +224,47 @@ Eine Regel in `argocd/apps/tech/monitoring/templates/vmrule-paging.yaml` (Vorbil
 
 ---
 
+## Zugriffsschutz (Token)
+
+`POST /alert` löst einen Anruf aus, `POST /watchdog` setzt den Totmann-Timer zurück. Beide verlangen ein gemeinsames Geheimnis im Header `Authorization: Bearer <Token>`, verglichen mit `hmac.compare_digest`. Eine negative oder unlesbare `Content-Length`
+beantwortet der Caller mit `400`, der Body wird erst nach der Prüfung gelesen. Ohne Prüfung konnte jeder Pod im Cluster und jedes Tailnet-Gerät Anrufe auslösen oder den Totmann stumm halten, die Firewall hilft dafür nicht (Pods dürfen zum Host,
+Tailscale nimmt den Tailnet-Verkehr vor UFW an).
+
+| Stelle | Wo der Token liegt |
+|---|---|
+| Caller-Pod (`alert-caller`) | SealedSecret `alert-caller-secrets`, Schlüssel `ALERT_CALLER_TOKEN`, Env `ALERT_CALLER_TOKEN` (optional) |
+| Alertmanager (sendet an Pod **und** Pi) | SealedSecret `alert-caller-token` im Namespace `monitoring`, gemountet nach `/etc/vm/secrets/alert-caller-token/token`, `http_config.authorization.credentials_file` an den drei Webhooks `watchdog` (Pod), `watchdog` (Pi) und `phone` |
+| Notfall-Caller auf dem Pi | Vault-Variable `vault_alert_caller_token`, Rollen-Variable `alert_caller_token`, Datei `/etc/alert-caller/alert-caller.env` (Modus `0600`) |
+
+**Zwei Stufen** über `ALERT_CALLER_AUTH_MODE` (`config.auth.mode` im Chart, `alert_caller_auth_mode` in der Rolle):
+
+1. `log` (Ausgangslage der Einführung): Aufrufe ohne gültigen Token werden angenommen und als `unauthenticated request <Pfad> from <IP>` protokolliert. So fällt kein Alarm aus, falls ein Sender den Token noch nicht mitschickt.
+2. `enforce`: Aufrufe ohne gültigen Token bekommen `401`. Der Dienst startet im Modus `enforce` nicht ohne Token.
+
+### Erstanlage
+
+```bash
+scripts/seal-alert-caller-token.sh
+ansible-vault encrypt_string --name vault_alert_caller_token "$(sed -n 's/^alert_caller_token=//p' ~/alert-caller-token-2026-10-17.txt)"
+ansible-playbook -i ansible/inventory/hosts.yml ansible/alert-caller.yml --limit vereinsheim-alarmmonitor --tags alert-caller --ask-vault-pass
+```
+
+Das Skript erzeugt aus der Datei `~/alert-caller-token-2026-10-17.txt` (Modus `0600`, außerhalb des Repos) die beiden SealedSecrets und trägt sie ein. Die Ausgabe von `ansible-vault encrypt_string` kommt in `ansible/group_vars/all.yml`. Vor dem Commit
+prüfen, dass dort kein Klartext steht. Der Alertmanager-Pod wartet auf das Secret `alert-caller-token`: Existiert es nicht, bleibt er in `ContainerCreating` und **alle** Alarme fehlen. Das SealedSecret gehört deshalb in denselben PR wie die Mount-Konfiguration.
+
+### Von `log` auf `enforce`
+
+1. Im Log prüfen, dass nichts Unauthentifiziertes mehr eintrifft:
+   `kubectl -n alert-caller logs deploy/alert-caller --since=30m | grep unauthenticated` und `ssh alarm-monitor 'sudo journalctl -u alert-caller --since -30min | grep unauthenticated'`. Alertmanager meldet sich jede Minute mit `/watchdog`.
+2. `config.auth.mode: enforce` im Chart, `alert_caller_auth_mode: enforce` in `ansible/group_vars/alert_caller_pi.yml`, PR, Rollenlauf für den Pi.
+3. Prüfen: `curl -s -o /dev/null -w '%{http_code}\n' -X POST http://<caller>:9310/watchdog` liefert `401`, mit `-H "Authorization: Bearer $TOKEN"` `200`. Danach Testplan 3 (echter Anruf).
+
+**Fehlerbild bei falschem Token im Modus `enforce`:** Alertmanager bekommt `401` auf `/watchdog`, nach `WATCHDOG_TIMEOUT` (10 Minuten) ruft der Caller selbst an („Der Cluster meldet sich seit über 10 Minuten nicht mehr“). Ein stiller Ausfall ist damit nicht möglich.
+
+**Rotation:** Neuen Token erzeugen, `scripts/seal-alert-caller-token.sh` ausführen, den Vault-Wert ersetzen, PR mergen und Pi-Lauf. Es gibt keine Überlappung: Zwischen Pod-Neustart und Alertmanager-Neustart kann es kurz `401` geben, deshalb die Rotation im Modus `log` durchführen und danach auf `enforce` zurückstellen. `ops/token-register.yaml` aktualisieren.
+
+---
+
 ## Testplan
 
 | # | Test | Erwartung |
@@ -236,6 +277,7 @@ Eine Regel in `argocd/apps/tech/monitoring/templates/vmrule-paging.yaml` (Vorbil
 | 5 | Silence setzen (siehe „Quittieren“) | Kein weiterer Anruf nach 15 min |
 | 6 | Mit healthchecks.io: in der Integration „Send test notification“ | Push über ntfy.sh und E-Mail kommen an |
 | 7 | `make lint`, `python3 scripts/check-doc-links.py`, `python3 scripts/check-token-register.py` | grün |
+| 8 | Token-Prüfung ([Zugriffsschutz](#zugriffsschutz-token)): `POST /watchdog` ohne und mit Token | `log`: beide `200`, ohne Token steht `unauthenticated` im Log. `enforce`: ohne Token `401`, mit Token `200` |
 
 ---
 

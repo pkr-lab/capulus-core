@@ -16,6 +16,17 @@
           (docs/1-benachrichtigungen/10020-telefon-alarm.md, Abschnitt Vault-Variablen).
         quiet: true
 
+    - name: Zugriffsschutz prüfen
+      ansible.builtin.assert:
+        that:
+          - alert_caller_auth_mode in ['log', 'enforce']
+          - alert_caller_auth_mode == 'log' or alert_caller_token | length > 0
+          - alert_caller_token is not search('\s')
+        fail_msg: >-
+          alert_caller_auth_mode ist log oder enforce, enforce braucht alert_caller_token
+          (Vault-Variable vault_alert_caller_token, docs/1-benachrichtigungen/10020-telefon-alarm.md).
+        quiet: true
+
     - name: Pakete installieren (Sprachausgabe, Build von baresip, Firewall)
       ansible.builtin.apt:
         name:
