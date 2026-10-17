@@ -115,7 +115,7 @@ Der Check „Code scanning results“ wird bei neuen Funden ab `high` trotzdem r
 | Quelle | Erwartung | Hinweis |
 |---|---|---|
 | CodeQL `py/path-injection` | 2 Alerts in [`power-agent.py`](../../ansible/roles/power_agent/files/power-agent.py) (Zeilen 67 und 92), 1 Issue | `name` kommt aus der HTTP-Anfrage, `TARGETS[name]` wirkt davor als Allowlist. Vermutlich Fehlalarm: im Alert mit Begründung verwerfen oder den Namen ausdrücklich prüfen, dann verschwindet der Fund. |
-| Dependabot `carplay-api/src/go.mod` | rund 28 Advisories in indirekten Abhängigkeiten von gin: `golang.org/x/crypto` (17), `x/net` (8), `x/text`, `x/sys`, `quic-go` (je 1), 1 Issue und 1 gruppierter Fix-PR | Abschätzung mit govulncheck gegen vuln.go.dev (Stand 2026-10-01). Nur der `quic-go`-Fund ist laut govulncheck vom Code aus erreichbar. |
+| Dependabot `carplay-api/src/go.mod` | rund 28 Advisories in indirekten Abhängigkeiten von gin: `golang.org/x/crypto` (17), `x/net` (8), `x/text`, `x/sys`, `quic-go` (je 1), 1 Issue und 1 gruppierter Fix-PR | Abschätzung mit govulncheck gegen vuln.go.dev (Stand 2026-10-01). Erledigt am 2026-10-17 (Incident 016): `govulncheck` meldet „No vulnerabilities found“, siehe [60080](../6-hintergruende/60080-carplay-api-und-ios-app.md#abhängigkeiten-und-schwachstellen-incident-016-2026-10-17). |
 | Dependabot `pacman/server/go.mod` | keine | — |
 | Swift | unbekannt | lokal nicht prüfbar (braucht macOS) |
 
