@@ -36,6 +36,58 @@
   register: power_agent_token_raw
   when: power_agent_enabled | bool
 
+- name: bekannte hostschlüssel der worker aus der root-known_hosts lesen
+  ansible.builtin.command: "ssh-keygen -F {{ item.ansible_host }} -f /root/.ssh/known_hosts"
+  check_mode: false
+  register: power_agent_known_hosts_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ power_agent_targets }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: power_agent_enabled | bool
+
+- name: hostschlüssel fehlender worker einmalig abrufen
+  ansible.builtin.command: "ssh-keyscan -T 5 -t ed25519 {{ item.item.ansible_host }}"
+  check_mode: false
+  register: power_agent_known_hosts_scan
+  changed_when: false
+  failed_when: false
+  loop: "{{ power_agent_known_hosts_lookup.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when:
+    - power_agent_enabled | bool
+    - item.stdout | default('') | length == 0
+
+- name: known_hosts-zeilen zusammenstellen
+  ansible.builtin.set_fact:
+    power_agent_known_hosts_lines: >-
+      {{ ((power_agent_known_hosts_lookup.results | default([]) | map(attribute='stdout_lines') | flatten)
+      + (power_agent_known_hosts_scan.results | default([]) | selectattr('stdout_lines', 'defined') | map(attribute='stdout_lines') | flatten))
+      | reject('match', '^#') | reject('equalto', '') | unique | list }}
+  when: power_agent_enabled | bool
+
+- name: festes known_hosts für die ssh-aufrufe des power-agent schreiben
+  ansible.builtin.copy:
+    dest: "{{ power_agent_known_hosts_path }}"
+    content: "{{ power_agent_known_hosts_lines | join('\n') }}\n"
+    owner: root
+    group: root
+    mode: "0600"
+  when:
+    - power_agent_enabled | bool
+    - power_agent_known_hosts_lines | length > 0
+
+- name: warnen, wenn kein worker-hostschlüssel gefunden wurde
+  ansible.builtin.debug:
+    msg: >-
+      Für die Worker wurde kein Hostschlüssel gefunden, {{ power_agent_known_hosts_path }} bleibt unverändert.
+      Ohne die Datei scheitert der Poweroff der Worker über die App mit Host key verification failed.
+  when:
+    - power_agent_enabled | bool
+    - power_agent_known_hosts_lines | length == 0
+
 - name: power-agent.py deployen
   ansible.builtin.copy:
     src: power-agent.py

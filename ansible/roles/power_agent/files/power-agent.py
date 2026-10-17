@@ -10,6 +10,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 TOKEN = os.environ["TOKEN"]
 PORT = int(os.environ.get("PORT", "9101"))
+BIND_ADDRESS = os.environ.get("BIND_ADDRESS", "0.0.0.0")
+KNOWN_HOSTS = os.environ.get("KNOWN_HOSTS", "/etc/power-agent/known_hosts")
+MAX_BODY = 4096
+REQUEST_TIMEOUT = 10
 BACKLIGHT_PATH = os.environ["BACKLIGHT_PATH"]
 BACKLIGHT_MAX_PATH = os.environ["BACKLIGHT_MAX_PATH"]
 BL_POWER_PATH = os.environ["BL_POWER_PATH"]
@@ -80,7 +84,8 @@ def poweroff_target(name):
     subprocess.run(
         [
             "ssh", "-i", SSH_KEY,
-            "-o", "StrictHostKeyChecking=accept-new",
+            "-o", "StrictHostKeyChecking=yes",
+            "-o", f"UserKnownHostsFile={KNOWN_HOSTS}",
             "-o", "BatchMode=yes",
             "-o", "ConnectTimeout=5",
             f"{SSH_USER}@{target['ip']}", "true",
@@ -124,6 +129,7 @@ def poweroff_self():
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "power-agent/1.0"
+    timeout = REQUEST_TIMEOUT
 
     def _authorized(self):
         header = self.headers.get("Authorization", "")
@@ -141,7 +147,12 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _read_json_body(self):
-        length = int(self.headers.get("Content-Length", "0") or "0")
+        try:
+            length = int(self.headers.get("Content-Length", "0") or "0")
+        except ValueError:
+            return None
+        if length < 0 or length > MAX_BODY:
+            return None
         if length == 0:
             return {}
         raw = self.rfile.read(length)
@@ -205,8 +216,8 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     os.makedirs(STATE_DIR, exist_ok=True)
-    server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
-    log(f"listening on :{PORT}, targets={list(TARGETS)}")
+    server = ThreadingHTTPServer((BIND_ADDRESS, PORT), Handler)
+    log(f"listening on {BIND_ADDRESS}:{PORT}, targets={list(TARGETS)}")
     server.serve_forever()
 
 
