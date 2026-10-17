@@ -120,3 +120,7 @@ redis:
       memory: 64Mi
     limits:
       memory: 256Mi
+
+networkPolicy:
+  enabled: true
+  extraIngressNamespaces: []

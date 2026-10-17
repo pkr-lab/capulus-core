@@ -27,12 +27,11 @@ Cloudflare-Tunnel (`*.pke-lab.de`) erfolgreich, `cloudflared`-Logs sauber.
 
 Der PROD-Cluster (`prod-vm`, Pod-Netz `10.46.0.0/16`) hatte bis zum 2026-10-17 keine NetworkPolicy. Seitdem bringt jeder App-Chart in `argocd/apps/prod/` eine Policy `default-ingress` mit
 (`templates/networkpolicy.yaml`, Schalter `networkPolicy.enabled`). Sie erlaubt Ingress auf alle Pods des Namespaces nur aus dem eigenen Namespace, aus `kube-system` (Traefik) und aus den
-Namespaces in `networkPolicy.extraIngressNamespaces`. Egress bleibt wie in TECH unbeschränkt.
+Namespaces in `networkPolicy.extraIngressNamespaces`. Egress bleibt wie in TECH unbeschränkt, das Abschotten des Pod-Netzes gegen LAN, NAS und Router ist Nachfolgearbeit (siehe unten).
 
 | Namespace | Stand | Extra-Ingress |
 |---|---|---|
-| wikijs, wiki-docs-sync, xibosignage | aktiv | wikijs: `wiki-docs-sync` |
-| paperless-ngx, immich, nextcloud | folgen im zweiten Batch | |
+| wikijs, wiki-docs-sync, xibosignage, paperless-ngx, immich, nextcloud | aktiv | wikijs: `wiki-docs-sync` |
 | kube-system, cert-manager, sealed-secrets, cloudflared, nas-storage, immich-storage | bewusst ohne Policy | |
 
 Warum `cloudflared` hier keine Ausnahme braucht und warum die Cluster-Grundlagen keine Policy tragen, steht in [60050](../6-hintergruende/60050-helm-charts-prod.md). Rollback: `networkPolicy.enabled: false` im
@@ -470,6 +469,9 @@ abgewartet.
   sind sie auch außerhalb jeder NetworkPolicy — kein Sicherheitsrisiko
   (sie sind Infrastruktur ohne Nutzdaten), aber ein blinder Fleck für
   künftige, feinere Policies.
+- **PROD und ENTW: Egress offen, Ingress nur in PROD-App-Namespaces.** Ein kompromittierter PROD-Pod erreicht keinen fremden Namespace mehr, aber weiter das LAN (NAS, Router, power-agent, ArgoCD-NodePort).
+  Ein Egress-Deny braucht pro App eine belegte Zielliste (Internet nur wo nötig, DNS, kein LAN). In den Werten stehen keine LAN-Ziele der Pods außer den NFS-Provisionern, die den Export über den Node mounten.
+  Eine Verbindungstabelle zum Nachprüfen liefert die `prod-vm` nicht (`/proc/net/nf_conntrack` fehlt). Eigener Schritt mit Test je Namespace.
 - **Egress bleibt komplett offen** — bewusste Entscheidung dieser
   Iteration, siehe [Design](#warum-ingress-only-kein-egress). Falls später
   gewünscht (z. B. um n8n explizit am Erreichen interner Postgres-Ports zu
