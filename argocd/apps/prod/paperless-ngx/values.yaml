@@ -104,3 +104,7 @@ affinity: {}
 
 nodeSelector: {}
 tolerations: []
+
+networkPolicy:
+  enabled: true
+  extraIngressNamespaces: []
