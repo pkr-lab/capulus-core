@@ -4,7 +4,8 @@
     {
       "parameters": {
         "path": "alamos-einsatz",
-        "options": {}
+        "options": {},
+        "authentication": "headerAuth"
       },
       "id": "67d21783-c253-4766-9345-bbcebdcbb7c5",
       "name": "Webhook (GET)",
@@ -14,13 +15,20 @@
         656,
         320
       ],
-      "webhookId": "alamos-einsatz-get"
+      "webhookId": "alamos-einsatz-get",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gNea6tgdpCCkqorX",
+          "name": "Webhook alamos-einsatz"
+        }
+      }
     },
     {
       "parameters": {
         "httpMethod": "POST",
         "path": "alamos-einsatz",
-        "options": {}
+        "options": {},
+        "authentication": "headerAuth"
       },
       "id": "c67f9dbb-c258-4f43-ab62-7f87b0f3fade",
       "name": "Webhook (POST)",
@@ -30,7 +38,13 @@
         656,
         528
       ],
-      "webhookId": "alamos-einsatz-post"
+      "webhookId": "alamos-einsatz-post",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gNea6tgdpCCkqorX",
+          "name": "Webhook alamos-einsatz"
+        }
+      }
     },
     {
       "parameters": {

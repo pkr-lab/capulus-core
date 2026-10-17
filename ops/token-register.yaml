@@ -28,6 +28,51 @@
   owner: peter
   blast_radius: "Kann Alarmierungen ueber alamos-relay ausloesen und lesen."
 
+- id: n8n-webhook-alamos-relay
+  service: n8n
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/alamos-relay/templates/sealedsecret.yaml
+  issued: "2026-10-17"
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/3-apps-workloads/30070-n8n.md#webhook-authentifizierung
+    overlap: false
+  owner: peter
+  blast_radius: "Kann Einsatz-Tickets im Webhook alamos-einsatz ausloesen. Gleicher Wert im n8n-Credential Webhook alamos-einsatz."
+
+- id: n8n-webhook-alertmanager
+  service: n8n
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/monitoring/templates/sealedsecret-n8n-webhook-token.yaml
+  issued: "2026-10-17"
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/3-apps-workloads/30070-n8n.md#webhook-authentifizierung
+    overlap: false
+  owner: peter
+  blast_radius: "Kann Banana-Pi-Ausfall-Tickets im Webhook banana-pi-down ausloesen. Gleicher Wert im n8n-Credential Webhook banana-pi-down."
+
+- id: n8n-webhook-nightly-worker-update
+  service: n8n
+  kind: api-token
+  stored_in:
+    - ansible/group_vars/all.yml
+  issued: "2026-10-17"
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/3-apps-workloads/30070-n8n.md#webhook-authentifizierung
+    overlap: false
+  owner: peter
+  blast_radius: "Kann Nightly-Update-Tickets im Webhook nightly-worker-update ausloesen. Gleicher Wert im n8n-Credential Webhook nightly-worker-update (Vault-Variable vault_n8n_nightly_webhook_token)."
+
 - id: argo-workflows-artifact-creds
   service: argo-workflows
   kind: api-token
