@@ -134,6 +134,23 @@
   owner: peter
   blast_radius: "Schreibzugriff (publisher) auf die ntfy-Topics von Host-Skripten und n8n: gefaelschte Alarme und Entwarnungen. Liegt als Vault-Variable ntfy_publisher_token und im n8n-Credential ntfy-publisher."
 
+- id: alert-caller-token
+  service: alert-caller
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/alert-caller/values.yaml
+    - argocd/apps/tech/monitoring/templates/sealedsecret-alert-caller-token.yaml
+    - ansible/roles/alert_caller/templates/alert-caller.env.j2
+  issued: "2026-10-17"
+  expires: null
+  max_age_days: null
+  rotation:
+    mode: manual
+    runbook: docs/1-benachrichtigungen/10020-telefon-alarm.md#zugriffsschutz-token
+    overlap: false
+  owner: peter
+  blast_radius: "Loest Telefonanrufe der Bereitschaft aus (POST /alert) oder haelt den Totmann-Alarm still (POST /watchdog). Liegt als SealedSecret in alert-caller und monitoring und als Vault-Variable vault_alert_caller_token fuer den Pi."
+
 - id: carplay-api-power-agent-token
   service: carplay-api
   kind: api-token

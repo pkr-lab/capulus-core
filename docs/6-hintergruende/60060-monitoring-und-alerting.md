@@ -75,6 +75,13 @@ Bedienung und Einrichtung: [10020](../1-benachrichtigungen/10020-telefon-alarm.m
 - **`KubeApiDownPaging`:** `absent(up{job="apiserver"} == 1)` deckt „Ziel auf 0“ und „Ziel verschwunden“ ab. Die Default-Regel `KubeAPIDown` bleibt unverändert und geht weiter nur an ntfy.
 - **Helm-Escaping:** vmalert-Platzhalter stehen in `templates/` als `{{`{{ $labels.host }}`}}`. Die Rohstring-Schreibweise braucht keine Maskierung der `"` in PromQL (`host="…"`), anders als die `{{ "…" }}`-Form der älteren Regeln.
 - Die Annotationen `ansage`, `grund`, `kontext` und `kontext_text` liest nur der Caller. Der ntfy-Pfad kennt sie nicht und zeigt weiter `summary`.
+**Webhook-Authentifizierung** (`argocd/apps/tech/monitoring/values.yaml`)
+
+- Die drei Webhooks zum Caller (`watchdog` an Pod und Pi, `phone`) tragen `http_config.authorization.credentials_file`. Der Alertmanager liest den Token aus `/etc/vm/secrets/alert-caller-token/token`, das der Operator aus
+  `spec.secrets: [alert-caller-token]` mountet. Der Token steht **nicht** in der Konfiguration, die inline im Repo liegt. ntfy-Bridge und n8n bleiben ohne Token.
+- **Reihenfolge ist riskant:** Ein VMAlertmanager mit `spec.secrets`, dessen Secret fehlt, startet nicht (`ContainerCreating`), und dann fallen alle Alarme aus. Das SealedSecret liegt deshalb im selben Chart (`templates/sealedsecret-alert-caller-token.yaml`)
+  und kommt im selben Sync. Der Sealed-Secrets-Controller entschlüsselt es binnen Sekunden, das Mounten wiederholt sich von selbst. Nach einer Änderung die Alertmanager-Logs und `amtool config show` prüfen.
+- Der Token darf keinen Zeilenumbruch enthalten (`printf '%s'` beim Versiegeln, das Skript `scripts/seal-alert-caller-token.sh` tut das), sonst würde der Header ungültig.
 
 ## Regeln (VMRule)
 

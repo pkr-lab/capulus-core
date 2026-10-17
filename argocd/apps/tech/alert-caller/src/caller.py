@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import array
 import calendar
+import hmac
 import json
 import math
 import os
@@ -38,6 +39,8 @@ SIP_DOMAIN = os.environ.get("SIP_DOMAIN", "sip.linphone.org")
 SIP_PASSWORD = os.environ.get("SIP_PASSWORD", "")
 SIP_STUN_SERVER = os.environ.get("SIP_STUN_SERVER", "stun.cloudflare.com:3478")
 SIP_MEDIA_ENCRYPTION = os.environ.get("SIP_MEDIA_ENCRYPTION", "")
+AUTH_TOKEN = os.environ.get("ALERT_CALLER_TOKEN", "")
+AUTH_MODE = os.environ.get("ALERT_CALLER_AUTH_MODE", "log")
 
 MAX_SPOKEN_ALERTS = 3
 WAV_HEADER_BYTES = 44
@@ -452,8 +455,23 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def _authorized(self):
+        if not AUTH_TOKEN:
+            return False
+        header = self.headers.get("Authorization", "")
+        return hmac.compare_digest(header.encode("utf-8"), f"Bearer {AUTH_TOKEN}".encode("utf-8"))
+
     def do_POST(self):
-        length = int(self.headers.get("Content-Length", "0") or "0")
+        if not self._authorized():
+            log(f"unauthenticated request {self.path} from {self.client_address[0]}")
+            if AUTH_MODE == "enforce":
+                return self._reply(401, "unauthorized")
+        try:
+            length = int(self.headers.get("Content-Length", "0") or "0")
+        except ValueError:
+            return self._reply(400, "bad length")
+        if length < 0:
+            return self._reply(400, "bad length")
         if length > MAX_BODY:
             return self._reply(413, "body too large")
         raw = self.rfile.read(length) if length else b""
@@ -479,6 +497,12 @@ def main():
     if not CALL_TARGETS:
         log("CALL_TARGETS is empty")
         sys.exit(1)
+    if AUTH_MODE not in ("log", "enforce"):
+        log("ALERT_CALLER_AUTH_MODE must be log or enforce")
+        sys.exit(1)
+    if AUTH_MODE == "enforce" and not AUTH_TOKEN:
+        log("ALERT_CALLER_AUTH_MODE=enforce needs ALERT_CALLER_TOKEN")
+        sys.exit(1)
     if SIP_PASSWORD and (not SIP_USER or re.search(r'[;"\s]', SIP_PASSWORD)):
         log("SIP_USER is empty or SIP_PASSWORD contains ; \" or whitespace")
         sys.exit(1)
@@ -487,7 +511,7 @@ def main():
     threading.Thread(target=watchdog_loop, daemon=True).start()
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     mode = f"static announcement {STATIC_ANNOUNCEMENT}" if STATIC_ANNOUNCEMENT else "speech synthesis"
-    log(f"listening on :{PORT}, targets={CALL_TARGETS}, watchdog timeout {WATCHDOG_TIMEOUT}s, {mode}")
+    log(f"listening on :{PORT}, targets={CALL_TARGETS}, watchdog timeout {WATCHDOG_TIMEOUT}s, {mode}, auth {AUTH_MODE}")
     server.serve_forever()
 
 

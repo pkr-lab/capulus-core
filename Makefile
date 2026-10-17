@@ -25,6 +25,16 @@ ping: ## Verify Ansible can reach the server.
 check: ## Dry-run the full playbook (no changes applied).
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --check --diff $(VAULT_OPTS)
 
+.PHONY: ssh-hardening
+ssh-hardening: ## Apply the ssh_hardening role (key-only SSH) on homeserver, workers, prod-vm, entw-vm and the kiosk Pis.
+	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags ssh-hardening $(VAULT_OPTS)
+	ansible-playbook -i $(INVENTORY) $(HS2_PLAYBOOK) --tags ssh-hardening $(VAULT_OPTS)
+	ansible-playbook -i $(INVENTORY) $(HS3_PLAYBOOK) --tags ssh-hardening $(VAULT_OPTS)
+	ansible-playbook -i $(INVENTORY) $(PROD_PLAYBOOK) --tags ssh-hardening $(VAULT_OPTS)
+	ansible-playbook -i $(INVENTORY) $(ENTW_PLAYBOOK) --tags ssh-hardening $(VAULT_OPTS)
+	ansible-playbook -i $(INVENTORY) $(ANSIBLE_DIR)/banana-pi-kiosks.yml --tags ssh-hardening $(VAULT_OPTS)
+	ansible-playbook -i $(INVENTORY) $(ANSIBLE_DIR)/xibo-kiosks.yml --tags ssh-hardening $(VAULT_OPTS)
+
 .PHONY: install
 install: deps ## Provision the home server end-to-end.
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) $(VAULT_OPTS)
