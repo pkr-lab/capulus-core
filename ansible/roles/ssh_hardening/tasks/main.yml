@@ -1,0 +1,49 @@
+---
+
+- name: sshd-härtung ablegen, prüfen und anwenden
+  block:
+    - name: sshd-drop-in ablegen
+      ansible.builtin.template:
+        src: 00-hardening.conf.j2
+        dest: "{{ ssh_hardening_dropin }}"
+        owner: root
+        group: root
+        mode: "0644"
+      register: ssh_hardening_result
+
+    - name: sshd-konfiguration prüfen
+      ansible.builtin.command: sshd -t
+      changed_when: false
+
+    - name: wirksame sshd-werte lesen
+      ansible.builtin.command: sshd -T
+      register: ssh_hardening_effective
+      changed_when: false
+
+    - name: prüfen dass das drop-in die werte aus anderen dateien übersteuert
+      ansible.builtin.assert:
+        that:
+          - "'passwordauthentication no' in ssh_hardening_effective.stdout"
+          - "'permitrootlogin no' in ssh_hardening_effective.stdout"
+          - "'allowagentforwarding no' in ssh_hardening_effective.stdout"
+        fail_msg: >-
+          Das Drop-in {{ ssh_hardening_dropin }} wird von einer früher geladenen
+          Datei übersteuert. Der Dateiname muss alphabetisch vor 50-cloud-init.conf liegen.
+
+    - name: sshd neu laden
+      ansible.builtin.systemd:
+        name: ssh
+        state: reloaded
+      when: ssh_hardening_result is changed
+
+  rescue:
+    - name: fehlerhaftes sshd-drop-in entfernen
+      ansible.builtin.file:
+        path: "{{ ssh_hardening_dropin }}"
+        state: absent
+
+    - name: ablauf abbrechen
+      ansible.builtin.fail:
+        msg: >-
+          sshd-Härtung abgebrochen, das Drop-in {{ ssh_hardening_dropin }} wurde entfernt.
+          sshd wurde nicht neu geladen.

@@ -89,6 +89,14 @@ spec:
                   name: {{ .Values.secrets.name }}
                   key: HC_PING_URL
                   optional: true
+            - name: ALERT_CALLER_AUTH_MODE
+              value: {{ .Values.config.auth.mode | quote }}
+            - name: ALERT_CALLER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: ALERT_CALLER_TOKEN
+                  optional: true
           livenessProbe:
             tcpSocket:
               port: http
