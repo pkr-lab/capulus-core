@@ -194,13 +194,13 @@
     comment: "k3s API ({{ item }})"
   loop: "{{ common_ufw_k3s_api_sources }}"
 
-- name: Allow ArgoCD NodePort HTTP (port 30080) from LAN and Tailnet only
+- name: Remove ArgoCD NodePort 30080 rules (NodePort entfällt, ArgoCD läuft über den Ingress)
   community.general.ufw:
     rule: allow
     port: "30080"
     proto: tcp
     src: "{{ item }}"
-    comment: "ArgoCD API/CLI/CI (HTTP, nur LAN + Tailnet)"
+    delete: true
   loop:
     - "{{ local_subnet }}"
     - "100.64.0.0/10"
