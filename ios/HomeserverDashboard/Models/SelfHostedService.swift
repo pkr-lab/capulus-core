@@ -7,5 +7,5 @@ struct SelfHostedService: Identifiable, Equatable {
 
     var id: String { host }
 
-    var url: URL { URL(string: "http://\(host)")! }
+    var url: URL { URL(string: "https://\(host)")! }
 }
