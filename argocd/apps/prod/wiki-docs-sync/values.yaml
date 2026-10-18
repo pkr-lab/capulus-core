@@ -31,7 +31,8 @@ wikijs:
   url: "http://wikijs.wikijs.svc.cluster.local"
   locale: "en"
   pathPrefix: "docs"
-  legacyPrefixes: []
+  legacyPrefixes:
+    - "Github/capulus-core"
   dryRun: false
   minPages: 20
   tokenSecretName: wiki-docs-sync-wikijs-token
