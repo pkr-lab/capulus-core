@@ -93,16 +93,26 @@ Der Verzeichnisname `carplay-api` ist historisch (aus der CarPlay-Vorversion), d
 
 ### Transport und Schlüssel
 
-- **HTTP im Code, HTTPS im Cluster.** `Constants.swift` verweist auf `http://carplay-api.prod.homeserver` mit einer `NSAppTransportSecurity`-Ausnahme für die Domain `homeserver` (siehe
-  [ios/README](../../ios/README.md), Abschnitt Transport). Diese Ausnahme wird aus `project.yml` in die `Info.plist` **generiert**: XcodeGen schreibt die Datei bei jedem `generate` aus diesen Eigenschaften und
-  **überschreibt** sie komplett, statt mit handgemachtem Inhalt zu mergen. Alles, was die App braucht (Anzeigename, Launch Screen, Orientierung, ATS-Ausnahme), muss deshalb in `project.yml` stehen,
-  sonst verschwindet es beim nächsten `xcodegen generate` still, und die App verweigert jeden `http://*.homeserver`-Request. Ein generiertes `.xcodeproj` lässt sich außerhalb von Xcode kaum von Hand pflegen oder
-  diffen, deshalb wird das Projekt aus dem Text generiert und nicht eingecheckt (Setup: `brew install xcodegen`, `cd ios && xcodegen generate`).
-- Die ATS-Ausnahme gilt nur für **Domainnamen**, nie für numerische IP-Literale. Die Basis-URL des `banana-pi-wol-agent` ist deshalb eine rohe Tailscale-IP und braucht **keine** Ausnahme (und ist ohnehin
-  kein `*.homeserver`-Name, weil das Gerät nur per Tailscale erreichbar ist und aus dem Cluster nicht).
-- **`MTLSDelegate` ist ein Erweiterungspunkt.** Die ursprüngliche Spezifikation wollte Zertifikats-Pinning. Ohne TLS-Handshake gäbe es nichts zu pinnen, eine Implementierung wäre eine Prüfung, die nie läuft.
+- **HTTPS ohne ATS-Ausnahme.** `Constants.swift` verweist auf `https://carplay-api.prod.homeserver`, die App enthält keinen `NSAppTransportSecurity`-Eintrag mehr (siehe
+  [ios/README](../../ios/README.md), Abschnitt Transport). Vorher stand dort `http://` mit `NSExceptionAllowsInsecureHTTPLoads` für die Domain `homeserver` samt Subdomains: Bearer-Token und Dashboard-Daten liefen
+  im Heim-WLAN im Klartext, und seit der globalen HTTP→HTTPS-Umleitung von Traefik (2026-09-13) ging jeder Aufruf ohnehin erst über einen `301`/`308`. Die Umleitung war kein Schutz, weil der erste Request mit
+  dem Token schon im Klartext hinausging. Der Hostname steht seit der Tier-Migration in der SAN-Liste des cert-manager-Zertifikats, deshalb brauchte es keine Serveränderung und keinen eigenen TLS-Block im Ingress
+  (der Standard-`TLSStore` greift).
+- **Die Root-CA muss auf dem Gerät aktiv sein, sonst hat die App keine Verbindung.** Ohne ATS-Ausnahme gibt es keinen Rückweg über Klartext: Ist das Profil nicht installiert oder in den
+  Zertifikatsvertrauenseinstellungen nicht aktiviert, scheitert jeder Request mit einem TLS-Fehler. Das ist gewollt (fail closed). Schnelltest: `https://carplay-api.prod.homeserver/health` in Safari.
+  Die Kurzlink-Kacheln brauchen dieselbe Vertrauensstellung und stehen deshalb ebenfalls auf `https://`.
+- Diese Konfiguration wird aus `project.yml` in die `Info.plist` **generiert**: XcodeGen schreibt die Datei bei jedem `generate` aus diesen Eigenschaften und **überschreibt** sie komplett, statt mit
+  handgemachtem Inhalt zu mergen. Alles, was die App braucht (Anzeigename, Launch Screen, Orientierung), muss deshalb in `project.yml` stehen, sonst verschwindet es beim nächsten `xcodegen generate` still.
+  Ein generiertes `.xcodeproj` lässt sich außerhalb von Xcode kaum von Hand pflegen oder diffen, deshalb wird das Projekt aus dem Text generiert und nicht eingecheckt (Setup: `brew install xcodegen`,
+  `cd ios && xcodegen generate`).
+- **Der WoL-Agent bleibt vorerst bei `http://` auf der Tailscale-IP.** ATS gilt nur für **Domainnamen**, nie für numerische IP-Literale, deshalb braucht die rohe Tailscale-IP des `banana-pi-wol-agent` keine
+  Ausnahme (und ist ohnehin kein `*.homeserver`-Name, weil das Gerät nur per Tailscale erreichbar ist und aus dem Cluster nicht). Der Agent lauscht ausschließlich auf der Tailscale-Adresse
+  (`banana_pi_kiosk_wol_agent_bind_address` in `host_vars/vereinsheim-alarmmonitor`, [60020](60020-ansible-rollen.md#banana_pi_kiosk-vereinsheim-alarmmonitor)), der Token läuft damit im WireGuard-Tunnel.
+  Offener Restpunkt: TLS im Agenten (IP-SAN-Zertifikat aus der Root-CA).
+- **`MTLSDelegate` ist ein Erweiterungspunkt.** Die ursprüngliche Spezifikation wollte Zertifikats-Pinning. Der Delegate führt heute nur `performDefaultHandling` aus, also die Systemprüfung gegen die im Gerät vertrauten Zertifikate (inklusive der installierten Root-CA).
   Echtes Client-Zertifikats-mTLS (Home-Lab-CA plus `RequireAndVerifyClientCert` am Traefik) ist eine unimplementierte Idee. Kommt sie, muss die IngressRoute die TLSOption `mtls-homelab` referenzieren, der
-  Client-Identity-Zweig im Delegate aktiviert, das `.p12` des Geräts per Keychain bereitgestellt und die Basis-URL wieder auf `https://` gestellt werden.
+  Client-Identity-Zweig im Delegate aktiviert und das `.p12` des Geräts per Keychain bereitgestellt werden. Ein Pinning auf die Root-CA (`SecTrustSetAnchorCertificates` für `*.homeserver`) ist nicht umgesetzt;
+  es würde die Profil-Installation für die App überflüssig machen, ließe sich aber nur mit Xcode prüfen.
 - **Keychain statt „Secure Enclave“.** Die Spezifikation nannte die Secure Enclave, sie schützt aber private **Schlüssel** für Signieren/Entschlüsseln und hat keine API für ein beliebiges opakes Token wie ein
   Bearer-Credential. `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` ist das richtige Primitiv: geräteverschlüsselt, von iCloud-/iTunes-Backups ausgenommen und bei gesperrtem Gerät nicht lesbar, also genau die
   Sicherheitseigenschaft, die gemeint war. Der Wert wird als Ganzes neu geschrieben, deshalb „löschen dann hinzufügen“ statt `SecItemUpdate`.
@@ -155,4 +165,4 @@ Der Verzeichnisname `carplay-api` ist historisch (aus der CarPlay-Vorversion), d
 - **News:** Je eine Schlagzeile von Tagesschau (öffentliches, inoffizielles JSON), Heise und WELT (RSS/Atom). Die Feeds sind nicht versioniert: Ändert ein Anbieter sein Schema, scheitert **nur diese Quelle**
   („Nicht verfügbar“), nicht die ganze Seite. Der Parser liest nur das erste Item (RSS `<item>` oder Atom `<entry>`) und bricht dann ab (der Abbruchfehler ist erwartet). Atoms `<link>` ist ein selbstschließendes
   Element mit `href`, RSS 2.0 hat den Link als Text, und `<description>` (RSS) bzw. `<summary>`/`<content>` (Atom) landen im selben Kurztext-Feld. HTML-Markup und Entitäten der Beschreibungen werden entfernt.
-- Die **Kurzlink-Kacheln** der Dienste sind reine Link-Listen ohne eigenen Live-Status und öffnen den Dienst in Safari (nicht in der `URLSession` der App, die ATS-Ausnahme spielt dort keine Rolle).
+- Die **Kurzlink-Kacheln** der Dienste sind reine Link-Listen ohne eigenen Live-Status und öffnen den Dienst in Safari (nicht in der `URLSession` der App, ATS spielt dort keine Rolle).
