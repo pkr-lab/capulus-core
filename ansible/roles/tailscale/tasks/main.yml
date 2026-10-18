@@ -13,6 +13,11 @@
     mode: '0644'
     force: false
 
+- name: Check whether the Tailscale keyring exists
+  ansible.builtin.stat:
+    path: /usr/share/keyrings/tailscale-archive-keyring.gpg
+  register: tailscale_keyring
+
 - name: Install gnupg for the key fingerprint check
   ansible.builtin.apt:
     name: gnupg
@@ -24,6 +29,7 @@
     prefix: tailscale-gnupg-
   register: tailscale_gnupg_home
   changed_when: false
+  check_mode: false
 
 - name: Read Tailscale signing key fingerprint
   ansible.builtin.command: >-
@@ -31,12 +37,15 @@
     /usr/share/keyrings/tailscale-archive-keyring.gpg
   register: tailscale_key_info
   changed_when: false
+  check_mode: false
+  when: tailscale_keyring.stat.exists or not ansible_check_mode
 
 - name: Remove temporary GnuPG home
   ansible.builtin.file:
     path: "{{ tailscale_gnupg_home.path }}"
     state: absent
   changed_when: false
+  check_mode: false
 
 - name: Verify Tailscale signing key fingerprint
   ansible.builtin.assert:
@@ -46,6 +55,7 @@
       Der Fingerprint von /usr/share/keyrings/tailscale-archive-keyring.gpg weicht von
       tailscale_signing_key_fingerprint ab. Schlüssel nicht vertrauen, Ursache klären
       (docs/6-hintergruende/60020-ansible-rollen.md, Abschnitt Installer und Prüfsummen).
+  when: tailscale_key_info.stdout is defined
 
 - name: Add Tailscale APT repository
   ansible.builtin.apt_repository:

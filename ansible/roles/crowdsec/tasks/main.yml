@@ -29,6 +29,7 @@
     prefix: crowdsec-gnupg-
   register: crowdsec_gnupg_home
   changed_when: false
+  check_mode: false
 
 - name: Convert CrowdSec repository key to a keyring
   ansible.builtin.command: >-
@@ -47,12 +48,15 @@
     /etc/apt/keyrings/crowdsec_crowdsec-archive-keyring.gpg
   register: crowdsec_key_info
   changed_when: false
+  check_mode: false
+  when: crowdsec_keyring.stat.exists or not ansible_check_mode
 
 - name: Remove temporary GnuPG home
   ansible.builtin.file:
     path: "{{ crowdsec_gnupg_home.path }}"
     state: absent
   changed_when: false
+  check_mode: false
 
 - name: Verify CrowdSec repository key fingerprint
   ansible.builtin.assert:
@@ -62,6 +66,7 @@
       Der Fingerprint von /etc/apt/keyrings/crowdsec_crowdsec-archive-keyring.gpg weicht von
       crowdsec_repo_key_fingerprint ab. Schlüssel nicht vertrauen, Ursache klären
       (docs/6-hintergruende/60020-ansible-rollen.md, Abschnitt Installer und Prüfsummen).
+  when: crowdsec_key_info.stdout is defined
 
 - name: Write CrowdSec APT repository
   ansible.builtin.copy:
