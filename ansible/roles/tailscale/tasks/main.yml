@@ -90,6 +90,7 @@
   register: tailscale_status_raw
   changed_when: false
   failed_when: false
+  check_mode: false
 
 - name: Parse Tailscale status
   ansible.builtin.set_fact:
@@ -105,7 +106,9 @@
     msg: "Tailscale connected: {{ tailscale_connected }}"
 
 - name: Authenticate with Tailscale using auth key
-  when: not tailscale_connected
+  when:
+    - not tailscale_connected
+    - not ansible_check_mode
   block:
     - name: Create temporary file for auth key
       ansible.builtin.tempfile:
@@ -158,12 +161,14 @@
   retries: 6
   delay: 5
   until: tailscale_final_status.rc == 0
+  check_mode: false
 
 - name: Get Tailscale IP address
   ansible.builtin.command: tailscale ip -4
   register: tailscale_ip
   changed_when: false
   failed_when: false
+  check_mode: false
 
 - name: Display Tailscale connection info
   ansible.builtin.debug:
