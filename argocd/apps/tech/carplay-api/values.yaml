@@ -4,7 +4,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/pkr-lab/carplay-api
-  tag: "sha-04f6d88"
+  tag: "sha-4e05141"
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
