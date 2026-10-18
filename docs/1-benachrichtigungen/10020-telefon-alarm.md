@@ -246,17 +246,17 @@ Tailscale nimmt den Tailnet-Verkehr vor UFW an).
 ```bash
 scripts/seal-alert-caller-token.sh
 ansible-vault encrypt_string --name vault_alert_caller_token "$(sed -n 's/^alert_caller_token=//p' ~/alert-caller-token-2026-10-17.txt)"
-ansible-playbook -i ansible/inventory/hosts.yml ansible/alert-caller.yml --limit vereinsheim-alarmmonitor --tags alert-caller --ask-vault-pass
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/alert-caller.yml --limit vereinsheim-alarmmonitor --tags alert-caller --ask-vault-pass
 ```
 
-Das Skript erzeugt aus der Datei `~/alert-caller-token-2026-10-17.txt` (Modus `0600`, außerhalb des Repos) die beiden SealedSecrets und trägt sie ein. Die Ausgabe von `ansible-vault encrypt_string` kommt in `ansible/group_vars/all.yml`. Vor dem Commit
+Das Skript erzeugt aus der Datei `~/alert-caller-token-2026-10-17.txt` (Modus `0600`, außerhalb des Repos) die beiden SealedSecrets und trägt sie ein. Die Ausgabe von `ansible-vault encrypt_string` kommt in `capulus-ansible/group_vars/all.yml`. Vor dem Commit
 prüfen, dass dort kein Klartext steht. Der Alertmanager-Pod wartet auf das Secret `alert-caller-token`: Existiert es nicht, bleibt er in `ContainerCreating` und **alle** Alarme fehlen. Das SealedSecret gehört deshalb in denselben PR wie die Mount-Konfiguration.
 
 ### Von `log` auf `enforce`
 
 1. Im Log prüfen, dass nichts Unauthentifiziertes mehr eintrifft:
    `kubectl -n alert-caller logs deploy/alert-caller --since=30m | grep unauthenticated` und `ssh alarm-monitor 'sudo journalctl -u alert-caller --since -30min | grep unauthenticated'`. Alertmanager meldet sich jede Minute mit `/watchdog`.
-2. `config.auth.mode: enforce` im Chart, `alert_caller_auth_mode: enforce` in `ansible/group_vars/alert_caller_pi.yml`, PR, Rollenlauf für den Pi.
+2. `config.auth.mode: enforce` im Chart, `alert_caller_auth_mode: enforce` in `capulus-ansible/group_vars/alert_caller_pi.yml`, PR, Rollenlauf für den Pi.
 3. Prüfen: `curl -s -o /dev/null -w '%{http_code}\n' -X POST http://<caller>:9310/watchdog` liefert `401`, mit `-H "Authorization: Bearer $TOKEN"` `200`. Danach Testplan 3 (echter Anruf).
 
 **Fehlerbild bei falschem Token im Modus `enforce`:** Alertmanager bekommt `401` auf `/watchdog`, nach `WATCHDOG_TIMEOUT` (10 Minuten) ruft der Caller selbst an („Der Cluster meldet sich seit über 10 Minuten nicht mehr“). Ein stiller Ausfall ist damit nicht möglich.
@@ -339,7 +339,7 @@ Das deckt auch einen Strom- oder Internetausfall im Haus ab. Fällt umgekehrt de
 | Eigenschaft | Pi | Cluster |
 |---|---|---|
 | Hardware | Banana Pi M2 Ultra, **armv7l (32 Bit)**, 2 GB RAM, 4 Kerne, 9 GB frei (Stand 2026-10-11, aus den Metriken) | `homeserver` |
-| Ansage | **feste WAV** `ansible/roles/alert_caller/files/cluster-down.wav` („Achtung, Cluster Alarm. Der Cluster meldet sich seit über 10 Minuten nicht mehr.“, 4,6 s, 16 kHz mono) | Piper, dynamisch je Alarm |
+| Ansage | **feste WAV** `capulus-ansible/roles/alert_caller/files/cluster-down.wav` („Achtung, Cluster Alarm. Der Cluster meldet sich seit über 10 Minuten nicht mehr.“, 4,6 s, 16 kHz mono) | Piper, dynamisch je Alarm |
 | Piper | nicht installiert: `onnxruntime` hat für 32-Bit-ARM keine Pakete | im Image |
 | Webhooks | nur `/watchdog` (`/alert` liefert 404, es gäbe sonst die falsche feste Ansage) | `/alert` und `/watchdog` |
 | Firewall | Rolle fasst sie nicht an (`alert_caller_manage_firewall: false`, der Pi hat bisher keine UFW-Konfiguration aus Ansible) | Rolle bzw. UFW des Hosts |
@@ -349,15 +349,15 @@ Das deckt auch einen Strom- oder Internetausfall im Haus ab. Fällt umgekehrt de
 
 ```bash
 kubectl -n alert-caller exec deploy/alert-caller -- sh -c 'cd /tmp && /opt/piper/venv/bin/python -m piper -m de_DE-thorsten-high --data-dir /opt/piper -f /tmp/cd-raw.wav -- "Achtung, Cluster Alarm. Der Cluster meldet sich seit über 10 Minuten nicht mehr." && sox /tmp/cd-raw.wav -r 16000 -c 1 -b 16 /tmp/cd.wav norm -3'
-kubectl -n alert-caller cp $(kubectl -n alert-caller get pod -o jsonpath='{.items[0].metadata.name}'):/tmp/cd.wav ansible/roles/alert_caller/files/cluster-down.wav
+kubectl -n alert-caller cp $(kubectl -n alert-caller get pod -o jsonpath='{.items[0].metadata.name}'):/tmp/cd.wav capulus-ansible/roles/alert_caller/files/cluster-down.wav
 ```
 
 Der Text muss zur Watchdog-Ansage in `caller.py` passen (`über {minutes} Minuten`, hier 10).
 
 **Ausrollen** (von einem Rechner, der den Pi per Tailscale erreicht):
 
-1. Das Passwort von `capulus-core` in den Vault: `ansible-vault encrypt_string --ask-vault-pass --name vault_alert_caller_sip_password '<Passwort>'`, Ausgabe in `ansible/group_vars/all.yml` einfügen (dieselbe Variable wie für die VM-Variante).
-2. `make alert-caller-pi-check`, dann `make alert-caller-pi`. Gruppe `alert_caller_pi`, Variablen in `ansible/group_vars/alert_caller_pi.yml`. Der erste Lauf **baut baresip auf dem Pi aus den Quellen** (2 parallele Jobs, wegen 2 GB RAM und laufendem Kiosk), das dauert deutlich länger als auf einem x86-Rechner.
+1. Das Passwort von `capulus-core` in den Vault: `ansible-vault encrypt_string --ask-vault-pass --name vault_alert_caller_sip_password '<Passwort>'`, Ausgabe in `capulus-ansible/group_vars/all.yml` einfügen (dieselbe Variable wie für die VM-Variante).
+2. `make alert-caller-pi-check`, dann `make alert-caller-pi`. Gruppe `alert_caller_pi`, Variablen in `capulus-ansible/group_vars/alert_caller_pi.yml`. Der erste Lauf **baut baresip auf dem Pi aus den Quellen** (2 parallele Jobs, wegen 2 GB RAM und laufendem Kiosk), das dauert deutlich länger als auf einem x86-Rechner.
 3. Auf dem Pi prüfen: `journalctl -u alert-caller -n 20` zeigt `listening on :9310 … static announcement /opt/alert-caller/cluster-down.wav`.
 
 **Stand 2026-10-11:** Die Rolle ist auf dem Pi ausgerollt (`make alert-caller-pi`). Die Tailscale-ACL hat eine Regel `tag:tech-node → 100.123.214.4:9310` (`tcp:9310`, nur dieser Port). Der Test aus dem Alertmanager-Pod lieferte `ok` auf `/watchdog` und `404` auf `/alert` (statischer Modus). Die zweite URL ist im Receiver `watchdog` eingetragen (siehe unten).
@@ -393,15 +393,15 @@ Fällt der Alertmanager aus, während der Cluster läuft, rufen dann beide Calle
 ## Später: externe VM
 
 Soll der Anruf auch bei Ausfall des Clusters, des Homeservers, des Stroms oder des Internets im Haus kommen, muss der Anrufer **außerhalb** laufen (Oracle Cloud Always Free, öffentliche IP, per Tailscale im Tailnet).
-Dafür gibt es die Ansible-Rolle `ansible/roles/alert_caller` (Playbook `ansible/alert-caller.yml`, Gruppe `alert_callers`, `make alert-caller-check` und `make alert-caller`). Sie benutzt dieselbe `caller.py` wie das Chart
+Dafür gibt es die Ansible-Rolle `capulus-ansible/roles/alert_caller` (Playbook `capulus-ansible/alert-caller.yml`, Gruppe `alert_callers`, `make alert-caller-check` und `make alert-caller`). Sie benutzt dieselbe `caller.py` wie das Chart
 (`argocd/apps/tech/alert-caller/src/caller.py`), baut `baresip` aus den Quellen und installiert Piper. Begründungen: [60020](../6-hintergruende/60020-ansible-rollen.md#alert_caller). Die Rolle wurde in einem Ubuntu-24.04-Container mit systemd geprüft (läuft durch, idempotent, Dienst
 als `DynamicUser`, Watchdog nach 600 s), **nicht** auf ARM und nicht in Oracle.
 
 Schritte, wenn es so weit ist:
 
 1. **VM:** Shape `VM.Standard.A1.Flex`, Ubuntu 24.04, öffentliche IP, Benutzer `ubuntu`. Piper braucht rund 250 MB Arbeitsspeicher und etwa 12 CPU-Sekunden je Ansage. In der Security List `UDP 10000-10100` aus `0.0.0.0/0` (Ingress) öffnen.
-2. **Secrets:** `ansible-vault encrypt_string --ask-vault-pass --name vault_alert_caller_sip_password '<Passwort>'` und `--name vault_alert_caller_hc_uuid '<UUID>'`, die Ausgaben in `ansible/group_vars/all.yml` einfügen.
-   `ansible/group_vars/alert_callers.yml`: die SIP-Adresse eintragen (Platzhalter `sip:EINTRAGEN@…` lässt die Rolle abbrechen). `ansible/inventory/hosts.yml`: `ansible_host` von `alert-caller-vm` setzen.
+2. **Secrets:** `ansible-vault encrypt_string --ask-vault-pass --name vault_alert_caller_sip_password '<Passwort>'` und `--name vault_alert_caller_hc_uuid '<UUID>'`, die Ausgaben in `capulus-ansible/group_vars/all.yml` einfügen.
+   `capulus-ansible/group_vars/alert_callers.yml`: die SIP-Adresse eintragen (Platzhalter `sip:EINTRAGEN@…` lässt die Rolle abbrechen). `capulus-ansible/inventory/hosts.yml`: `ansible_host` von `alert-caller-vm` setzen.
 3. **Tailscale-ACL:** Der Alertmanager-Pod erreicht das Tailnet über die Maskierung des Homeservers und kommt bei der VM als **`homeserver` (100.74.0.59, Tag `tagged-devices`)** an. Die ACL muss diese Quelle auf `<vm>:9310` zulassen.
    Das Netzwerk dahin ist geprüft: Ein SYN aus dem Alertmanager-Pod verlässt den Homeserver auf `tailscale0` mit der Absenderadresse `100.74.0.59` (mit `tcpdump` gesehen). Ob die ACL die Verbindung zur VM erlaubt, lässt sich erst mit der VM prüfen.
 4. **Ausrollen:** `make alert-caller-check`, dann `make alert-caller`. Danach `tailscale ip -4` auf der VM, und aus dem Alertmanager-Pod prüfen:
@@ -410,4 +410,4 @@ Schritte, wenn es so weit ist:
    (`replicaCount: 0`), sonst gibt es zwei Caller. Die Kontext-Abfragen (`kontext`) brauchen dann einen lesenden Zugang der VM zu VictoriaMetrics, den es nicht gibt (`vm-write` erlaubt nur Schreiben): `alert_caller_vm_url` bleibt leer, der Kontext fällt weg.
 6. **healthchecks.io:** Die Rolle liest `vault_alert_caller_hc_uuid` und bildet daraus `HC_PING_URL`. Der Check hat dasselbe Verhalten wie oben beschrieben.
 
-Weitere Variablen der Rolle: `ansible/roles/alert_caller/defaults/main.yml` (`alert_caller_*`, entsprechen den Schlüsseln aus „Konfiguration“).
+Weitere Variablen der Rolle: `capulus-ansible/roles/alert_caller/defaults/main.yml` (`alert_caller_*`, entsprechen den Schlüsseln aus „Konfiguration“).

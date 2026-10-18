@@ -2,7 +2,7 @@
 
 - Severity: Medium
 - Bereich: Repo
-- Betroffen: `ansible/roles/k3s/templates/k3s-config.yaml.j2:3` (`write-kubeconfig-mode: "0644"`), Datei `/etc/rancher/k3s/k3s.yaml` auf dem Control-Plane-Host (homeserver, nicht worker0/1)
+- Betroffen: `capulus-ansible/roles/k3s/templates/k3s-config.yaml.j2:3` (`write-kubeconfig-mode: "0644"`), Datei `/etc/rancher/k3s/k3s.yaml` auf dem Control-Plane-Host (homeserver, nicht worker0/1)
 - Status: Behoben am 2026-10-17
 
 ## Beschreibung
@@ -12,14 +12,14 @@ Die k3s-Serverkonfiguration setzt `write-kubeconfig-mode: "0644"`. Die Kubeconfi
 ## Nachweis
 
 ```
-$ sed -n 1,5p ansible/roles/k3s/templates/k3s-config.yaml.j2
+$ sed -n 1,5p capulus-ansible/roles/k3s/templates/k3s-config.yaml.j2
 ---
 write-kubeconfig-mode: "0644"
 tls-san:
   - "{{ k3s_server_ip }}"
 
-$ grep -rn 'k3s.yaml' ansible/roles | head -3
-ansible/roles/cluster_power_manager/defaults/main.yml:24:cluster_power_manager_kubeconfig: /etc/rancher/k3s/k3s.yaml
+$ grep -rn 'k3s.yaml' capulus-ansible/roles | head -3
+capulus-ansible/roles/cluster_power_manager/defaults/main.yml:24:cluster_power_manager_kubeconfig: /etc/rancher/k3s/k3s.yaml
 ```
 Auf dem Host zu prüfen: `stat -c '%a %U:%G' /etc/rancher/k3s/k3s.yaml`
 
@@ -83,7 +83,7 @@ Health-Check danach: ArgoCD-Apps `Synced`/`Healthy` bis auf `logging` und `ollam
 
 **Geänderte Dateien.**
 
-- `ansible/roles/k3s/templates/k3s-config.yaml.j2` (`write-kubeconfig-mode: "0600"`)
+- `capulus-ansible/roles/k3s/templates/k3s-config.yaml.j2` (`write-kubeconfig-mode: "0600"`)
 - `docs/6-hintergruende/60020-ansible-rollen.md` (Abschnitt „k3s: Modus der Kubeconfig“)
 - Auf den Hosts: `/etc/rancher/k3s/config.yaml` (Zeile 3) und Modus von `/etc/rancher/k3s/k3s.yaml`
 

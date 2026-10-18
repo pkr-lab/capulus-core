@@ -1,6 +1,6 @@
 # Ansible: Rollen — Hintergründe
 
-Begründungen zu den Rollen unter `ansible/roles/`, geordnet nach Rolle. Hosts, VMs, Playbook-Reihenfolge und die Rolle
+Begründungen zu den Rollen unter `capulus-ansible/roles/`, geordnet nach Rolle. Hosts, VMs, Playbook-Reihenfolge und die Rolle
 `libvirt_host` stehen in [60010](60010-ansible-hosts-und-playbooks.md). Die Rolle `argocd` steht in
 [60030](60030-argocd-und-bootstrap.md). Bedienung der Geräte: [30010](../3-apps-workloads/30010-alamos-apager.md),
 [30020](../3-apps-workloads/30020-vereinsheim-alarmmonitor.md), [300e0](../3-apps-workloads/300e0-xibosignage.md).
@@ -155,7 +155,7 @@ Bildschirmhelligkeit (sysfs), manuelles Wake-on-LAN und Poweroff für worker-0/w
 - **HTTPS ist Pflicht (Vorfall 2026-09-13 bis 2026-10-18).** Der TECH-Traefik leitet HTTP global per `308` um; `curl` folgt dem ohne `-L` nicht, `--fail` greift erst ab Status 400 und `|| true` verschluckte jeden Fehler.
   Alle vier Skripte (`thermal-watchdog`, `resource-watchdog`, `cluster-power-manager`, `nightly-worker-wake`) hatten deshalb seit dem 13.09. keine einzige Meldung zugestellt, ohne dass ein Dienst einen Fehler zeigte.
   Sie nutzen jetzt `--resolve "${NTFY_HOST}:443:${NTFY_IP}"` (weiterhin ohne DNS) und prüfen das Zertifikat mit `--cacert "$NTFY_CA_FILE"` (Standard `/etc/ntfy-publisher/ca.pem`). Die Datei legt die Rolle
-  `ntfy_publisher` aus `docs/assets/homeserver-root-ca.pem` ab (`ntfy_publisher_ca_src`), nur diese Datei, nicht der System-Trust-Store: So geht es auch auf worker-0 und worker-1 ohne `update-ca-certificates`.
+  `ntfy_publisher` aus `pki/homeserver-root-ca.pem` ab (`ntfy_publisher_ca_src`), nur diese Datei, nicht der System-Trust-Store: So geht es auch auf worker-0 und worker-1 ohne `update-ca-certificates`.
   Ein Fehlschlag steht jetzt im Journal (`logger -t <skript> "ntfy-Meldung fehlgeschlagen"`), der Dienst läuft weiter (die Abschaltlogik darf nicht an einer Meldung hängen). Der Token verlässt den Host damit verschlüsselt.
 - Mehrere Rollen haben einen Kill-Switch (`*_enabled: false`, z. B. in `host_vars`), um sie auf einem Host abzuschalten, ohne die
   Rolle aus dem Playbook zu nehmen: `thermal_watchdog`, `vmagent`, `node_exporter`, `smartctl_exporter`, `wake_on_lan`,
@@ -277,7 +277,7 @@ DERP-Servern). Er dient nur als Notzugang, falls die Tailscale-Control-Plane aus
 ### alert_caller
 
 Telefon-Alarm für eine **externe VM** (noch nicht ausgerollt, heute läuft der Caller als Pod, siehe [60040](60040-helm-charts-tech.md#alert-caller)): systemd-Dienst `alert-caller` (Python, nur Standardbibliothek), der Alertmanager-Webhooks in einen Anruf per SIP verwandelt. `caller.py` liegt
-im Chart `argocd/apps/tech/alert-caller/src/` und wird von der Rolle von dort kopiert (eine Quelle für beide Betriebsarten). Playbook `ansible/alert-caller.yml`, Inventar-Gruppe `alert_callers`, Make-Targets `alert-caller` und `alert-caller-check`.
+im Chart `argocd/apps/tech/alert-caller/src/` und wird von der Rolle von dort kopiert (eine Quelle für beide Betriebsarten). Playbook `capulus-ansible/alert-caller.yml`, Inventar-Gruppe `alert_callers`, Make-Targets `alert-caller` und `alert-caller-check`.
 Bedienung, Einrichtung und Testplan: [10020](../1-benachrichtigungen/10020-telefon-alarm.md). Routing und Regeln: [60060](60060-monitoring-und-alerting.md#telefon-alarm).
 
 - **Playbook und Tailscale:** Die Overrides für Tailscale (`tailscale_hostname`, keine Subnetz-Route) stehen in `host_vars/alert-caller-vm`, **nicht** in `group_vars/alert_callers.yml`. Der `homeserver` kann als Fallback in der Gruppe stehen, und ein

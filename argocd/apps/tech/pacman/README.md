@@ -23,7 +23,7 @@ ca. 3 Minuten) und legt die Application **pacman** an — Namespace ist
 dabei immer der Ordnername, hier also **`pacman`**.
 
 Damit `pacman` als eigenes AppProject-Ziel erlaubt ist, muss der Namespace
-zusätzlich in `argocd_workloads_apps` (`ansible/roles/argocd/defaults/main.yml`)
+zusätzlich in `argocd_workloads_apps` (`capulus-ansible/roles/argocd/defaults/main.yml`)
 stehen und `make render-bootstrap` gelaufen sein (für dieses Chart bereits
 erledigt) — **und** `make argocd` einmal gegen den Cluster gelaufen sein,
 damit die AppProject-Änderung tatsächlich angewendet wird (die

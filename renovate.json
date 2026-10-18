@@ -35,14 +35,6 @@
       "depNameTemplate": "tailscale/tailscale",
       "datasourceTemplate": "github-releases",
       "extractVersionTemplate": "^v(?<version>.+)$"
-    },
-    {
-      "customType": "regex",
-      "description": "Helm-Release der Rolle k3s (Variable k3s_helm_release), siehe docs/6-hintergruende/60020-ansible-rollen.md.",
-      "managerFilePatterns": ["/^ansible/roles/k3s/defaults/main\\.yml$/"],
-      "matchStrings": ["k3s_helm_release: \"(?<currentValue>v[0-9.]+)\""],
-      "depNameTemplate": "helm/helm",
-      "datasourceTemplate": "github-releases"
     }
   ],
   "minimumReleaseAge": "3 days",
@@ -50,11 +42,6 @@
     "enabled": false
   },
   "packageRules": [
-    {
-      "description": "Die Rolle k3s installiert Helm 3, Helm 4 ist eine eigene Umstellung.",
-      "matchPackageNames": ["helm/helm"],
-      "allowedVersions": "/^v3\\./"
-    },
     {
       "description": "Tailscale-Client nur auf Stable-Releases (gerade Minor-Nummer) anheben, ungerade Minor-Versionen sind Unstable.",
       "matchPackageNames": ["tailscale/tailscale"],

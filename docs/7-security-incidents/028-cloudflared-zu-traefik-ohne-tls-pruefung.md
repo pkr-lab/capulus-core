@@ -52,7 +52,7 @@ Niedrig.
 
 ## Behebung (2026-10-18)
 
-**Fix.** `noTLSVerify: true` ist in TECH und PROD entfernt. cloudflared prüft das Traefik-Zertifikat jetzt gegen die Homeserver-Root-CA (`caPool: /etc/cloudflared/origin-ca.pem`, Datei aus der ConfigMap des Charts, Inhalt `tunnel.originCaPem` in `values.yaml`, identisch zu `docs/assets/homeserver-root-ca.pem`). Statt die SAN-Liste um den Service-Namen zu erweitern (so empfohlen), setzt `originServerName` einen bereits enthaltenen Namen: TECH `homeserver`, PROD `nextcloud.prod.homeserver`. So braucht es keine Zertifikatsänderung und keine Reihenfolge zwischen Zertifikat-Erneuerung und Rollout. Geroutet wird weiter über den `Host`-Header, der Name wirkt nur auf SNI und Prüfung.
+**Fix.** `noTLSVerify: true` ist in TECH und PROD entfernt. cloudflared prüft das Traefik-Zertifikat jetzt gegen die Homeserver-Root-CA (`caPool: /etc/cloudflared/origin-ca.pem`, Datei aus der ConfigMap des Charts, Inhalt `tunnel.originCaPem` in `values.yaml`, identisch zu `pki/homeserver-root-ca.pem`). Statt die SAN-Liste um den Service-Namen zu erweitern (so empfohlen), setzt `originServerName` einen bereits enthaltenen Namen: TECH `homeserver`, PROD `nextcloud.prod.homeserver`. So braucht es keine Zertifikatsänderung und keine Reihenfolge zwischen Zertifikat-Erneuerung und Rollout. Geroutet wird weiter über den `Host`-Header, der Name wirkt nur auf SNI und Prüfung.
 
 **Nachweis** (vor dem Merge):
 
