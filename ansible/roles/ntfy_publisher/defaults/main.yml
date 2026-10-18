@@ -1,3 +1,0 @@
----
-ntfy_publisher_dir: /etc/ntfy-publisher
-ntfy_publisher_ca_src: "{{ playbook_dir }}/../docs/assets/homeserver-root-ca.pem"

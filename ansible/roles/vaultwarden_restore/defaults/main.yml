@@ -1,6 +1,0 @@
----
-vaultwarden_namespace: vaultwarden
-vaultwarden_release: vaultwarden
-vaultwarden_restore_image: "alpine:3.20"
-
-force_restore: false
