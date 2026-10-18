@@ -27,7 +27,7 @@ ansible-vault encrypt_string 'DEIN_STARKES_PIHOLE_PW' \
   --name 'pihole_admin_password'
 ```
 
-Den resultierenden `!vault |`-Block optional in `ansible/group_vars/all.yml`
+Den resultierenden `!vault |`-Block optional in `capulus-ansible/group_vars/all.yml`
 ablegen, damit das Klartext-Passwort bei einer Rotation nicht verloren geht
 (wird von Ansible selbst nicht gelesen — Pi-hole bekommt sein Passwort
 ausschließlich über den SealedSecret unten).
@@ -77,8 +77,8 @@ der ArgoCD-UI bei der `pihole`-App klicken, um sie sofort anzuwenden).
 ### 1.4 dnsmasq-Forward aktivieren
 
 Der Forward von dnsmasq an Pi-hole (`pihole_dns_nodeport: 30053` in
-`ansible/group_vars/all.yml`, gerendert in
-`ansible/roles/dnsmasq/templates/dnsmasq.conf.j2`) ist bereits Teil des
+`capulus-ansible/group_vars/all.yml`, gerendert in
+`capulus-ansible/roles/dnsmasq/templates/dnsmasq.conf.j2`) ist bereits Teil des
 Playbooks — nach dem ersten Sync der `pihole`-App einmal ausrollen:
 
 ```bash

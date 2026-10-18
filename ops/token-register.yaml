@@ -8,7 +8,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    runbook: pkr-lab-docs:capulus-core/4-planung/40090-standby-cluster-ha-paar.md#rotation
     overlap: true
   owner: peter
   blast_radius: "Zugangsdaten je Alamos-Alarmierungsstation (Digitalfunk-Pager-Bridge)."
@@ -23,7 +23,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    runbook: pkr-lab-docs:capulus-core/4-planung/40090-standby-cluster-ha-paar.md#rotation
     overlap: true
   owner: peter
   blast_radius: "Kann Alarmierungen ueber alamos-relay ausloesen und lesen."
@@ -38,7 +38,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/3-apps-workloads/30070-n8n.md#webhook-authentifizierung
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/30070-n8n.md#webhook-authentifizierung
     overlap: false
   owner: peter
   blast_radius: "Kann Einsatz-Tickets im Webhook alamos-einsatz ausloesen. Gleicher Wert im n8n-Credential Webhook alamos-einsatz."
@@ -53,7 +53,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/3-apps-workloads/30070-n8n.md#webhook-authentifizierung
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/30070-n8n.md#webhook-authentifizierung
     overlap: false
   owner: peter
   blast_radius: "Kann Banana-Pi-Ausfall-Tickets im Webhook banana-pi-down ausloesen. Gleicher Wert im n8n-Credential Webhook banana-pi-down."
@@ -62,13 +62,13 @@
   service: n8n
   kind: api-token
   stored_in:
-    - ansible/group_vars/all.yml
+    - capulus-ansible:group_vars/all.yml
   issued: "2026-10-17"
   expires: null
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/3-apps-workloads/30070-n8n.md#webhook-authentifizierung
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/30070-n8n.md#webhook-authentifizierung
     overlap: false
   owner: peter
   blast_radius: "Kann Nightly-Update-Tickets im Webhook nightly-worker-update ausloesen. Gleicher Wert im n8n-Credential Webhook nightly-worker-update (Vault-Variable vault_n8n_nightly_webhook_token)."
@@ -77,13 +77,13 @@
   service: argocd
   kind: certificate
   stored_in:
-    - ansible/host_vars/entw-vm/vars.yml
+    - capulus-ansible:host_vars/entw-vm/vars.yml
   issued: "2026-10-17"
   expires: "2027-10-17"
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/d-sicherheit/d0040-internal-tls.md#zertifikat-für-argocd-auf-der-entw-vm
+    runbook: pkr-lab-docs:capulus-core/d-sicherheit/d0040-internal-tls.md#zertifikat-für-argocd-auf-der-entw-vm
     overlap: false
   owner: peter
   blast_radius: "TLS-Zertifikat des ENTW-ArgoCD-Ingress (argocd.dev.homeserver). Bei Ablauf blockiert das Gate der ENTW-Stufe in der Promotion-Kette."
@@ -92,13 +92,13 @@
   service: banana-pi-wol-agent
   kind: certificate
   stored_in:
-    - ansible/host_vars/vereinsheim-alarmmonitor/vault.yml
+    - capulus-ansible:host_vars/vereinsheim-alarmmonitor/vault.yml
   issued: "2026-10-18"
   expires: "2027-10-18"
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/d-sicherheit/d0040-internal-tls.md#zertifikat-für-den-wol-agent-auf-dem-vereinsheim-pi
+    runbook: pkr-lab-docs:capulus-core/d-sicherheit/d0040-internal-tls.md#zertifikat-für-den-wol-agent-auf-dem-vereinsheim-pi
     overlap: false
   owner: peter
   blast_radius: "TLS-Zertifikat und Schlüssel des WoL-Agents (IP-SAN 100.123.214.4). Bei Ablauf lehnt die iOS-App den Agent ab und Aufwecken des Vereinsheim-PCs aus der App fällt aus. Ein abgeflossener Schlüssel erlaubt einen Mitschnitt des WoL-Tokens im Tailnet nur zusammen mit einem Man-in-the-Middle-Platz."
@@ -113,7 +113,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    runbook: pkr-lab-docs:capulus-core/4-planung/40090-standby-cluster-ha-paar.md#rotation
     overlap: true
   owner: peter
   blast_radius: "Lese-/Schreibzugriff auf den Artefakt-Speicher von Argo Workflows."
@@ -128,7 +128,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    runbook: pkr-lab-docs:capulus-core/4-planung/40090-standby-cluster-ha-paar.md#rotation
     overlap: true
   owner: peter
   blast_radius: "Kann Images unter ghcr.io im Namen des Repos pushen."
@@ -143,7 +143,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    runbook: pkr-lab-docs:capulus-core/4-planung/40090-standby-cluster-ha-paar.md#rotation
     overlap: true
   owner: peter
   blast_radius: "Zugriff auf die carplay-api, von der iOS-App genutzt."
@@ -158,7 +158,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/1-benachrichtigungen/10010-ntfy.md#zugangsdaten-und-token-rotation
+    runbook: pkr-lab-docs:capulus-core/1-benachrichtigungen/10010-ntfy.md#zugangsdaten-und-token-rotation
     overlap: true
   owner: peter
   blast_radius: "Lesezugriff (reader) auf die ntfy-Topics, darunter Alarmtexte aus dem Vereins-/Feuerwehrumfeld."
@@ -173,7 +173,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/1-benachrichtigungen/10010-ntfy.md#zugangsdaten-und-token-rotation
+    runbook: pkr-lab-docs:capulus-core/1-benachrichtigungen/10010-ntfy.md#zugangsdaten-und-token-rotation
     overlap: true
   owner: peter
   blast_radius: "Schreibzugriff (publisher) auf die ntfy-Topics: gefaelschte Alarme und Entwarnungen."
@@ -188,7 +188,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/1-benachrichtigungen/10010-ntfy.md#zugangsdaten-und-token-rotation
+    runbook: pkr-lab-docs:capulus-core/1-benachrichtigungen/10010-ntfy.md#zugangsdaten-und-token-rotation
     overlap: true
   owner: peter
   blast_radius: "Schreibzugriff (publisher) auf die ntfy-Topics: gefaelschte Alarme und Entwarnungen."
@@ -197,14 +197,14 @@
   service: ntfy
   kind: api-token
   stored_in:
-    - ansible/group_vars/all.yml
-    - ansible/roles/ntfy_publisher/tasks/main.yml
+    - capulus-ansible:group_vars/all.yml
+    - capulus-ansible:roles/ntfy_publisher/tasks/main.yml
   issued: "2026-10-17"
   expires: null
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/1-benachrichtigungen/10010-ntfy.md#zugangsdaten-und-token-rotation
+    runbook: pkr-lab-docs:capulus-core/1-benachrichtigungen/10010-ntfy.md#zugangsdaten-und-token-rotation
     overlap: true
   owner: peter
   blast_radius: "Schreibzugriff (publisher) auf die ntfy-Topics von Host-Skripten und n8n: gefaelschte Alarme und Entwarnungen. Liegt als Vault-Variable ntfy_publisher_token und im n8n-Credential ntfy-publisher."
@@ -215,13 +215,13 @@
   stored_in:
     - argocd/apps/tech/alert-caller/values.yaml
     - argocd/apps/tech/monitoring/templates/sealedsecret-alert-caller-token.yaml
-    - ansible/roles/alert_caller/templates/alert-caller.env.j2
+    - capulus-ansible:roles/alert_caller/templates/alert-caller.env.j2
   issued: "2026-10-17"
   expires: null
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/1-benachrichtigungen/10020-telefon-alarm.md#zugriffsschutz-token
+    runbook: pkr-lab-docs:capulus-core/1-benachrichtigungen/10020-telefon-alarm.md#zugriffsschutz-token
     overlap: false
   owner: peter
   blast_radius: "Loest Telefonanrufe der Bereitschaft aus (POST /alert) oder haelt den Totmann-Alarm still (POST /watchdog). Liegt als SealedSecret in alert-caller und monitoring und als Vault-Variable vault_alert_caller_token fuer den Pi."
@@ -236,7 +236,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    runbook: pkr-lab-docs:capulus-core/4-planung/40090-standby-cluster-ha-paar.md#rotation
     overlap: true
   owner: peter
   blast_radius: "Kann ueber carplay-api den Power-Agent (Worker-Steuerung) ansprechen."
@@ -251,7 +251,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    runbook: pkr-lab-docs:capulus-core/4-planung/40090-standby-cluster-ha-paar.md#rotation
     overlap: true
   owner: peter
   blast_radius: "Aktuell deaktiviert (enabled: false). Bestaetigungscode fuer einen Shutdown ueber carplay-api."
@@ -266,7 +266,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md#credentials-rotieren
+    runbook: pkr-lab-docs:capulus-core/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md#credentials-rotieren
     overlap: true
   owner: peter
   blast_radius: "Kontrolle ueber den Cloudflare-Tunnel homeserver (TECH), damit alle unter *.pke-lab.de erreichbaren TECH-Dienste."
@@ -281,7 +281,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md#credentials-rotieren
+    runbook: pkr-lab-docs:capulus-core/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md#credentials-rotieren
     overlap: true
   owner: peter
   blast_radius: "Kontrolle ueber den Cloudflare-Tunnel homeserver-prod (PROD)."
@@ -312,7 +312,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/f-cicd-automatisierung/f0040-github-release-watcher.md
+    runbook: pkr-lab-docs:capulus-core/f-cicd-automatisierung/f0040-github-release-watcher.md
     overlap: true
   owner: peter
   blast_radius: "Kann Tickets in Zammad (Gruppe Support::Administration) anlegen."
@@ -327,7 +327,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/d-sicherheit/d0072-lldap.md
+    runbook: pkr-lab-docs:capulus-core/d-sicherheit/d0072-lldap.md
     overlap: true
   owner: peter
   blast_radius: "JWT-Secret, Key-Seed, Root- und Bind-Passwoerter von lldap, inklusive des Bind-Passworts fuer Authentik."
@@ -342,7 +342,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    runbook: pkr-lab-docs:capulus-core/4-planung/40090-standby-cluster-ha-paar.md#rotation
     overlap: true
   owner: peter
   blast_radius: "Root-Zugangsdaten des internen MinIO (Artefakt-Speicher)."
@@ -357,7 +357,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    runbook: pkr-lab-docs:capulus-core/4-planung/40090-standby-cluster-ha-paar.md#rotation
     overlap: true
   owner: peter
   blast_radius: "Web-Login von Pi-hole (interne DNS-Aufloesung)."
@@ -372,7 +372,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/3-apps-workloads/300a0-vaultwarden.md
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300a0-vaultwarden.md
     overlap: true
   owner: peter
   blast_radius: "Zugriff auf das Vaultwarden-Admin-Panel (/admin), volle Kontrolle ueber alle Nutzer und Tresore."
@@ -387,7 +387,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/3-apps-workloads/300a0-vaultwarden.md
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300a0-vaultwarden.md
     overlap: true
   owner: peter
   blast_radius: "SMTP-Zugang, den Vaultwarden fuer Einladungs- und Benachrichtigungsmails nutzt."
@@ -402,7 +402,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    runbook: pkr-lab-docs:capulus-core/4-planung/40090-standby-cluster-ha-paar.md#rotation
     overlap: true
   owner: peter
   blast_radius: "Interner Postgres- und Redis-Zugriff des Zammad-Ticketsystems."
@@ -417,7 +417,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    runbook: pkr-lab-docs:capulus-core/4-planung/40090-standby-cluster-ha-paar.md#rotation
     overlap: true
   owner: peter
   blast_radius: "DB-Zugriff der Immich-Instanz (PROD)."
@@ -432,7 +432,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    runbook: pkr-lab-docs:capulus-core/4-planung/40090-standby-cluster-ha-paar.md#rotation
     overlap: true
   owner: peter
   blast_radius: "Admin- und DB-Passwort von Nextcloud (PROD)."
@@ -447,7 +447,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    runbook: pkr-lab-docs:capulus-core/4-planung/40090-standby-cluster-ha-paar.md#rotation
     overlap: true
   owner: peter
   blast_radius: "DB-Zugriff von Wiki.js (PROD)."
@@ -462,7 +462,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    runbook: pkr-lab-docs:capulus-core/4-planung/40090-standby-cluster-ha-paar.md#rotation
     overlap: true
   owner: peter
   blast_radius: "Kann Seiten unter Github/capulus-core in Wiki.js schreiben."
@@ -477,7 +477,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
+    runbook: pkr-lab-docs:capulus-core/4-planung/40090-standby-cluster-ha-paar.md#rotation
     overlap: true
   owner: peter
   blast_radius: "DB-Zugriff von Xibo Signage (PROD)."
@@ -492,26 +492,26 @@
   max_age_days: 730
   rotation:
     mode: manual
-    runbook: docs/d-sicherheit/d0060-secrets-rotation.md
+    runbook: pkr-lab-docs:capulus-core/d-sicherheit/d0060-secrets-rotation.md
     overlap: false
   owner: peter
-  blast_radius: "Schluessel zu allen !vault-Werten im Repo (ansible/group_vars, ansible/host_vars) - kompletter Ansible-Fundus."
+  blast_radius: "Schluessel zu allen !vault-Werten im Repo (capulus-ansible: group_vars, host_vars) - kompletter Ansible-Fundus."
 
 - id: tailscale-auth-key
   service: tailscale
   kind: auth-key
   stored_in:
-    - ansible/group_vars/all.yml
-    - ansible/group_vars/banana_pis.yml
-    - ansible/group_vars/xibo_displays.yml
-    - ansible/host_vars/worker-0/vars.yml
-    - ansible/host_vars/worker-1/vars.yml
+    - capulus-ansible:group_vars/all.yml
+    - capulus-ansible:group_vars/banana_pis.yml
+    - capulus-ansible:group_vars/xibo_displays.yml
+    - capulus-ansible:host_vars/worker-0/vars.yml
+    - capulus-ansible:host_vars/worker-1/vars.yml
   issued: null
   expires: null
   max_age_days: 90
   rotation:
     mode: manual
-    runbook: docs/2-betrieb-hardware/20030-nightly-worker-update.md
+    runbook: pkr-lab-docs:capulus-ansible/2-betrieb-hardware/20030-nightly-worker-update.md
     overlap: true
   owner: peter
   live_check: tailscale-device
@@ -529,7 +529,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/f-cicd-automatisierung/f00a0-tailscale-runner-poc.md
+    runbook: pkr-lab-docs:capulus-core/f-cicd-automatisierung/f00a0-tailscale-runner-poc.md
     overlap: true
   owner: peter
   blast_radius: "Kann kurzlebige Auth-Keys mit Tag tag:ci erzeugen (Beitritt der GitHub-Runner zum Tailnet). Federated Identity ohne dauerhaftes Secret, nur fuer Laeufe von main in pkr-lab/capulus-core."
@@ -574,7 +574,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/6-hintergruende/600a0-ci-workflows-und-skripte.md
+    runbook: pkr-lab-docs:capulus-core/6-hintergruende/600a0-ci-workflows-und-skripte.md
     overlap: true
   owner: peter
   live_check: github-pat
@@ -591,7 +591,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/6-hintergruende/600a0-ci-workflows-und-skripte.md
+    runbook: pkr-lab-docs:capulus-core/6-hintergruende/600a0-ci-workflows-und-skripte.md
     overlap: true
   owner: peter
   live_check: github-pat
@@ -608,7 +608,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/f-cicd-automatisierung/f0050-gitlab-mirror.md
+    runbook: pkr-lab-docs:capulus-core/f-cicd-automatisierung/f0050-gitlab-mirror.md
     overlap: true
   owner: peter
   blast_radius: "Push-Zugriff auf das passive GitLab-Mirror-Repo."
@@ -623,7 +623,7 @@
   max_age_days: 30
   rotation:
     mode: auto
-    runbook: docs/d-sicherheit/d0060-secrets-rotation.md
+    runbook: pkr-lab-docs:capulus-core/d-sicherheit/d0060-secrets-rotation.md
     overlap: true
   owner: peter
   blast_radius: "Kann alle SealedSecrets des jeweiligen Clusters entschluesseln. Rotiert automatisch per Controller, siehe Runbook."
@@ -638,7 +638,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/3-apps-workloads/300k0-isc-news-bot.md#secrets-anlegen-und-versiegeln
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300k0-isc-news-bot.md#secrets-anlegen-und-versiegeln
     overlap: true
   owner: peter
   blast_radius: "Zugang zum ISC-Account der OG Andernach: kann dort News anlegen, bearbeiten und veroeffentlichen. Eigener Account mit News-Rechten, nicht der Hauptaccount."
@@ -653,7 +653,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/3-apps-workloads/300k0-isc-news-bot.md#secrets-anlegen-und-versiegeln
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300k0-isc-news-bot.md#secrets-anlegen-und-versiegeln
     overlap: true
   owner: peter
   blast_radius: "Bearer-Token der API isc-news-bot: wer es hat, kann ueber den Dienst News im ISC anlegen und veroeffentlichen. Nur n8n kennt es (Header-Auth-Credential)."
@@ -668,7 +668,7 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: docs/1-benachrichtigungen/10020-telefon-alarm.md#3-secrets-anlegen-und-versiegeln
+    runbook: pkr-lab-docs:capulus-core/1-benachrichtigungen/10020-telefon-alarm.md#3-secrets-anlegen-und-versiegeln
     overlap: true
   owner: peter
   blast_radius: "Passwort des Linphone-Kontos capulus-core: wer es hat, kann damit auf sip.linphone.org anrufen und Anrufe als capulus-core ausloesen. Das Konto hat keine weiteren Rechte."
@@ -678,13 +678,13 @@
   kind: password
   stored_in:
     - argocd/apps/tech/monitoring/templates/write-auth.yaml
-    - ansible/group_vars/all.yml
+    - capulus-ansible:group_vars/all.yml
   issued: null
   expires: null
   max_age_days: 365
   rotation:
     mode: scripted
-    runbook: docs/6-hintergruende/60060-monitoring-und-alerting.md#schreib-endpunkte-vm-write-und-logs-write-basic-auth
+    runbook: pkr-lab-docs:capulus-core/6-hintergruende/60060-monitoring-und-alerting.md#schreib-endpunkte-vm-write-und-logs-write-basic-auth
     overlap: false
   owner: peter
   blast_radius: "Basic-Auth-Zugang vm-writer: Metriken in VictoriaMetrics einspeisen (vmagent aller Hosts). Gleicher Wert als Vault-Variable vault_vm_write_auth_password. Erst nach dem Einschalten von writeAuth.enabled aktiv."
@@ -694,13 +694,13 @@
   kind: password
   stored_in:
     - argocd/apps/tech/logging/templates/write-auth.yaml
-    - ansible/group_vars/all.yml
+    - capulus-ansible:group_vars/all.yml
   issued: null
   expires: null
   max_age_days: 365
   rotation:
     mode: scripted
-    runbook: docs/6-hintergruende/60060-monitoring-und-alerting.md#schreib-endpunkte-vm-write-und-logs-write-basic-auth
+    runbook: pkr-lab-docs:capulus-core/6-hintergruende/60060-monitoring-und-alerting.md#schreib-endpunkte-vm-write-und-logs-write-basic-auth
     overlap: false
   owner: peter
   blast_radius: "Basic-Auth-Zugang logs-writer: Journal-Zeilen in VictoriaLogs einspeisen (systemd-journal-upload aller Hosts). Gleicher Wert als Vault-Variable vault_logs_write_auth_password; kann bei Upload-Fehlern im Journal stehen."
@@ -715,7 +715,7 @@
   max_age_days: 3650
   rotation:
     mode: manual
-    runbook: docs/2-betrieb-hardware/20010-nas-backup.md#restic-für-vaultwarden-im-cluster
+    runbook: pkr-lab-docs:capulus-core/2-betrieb-hardware/20010-nas-backup.md#restic-für-vaultwarden-im-cluster
     overlap: false
   owner: peter
   blast_radius: "Repository-Passwort der verschluesselten Vaultwarden-Sicherung (restic auf dem NAS-Volume). Wer es und das Volume hat, liest Datenbank, rsa_key und config.json. Nicht routinemaessig wechseln: ein Wechsel macht alle bisherigen Snapshots unlesbar, ausser sie werden per restic key passwd umgeschluesselt. Zusaetzlich im Passwortmanager ablegen."

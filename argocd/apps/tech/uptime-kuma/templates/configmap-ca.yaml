@@ -1,8 +1,8 @@
-# Kopie von docs/assets/homeserver-root-ca.pem — Helms .Files kann nur
+# Kopie von pki/homeserver-root-ca.pem — Helms .Files kann nur
 # innerhalb des Chart-Verzeichnisses lesen, kein Verweis auf den Repo-Pfad
 # moeglich (gleiche Einschraenkung wie bei den Ansible-Rollen, dort per
 # playbook_dir umgangen, hier nicht verfuegbar). Bei einer CA-Rotation
-# (docs/d-sicherheit/d0040-internal-tls.md, "CA laeuft aus / CA-Key kompromittiert") muss
+# (https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus-core/d-sicherheit/d0040-internal-tls.md, "CA laeuft aus / CA-Key kompromittiert") muss
 # diese Kopie mit aktualisiert werden.
 #
 # Noetig, weil der Uptime-Kuma-Container (Node.js) HTTPS-Monitor-Checks

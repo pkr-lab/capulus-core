@@ -1,26 +1,30 @@
 # CLAUDE.md — Arbeitsregeln für capulus-core
 
-GitOps-Homelab: Ansible provisioniert Ubuntu-Hosts und drei k3s-Cluster (TECH, PROD, ENTW), ArgoCD rollt alles unter
-`argocd/apps/<cluster>/` aus. Sprache im Repo ist **Deutsch** (Docs, Commit-Beschreibungen, PR-Texte).
+GitOps-Homelab: ArgoCD rollt alles unter `argocd/apps/<cluster>/` auf drei k3s-Clustern (TECH, PROD, ENTW) aus. Die Hosts und Cluster
+provisioniert [capulus-ansible](https://github.com/pkr-lab/capulus-ansible), die iOS-App liegt in
+[capulus-ios](https://github.com/pkr-lab/capulus-ios) (beides eigene Repos, nicht mehr hier). Sprache im Repo ist **Deutsch** (Docs, Commit-Beschreibungen, PR-Texte).
 
 ---
 
 ## Harte Regeln
 
-- **Keine Kommentare im Code.** Gilt für YAML, Helm-Templates, Ansible, Shell, Python, Go, TS, Swift, Workflows.
+- **Keine Kommentare im Code.** Gilt für YAML, Helm-Templates, Ansible, Shell, Python, Go, TS, Workflows.
   Einzige Ausnahme: der Versions-Kommentar `# vX.Y.Z` hinter der Commit-SHA in `uses:`-Zeilen der Workflows (Renovate und Dependabot lesen ihn).
-  Begründungen, Fallstricke und Vorfall-Regeln gehören im **selben PR** in das passende Doc unter
-  `docs/6-hintergruende/` (Zuordnung Pfad → Doc: `docs/6-hintergruende/60000-uebersicht.md`, Tabelle „Von der Datei zum Eintrag“).
-- **Jede Codeänderung bekommt Doku unter `docs/`.** Fach-Doc (was/wie) in der passenden Kategorie aktualisieren oder
-  neu anlegen, Hintergrund (warum) in `6-hintergruende/`. Docs beschreiben den Ist-Zustand, außer `4-planung/`.
-- **Vor dem Ändern einer Stelle den Eintrag in `6-hintergruende/` lesen.** Die meisten Eigenheiten existieren,
+  Begründungen, Fallstricke und Vorfall-Regeln gehören in das passende Doc unter `capulus-core/6-hintergruende/` im Repo
+  [pkr-lab-docs](https://github.com/pkr-lab/pkr-lab-docs) (Zuordnung Pfad → Doc: `60000-uebersicht.md`, Tabelle „Von der Datei zum Eintrag“).
+- **Doku liegt nicht in diesem Repo, sondern in [pkr-lab-docs](https://github.com/pkr-lab/pkr-lab-docs).** Jede Codeänderung bekommt
+  dort einen PR: Fach-Doc (was/wie) in der passenden Kategorie unter `capulus-core/` aktualisieren oder neu anlegen, Hintergrund
+  (warum) in `6-hintergruende/`. Konventionen stehen in der `CLAUDE.md` von pkr-lab-docs. Der Ordner `docs/` hier ist veraltet und
+  wird entfernt, sobald wiki-docs-sync auf pkr-lab-docs umgestellt ist; dort nichts mehr ändern.
+- **Vor dem Ändern einer Stelle den Eintrag in `capulus-core/6-hintergruende/` (pkr-lab-docs) lesen.** Die meisten Eigenheiten existieren,
   weil der naheliegende Ansatz schon einmal gescheitert ist.
 - **Niemals Klartext-Secrets committen.** Nur `SealedSecret` (je Cluster eigener Schlüssel). gitleaks läuft in der CI.
   Neue Tokens/Passwörter in `ops/token-register.yaml` eintragen (`stored_in` muss auf existierende Dateien zeigen).
 - **`main` ist geschützt** (PR + grüne CI). Ein Merge nach `main` rollt sofort auf TECH/PROD aus.
-- `argocd/bootstrap/*` ist **generiert** — nie von Hand ändern, sondern Template/Defaults in `ansible/roles/argocd/`
-  anpassen und `make render-bootstrap` (braucht Vault-Passwort, im Container meist nicht möglich → dem Nutzer sagen).
-- Vault-Dateien (`ansible/group_vars/all.yml`-Secrets, `user_inventory_vault.yml`) nicht anfassen.
+- `argocd/bootstrap/*` ist **generiert** — nie von Hand ändern, sondern Template/Defaults in `roles/argocd/` von
+  capulus-ansible anpassen und dort `make render-bootstrap CORE_DIR=<Pfad zu diesem Repo>` ausführen (im Container meist nicht
+  möglich → dem Nutzer sagen).
+- Die Vault-Dateien liegen in capulus-ansible (`group_vars/all.yml`, `user_inventory_vault.yml`) und werden nie angefasst.
 
 ---
 
@@ -34,11 +38,9 @@ GitOps-Homelab: Ansible provisioniert Ubuntu-Hosts und drei k3s-Cluster (TECH, P
 | `argocd/bootstrap/` | Hub-ApplicationSet + AppProjects (generiert) |
 | `argocd/bootstrap-prod/` | PROD-AppProject + ApplicationSets (handgeschrieben), `migrations/` |
 | `argocd/promotion.yaml` | Gates und Smoke-Checks der Promotion ENTW → TECH → PROD |
-| `ansible/` | `site.yml` (Homeserver/TECH), `worker-*.yml`, `prod.yml`, `entw.yml`, Kiosk-Playbooks, `roles/` |
+| `pki/` | Root-CA `homeserver-root-ca.pem` (Quelle der Wahrheit, Kopien in capulus-ansible und capulus-ios) |
 | `scripts/` | Promotion, Doc-Link-Check, Token-Register-Check, Versiegel-Helfer (`reseal-for-prod.sh`, `seal-*.sh`), `bump-image-tag.py` |
 | `.github/workflows/` | `ci.yml` (Pflicht-Gate), `build-images.yml`, Promotion-/Sync-Workflows, Renovate, Release |
-| `docs/` | Doku, Schema in `docs/TEMPLATE.md` |
-| `ios/` | SwiftUI-App, Backend ist `argocd/apps/tech/carplay-api` |
 
 Eigener Code mit Tests: `argocd/apps/tech/carplay-api/src` und `argocd/apps/tech/pacman/server` (Go),
 `argocd/apps/tech/isc-news-bot` (TypeScript/Node, Playwright).
@@ -49,15 +51,15 @@ Eigener Code mit Tests: `argocd/apps/tech/carplay-api/src` und `argocd/apps/tech
 
 | Cluster | Zusätzlich nötig |
 |---|---|
-| TECH | Namespace in `argocd_platform_apps` bzw. `argocd_workloads_apps` (`ansible/roles/argocd/defaults/main.yml`), dann `make render-bootstrap` |
-| PROD | Namespace in `argocd/bootstrap-prod/appproject.yaml`; reine Manifest-Ordner zusätzlich als Pfad in `argocd/bootstrap-prod/applicationset.yaml`; interner Host in `dnsmasq_prod_vm_hosts` |
+| TECH | Namespace in `argocd_platform_apps` bzw. `argocd_workloads_apps` (`roles/argocd/defaults/main.yml` in capulus-ansible), dann dort `make render-bootstrap CORE_DIR=…` |
+| PROD | Namespace in `argocd/bootstrap-prod/appproject.yaml`; reine Manifest-Ordner zusätzlich als Pfad in `argocd/bootstrap-prod/applicationset.yaml`; interner Host in `dnsmasq_prod_vm_hosts` (capulus-ansible) |
 | ENTW | nichts, nur auf Branch `entw` |
 
 - Muster für Charts: bestehende App kopieren (z. B. `argocd/apps/tech/ntfy/`): `Chart.yaml`, `values.yaml`, `templates/` mit `_helpers.tpl`.
 - Hostnamen immer im Tier-Schema: `<app>.tech.homeserver`, `<app>.prod.homeserver`, `<app>.dev.homeserver` (nie flach `<app>.homeserver`).
 - Image-Tags in `values.yaml` unter `image.tag`; Renovate und `build-images.yml` bumpen sie. Selbst gebaute Images: `sha-<commit>`.
 - Ressourcen mit Feldern, die ein Controller verändert (Replicas durch HPA etc.), brauchen ggf. einen `ignoreDifferences`-Eintrag im
-  ApplicationSet-Template (Rolle `argocd`), siehe `docs/6-hintergruende/60030-argocd-und-bootstrap.md`.
+  ApplicationSet-Template (Rolle `argocd`), siehe `capulus-core/6-hintergruende/60030-argocd-und-bootstrap.md` in pkr-lab-docs.
 - Versiegeln: `printf '%s' "$WERT" | kubeseal --raw …` — **kein** Here-String/`echo` (mitversiegeltes `\n` hat schon Ausfälle verursacht).
 
 ---
@@ -74,21 +76,15 @@ pip install -q pyyaml && python3 scripts/check-token-register.py    # ops/token-
 (cd argocd/apps/tech/isc-news-bot && npm ci && npm test)
 ```
 
-Falls installierbar (`pip install yamllint ansible-lint`, Helm, kubeconform): `make lint` sowie
+Falls installierbar (`pip install yamllint`, Helm, kubeconform): `make lint` sowie
 `helm template argocd/apps/<cluster>/<app> | kubeconform -strict -ignore-missing-schemas -summary`.
 Nur die betroffenen Teile prüfen, nicht immer alles.
 
 ---
 
-## Doku-Konventionen (Kurzfassung von `docs/TEMPLATE.md`)
+## Doku-Konventionen
 
-- Dateiname `<id>-<slug>.md`, `<id>` = Kategorie-Zeichen + 4 Hex-Ziffern, neue IDs in Schritten von `0x10`.
-  Kategorien: `a` OS, `b` Kubernetes/GitOps, `c` Netzwerk/DNS, `d` Sicherheit, `e` extern, `f` CI/CD,
-  `1` Benachrichtigungen, `2` Betrieb/Hardware, `3` Apps, `4` Planung, `5` Incidents, `6` Hintergründe.
-- Doc-Typen: A Setup/Runbook, B Konzept/Referenz, C Incident — Skelette in `docs/TEMPLATE.md`.
-- Links innerhalb `docs/` relativ (`../c-netzwerk-dns/c0040-domain-tiers.md`), außerhalb repo-root-relativ (`docs/…`).
-- Neue Docs auch im Index in `README.md` (Abschnitt „Dokumentation“) eintragen.
-- Nur `##`/`###`, `---` zwischen Abschnitten, Tabellen für Konfiguration und Troubleshooting.
+Siehe `CLAUDE.md` in [pkr-lab-docs](https://github.com/pkr-lab/pkr-lab-docs): Dateinamen mit Hex-ID und Kategorie, Doc-Typen, Link-Regeln.
 
 ---
 
@@ -114,8 +110,7 @@ Nur die betroffenen Teile prüfen, nicht immer alles.
 
 ## Effizient arbeiten
 
-- Erst `docs/6-hintergruende/60000-uebersicht.md` → passendes Hintergrund-Doc → dann den Code. Das spart Fehlversuche.
-- `README.md` ist groß (~50 KB): gezielt per `grep -n` springen statt ganz lesen.
+- Erst `capulus-core/6-hintergruende/60000-uebersicht.md` in pkr-lab-docs → passendes Hintergrund-Doc → dann den Code. Das spart Fehlversuche.
 - Charts unter `argocd/apps/*/*/charts/*.tgz` sind vendorte Abhängigkeiten — nicht durchsuchen oder ändern.
-- `kubectl`/`ansible-playbook` gegen echte Hosts funktionieren aus der Cloud-Sandbox nicht (kein Zugriff aufs LAN/Tailnet).
+- `kubectl` gegen echte Cluster funktioniert aus der Cloud-Sandbox nicht (kein Zugriff aufs LAN/Tailnet).
   Solche Schritte als Befehl für den Nutzer formulieren statt sie zu versuchen.

@@ -2,7 +2,7 @@
 
 - Severity: Medium
 - Bereich: Repo
-- Betroffen: `ansible/roles/thermal_watchdog/files/thermal-watchdog.sh`, `ansible/roles/resource_watchdog/files/resource-watchdog.sh`, `ansible/roles/cluster_power_manager/files/cluster-power-manager.sh`, `ansible/roles/nightly_worker_wake/files/nightly-worker-wake.sh`; Ursache: `argocd/apps/tech/traefik-config/helmchartconfig.yaml` (Commit `a2fddac`, 2026-09-13)
+- Betroffen: `capulus-ansible/roles/thermal_watchdog/files/thermal-watchdog.sh`, `capulus-ansible/roles/resource_watchdog/files/resource-watchdog.sh`, `capulus-ansible/roles/cluster_power_manager/files/cluster-power-manager.sh`, `capulus-ansible/roles/nightly_worker_wake/files/nightly-worker-wake.sh`; Ursache: `argocd/apps/tech/traefik-config/helmchartconfig.yaml` (Commit `a2fddac`, 2026-09-13)
 - Status: Im Code behoben am 2026-10-18 (gestaged; wirkt erst nach dem Rollenlauf auf den Hosts, Weg auf dem homeserver getestet)
 
 ## Beschreibung
@@ -55,7 +55,7 @@ Niedrig: Eine fehlende CA lässt die Meldung wie heute stumm scheitern, ohne den
 **Fix.**
 
 - **Punkt 1, Skripte:** `thermal-watchdog.sh`, `resource-watchdog.sh` (zwei Stellen), `cluster-power-manager.sh` und `nightly-worker-wake.sh` senden per `https://${NTFY_HOST}/${NTFY_TOPIC}` mit `--resolve "${NTFY_HOST}:443:${NTFY_IP}"` und `--cacert "$NTFY_CA_FILE"` (Standard `/etc/ntfy-publisher/ca.pem`). `|| true` ist durch `|| logger -t <skript> "ntfy-Meldung fehlgeschlagen"` ersetzt: Ein Fehlschlag steht im Journal, die Abschaltlogik läuft weiter.
-- **Punkt 2, CA:** Die Rolle `ntfy_publisher` legt `docs/assets/homeserver-root-ca.pem` als `/etc/ntfy-publisher/ca.pem` ab (Variable `ntfy_publisher_ca_src`). Bewusst nur diese Datei und nicht der System-Trust-Store: Das funktioniert auch auf worker-0 und worker-1 ohne `update-ca-certificates`.
+- **Punkt 2, CA:** Die Rolle `ntfy_publisher` legt `pki/homeserver-root-ca.pem` als `/etc/ntfy-publisher/ca.pem` ab (Variable `ntfy_publisher_ca_src`). Bewusst nur diese Datei und nicht der System-Trust-Store: Das funktioniert auch auf worker-0 und worker-1 ohne `update-ca-certificates`.
 
 **Nachweis** (vor dem Rollenlauf).
 
@@ -63,14 +63,14 @@ Niedrig: Eine fehlende CA lässt die Meldung wie heute stumm scheitern, ohne den
 |---|---|
 | `bash -n` aller vier Skripte | ok |
 | `curl --resolve ntfy.tech.homeserver:80:… -d x http://ntfy.tech.homeserver/Home-Lab-System` (alter Weg) | `308` (der Fehler aus dem Incident) |
-| `curl --resolve ntfy.tech.homeserver:443:… --cacert docs/assets/homeserver-root-ca.pem -d x https://…/Home-Lab-System` ohne Token (neuer Weg) | `403` (ntfy erreicht, anonym abgewiesen, wie gewollt) |
+| `curl --resolve ntfy.tech.homeserver:443:… --cacert pki/homeserver-root-ca.pem -d x https://…/Home-Lab-System` ohne Token (neuer Weg) | `403` (ntfy erreicht, anonym abgewiesen, wie gewollt) |
 | neuer Skriptweg auf dem homeserver: `ca.pem` abgelegt, `curl` mit denselben Optionen und dem Publisher-Header aus `/etc/ntfy-publisher/auth-header`, Priorität 1 | `HTTP 200`, eine Testmeldung „[Test] Incident 046 Skriptweg“ in `Home-Lab-System` |
 | `ansible-playbook … --syntax-check` (worker-1) | ok |
 
 **Geänderte Dateien.**
 
-- `ansible/roles/thermal_watchdog/files/thermal-watchdog.sh`, `ansible/roles/resource_watchdog/files/resource-watchdog.sh`, `ansible/roles/cluster_power_manager/files/cluster-power-manager.sh`, `ansible/roles/nightly_worker_wake/files/nightly-worker-wake.sh`
-- `ansible/roles/ntfy_publisher/tasks/main.yml`, `ansible/roles/ntfy_publisher/defaults/main.yml`
+- `capulus-ansible/roles/thermal_watchdog/files/thermal-watchdog.sh`, `capulus-ansible/roles/resource_watchdog/files/resource-watchdog.sh`, `capulus-ansible/roles/cluster_power_manager/files/cluster-power-manager.sh`, `capulus-ansible/roles/nightly_worker_wake/files/nightly-worker-wake.sh`
+- `capulus-ansible/roles/ntfy_publisher/tasks/main.yml`, `capulus-ansible/roles/ntfy_publisher/defaults/main.yml`
 - Doku: `docs/6-hintergruende/60020-ansible-rollen.md`
 
 **Live-Stand.** Nur auf dem homeserver liegt `/etc/ntfy-publisher/ca.pem` bereits (von Hand, gleicher Inhalt wie die Rolle). Die laufenden Skripte verwenden noch die alte Fassung, bis die Rollen laufen.
@@ -80,11 +80,11 @@ Niedrig: Eine fehlende CA lässt die Meldung wie heute stumm scheitern, ohne den
 **Offen (du, Vault-Passwort nötig).** Ausrollen der geänderten Skripte und der CA auf allen Hosts, ohne Kiosk-Neustart (nur diese Tags):
 
 ```
-ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --tags ntfy-publisher,thermal-watchdog,resource-watchdog,cluster-power-manager,nightly-worker-wake --limit homeserver --ask-vault-pass
-ansible-playbook -i ansible/inventory/hosts.yml ansible/worker-0.yml --tags ntfy-publisher,thermal-watchdog,resource-watchdog --ask-vault-pass
-ansible-playbook -i ansible/inventory/hosts.yml ansible/worker-1.yml --tags ntfy-publisher,thermal-watchdog,resource-watchdog --ask-vault-pass
-ansible-playbook -i ansible/inventory/hosts.yml ansible/banana-pi-kiosks.yml --limit vereinsheim-alarmmonitor --tags ntfy-publisher,thermal-watchdog,resource-watchdog --ask-vault-pass
-ansible-playbook -i ansible/inventory/hosts.yml ansible/xibo-kiosks.yml --tags ntfy-publisher,thermal-watchdog,resource-watchdog --ask-vault-pass
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/site.yml --tags ntfy-publisher,thermal-watchdog,resource-watchdog,cluster-power-manager,nightly-worker-wake --limit homeserver --ask-vault-pass
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/worker-0.yml --tags ntfy-publisher,thermal-watchdog,resource-watchdog --ask-vault-pass
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/worker-1.yml --tags ntfy-publisher,thermal-watchdog,resource-watchdog --ask-vault-pass
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/banana-pi-kiosks.yml --limit vereinsheim-alarmmonitor --tags ntfy-publisher,thermal-watchdog,resource-watchdog --ask-vault-pass
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/xibo-kiosks.yml --tags ntfy-publisher,thermal-watchdog,resource-watchdog --ask-vault-pass
 ```
 
 Prüfen je Host: `sudo systemctl edit --runtime thermal-watchdog` mit `[Service]`/`Environment=DRY_RUN=1`, Dienst neu starten, in `Home-Lab-System` muss die Testmeldung `[DRY RUN]` des Hosts erscheinen. worker-1 und worker-0 sind oft ausgeschaltet, dann nach dem Einschalten.

@@ -49,7 +49,7 @@ ansible/
 
 ## Inventory
 
-`ansible/inventory/hosts.yml` bekommt `ugreen-nas` als zweiten Host:
+`capulus-ansible/inventory/hosts.yml` bekommt `ugreen-nas` als zweiten Host:
 
 ```yaml
 all:
@@ -78,7 +78,7 @@ all:
 
 ## Variablen & Secrets
 
-Alle NAS-spezifischen Variablen liegen in `ansible/host_vars/ugreen-nas/`:
+Alle NAS-spezifischen Variablen liegen in `capulus-ansible/host_vars/ugreen-nas/`:
 
 - `vars.yml` — Klartext-Variablen (Ports, Image-Tags, Pfade, Feature-Flags)
 - `vault.yml` — Ansible-Vault-verschlüsselt (Passwörter, API-Keys, Tokens)

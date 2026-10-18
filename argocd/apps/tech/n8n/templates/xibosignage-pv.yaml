@@ -1,9 +1,9 @@
 {{- if .Values.xibosignage.enabled -}}
 # Statische NFS-PVs mit FESTEM Pfad auf dem UGREEN NAS (statt dynamisch vom
-# nfs-subdir-external-provisioner vergeben) — siehe docs/3-apps-workloads/300e0-xibosignage.md
-# und docs/2-betrieb-hardware/20000-nas-storage.md ("Fixer Pfad statt dynamischer Subdir-Name").
+# nfs-subdir-external-provisioner vergeben) — siehe https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus-core/3-apps-workloads/300e0-xibosignage.md
+# und https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus-core/2-betrieb-hardware/20000-nas-storage.md ("Fixer Pfad statt dynamischer Subdir-Name").
 # Der feste Pfad ist Voraussetzung dafür, dass sowohl n8n (dieser Mount),
-# der Raspberry-Pi-Kiosk (ansible/roles/xibo_kiosk, per rohem NFS-Mount)
+# der Raspberry-Pi-Kiosk (capulus-ansible/roles/xibo_kiosk, per rohem NFS-Mount)
 # als auch die vom Nutzer selbst eingerichtete OnlineSync denselben Ordner
 # ansprechen können — eine dynamisch vom Provisioner benannte PVC-
 # Unterverzeichnis-ID wäre dafür nicht vorhersagbar.

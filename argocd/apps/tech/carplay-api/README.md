@@ -5,7 +5,7 @@ CarPlay component; this directory/namespace kept its name from an earlier
 CarPlay-oriented cut of the project). Combines VictoriaMetrics (per-host
 metrics), ntfy (alerts) and Uptime-Kuma (service status) into one payload,
 cached for 30s, served over Gin — plus brightness and Wake-on-LAN/shutdown
-endpoints proxied to power-agent (`ansible/roles/power_agent`) on the
+endpoints proxied to power-agent (`capulus-ansible/roles/power_agent`) on the
 homeserver host.
 
 Full setup/operations guide: [`docs/3-apps-workloads/300d0-carplay-api.md`](../../../../docs/3-apps-workloads/300d0-carplay-api.md).
@@ -48,7 +48,7 @@ docs/3-apps-workloads/300d0-carplay-api.md:
 | GET | `/api/updates` | Bearer token | Per-repo update status (name, current vs. latest GitHub release) read from the `github-release-watcher`'s `updates` ConfigMap — see [docs/f-cicd-automatisierung/f0040-github-release-watcher.md](../../../../docs/f-cicd-automatisierung/f0040-github-release-watcher.md). |
 
 Brightness and power endpoints are proxied to **power-agent**
-(`ansible/roles/power_agent`), a small privileged daemon on the bare
+(`capulus-ansible/roles/power_agent`), a small privileged daemon on the bare
 Homeserver host — this pod runs unprivileged and has no host/sysfs/SSH
 access of its own, see [docs/3-apps-workloads/300d0-carplay-api.md](../../../../docs/3-apps-workloads/300d0-carplay-api.md#power-agent).
 

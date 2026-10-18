@@ -76,7 +76,7 @@ geschützt — ein System, das in diesem Repo konsequent vermieden wird (siehe
 
 Stattdessen bleibt Publish wie ArgoCD/Semaphore/Headlamp strikt
 LAN/Tailnet-only (NodePort, siehe
-[README.md#networking--security](../../README.md#networking--security)) —
+[README.md#networking--security](https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus-core/konfiguration.md#netzwerk-und-sicherheit)) —
 wer streamen will, braucht ohnehin Tailscale oder ist im Heimnetz. Die
 eigentliche Autorisierung *innerhalb* dieses vertrauenswürdigen Netzes
 übernimmt mediamtx' interne Auth (Schritt 2): Netzwerkzugriff allein reicht

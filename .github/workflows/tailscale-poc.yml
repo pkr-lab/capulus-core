@@ -42,7 +42,7 @@ jobs:
           echo
 
           printf '%s\n' "192.168.178.94 argocd.tech.homeserver" "192.168.178.100 argocd.dev.homeserver" | sudo tee -a /etc/hosts >/dev/null
-          ca="$GITHUB_WORKSPACE/docs/assets/homeserver-root-ca.pem"
+          ca="$GITHUB_WORKSPACE/pki/homeserver-root-ca.pem"
 
           tcp() { timeout 6 bash -c "</dev/tcp/$1/$2" 2>/dev/null && echo offen || echo "zu/gefiltert"; }
           http() { curl -s -m 8 --cacert "$ca" -o /dev/null -w '%{http_code}' "$@" 2>/dev/null || true; }
@@ -74,7 +74,7 @@ jobs:
           if [ "$fail" = 0 ]; then
             echo "OK: hub-lan und entw erreichbar - die Promotion-Kette kann die Gates auswerten."
           else
-            echo "FEHLGESCHLAGEN: siehe Troubleshooting in docs/f-cicd-automatisierung/f00a0-tailscale-runner-poc.md"
+            echo "FEHLGESCHLAGEN: siehe Troubleshooting in https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus-core/f-cicd-automatisierung/f00a0-tailscale-runner-poc.md"
             echo "Meist fehlt der Grant in der Tailscale-ACL (Timeout = gefiltert) oder --accept-routes/Route-Freigabe."
           fi
           exit $fail

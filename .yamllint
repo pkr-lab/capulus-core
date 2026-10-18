@@ -19,4 +19,5 @@ rules:
 ignore: |
   argocd/apps/*/*/charts/
   argocd/apps/*/*/templates/
+  argocd/pending/*/templates/
   argocd/apps/tech/isc-news-bot/node_modules/

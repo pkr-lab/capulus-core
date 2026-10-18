@@ -169,7 +169,7 @@ bleibt funktional.
 Seit `argocd/apps/tech/pihole/` existiert, leitet dnsmasq alle nicht-`*.homeserver`-
 Anfragen nicht mehr direkt an die Fritz!Box weiter, sondern zuerst an Pi-hole
 (k3s-NodePort auf `192.168.178.94:30053`, siehe `pihole_dns_nodeport` in
-`ansible/group_vars/all.yml`). Pi-hole filtert Werbe-/Tracking-Domains heraus
+`capulus-ansible/group_vars/all.yml`). Pi-hole filtert Werbe-/Tracking-Domains heraus
 und reicht den Rest an die Fritz!Box weiter.
 
 ```
@@ -264,7 +264,7 @@ kube-proxy/kube-router auf demselben Host.
 die nftables-Tabellen komplett neu auf und stellt die Loopback-Regel
 wieder her.
 
-**Dauerhafte Absicherung:** `ansible/site.yml` prüft in den
+**Dauerhafte Absicherung:** `capulus-ansible/site.yml` prüft in den
 `post_tasks` (Tag `always`, läuft also bei jedem Playbook-Aufruf,
 unabhängig von `--tags`) per `iptables -C ufw-before-input -i lo -j
 ACCEPT`, ob die Regel aktiv ist, und führt bei Bedarf denselben
