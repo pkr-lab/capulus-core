@@ -13,7 +13,7 @@ LEVEL_TO_SEVERITY = {"error": "high", "warning": "medium", "note": "low"}
 KEY_MARKER = re.compile(r"<!-- security-issues:key=(\S+) -->")
 ALERTS_MARKER = re.compile(r"<!-- security-issues:alerts=([0-9,]*) -->")
 TITLE_PREFIX = "Security: "
-DOC = "docs/d-sicherheit/d0080-codeql-dependabot.md"
+DOC = "https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus-core/d-sicherheit/d0080-codeql-dependabot.md"
 MAX_ROWS = 50
 SOURCE_CODE_SCANNING = "code-scanning"
 SOURCE_DEPENDABOT = "dependabot"

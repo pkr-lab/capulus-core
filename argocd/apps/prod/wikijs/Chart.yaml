@@ -5,7 +5,7 @@ description: |
   Wiki.js — Markdown-Wiki mit eingebauten Gruppen- und Page-Rules-Berechtigungen.
   Bündelt eine eigene, schlanke PostgreSQL-Instanz (kein Bitnami-Subchart —
   Bitnamis Helm-Charts sind seit August 2025 eingefroren/kostenpflichtig,
-  siehe docs/3-apps-workloads/30030-wikijs.md). Seiten- und Asset-Inhalte liegen vollständig in
+  siehe https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus-core/3-apps-workloads/30030-wikijs.md). Seiten- und Asset-Inhalte liegen vollständig in
   PostgreSQL, der Wiki.js-Pod selbst ist zustandslos.
 
   Web-Interface:

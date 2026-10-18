@@ -5,7 +5,7 @@ description: >
   Telefon-Alarm: nimmt Alertmanager-Webhooks entgegen, baut eine deutsche
   Sprachansage (Piper) und ruft per SIP (baresip, Linphone) an. Der Watchdog-
   Webhook sichert den Alertmanager selbst ab. Siehe
-  docs/1-benachrichtigungen/10020-telefon-alarm.md.
+  https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus-core/1-benachrichtigungen/10020-telefon-alarm.md.
 type: application
 version: 0.1.0
 appVersion: "1.0.0"
