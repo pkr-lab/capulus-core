@@ -105,10 +105,10 @@ Der Verzeichnisname `carplay-api` ist historisch (aus der CarPlay-Vorversion), d
   handgemachtem Inhalt zu mergen. Alles, was die App braucht (Anzeigename, Launch Screen, Orientierung), muss deshalb in `project.yml` stehen, sonst verschwindet es beim nächsten `xcodegen generate` still.
   Ein generiertes `.xcodeproj` lässt sich außerhalb von Xcode kaum von Hand pflegen oder diffen, deshalb wird das Projekt aus dem Text generiert und nicht eingecheckt (Setup: `brew install xcodegen`,
   `cd ios && xcodegen generate`).
-- **Der WoL-Agent bleibt vorerst bei `http://` auf der Tailscale-IP.** ATS gilt nur für **Domainnamen**, nie für numerische IP-Literale, deshalb braucht die rohe Tailscale-IP des `banana-pi-wol-agent` keine
-  Ausnahme (und ist ohnehin kein `*.homeserver`-Name, weil das Gerät nur per Tailscale erreichbar ist und aus dem Cluster nicht). Der Agent lauscht ausschließlich auf der Tailscale-Adresse
-  (`banana_pi_kiosk_wol_agent_bind_address` in `host_vars/vereinsheim-alarmmonitor`, [60020](60020-ansible-rollen.md#banana_pi_kiosk-vereinsheim-alarmmonitor)), der Token läuft damit im WireGuard-Tunnel.
-  Offener Restpunkt: TLS im Agenten (IP-SAN-Zertifikat aus der Root-CA).
+- **Der WoL-Agent spricht HTTPS mit IP-SAN-Zertifikat.** Die Basis-URL ist die rohe Tailscale-IP (`https://100.123.214.4:9102`). Mit TLS ist die Frage, ob ATS für numerische IPs greift, gegenstandslos. Das Zertifikat
+  trägt die IP als Subject Alternative Name, weil es für das Gerät keinen DNS-Namen gibt und `*.homeserver`-Namen im Tailnet nicht zuverlässig auflösen. Die Root-CA ist dieselbe wie bei `carplay-api`, auf dem iPhone
+  ist nichts zusätzlich zu installieren. Der Agent lauscht weiter nur auf der Tailscale-Adresse ([60020](60020-ansible-rollen.md#banana_pi_kiosk-vereinsheim-alarmmonitor)); TLS schützt zusätzlich gegen einen
+  Mitleser im Tailnet und gegen einen Agent-Impostor.
 - **`MTLSDelegate` ist ein Erweiterungspunkt.** Die ursprüngliche Spezifikation wollte Zertifikats-Pinning. Der Delegate führt heute nur `performDefaultHandling` aus, also die Systemprüfung gegen die im Gerät vertrauten Zertifikate (inklusive der installierten Root-CA).
   Echtes Client-Zertifikats-mTLS (Home-Lab-CA plus `RequireAndVerifyClientCert` am Traefik) ist eine unimplementierte Idee. Kommt sie, muss die IngressRoute die TLSOption `mtls-homelab` referenzieren, der
   Client-Identity-Zweig im Delegate aktiviert und das `.p12` des Geräts per Keychain bereitgestellt werden. Ein Pinning auf die Root-CA (`SecTrustSetAnchorCertificates` für `*.homeserver`) ist nicht umgesetzt;

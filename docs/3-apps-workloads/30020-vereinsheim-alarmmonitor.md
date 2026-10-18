@@ -471,11 +471,13 @@ Tailscale-Peers) — die App spricht stattdessen einen kleinen HTTP-Agenten
 Tailscale-IP des Pi an, Port 9102, Bearer-Token-gesichert. Der Agent ruft
 intern nur `banana-pi-wol.sh` auf — keine doppelte MAC-Verwaltung.
 
-Der Agent spricht Klartext-HTTP, lauscht aber ausschließlich auf der
-Tailscale-Adresse des Pi (`banana_pi_kiosk_wol_agent_bind_address`), der Token
-läuft damit im WireGuard-Tunnel und nicht über das Heim-WLAN. Die App hat keine
-ATS-Ausnahme mehr; für die numerische IP braucht sie keine, siehe
-[60080](../6-hintergruende/60080-carplay-api-und-ios-app.md#transport-und-schlüssel).
+Der Agent spricht HTTPS (`https://100.123.214.4:9102`) mit einem Zertifikat der
+Homeserver-Root-CA, das die IP als Subject Alternative Name trägt, und lauscht
+ausschließlich auf der Tailscale-Adresse des Pi
+(`banana_pi_kiosk_wol_agent_bind_address`). Die App vertraut ihm über dieselbe
+Root-CA wie `carplay-api`. Ausstellung, Hinterlegung und Erneuerung des
+Zertifikats: [d0040](../d-sicherheit/d0040-internal-tls.md#zertifikat-für-den-wol-agent-auf-dem-vereinsheim-pi),
+Hintergründe: [60080](../6-hintergruende/60080-carplay-api-und-ios-app.md#transport-und-schlüssel).
 
 Token für die App-Einstellungen auslesen:
 
@@ -514,7 +516,8 @@ Online-Status prüfen und den PC wieder herunterfahren: siehe
 | n8n-Workflow schlägt am Zammad-Node fehl | Header-Auth-Credential zugewiesen? Token gültig/`ticket.agent`-Berechtigung? |
 | `banana-pi-wol.sh` läuft durch, PC wacht trotzdem nicht auf | WoL im BIOS/NIC des PCs aktiv? Windows-Schnellstart deaktiviert? Client-/AP-Isolation im Router/Repeater aktiv? Pi und PC wirklich im selben Subnetz (`ip a`)? |
 | iOS-App: "Aufwecken" bei Windows-PC schlägt fehl (401) | Token in der App aktuell? Neu auslesen: `ssh pela@vereinsheim-alarmmonitor sudo cat /etc/banana-pi-wol-agent/token` |
-| iOS-App: "Aufwecken" bei Windows-PC ohne Antwort/Timeout | Tailscale auf dem Handy aktiv? `systemctl status banana-pi-wol-agent` auf dem Pi — läuft der Dienst? `curl -X POST http://100.123.214.4:9102/wol -H "Authorization: Bearer <token>" -d '{"target":"windows-pc"}'` von einer Tailnet-Maschine zum Gegenchecken |
+| iOS-App: "Aufwecken" bei Windows-PC meldet einen TLS-/Verbindungsfehler, obwohl `curl --cacert docs/assets/homeserver-root-ca.pem -X POST https://100.123.214.4:9102/wol` eine HTTP-Antwort liefert | Root-CA auf dem iPhone installiert **und** aktiviert? Zertifikat abgelaufen (`openssl s_client -connect 100.123.214.4:9102` und `openssl x509 -noout -enddate`, Eintrag `vereinsheim-wol-agent-cert` im Token-Register)? App-Build noch mit `http://` (der Agent spricht nur HTTPS)? |
+| iOS-App: "Aufwecken" bei Windows-PC ohne Antwort/Timeout | Tailscale auf dem Handy aktiv? `systemctl status banana-pi-wol-agent` auf dem Pi — läuft der Dienst? `curl --cacert docs/assets/homeserver-root-ca.pem -X POST https://100.123.214.4:9102/wol -H "Authorization: Bearer <token>" -d '{"target":"windows-pc"}'` von einer Tailnet-Maschine zum Gegenchecken |
 | Nachträgliche Analyse eines Vorfalls (z. B. "Alarm wurde nicht angezeigt") — lokales `journalctl` reicht nicht mehr zurück | Journal auf dem Pi ist auf ~3,5 Tage begrenzt (täglicher Reboot + 20-MB-Limit) — stattdessen Grafana/VictoriaLogs abfragen (Retention 14 Tage), siehe [docs/3-apps-workloads/300j0-logging.md](300j0-logging.md) |
 | Prüfen, ob der periodische Chromium-Neustart läuft (nur relevant, falls wieder aktiviert) | `journalctl -t banana-pi-kiosk` auf dem Pi bzw. in VictoriaLogs nach `periodischer Neustart` filtern (siehe [Periodischer Seiten-Neustart](#periodischer-seiten-neustart)) |
 

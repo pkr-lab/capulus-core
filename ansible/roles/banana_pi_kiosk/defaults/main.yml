@@ -28,3 +28,8 @@ banana_pi_kiosk_wol_agent_port: 9102
 banana_pi_kiosk_wol_agent_bind_address: "0.0.0.0"
 
 banana_pi_kiosk_wol_agent_token_path: /etc/banana-pi-wol-agent/token
+banana_pi_kiosk_wol_agent_tls_enabled: false
+banana_pi_kiosk_wol_agent_tls_crt: ""
+banana_pi_kiosk_wol_agent_tls_key: ""
+banana_pi_kiosk_wol_agent_tls_crt_path: /etc/banana-pi-wol-agent/tls.crt
+banana_pi_kiosk_wol_agent_tls_key_path: /etc/banana-pi-wol-agent/tls.key
