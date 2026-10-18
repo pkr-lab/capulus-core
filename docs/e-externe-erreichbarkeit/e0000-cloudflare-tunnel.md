@@ -423,7 +423,7 @@ mit einer Cloudflare-Access-Policy davor.
 
 - **UFW-Firewall bleibt unverändert.** `cloudflared` braucht keinen
   eingehenden Port — es öffnet nur eine ausgehende Verbindung. Die
-  bestehende Firewall-Tabelle in [README.md](../../README.md#networking--security)
+  bestehende Firewall-Tabelle in [README.md](https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus-core/konfiguration.md#netzwerk-und-sicherheit)
   bleibt exakt so, wie sie ist.
 - **Opt-in pro Dienst.** Es wird nichts automatisch öffentlich — nur
   Hostnamen, die explizit in `tunnel.ingress.rules` stehen, sind über
