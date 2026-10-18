@@ -14,8 +14,7 @@ provisioniert [capulus-ansible](https://github.com/pkr-lab/capulus-ansible), die
   [pkr-lab-docs](https://github.com/pkr-lab/pkr-lab-docs) (Zuordnung Pfad → Doc: `60000-uebersicht.md`, Tabelle „Von der Datei zum Eintrag“).
 - **Doku liegt nicht in diesem Repo, sondern in [pkr-lab-docs](https://github.com/pkr-lab/pkr-lab-docs).** Jede Codeänderung bekommt
   dort einen PR: Fach-Doc (was/wie) in der passenden Kategorie unter `capulus-core/` aktualisieren oder neu anlegen, Hintergrund
-  (warum) in `6-hintergruende/`. Konventionen stehen in der `CLAUDE.md` von pkr-lab-docs. Der Ordner `docs/` hier ist veraltet und
-  wird entfernt, sobald wiki-docs-sync auf pkr-lab-docs umgestellt ist; dort nichts mehr ändern.
+  (warum) in `6-hintergruende/`. Konventionen stehen in der `CLAUDE.md` von pkr-lab-docs. wiki-docs-sync spiegelt dieses Repo nach Wiki.js.
 - **Vor dem Ändern einer Stelle den Eintrag in `capulus-core/6-hintergruende/` (pkr-lab-docs) lesen.** Die meisten Eigenheiten existieren,
   weil der naheliegende Ansatz schon einmal gescheitert ist.
 - **Niemals Klartext-Secrets committen.** Nur `SealedSecret` (je Cluster eigener Schlüssel). gitleaks läuft in der CI.
@@ -66,10 +65,9 @@ Eigener Code mit Tests: `argocd/apps/tech/carplay-api/src` und `argocd/apps/tech
 
 ## Prüfen vor dem Commit
 
-Die CI (`.github/workflows/ci.yml`) hat sechs Pflicht-Jobs. Lokal verfügbar sind meist nur Python, Go und Node:
+Die CI (`.github/workflows/ci.yml`) hat fünf Pflicht-Jobs. Lokal verfügbar sind meist nur Python, Go und Node:
 
 ```bash
-python3 scripts/check-doc-links.py                                  # kaputte relative Links/Anker in Markdown
 pip install -q pyyaml && python3 scripts/check-token-register.py    # ops/token-register.yaml
 (cd argocd/apps/tech/pacman/server && go build ./... && go vet ./... && go test ./... && go mod tidy -diff)
 (cd argocd/apps/tech/carplay-api/src && go build ./... && go vet ./... && go test ./... && go mod tidy -diff)
@@ -103,7 +101,8 @@ Siehe `CLAUDE.md` in [pkr-lab-docs](https://github.com/pkr-lab/pkr-lab-docs): Da
   Ausnahme nur, wenn der Nutzer es in der jeweiligen Anfrage ausdrücklich verlangt.
 - Conventional Commits mit Scope = App/Bereich, Beschreibung auf Deutsch:
   `feat(isc-news-bot): …`, `fix(monitoring): …`, `chore(<app>): image.tag auf sha-…`, `docs(…): …`.
-  `feat`/`fix` lösen über semantic-release ein Release aus.
+  `feat`/`fix` lösen über semantic-release ein Release aus (zentraler Workflow in `pkr-lab/.github`, CHANGELOG.md und Tag `vX.Y.Z`).
+  Der Commitlint-Check läuft auf PRs; lokal prüft `make hooks` (commit-msg-Hook) das Format.
 - Ein PR = eine Änderung inkl. zugehöriger Doku. Renovate-/Bump-PRs nicht manuell nachbauen.
 
 ---
