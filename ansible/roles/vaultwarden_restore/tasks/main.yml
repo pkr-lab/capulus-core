@@ -60,7 +60,7 @@
 - name: Erreichbarkeit nach dem Restore pruefen (/alive)
   ansible.builtin.uri:
     url: "https://vault.tech.homeserver/alive"
-    validate_certs: false
+    validate_certs: true
     status_code: 200
   register: vaultwarden_alive_check
   until: vaultwarden_alive_check.status == 200

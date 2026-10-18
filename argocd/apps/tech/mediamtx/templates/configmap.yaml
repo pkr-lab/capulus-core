@@ -9,8 +9,7 @@ data:
   mediamtx.yml: |
     logLevel: {{ .Values.logLevel | quote }}
 
-    api: yes
-    apiAddress: :{{ .Values.service.ports.api }}
+    api: no
 
     rtsp: yes
     rtspAddress: :{{ .Values.publishService.ports.rtsp.port }}
@@ -38,15 +37,6 @@ data:
         permissions:
           - action: read
           - action: playback
-      # Erlaubt der Kubernetes-Readiness-Probe und internem Monitoring
-      # Zugriff auf API/Metrics ohne Login — beides ist ohnehin nur
-      # ClusterIP-intern erreichbar, kein extern exponierter Endpunkt.
-      - user: any
-        pass:
-        ips: []
-        permissions:
-          - action: api
-          - action: metrics
 
     paths:
       all_others:

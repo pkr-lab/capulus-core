@@ -2,7 +2,8 @@ FROM ubuntu:24.04 AS build
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG BARESIP_VERSION=4.12.0
-ARG PIPER_VERSION=1.8.0
+ARG BARESIP_RE_SHA=65555dad439de9d6a81b3ee6092b9c096585249b
+ARG BARESIP_SHA=9cfab81550acc4bd38d6580d79b45cc6eea65cd6
 ARG PIPER_VOICE=de_DE-thorsten-high
 
 RUN apt-get update \
@@ -10,10 +11,15 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 COPY patches/ /patches/
+COPY requirements.txt /tmp/requirements.txt
 
-RUN git clone --depth 1 --branch "v${BARESIP_VERSION}" https://github.com/baresip/re.git /src/re \
+RUN git init -q /src/re \
+ && git -C /src/re fetch -q --depth 1 https://github.com/baresip/re.git "${BARESIP_RE_SHA}" \
+ && git -C /src/re checkout -q FETCH_HEAD \
  && for patch_file in /patches/libre-*.patch; do patch -p1 -d /src/re < "$patch_file" || exit 1; done \
- && git clone --depth 1 --branch "v${BARESIP_VERSION}" https://github.com/baresip/baresip.git /src/baresip \
+ && git init -q /src/baresip \
+ && git -C /src/baresip fetch -q --depth 1 https://github.com/baresip/baresip.git "${BARESIP_SHA}" \
+ && git -C /src/baresip checkout -q FETCH_HEAD \
  && for patch_file in /patches/baresip-*.patch; do patch -p1 -d /src/baresip < "$patch_file" || exit 1; done \
  && cmake -S /src/re -B /src/re/build -DCMAKE_INSTALL_PREFIX=/opt/baresip -DCMAKE_INSTALL_RPATH=/opt/baresip/lib -DCMAKE_BUILD_TYPE=Release \
  && cmake --build /src/re/build --parallel \
@@ -23,7 +29,7 @@ RUN git clone --depth 1 --branch "v${BARESIP_VERSION}" https://github.com/baresi
  && cmake --install /src/baresip/build
 
 RUN python3 -m venv /opt/piper/venv \
- && /opt/piper/venv/bin/pip install --no-cache-dir "piper-tts==${PIPER_VERSION}" \
+ && /opt/piper/venv/bin/pip install --no-cache-dir --require-hashes -r /tmp/requirements.txt \
  && /opt/piper/venv/bin/python -m piper.download_voices "${PIPER_VOICE}" --download-dir /opt/piper
 
 FROM ubuntu:24.04

@@ -290,16 +290,17 @@ tunnel:
   # abgelehnt — auf Port 80 setzte Traefik X-Forwarded-Proto: http, obwohl
   # TLS längst an der Cloudflare-Edge terminiert war (401 statt Redirect für
   # jeden extern exponierten, SSO-geschützten Host).
-  # noTLSVerify: true, weil das interne Zertifikat von der privaten
-  # Homeserver-CA kommt, die cloudflared nicht kennt — die eigentliche
-  # Sicherheitsgrenze ist ohnehin die Cloudflare-Tunnel-Verschlüsselung
-  # selbst, nicht diese interne Hop.
+  # Das interne Zertifikat kommt von der privaten Homeserver-CA. cloudflared
+  # prüft es mit dieser CA (caPool, als Datei aus der ConfigMap des Charts)
+  # gegen einen Namen aus der SAN-Liste (originServerName), siehe
+  # docs/6-hintergruende/60040-helm-charts-tech.md, Abschnitt cloudflared.
   ingress:
     rules:
       - hostname: "*.deine-domain.de"
         service: https://traefik.kube-system.svc.cluster.local:443
         originRequest:
-          noTLSVerify: true
+          caPool: /etc/cloudflared/origin-ca.pem
+          originServerName: homeserver
     defaultService: "http_status:404"
 ```
 
@@ -371,8 +372,7 @@ Setup:
    - Name: z. B. `grafana-only-me`
    - Action: `Allow`
    - Include: `Emails` → deine eigene Adresse
-     (`ichwillkeinewerbung9901@gmail.com` oder die, die du tatsächlich
-     nutzt)
+     (die, mit der du dich bei Cloudflare anmeldest)
 6. Speichern. Ab jetzt zeigt Cloudflare **vor** dem Grafana-Login-Screen
    erst die Access-Seite — ein Angreifer muss also sowohl den
    One-Time-PIN-Check als auch das Grafana-Passwort umgehen.

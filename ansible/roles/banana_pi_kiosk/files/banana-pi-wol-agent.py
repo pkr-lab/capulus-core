@@ -2,6 +2,7 @@
 import hmac
 import json
 import os
+import ssl
 import subprocess
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -9,6 +10,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 TOKEN = os.environ["TOKEN"]
 PORT = int(os.environ.get("PORT", "9102"))
 BIND_ADDRESS = os.environ.get("BIND_ADDRESS", "0.0.0.0")
+TLS_CERT = os.environ.get("TLS_CERT", "")
+TLS_KEY = os.environ.get("TLS_KEY", "")
 MAX_BODY = 4096
 REQUEST_TIMEOUT = 10
 WOL_SCRIPT = os.environ.get("WOL_SCRIPT", "/usr/local/bin/banana-pi-wol.sh")
@@ -77,9 +80,31 @@ class Handler(BaseHTTPRequestHandler):
         log(format % args)
 
 
+class TLSServer(ThreadingHTTPServer):
+    tls_context = None
+
+    def get_request(self):
+        sock, addr = super().get_request()
+        wrapped = self.tls_context.wrap_socket(sock, server_side=True, do_handshake_on_connect=False)
+        return wrapped, addr
+
+    def handle_error(self, request, client_address):
+        exc = sys.exc_info()[1]
+        log(f"connection from {client_address[0]} failed: {type(exc).__name__}: {exc}")
+
+
 def main():
-    server = ThreadingHTTPServer((BIND_ADDRESS, PORT), Handler)
-    log(f"listening on {BIND_ADDRESS}:{PORT}, aliases={sorted(ALIASES)}")
+    if TLS_CERT and TLS_KEY:
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
+        context.load_cert_chain(TLS_CERT, TLS_KEY)
+        server = TLSServer((BIND_ADDRESS, PORT), Handler)
+        server.tls_context = context
+        scheme = "https"
+    else:
+        server = ThreadingHTTPServer((BIND_ADDRESS, PORT), Handler)
+        scheme = "http"
+    log(f"listening on {scheme}://{BIND_ADDRESS}:{PORT}, aliases={sorted(ALIASES)}")
     server.serve_forever()
 
 
