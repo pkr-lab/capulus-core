@@ -7,8 +7,8 @@ description: |
   (argocd/apps/tech/minio) as the S3 artifact repository and log archive.
 
   Split of concerns: Argo Workflows = CI (build/test/lint, image builds via
-  Kaniko → GHCR), ArgoCD = CD (deploy). Triggers: manual (UI / `argo submit`)
-  and CronWorkflows. Ships reusable WorkflowTemplates (git-ci, kaniko-build-push)
+  GitHub Actions), ArgoCD = CD (deploy). Triggers: manual (UI / `argo submit`)
+  and CronWorkflows. Ships reusable WorkflowTemplates (git-ci, pod-maintenance)
   and a suspended nightly-lint CronWorkflow example.
 type: application
 version: 0.1.0
@@ -18,7 +18,6 @@ keywords:
   - ci
   - cicd
   - pipelines
-  - kaniko
 home: https://argo-workflows.readthedocs.io
 sources:
   - https://github.com/argoproj/argo-helm/tree/main/charts/argo-workflows
