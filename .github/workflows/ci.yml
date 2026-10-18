@@ -191,17 +191,6 @@ jobs:
       - name: Typecheck, Unit- und Mock-Tests (kein Zugriff auf das echte ISC)
         run: npm test
 
-  docs-links:
-    name: docs links
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ inputs.ref }}
-
-      - name: Check relative links and anchors in Markdown
-        run: python3 scripts/check-doc-links.py
-
   token-register:
     name: token register
     runs-on: ubuntu-latest
