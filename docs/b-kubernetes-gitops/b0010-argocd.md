@@ -28,8 +28,8 @@ https://argocd.tech.homeserver
 ```
 
 Der Hostname löst über den dnsmasq-Wildcard (`*.homeserver`) im LAN und im Tailnet auf.
-Konfiguriert ist der Ingress in `ansible/roles/argocd` (`argocd_ingress_enabled`,
-`argocd_ui_host`, gesetzt in `ansible/host_vars/homeserver/vars.yml`) — als Wert der Rolle,
+Konfiguriert ist der Ingress in `capulus-ansible/roles/argocd` (`argocd_ingress_enabled`,
+`argocd_ui_host`, gesetzt in `capulus-ansible/host_vars/homeserver/vars.yml`) — als Wert der Rolle,
 damit der tägliche Semaphore-Lauf (`helm upgrade`) ihn nicht zurückdreht.
 
 **CLI und CI:** Die API läuft über denselben HTTPS-Ingress wie die Web-UI. Der Service
@@ -43,7 +43,7 @@ argocd login argocd.tech.homeserver --grpc-web
 ```
 
 Die Promotion-Kette ruft `https://argocd.tech.homeserver` und prüft das Zertifikat gegen
-[`docs/assets/homeserver-root-ca.pem`](../assets/homeserver-root-ca.pem). Für das Admin-Passwort
+[`pki/homeserver-root-ca.pem`](../../pki/homeserver-root-ca.pem). Für das Admin-Passwort
 gilt weiter: nur in der Web-UI eingeben, für die CLI ein API-Token verwenden.
 
 ### Initial-Credentials
@@ -142,7 +142,7 @@ Der Hub kennt **drei** `ApplicationSet`-Ressourcen, je Ordner-Familie eine:
 
 | ApplicationSet | Quelle | Projekt | Ziel-Cluster | Pflege |
 |---|---|---|---|---|
-| `home-server-apps-tech` | `argocd/apps/tech/*` | `tech` | Hub-Cluster (TECH) | **generiert** aus [`bootstrap-applicationset.yaml.j2`](../../ansible/roles/argocd/templates/bootstrap-applicationset.yaml.j2), committet als [`argocd/bootstrap/root-applicationset.yaml`](../../argocd/bootstrap/root-applicationset.yaml) |
+| `home-server-apps-tech` | `argocd/apps/tech/*` | `tech` | Hub-Cluster (TECH) | **generiert** aus [`bootstrap-applicationset.yaml.j2`](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/argocd/templates/bootstrap-applicationset.yaml.j2), committet als [`argocd/bootstrap/root-applicationset.yaml`](../../argocd/bootstrap/root-applicationset.yaml) |
 | `home-server-apps-prod` | explizit gelistete Manifest-Ordner unter `argocd/apps/prod/` | `prod` | Cluster `prod` | handgeschrieben in [`argocd/bootstrap-prod/`](../../argocd/bootstrap-prod/README.md) |
 | `home-server-apps-prod-charts` | jeder Ordner mit `Chart.yaml` unter `argocd/apps/prod/` | `prod` | Cluster `prod` | dito |
 
@@ -214,7 +214,7 @@ Neuentwicklung). Neue Apps starten in der Regel auf ENTW und wandern über die
 
 1. Verzeichnis `argocd/apps/tech/<app-name>/` anlegen, Manifeste oder Helm-Chart hineinlegen.
 2. `<app-name>` in `argocd_platform_apps` (Infrastruktur) oder `argocd_workloads_apps` (Anwendung)
-   in `ansible/roles/argocd/defaults/main.yml` ergänzen. Sonst fehlt der `destinations`-Eintrag im
+   in `capulus-ansible/roles/argocd/defaults/main.yml` ergänzen. Sonst fehlt der `destinations`-Eintrag im
    Projekt `tech`, und der Sync schlägt mit
    `application destination namespace ... is not permitted in project ...` fehl.
 3. `make render-bootstrap` (aktualisiert die committeten Kopien unter `argocd/bootstrap/`).
@@ -251,10 +251,10 @@ spec:
             - containerPort: 80
 EOF
 
-# my-app in argocd_workloads_apps (ansible/roles/argocd/defaults/main.yml) ergänzen, dann:
+# my-app in argocd_workloads_apps (capulus-ansible/roles/argocd/defaults/main.yml) ergänzen, dann:
 make render-bootstrap
 
-git add argocd/apps/tech/my-app/ ansible/roles/argocd/defaults/main.yml argocd/bootstrap/
+git add argocd/apps/tech/my-app/ capulus-ansible/roles/argocd/defaults/main.yml argocd/bootstrap/
 git commit -m "feat(apps): add my-app"
 git push   # auf einem Feature-Branch, dann PR nach main
 ```
@@ -271,7 +271,7 @@ Beispiel als Helm-Chart: Ordner `argocd/apps/tech/my-helm-app/` mit `Chart.yaml`
    [`argocd/bootstrap-prod/applicationset.yaml`](../../argocd/bootstrap-prod/applicationset.yaml)
    ergänzen und anwenden. Helm-Charts werden automatisch gefunden.
 4. Für einen internen Host unter `*.prod.homeserver` den Namen in `dnsmasq_prod_vm_hosts`
-   (`ansible/group_vars/all.yml`) aufnehmen und `make dnsmasq` ausführen, sonst löst der Name auf den
+   (`capulus-ansible/group_vars/all.yml`) aufnehmen und `make dnsmasq` ausführen, sonst löst der Name auf den
    TECH-Cluster auf, siehe [c0040](../c-netzwerk-dns/c0040-domain-tiers.md#dns-tier-und-cluster-sind-zwei-verschiedene-dinge).
 5. Per PR nach `main`. In der Hub-UI erscheint die Application als `prod-<app-name>`.
 

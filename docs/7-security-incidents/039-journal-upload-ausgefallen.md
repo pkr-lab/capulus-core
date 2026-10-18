@@ -2,7 +2,7 @@
 
 - Severity: Low
 - Bereich: worker1
-- Betroffen: homeserver (seit 2026-10-16 06:07 CEST), worker-1 (seit Boot 17:49 UTC), `ansible/roles/journal_upload`
+- Betroffen: homeserver (seit 2026-10-16 06:07 CEST), worker-1 (seit Boot 17:49 UTC), `capulus-ansible/roles/journal_upload`
 - Status: Behoben am 2026-10-18 (live repariert auf homeserver, worker-1, vereinsheim-alarmmonitor, infotafel; Drop-in, Alarm und Pi-Adresse im Code gestaged, wirken nach Merge bzw. Rollenlauf)
 
 ## Beschreibung
@@ -69,8 +69,8 @@ Niedrig.
 
 **Fix im Code.**
 
-- `ansible/roles/journal_upload`: Drop-in `restart.conf` (`StartLimitIntervalSec=0`, `Restart=always`, `RestartSec=30`).
-- `ansible/group_vars/banana_pis.yml` und `xibo_displays.yml`: `journal_upload_hosts_entry_ip: "192.168.178.94"`.
+- `capulus-ansible/roles/journal_upload`: Drop-in `restart.conf` (`StartLimitIntervalSec=0`, `Restart=always`, `RestartSec=30`).
+- `capulus-ansible/group_vars/banana_pis.yml` und `xibo_displays.yml`: `journal_upload_hosts_entry_ip: "192.168.178.94"`.
 - `argocd/apps/tech/monitoring/templates/vmrule-host-services.yaml`: Alarm `JournalUploadFailed` (Metrik `node_systemd_unit_state`, 15 Minuten, `severity: warning`).
 
 **Nachweis.**
@@ -84,7 +84,7 @@ Niedrig.
 
 **Geänderte Dateien.**
 
-- `ansible/roles/journal_upload/tasks/main.yml`, `ansible/group_vars/banana_pis.yml`, `ansible/group_vars/xibo_displays.yml`
+- `capulus-ansible/roles/journal_upload/tasks/main.yml`, `capulus-ansible/group_vars/banana_pis.yml`, `capulus-ansible/group_vars/xibo_displays.yml`
 - `argocd/apps/tech/monitoring/templates/vmrule-host-services.yaml` (neu)
 - Doku: `docs/6-hintergruende/60020-ansible-rollen.md`, `docs/6-hintergruende/60060-monitoring-und-alerting.md`
 

@@ -39,9 +39,9 @@ siehe [TEMPLATE](../TEMPLATE.md)).
 
 | Pfad | Doc |
 |---|---|
-| `ansible/host_vars/`, `ansible/group_vars/`, `ansible/inventory/`, `ansible/*.yml`, `ansible/roles/libvirt_host`, `ansible/roles/dnsmasq`, `ansible/roles/disable_eee` | [60010](60010-ansible-hosts-und-playbooks.md) |
-| `ansible/roles/*` (übrige Rollen) | [60020](60020-ansible-rollen.md) |
-| `ansible/roles/argocd`, `argocd/bootstrap/`, `argocd/bootstrap-prod/`, `argocd/promotion.yaml`, SealedSecrets | [60030](60030-argocd-und-bootstrap.md) |
+| `capulus-ansible/host_vars/`, `capulus-ansible/group_vars/`, `capulus-ansible/inventory/`, `ansible/*.yml`, `capulus-ansible/roles/libvirt_host`, `capulus-ansible/roles/dnsmasq`, `capulus-ansible/roles/disable_eee` | [60010](60010-ansible-hosts-und-playbooks.md) |
+| `capulus-ansible/roles/*` (übrige Rollen) | [60020](60020-ansible-rollen.md) |
+| `capulus-ansible/roles/argocd`, `argocd/bootstrap/`, `argocd/bootstrap-prod/`, `argocd/promotion.yaml`, SealedSecrets | [60030](60030-argocd-und-bootstrap.md) |
 | `argocd/apps/tech/*` (ohne monitoring, lldap, carplay-api, pacman) | [60040](60040-helm-charts-tech.md) |
 | `argocd/apps/prod/*`, `argocd/apps/entw/*` | [60050](60050-helm-charts-prod.md) |
 | `argocd/apps/tech/monitoring`, `argocd/apps/tech/logging` | [60060](60060-monitoring-und-alerting.md) |

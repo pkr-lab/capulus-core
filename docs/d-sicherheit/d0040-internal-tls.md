@@ -59,7 +59,7 @@ signiert ein `ClusterIssuer` vom Typ `CA` mit der **bestehenden**
 Homeserver-Root-CA (`rootCA.pem`/`rootCA-key.pem`, bisher nur lokal für
 den manuellen `openssl x509 -req -CA ...`-Schritt genutzt) — exakt
 dieselbe CA bleibt gültig, das bereits auf allen Geräten installierte
-[docs/assets/homeserver-root-ca.pem](../assets/homeserver-root-ca.pem)
+[pki/homeserver-root-ca.pem](../../pki/homeserver-root-ca.pem)
 musste **nicht** ersetzt werden.
 
 ### CA-Private-Key: einmaliger manueller Import, kein SealedSecret
@@ -115,12 +115,12 @@ TLSStore referenziert.
 
 `cert-manager` läuft in einem eigenen Namespace, ist aber bewusst **nicht**
 Teil von `argocd_platform_apps`
-([ansible/roles/argocd/defaults/main.yml](../../ansible/roles/argocd/defaults/main.yml))
+([capulus-ansible/roles/argocd/defaults/main.yml](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/argocd/defaults/main.yml))
 — genau wie `kube-system` und `argocd` selbst ist das Cluster-
 Infrastruktur, kein App mit eigenem Nutzerkreis/Tier. Die Namespace-
 Berechtigung steht deshalb als zusätzlicher, fest kodierter Eintrag in der
 `platform`-AppProject-Destination-Liste
-([ansible/roles/argocd/templates/bootstrap-appprojects.yaml.j2](../../ansible/roles/argocd/templates/bootstrap-appprojects.yaml.j2)),
+([capulus-ansible/roles/argocd/templates/bootstrap-appprojects.yaml.j2](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/argocd/templates/bootstrap-appprojects.yaml.j2)),
 analog zum bestehenden `kube-system`-Eintrag — sonst bekäme der
 Namespace ein `tier-default-ingress`-NetworkPolicy und ein
 `security-tier`-Label, die für Cluster-Infrastruktur nicht sinnvoll sind
@@ -133,7 +133,7 @@ Namespace ein `tier-default-ingress`-NetworkPolicy und ein
 **1. Committen + pushen** (macht der Nutzer selbst) — sobald
 `argocd/apps/tech/cert-manager/`,
 `argocd/apps/tech/traefik-config/tlsstore.yaml` und
-`ansible/roles/argocd/templates/bootstrap-appprojects.yaml.j2` +
+`capulus-ansible/roles/argocd/templates/bootstrap-appprojects.yaml.j2` +
 `argocd/bootstrap/projects.yaml` im Repo sind, holt sich ArgoCD die
 Änderung automatisch (`automated: {prune: true, selfHeal: true}`, kein
 manueller Sync-Trigger nötig). cert-manager selbst (Controller + CRDs +
@@ -190,12 +190,12 @@ Ansible/Automatisierung möglich (unterschiedliche OS-Mechanismen, teils
 kein Remote-Zugriff auf private Geräte):
 
 **Ausnahme Banana-Pi-Alarmmonitore:** anders als die privaten Geräte unten
-sind diese bereits Ansible-verwaltet (`ansible/roles/banana_pi_kiosk`),
+sind diese bereits Ansible-verwaltet (`capulus-ansible/roles/banana_pi_kiosk`),
 sowohl das System-Trust-Store-Update (`update-ca-certificates`) als auch
 der NSS-Datenbank-Import für den Kiosk-User (`~/.pki/nssdb`, siehe
 "Linux" unten — Chromium braucht **beides**, der System-Trust-Store allein
 reicht nicht) laufen dort deshalb automatisch bei jedem Rollout — Quelle
-ist direkt das committete `docs/assets/homeserver-root-ca.pem`, keine
+ist direkt das committete `pki/homeserver-root-ca.pem`, keine
 separate Kopie. Nichts manuell zu tun, solange `make banana-pi-kiosks`
 regelmäßig läuft.
 
@@ -214,19 +214,19 @@ kopieren und manuell registrieren, statt mkcert erneut zu installieren
 (braucht nur die public `.pem`, keinen Private Key):
 
 ```bash
-sudo cp docs/assets/homeserver-root-ca.pem /usr/local/share/ca-certificates/homeserver-root-ca.crt
+sudo cp pki/homeserver-root-ca.pem /usr/local/share/ca-certificates/homeserver-root-ca.crt
 sudo update-ca-certificates
 # Für Firefox/Chrome zusätzlich (NSS-Datenbank):
-certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n "homeserver-root-ca" -i docs/assets/homeserver-root-ca.pem
+certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n "homeserver-root-ca" -i pki/homeserver-root-ca.pem
 ```
 
-**Windows:** `docs/assets/homeserver-root-ca.pem` doppelklicken →
+**Windows:** `pki/homeserver-root-ca.pem` doppelklicken →
 "Zertifikat installieren" → **Lokaler Computer** → "Alle Zertifikate in
 folgendem Speicher speichern" → **Vertrauenswürdige Stammzertifizierungsstellen**.
 Firefox verwendet einen eigenen Speicher (`about:preferences#privacy` →
 Zertifikate → Zertifikate anzeigen → Zertifizierungsstellen → Importieren).
 
-**macOS:** `docs/assets/homeserver-root-ca.pem` in Schlüsselbundverwaltung
+**macOS:** `pki/homeserver-root-ca.pem` in Schlüsselbundverwaltung
 importieren (System-Schlüsselbund) → Zertifikat öffnen → "Vertrauen" →
 "Bei Verwendung dieses Zertifikats" auf **Immer vertrauen** setzen.
 
@@ -259,7 +259,7 @@ nötig.
 **CA läuft aus (alle 10 Jahre) oder CA-Key kompromittiert:** einziger
 noch verbliebener manueller Fall — neue Root-CA per `openssl` erzeugen
 (gleiches Verfahren wie beim ursprünglichen Rollout), `rootCA.pem` in
-[docs/assets/homeserver-root-ca.pem](../assets/homeserver-root-ca.pem)
+[pki/homeserver-root-ca.pem](../../pki/homeserver-root-ca.pem)
 ersetzen + committen, `homeserver-ca-keypair`-Secret im Cluster mit dem
 neuen Keypair überschreiben (Schritt 2 aus [Rollout](#rollout) erneut),
 und — anders als bei einer normalen Zertifikats-Erneuerung — **auf jedem
@@ -359,7 +359,7 @@ bzw. einen 404, das Zertifikat selbst ist aber bereits prüfbar
 ## Zertifikat für ArgoCD auf der ENTW-VM
 
 Die ENTW-VM hat kein cert-manager. Das Zertifikat für `argocd.dev.homeserver` stellt der Betreiber von Hand mit der Homeserver-Root-CA aus (Gültigkeit 365 Tage) und legt
-es als Vault-Variablen in `ansible/host_vars/entw-vm/vars.yml` ab. Grund und Einbindung: [60030](../6-hintergruende/60030-argocd-und-bootstrap.md#rolle-argocd).
+es als Vault-Variablen in `capulus-ansible/host_vars/entw-vm/vars.yml` ab. Grund und Einbindung: [60030](../6-hintergruende/60030-argocd-und-bootstrap.md#rolle-argocd).
 
 ```bash
 kubectl -n cert-manager get secret homeserver-ca-keypair -o jsonpath='{.data.tls\.crt}' | base64 -d > ca.crt
@@ -379,8 +379,8 @@ shred -u ca.key leaf.key; rm -f ca.crt leaf.csr leaf.crt ext.cnf ca.srl
 Die zwei Ausgaben ersetzen die gleichnamigen Einträge in `host_vars/entw-vm/vars.yml`. Danach:
 
 ```bash
-ansible-playbook -i ansible/inventory/hosts.yml ansible/entw.yml --tags argocd --vault-password-file ~/.vault_pass
-curl -s --cacert docs/assets/homeserver-root-ca.pem https://argocd.dev.homeserver/api/version
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/entw.yml --tags argocd --vault-password-file ~/.vault_pass
+curl -s --cacert pki/homeserver-root-ca.pem https://argocd.dev.homeserver/api/version
 ```
 
 Das Ablaufdatum steht in `ops/token-register.yaml` (`entw-argocd-ingress-cert`). Läuft das Zertifikat ab, antwortet der Ingress weiter, aber die
@@ -392,7 +392,7 @@ Promotion-Kette lehnt es ab und das Gate der ENTW-Stufe blockiert. **Rollback:**
 
 Der `banana-pi-wol-agent` ([60020](../6-hintergruende/60020-ansible-rollen.md)) spricht HTTPS mit einem Zertifikat der Homeserver-Root-CA, das die Tailscale-IP `100.123.214.4` als IP-SAN trägt. Der Pi hat kein cert-manager,
 deshalb stellt der Betreiber es von Hand aus (Gültigkeit 365 Tage) und legt es als Vault-Variablen `vault_vereinsheim_wol_agent_tls_crt` und `vault_vereinsheim_wol_agent_tls_key` in
-`ansible/host_vars/vereinsheim-alarmmonitor/vault.yml` ab. Der CA-Schlüssel verlässt dabei den Cluster nicht: cert-manager stellt das Blatt-Zertifikat selbst aus.
+`capulus-ansible/host_vars/vereinsheim-alarmmonitor/vault.yml` ab. Der CA-Schlüssel verlässt dabei den Cluster nicht: cert-manager stellt das Blatt-Zertifikat selbst aus.
 
 ```bash
 cat > cert.yaml <<'EOF'
@@ -424,7 +424,7 @@ kubectl -n cert-manager wait certificate/wol-agent-tls-tmp --for=condition=Ready
 umask 077
 kubectl -n cert-manager get secret wol-agent-tls-tmp -o jsonpath='{.data.tls\.crt}' | base64 -d > tls.crt
 kubectl -n cert-manager get secret wol-agent-tls-tmp -o jsonpath='{.data.tls\.key}' | base64 -d > tls.key
-openssl verify -CAfile docs/assets/homeserver-root-ca.pem -verify_ip 100.123.214.4 tls.crt
+openssl verify -CAfile pki/homeserver-root-ca.pem -verify_ip 100.123.214.4 tls.crt
 
 kubectl -n cert-manager delete certificate wol-agent-tls-tmp
 kubectl -n cert-manager delete secret wol-agent-tls-tmp
@@ -437,9 +437,9 @@ shred -u tls.key; rm -f tls.crt cert.yaml
 Die zwei Ausgaben ersetzen die gleichnamigen Einträge in `vault.yml`. Danach `issued` und `expires` des Eintrags `vereinsheim-wol-agent-cert` im Token-Register anpassen und den Pi ausrollen, erst als Prüflauf:
 
 ```bash
-ansible-playbook -i ansible/inventory/hosts.yml ansible/banana-pi-kiosks.yml --limit vereinsheim-alarmmonitor --tags banana-pi-kiosk --check --diff --ask-vault-pass
-ansible-playbook -i ansible/inventory/hosts.yml ansible/banana-pi-kiosks.yml --limit vereinsheim-alarmmonitor --tags banana-pi-kiosk --ask-vault-pass
-curl -s -o /dev/null -w '%{http_code}\n' --cacert docs/assets/homeserver-root-ca.pem -X POST https://100.123.214.4:9102/wol
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/banana-pi-kiosks.yml --limit vereinsheim-alarmmonitor --tags banana-pi-kiosk --check --diff --ask-vault-pass
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/banana-pi-kiosks.yml --limit vereinsheim-alarmmonitor --tags banana-pi-kiosk --ask-vault-pass
+curl -s -o /dev/null -w '%{http_code}\n' --cacert pki/homeserver-root-ca.pem -X POST https://100.123.214.4:9102/wol
 ```
 
 Erwartung der letzten Zeile: `401` (kein Token, es wird nichts geweckt). Läuft das Zertifikat ab, lehnt die iOS-App den Agent ab und das Aufwecken aus der App fällt aus, der Agent selbst läuft weiter.

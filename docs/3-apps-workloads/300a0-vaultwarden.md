@@ -144,7 +144,7 @@ Erwartet:
    erreichbar, siehe Architektur oben).
 
 **Nutzer-Inventar:** Wer einen Account hat, wird zusätzlich (verschlüsselt,
-außerhalb der App-DB) in `ansible/group_vars/user_inventory_vault.yml`
+außerhalb der App-DB) in `capulus-ansible/group_vars/user_inventory_vault.yml`
 festgehalten — `make user-inventory-edit` zum Bearbeiten, siehe
 [docs/4-planung/40080-multi-cluster-entw-prod-tech.md → Baustein 7](../4-planung/40080-multi-cluster-entw-prod-tech.md#7-nutzer-daten-inventar-für-immich--vaultwarden)
 für den Zweck (Dokumentation, kein Ersatz für die eigentliche DB).
@@ -302,8 +302,8 @@ und [docs/2-betrieb-hardware/20010-nas-backup.md](../2-betrieb-hardware/20010-na
 separater Schritt, um den Nutzer "neu anzulegen", ist nicht nötig.
 
 Dafür gibt es die Ansible-Rolle `vaultwarden_restore`
-(`ansible/roles/vaultwarden_restore/`, Playbook
-`ansible/vaultwarden-restore.yml`):
+(`capulus-ansible/roles/vaultwarden_restore/`, Playbook
+`capulus-ansible/vaultwarden-restore.yml`):
 
 ```bash
 make vaultwarden-restore FORCE_RESTORE=true

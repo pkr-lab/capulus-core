@@ -90,7 +90,7 @@ Positivtests für `banana-pi-down` und `nightly-worker-update` wurden nicht ausg
 - `argocd/apps/tech/n8n/values.yaml`, `argocd/apps/tech/n8n/workflows/alamos-einsatz-to-zammad.json`, `banana-pi-down-to-zammad.json`, `nightly-worker-update-to-zammad.json`
 - `argocd/apps/tech/alamos-relay/` (`templates/configmap-script.yaml`, `deployment.yaml`, `sealedsecret.yaml`, `values.yaml`)
 - `argocd/apps/tech/monitoring/` (`values.yaml`, `templates/sealedsecret-n8n-webhook-token.yaml`)
-- `ansible/roles/nightly_worker_wake/` (`files/nightly-worker-wake.sh`, `defaults/main.yml`, `tasks/main.yml`), `ansible/group_vars/all.yml` (nur die Vault-Variable)
+- `capulus-ansible/roles/nightly_worker_wake/` (`files/nightly-worker-wake.sh`, `defaults/main.yml`, `tasks/main.yml`), `capulus-ansible/group_vars/all.yml` (nur die Vault-Variable)
 - `ops/token-register.yaml` (drei neue Einträge)
 - Doku: `docs/3-apps-workloads/30070-n8n.md`, `300h0-alamos-einsatz-zammad.md`, `300i0-alamos-relay.md`, `30020-vereinsheim-alarmmonitor.md`, `docs/2-betrieb-hardware/20030-nightly-worker-update.md`, `docs/6-hintergruende/60040-helm-charts-tech.md`
 

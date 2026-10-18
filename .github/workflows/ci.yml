@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   lint:
-    name: make lint (yamllint, ansible-lint, helm lint)
+    name: make lint (yamllint, helm lint)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -34,11 +34,8 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Install yamllint + ansible-lint
-        run: pip install --disable-pip-version-check yamllint ansible-lint
-
-      - name: Install Ansible Galaxy collections (ansible-lint braucht sie zur Modul-Aufloesung)
-        run: ansible-galaxy collection install -r ansible/requirements.yml
+      - name: Install yamllint
+        run: pip install --disable-pip-version-check yamllint
 
       - name: Setup Helm
         uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
