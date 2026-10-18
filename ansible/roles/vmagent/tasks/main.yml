@@ -40,6 +40,7 @@
   ansible.builtin.get_url:
     url: "{{ vmagent_download_url }}"
     dest: "/usr/local/src/vmutils-linux-{{ vmagent_arch }}-v{{ vmagent_version }}.tar.gz"
+    checksum: "sha256:{{ vmagent_sha256[vmagent_arch] }}"
     mode: "0644"
     force: false
   when: vmagent_enabled | bool
