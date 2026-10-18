@@ -19,8 +19,7 @@ ArgoCD          =  CD   (argocd/apps/* in den Cluster deployen)
 - **Auth:** Server-Auth-Mode — kein Login, offen im LAN/Tailnet (gleiches
   Trust-Modell wie Grafana/Headlamp/Semaphore). Nur über Tailnet/LAN
   erreichbar.
-- **Image-Builds:** Kaniko baut und pusht nach GHCR (`ghcr.io/pke/...`)
-  mittels eines versiegelten Docker-Config-Secrets. Keine In-Cluster-Registry.
+- **Image-Builds:** laufen nicht mehr in Argo Workflows, sondern über `.github/workflows/build-images.yml` ([f0060](f0060-build-images.md)). Das frühere WorkflowTemplate `kaniko-build-push` ist entfernt (Kaniko ist archiviert). Keine In-Cluster-Registry.
 
 | Dienst         | URL                                    | Hinweise                    |
 |----------------|-----------------------------------------|------------------------------|
@@ -103,7 +102,7 @@ $SSH 'sudo kubectl -n argo-workflows get pods'
 ```
 
 `http://argo-workflows.tech.homeserver` öffnen — die Workflows-UI sollte
-laden und die WorkflowTemplates `git-ci` und `kaniko-build-push` auflisten.
+laden und die WorkflowTemplates `git-ci` und `pod-maintenance` auflisten.
 
 ---
 
@@ -145,24 +144,9 @@ werden nach MinIO archiviert (Bucket `argo-artifacts`). Ein `Succeeded`-Status
 mit sichtbaren archivierten Logs bestätigt, dass das Artifact-Repository
 korrekt verdrahtet ist.
 
-### 3.2 Image-Build (`kaniko-build-push`)
+### 3.2 Image-Build (entfernt)
 
-**Für `pacman`, `carplay-api` und `n8n` inzwischen abgelöst** durch
-`.github/workflows/build-images.yml` (siehe
-[f0060-build-images.md](f0060-build-images.md)) — dieser Weg hier bleibt
-als manueller Fallback für Ad-hoc-Builds anderer Images bestehen:
-
-```bash
-argo submit -n argo-workflows --from workflowtemplate/kaniko-build-push \
-  -p repo=https://github.com/pke/<repo-mit-Dockerfile>.git \
-  -p revision=main \
-  -p context=. \
-  -p dockerfile=Dockerfile \
-  -p image=ghcr.io/pke/<image>:latest
-```
-
-Das Image erscheint unter `ghcr.io/pke/...`. ArgoCD kann es dann wie gewohnt
-deployen (CD bleibt bei ArgoCD).
+Das WorkflowTemplate `kaniko-build-push` ist am 2026-10-18 entfernt worden. Image-Builds macht `.github/workflows/build-images.yml` ([f0060](f0060-build-images.md)). Das Secret `ghcr-push` (Docker-Config für GHCR) wird von nichts mehr genutzt; der zugehörige PAT kann bei GitHub widerrufen werden, das SealedSecret `argo-workflows-ghcr-push` danach aus dem Chart und dem Token-Register entfernt werden.
 
 ### 3.3 Geplante Runs (`CronWorkflow`)
 
@@ -188,9 +172,6 @@ argo cron resume -n argo-workflows nightly-home-server-lint
   MinIO-Root-Credentials überein, oder MinIO ist nicht erreichbar.
   `kubectl -n minio logs deploy/minio` prüfen und sicherstellen, dass der
   Bucket `argo-artifacts` existiert.
-- **Kaniko liefert `UNAUTHORIZED` beim Push nach GHCR** — dem PAT fehlt
-  `write:packages` oder das Secret `ghcr-push` ist fehlerhaft. Den
-  Auth-String im Docker-Config-JSON verifizieren.
 - **CRDs beim ersten Sync nicht gefunden** — die WorkflowTemplate-/
   CronWorkflow-Custom-Resources und die Argo-CRDs landen im selben Sync. Das
   ApplicationSet setzt bereits `SkipDryRunOnMissingResource=true` + Retry,

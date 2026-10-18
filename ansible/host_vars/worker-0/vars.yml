@@ -5,6 +5,11 @@ k3s_agent_hostname: worker-0
 
 wake_on_lan_mac_address: "98:fa:9b:28:b0:22"
 
+k3s_agent_ufw_enable: true
+k3s_agent_ufw_trusted_hosts:
+  - "192.168.178.94"
+  - "192.168.178.96"
+
 worker_apt_update_dns_fallback_enabled: true
 
 tailscale_advertise_routes: ""
