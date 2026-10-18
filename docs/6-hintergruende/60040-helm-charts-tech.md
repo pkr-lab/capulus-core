@@ -194,15 +194,14 @@ leitet alle `*.homeserver`-Anfragen an dnsmasq weiter.
 
 ### argo-workflows und minio
 
-- **`kaniko-build-push` nutzt `gcr.io/kaniko-project/executor:v1.24.0`** statt `:latest` (derselbe Digest `sha256:4e7a52dd…`, die Fixierung ändert nichts am laufenden Verhalten). Das kaniko-Projekt von Google ist archiviert und bekommt keine Updates mehr, der Scan zeigt entsprechend 5 CRITICAL / rund 150 HIGH; die Workflow-Vorlage läuft nur auf Abruf. Ein Ersatz wäre `docker buildx` im Runner oder das Chainguard-Fork, beides eine eigene Umstellung.
+- **Kaniko ist entfernt (2026-10-18).** Das WorkflowTemplate `kaniko-build-push` lief mit `gcr.io/kaniko-project/executor` (zuletzt auf `v1.24.0` fixiert, gleicher Digest wie `latest`); das kaniko-Projekt von Google ist archiviert, der Scan zeigte 5 CRITICAL / rund 150 HIGH, und `build-images.yml` hat das Template ersetzt. Zuletzt lief es vor rund 61 Tagen. Der alte Docker-Config-Secret `ghcr-push` ist übrig (siehe [f0000](../f-cicd-automatisierung/f0000-argo-workflows.md)).
 
 - **`clusterWorkflowTemplates.enabled: false` für Server und Controller.** Mit `singleNamespace: true` legt das Chart (2.0.13) zwar die ClusterRoleBindings `argo-workflows-server-cluster-template` und `argo-workflows-workflow-controller-cluster-template` an, aber nicht die dazugehörigen ClusterRoles (deren Template verlangt `not singleNamespace`). Die Bindings zeigten ins Leere, und jede künftig angelegte ClusterRole mit diesem Namen hätte sofort Rechte an die beiden ServiceAccounts vergeben. Es gibt keine `ClusterWorkflowTemplate` im Cluster, die Funktion wird nicht gebraucht; wer sie später nutzen will, muss `singleNamespace` auf `false` stellen und beide Schalter wieder einschalten.
 
 - **argo-workflows:** Controller und Server sind auf den Release-Namespace beschränkt (einfacher und sicherer als cluster-weit für ein
   Ein-Nutzer-Heim-CI). HTTP im Klartext, TLS endet bzw. entfällt hinter Traefik im LAN. Artefakt-Repository und Log-Archiv liegen auf MinIO
   (cluster-intern), die Zugangsdaten kommen aus dem Secret `argo-artifacts-s3` und **müssen den MinIO-Root-Zugangsdaten entsprechen**.
-  Für Kaniko-Pushes nach GHCR ein `dockerconfigjson` bauen und unter dem Schlüssel `.dockerconfigjson` versiegeln
-  ([f0000](../f-cicd-automatisierung/f0000-argo-workflows.md)). Eine ClusterRole erlaubt dem `argo-workflow`-ServiceAccount, Pods und
+  Eine ClusterRole erlaubt dem `argo-workflow`-ServiceAccount, Pods und
   Workloads in allen Namespaces zu lesen, zu skalieren und zu überwachen, ausschließlich vom Workflow `nightly-pod-maintenance` genutzt.
 - **minio:** Der Chart-Default für `replicas` ist 16 (verteilt), im Standalone-Betrieb muss das überschrieben werden, damit Scheduling und
   Validierung einen einzelnen Pod erwarten. Der Default-Request von **16 Gi Speicher** wäre auf dem Homeserver nie schedulbar und wird hart

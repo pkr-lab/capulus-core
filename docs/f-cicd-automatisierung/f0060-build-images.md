@@ -5,10 +5,9 @@ baut und pusht die drei selbst gebauten Workload-Images —
 [`pacman`](../../argocd/apps/tech/pacman/), [`carplay-api`](../../argocd/apps/tech/carplay-api/), [`isc-news-bot`](../../argocd/apps/tech/isc-news-bot/),
 [`alert-caller`](../../argocd/apps/tech/alert-caller/) (nur `Dockerfile`, das Skript kommt per ConfigMap) und [`n8n`](../../argocd/apps/tech/n8n/) (dessen `image/Dockerfile`) —
 automatisch nach GHCR, sobald der jeweilige Build-Kontext auf `main`
-geändert wird. Vorher musste dafür manuell das `kaniko-build-push`
-Argo-WorkflowTemplate gegen den Cluster angestoßen werden (siehe
-[f0000-argo-workflows.md](f0000-argo-workflows.md#32-image-build-kaniko-build-push)),
-das bei jeder Code-Änderung leicht vergessen wurde.
+geändert wird. Vorher musste dafür manuell ein Kaniko-Build in Argo Workflows
+angestoßen werden, das bei jeder Code-Änderung leicht vergessen wurde; dieser
+Weg ist entfernt.
 
 ---
 
@@ -85,13 +84,9 @@ Layout-Umzug (`workloads/` → `tech/`) die Pfade im Workflow überholt hatte
 
 Frisch gepushte GHCR-Packages sind standardmäßig **privat** — ohne
 `imagePullSecrets` scheitert der Pod dann mit `ImagePullBackOff`. Gleiche
-Falle/Lösung wie beim alten Kaniko-Weg, siehe
+Falle/Lösung wie früher beim Kaniko-Weg, siehe
 [pacman/README.md](../../argocd/apps/tech/pacman/README.md#image-bauen).
 
-## Verhältnis zu `kaniko-build-push`
+## Verhältnis zu Kaniko
 
-Das Argo-WorkflowTemplate bleibt installiert und nutzbar — als manueller
-Fallback für Ad-hoc-Builds von Images außerhalb dieser drei Apps, oder
-falls GHCR-Push per `GITHUB_TOKEN` aus GitHub Actions heraus mal nicht
-funktioniert (z. B. Org-Policy blockiert Package-Writes). Für `pacman`,
-`carplay-api` und `n8n` ist er nicht mehr der vorgesehene Weg.
+Das frühere Argo-WorkflowTemplate `kaniko-build-push` ist entfernt (2026-10-18). Für Ad-hoc-Builds anderer Images nutzt man `docker build` und `docker push` lokal oder ergänzt die Matrix in `build-images.yml`.
