@@ -465,7 +465,7 @@
     runbook: pkr-lab-docs:capulus-core/4-planung/40090-standby-cluster-ha-paar.md#rotation
     overlap: true
   owner: peter
-  blast_radius: "Kann Seiten unter Github/capulus-core in Wiki.js schreiben."
+  blast_radius: "Kann Seiten in Wiki.js anlegen, ändern und löschen; der Sync arbeitet unter dem Pfad docs/ (und optional unter wikijs.legacyPrefixes)."
 
 - id: xibosignage-db-password
   service: xibosignage
