@@ -101,7 +101,8 @@ Siehe `CLAUDE.md` in [pkr-lab-docs](https://github.com/pkr-lab/pkr-lab-docs): Da
   Ausnahme nur, wenn der Nutzer es in der jeweiligen Anfrage ausdrücklich verlangt.
 - Conventional Commits mit Scope = App/Bereich, Beschreibung auf Deutsch:
   `feat(isc-news-bot): …`, `fix(monitoring): …`, `chore(<app>): image.tag auf sha-…`, `docs(…): …`.
-  `feat`/`fix` lösen über semantic-release ein Release aus.
+  `feat`/`fix` lösen über semantic-release ein Release aus (zentraler Workflow in `pkr-lab/.github`, CHANGELOG.md und Tag `vX.Y.Z`).
+  Der Commitlint-Check läuft auf PRs; lokal prüft `make hooks` (commit-msg-Hook) das Format.
 - Ein PR = eine Änderung inkl. zugehöriger Doku. Renovate-/Bump-PRs nicht manuell nachbauen.
 
 ---
