@@ -44,6 +44,7 @@
   register: k3s_current_version
   changed_when: false
   failed_when: false
+  check_mode: false
   when: k3s_binary.stat.exists
 
 - name: Decide whether to (re)run the k3s installer
@@ -107,6 +108,7 @@
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   changed_when: false
+  check_mode: false
 
 - name: Display node status
   ansible.builtin.debug:
@@ -224,6 +226,7 @@
   ansible.builtin.command: helm version --short
   register: k3s_helm_version
   changed_when: false
+  check_mode: false
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
 
@@ -248,6 +251,7 @@
   ansible.builtin.command: kubectl get pods -n kube-system --no-headers
   register: k3s_system_pods
   changed_when: false
+  check_mode: false
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
 
