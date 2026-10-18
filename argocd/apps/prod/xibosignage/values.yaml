@@ -68,7 +68,7 @@ quickchart:
   image:
     repository: ianw/quickchart
     pullPolicy: IfNotPresent
-    tag: "latest"
+    tag: "v1.8.1"
 
   resources:
     requests:

@@ -29,7 +29,8 @@ Besucher (IPv4/IPv6)
   → cloudflared (Tunnel)
   → Traefik (Ingress, Host-Header-Routing)
   → pacman-server (Go, siehe server/cmd/server/main.go)
-      - liest CF-Connecting-IP (Fallback: X-Forwarded-For, dann TCP-Peer)
+      - liest CF-Connecting-IP (Fallback: X-Forwarded-For, dann TCP-Peer), aber nur,
+        wenn die TCP-Gegenstelle im Pod-CIDR liegt (`TRUSTED_PROXY_CIDRS`)
       - optional: GeoIP-Lookup gegen lokale DB-IP-City-Lite-DB
       - loggt eine JSON-Zeile pro Request nach stdout
   → victoria-logs-collector (DaemonSet, liest Container-stdout)
@@ -41,7 +42,9 @@ Warum `CF-Connecting-IP` und nicht nur `X-Forwarded-For`: Cloudflare setzt
 diesen Header einmalig und verbindlich an seiner Edge auf die tatsächliche
 Client-IP (v4 oder v6) — im Gegensatz zu `X-Forwarded-For`, das über
 mehrere Hops akkumulieren kann. `pacman-server` nutzt ihn deshalb
-vorrangig, siehe `clientIP()` in `main.go`.
+vorrangig, siehe `clientIP()` in `main.go`. Die Header werden nur ausgewertet, wenn der Request aus dem Pod-Netz
+(`TRUSTED_PROXY_CIDRS`, Standard `10.42.0.0/16`, Traefik) kommt; ein direkter Aufruf aus anderen Netzen kann die
+IP nicht fälschen.
 
 Warum kein Eingriff an Traefik/cloudflared nötig war: Beide Komponenten
 reichen die von Cloudflare gesetzten Header unverändert an das Backend

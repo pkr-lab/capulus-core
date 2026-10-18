@@ -39,8 +39,8 @@ docs/3-apps-workloads/300d0-carplay-api.md:
 | Method | Path | Auth | Description |
 |---|---|---|---|
 | GET | `/health` | none | Liveness/readiness. Always 200 if the process is up; body reports per-dependency reachability for diagnostics. |
-| GET | `/metrics` | none (ClusterIP-internal) | Prometheus text exposition: request counts/durations, cache hit/miss. |
-| GET | `/api/dashboard` | Bearer token (if `CARPLAY_API_TOKEN` set) | Combined alerts + per-host metrics + status, cached 30s. |
+| GET | `/metrics` | Bearer token | Prometheus text exposition: request counts/durations, cache hit/miss. |
+| GET | `/api/dashboard` | Bearer token | Combined alerts + per-host metrics + status, cached 30s. |
 | GET | `/api/brightness` | Bearer token | Current Homeserver screen brightness, proxied to power-agent. |
 | PUT | `/api/brightness` | Bearer token | Body `{"percent": 0-100}` — sets Homeserver screen brightness. |
 | POST | `/api/power/wake` | Bearer token | Body `{"target": "worker-0"\|"worker-1"}` — sends a WoL magic packet. |
@@ -64,7 +64,7 @@ access of its own, see [docs/3-apps-workloads/300d0-carplay-api.md](../../../../
 | `IP_ALLOWLIST_CIDRS` | *(empty)* | Comma-separated CIDRs; empty = allow all. E.g. Tailscale CGNAT range `100.64.0.0/10`. |
 | `CORS_ALLOWED_ORIGINS` | *(empty)* | Comma-separated allowed Origins; empty = CORS headers never sent. |
 | `RATE_LIMIT_PER_MINUTE` | `100` | Per-client-IP fixed-window limit on `/api/*`. |
-| `TRUSTED_PROXIES` | *(empty = trust none)* | CIDRs of proxies allowed to set `X-Forwarded-For` (needed for correct client IPs behind Traefik). |
+| `TRUSTED_PROXIES` | *(empty = trust none)*, chart default `10.42.0.0/16` | CIDRs of proxies allowed to set `X-Forwarded-For` (needed for correct client IPs behind Traefik). |
 | `VM_URL` | `http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428` | VictoriaMetrics query API base. |
 | `HOSTS` | see `values.yaml` `config.hosts` | `id\|name\|instance` triples, comma-separated — one per host card on the app's home screen. `instance` must match VictoriaMetrics' `instance` label exactly. |
 | `NTFY_URL` | `http://ntfy.ntfy.svc.cluster.local` | ntfy base URL. |

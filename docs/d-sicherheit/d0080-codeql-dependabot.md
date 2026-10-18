@@ -131,6 +131,7 @@ Der Check „Code scanning results“ wird bei neuen Funden ab `high` trotzdem r
 - **Dependabot security updates** öffnen für jeden behebbaren Alert einen PR auf die kleinste Version ohne Lücke.
   Gruppiert je Verzeichnis (`go-security`, `actions-security`): ein PR je `go.mod` statt einer pro Paket,
   sonst müsste nach jedem Merge der nächste PR neu aufgebaut werden (`go.sum`-Konflikte).
+- **Karenzzeit:** `cooldown: default-days: 3` bei beiden Ökosystemen, ein frisch veröffentlichtes Release wird erst nach drei Tagen vorgeschlagen (Sicherheits-PRs sind ausgenommen).
 - **Versions-Updates sind aus** (`open-pull-requests-limit: 0`), die macht Renovate. Sicherheits-PRs zählen nicht
   gegen dieses Limit.
 - PR-Titel `fix(deps): bump …`, Labels `dependencies` und `security`. Der Präfix `fix` löst nach dem Merge ein

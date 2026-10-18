@@ -1,0 +1,23 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: host-services
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: host.services
+      interval: 1m
+      rules:
+
+        - alert: JournalUploadFailed
+          expr: node_systemd_unit_state{name="systemd-journal-upload.service", state="failed"} == 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "systemd-journal-upload auf {{`{{ $labels.instance }}`}} ausgefallen"
+            description: >-
+              Der Dienst systemd-journal-upload auf {{`{{ $labels.instance }}`}} ist seit mehr als 15 Minuten
+              im Zustand failed. Die Host-Logs (SSH-Anmeldungen, sudo, Kernel) erreichen VictoriaLogs nicht mehr.
+              Auf dem Host `journalctl -u systemd-journal-upload` ansehen, bei "Buffer space is too small" den
+              Cursor in /var/lib/systemd/journal-upload/state auf das Journal-Ende setzen.

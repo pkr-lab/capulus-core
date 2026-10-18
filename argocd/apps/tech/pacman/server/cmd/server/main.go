@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -27,6 +28,8 @@ func main() {
 	}
 
 	leaderboard := newLeaderboardStore()
+	trustedProxies = parseCIDRs(getenv("TRUSTED_PROXY_CIDRS", "10.42.0.0/16"), logger)
+	limiter := newRateLimiter(getenvInt("RATE_LIMIT_PER_MINUTE", 60), time.Minute)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
@@ -34,14 +37,22 @@ func main() {
 		_, _ = w.Write([]byte("ok\n"))
 	})
 	mux.Handle("/", withAccessLog(logger, geo, serveStatic(staticDir, trainingMode)))
-	mux.Handle("/api/fingerprint", withAccessLog(logger, geo, handleFingerprint(logger)))
-	mux.Handle("/api/leaderboard", withAccessLog(logger, geo, handleLeaderboard(logger, leaderboard)))
+	mux.Handle("/api/fingerprint", withAccessLog(logger, geo, withRateLimit(limiter, handleFingerprint(logger))))
+	mux.Handle("/api/leaderboard", withAccessLog(logger, geo, withRateLimit(limiter, handleLeaderboard(logger, leaderboard))))
 
 	if trainingMode {
 		logger.Warn("training mode ENABLED: nickname field now carries hidden email/tel/address/postal autofill capture (see src/nickname.js) - covers every visitor of this host, not just an informed group, see README.md")
 	}
 	logger.Info("pacman server starting", "addr", listenAddr, "static_dir", staticDir, "geoip_enabled", geo != nil, "training_mode", trainingMode)
-	if err := http.ListenAndServe(listenAddr, mux); err != nil {
+	srv := &http.Server{
+		Addr:              listenAddr,
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+	if err := srv.ListenAndServe(); err != nil {
 		logger.Error("server exited", "error", err.Error())
 		os.Exit(1)
 	}
@@ -148,6 +159,54 @@ func handleFingerprint(logger *slog.Logger) http.HandlerFunc {
 	}
 }
 
+func getenvInt(key string, fallback int) int {
+	v := os.Getenv(key)
+	if v == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(v)
+	if err != nil || parsed <= 0 {
+		return fallback
+	}
+	return parsed
+}
+
+var trustedProxies []*net.IPNet
+
+func parseCIDRs(v string, logger *slog.Logger) []*net.IPNet {
+	var nets []*net.IPNet
+	for _, part := range strings.Split(v, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		_, ipNet, err := net.ParseCIDR(part)
+		if err != nil {
+			logger.Warn("ignoring invalid CIDR in TRUSTED_PROXY_CIDRS", "value", part)
+			continue
+		}
+		nets = append(nets, ipNet)
+	}
+	return nets
+}
+
+func isTrustedProxy(remoteAddr string) bool {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		host = remoteAddr
+	}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return false
+	}
+	for _, n := range trustedProxies {
+		if n.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
 func getenv(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
@@ -203,12 +262,16 @@ func versionAfter(ua, marker string) string {
 }
 
 func clientIP(r *http.Request) string {
-	if ip := r.Header.Get("CF-Connecting-IP"); ip != "" {
-		return ip
-	}
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		first, _, _ := strings.Cut(xff, ",")
-		return strings.TrimSpace(first)
+	if isTrustedProxy(r.RemoteAddr) {
+		if ip := r.Header.Get("CF-Connecting-IP"); net.ParseIP(ip) != nil {
+			return ip
+		}
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			first, _, _ := strings.Cut(xff, ",")
+			if first = strings.TrimSpace(first); net.ParseIP(first) != nil {
+				return first
+			}
+		}
 	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {

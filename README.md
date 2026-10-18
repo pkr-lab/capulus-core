@@ -500,6 +500,7 @@ Neu hier? Der beste Einstieg ist der **[Architektur-Überblick](docs/a-betriebss
 | [Semaphore-UI](docs/b-kubernetes-gitops/b0030-semaphore.md) | Web-UI zum Ausführen von Playbooks |
 | [Autoskalierung (HPA)](docs/b-kubernetes-gitops/b0040-hpa-autoscaling.md) | Welche Apps per HorizontalPodAutoscaler mitskalieren, welche bewusst nicht, und mit welchen Schwellenwerten |
 | [ENTW-ArgoCD](docs/b-kubernetes-gitops/b0050-entw-argocd.md) | Eigene ArgoCD-Instanz für ENTW, liest nur `argocd/apps/entw/`; neue App deployen, Rollout, Zugriff |
+| [MetalLB](docs/b-kubernetes-gitops/b0060-metallb.md) | LoadBalancer-Adresse `192.168.178.200` für Traefik: von Hand installiert, Ist-Zustand, Neuaufbau, Auffälligkeiten |
 
 ### Netzwerk & DNS (`c-netzwerk-dns/`)
 
@@ -597,6 +598,7 @@ Die Spalte *Cluster* zeigt, wo die App läuft (Ordner unter `argocd/apps/`).
 | [Instagram-Post per Mail](docs/3-apps-workloads/300l0-instagram-post-per-mail.md) | TECH | n8n-Workflow: Mail mit JSON und Bildern wird zum Instagram-Beitrag (Graph API), Bilder kurz über einen einzelnen öffentlichen Pfad für Meta |
 | [ISC-Urkunden melden](docs/3-apps-workloads/300m0-isc-urkunden-melden.md) | TECH | n8n-Workflow + ISC-News-Bot: donnerstags 17:30–20:00 neue Seepferdchen-, Schwimmabzeichen- und Juniorretter-Urkunden per Mail |
 | [Zentrales Logging](docs/3-apps-workloads/300j0-logging.md) | TECH | VictoriaLogs: journald aller Hosts und Pod-Logs an einem Ort |
+| [Headlamp](docs/3-apps-workloads/300n0-headlamp.md) | TECH | Kubernetes-Dashboard im Browser, Anmeldung mit kurzlebigem Lese-Token |
 
 ### Planung (`4-planung/`)
 

@@ -16,3 +16,5 @@ tailscale_auth_key: !vault |
           656539343061396330363236326338353636
 
 vmagent_remote_write_url: "https://vm-write.tech.homeserver/api/v1/write"
+
+journal_upload_hosts_entry_ip: "192.168.178.94"

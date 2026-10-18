@@ -46,6 +46,8 @@ securityContext:
   runAsUser: 1000
   runAsGroup: 1000
   allowPrivilegeEscalation: false
+  seccompProfile:
+    type: RuntimeDefault
   readOnlyRootFilesystem: true
   capabilities:
     drop:
@@ -79,7 +81,7 @@ config:
 
   corsAllowedOrigins: ""
 
-  trustedProxies: ""
+  trustedProxies: "10.42.0.0/16"
 
   ipAllowlist:
     enabled: false

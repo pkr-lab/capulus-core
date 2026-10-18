@@ -16,7 +16,7 @@ Diese Seite bleibt das **Wie** (Runbooks je Secret), das Register plus der
 tägliche Workflow [`token-watch.yml`](../../.github/workflows/token-watch.yml)
 sind das **Wann** — er meldet nahende Abläufe automatisch als GitHub-Issue,
 statt auf das jährliche Zammad-Ticket zu warten. `scripts/check-token-register.py`
-erzwingt im CI, dass jede `SealedSecret`-Datei im Repo dort auch auftaucht.
+erzwingt im CI, dass jede `SealedSecret`-Datei im Repo dort auch auftaucht, dass jeder Eintrag ein `max_age_days` hat, dass ein Eintrag mit bekanntem `issued` nicht älter als `max_age_days` ist und dass kein `expires` in der Vergangenheit liegt. Richtwerte: Passwörter, API-Tokens, Zertifikate und Tunnel-Credentials 365 Tage, Auth-Keys 90, der Sealed-Secrets-Schlüssel 30. Bei Einträgen mit `issued: null` ist das Alter unbekannt, das Skript meldet deren Zahl als Hinweis; sobald ein Wert rotiert wird, trägt man das Datum in `issued` ein.
 
 ---
 

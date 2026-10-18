@@ -141,7 +141,7 @@ Bildschirmhelligkeit (sysfs), manuelles Wake-on-LAN und Poweroff für worker-0/w
   Sensor `THRESHOLD_C` für `SUSTAIN_SECONDS` erreicht (90 s = Mitte der gewünschten 1–2 Minuten), vorher geht eine ntfy-Meldung raus.
   Er läuft bewusst **unabhängig vom Cluster**, damit der Schutz auch greift, wenn der Cluster wegen der Hitze schon klemmt. Er
   ergänzt den Alert ab 95 °C über 3 Minuten ([60060](60060-monitoring-und-alerting.md#lautstärke-der-ntfy-meldungen)).
-- Die ntfy-Meldung wird per `curl --resolve` direkt auf die statische Server-IP aufgelöst, damit sie auch rausgeht, wenn auf dem
+- Die ntfy-Meldung geht per **HTTPS** (`https://ntfy.tech.homeserver/<Topic>`, Port 443) hinaus und wird per `curl --resolve` direkt auf die statische Server-IP aufgelöst, damit sie auch rausgeht, wenn auf dem
   Host kein `*.homeserver`-DNS eingerichtet ist.
 - `DRY_RUN=1` (z. B. `systemctl edit --runtime thermal-watchdog`) testet den kompletten Pfad Erkennung → Meldung, ohne auszuschalten.
 - Der `resource_watchdog` ist das Gegenstück für CPU/RAM (Schwelle 90 %): Ist `WARN_THRESHOLD` leer, entfällt die Vorwarnstufe.
@@ -151,8 +151,11 @@ Bildschirmhelligkeit (sysfs), manuelles Wake-on-LAN und Poweroff für worker-0/w
   noch in `systemctl show`. Fehlt die Datei, senden sie anonym weiter (sonst hinge die Reihenfolge Rolle → ntfy-Umstellung an einem Zeitpunkt). Die Datei schreibt die Rolle
   `ntfy_publisher` aus der Vault-Variable `ntfy_publisher_token`, sie ist in allen Playbooks mit Watchdogs vor diesen eingetragen (Tag `ntfy-publisher`). Ist die Variable
   nicht gesetzt, überspringt die Rolle den Schreib-Task, ein bestehender Header bleibt liegen.
-- Der Token läuft über `http://ntfy.tech.homeserver` (Port 80) im Klartext durch LAN bzw. Tailscale. Das ist beabsichtigt, weil `--resolve` auf die statische Server-IP
-  auch ohne DNS funktioniert. Der Publisher darf nur schreiben, ein Mitschnitt erlaubt also gefälschte Meldungen, kein Mitlesen.
+- **HTTPS ist Pflicht (Vorfall 2026-09-13 bis 2026-10-18).** Der TECH-Traefik leitet HTTP global per `308` um; `curl` folgt dem ohne `-L` nicht, `--fail` greift erst ab Status 400 und `|| true` verschluckte jeden Fehler.
+  Alle vier Skripte (`thermal-watchdog`, `resource-watchdog`, `cluster-power-manager`, `nightly-worker-wake`) hatten deshalb seit dem 13.09. keine einzige Meldung zugestellt, ohne dass ein Dienst einen Fehler zeigte.
+  Sie nutzen jetzt `--resolve "${NTFY_HOST}:443:${NTFY_IP}"` (weiterhin ohne DNS) und prüfen das Zertifikat mit `--cacert "$NTFY_CA_FILE"` (Standard `/etc/ntfy-publisher/ca.pem`). Die Datei legt die Rolle
+  `ntfy_publisher` aus `docs/assets/homeserver-root-ca.pem` ab (`ntfy_publisher_ca_src`), nur diese Datei, nicht der System-Trust-Store: So geht es auch auf worker-0 und worker-1 ohne `update-ca-certificates`.
+  Ein Fehlschlag steht jetzt im Journal (`logger -t <skript> "ntfy-Meldung fehlgeschlagen"`), der Dienst läuft weiter (die Abschaltlogik darf nicht an einer Meldung hängen). Der Token verlässt den Host damit verschlüsselt.
 - Mehrere Rollen haben einen Kill-Switch (`*_enabled: false`, z. B. in `host_vars`), um sie auf einem Host abzuschalten, ohne die
   Rolle aus dem Playbook zu nehmen: `thermal_watchdog`, `vmagent`, `node_exporter`, `smartctl_exporter`, `wake_on_lan`,
   `worker_apt_update`, `alamos_kiosk` und `xibo_kiosk`.
@@ -200,7 +203,19 @@ Bildschirmhelligkeit (sysfs), manuelles Wake-on-LAN und Poweroff für worker-0/w
   nicht ([60040](60040-helm-charts-tech.md#zertifikate-und-tls)).
 - **Namensauflösung ohne DNS-Abhängigkeit:** worker-0/worker-1 lösen `*.homeserver` nicht auf (kein dnsmasq als Resolver), die
   Pis nur über Tailscale-Split-DNS. Ein fester `/etc/hosts`-Eintrag auf die LAN-IP des Homeservers macht den Upload unabhängig davon.
-  Nur abschalten, wenn der Host `*.homeserver` zuverlässig per DNS auflöst.
+  Nur abschalten, wenn der Host `*.homeserver` zuverlässig per DNS auflöst. **Der Default `127.0.0.1` stimmt nur auf dem Homeserver und den
+  k3s-Knoten** (dort leitet ServiceLB Port 443 an Traefik). Auf Hosts außerhalb des Clusters (Pis, Infotafel) zeigt er ins Leere: Der Upload
+  scheiterte dort mit „Failed to connect … port 443“. Diese Gruppen setzen deshalb `journal_upload_hosts_entry_ip: "192.168.178.94"` in
+  `group_vars/banana_pis.yml` und `xibo_displays.yml`. Auch der DNS-Weg hilft nicht: Der Eintrag `127.0.0.1 logs-write.tech.homeserver` steht
+  in `/etc/hosts` des Homeservers, und Pi-hole/dnsmasq liest diese Datei und liefert den Namen allen DNS-Clients mit `127.0.0.1` aus.
+- **Neustart-Drop-in (Vorfall 2026-10-16 bis 2026-10-18):** Der Dienst gibt nach fünf schnellen Fehlschlägen auf („Start request repeated too
+  quickly“) und bleibt `failed`. Ein Drop-in `restart.conf` (`StartLimitIntervalSec=0`, `Restart=always`, `RestartSec=30`) startet ihn
+  dauerhaft neu. Ursache des Ausfalls auf Homeserver und worker-1 war wieder das Backlog: Der Cursor stand auf dem 2026-10-02, danach
+  hatten sich 1,29 Millionen Einträge angesammelt, der Upload schickt sie in einem Request und bricht mit „Buffer space is too small to
+  write entry“ ab, ohne den Cursor zu bewegen. Jede längere Unterbrechung des Log-Endpunkts kann das auslösen. Behoben wird es durch das Setzen
+  von `LAST_CURSOR` in `/var/lib/private/systemd/journal-upload/state` auf das Journal-Ende (`journalctl -q -n 1 --show-cursor`), danach
+  `systemctl reset-failed` und `restart`; das Alt-Journal bleibt lokal, geht nur der zentralen Ablage verloren. Der Alarm `JournalUploadFailed`
+  ([60060](60060-monitoring-und-alerting.md)) meldet den Zustand nach 15 Minuten.
 - **State-Datei (Vorfall 2026-09-24):** Ohne State-Datei beginnt `systemd-journal-upload` am Journal-**Anfang** und schickt das
   komplette Backlog als einen einzigen Request. Auf dem Homeserver (5 GB Journal) brach das jedes Mal mit „Buffer space is too small
   to write entry“ / „operation aborted by callback“ ab, bevor je ein Cursor gespeichert wurde, eine Endlosschleife bis zum

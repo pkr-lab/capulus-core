@@ -8,6 +8,7 @@ NTFY_HOST="${NTFY_HOST:?NTFY_HOST not set}"
 NTFY_IP="${NTFY_IP:?NTFY_IP not set}"
 NTFY_TOPIC="${NTFY_TOPIC:?NTFY_TOPIC not set}"
 NTFY_AUTH_HEADER_FILE="${NTFY_AUTH_HEADER_FILE:-/etc/ntfy-publisher/auth-header}"
+NTFY_CA_FILE="${NTFY_CA_FILE:-/etc/ntfy-publisher/ca.pem}"
 ntfy_auth_args=()
 if [ -r "$NTFY_AUTH_HEADER_FILE" ]; then
   ntfy_auth_args=(-H "@${NTFY_AUTH_HEADER_FILE}")
@@ -36,13 +37,14 @@ notify_shutdown() {
     body="${body} (DRY_RUN=1, kein echter Shutdown)"
   fi
   curl --fail --silent --show-error --max-time 5 \
-    --resolve "${NTFY_HOST}:80:${NTFY_IP}" \
+    --resolve "${NTFY_HOST}:443:${NTFY_IP}" \
+    --cacert "$NTFY_CA_FILE" \
     "${ntfy_auth_args[@]}" \
     -H "Title: ${title}" \
     -H "Priority: 2" \
     -H "Tags: rotating_light,stop_sign" \
     -d "$body" \
-    "http://${NTFY_HOST}/${NTFY_TOPIC}" || true
+    "https://${NTFY_HOST}/${NTFY_TOPIC}" || logger -t "thermal-watchdog" "ntfy-Meldung fehlgeschlagen"
 }
 
 logger -t thermal-watchdog "started (threshold=${THRESHOLD_C}C sustain=${SUSTAIN_SECONDS}s poll=${POLL_SECONDS}s)"
