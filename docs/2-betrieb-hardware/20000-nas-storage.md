@@ -28,7 +28,7 @@ homeserver/worker-0/worker-1 verteilen.
 - 1× 2 TB aktuell **nicht** Teil des Storage-Pools — ungenutzte Reserve,
   spätere Verwendung noch offen.
 - Netzwerk: 192.168.178.97 (LAN), DNS-Alias `ugreen-nas` (siehe
-  `ansible/roles/dnsmasq/templates/dnsmasq.conf.j2`).
+  `capulus-ansible/roles/dnsmasq/templates/dnsmasq.conf.j2`).
 
 ### RAID-Kapazitätshinweis
 
@@ -317,7 +317,7 @@ kubectl -n nas-storage logs deploy/nas-nfs-subdir-external-provisioner
 ### NFS-Mount schlägt fehl
 
 ```bash
-# nfs-common muss auf JEDEM k3s-Node installiert sein (ansible/roles/k3s_agent)
+# nfs-common muss auf JEDEM k3s-Node installiert sein (capulus-ansible/roles/k3s_agent)
 ssh ubuntu@192.168.178.95 'dpkg -l | grep nfs-common'
 
 # Manueller Mount-Test vom Node aus:

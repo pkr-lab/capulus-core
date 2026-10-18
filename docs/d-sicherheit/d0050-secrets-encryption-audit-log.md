@@ -88,7 +88,7 @@ API-Server, unabhängig davon, wie viele Flags sich gleichzeitig ändern.
 Ein gemeinsamer Restart statt zwei getrennter reduziert die Anzahl der
 Downtime-Fenster. Über zwei unabhängige Ansible-Variablen
 (`k3s_secrets_encryption_enabled`, `k3s_audit_log_enabled` in
-[ansible/group_vars/all.yml](../../ansible/group_vars/all.yml)) lässt sich
+[capulus-ansible/group_vars/all.yml](https://github.com/pkr-lab/capulus-ansible/blob/main/group_vars/all.yml)) lässt sich
 bei Bedarf trotzdem einzeln togglen und getrennt ausrollen.
 
 ### Audit-Policy: Metadata-Level, kein Full-Request-Response-Dump
@@ -98,7 +98,7 @@ Polling von Grafana/vmagent/ArgoCD) komplett ausgeschlossen. Für
 Secrets/ConfigMaps bewusst **Metadata**-Level statt `RequestResponse` —
 sonst würde das Audit-Log genau die Klartext-Werte mitschreiben, vor
 denen die Secrets-Encryption gerade schützen soll. Volle Regel-Liste:
-[ansible/roles/k3s/templates/audit-policy.yaml.j2](../../ansible/roles/k3s/templates/audit-policy.yaml.j2).
+[capulus-ansible/roles/k3s/templates/audit-policy.yaml.j2](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/k3s/templates/audit-policy.yaml.j2).
 
 Retention bewusst begrenzt (14 Tage / 5 Backups / 100 MB je Datei) —
 Homelab-Cluster mit reichlich freiem Plattenplatz (769 Gi frei, Stand
@@ -245,7 +245,7 @@ EOF
 ```
 
 Zusätzlich `secrets-encryption: true` und den `kube-apiserver-arg`-Block
-wieder aus `ansible/group_vars/all.yml` entfernen (bzw.
+wieder aus `capulus-ansible/group_vars/all.yml` entfernen (bzw.
 `k3s_secrets_encryption_enabled`/`k3s_audit_log_enabled` auf `false`) und
 `make k3s` erneut laufen lassen, damit der nächste reguläre Ansible-Lauf
 nicht wieder dieselbe Config schreibt.
@@ -258,7 +258,7 @@ nicht wieder dieselbe Config schreibt.
   (TECH: `homeserver`, PROD: `prod-vm`, ENTW: `entw-vm`) — die in der k3s-Doku
   erwähnten HA-spezifischen Schritte (Server einzeln nacheinander neu starten,
   Hash-Abgleich zwischen Servern) entfallen hier komplett. Secrets-Encryption und Audit-Log
-  laufen auf TECH und PROD (Defaults in `ansible/group_vars/all.yml`), auf ENTW sind sie bewusst
+  laufen auf TECH und PROD (Defaults in `capulus-ansible/group_vars/all.yml`), auf ENTW sind sie bewusst
   abgeschaltet (`host_vars/entw-vm/vars.yml`).
 - **Encryption-Key-Rotation danach:** Für künftige Rotationen (z. B.
   turnusmäßig, siehe Phase 7 in docs/d-sicherheit/d0010-security-hardening-roadmap.md) reicht danach ein einzelnes

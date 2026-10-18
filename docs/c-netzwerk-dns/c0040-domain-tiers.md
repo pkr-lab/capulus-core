@@ -47,7 +47,7 @@ Hostnamens zu einem Tier folgt dem Charakter der App, **nicht** dem Ordner, in d
 
 ## DNS: Tier und Cluster sind zwei verschiedene Dinge
 
-Die dnsmasq-Rolle ([`dnsmasq.conf.j2`](../../ansible/roles/dnsmasq/templates/dnsmasq.conf.j2)) löst
+Die dnsmasq-Rolle ([`dnsmasq.conf.j2`](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/dnsmasq/templates/dnsmasq.conf.j2)) löst
 nach dem Prinzip „spezifischer gewinnt" auf:
 
 | Regel | Auflösung | Cluster |
@@ -216,11 +216,11 @@ angepasst wurden:
 | n8n-Workflow (Banana-Pi-Alarm → Zammad-Ticket) | Zammad-API + Grafana-Dashboard-Link | `argocd/apps/tech/n8n/workflows/banana-pi-down-to-zammad.json` |
 | `carplay-api` (Kommentar) | kubeseal-webgui | `argocd/apps/tech/carplay-api/values.yaml` |
 | Grafana selbst (`grafana.ini` `domain`/`root_url`) | eigener externer Hostname | `argocd/apps/tech/monitoring/values.yaml` |
-| ntfy-Watchdogs (Cluster-Power-Manager, Resource-/Thermal-Watchdog) | ntfy | `ansible/roles/{cluster_power_manager,resource_watchdog,thermal_watchdog}/defaults/main.yml` |
-| Semaphore-Ansible-Rollen (`semaphore_bootstrap`, `semaphore_secrets`) | Semaphore-REST-API | `ansible/roles/semaphore_bootstrap/defaults/main.yml`, `ansible/roles/semaphore_secrets/tasks/main.yml` |
-| vmagent auf den Banana-Pis | VictoriaMetrics remote-write (`vm-write`) | `ansible/group_vars/banana_pis.yml` |
-| Alamos-/Banana-Pi-Kiosk-Rollen | alamos-apager | `ansible/roles/{alamos_kiosk,banana_pi_kiosk}/defaults/main.yml` |
-| iOS-App "Homeserver Dashboard" | carplay-api + alle in der App verlinkten Self-Hosted-Services | `ios/HomeserverDashboard/Utilities/Constants.swift` |
+| ntfy-Watchdogs (Cluster-Power-Manager, Resource-/Thermal-Watchdog) | ntfy | `capulus-ansible/roles/{cluster_power_manager,resource_watchdog,thermal_watchdog}/defaults/main.yml` |
+| Semaphore-Ansible-Rollen (`semaphore_bootstrap`, `semaphore_secrets`) | Semaphore-REST-API | `capulus-ansible/roles/semaphore_bootstrap/defaults/main.yml`, `capulus-ansible/roles/semaphore_secrets/tasks/main.yml` |
+| vmagent auf den Banana-Pis | VictoriaMetrics remote-write (`vm-write`) | `capulus-ansible/group_vars/banana_pis.yml` |
+| Alamos-/Banana-Pi-Kiosk-Rollen | alamos-apager | `capulus-ansible/roles/{alamos_kiosk,banana_pi_kiosk}/defaults/main.yml` |
+| iOS-App "Homeserver Dashboard" | carplay-api + alle in der App verlinkten Self-Hosted-Services | `capulus-ios/HomeserverDashboard/Utilities/Constants.swift` |
 
 **Faustregel für neue Cross-App-Referenzen:** Der Tier eines Hostnamens
 richtet sich immer nach der **Ziel-App**, nicht nach der App, die

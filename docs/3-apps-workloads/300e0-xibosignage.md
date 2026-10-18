@@ -71,7 +71,7 @@ periodisch über die Xibo-REST-API in einen festen NAS-Ordner, und ein
                     │ NFS-Mount, read-only
                     ▼
          Raspberry Pi 3 B+ ("infotafel")
-         ansible/roles/xibo_kiosk:
+         capulus-ansible/roles/xibo_kiosk:
          manifest.json-Scan (alle 30s, alphabetisch sortiert)
          + Chromium-Kiosk-Slideshow
          + Tailscale (Fernzugriff)
@@ -344,7 +344,7 @@ richtet diese Rolle nicht zusätzlich ein.
 
 ### 1. Host eintragen
 
-`ansible/inventory/hosts.yml`, Gruppe `xibo_displays`:
+`capulus-ansible/inventory/hosts.yml`, Gruppe `xibo_displays`:
 
 ```yaml
 xibo_displays:
@@ -358,7 +358,7 @@ Denselben Host auch unter `semaphore_targets` eintragen.
 
 ### 2. Eigenen Tailscale-Auth-Key hinterlegen
 
-`ansible/group_vars/xibo_displays.yml` enthält bereits die richtigen
+`capulus-ansible/group_vars/xibo_displays.yml` enthält bereits die richtigen
 Defaults (eigener Hostname pro Pi, kein Subnetz-Advertising). Fehlt noch:
 ein eigener Tailscale-Auth-Key für diese Geräte-Gruppe — **nicht** den
 Home-Server-Key aus `group_vars/all.yml` wiederverwenden (der ist i. d. R.
@@ -370,7 +370,7 @@ Single-Use und bereits verbraucht). Empfehlung bei mehreren Displays: ein
 ansible-vault encrypt_string 'tskey-auth-...' --name 'tailscale_auth_key'
 ```
 
-Den `!vault |`-Block in `ansible/group_vars/xibo_displays.yml` einsetzen
+Den `!vault |`-Block in `capulus-ansible/group_vars/xibo_displays.yml` einsetzen
 (ersetzt den auskommentierten Platzhalter).
 
 ### 3. Rollout ausführen
@@ -382,7 +382,7 @@ make xibo-kiosks          # oder: Semaphore-UI → "Deploy xibosignage Displays"
 
 Dry-Run vorher: `make xibo-kiosks-check`.
 
-Das Playbook `ansible/xibo-kiosks.yml` führt pro Pi aus:
+Das Playbook `capulus-ansible/xibo-kiosks.yml` führt pro Pi aus:
 
 | Rolle | Zweck |
 |---|---|
@@ -420,7 +420,7 @@ wie bei `ugreen-nas`
 ([docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md)):
 
 ```
-node_exporter (Port 9100, ansible/roles/node_exporter)
+node_exporter (Port 9100, capulus-ansible/roles/node_exporter)
   → VMStaticScrape "infotafel-node-exporter"
     (argocd/apps/tech/monitoring/templates/vmstaticscrape-infotafel.yaml,
      Ziel 192.168.178.98:9100, label instance=infotafel)
@@ -520,7 +520,7 @@ erreichen (neuer, leerer Unterordner derselben PVC):
 | `xibosignage-kiosk.service` im Crash-Loop, `journalctl -u xibosignage-kiosk` zeigt `exec: chromium-browser: Nicht gefunden` (exit 127) | Auf aktuellen (Debian-trixie-basierten) Raspberry-Pi-OS-Images ist `chromium-browser` nur noch ein leeres transitionales Dummy-Paket, das Binary heißt `chromium` (`/usr/bin/chromium`). `xibosignage-kiosk-start.sh.j2` löst das Binary zur Laufzeit dynamisch auf (`command -v chromium \|\| command -v chromium-browser`) — bei älterem Rollenstand `make xibo-kiosks` erneut laufen lassen, um das aktualisierte Skript auszurollen |
 | `Permission denied (publickey)` bei `make xibo-kiosks` | `make semaphore-targets` lief nicht für den neuen Pi (siehe [docs/b-kubernetes-gitops/b0030-semaphore.md](../b-kubernetes-gitops/b0030-semaphore.md)) |
 | Nach Workflow-Import in n8n: "Watch Inbox" und/oder "Original archivieren" zeigen "Install this node to use it" | n8n blockt Local File Trigger/Execute Command standardmäßig (Sicherheitsfeature) — `env.NODES_EXCLUDE: "[]"` in `argocd/apps/tech/n8n/values.yaml` setzt das für diese Instanz zurück, danach n8n-Pod neu starten und Workflow neu öffnen |
-| Pi advertised ungewollt das Heim-Subnetz im Tailscale-Adminpanel | `tailscale_advertise_routes: ""` fehlt in `ansible/group_vars/xibo_displays.yml` — sollte nach dem nächsten Rollout verschwinden (`tailscale set --advertise-routes=` ohne Wert entfernt bestehende Routes nicht automatisch, ggf. einmalig `sudo tailscale set --advertise-routes=` manuell auf dem Pi nachziehen) |
+| Pi advertised ungewollt das Heim-Subnetz im Tailscale-Adminpanel | `tailscale_advertise_routes: ""` fehlt in `capulus-ansible/group_vars/xibo_displays.yml` — sollte nach dem nächsten Rollout verschwinden (`tailscale set --advertise-routes=` ohne Wert entfernt bestehende Routes nicht automatisch, ggf. einmalig `sudo tailscale set --advertise-routes=` manuell auf dem Pi nachziehen) |
 | `infotafel` taucht nicht in Grafana auf | `systemctl status prometheus-node-exporter` auf dem Pi — läuft der Dienst (Port 9100)? `curl -s 192.168.178.98:9100/metrics` von einem k3s-Node aus erreichbar? `kubectl -n monitoring get vmstaticscrape infotafel-node-exporter` |
-| `make xibo-kiosks` bricht bei "Gathering Facts"/erstem `become`-Task mit `sudo: Ein Passwort ist notwendig` ab | Nur relevant, wenn `ansible_user` **nicht** `pi` ist (bei der Infotafel ist das `pela`, siehe [60010](../6-hintergruende/60010-ansible-hosts-und-playbooks.md#inventar)) — Raspberry Pi OS legt nur für den Default-User `pi` automatisch einen `NOPASSWD`-Sudoers-Eintrag an. Einmalig direkt am Gerät (Henne-Ei-Problem, nicht per Ansible automatisierbar): `sudo visudo -f /etc/sudoers.d/010-<user>-nopasswd` mit Inhalt `<user> ALL=(ALL) NOPASSWD:ALL`. Alternative: Ansible-Vault-verschlüsseltes `ansible_become_password` in `ansible/host_vars/<host>/vault.yml`, gleiches Muster wie `vault_worker-0_become_password` in `ansible/group_vars/all.yml` |
-| `make xibo-kiosks` bricht bei "Mount-Point für xibosignage-display anlegen" mit `chown failed ... Das Dateisystem ist nur lesbar` ab | Wiederholungslauf nach einem vorherigen abgebrochenen Durchlauf — der NFS-Mount (read-only) war noch aktiv, `ansible.builtin.file` kann dann keine lokalen Attribute mehr auf den (jetzt read-only) Mountpoint schreiben. Behoben in `ansible/roles/xibo_kiosk/tasks/main.yml` (haengt vor dem `file`-Task ein `state: unmounted` voraus, idempotent egal ob vorher gemountet oder nicht) — bei älterem Rollenstand einmalig manuell `sudo umount /mnt/xibosignage-display` auf dem Pi, dann Playbook erneut laufen lassen |
+| `make xibo-kiosks` bricht bei "Gathering Facts"/erstem `become`-Task mit `sudo: Ein Passwort ist notwendig` ab | Nur relevant, wenn `ansible_user` **nicht** `pi` ist (bei der Infotafel ist das `pela`, siehe [60010](../6-hintergruende/60010-ansible-hosts-und-playbooks.md#inventar)) — Raspberry Pi OS legt nur für den Default-User `pi` automatisch einen `NOPASSWD`-Sudoers-Eintrag an. Einmalig direkt am Gerät (Henne-Ei-Problem, nicht per Ansible automatisierbar): `sudo visudo -f /etc/sudoers.d/010-<user>-nopasswd` mit Inhalt `<user> ALL=(ALL) NOPASSWD:ALL`. Alternative: Ansible-Vault-verschlüsseltes `ansible_become_password` in `capulus-ansible/host_vars/<host>/vault.yml`, gleiches Muster wie `vault_worker-0_become_password` in `capulus-ansible/group_vars/all.yml` |
+| `make xibo-kiosks` bricht bei "Mount-Point für xibosignage-display anlegen" mit `chown failed ... Das Dateisystem ist nur lesbar` ab | Wiederholungslauf nach einem vorherigen abgebrochenen Durchlauf — der NFS-Mount (read-only) war noch aktiv, `ansible.builtin.file` kann dann keine lokalen Attribute mehr auf den (jetzt read-only) Mountpoint schreiben. Behoben in `capulus-ansible/roles/xibo_kiosk/tasks/main.yml` (haengt vor dem `file`-Task ein `state: unmounted` voraus, idempotent egal ob vorher gemountet oder nicht) — bei älterem Rollenstand einmalig manuell `sudo umount /mnt/xibosignage-display` auf dem Pi, dann Playbook erneut laufen lassen |

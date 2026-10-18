@@ -11,7 +11,7 @@ description: |
   Die eigentliche Wiedergabe läuft NICHT über einen offiziellen/inoffiziellen
   Xibo-Player (Raspberry Pi wird von Xibo nicht unterstützt) — stattdessen
   liest ein Chromium-Kiosk auf dem Pi direkt einen NFS-Ordner
-  (`xibosignage-display`, siehe ansible/roles/xibo_kiosk). Das Xibo-CMS
+  (`xibosignage-display`, siehe capulus-ansible/roles/xibo_kiosk). Das Xibo-CMS
   dient als zentrale Medien-/Asset-Verwaltung.
 
   Web-Interface:

@@ -139,7 +139,7 @@ ML-Container lädt beim ersten Start seine Modelle herunter (landet im
 `model-cache`-PVC) — das kann je nach Verbindung ein paar Minuten dauern,
 danach ist der Cache persistent und Neustarts sind schnell.
 
-**DNS:** Immich läuft im **PROD**-Cluster; `immich.prod.homeserver` steht in `dnsmasq_prod_vm_hosts` (`ansible/group_vars/all.yml`) und zeigt auf die PROD-VM (`.99`).
+**DNS:** Immich läuft im **PROD**-Cluster; `immich.prod.homeserver` steht in `dnsmasq_prod_vm_hosts` (`capulus-ansible/group_vars/all.yml`) und zeigt auf die PROD-VM (`.99`).
 
 > **Machine-Learning-Verbindung:** `immich-server` erwartet den
 > ML-Dienst standardmäßig unter `http://immich-machine-learning:3003`
@@ -167,7 +167,7 @@ danach ist der Cache persistent und Neustarts sind schnell.
 
 **Nutzer-Inventar:** Wer einen Account hat und welche Library/welches
 Album ihm zugeordnet ist, wird zusätzlich (verschlüsselt, außerhalb der
-App-DB) in `ansible/group_vars/user_inventory_vault.yml` festgehalten —
+App-DB) in `capulus-ansible/group_vars/user_inventory_vault.yml` festgehalten —
 `make user-inventory-edit` zum Bearbeiten, siehe
 [docs/4-planung/40080-multi-cluster-entw-prod-tech.md → Baustein 7](../4-planung/40080-multi-cluster-entw-prod-tech.md#7-nutzer-daten-inventar-für-immich--vaultwarden)
 für den Zweck (Dokumentation, kein Ersatz für die eigentliche DB).

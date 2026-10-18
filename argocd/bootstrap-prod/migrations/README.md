@@ -60,7 +60,7 @@ Alte Daten: `192.168.178.97:/volume1/k8s-storage/<app>-<pvc>-<uid>`
    `curl -skI --resolve <app>.prod.homeserver:443:192.168.178.99 https://<app>.prod.homeserver`
    muss `200` liefern.
 8. DNS intern: `<app>.prod.homeserver` in
-   `dnsmasq_prod_vm_hosts` (ansible/group_vars/all.yml), `make dnsmasq`.
+   `dnsmasq_prod_vm_hosts` (capulus-ansible/group_vars/all.yml), `make dnsmasq`.
 9. Oeffentlich (nur der eine Host der App): `cloudflared tunnel route dns
    homeserver-prod <oeffentlicher-host>`. NIE einen anderen Host als den der
    gerade umgezogenen App eintragen.
