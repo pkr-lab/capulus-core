@@ -3,7 +3,7 @@
 - Severity: Medium
 - Bereich: worker1
 - Betroffen: worker-1 (`192.168.178.96`), `ansible/roles/k3s_agent/tasks/main.yml:62-90`, `ansible/worker-1.yml`
-- Status: Behoben am 2026-10-18 für worker-1 (live bestätigt vom Betreiber, Timer gestoppt); worker-0 offen
+- Status: Behoben am 2026-10-18 für worker-1 und worker-0 (beide live, vom Betreiber bestätigt, Rollback-Timer gestoppt)
 
 ## Beschreibung
 
@@ -153,8 +153,21 @@ ufw --force enable
 
 **Rollback.** `ssh ubuntu@192.168.178.96 sudo ufw disable`; Konfiguration aus dem Backup nur bei Bedarf zurückkopieren.
 
-**Offen.** worker-0 hat denselben Ausgangszustand (UFW aus, `111`, `2623`, Exporter offen) und ist noch nicht umgestellt: gleiches Muster mit `k3s_agent_ufw_enable: true` in `host_vars/worker-0` (kein VM-Bridge nötig), vor dem Rollenlauf den Ablauf wie bei worker-1 mit Timer wiederholen.
+**Offen.** worker-0: siehe Abschnitt unten.
 
 ## Bestätigung (2026-10-18)
 
 Der Betreiber hat die Firewall in einem zweiten Terminal geprüft (SSH, `kubectl get nodes` alle `Ready`, aus der ENTW-VM Ping zum Homeserver und `https://github.com` mit `200`). Der Rollback-Timer `ufw-rollback-035` wurde um 12:19 UTC gestoppt (`inactive`), UFW bleibt aktiv (11 Regeln). worker-0 folgt nach demselben Muster auf Freigabe.
+
+## worker-0 (2026-10-18, nach Freigabe)
+
+**Ausgangslage anders als angenommen:** UFW war auf worker-0 bereits aktiv, aber großzügig: `allow from 192.168.178.0/24` (das ganze LAN mit Vollzugriff), `22/tcp` von überall, `10250/tcp` aus dem LAN. Das war die Lage aus Incident 008 vor der Härtung des homeservers. Auf dem Node laufen außerdem Docker-Container (`tinyteller-*`, `day-pilot-*`, `cadvisor`) mit veröffentlichten Ports `3002`, `3003`, `3004`, `8001`, `18080`; deren Verkehr läuft über Dockers eigene NAT- und `FORWARD`-Regeln und ist von UFW-Eingangsregeln unabhängig.
+
+**Geändert (live):** Backup `/root/ufw-backup-035w0-<zeit>.tgz`, Rollback-Timer `ufw-rollback-035w0` (15 Minuten; stellt das Backup wieder her und startet UFW per `disable`/`enable` neu), dann: `allow from 192.168.178.94` und `.96` (Infrastruktur-Hosts, Vollzugriff), `allow from 192.168.178.0/24 to port 22`; entfernt: `allow from 192.168.178.0/24`, `22/tcp` von überall, `10250/tcp` aus dem LAN. Bestehend bleiben `8472/udp` aus dem LAN, `41641/udp`, Pod-/Service-Netz und `10250` vom Homeserver.
+
+**Prüfung** (bestanden): neue SSH-Verbindung; Nodes `Ready`; `node_exporter` `9100` und `smartctl` `9633` vom homeserver `200`, Metrik `up=1`; aus dem LAN sind `111`, `2623`, `9100`, `10250` zu, `22` offen; die Docker-Anwendungen antworten weiter (`3002`, `3003`, `8001` mit `200`, `3004` `404` auf `/`); Pods und DaemonSets auf worker-0 `Running`. Die Docker-Health-Status `unhealthy` bei `tinyteller-backend-1` und `day-pilot-frontend` sind unabhängig von der Firewall: Die Healthchecks rufen `curl`/`wget` im Image auf, das es dort nicht gibt bzw. sie laufen kurz nach dem Start.
+
+**Code.** `host_vars/worker-0/vars.yml`: `k3s_agent_ufw_enable: true`, Vertrauenshosts `.94` und `.96`. Die Rolle `k3s_agent` entfernt die drei veralteten offenen Regeln (`veraltete offene regeln entfernen`) und legt die neuen an.
+
+**Rollback.** Bis zur Bestätigung stellt der Timer um 14:48 Ortszeit den alten Zustand her; danach manuell: `sudo tar xzf /root/ufw-backup-035w0-<zeit>.tgz -C / && sudo ufw disable && sudo ufw --force enable`.
+
