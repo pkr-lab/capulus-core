@@ -10,8 +10,8 @@ und zum Versiegeln von Secrets. Bedienung: [b0010](../b-kubernetes-gitops/b0010-
 ## Generierte Bootstrap-Dateien
 
 - `argocd/bootstrap/root-applicationset.yaml` und `projects.yaml` sind **generiert** aus den Templates der Rolle `argocd`
-  (`make render-bootstrap`, Playbook `ansible/render-bootstrap.yml`). Nach jeder Änderung an den Templates, an den Namespace-Listen
-  in `ansible/roles/argocd/defaults/main.yml` oder an `argocd_repo_*`/`argocd_namespace` neu rendern, die Kopie im Repo nicht von Hand
+  (`make render-bootstrap`, Playbook `capulus-ansible/render-bootstrap.yml`). Nach jeder Änderung an den Templates, an den Namespace-Listen
+  in `capulus-ansible/roles/argocd/defaults/main.yml` oder an `argocd_repo_*`/`argocd_namespace` neu rendern, die Kopie im Repo nicht von Hand
   editieren. So driftet die eingecheckte Datei nie von dem ab, was das Playbook anwendet.
 - Die AppProjects werden **vor** dem ApplicationSet angewendet: Applications, die auf ein noch nicht vorhandenes Projekt zeigen,
   scheitern beim Sync.
@@ -61,7 +61,7 @@ Sync (z. B. victoria-metrics-operator installiert die CRD `VMSingle` und ein `VM
   erzeugt, sondern einmalig per `scripts/create-argocd-ci-token.sh` ([f00b0](../f-cicd-automatisierung/f00b0-promotion-chain.md#einrichtung)).
   Das Skript legt ihn direkt als GitHub-Repo-Secret ab (`hub` → `ARGOCD_HUB_TOKEN`, `entw` → `ARGOCD_ENTW_TOKEN`), gibt ihn nicht aus
   und speichert ihn nirgends. Voraussetzung: das Konto existiert (`argocd_ci_account_enabled: true`, einmal `make argocd` bzw.
-  `ansible-playbook ansible/entw.yml --tags argocd`), `gh` ist als Repo-Admin angemeldet, und das Admin-Passwort ist über das Secret
+  `ansible-playbook capulus-ansible/entw.yml --tags argocd`), `gh` ist als Repo-Admin angemeldet, und das Admin-Passwort ist über das Secret
   `argocd-initial-admin-secret` lesbar (sonst `ARGOCD_ADMIN_PASSWORD` setzen). `TOKEN_TTL_DAYS` (Standard 365) begrenzt die Laufzeit,
   alte Token bleiben bis zum Ablauf gültig.
 - **Web-UI, API und kein NodePort (Incident 013, 2026-10-17):** UI, CLI und CI erreichen ArgoCD über den Traefik-Ingress per HTTPS. Der Service

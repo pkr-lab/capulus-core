@@ -508,7 +508,7 @@ keinen eigenen Port, UI und API laufen über Traefik auf `:443`. Details je App:
 **Rechenleistung und Reihenfolge**
 - Erst `make install` auf dem Homeserver (erzeugt Join-Token und Shutdown-Schlüssel), dann `make worker-0` / `make worker-1` — sonst können die Worker nicht beitreten.
 - Die VMs brauchen zuerst die Bridge (`libvirt_host` mit `libvirt_host_configure_bridge`); ein falsch gepinntes Interface hat schon einmal den Homeserver vom LAN getrennt, die Rolle prüft das jetzt per `assert`. Nach jeder Netzwerkumstellung einen Reboot-Test machen.
-- Wake-on-LAN braucht zusätzlich die BIOS-Einstellung auf den Workern und die richtige MAC-Adresse in `ansible/host_vars/`.
+- Wake-on-LAN braucht zusätzlich die BIOS-Einstellung auf den Workern und die richtige MAC-Adresse in `capulus-ansible/host_vars/`.
 - Argo Workflows braucht MinIO als Artefaktspeicher; die Alarm-Brücke braucht ntfy; `wiki-docs-sync` (PROD) braucht Wiki.js; `github-release-watcher` braucht Zammad.
 - `cluster_power_manager` misst absichtlich ohne Prometheus: er liest `/proc/stat` und `/proc/meminfo` direkt, damit die Entscheidung auch dann funktioniert, wenn der Monitoring-Stack selbst unter Last steht.
 

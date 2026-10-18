@@ -61,10 +61,10 @@ abfließen sollte, kann damit nichts anderes ausgeführt werden.
 
 | Rolle | Läuft auf | Zweck |
 |---|---|---|
-| [`wake_on_lan`](../../ansible/roles/wake_on_lan) | worker-0, worker-1 | Aktiviert WoL (`ethtool wol g`) persistent bei jedem Boot |
-| [`cluster_power_manager`](../../ansible/roles/cluster_power_manager) | homeserver | Erzeugt den Shutdown-SSH-Key, deployt den Watchdog (`cluster-power-manager.service`) |
-| [`cluster_power_manager_target`](../../ansible/roles/cluster_power_manager_target) | worker-0, worker-1 | Autorisiert den Public Key des Homeservers, beschränkt auf `poweroff` |
-| [`power_agent`](../../ansible/roles/power_agent) | homeserver | HTTP-Gegenstück für **manuelle** Wake-/Shutdown-Taps aus der iOS-App (siehe [docs/3-apps-workloads/300d0-carplay-api.md](../3-apps-workloads/300d0-carplay-api.md#power-agent)) — nutzt denselben SSH-Key, dieselbe `woke_at`-Buchführung und dieselbe Worker-Liste wie oben weiter, damit sich App-Taps und dieser automatische Last-Watchdog nicht widersprechen. Läuft direkt nach `cluster_power_manager` in `site.yml`. |
+| [`wake_on_lan`](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/wake_on_lan) | worker-0, worker-1 | Aktiviert WoL (`ethtool wol g`) persistent bei jedem Boot |
+| [`cluster_power_manager`](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/cluster_power_manager) | homeserver | Erzeugt den Shutdown-SSH-Key, deployt den Watchdog (`cluster-power-manager.service`) |
+| [`cluster_power_manager_target`](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/cluster_power_manager_target) | worker-0, worker-1 | Autorisiert den Public Key des Homeservers, beschränkt auf `poweroff` |
+| [`power_agent`](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/power_agent) | homeserver | HTTP-Gegenstück für **manuelle** Wake-/Shutdown-Taps aus der iOS-App (siehe [docs/3-apps-workloads/300d0-carplay-api.md](../3-apps-workloads/300d0-carplay-api.md#power-agent)) — nutzt denselben SSH-Key, dieselbe `woke_at`-Buchführung und dieselbe Worker-Liste wie oben weiter, damit sich App-Taps und dieser automatische Last-Watchdog nicht widersprechen. Läuft direkt nach `cluster_power_manager` in `site.yml`. |
 
 Reihenfolge beim erstmaligen Rollout wichtig: `make install` (site.yml,
 erzeugt den SSH-Key auf homeserver) **vor** `make worker-0` /
@@ -80,7 +80,7 @@ erzeugt den SSH-Key auf homeserver) **vor** `make worker-0` /
    den OS-seitigen Teil (`ethtool -s <iface> wol g`).
 2. **MAC-Adressen eintragen** — auf jedem Worker per
    `ip link show` ermitteln und in
-   `ansible/host_vars/worker-0/vars.yml` bzw. `worker-1/vars.yml` den
+   `capulus-ansible/host_vars/worker-0/vars.yml` bzw. `worker-1/vars.yml` den
    Platzhalter `wake_on_lan_mac_address` ersetzen. Ohne echte MAC kann
    `cluster_power_manager` diesen Worker nicht wecken — der Rollout
    warnt darauf hin, bricht aber nicht ab.
@@ -111,8 +111,8 @@ make cluster-power-manager
 ## Schwellwerte & Hysterese
 
 Defaults in
-[`ansible/roles/cluster_power_manager/defaults/main.yml`](../../ansible/roles/cluster_power_manager/defaults/main.yml),
-überschreibbar in `ansible/group_vars/all.yml`:
+[`capulus-ansible/roles/cluster_power_manager/defaults/main.yml`](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/cluster_power_manager/defaults/main.yml),
+überschreibbar in `capulus-ansible/group_vars/all.yml`:
 
 | Variable | Default | Bedeutung |
 |---|---|---|
@@ -229,13 +229,13 @@ von früh/sanft bis spät/hart:
    selbst betroffen sein, wenn genau der Ressourcendruck, vor dem sie
    warnen soll, den Monitoring-Stack mit ausbremst.
 2. **resource_watchdog-Frühwarnung** (RAM ≥ 80% / CPU ≥ 85%, 60s,
-   [ansible/roles/resource_watchdog](../../ansible/roles/resource_watchdog)) —
+   [capulus-ansible/roles/resource_watchdog](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/resource_watchdog)) —
    läuft dependency-frei direkt auf dem Host (kein Prometheus/k8s in der
    Messkette) und schickt eine einmalige ntfy-Warnung, auch wenn Schicht 1
    gerade selbst ausfällt. Ebenfalls kein Eingriff, reine Vorwarnung vor
    dem automatischen Shutdown.
 3. **Kubelet-Eviction** (verfügbarer RAM < 15%, `eviction-hard` +
-   `system-reserved`/`kube-reserved` in `ansible/group_vars/all.yml` →
+   `system-reserved`/`kube-reserved` in `capulus-ansible/group_vars/all.yml` →
    `k3s_kubelet_*`) — der Kubelet evakuiert/killt gezielt einzelne Pods
    (typischerweise den größten Speicherverbraucher), bevor der gesamte
    Node gefährdet ist, und reserviert RAM für OS/kubelet/containerd/sshd/
@@ -243,7 +243,7 @@ von früh/sanft bis spät/hart:
    Wirkt erst nach `sudo systemctl restart k3s` (bzw. `k3s-agent`) auf dem
    jeweiligen Node.
 4. **resource_watchdog-Shutdown** (RAM/CPU ≥ 90%, 300s sustained,
-   [ansible/roles/resource_watchdog](../../ansible/roles/resource_watchdog)) —
+   [capulus-ansible/roles/resource_watchdog](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/resource_watchdog)) —
    letzte Instanz, wenn Schicht 3 die Last nicht mehr abfangen konnte:
    fährt den kompletten Node herunter. Erreichbar dann nur noch über
    physischen Zugriff, NICHT mehr über Tailscale (Poweroff, kein Hang).
@@ -260,10 +260,10 @@ sondern als physischer Link-Verlust auf `eno1` (Realtek `r8169`,
 Erholung mehr bis zum nächsten harten Reset). `ethtool --show-eee eno1`
 zeigte "EEE status: enabled - active" bei 1Gbps — eine bekannte
 Schwachstelle mancher Realtek-NICs. Fix:
-[`ansible/roles/disable_eee`](../../ansible/roles/disable_eee)
+[`capulus-ansible/roles/disable_eee`](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/disable_eee)
 deaktiviert Energy Efficient Ethernet persistent beim Boot (analog zum
 `enable-wol.service`-Muster in
-[`ansible/roles/wake_on_lan`](../../ansible/roles/wake_on_lan)) — eigene
+[`capulus-ansible/roles/wake_on_lan`](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/wake_on_lan)) — eigene
 Rolle statt Teil von `common`, damit auch worker-0/worker-1 (die
 `common` nicht durchlaufen) denselben Schutz bekommen, falls sie
 dieselbe NIC-Generation verbaut haben. Die vier Schichten oben bleiben
@@ -286,6 +286,6 @@ physische NIC zeigen (`libvirt_host_bridge_interface`). Prüfen:
 ## Relevante Links
 
 - [k3s-Referenz (Cluster-Topologie, cordon/drain/uncordon)](../b-kubernetes-gitops/b0000-k3s.md)
-- [resource_watchdog / thermal_watchdog](../../ansible/roles/resource_watchdog)
+- [resource_watchdog / thermal_watchdog](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/resource_watchdog)
 - [HPA-Autoskalierung (podAffinity/RWO-Hintergrund)](../b-kubernetes-gitops/b0040-hpa-autoscaling.md)
 - [NAS-Backup](20010-nas-backup.md)

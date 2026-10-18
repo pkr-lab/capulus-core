@@ -110,7 +110,7 @@ Neuer Chart-Ordner `argocd/apps/tech/authelia/` (Struktur analog zu
 | 2FA | eingebautes TOTP, erzwungen nur für Admin-Tool-Regeln (siehe Baustein 4) |
 | Hostnamen | `auth.tech.homeserver` (intern) und `auth-tech.pke-lab.de` (extern, über bestehenden `*.pke-lab.de`-Wildcard, kein neuer `cloudflared`-Schritt nötig) |
 | TLS | `auth.tech.homeserver` als neuer Eintrag in `argocd/apps/tech/cert-manager/templates/certificate-homeserver-wildcard.yaml` → `dnsNames` |
-| NetworkPolicy | `authelia` als neuer Eintrag in `argocd_platform_apps` + `argocd_network_policy_refined_namespaces` (`ansible/roles/argocd/defaults/main.yml`) — Traefik (`kube-system`) ist dort standardmäßig als Ingress-Quelle erlaubt |
+| NetworkPolicy | `authelia` als neuer Eintrag in `argocd_platform_apps` + `argocd_network_policy_refined_namespaces` (`capulus-ansible/roles/argocd/defaults/main.yml`) — Traefik (`kube-system`) ist dort standardmäßig als Ingress-Quelle erlaubt |
 | AppProject | `platform` (Identity-Layer, wie früher Authentik) |
 
 ### 2. Traefik-Middleware (ForwardAuth)

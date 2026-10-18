@@ -2,7 +2,7 @@
 
 - Severity: Medium
 - Bereich: Repo
-- Betroffen: `ansible/roles/k3s/tasks/main.yml:59,180`, `ansible/roles/k3s_agent/tasks/main.yml:139`, `ansible/roles/crowdsec/tasks/main.yml:7`, `ansible/roles/vmagent/tasks/main.yml:40`, `ansible/roles/libvirt_host/tasks/main.yml:213`
+- Betroffen: `capulus-ansible/roles/k3s/tasks/main.yml:59,180`, `capulus-ansible/roles/k3s_agent/tasks/main.yml:139`, `capulus-ansible/roles/crowdsec/tasks/main.yml:7`, `capulus-ansible/roles/vmagent/tasks/main.yml:40`, `capulus-ansible/roles/libvirt_host/tasks/main.yml:213`
 - Status: Behoben am 2026-10-17 (im Code; wirkt erst beim nächsten Lauf der Rollen, Check-Lauf gegen die Hosts steht aus)
 
 ## Beschreibung
@@ -12,12 +12,12 @@ Mehrere Rollen laden ein Skript oder Binärpaket per `get_url` ohne `checksum:` 
 ## Nachweis
 
 ```
-$ grep -rn -B1 -A3 'get_url' ansible/roles | grep -E 'url:|checksum'
-ansible/roles/k3s/tasks/main.yml:60:    url: https://get.k3s.io
-ansible/roles/k3s/tasks/main.yml:181:    url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-ansible/roles/crowdsec/tasks/main.yml:8:    url: https://install.crowdsec.net
-ansible/roles/vmagent/tasks/main.yml:41:    url: "{{ vmagent_download_url }}"
-ansible/roles/libvirt_host/tasks/main.yml:214:    url: "{{ libvirt_host_base_image_url }}"
+$ grep -rn -B1 -A3 'get_url' capulus-ansible/roles | grep -E 'url:|checksum'
+capulus-ansible/roles/k3s/tasks/main.yml:60:    url: https://get.k3s.io
+capulus-ansible/roles/k3s/tasks/main.yml:181:    url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+capulus-ansible/roles/crowdsec/tasks/main.yml:8:    url: https://install.crowdsec.net
+capulus-ansible/roles/vmagent/tasks/main.yml:41:    url: "{{ vmagent_download_url }}"
+capulus-ansible/roles/libvirt_host/tasks/main.yml:214:    url: "{{ libvirt_host_base_image_url }}"
 (kein `checksum:` in irgendeinem der Aufrufe)
 ```
 
@@ -40,8 +40,8 @@ Vorherige Task-Fassung wiederherstellen (Git).
 ## Verifikation
 
 ```
-grep -rn -A6 'ansible.builtin.get_url' ansible/roles | grep -c 'checksum:'
-ansible-playbook --check --diff ansible/site.yml
+grep -rn -A6 'ansible.builtin.get_url' capulus-ansible/roles | grep -c 'checksum:'
+ansible-playbook --check --diff capulus-ansible/site.yml
 ```
 Jeder `get_url` mit externer Quelle trägt `checksum:`; der Check-Lauf läuft ohne Fehler.
 
@@ -91,9 +91,9 @@ Nicht getestet: ein echter Lauf (kein `--check`) der drei Rollen, die Tests des 
 
 **Geänderte Dateien.**
 
-- `ansible/roles/k3s/` (`tasks/main.yml`, neu `defaults/main.yml`), `ansible/roles/k3s_agent/` (`tasks/main.yml`, neu `defaults/main.yml`)
-- `ansible/roles/crowdsec/` (`tasks/main.yml`, `defaults/main.yml`), `ansible/roles/tailscale/` (`tasks/main.yml`, `defaults/main.yml`)
-- `ansible/roles/vmagent/` (`tasks/main.yml`, `defaults/main.yml`), `ansible/roles/libvirt_host/` (`tasks/main.yml`, `defaults/main.yml`)
+- `capulus-ansible/roles/k3s/` (`tasks/main.yml`, neu `defaults/main.yml`), `capulus-ansible/roles/k3s_agent/` (`tasks/main.yml`, neu `defaults/main.yml`)
+- `capulus-ansible/roles/crowdsec/` (`tasks/main.yml`, `defaults/main.yml`), `capulus-ansible/roles/tailscale/` (`tasks/main.yml`, `defaults/main.yml`)
+- `capulus-ansible/roles/vmagent/` (`tasks/main.yml`, `defaults/main.yml`), `capulus-ansible/roles/libvirt_host/` (`tasks/main.yml`, `defaults/main.yml`)
 - `renovate.json` (Regex-Manager für `k3s_helm_release` und Regel `v3.*`)
 - Doku: `docs/6-hintergruende/60020-ansible-rollen.md` (Abschnitt „Installer und Prüfsummen“), `docs/a-betriebssystem/a0030-installation.md`, `docs/d-sicherheit/d0020-crowdsec.md`, `docs/f-cicd-automatisierung/f0020-renovate.md`
 
@@ -103,8 +103,8 @@ Nicht getestet: ein echter Lauf (kein `--check`) der drei Rollen, die Tests des 
 
 - **Echter Lauf der Rollen** steht aus. Er würde wegen `auto_upgrade: true` (nicht Teil von 017) auch Tailscale-Pakete auf mehreren Hosts anheben (die Check-Läufe zeigen `Install (or upgrade) tailscale package` als geändert) und k3s dem Kanal `stable` folgen lassen. Der Betreiber entscheidet, wann.
 - **`libvirt_host` auf worker-1** zeigt im Check-Lauf offenen Drift (Netplan-Datei `99-libvirt-bridge.yaml` mit `ra-overrides`, Entfernen von `90-dns-fallback.yaml`, `Netplan anwenden`). Nicht 017. Vor einem Lauf mit dem Tag `libvirt-host` die Diffs prüfen, denn `Netplan anwenden` kann die Verbindung kurz trennen.
-- **Check-Lauf gegen die Hosts** (erledigt, siehe oben; ursprünglicher Befehl): `ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --check --diff --vault-password-file ~/.vault_pass --tags k3s,crowdsec,tailscale` und entsprechend für `worker-0.yml`/`worker-1.yml` (k3s_agent, libvirt_host) und `banana-pi-kiosks.yml` (vmagent), bevor der nächste reguläre Lauf kommt. Erwartet: keine Änderung außer dem Helm-Update auf `v3.22.1` von prod-vm und entw-vm (derzeit `v3.22.0`).
-- **`helm_version` in `ansible/group_vars/all.yml`** hat jetzt keine Wirkung mehr; die Zeile kann entfallen (Vault-Datei, nicht von mir angefasst).
+- **Check-Lauf gegen die Hosts** (erledigt, siehe oben; ursprünglicher Befehl): `ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/site.yml --check --diff --vault-password-file ~/.vault_pass --tags k3s,crowdsec,tailscale` und entsprechend für `worker-0.yml`/`worker-1.yml` (k3s_agent, libvirt_host) und `banana-pi-kiosks.yml` (vmagent), bevor der nächste reguläre Lauf kommt. Erwartet: keine Änderung außer dem Helm-Update auf `v3.22.1` von prod-vm und entw-vm (derzeit `v3.22.0`).
+- **`helm_version` in `capulus-ansible/group_vars/all.yml`** hat jetzt keine Wirkung mehr; die Zeile kann entfallen (Vault-Datei, nicht von mir angefasst).
 - **Helm 3 hat ein Ende:** Renovate bleibt auf `v3.*`. Eine Umstellung auf Helm 4 ist ein eigener Schritt.
 - `ansible.builtin.apt_repository` ist veraltet (in ansible-core 2.25 entfernt), Umstellung auf `deb822_repository` ist ein eigener Schritt.
 

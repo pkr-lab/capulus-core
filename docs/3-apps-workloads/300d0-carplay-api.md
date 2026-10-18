@@ -7,7 +7,7 @@ Kleine Go/Gin-API, die VictoriaMetrics (Systemmetriken pro Host), ntfy
 zusammenfasst, 30s gecacht, plus Bildschirmhelligkeit und
 Wake-on-LAN/Shutdown für die Flotte. Einziger Konsument: die iOS-App
 **Homeserver Dashboard** — eine reine iPhone-App, keine CarPlay-Komponente
-(siehe `ios/README.md` im selben Repo für die App selbst; dieses Dokument
+(siehe `capulus-ios/README.md` im selben Repo für die App selbst; dieses Dokument
 ist nur der Backend-Teil, der Verzeichnisname `carplay-api` blieb aus
 diesem früheren CarPlay-Zuschnitt erhalten).
 
@@ -59,7 +59,7 @@ ausgeführt — der Pod läuft absichtlich unprivilegiert
 (`podSecurityContext`/`securityContext` in `values.yaml`, `readOnlyRootFilesystem`,
 kein Host-Zugriff). Stattdessen proxied carplay-api jede
 Helligkeits-/Wake-/Shutdown-Anfrage an **power-agent**
-(`ansible/roles/power_agent`), einen kleinen privilegierten HTTP-Daemon,
+(`capulus-ansible/roles/power_agent`), einen kleinen privilegierten HTTP-Daemon,
 der direkt auf dem nackten Homeserver-Host läuft (systemd-Service, NICHT
 im Cluster), ist aus Pods über die Adresse der Bridge `cni0` des homeservers
 (`POWER_AGENT_URL=http://10.42.2.1:9101`) erreichbar und:
@@ -155,7 +155,7 @@ funktioniert hätte), wurde angepasst:
 
    Das Ergebnis in `argocd/apps/tech/carplay-api/values.yaml` unter
    `secrets.apiToken.encryptedData` eintragen. `$TOKEN` selbst geht in die
-   iOS-App (Keychain, siehe `ios/README.md`) — nie ins Git.
+   iOS-App (Keychain, siehe `capulus-ios/README.md`) — nie ins Git.
 
 3. **power-agent ausrollen und Token versiegeln** (Pflicht für
    Helligkeit/Wake/Shutdown, der Rest der App funktioniert auch ohne —
@@ -281,7 +281,7 @@ Die wichtigsten:
 | `/api/dashboard` liefert `alerts: []`, obwohl ntfy Nachrichten hat | `config.ntfy.topic` prüfen; `NTFY_SINCE` (Default `12h`) evtl. zu kurz für ältere Test-Nachrichten |
 | `hosts[]` zeigt einen bekanntermaßen laufenden Host als `online: false` | `instance` in `config.hosts` gegen die echten VictoriaMetrics-Labels prüfen: `curl vmsingle-....svc.cluster.local:8428/api/v1/targets` |
 | `hosts` zeigt überall `0` / `online: false` | `kubectl -n carplay-api logs deploy/carplay-api` — PromQL-Query-Fehler landen dort mit Klartext-Fehlermeldung von VictoriaMetrics |
-| App meldet Verbindungsfehler, `curl --cacert docs/assets/homeserver-root-ca.pem https://carplay-api.prod.homeserver/health` liefert aber `200` | Die App spricht nur HTTPS (keine ATS-Ausnahme). Root-CA auf dem iPhone installiert **und** unter Einstellungen → Allgemein → Info → Zertifikatsvertrauenseinstellungen aktiviert? Test: `https://carplay-api.prod.homeserver/health` in Safari ohne Zertifikatswarnung, siehe [60080](../6-hintergruende/60080-carplay-api-und-ios-app.md#transport-und-schlüssel) |
+| App meldet Verbindungsfehler, `curl --cacert pki/homeserver-root-ca.pem https://carplay-api.prod.homeserver/health` liefert aber `200` | Die App spricht nur HTTPS (keine ATS-Ausnahme). Root-CA auf dem iPhone installiert **und** unter Einstellungen → Allgemein → Info → Zertifikatsvertrauenseinstellungen aktiviert? Test: `https://carplay-api.prod.homeserver/health` in Safari ohne Zertifikatswarnung, siehe [60080](../6-hintergruende/60080-carplay-api-und-ios-app.md#transport-und-schlüssel) |
 | App bekommt `401` auf `/api/dashboard` | Token in der App (Keychain) ≠ `secrets.apiToken`-Klartext beim Erzeugen des SealedSecret |
 | App bekommt `401` beim Homeserver-Shutdown | Eingegebener Code ≠ `secrets.shutdownConfirmationCode`-Klartext — meist nach einer ArgoCD-Passwort-Rotation, die hier noch nicht nachgezogen wurde |
 | App bekommt `502` auf Helligkeit/Wake/Shutdown | `secrets.powerAgentToken` stimmt nicht mit `/etc/power-agent/token` auf dem Homeserver überein, oder power-agent läuft nicht (`systemctl status power-agent` auf dem Homeserver) — siehe [power-agent](#power-agent) |

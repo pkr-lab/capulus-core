@@ -74,7 +74,7 @@ Objekt, Farbe nach Schwellwert:
   keine veth/bridge/bond): Durchsatz, Fehler/Drops, Link-Status,
   Geschwindigkeit und **Link-Abbrüche im Zeitraum** (Carrier-Changes) — der
   Indikator für Kabel-/Switch-/EEE-Probleme wie beim Link-Drop des
-  homeserver am 2026-09-02 (siehe `ansible/roles/disable_eee`). Link-Status, -Geschwindigkeit und -Abbrüche
+  homeserver am 2026-09-02 (siehe `capulus-ansible/roles/disable_eee`). Link-Status, -Geschwindigkeit und -Abbrüche
   erscheinen nur für Schnittstellen mit Traffic im gewählten Zeitraum
   (ungenutztes WLAN/`eth1` bleibt ausgeblendet).
 - **Datenträger**: Füllstand je Dateisystem (auch Inodes), Durchsatz,
@@ -115,11 +115,11 @@ mitbekommt — nicht über `instance` (das ist bei den k3s-Nodes weiterhin
 
 | Host | node_exporter | S.M.A.R.T. | Wo definiert |
 |---|---|---|---|
-| homeserver, worker-0, worker-1 | DaemonSet `prometheus-node-exporter` (Relabeling `host` = k8s-Nodename, `kind: server`) | Ansible-Rolle [`smartctl_exporter`](../../ansible/roles/smartctl_exporter) (Port 9633) → `vmstaticscrape-smartctl.yaml` | [values.yaml](../../argocd/apps/tech/monitoring/values.yaml) `prometheus-node-exporter.vmScrape` |
+| homeserver, worker-0, worker-1 | DaemonSet `prometheus-node-exporter` (Relabeling `host` = k8s-Nodename, `kind: server`) | Ansible-Rolle [`smartctl_exporter`](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/smartctl_exporter) (Port 9633) → `vmstaticscrape-smartctl.yaml` | [values.yaml](../../argocd/apps/tech/monitoring/values.yaml) `prometheus-node-exporter.vmScrape` |
 | ugreen-nas | Docker-Container auf dem NAS (Port 9100) | Docker-Container (Port 9633), siehe [NAS-Storage](20000-nas-storage.md#monitoring-grafana-hardware-dashboards) | `vmstaticscrape-ugreen-nas.yaml` |
-| **prod-vm** (192.168.178.99), **entw-vm** (192.168.178.100) | Ansible-Rolle [`node_exporter`](../../ansible/roles/node_exporter) (Port 9100) in `prod.yml`/`entw.yml` | — (virtuelle Platten, kein SMART) | `vmstaticscrape-vms.yaml` |
+| **prod-vm** (192.168.178.99), **entw-vm** (192.168.178.100) | Ansible-Rolle [`node_exporter`](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/node_exporter) (Port 9100) in `prod.yml`/`entw.yml` | — (virtuelle Platten, kein SMART) | `vmstaticscrape-vms.yaml` |
 | infotafel (Pi) | `node_exporter` (Port 9100) | — | `vmstaticscrape-infotafel.yaml` |
-| vereinsheim-alarmmonitor (Pi, nur Tailscale) | lokaler `vmagent` pusht per remote_write | — | [vmagent-Rolle](../../ansible/roles/vmagent) (setzt `host`/`kind` ab dem nächsten Lauf) **und** VMSingle-Relabeling [`configmap-vmsingle-relabel.yaml`](../../argocd/apps/tech/monitoring/templates/configmap-vmsingle-relabel.yaml) (setzt sie beim Empfang, solange sie fehlen) |
+| vereinsheim-alarmmonitor (Pi, nur Tailscale) | lokaler `vmagent` pusht per remote_write | — | [vmagent-Rolle](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/vmagent) (setzt `host`/`kind` ab dem nächsten Lauf) **und** VMSingle-Relabeling [`configmap-vmsingle-relabel.yaml`](../../argocd/apps/tech/monitoring/templates/configmap-vmsingle-relabel.yaml) (setzt sie beim Empfang, solange sie fehlen) |
 
 ```
 homeserver / worker-1 ──► node-exporter (DaemonSet, :9100) ─┐
@@ -155,13 +155,13 @@ beide aus dem Ubuntu-Repo, Dienste laufen per systemd):
 
 ```bash
 # node_exporter in den beiden VMs
-ansible-playbook -i ansible/inventory/hosts.yml ansible/prod.yml --tags node-exporter --ask-vault-pass
-ansible-playbook -i ansible/inventory/hosts.yml ansible/entw.yml --tags node-exporter --ask-vault-pass
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/prod.yml --tags node-exporter --ask-vault-pass
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/entw.yml --tags node-exporter --ask-vault-pass
 
 # S.M.A.R.T.-Exporter auf den physischen Nodes (worker-0 nur, wenn er gerade wach ist)
-ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml     --tags smartctl-exporter --limit homeserver --ask-vault-pass
-ansible-playbook -i ansible/inventory/hosts.yml ansible/worker-1.yml --tags smartctl-exporter --ask-vault-pass
-ansible-playbook -i ansible/inventory/hosts.yml ansible/worker-0.yml --tags smartctl-exporter --ask-vault-pass
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/site.yml     --tags smartctl-exporter --limit homeserver --ask-vault-pass
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/worker-1.yml --tags smartctl-exporter --ask-vault-pass
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/worker-0.yml --tags smartctl-exporter --ask-vault-pass
 ```
 
 Ohne `--tags` installieren die Playbooks die Rollen ohnehin bei jedem

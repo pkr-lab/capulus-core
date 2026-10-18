@@ -2,7 +2,7 @@
 
 - Severity: Medium
 - Bereich: Repo
-- Betroffen: `ios/project.yml:33-37`, `ios/HomeserverDashboard/Utilities/Constants.swift:4,6`, `ios/HomeserverDashboard/Utilities/MTLSDelegate.swift`
+- Betroffen: `capulus-ios/project.yml:33-37`, `capulus-ios/HomeserverDashboard/Utilities/Constants.swift:4,6`, `capulus-ios/HomeserverDashboard/Utilities/MTLSDelegate.swift`
 - Status: Behoben am 2026-10-18 (carplay-api und WoL-Agent per HTTPS, ATS-Ausnahme entfernt; Gerätetest durch den Nutzer und optionales Pinning offen)
 
 ## Beschreibung
@@ -12,14 +12,14 @@ Die App spricht `http://carplay-api.prod.homeserver` und `http://100.123.214.4:9
 ## Nachweis
 
 ```
-$ sed -n 33,37p ios/project.yml
+$ sed -n 33,37p capulus-ios/project.yml
         NSAppTransportSecurity:
           NSExceptionDomains:
             homeserver:
               NSIncludesSubdomains: true
               NSExceptionAllowsInsecureHTTPLoads: true
 
-$ grep -n 'URL(string' ios/HomeserverDashboard/Utilities/Constants.swift
+$ grep -n 'URL(string' capulus-ios/HomeserverDashboard/Utilities/Constants.swift
 4:    static let apiBaseURL = URL(string: "http://carplay-api.prod.homeserver")!
 6:    static let wolAgentBaseURL = URL(string: "http://100.123.214.4:9102")!
 ```
@@ -68,23 +68,23 @@ Bei der Umstellung des power-agent kam von der App keine einzige Anfrage bei `ca
 
 | Test | Ergebnis |
 |---|---|
-| `curl --cacert docs/assets/homeserver-root-ca.pem https://carplay-api.prod.homeserver/health` | `200`, `ssl_verify_result=0` |
+| `curl --cacert pki/homeserver-root-ca.pem https://carplay-api.prod.homeserver/health` | `200`, `ssl_verify_result=0` |
 | `curl http://carplay-api.prod.homeserver/health` | `301` nach `https://…` |
 | Zertifikat | SAN enthält `carplay-api.prod.homeserver`, Aussteller `Homeserver Root CA`, gültig bis 2027-01-09 (cert-manager erneuert) |
 | Kurzlink-Dienste (nextcloud, immich, vault, paperless, n8n, wiki, zammad) per HTTPS mit Root-CA | alle `200` oder `302`, Prüfung bestanden |
 | `grep -rn 'http://' ios --include=*.swift` | nur noch `wolAgentBaseURL` |
-| `grep -n NSAppTransportSecurity ios/project.yml` | leer, YAML parst, `Info.plist`-Eigenschaften unverändert bis auf den entfernten Block |
+| `grep -n NSAppTransportSecurity capulus-ios/project.yml` | leer, YAML parst, `Info.plist`-Eigenschaften unverändert bis auf den entfernten Block |
 | carplay-api nach der Änderung | Pod `1/1 Running`, `/health` `200`, keine neuen Fehler im Log (keine Cluster-Änderung) |
-| WoL-Agent: Zertifikat | `openssl verify -CAfile docs/assets/homeserver-root-ca.pem -verify_ip 100.123.214.4` OK, Aussteller `Homeserver Root CA`, SAN nur `IP:100.123.214.4`, Server-EKU |
+| WoL-Agent: Zertifikat | `openssl verify -CAfile pki/homeserver-root-ca.pem -verify_ip 100.123.214.4` OK, Aussteller `Homeserver Root CA`, SAN nur `IP:100.123.214.4`, Server-EKU |
 | WoL-Agent live (`https://100.123.214.4:9102/wol` mit Root-CA) | ohne Token `401`, mit falschem Token `401`, Klartext-HTTP abgewiesen (Verbindung ohne Antwort), TLS 1.3 mit `Verification: OK` |
 | Lokaler Test mit Wegwerf-CA | 401/400/200, Klartext auf TLS-Port abgewiesen, hängender Client blockiert nichts, TLS 1.2 und 1.3 gehen, TLS 1.1 nicht, ohne `TLS_CERT` weiter HTTP |
 | Pi nach der Umschaltung | Agent `active`, `NRestarts=0`, lauscht nur auf `100.123.214.4:9102`, Kiosk (Chromium-Prozess unverändert), Heartbeat und getty aktiv, `systemctl --failed` leer |
 
 **Geänderte Dateien.**
 
-- `ios/HomeserverDashboard/Utilities/Constants.swift`, `ios/HomeserverDashboard/Models/SelfHostedService.swift`, `ios/project.yml`
-- Stufe 2: `ansible/roles/banana_pi_kiosk/` (`files/banana-pi-wol-agent.py`, `defaults/main.yml`, `tasks/main.yml`, `templates/banana-pi-wol-agent.env.j2`), `ansible/host_vars/vereinsheim-alarmmonitor/vars.yml` und `vault.yml` (zwei Vault-Variablen), `ops/token-register.yaml`, `ios/HomeserverDashboard/Utilities/Constants.swift`
-- Doku: `ios/README.md`, `docs/6-hintergruende/60080-carplay-api-und-ios-app.md`, `60020-ansible-rollen.md`, `docs/3-apps-workloads/300d0-carplay-api.md`, `30020-vereinsheim-alarmmonitor.md`, `docs/d-sicherheit/d0040-internal-tls.md`
+- `capulus-ios/HomeserverDashboard/Utilities/Constants.swift`, `capulus-ios/HomeserverDashboard/Models/SelfHostedService.swift`, `capulus-ios/project.yml`
+- Stufe 2: `capulus-ansible/roles/banana_pi_kiosk/` (`files/banana-pi-wol-agent.py`, `defaults/main.yml`, `tasks/main.yml`, `templates/banana-pi-wol-agent.env.j2`), `capulus-ansible/host_vars/vereinsheim-alarmmonitor/vars.yml` und `vault.yml` (zwei Vault-Variablen), `ops/token-register.yaml`, `capulus-ios/HomeserverDashboard/Utilities/Constants.swift`
+- Doku: `capulus-ios/README.md`, `docs/6-hintergruende/60080-carplay-api-und-ios-app.md`, `60020-ansible-rollen.md`, `docs/3-apps-workloads/300d0-carplay-api.md`, `30020-vereinsheim-alarmmonitor.md`, `docs/d-sicherheit/d0040-internal-tls.md`
 
 **Rollback.** WoL-Agent: `banana_pi_kiosk_wol_agent_tls_enabled: false` und Rollenlauf, oder von Hand in `/etc/banana-pi-wol-agent/config.env` die Zeilen `TLS_CERT` und `TLS_KEY` entfernen und `systemctl restart banana-pi-wol-agent` (der Agent spricht dann wieder HTTP; die Sicherungskopien vom 2026-10-18 sind nach der Prüfung gelöscht). App: Die zwei Swift-Dateien auf `http://` zurücksetzen, den ATS-Block aus dem Abschnitt „Nachweis“ oben in `project.yml` wiederherstellen, `cd ios && xcodegen generate`, App neu bauen. Auf dem Server gibt es nichts zurückzunehmen. Die Rückkehr zu `http://` hilft nicht gegen einen Zertifikatsfehler, denn Traefik leitet auf HTTPS um.
 
@@ -98,7 +98,7 @@ Bei der Umstellung des power-agent kam von der App keine einzige Anfrage bei `ca
 
 ## Nachtrag: Pinning (2026-10-18)
 
-Auf Wunsch umgesetzt (Punkt 4 der Empfehlung): `MTLSDelegate` prüft Hosts auf `.homeserver` und `100.123.214.4` nur gegen die eingebettete Root-CA (`SecTrustSetAnchorCertificates` plus `SecTrustSetAnchorCertificatesOnly`), `project.yml` bindet `docs/assets/homeserver-root-ca.pem` als Resource ins Bundle ein. Andere Hosts bleiben bei der Systemprüfung. Fehlt die Datei im Bundle, scheitern die gepinnten Anfragen (fail closed).
+Auf Wunsch umgesetzt (Punkt 4 der Empfehlung): `MTLSDelegate` prüft Hosts auf `.homeserver` und `100.123.214.4` nur gegen die eingebettete Root-CA (`SecTrustSetAnchorCertificates` plus `SecTrustSetAnchorCertificatesOnly`), `project.yml` bindet `pki/homeserver-root-ca.pem` als Resource ins Bundle ein. Andere Hosts bleiben bei der Systemprüfung. Fehlt die Datei im Bundle, scheitern die gepinnten Anfragen (fail closed).
 
 **Nachweis.** `swiftc -parse` (Swift 6.0 im Container) meldet keine Syntaxfehler; die Typprüfung und der Lauf sind in dieser Linux-Umgebung nicht möglich (kein `Security`-Framework).
 

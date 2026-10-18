@@ -119,7 +119,7 @@ den Kiosk-User im Raspberry Pi Imager aktiviert ("Enable autologin"). Das
 richtet diese Rolle nicht zusätzlich ein — reines Imaging, kein
 Konfigurationsmanagement-Thema.
 
-1. Host in `ansible/inventory/hosts.yml` unter `raspberry_pis` eintragen:
+1. Host in `capulus-ansible/inventory/hosts.yml` unter `raspberry_pis` eintragen:
 
    ```yaml
    raspberry_pis:
@@ -139,12 +139,12 @@ Konfigurationsmanagement-Thema.
 
    Dry-Run vorher: `make alarm-kiosks-check`.
 
-Die Rolle `ansible/roles/alamos_kiosk` installiert Chromium im Kiosk-Modus
+Die Rolle `capulus-ansible/roles/alamos_kiosk` installiert Chromium im Kiosk-Modus
 (`alamos-kiosk.service`, läuft in der grafischen Session des Pi-Users) sowie
 einen `alamos-heartbeat.timer` (Default alle 60s, siehe
 `alamos_kiosk_heartbeat_interval`). Zusätzlich laufen `thermal_watchdog` und
 `resource_watchdog` mit (gleiches Bundling wie bei `worker-0`, siehe
-`ansible/worker-0.yml`) — unbeaufsichtigte Geräte sollen sich bei
+`capulus-ansible/worker-0.yml`) — unbeaufsichtigte Geräte sollen sich bei
 Überhitzung/Überlast selbst schützen.
 
 3. **Einmaliger manueller Login am Pi (nach dem ersten Deploy):** AMweb
@@ -191,4 +191,4 @@ Knopfdruck laufen.
 | Kein ntfy-Alarm bei Ausfall | `kubectl -n alamos-apager logs deploy/alamos-apager` — `NTFY_URL`/`NTFY_TOPIC` korrekt? ntfy-Topic im Client abonniert? |
 | Chromium startet nicht / schwarzer Bildschirm | Autologin auf dem Pi aktiv? `systemctl status alamos-kiosk` auf dem Pi |
 | `Permission denied (publickey)` bei `make alarm-kiosks` | `make semaphore-targets` lief nicht für den neuen Pi (siehe [docs/b-kubernetes-gitops/b0030-semaphore.md](../b-kubernetes-gitops/b0030-semaphore.md)) |
-| Ansible-Fehler "alamos_kiosk_station ist nicht gesetzt" | Host-Var in `ansible/inventory/hosts.yml` fehlt — siehe [Pi-Provisionierung](#pi-provisionierung-ansible) |
+| Ansible-Fehler "alamos_kiosk_station ist nicht gesetzt" | Host-Var in `capulus-ansible/inventory/hosts.yml` fehlt — siehe [Pi-Provisionierung](#pi-provisionierung-ansible) |

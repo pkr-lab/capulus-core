@@ -88,7 +88,7 @@ hinterlegten Wert (`replicas: 0`) zurücksetzen — auch **während** n8n es
 gerade auf 1 hochskaliert hat, für die Dauer eines laufenden KI-Laufs. Das
 Deployment `ollama` ist deshalb in
 `argocd/bootstrap/root-applicationset.yaml` (und im Quelltemplate
-`ansible/roles/argocd/templates/bootstrap-applicationset.yaml.j2`) explizit
+`capulus-ansible/roles/argocd/templates/bootstrap-applicationset.yaml.j2`) explizit
 per `ignoreDifferences` auf `/spec/replicas` von der Sync-Prüfung
 ausgenommen — analog zum bereits bestehenden Muster für die
 HPA-gesteuerten `zammad-railsserver`/`zammad-nginx`-Deployments.
@@ -136,8 +136,8 @@ eine Momentaufnahme.
 
 **Wichtig — `ollama` muss von der generischen `tier-default-ingress`-Policy
 ausgeschlossen sein** (`argocd_network_policy_excluded_apps` in
-`ansible/roles/argocd/defaults/main.yml`, ausgewertet in
-`ansible/roles/argocd/templates/bootstrap-networkpolicies.yaml.j2`). Ohne
+`capulus-ansible/roles/argocd/defaults/main.yml`, ausgewertet in
+`capulus-ansible/roles/argocd/templates/bootstrap-networkpolicies.yaml.j2`). Ohne
 diesen Ausschluss würde jeder Workload-Namespace automatisch zusätzlich
 eine `tier-default-ingress`-Policy bekommen, die u. a. `kube-system`,
 `monitoring` und `cloudflared` (und je nach Verfeinerungsstufe den ganzen

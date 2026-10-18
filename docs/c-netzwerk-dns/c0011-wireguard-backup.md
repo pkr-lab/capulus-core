@@ -2,7 +2,7 @@
 
 Dieses Dokument behandelt den eigenständigen WireGuard-Tunnel, der als
 Notfall-Zugriffsweg dient, falls Tailscale ausfällt (Control-Plane/DERP-Relays
-down, Account-Problem, Bug im Client). Rolle: `ansible/roles/wireguard_backup`.
+down, Account-Problem, Bug im Client). Rolle: `capulus-ansible/roles/wireguard_backup`.
 
 ---
 
@@ -78,13 +78,13 @@ Repo, nie an den Server übertragen, nie in Ansible-Vault. Nur der
 wg genpsk
 ```
 
-Verschlüsselt in `ansible/group_vars/all.yml` ablegen:
+Verschlüsselt in `capulus-ansible/group_vars/all.yml` ablegen:
 
 ```bash
 ansible-vault encrypt_string '<PSK-AUSGABE>' --name 'wireguard_backup_peer_preshared_key'
 ```
 
-Den verschlüsselten Block in `ansible/group_vars/all.yml` einfügen (siehe
+Den verschlüsselten Block in `capulus-ansible/group_vars/all.yml` einfügen (siehe
 auskommentierten Platzhalter dort).
 
 ### 3. `group_vars/all.yml` konfigurieren
@@ -110,7 +110,7 @@ DuckDNS/No-IP); falls noch keiner eingerichtet ist, vorher einrichten.
 ### 5. Ansible-Rollout
 
 ```bash
-ansible-playbook ansible/site.yml --tags wireguard --ask-vault-pass
+ansible-playbook capulus-ansible/site.yml --tags wireguard --ask-vault-pass
 ```
 
 Die Rolle installiert `wireguard`, generiert (einmalig) das

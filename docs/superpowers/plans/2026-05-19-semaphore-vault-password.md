@@ -14,17 +14,17 @@
 
 | Action | Path |
 |--------|------|
-| Modify | `ansible/roles/semaphore_bootstrap/defaults/main.yml` |
-| Modify | `ansible/roles/semaphore_bootstrap/tasks/key.yml` |
-| Modify | `ansible/roles/semaphore_bootstrap/tasks/template.yml` |
-| Modify (manual) | `ansible/group_vars/all.yml` — user adds `semaphore_vault_password` |
+| Modify | `capulus-ansible/roles/semaphore_bootstrap/defaults/main.yml` |
+| Modify | `capulus-ansible/roles/semaphore_bootstrap/tasks/key.yml` |
+| Modify | `capulus-ansible/roles/semaphore_bootstrap/tasks/template.yml` |
+| Modify (manual) | `capulus-ansible/group_vars/all.yml` — user adds `semaphore_vault_password` |
 
 ---
 
 ## Task 1: Add `semaphore_vault_password` to group_vars
 
 **Files:**
-- Modify: `ansible/group_vars/all.yml`
+- Modify: `capulus-ansible/group_vars/all.yml`
 
 - [ ] **Step 1: Encrypt the vault password**
 
@@ -63,11 +63,11 @@ Expected: the plaintext password appears as `semaphore_vault_password: YOUR-VAUL
 ## Task 2: Add `vault-password` key to `semaphore_default_keys`
 
 **Files:**
-- Modify: `ansible/roles/semaphore_bootstrap/defaults/main.yml:31-36`
+- Modify: `capulus-ansible/roles/semaphore_bootstrap/defaults/main.yml:31-36`
 
 - [ ] **Step 1: Add the third key entry**
 
-In `ansible/roles/semaphore_bootstrap/defaults/main.yml`, replace:
+In `capulus-ansible/roles/semaphore_bootstrap/defaults/main.yml`, replace:
 ```yaml
 # Two access keys are created in every project — name them once here.
 # `login` is only relevant for the ssh-type entry.
@@ -94,11 +94,11 @@ semaphore_default_keys:
 
 - [ ] **Step 2: Add `vault_key` to both templates**
 
-Still in `ansible/roles/semaphore_bootstrap/defaults/main.yml`, replace:
+Still in `capulus-ansible/roles/semaphore_bootstrap/defaults/main.yml`, replace:
 ```yaml
     templates:
       - name: "Deploy Home Server"
-        playbook: ansible/site.yml
+        playbook: capulus-ansible/site.yml
         inventory: homeservers
         description: "Run the full site.yml against the home-server (recursive)."
 ```
@@ -106,7 +106,7 @@ with:
 ```yaml
     templates:
       - name: "Deploy Home Server"
-        playbook: ansible/site.yml
+        playbook: capulus-ansible/site.yml
         inventory: homeservers
         vault_key: vault-password
         description: "Run the full site.yml against the home-server (recursive)."
@@ -141,7 +141,7 @@ Expected: no output (no errors)
 - [ ] **Step 4: Commit**
 
 ```bash
-git add ansible/roles/semaphore_bootstrap/defaults/main.yml
+git add capulus-ansible/roles/semaphore_bootstrap/defaults/main.yml
 git commit -m "feat(semaphore): add vault-password key and wire to templates"
 ```
 
@@ -150,11 +150,11 @@ git commit -m "feat(semaphore): add vault-password key and wire to templates"
 ## Task 3: Implement `login_password` handler in `key.yml`
 
 **Files:**
-- Modify: `ansible/roles/semaphore_bootstrap/tasks/key.yml`
+- Modify: `capulus-ansible/roles/semaphore_bootstrap/tasks/key.yml`
 
 - [ ] **Step 1: Append the login_password tasks**
 
-In `ansible/roles/semaphore_bootstrap/tasks/key.yml`, after the last line (`    - key_spec.type == "none"`), append:
+In `capulus-ansible/roles/semaphore_bootstrap/tasks/key.yml`, after the last line (`    - key_spec.type == "none"`), append:
 
 ```yaml
 
@@ -204,7 +204,7 @@ Expected: no errors
 - [ ] **Step 3: Commit**
 
 ```bash
-git add ansible/roles/semaphore_bootstrap/tasks/key.yml
+git add capulus-ansible/roles/semaphore_bootstrap/tasks/key.yml
 git commit -m "feat(semaphore): handle login_password key type for vault password"
 ```
 
@@ -213,11 +213,11 @@ git commit -m "feat(semaphore): handle login_password key type for vault passwor
 ## Task 4: Add `vault_key_id` to template creation
 
 **Files:**
-- Modify: `ansible/roles/semaphore_bootstrap/tasks/template.yml:28-41`
+- Modify: `capulus-ansible/roles/semaphore_bootstrap/tasks/template.yml:28-41`
 
 - [ ] **Step 1: Add `vault_key_id` to the template body**
 
-In `ansible/roles/semaphore_bootstrap/tasks/template.yml`, replace:
+In `capulus-ansible/roles/semaphore_bootstrap/tasks/template.yml`, replace:
 ```yaml
     body:
       project_id: "{{ project_id | int }}"
@@ -269,7 +269,7 @@ Expected: no errors
 - [ ] **Step 3: Commit**
 
 ```bash
-git add ansible/roles/semaphore_bootstrap/tasks/template.yml
+git add capulus-ansible/roles/semaphore_bootstrap/tasks/template.yml
 git commit -m "feat(semaphore): set vault_key_id on templates from project_key_map"
 ```
 

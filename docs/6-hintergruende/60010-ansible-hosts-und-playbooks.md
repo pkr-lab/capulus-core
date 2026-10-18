@@ -1,6 +1,6 @@
 # Ansible: Hosts, VMs und Playbooks — Hintergründe
 
-Begründungen zu `ansible/host_vars/`, `ansible/group_vars/`, `ansible/inventory/`, den Playbooks in `ansible/`
+Begründungen zu `capulus-ansible/host_vars/`, `capulus-ansible/group_vars/`, `capulus-ansible/inventory/`, den Playbooks in `ansible/`
 und zur Rolle `libvirt_host`. Was läuft und wie man es bedient, steht in
 [a0030](../a-betriebssystem/a0030-installation.md) und [40080](../4-planung/40080-multi-cluster-entw-prod-tech.md);
 zum Vorfall mit dem Basis-Image siehe [50010](../5-incidents/50010-prod-vm-basis-image-ersetzt.md).
@@ -18,7 +18,7 @@ zum Vorfall mit dem Basis-Image siehe [50010](../5-incidents/50010-prod-vm-basis
 
 ## Inventar
 
-Aufbau von `ansible/inventory/hosts.yml`:
+Aufbau von `capulus-ansible/inventory/hosts.yml`:
 
 | Stelle | Begründung |
 |---|---|
@@ -201,7 +201,7 @@ damit die UI ohne Klicks benutzbar ist.
 
 ## Firewall (UFW, Rolle `common`)
 
-Die Rolle `common` setzt die Regeln, die Variablen stehen in `ansible/roles/common/defaults/main.yml`. Der homeserver überschreibt sie in `host_vars/homeserver/vars.yml`, alle anderen Hosts behalten die
+Die Rolle `common` setzt die Regeln, die Variablen stehen in `capulus-ansible/roles/common/defaults/main.yml`. Der homeserver überschreibt sie in `host_vars/homeserver/vars.yml`, alle anderen Hosts behalten die
 bisherigen Defaults (pauschale Freigabe für LAN und Tailnet, `6443` nur aus dem LAN).
 
 | Variable | Bedeutung | homeserver |

@@ -2,7 +2,7 @@
 
 - Severity: Medium
 - Bereich: Netzwerk
-- Betroffen: `ansible/group_vars/all.yml:33` (`argocd_server_insecure: true`), `ansible/roles/common/tasks/main.yml:195-206`, `scripts/promote-chain.py:374`, `.github/workflows/promote-chain.yml` (`ARGOCD_*_URL` `http://192.168.178.94:30080`)
+- Betroffen: `capulus-ansible/group_vars/all.yml:33` (`argocd_server_insecure: true`), `capulus-ansible/roles/common/tasks/main.yml:195-206`, `scripts/promote-chain.py:374`, `.github/workflows/promote-chain.yml` (`ARGOCD_*_URL` `http://192.168.178.94:30080`)
 - Status: Behoben am 2026-10-17 (Hub und ENTW; `server.insecure` bewusst belassen, ACL Stufe 2 und Wiederinbetriebnahme der Promotion-Kette offen)
 
 ## Beschreibung
@@ -12,10 +12,10 @@ ArgoCD läuft mit `server.insecure: true`. Der NodePort 30080 liefert die API (i
 ## Nachweis
 
 ```
-$ sed -n 33p ansible/group_vars/all.yml
+$ sed -n 33p capulus-ansible/group_vars/all.yml
 argocd_server_insecure: true
 
-$ sed -n 195,206p ansible/roles/common/tasks/main.yml
+$ sed -n 195,206p capulus-ansible/roles/common/tasks/main.yml
 - name: Allow ArgoCD NodePort HTTP (port 30080) from LAN and Tailnet only
     port: "30080"
   loop:
@@ -65,7 +65,7 @@ Die UFW-Regeln für den NodePort `30080` (nur LAN, Tailnet, WireGuard) beschrän
 
 **Fix.** Zwei Phasen (PR #472 und #474), damit die Promotion-Kette nie ohne Weg zu ArgoCD war.
 
-- **Phase 1:** `promote-chain.py` prüft Zertifikate (`ssl.create_default_context(cafile=ARGOCD_CA_FILE)` statt `_create_unverified_context`). `promote-chain.yml` trägt `argocd.tech.homeserver` und `argocd.dev.homeserver` in `/etc/hosts` des Runners ein, kopiert `docs/assets/homeserver-root-ca.pem` nach `$RUNNER_TEMP` und ruft `https://argocd.tech.homeserver` und `https://argocd.dev.homeserver` auf. `tailscale-poc.yml` und `create-argocd-ci-token.sh` nutzen dieselben HTTPS-Hosts. Die Rolle `argocd` rendert den Service wahlweise als `ClusterIP` (`argocd_server_nodeport_enabled`) und legt aus den Vault-Variablen `argocd_ingress_tls_crt` und `argocd_ingress_tls_key` das TLS-Secret `argocd-server-tls` an. ENTW bekam einen Ingress `argocd.dev.homeserver` mit einem von der Homeserver-Root-CA ausgestellten Zertifikat (365 Tage, Eintrag `entw-argocd-ingress-cert` in `ops/token-register.yaml`).
+- **Phase 1:** `promote-chain.py` prüft Zertifikate (`ssl.create_default_context(cafile=ARGOCD_CA_FILE)` statt `_create_unverified_context`). `promote-chain.yml` trägt `argocd.tech.homeserver` und `argocd.dev.homeserver` in `/etc/hosts` des Runners ein, kopiert `pki/homeserver-root-ca.pem` nach `$RUNNER_TEMP` und ruft `https://argocd.tech.homeserver` und `https://argocd.dev.homeserver` auf. `tailscale-poc.yml` und `create-argocd-ci-token.sh` nutzen dieselben HTTPS-Hosts. Die Rolle `argocd` rendert den Service wahlweise als `ClusterIP` (`argocd_server_nodeport_enabled`) und legt aus den Vault-Variablen `argocd_ingress_tls_crt` und `argocd_ingress_tls_key` das TLS-Secret `argocd-server-tls` an. ENTW bekam einen Ingress `argocd.dev.homeserver` mit einem von der Homeserver-Root-CA ausgestellten Zertifikat (365 Tage, Eintrag `entw-argocd-ingress-cert` in `ops/token-register.yaml`).
 - **Phase 2:** `argocd_server_nodeport_enabled: false` in `host_vars/homeserver` und `host_vars/entw-vm`. Der Service `argocd-server` ist `ClusterIP`, die NodePorts 30080 und 30443 existieren nicht mehr. Die Rolle `common` löscht die früheren UFW-Freigaben für 30080.
 - **Abweichung von Punkt 1:** `server.insecure` bleibt `true`. TLS endet im Traefik, der Hop zum Pod bleibt HTTP im Node. Mit `false` bräche die UI hinter dem Ingress. Das Risiko im Klartext (Admin-Login, CI-Token) ist durch den entfallenen NodePort beseitigt.
 - **Abweichung von Punkt 3:** Die UFW-Regel allein hätte nichts bewirkt (siehe Nachtrag zu 008). Wirksam ist erst, dass der Port nicht mehr existiert.
@@ -87,8 +87,8 @@ Die UFW-Regeln für den NodePort `30080` (nur LAN, Tailnet, WireGuard) beschrän
 
 - `scripts/promote-chain.py`, `scripts/create-argocd-ci-token.sh`
 - `.github/workflows/promote-chain.yml`, `.github/workflows/tailscale-poc.yml`
-- `ansible/roles/argocd/` (`defaults/main.yml`, `tasks/main.yml`, `templates/argocd-values.yaml.j2`), `ansible/roles/common/tasks/main.yml`, `ansible/site.yml`
-- `ansible/host_vars/homeserver/vars.yml`, `ansible/host_vars/entw-vm/vars.yml` (Ingress, NodePort-Schalter, verschlüsseltes Zertifikat)
+- `capulus-ansible/roles/argocd/` (`defaults/main.yml`, `tasks/main.yml`, `templates/argocd-values.yaml.j2`), `capulus-ansible/roles/common/tasks/main.yml`, `capulus-ansible/site.yml`
+- `capulus-ansible/host_vars/homeserver/vars.yml`, `capulus-ansible/host_vars/entw-vm/vars.yml` (Ingress, NodePort-Schalter, verschlüsseltes Zertifikat)
 - `ops/token-register.yaml` (Eintrag `entw-argocd-ingress-cert`)
 - Doku: `docs/6-hintergruende/60030-argocd-und-bootstrap.md`, `60020-ansible-rollen.md`, `600a0-ci-workflows-und-skripte.md`, `docs/b-kubernetes-gitops/b0010-argocd.md`, `b0050-entw-argocd.md`, `docs/f-cicd-automatisierung/f00a0-tailscale-runner-poc.md`, `f00b0-promotion-chain.md`, `docs/d-sicherheit/d0040-internal-tls.md`, `docs/c-netzwerk-dns/c0010-tailscale.md`, `c0011-wireguard-backup.md`, `c0030-port-uebersicht.md`, `docs/a-betriebssystem/a0010-overview.md`, `a0030-installation.md`, `README.md`
 

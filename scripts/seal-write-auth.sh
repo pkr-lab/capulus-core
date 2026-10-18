@@ -45,5 +45,5 @@ unset vault_pw
 
 echo
 echo "Fertig. Die verschluesselten Variablen stehen in: $out"
-echo "Inhalt in ansible/group_vars/all.yml einfuegen, danach die Datei loeschen."
+echo "Inhalt in capulus-ansible: group_vars/all.yml einfuegen, danach die Datei loeschen."
 echo "Der Schalter writeAuth.enabled bleibt in beiden values.yaml auf false, bis die Hosts die Zugangsdaten haben."

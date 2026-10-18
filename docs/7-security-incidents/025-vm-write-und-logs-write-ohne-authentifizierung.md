@@ -66,5 +66,5 @@ Gebaut ist `basicAuth` an beiden Ingresses, **standardmäßig aus**. Beschreibun
 
 ## Stand der Einrichtung (2026-10-18)
 
-`./scripts/seal-write-auth.sh` wurde ausgeführt: beide Benutzerdateien sind in `argocd/apps/tech/monitoring/values.yaml` und `argocd/apps/tech/logging/values.yaml` versiegelt (`writeAuth.encryptedUsers`), der Schalter `writeAuth.enabled` steht noch auf `false`. Die Vault-Zeilen liegen in `~/write-auth-vault.yml` und gehören in `ansible/group_vars/all.yml`. Als Nächstes: Merge, Rollenläufe mit den Tags `vmagent` und `journal-upload` auf allen Hosts, Prüfung, dann `enabled: true`.
+`./scripts/seal-write-auth.sh` wurde ausgeführt: beide Benutzerdateien sind in `argocd/apps/tech/monitoring/values.yaml` und `argocd/apps/tech/logging/values.yaml` versiegelt (`writeAuth.encryptedUsers`), der Schalter `writeAuth.enabled` steht noch auf `false`. Die Vault-Zeilen liegen in `~/write-auth-vault.yml` und gehören in `capulus-ansible/group_vars/all.yml`. Als Nächstes: Merge, Rollenläufe mit den Tags `vmagent` und `journal-upload` auf allen Hosts, Prüfung, dann `enabled: true`.
 

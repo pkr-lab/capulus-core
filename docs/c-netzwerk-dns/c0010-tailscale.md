@@ -35,7 +35,7 @@ Server, bei denen ein interaktiver Browser-Login nicht passt).
 ansible-vault encrypt_string 'tskey-auth-DEIN_KEY' --name 'tailscale_auth_key'
 ```
 
-Den verschlüsselten Block in `ansible/group_vars/all.yml` einsetzen.
+Den verschlüsselten Block in `capulus-ansible/group_vars/all.yml` einsetzen.
 
 ---
 
@@ -111,7 +111,7 @@ Die Ansible-Rolle konfiguriert den Server so, dass er das eigene Subnetz
 
 **Nicht jeder Host soll Subnetz-Router sein:** Die Rolle liest dafür die
 Variable `tailscale_advertise_routes` (Default `{{ local_subnet }}`, siehe
-`ansible/roles/tailscale/defaults/main.yml`). Geräte, die nur selbst im
+`capulus-ansible/roles/tailscale/defaults/main.yml`). Geräte, die nur selbst im
 Tailnet erreichbar sein sollen, ohne fremden LAN-Traffic weiterzuleiten —
 z. B. die xibosignage-Raspberry-Pis, siehe
 [docs/3-apps-workloads/300e0-xibosignage.md](../3-apps-workloads/300e0-xibosignage.md) — setzen sie in ihren
@@ -119,7 +119,7 @@ z. B. die xibosignage-Raspberry-Pis, siehe
 `tailscale up`/`tailscale set`-Aufruf komplett weg:
 
 ```yaml
-# ansible/group_vars/<gruppe>.yml
+# capulus-ansible/group_vars/<gruppe>.yml
 tailscale_advertise_routes: ""
 ```
 

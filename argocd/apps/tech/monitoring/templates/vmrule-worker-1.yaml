@@ -24,7 +24,7 @@ spec:
             # worker-1 wird vom cluster-power-manager NUR bei hoher
             # Homeserver-Last per WoL geweckt und sonst bewusst
             # heruntergefahren (cordon vor Shutdown, uncordon nach
-            # erfolgreichem Wake, siehe ansible/roles/cluster_power_manager).
+            # erfolgreichem Wake, siehe capulus-ansible/roles/cluster_power_manager).
             # Ohne diesen Ausschluss würde dieser Alert die meiste Zeit
             # (Standardzustand: Worker schläft) fälschlich als "critical"
             # feuern. kube_node_spec_unschedulable==1 ist genau das Signal
