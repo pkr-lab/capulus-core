@@ -108,7 +108,7 @@ Ein falscher Token wird auch bei offenem Default mit `401` abgelehnt, sodass erf
 - `argocd/apps/tech/alamos-apager/` (`values.yaml`, `templates/configmap-script.yaml`, `templates/deployment.yaml`, neu `templates/secret-ntfy-token.yaml`)
 - `argocd/apps/tech/carplay-api/values.yaml`
 - `argocd/apps/tech/n8n/workflows/` (fünf Workflow-JSONs)
-- `ansible/roles/ntfy_publisher/` (neu), `ansible/roles/{thermal_watchdog,resource_watchdog,cluster_power_manager,nightly_worker_wake}/files/*.sh`, sechs Playbooks, `ansible/group_vars/all.yml` (`ntfy_publisher_token` als Vault-Wert)
+- `capulus-ansible/roles/ntfy_publisher/` (neu), `capulus-ansible/roles/{thermal_watchdog,resource_watchdog,cluster_power_manager,nightly_worker_wake}/files/*.sh`, sechs Playbooks, `capulus-ansible/group_vars/all.yml` (`ntfy_publisher_token` als Vault-Wert)
 - `scripts/seal-ntfy-tokens.sh` (neu), `ops/token-register.yaml`
 - Doku: `docs/1-benachrichtigungen/10010-ntfy.md`, `docs/3-apps-workloads/30070-n8n.md`, `docs/6-hintergruende/{60020,60040,60080,600a0}`, `docs/f-cicd-automatisierung/f0070-ci-lint.md`
 
@@ -116,7 +116,7 @@ Ein falscher Token wird auch bei offenem Default mit `401` abgelehnt, sodass erf
 
 **Restpunkte.**
 
-- worker-1 war ausgeschaltet. Dort fehlt die Header-Datei, bis `ansible/worker-1.yml --tags ntfy-publisher,thermal` gelaufen ist. Bis dahin würden seine Meldungen (sobald 046 behoben ist) mit `403` abgelehnt.
+- worker-1 war ausgeschaltet. Dort fehlt die Header-Datei, bis `capulus-ansible/worker-1.yml --tags ntfy-publisher,thermal` gelaufen ist. Bis dahin würden seine Meldungen (sobald 046 behoben ist) mit `403` abgelehnt.
 - alamos-apager sendet nur bei Stationsausfall und konnte live nicht getestet werden. Die gerenderte Skript-Funktion wurde lokal gegen einen Listener geprüft: Mit Token kommt `Authorization: Bearer …` an, ohne Token keiner.
 - Dass keine weiteren anonymen Sender existieren, ließ sich nicht beweisen: ntfy protokolliert abgelehnte Anfragen im Standard-Loglevel nicht, der Cache hält nur 12 Stunden, Traefik schreibt kein Access-Log. Ein übersehener Sender fällt durch fehlende Meldungen auf.
 - Neuer Befund 046: Die Host-Skripte senden wegen eines Redirects seit 2026-09-13 nichts an ntfy.

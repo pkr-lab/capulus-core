@@ -13,7 +13,7 @@ description: |
   - Apps: VMAgent has selectAllByDefault=true, so any VMServiceScrape /
     VMPodScrape / Prometheus ServiceMonitor in any namespace is scraped.
   - UI: Grafana is exposed via Traefik at https://grafana.tech.homeserver
-    (add `grafana` to `dnsmasq_hosts` in ansible/group_vars/all.yml).
+    (add `grafana` to `dnsmasq_hosts` in capulus-ansible/group_vars/all.yml).
 type: application
 version: 0.1.0
 appVersion: "latest"

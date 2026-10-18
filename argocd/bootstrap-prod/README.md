@@ -96,7 +96,7 @@ sudo k3s kubectl get pods -A                            # auf prod-vm
    (Set `home-server-apps-prod`) ergaenzen und anwenden. Ordner mit `Chart.yaml` werden vom Set
    `home-server-apps-prod-charts` automatisch gefunden.
 4. Fuer einen internen Host unter `*.prod.homeserver`: Name in `dnsmasq_prod_vm_hosts`
-   (`ansible/group_vars/all.yml`) eintragen und `make dnsmasq` ausfuehren, sonst antwortet der
+   (`capulus-ansible/group_vars/all.yml`) eintragen und `make dnsmasq` ausfuehren, sonst antwortet der
    TECH-Traefik. Ein oeffentlicher Host braucht zusaetzlich einen DNS-Eintrag auf den PROD-Tunnel:
    `cloudflared tunnel route dns homeserver-prod <host>`, siehe
    [docs/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md](../../docs/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md).

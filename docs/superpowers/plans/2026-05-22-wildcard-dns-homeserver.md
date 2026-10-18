@@ -13,7 +13,7 @@
 ### Task 1: dnsmasq-Template auf Wildcard umstellen
 
 **Files:**
-- Modify: `ansible/roles/dnsmasq/templates/dnsmasq.conf.j2`
+- Modify: `capulus-ansible/roles/dnsmasq/templates/dnsmasq.conf.j2`
 
 - [ ] **Schritt 1: Aktuellen Template-Inhalt als Referenz notieren**
 
@@ -34,7 +34,7 @@
 
 - [ ] **Schritt 2: Template anpassen**
 
-  `ansible/roles/dnsmasq/templates/dnsmasq.conf.j2` — vollständiger neuer Inhalt:
+  `capulus-ansible/roles/dnsmasq/templates/dnsmasq.conf.j2` — vollständiger neuer Inhalt:
   ```
   # Managed by Ansible — do not edit manually.
   # Wildcard-DNS: alle *.homeserver-Namen → network_static_ip
@@ -64,7 +64,7 @@
 - [ ] **Schritt 3: Commit**
 
   ```bash
-  git add ansible/roles/dnsmasq/templates/dnsmasq.conf.j2
+  git add capulus-ansible/roles/dnsmasq/templates/dnsmasq.conf.j2
   git commit -m "feat(dnsmasq): Wildcard-DNS *.homeserver statt expliziter Einträge"
   ```
 
@@ -73,7 +73,7 @@
 ### Task 2: `dnsmasq_hosts` aus group_vars entfernen
 
 **Files:**
-- Modify: `ansible/group_vars/all.yml`
+- Modify: `capulus-ansible/group_vars/all.yml`
 
 - [ ] **Schritt 1: dnsmasq_hosts-Block entfernen**
 
@@ -105,7 +105,7 @@
 - [ ] **Schritt 3: Commit**
 
   ```bash
-  git add ansible/group_vars/all.yml
+  git add capulus-ansible/group_vars/all.yml
   git commit -m "chore(dnsmasq): dnsmasq_hosts entfernen, Wildcard macht Einträge obsolet"
   ```
 

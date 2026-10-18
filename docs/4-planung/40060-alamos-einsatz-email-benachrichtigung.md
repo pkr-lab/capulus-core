@@ -65,7 +65,7 @@ mit Alamos-Login in die Webhook-Konfiguration schauen.
   `argocd/apps/tech/alamos-apager/`) macht aktuell nur Redirect +
   Heartbeat/Ausfall-Erkennung, fasst keine Einsatzinhalte an — siehe
   [30010-alamos-apager.md](../3-apps-workloads/30010-alamos-apager.md).
-  Die `alamos_kiosk`-Ansible-Rolle (`ansible/roles/alamos_kiosk/`) startet
+  Die `alamos_kiosk`-Ansible-Rolle (`capulus-ansible/roles/alamos_kiosk/`) startet
   nur Chromium im Kiosk-Modus gegen diese Redirect-URL, liest selbst nichts
   aus der Seite.
 - Öffentlich erreichbare Seiten des Alamos-Handbuchs

@@ -16,7 +16,7 @@ wieder herunterfahren.
 ## Online-Status prüfen
 
 Für den PC ist keine feste IP im Repo hinterlegt (nur die MAC, siehe
-`ansible/host_vars/vereinsheim-alarmmonitor/vars.yml`,
+`capulus-ansible/host_vars/vereinsheim-alarmmonitor/vars.yml`,
 `banana_pi_kiosk_wol_devices.windows-pc`). Der Online-Check läuft daher
 über den ARP-Cache des Pi statt über eine direkte Ping-Adresse — Pi und PC
 hängen im selben Subnetz (Voraussetzung für WoL ohnehin, siehe

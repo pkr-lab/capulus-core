@@ -94,11 +94,11 @@ ansible-vault encrypt_string 'DEIN_VAULT_PW' \
 ```
 
 Den `!vault |…`-Block über den leeren Wert in
-`ansible/group_vars/all.yml` (`semaphore_vault_password`) pasten.
+`capulus-ansible/group_vars/all.yml` (`semaphore_vault_password`) pasten.
 
 ### 2. Targets in der Inventory eintragen
 
-`ansible/inventory/hosts.yml`:
+`capulus-ansible/inventory/hosts.yml`:
 
 ```yaml
 raspberry_pis:
@@ -160,8 +160,8 @@ nichts mehr klicken außer ▶ **Run**.
 
 | Project              | Repository                                                | Inventory   | Template                  | Playbook                  | Schedule       |
 |----------------------|-----------------------------------------------------------|-------------|---------------------------|---------------------------|----------------|
-| `home-server`        | dieses Repo (`argocd_repo_url` aus `group_vars/all.yml`)  | `homeservers` (192.168.178.94) | `Deploy Home Server`      | `ansible/site.yml`        | täglich 06:00  |
-| `worker-0`           | dieses Repo (`argocd_repo_url` aus `group_vars/all.yml`)  | `worker_0_only` (192.168.178.95) | `Deploy worker-0`         | `ansible/worker-0.yml`    | —              |
+| `home-server`        | dieses Repo (`argocd_repo_url` aus `group_vars/all.yml`)  | `homeservers` (192.168.178.94) | `Deploy Home Server`      | `capulus-ansible/site.yml`        | täglich 06:00  |
+| `worker-0`           | dieses Repo (`argocd_repo_url` aus `group_vars/all.yml`)  | `worker_0_only` (192.168.178.95) | `Deploy worker-0`         | `capulus-ansible/worker-0.yml`    | —              |
 
 ### Workflow
 
@@ -178,8 +178,8 @@ nichts mehr klicken außer ▶ **Run**.
 
 ### Weitere Projekte hinzufügen
 
-`semaphore_projects` in `ansible/group_vars/all.yml` (oder direkt in der
-Default-Liste in `ansible/roles/semaphore_bootstrap/defaults/main.yml`)
+`semaphore_projects` in `capulus-ansible/group_vars/all.yml` (oder direkt in der
+Default-Liste in `capulus-ansible/roles/semaphore_bootstrap/defaults/main.yml`)
 erweitern und `make semaphore-bootstrap` laufen lassen:
 
 ```yaml
@@ -247,7 +247,7 @@ du es per UI anlegen:
 - **Mehrere Repos**: Pro Repo ein eigenes Semaphore-Project anlegen.
   Den selben SSH-Key (`semaphore-ssh-key`) kannst du in jedes Project
   importieren.
-- **Neuer Target-Host**: in `ansible/inventory/hosts.yml` eintragen,
+- **Neuer Target-Host**: in `capulus-ansible/inventory/hosts.yml` eintragen,
   `make semaphore-targets` laufen lassen. Der Public Key landet
   automatisch in dessen `authorized_keys`. In der Semaphore-Inventory
   ergänzen — fertig.

@@ -109,7 +109,7 @@ ssh -i ~/.ssh/id_ed25519 ubuntu@<server-ip> "echo 'SSH-Key-Login funktioniert'"
 ```
 
 Bei abweichendem Key-Pfad (z. B. legacy `~/.ssh/id_rsa`) den Eintrag
-`ansible_ssh_private_key_file` in `ansible/inventory/hosts.yml` anpassen.
+`ansible_ssh_private_key_file` in `capulus-ansible/inventory/hosts.yml` anpassen.
 
 ---
 
@@ -119,7 +119,7 @@ Für einen Server dringend empfohlen.
 
 ### Variante A — Ansible erledigt es (empfohlen)
 
-In `ansible/group_vars/all.yml`:
+In `capulus-ansible/group_vars/all.yml`:
 
 ```yaml
 network_configure_static_ip: true
@@ -203,13 +203,13 @@ sudo reboot
 
 - [ ] Ubuntu Server 26.04 LTS installiert (nicht Desktop)
 - [ ] Username ist `ubuntu`
-- [ ] Hostname stimmt mit `hostname` in `ansible/group_vars/all.yml` überein (Default: `homeserver`)
+- [ ] Hostname stimmt mit `hostname` in `capulus-ansible/group_vars/all.yml` überein (Default: `homeserver`)
 - [ ] SSH-Key-Login funktioniert (`ssh -i ~/.ssh/id_ed25519 ubuntu@<ip>`)
 - [ ] Passwortloses sudo funktioniert (`sudo -n whoami` → `root`)
 - [ ] Server hat statische IP
 - [ ] Internet vom Server erreichbar (`ping 1.1.1.1`)
-- [ ] `ansible/inventory/hosts.yml` hat die korrekte IP
-- [ ] `ansible/group_vars/all.yml` ist ausgefüllt (`argocd_repo_url`, `local_subnet`, `timezone`)
+- [ ] `capulus-ansible/inventory/hosts.yml` hat die korrekte IP
+- [ ] `capulus-ansible/group_vars/all.yml` ist ausgefüllt (`argocd_repo_url`, `local_subnet`, `timezone`)
 - [ ] Tailscale Auth-Key mit Ansible-Vault verschlüsselt
 
 Wenn alles abgehakt ist, weiter mit dem **[Installationsleitfaden](a0030-installation.md)**.

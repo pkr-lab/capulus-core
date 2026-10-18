@@ -108,7 +108,7 @@ Erwartete Reihenfolge:
 > [docs/2-betrieb-hardware/20000-nas-storage.md](../2-betrieb-hardware/20000-nas-storage.md) → Fehlerbehebung.
 
 **DNS:** Wiki.js läuft im **PROD**-Cluster, deshalb steht `wiki.prod.homeserver` in
-`dnsmasq_prod_vm_hosts` (`ansible/group_vars/all.yml`) und zeigt auf die PROD-VM (`.99`); die
+`dnsmasq_prod_vm_hosts` (`capulus-ansible/group_vars/all.yml`) und zeigt auf die PROD-VM (`.99`); die
 allgemeine Wildcard `address=/homeserver/<server-ip>` würde auf TECH zeigen (siehe
 [docs/c-netzwerk-dns/c0040-domain-tiers.md](../c-netzwerk-dns/c0040-domain-tiers.md#dns-tier-und-cluster-sind-zwei-verschiedene-dinge)).
 

@@ -644,7 +644,7 @@ Einstieg und Zuordnung von Dateien zu Docs: **[docs/6-hintergruende/60000-uebers
 Weitere Ordner-READMEs: [argocd/apps/entw/](argocd/apps/entw/README.md) (ENTW-Ordner),
 [argocd/bootstrap-prod/](argocd/bootstrap-prod/README.md) (PROD im Hub anbinden, Umzug mit Daten),
 [argocd/apps/tech/pacman/](argocd/apps/tech/pacman/README.md), [argocd/apps/tech/carplay-api/](argocd/apps/tech/carplay-api/README.md),
-[ios/](ios/README.md) (iOS-App).
+[ios/](https://github.com/pkr-lab/capulus-ios/blob/main/README.md) (iOS-App).
 
 ---
 

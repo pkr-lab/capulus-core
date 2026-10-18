@@ -62,7 +62,7 @@
   service: n8n
   kind: api-token
   stored_in:
-    - ansible/group_vars/all.yml
+    - capulus-ansible:group_vars/all.yml
   issued: "2026-10-17"
   expires: null
   max_age_days: 365
@@ -77,7 +77,7 @@
   service: argocd
   kind: certificate
   stored_in:
-    - ansible/host_vars/entw-vm/vars.yml
+    - capulus-ansible:host_vars/entw-vm/vars.yml
   issued: "2026-10-17"
   expires: "2027-10-17"
   max_age_days: 365
@@ -92,7 +92,7 @@
   service: banana-pi-wol-agent
   kind: certificate
   stored_in:
-    - ansible/host_vars/vereinsheim-alarmmonitor/vault.yml
+    - capulus-ansible:host_vars/vereinsheim-alarmmonitor/vault.yml
   issued: "2026-10-18"
   expires: "2027-10-18"
   max_age_days: 365
@@ -197,8 +197,8 @@
   service: ntfy
   kind: api-token
   stored_in:
-    - ansible/group_vars/all.yml
-    - ansible/roles/ntfy_publisher/tasks/main.yml
+    - capulus-ansible:group_vars/all.yml
+    - capulus-ansible:roles/ntfy_publisher/tasks/main.yml
   issued: "2026-10-17"
   expires: null
   max_age_days: 365
@@ -215,7 +215,7 @@
   stored_in:
     - argocd/apps/tech/alert-caller/values.yaml
     - argocd/apps/tech/monitoring/templates/sealedsecret-alert-caller-token.yaml
-    - ansible/roles/alert_caller/templates/alert-caller.env.j2
+    - capulus-ansible:roles/alert_caller/templates/alert-caller.env.j2
   issued: "2026-10-17"
   expires: null
   max_age_days: 365
@@ -495,17 +495,17 @@
     runbook: docs/d-sicherheit/d0060-secrets-rotation.md
     overlap: false
   owner: peter
-  blast_radius: "Schluessel zu allen !vault-Werten im Repo (ansible/group_vars, ansible/host_vars) - kompletter Ansible-Fundus."
+  blast_radius: "Schluessel zu allen !vault-Werten im Repo (capulus-ansible: group_vars, host_vars) - kompletter Ansible-Fundus."
 
 - id: tailscale-auth-key
   service: tailscale
   kind: auth-key
   stored_in:
-    - ansible/group_vars/all.yml
-    - ansible/group_vars/banana_pis.yml
-    - ansible/group_vars/xibo_displays.yml
-    - ansible/host_vars/worker-0/vars.yml
-    - ansible/host_vars/worker-1/vars.yml
+    - capulus-ansible:group_vars/all.yml
+    - capulus-ansible:group_vars/banana_pis.yml
+    - capulus-ansible:group_vars/xibo_displays.yml
+    - capulus-ansible:host_vars/worker-0/vars.yml
+    - capulus-ansible:host_vars/worker-1/vars.yml
   issued: null
   expires: null
   max_age_days: 90
@@ -678,7 +678,7 @@
   kind: password
   stored_in:
     - argocd/apps/tech/monitoring/templates/write-auth.yaml
-    - ansible/group_vars/all.yml
+    - capulus-ansible:group_vars/all.yml
   issued: null
   expires: null
   max_age_days: 365
@@ -694,7 +694,7 @@
   kind: password
   stored_in:
     - argocd/apps/tech/logging/templates/write-auth.yaml
-    - ansible/group_vars/all.yml
+    - capulus-ansible:group_vars/all.yml
   issued: null
   expires: null
   max_age_days: 365

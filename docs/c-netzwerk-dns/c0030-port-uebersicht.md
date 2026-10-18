@@ -156,7 +156,7 @@ Tunnel-Client, baut die Verbindung ausschließlich nach außen auf.
 | Neuen Tunnel-Host eines PROD-Dienstes freigeben | DNS-Eintrag auf den PROD-Tunnel: `cloudflared tunnel route dns homeserver-prod <host>` (siehe [e0010](../e-externe-erreichbarkeit/e0010-cloudflare-deploy.md)) |
 | Internen Service-Port einer App | `argocd/apps/<tech\|prod>/<app>/values.yaml` → `service.port`/`targetPort` (Chart-abhängig) |
 | NodePort (Pi-hole DNS, MediaMTX Publish) | `argocd/apps/<tech\|prod>/<app>/values.yaml` → `service.nodePort`/`publishService.ports.*.nodePort` — danach ggf. UFW-Regel auf neuen Port anpassen |
-| ArgoCD-Zugriffsport | ArgoCD-Bootstrap (`ansible/roles/argocd/`) bzw. Helm-Values des ArgoCD-Charts selbst (nicht Teil der App-Wrapper-Charts) |
+| ArgoCD-Zugriffsport | ArgoCD-Bootstrap (`capulus-ansible/roles/argocd/`) bzw. Helm-Values des ArgoCD-Charts selbst (nicht Teil der App-Wrapper-Charts) |
 
 Nach jeder Änderung: committen + pushen, ArgoCD synct automatisch
 (`automated: {prune: true, selfHeal: true}` ist für alle Apps aktiv).

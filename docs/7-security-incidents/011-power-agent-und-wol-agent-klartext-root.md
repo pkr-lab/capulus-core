@@ -2,7 +2,7 @@
 
 - Severity: Medium
 - Bereich: Repo
-- Betroffen: `ansible/roles/power_agent/files/power-agent.py:208`, `ansible/roles/power_agent/templates/power-agent.service.j2`, `ansible/roles/banana_pi_kiosk/files/banana-pi-wol-agent.py:72`
+- Betroffen: `capulus-ansible/roles/power_agent/files/power-agent.py:208`, `capulus-ansible/roles/power_agent/templates/power-agent.service.j2`, `capulus-ansible/roles/banana_pi_kiosk/files/banana-pi-wol-agent.py:72`
 - Status: Behoben am 2026-10-17 (Punkt 5 bewusst nicht umgesetzt)
 
 ## Beschreibung
@@ -14,10 +14,10 @@ Beide Server sind `ThreadingHTTPServer` ohne Timeouts; ein einzelner Client mit 
 ## Nachweis
 
 ```
-$ sed -n 208p ansible/roles/power_agent/files/power-agent.py
+$ sed -n 208p capulus-ansible/roles/power_agent/files/power-agent.py
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
 
-$ sed -n 6,11p ansible/roles/power_agent/templates/power-agent.service.j2
+$ sed -n 6,11p capulus-ansible/roles/power_agent/templates/power-agent.service.j2
 [Service]
 Type=simple
 EnvironmentFile=/etc/power-agent/config.env
@@ -25,7 +25,7 @@ ExecStart=/usr/bin/python3 /usr/local/bin/power-agent.py
 Restart=always
 RestartSec=10
 
-$ grep -n 'poweroff-self' ansible/roles/power_agent/files/power-agent.py
+$ grep -n 'poweroff-self' capulus-ansible/roles/power_agent/files/power-agent.py
 183:        if self.path == "/poweroff-self":
 (nur der Bearer-Token wird geprüft, keine zweite Bestätigung)
 ```
@@ -101,9 +101,9 @@ Mittel: Wake/Shutdown/Helligkeit in der iOS-App fallen aus, wenn die Quellfreiga
 
 **Geänderte Dateien.**
 
-- `ansible/roles/power_agent/` (`files/power-agent.py`, `defaults/main.yml`, `tasks/main.yml`, `templates/config.env.j2`, `templates/power-agent.service.j2`)
-- `ansible/roles/banana_pi_kiosk/` (`files/banana-pi-wol-agent.py`, `defaults/main.yml`, `templates/banana-pi-wol-agent.env.j2`, `templates/banana-pi-wol-agent.service.j2`)
-- `ansible/host_vars/homeserver/vars.yml`, `ansible/host_vars/vereinsheim-alarmmonitor/vars.yml`
+- `capulus-ansible/roles/power_agent/` (`files/power-agent.py`, `defaults/main.yml`, `tasks/main.yml`, `templates/config.env.j2`, `templates/power-agent.service.j2`)
+- `capulus-ansible/roles/banana_pi_kiosk/` (`files/banana-pi-wol-agent.py`, `defaults/main.yml`, `templates/banana-pi-wol-agent.env.j2`, `templates/banana-pi-wol-agent.service.j2`)
+- `capulus-ansible/host_vars/homeserver/vars.yml`, `capulus-ansible/host_vars/vereinsheim-alarmmonitor/vars.yml`
 - `argocd/apps/tech/carplay-api/values.yaml`, `argocd/apps/tech/carplay-api/README.md`
 - Doku: `docs/6-hintergruende/60020-ansible-rollen.md`, `60080-carplay-api-und-ios-app.md`, `docs/3-apps-workloads/300d0-carplay-api.md`
 

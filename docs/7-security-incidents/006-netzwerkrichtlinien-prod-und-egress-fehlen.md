@@ -2,7 +2,7 @@
 
 - Severity: Medium
 - Bereich: Repo
-- Betroffen: `argocd/apps/prod/*`, `argocd/apps/entw/*`, `ansible/roles/argocd/templates/bootstrap-networkpolicies.yaml.j2`
+- Betroffen: `argocd/apps/prod/*`, `argocd/apps/entw/*`, `capulus-ansible/roles/argocd/templates/bootstrap-networkpolicies.yaml.j2`
 - Status: Teilweise behoben am 2026-10-17 (Stufe 1: Ingress in PROD umgesetzt; offen: Egress in PROD und TECH)
 
 ## Beschreibung
@@ -22,7 +22,7 @@ prod-immich  np=0   prod-nextcloud  np=0   prod-paperless-ngx  np=0
 prod-wikijs  np=0   prod-xibosignage np=0  prod-cloudflared    np=0
 tech: nur alamos-relay(3), isc-news-bot(4), ollama(2), zammad(1) mit Egress-Regeln
 
-$ sed -n 1,12p ansible/roles/argocd/templates/bootstrap-networkpolicies.yaml.j2   (nur policyTypes: Ingress)
+$ sed -n 1,12p capulus-ansible/roles/argocd/templates/bootstrap-networkpolicies.yaml.j2   (nur policyTypes: Ingress)
 ```
 
 ## Phase-2-Nachweis (live, lesend)

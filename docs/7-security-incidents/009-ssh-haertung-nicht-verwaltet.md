@@ -2,7 +2,7 @@
 
 - Severity: Medium
 - Bereich: Repo
-- Betroffen: `ansible/roles/common/tasks/main.yml:157-162`, kein Task für `sshd_config` in `ansible/roles/*`, betrifft worker0, worker1 und weitere Hosts
+- Betroffen: `capulus-ansible/roles/common/tasks/main.yml:157-162`, kein Task für `sshd_config` in `capulus-ansible/roles/*`, betrifft worker0, worker1 und weitere Hosts
 - Status: Behoben am 2026-10-17 (alle sieben Hosts; Restpunkte: Ansible-Abgleich, Dienstweg im Journal belegen)
 
 ## Beschreibung
@@ -17,7 +17,7 @@ Die Verifikation der effektiven Konfiguration steht für Phase 2 aus (`sshd -T`,
 $ grep -rn -i -E 'PermitRootLogin|PasswordAuthentication|sshd_config|AllowUsers|MaxAuthTries' ansible
 (keine Treffer)
 
-$ sed -n 157,162p ansible/roles/common/tasks/main.yml
+$ sed -n 157,162p capulus-ansible/roles/common/tasks/main.yml
 - name: Allow SSH (port 22) before any other firewall changes
   community.general.ufw:
     rule: allow
@@ -134,8 +134,8 @@ Danach: Cluster, ArgoCD und die öffentlichen Hosts unverändert, `sshd -T` zeig
 
 **Geänderte Dateien.**
 
-- `ansible/roles/ssh_hardening/` (neu: `defaults/main.yml`, `tasks/main.yml`, `templates/00-hardening.conf.j2`)
-- `ansible/site.yml`, `prod.yml`, `entw.yml`, `worker-0.yml`, `worker-1.yml`, `Makefile`
+- `capulus-ansible/roles/ssh_hardening/` (neu: `defaults/main.yml`, `tasks/main.yml`, `templates/00-hardening.conf.j2`)
+- `capulus-ansible/site.yml`, `prod.yml`, `entw.yml`, `worker-0.yml`, `worker-1.yml`, `Makefile`
 - Doku: `docs/6-hintergruende/60020-ansible-rollen.md` (Abschnitt `ssh_hardening`), `docs/a-betriebssystem/a0020-prerequisites.md`
 
 **Rollback.** Je Host `sudo rm /etc/ssh/sshd_config.d/00-hardening.conf && sudo systemctl reload ssh`. Bei Lockout: Konsole bzw. eine zweite offene Sitzung. Im Repo die Rolle aus den Playbooks nehmen. Die Sicherungskopien von `/etc/ssh` (`/root/ssh-backup-20261017-*`, sieben Stück) wurden nach der Bestätigung gelöscht, sie enthielten auch die privaten Host-Schlüssel.

@@ -4,7 +4,7 @@
 
 **Goal:** Alle NAS-Rollen aus `ugreen-paperless` ins `home-server`-Repo migrieren, sodass UGREEN NAS + Home-Server aus einem einzigen Repo betrieben werden.
 
-**Architecture:** Separates Playbook `ansible/ugreen-nas.yml` für den NAS; gemeinsames Inventory `ansible/inventory/hosts.yml`; NAS-Variablen isoliert in `ansible/host_vars/ugreen-nas/`. Rollen werden 1:1 aus `/home/ubuntu/git/ugreen-paperless/roles/` kopiert; Umbenennung von `node-exporter` → `node_exporter_nas` und `day-pilot` → `day_pilot`. Node-Exporter-Metriken des NAS werden per `VMStaticScrape` CRD in den bestehenden k8s-Monitoring-Stack integriert.
+**Architecture:** Separates Playbook `ansible/ugreen-nas.yml` für den NAS; gemeinsames Inventory `capulus-ansible/inventory/hosts.yml`; NAS-Variablen isoliert in `capulus-ansible/host_vars/ugreen-nas/`. Rollen werden 1:1 aus `/home/ubuntu/git/ugreen-paperless/roles/` kopiert; Umbenennung von `node-exporter` → `node_exporter_nas` und `day-pilot` → `day_pilot`. Node-Exporter-Metriken des NAS werden per `VMStaticScrape` CRD in den bestehenden k8s-Monitoring-Stack integriert.
 
 **Tech Stack:** Ansible 2.14+, Docker Compose v2, VictoriaMetrics Operator (VMStaticScrape CRD), Ansible Vault
 
@@ -14,18 +14,18 @@
 
 | Aktion | Pfad |
 |--------|------|
-| Modify | `ansible/inventory/hosts.yml` |
-| Create | `ansible/host_vars/ugreen-nas/vars.yml` |
-| Create | `ansible/host_vars/ugreen-nas/vault.yml` |
-| Copy   | `ansible/roles/paperless/` (von ugreen-paperless) |
-| Copy+Rename | `ansible/roles/node_exporter_nas/` (von ugreen-paperless/roles/node-exporter) |
-| Copy   | `ansible/roles/opencode/` |
-| Copy   | `ansible/roles/tinyteller/` |
-| Copy+Rename | `ansible/roles/day_pilot/` (von ugreen-paperless/roles/day-pilot) |
+| Modify | `capulus-ansible/inventory/hosts.yml` |
+| Create | `capulus-ansible/host_vars/ugreen-nas/vars.yml` |
+| Create | `capulus-ansible/host_vars/ugreen-nas/vault.yml` |
+| Copy   | `capulus-ansible/roles/paperless/` (von ugreen-paperless) |
+| Copy+Rename | `capulus-ansible/roles/node_exporter_nas/` (von ugreen-paperless/roles/node-exporter) |
+| Copy   | `capulus-ansible/roles/opencode/` |
+| Copy   | `capulus-ansible/roles/tinyteller/` |
+| Copy+Rename | `capulus-ansible/roles/day_pilot/` (von ugreen-paperless/roles/day-pilot) |
 | Create | `ansible/ugreen-nas.yml` |
 | Modify | `Makefile` |
 | Create | `argocd/apps/tech/monitoring/ugreen-nas-scrape.yaml` |
-| Modify | `ansible/group_vars/all.yml` |
+| Modify | `capulus-ansible/group_vars/all.yml` |
 | Modify | `CLAUDE.md` |
 
 ---
@@ -33,9 +33,9 @@
 ## Task 1: Inventory und host_vars anlegen
 
 **Files:**
-- Modify: `ansible/inventory/hosts.yml`
-- Create: `ansible/host_vars/ugreen-nas/vars.yml`
-- Create: `ansible/host_vars/ugreen-nas/vault.yml`
+- Modify: `capulus-ansible/inventory/hosts.yml`
+- Create: `capulus-ansible/host_vars/ugreen-nas/vars.yml`
+- Create: `capulus-ansible/host_vars/ugreen-nas/vault.yml`
 
 - [ ] **Schritt 1: Lint-Baseline erfassen**
 
@@ -49,7 +49,7 @@ Erwartung: Kein Fehler (Baseline für Vergleich).
 
 - [ ] **Schritt 2: ugreen-nas zum Inventory hinzufügen**
 
-Datei: `ansible/inventory/hosts.yml`
+Datei: `capulus-ansible/inventory/hosts.yml`
 
 Ersetze den Block ab `all:` so:
 
@@ -88,7 +88,7 @@ all:
 
 - [ ] **Schritt 3: host_vars Verzeichnis und vars.yml anlegen**
 
-Erstelle `ansible/host_vars/ugreen-nas/vars.yml`:
+Erstelle `capulus-ansible/host_vars/ugreen-nas/vars.yml`:
 
 ```yaml
 ---
@@ -136,7 +136,7 @@ day_pilot_github_token: "{{ vault_day_pilot_github_token | default('') }}"
 
 - [ ] **Schritt 4: vault.yml Platzhalter-Datei anlegen**
 
-Erstelle `ansible/host_vars/ugreen-nas/vault.yml`:
+Erstelle `capulus-ansible/host_vars/ugreen-nas/vault.yml`:
 
 ```yaml
 ---
@@ -161,7 +161,7 @@ vault_paperless_secret_key: "CHANGE_ME"
 - [ ] **Schritt 5: Lint prüfen**
 
 ```bash
-yamllint -c .yamllint ansible/inventory/hosts.yml ansible/host_vars/
+yamllint -c .yamllint capulus-ansible/inventory/hosts.yml capulus-ansible/host_vars/
 ```
 
 Erwartung: Keine Fehler.
@@ -169,7 +169,7 @@ Erwartung: Keine Fehler.
 - [ ] **Schritt 6: Committen**
 
 ```bash
-git add ansible/inventory/hosts.yml ansible/host_vars/
+git add capulus-ansible/inventory/hosts.yml capulus-ansible/host_vars/
 git commit -m "feat(nas): add ugreen-nas to inventory and host_vars"
 ```
 
@@ -178,7 +178,7 @@ git commit -m "feat(nas): add ugreen-nas to inventory and host_vars"
 ## Task 2: Rolle `paperless` migrieren
 
 **Files:**
-- Create: `ansible/roles/paperless/` (komplett von ugreen-paperless)
+- Create: `capulus-ansible/roles/paperless/` (komplett von ugreen-paperless)
 
 - [ ] **Schritt 1: Rolle kopieren**
 
@@ -191,8 +191,8 @@ cp -r /home/ubuntu/git/ugreen-paperless/roles/paperless \
 
 ```bash
 cd /home/ubuntu/git/home-server
-yamllint -c .yamllint ansible/roles/paperless/
-ansible-lint ansible/roles/paperless/ 2>&1 | grep -E 'error|warning' | head -20
+yamllint -c .yamllint capulus-ansible/roles/paperless/
+ansible-lint capulus-ansible/roles/paperless/ 2>&1 | grep -E 'error|warning' | head -20
 ```
 
 Erwartung: Keine Fehler (die Rolle kommt aus einem bereits gepflegten Repo).
@@ -200,7 +200,7 @@ Erwartung: Keine Fehler (die Rolle kommt aus einem bereits gepflegten Repo).
 - [ ] **Schritt 3: Committen**
 
 ```bash
-git add ansible/roles/paperless/
+git add capulus-ansible/roles/paperless/
 git commit -m "feat(nas): migrate paperless role from ugreen-paperless"
 ```
 
@@ -209,7 +209,7 @@ git commit -m "feat(nas): migrate paperless role from ugreen-paperless"
 ## Task 3: Rolle `node_exporter_nas` migrieren
 
 **Files:**
-- Create: `ansible/roles/node_exporter_nas/` (von ugreen-paperless/roles/node-exporter, umbenannt)
+- Create: `capulus-ansible/roles/node_exporter_nas/` (von ugreen-paperless/roles/node-exporter, umbenannt)
 
 Die Rolle behält ihren internen Inhalt unverändert, nur der Verzeichnisname ändert sich um Konflikte mit zukünftigen cluster-seitigen node-exporter-Rollen zu vermeiden.
 
@@ -224,8 +224,8 @@ cp -r /home/ubuntu/git/ugreen-paperless/roles/node-exporter \
 
 ```bash
 cd /home/ubuntu/git/home-server
-yamllint -c .yamllint ansible/roles/node_exporter_nas/
-ansible-lint ansible/roles/node_exporter_nas/ 2>&1 | grep -E 'error|warning' | head -20
+yamllint -c .yamllint capulus-ansible/roles/node_exporter_nas/
+ansible-lint capulus-ansible/roles/node_exporter_nas/ 2>&1 | grep -E 'error|warning' | head -20
 ```
 
 Erwartung: Keine Fehler.
@@ -233,7 +233,7 @@ Erwartung: Keine Fehler.
 - [ ] **Schritt 3: Committen**
 
 ```bash
-git add ansible/roles/node_exporter_nas/
+git add capulus-ansible/roles/node_exporter_nas/
 git commit -m "feat(nas): migrate node-exporter role as node_exporter_nas"
 ```
 
@@ -242,7 +242,7 @@ git commit -m "feat(nas): migrate node-exporter role as node_exporter_nas"
 ## Task 4: Rolle `opencode` migrieren
 
 **Files:**
-- Create: `ansible/roles/opencode/` (von ugreen-paperless)
+- Create: `capulus-ansible/roles/opencode/` (von ugreen-paperless)
 
 - [ ] **Schritt 1: Rolle kopieren**
 
@@ -255,8 +255,8 @@ cp -r /home/ubuntu/git/ugreen-paperless/roles/opencode \
 
 ```bash
 cd /home/ubuntu/git/home-server
-yamllint -c .yamllint ansible/roles/opencode/
-ansible-lint ansible/roles/opencode/ 2>&1 | grep -E 'error|warning' | head -20
+yamllint -c .yamllint capulus-ansible/roles/opencode/
+ansible-lint capulus-ansible/roles/opencode/ 2>&1 | grep -E 'error|warning' | head -20
 ```
 
 Erwartung: Keine Fehler.
@@ -264,7 +264,7 @@ Erwartung: Keine Fehler.
 - [ ] **Schritt 3: Committen**
 
 ```bash
-git add ansible/roles/opencode/
+git add capulus-ansible/roles/opencode/
 git commit -m "feat(nas): migrate opencode role from ugreen-paperless"
 ```
 
@@ -273,7 +273,7 @@ git commit -m "feat(nas): migrate opencode role from ugreen-paperless"
 ## Task 5: Rolle `tinyteller` migrieren
 
 **Files:**
-- Create: `ansible/roles/tinyteller/` (von ugreen-paperless)
+- Create: `capulus-ansible/roles/tinyteller/` (von ugreen-paperless)
 
 - [ ] **Schritt 1: Rolle kopieren**
 
@@ -286,8 +286,8 @@ cp -r /home/ubuntu/git/ugreen-paperless/roles/tinyteller \
 
 ```bash
 cd /home/ubuntu/git/home-server
-yamllint -c .yamllint ansible/roles/tinyteller/
-ansible-lint ansible/roles/tinyteller/ 2>&1 | grep -E 'error|warning' | head -20
+yamllint -c .yamllint capulus-ansible/roles/tinyteller/
+ansible-lint capulus-ansible/roles/tinyteller/ 2>&1 | grep -E 'error|warning' | head -20
 ```
 
 Erwartung: Keine Fehler.
@@ -295,7 +295,7 @@ Erwartung: Keine Fehler.
 - [ ] **Schritt 3: Committen**
 
 ```bash
-git add ansible/roles/tinyteller/
+git add capulus-ansible/roles/tinyteller/
 git commit -m "feat(nas): migrate tinyteller role from ugreen-paperless"
 ```
 
@@ -304,7 +304,7 @@ git commit -m "feat(nas): migrate tinyteller role from ugreen-paperless"
 ## Task 6: Rolle `day_pilot` migrieren
 
 **Files:**
-- Create: `ansible/roles/day_pilot/` (von ugreen-paperless/roles/day-pilot, umbenannt)
+- Create: `capulus-ansible/roles/day_pilot/` (von ugreen-paperless/roles/day-pilot, umbenannt)
 
 Der Bindestrich im Rollennamen ist in Ansible zulässig, aber Unterstriche sind Konvention für dieses Repo (vgl. `semaphore_bootstrap`, `semaphore_secrets`).
 
@@ -319,8 +319,8 @@ cp -r /home/ubuntu/git/ugreen-paperless/roles/day-pilot \
 
 ```bash
 cd /home/ubuntu/git/home-server
-yamllint -c .yamllint ansible/roles/day_pilot/
-ansible-lint ansible/roles/day_pilot/ 2>&1 | grep -E 'error|warning' | head -20
+yamllint -c .yamllint capulus-ansible/roles/day_pilot/
+ansible-lint capulus-ansible/roles/day_pilot/ 2>&1 | grep -E 'error|warning' | head -20
 ```
 
 Erwartung: Keine Fehler.
@@ -328,7 +328,7 @@ Erwartung: Keine Fehler.
 - [ ] **Schritt 3: Committen**
 
 ```bash
-git add ansible/roles/day_pilot/
+git add capulus-ansible/roles/day_pilot/
 git commit -m "feat(nas): migrate day-pilot role as day_pilot"
 ```
 
@@ -375,7 +375,7 @@ Erstelle `ansible/ugreen-nas.yml`:
 
 ```bash
 cd /home/ubuntu/git/home-server
-ansible-playbook -i ansible/inventory/hosts.yml ansible/ugreen-nas.yml \
+ansible-playbook -i capulus-ansible/inventory/hosts.yml ansible/ugreen-nas.yml \
   --syntax-check 2>&1
 ```
 
@@ -502,13 +502,13 @@ git commit -m "feat(monitoring): add VMStaticScrape for ugreen-nas node-exporter
 ## Task 10: Semaphore-Konfiguration anpassen
 
 **Files:**
-- Modify: `ansible/group_vars/all.yml`
+- Modify: `capulus-ansible/group_vars/all.yml`
 
 Das bestehende `ugreen-paperless`-Projekt in `semaphore_projects` zeigt auf das alte Repo. Es wird auf das `home-server`-Repo umgestellt und das Template auf `ansible/ugreen-nas.yml` geändert.
 
 - [ ] **Schritt 1: semaphore_projects in group_vars/all.yml anpassen**
 
-Ersetze den Block des `ugreen-paperless`-Projekts in `ansible/group_vars/all.yml`:
+Ersetze den Block des `ugreen-paperless`-Projekts in `capulus-ansible/group_vars/all.yml`:
 
 Alter Block:
 ```yaml
@@ -559,7 +559,7 @@ Neuer Block:
 - [ ] **Schritt 2: Lint**
 
 ```bash
-yamllint -c .yamllint ansible/group_vars/all.yml
+yamllint -c .yamllint capulus-ansible/group_vars/all.yml
 ```
 
 Erwartung: Keine Fehler.
@@ -567,7 +567,7 @@ Erwartung: Keine Fehler.
 - [ ] **Schritt 3: Committen**
 
 ```bash
-git add ansible/group_vars/all.yml
+git add capulus-ansible/group_vars/all.yml
 git commit -m "feat(semaphore): update ugreen-paperless project to use home-server repo"
 ```
 
@@ -622,8 +622,8 @@ Erwartung: Keine Fehler.
 - [ ] **Schritt 2: Syntax-Check beider Playbooks**
 
 ```bash
-ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --syntax-check
-ansible-playbook -i ansible/inventory/hosts.yml ansible/ugreen-nas.yml --syntax-check
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/site.yml --syntax-check
+ansible-playbook -i capulus-ansible/inventory/hosts.yml ansible/ugreen-nas.yml --syntax-check
 ```
 
 Erwartung: Beide zeigen `playbook: ...` ohne Fehler.
@@ -631,7 +631,7 @@ Erwartung: Beide zeigen `playbook: ...` ohne Fehler.
 - [ ] **Schritt 3: Rollen-Liste prüfen**
 
 ```bash
-ls ansible/roles/
+ls capulus-ansible/roles/
 ```
 
 Erwartung: `paperless  node_exporter_nas  opencode  tinyteller  day_pilot` sind vorhanden (neben den bestehenden Rollen).

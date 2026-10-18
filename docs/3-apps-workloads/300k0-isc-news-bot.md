@@ -235,7 +235,7 @@ Rotation: Schritte 2 bis 4 wiederholen. Für `API_TOKEN` zuerst die neue Credent
 
 ## Deployment und Promotion
 
-- **Deploy:** ArgoCD erkennt `argocd/apps/tech/isc-news-bot/` über den ApplicationSet `home-server-apps-tech` automatisch (Namespace `isc-news-bot`, AppProject `tech`). Die Registrierung steht in `ansible/roles/argocd/defaults/main.yml` (`argocd_workloads_apps`, `argocd_network_policy_refined_namespaces`). `projects.yaml` wird mit `make render-bootstrap` erzeugt.
+- **Deploy:** ArgoCD erkennt `argocd/apps/tech/isc-news-bot/` über den ApplicationSet `home-server-apps-tech` automatisch (Namespace `isc-news-bot`, AppProject `tech`). Die Registrierung steht in `capulus-ansible/roles/argocd/defaults/main.yml` (`argocd_workloads_apps`, `argocd_network_policy_refined_namespaces`). `projects.yaml` wird mit `make render-bootstrap` erzeugt.
 - **Netzwerk-Stufe:** `make argocd` setzt das `security-tier`-Label und die Tier-Policy nach dem ersten Sync. Erst danach greift die Stufe vollständig.
 - **Image:** `build-images.yml` baut bei Änderungen an Dockerfile, `src/`, `test/`, `scripts/` oder den Paketdateien nach `ghcr.io/pkr-lab/isc-news-bot`. Anschließend öffnet der Workflow einen `image.tag`-PR, der den Rollout auslöst. Neue GHCR-Pakete sind zunächst privat, bei `ImagePullBackOff` die Sichtbarkeit prüfen.
 - **Promotion:** keine. Der Dienst gibt es nur in TECH, nicht in ENTW oder PROD. Ein Testlauf in ENTW würde mit echten Zugangsdaten gegen das echte ISC laufen. Testläufe laufen in TECH mit `dryRun`.

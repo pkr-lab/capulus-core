@@ -43,20 +43,20 @@ VPN-Server-Einrichtung im Web-UI ist nötig.
 
 Kein neuer Ansible-Role nötig — das Muster existiert schon 1:1 für das
 On-Demand-Screenshot-Skript
-(`ansible/roles/banana_pi_kiosk/templates/banana-pi-screenshot.sh.j2`).
+(`capulus-ansible/roles/banana_pi_kiosk/templates/banana-pi-screenshot.sh.j2`).
 Das WoL-Skript ergänzt dasselbe Muster:
 
-- `ansible/roles/banana_pi_kiosk/defaults/main.yml` — neue Defaults
+- `capulus-ansible/roles/banana_pi_kiosk/defaults/main.yml` — neue Defaults
   `banana_pi_kiosk_wol_enabled` (Kill-switch) und
   `banana_pi_kiosk_wol_devices` (Alias → MAC, leer per Default).
-- `ansible/host_vars/vereinsheim-alarmmonitor/vars.yml` — setzt
+- `capulus-ansible/host_vars/vereinsheim-alarmmonitor/vars.yml` — setzt
   `banana_pi_kiosk_wol_devices.windows-pc` (MAC noch als `CHANGE-ME`
   Platzhalter, muss vor dem ersten produktiven Lauf durch die echte
   MAC-Adresse der PC-LAN-NIC ersetzt werden).
-- `ansible/roles/banana_pi_kiosk/templates/banana-pi-wol.sh.j2` — neues
+- `capulus-ansible/roles/banana_pi_kiosk/templates/banana-pi-wol.sh.j2` — neues
   Skript, Alias als `$1`, MAC-Lookup über eine aus
   `banana_pi_kiosk_wol_devices` gerenderte Bash-Map, ruft `wakeonlan`.
-- `ansible/roles/banana_pi_kiosk/tasks/main.yml` — zwei neue Tasks
+- `capulus-ansible/roles/banana_pi_kiosk/tasks/main.yml` — zwei neue Tasks
   (Paket `wakeonlan` installieren, Skript nach
   `/usr/local/bin/banana-pi-wol.sh` deployen), `when:
   banana_pi_kiosk_enabled | bool and banana_pi_kiosk_wol_enabled | bool`.
@@ -113,7 +113,7 @@ selbst quelloffen zu halten.
 
 ## 3. iOS-App-Anbindung — umgesetzt
 
-Die "Homeserver Dashboard"-App (`ios/HomeserverDashboard/`) hat im Tab
+Die "Homeserver Dashboard"-App (`capulus-ios/HomeserverDashboard/`) hat im Tab
 "Steuerung" bereits Wake-on-LAN für worker-0/worker-1, proxied über
 `carplay-api` (Cluster-Pod) → `power-agent` (Homeserver-Host). Dieses
 Muster funktioniert für `vereinsheim-alarmmonitor` NICHT — `carplay-api`
@@ -121,7 +121,7 @@ läuft als normaler Cluster-Pod ohne Route zu Tailscale-Peers, exakt die
 gleiche Einschränkung wie oben für Semaphore/n8n beschrieben.
 
 Lösung: Ein neuer, kleiner HTTP-Agent (`banana-pi-wol-agent`, Teil der
-`banana_pi_kiosk`-Rolle, `ansible/roles/banana_pi_kiosk/files/banana-pi-wol-agent.py`)
+`banana_pi_kiosk`-Rolle, `capulus-ansible/roles/banana_pi_kiosk/files/banana-pi-wol-agent.py`)
 läuft direkt auf dem Pi und wird von der App **direkt** über dessen
 Tailscale-IP angesprochen (`100.123.214.4:9102`) — `carplay-api` bleibt
 für diesen einen Fall komplett außen vor. Der Agent kennt selbst keine

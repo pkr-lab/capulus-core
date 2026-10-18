@@ -55,8 +55,8 @@ gepflegt, sondern aus zwei Vorlagen der `argocd`-Rolle **generiert** und committ
 
 | Vorlage | Ergebnis (committet) |
 |---|---|
-| [`bootstrap-applicationset.yaml.j2`](../../ansible/roles/argocd/templates/bootstrap-applicationset.yaml.j2) | [`argocd/bootstrap/root-applicationset.yaml`](../../argocd/bootstrap/root-applicationset.yaml) |
-| [`bootstrap-appprojects.yaml.j2`](../../ansible/roles/argocd/templates/bootstrap-appprojects.yaml.j2) | [`argocd/bootstrap/projects.yaml`](../../argocd/bootstrap/projects.yaml) |
+| [`bootstrap-applicationset.yaml.j2`](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/argocd/templates/bootstrap-applicationset.yaml.j2) | [`argocd/bootstrap/root-applicationset.yaml`](../../argocd/bootstrap/root-applicationset.yaml) |
+| [`bootstrap-appprojects.yaml.j2`](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/argocd/templates/bootstrap-appprojects.yaml.j2) | [`argocd/bootstrap/projects.yaml`](../../argocd/bootstrap/projects.yaml) |
 
 Nach jeder Änderung an einer Vorlage oder an den Listen `argocd_platform_apps` /
 `argocd_workloads_apps` läuft `make render-bootstrap`; die Kopien in `argocd/bootstrap/`
@@ -137,7 +137,7 @@ verwundbare Trainingsumgebung; Schutz kommt aus der Isolation des Clusters. Alle
 
 | Ziel | Vorgehen |
 |---|---|
-| **TECH** | Ordner `argocd/apps/tech/<name>/` anlegen (Manifeste, `kustomization.yaml` oder Helm-Chart). Den Namen in `argocd_platform_apps` **oder** `argocd_workloads_apps` (`ansible/roles/argocd/defaults/main.yml`) ergänzen — sonst fehlt der `destinations`-Eintrag im Projekt `tech`. Dann `make render-bootstrap`, committen, per PR nach `main`. |
+| **TECH** | Ordner `argocd/apps/tech/<name>/` anlegen (Manifeste, `kustomization.yaml` oder Helm-Chart). Den Namen in `argocd_platform_apps` **oder** `argocd_workloads_apps` (`capulus-ansible/roles/argocd/defaults/main.yml`) ergänzen — sonst fehlt der `destinations`-Eintrag im Projekt `tech`. Dann `make render-bootstrap`, committen, per PR nach `main`. |
 | **PROD** | Ordner `argocd/apps/prod/<name>/` anlegen. Namespace in `argocd/bootstrap-prod/appproject.yaml` ergänzen und diese Datei per `kubectl apply` im TECH-Hub anwenden. Bei einem reinen Manifest-Ordner zusätzlich den `path` in `argocd/bootstrap-prod/applicationset.yaml` eintragen (und ebenfalls anwenden). Hosts unter `*.prod.homeserver` brauchen außerdem einen Eintrag in `dnsmasq_prod_vm_hosts` (siehe [c0040](../c-netzwerk-dns/c0040-domain-tiers.md#dns-tier-und-cluster-sind-zwei-verschiedene-dinge)). |
 | **ENTW** | Ordner `argocd/apps/entw/<name>/` auf dem Branch `entw` anlegen, sonst nichts. Keine Liste, kein Projekt, kein Ansible-Lauf. |
 
@@ -151,7 +151,7 @@ vorgesehen einen nicht vorgesehenen Namespace blockiert.
 
 ## Was die Listen noch steuern
 
-`argocd_platform_apps` und `argocd_workloads_apps` (`ansible/roles/argocd/defaults/main.yml`) sind
+`argocd_platform_apps` und `argocd_workloads_apps` (`capulus-ansible/roles/argocd/defaults/main.yml`) sind
 weiterhin die **Quelle der Wahrheit für die TECH-Namespaces**. Sie steuern
 
 1. die `destinations` des Projekts `tech` (Vereinigung beider Listen),

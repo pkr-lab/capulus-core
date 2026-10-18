@@ -104,7 +104,7 @@ Installation durch, das kann 1–2 Minuten dauern (siehe `readinessProbe`
 gegen `/status.php`).
 
 **DNS:** Nextcloud läuft im **PROD**-Cluster; `nextcloud.prod.homeserver` steht dafür in
-`dnsmasq_prod_vm_hosts` (`ansible/group_vars/all.yml`) und zeigt auf die PROD-VM (`.99`), siehe
+`dnsmasq_prod_vm_hosts` (`capulus-ansible/group_vars/all.yml`) und zeigt auf die PROD-VM (`.99`), siehe
 [docs/c-netzwerk-dns/c0040-domain-tiers.md](../c-netzwerk-dns/c0040-domain-tiers.md#dns-tier-und-cluster-sind-zwei-verschiedene-dinge)
 und [docs/c-netzwerk-dns/c0000-dns-architecture.md](../c-netzwerk-dns/c0000-dns-architecture.md).
 

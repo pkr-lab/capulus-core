@@ -33,7 +33,7 @@ ruleset_json() {
       "parameters": {
         "strict_required_status_checks_policy": false,
         "required_status_checks": [
-          { "context": "make lint (yamllint, ansible-lint, helm lint)" },
+          { "context": "make lint (yamllint, helm lint)" },
           { "context": "helm template | kubeconform" },
           { "context": "go build, vet, test, tidy" },
           { "context": "docs links" },

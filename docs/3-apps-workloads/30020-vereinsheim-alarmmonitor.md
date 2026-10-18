@@ -23,7 +23,7 @@ die es bei den Raspberry Pis bewusst nicht gibt:
    länger als 10 Minuten nicht erreichbar ist. Ein eigenes Standort-Dashboard
    **"1002011-pis"** (`dashboard-1002011-pis.yaml`, benannt nach dem
    ALAMOS-Standortcode des Vereinsheims, siehe `banana_pi_kiosk_station` in
-   `ansible/inventory/hosts.yml`) zeigt zusätzlich zum Rhein-Pegel und den
+   `capulus-ansible/inventory/hosts.yml`) zeigt zusätzlich zum Rhein-Pegel und den
    ALAMOS-Statuswerten auch CPU/RAM/Temperatur/Disk dieses Pi im Detail —
    und, da am selben Standort, dieselben Metriken für die xibosignage-
    Infotafel `infotafel` (siehe
@@ -70,11 +70,11 @@ zum Gerät ist. Deshalb zwei Phasen:
 - **Phase 1 (Ersteinrichtung):** Pi hängt kurz am LAN,
   `ansible_host` = LAN-IP (`192.168.178.129`). Der erste
   `make banana-pi-kiosks`-Lauf installiert dabei auch Tailscale
-  (`ansible/roles/tailscale`, siehe `ansible/group_vars/banana_pis.yml`
+  (`capulus-ansible/roles/tailscale`, siehe `capulus-ansible/group_vars/banana_pis.yml`
   für den eigenen Tailscale-Auth-Key — **nicht** den Homeserver-Key aus
   `group_vars/all.yml` wiederverwenden).
 - **Phase 2 (Dauerbetrieb):** Nach dem Umzug an den eigentlichen Standort
-  `ansible_host` in `ansible/inventory/hosts.yml` auf die Tailscale-IP
+  `ansible_host` in `capulus-ansible/inventory/hosts.yml` auf die Tailscale-IP
   (`tailscale ip -4` auf dem Pi) oder den MagicDNS-Namen umstellen.
   **Wichtig:** Semaphore läuft selbst als Pod im k3s-Cluster und hat wie
   jeder Pod **keinen** Netzwerkpfad zu Tailscale-Peers — Re-Provisionierung
@@ -95,13 +95,13 @@ hinzufügen. Danach löst der Pi `alamos-apager.prod.homeserver` etc. korrekt au
 **3. Tatsächliche Erreichbarkeit der aufgelösten LAN-IP.** Die DNS-Antwort
 bringt nichts, wenn der Pi die LAN-IP dahinter nicht routen kann. Der
 Homeserver bewirbt bereits `192.168.178.0/24` als Subnetz-Route
-(`ansible/roles/tailscale`, Default über `group_vars/all.yml`) — die muss
+(`capulus-ansible/roles/tailscale`, Default über `group_vars/all.yml`) — die muss
 im Tailscale-Adminpanel genehmigt sein
 (<https://login.tailscale.com/admin/machines>). Der Pi selbst muss diese
 Route zusätzlich **annehmen**: `tailscale_accept_routes: true` in
-`ansible/group_vars/banana_pis.yml` (Default für alle anderen Hosts in
+`capulus-ansible/group_vars/banana_pis.yml` (Default für alle anderen Hosts in
 diesem Repo ist `false` — die Rolle wurde dafür erweitert, siehe
-`ansible/roles/tailscale/defaults/main.yml`).
+`capulus-ansible/roles/tailscale/defaults/main.yml`).
 
 **Nebenbei behoben:** Die `tailscale`-Rolle war bisher hart auf das
 Ubuntu-APT-Repo von Tailscale kodiert (`pkgs.tailscale.com/stable/ubuntu/...`).
@@ -115,18 +115,18 @@ Autologin" bei den anderen Kiosks):
 
 1. Armbian-Image auf SD/eMMC flashen.
 2. Erstboot: Root-Login, Kiosk-User anlegen (hier `pela`, siehe
-   `banana_pi_kiosk_user` in `ansible/roles/banana_pi_kiosk/defaults/main.yml`).
+   `banana_pi_kiosk_user` in `capulus-ansible/roles/banana_pi_kiosk/defaults/main.yml`).
 3. Netzwerk/SSH so einrichten, dass der Host **noch am LAN** per
    `ansible_host` aus dem Inventory (`192.168.178.129`, Phase 1) erreichbar
    ist — siehe [Netzwerk: Tailscale-only](#netzwerk-tailscale-only).
 4. `make semaphore-targets` laufen lassen (pusht den Semaphore-SSH-Key,
    Host ist bereits unter `semaphore_targets` in
-   `ansible/inventory/hosts.yml` eingetragen). Funktioniert nur in Phase 1.
+   `capulus-ansible/inventory/hosts.yml` eingetragen). Funktioniert nur in Phase 1.
 
 Autologin auf tty1 sowie die minimale X11-Session (Xorg + Openbox, kein
 Desktop-Environment) richtet — anders als bei den Raspberry Pis, wo das
 der Raspberry Pi Imager übernimmt — die Ansible-Rolle
-`ansible/roles/banana_pi_kiosk` selbst ein (getty-Drop-in +
+`capulus-ansible/roles/banana_pi_kiosk` selbst ein (getty-Drop-in +
 `.bash_profile` + `.xinitrc`).
 
 ## Ansible-Provisionierung
@@ -136,7 +136,7 @@ make banana-pi-kiosks-check   # Dry-run
 make banana-pi-kiosks         # Provisionieren
 ```
 
-Rollen, in dieser Reihenfolge (siehe `ansible/banana-pi-kiosks.yml`):
+Rollen, in dieser Reihenfolge (siehe `capulus-ansible/banana-pi-kiosks.yml`):
 
 | Rolle | Zweck |
 |---|---|
@@ -157,9 +157,9 @@ Vor dem ersten Lauf nötig:
    ansible-vault encrypt_string 'https://amweb.alamos.cloud/...echte-url...' \
      --name 'vault_vereinsheim_alarmmonitor_fallback_url'
    ```
-   Ausgabe in `ansible/host_vars/vereinsheim-alarmmonitor/vault.yml`
+   Ausgabe in `capulus-ansible/host_vars/vereinsheim-alarmmonitor/vault.yml`
    anstelle des `CHANGE-ME`-Platzhalters einfügen.
-3. **Eigener Tailscale-Auth-Key** in `ansible/group_vars/banana_pis.yml`
+3. **Eigener Tailscale-Auth-Key** in `capulus-ansible/group_vars/banana_pis.yml`
    (Ansible-Vault-verschlüsselt, Ablauf in [60010](../6-hintergruende/60010-ansible-hosts-und-playbooks.md#worker-0-dns-und-tailscale) — nicht den
    Homeserver-Key wiederverwenden).
 4. **Tailscale-Adminkonsole:** Split-DNS + Subnetz-Route-Genehmigung, siehe
@@ -176,7 +176,7 @@ Bewusster Bruch mit der sonst geltenden Regel "die echte AMweb-URL
 verlässt nie den Cluster" ([docs/3-apps-workloads/30010-alamos-apager.md](30010-alamos-apager.md))
 — nur für dieses Gerät, auf ausdrücklichen Wunsch.
 
-`ansible/roles/banana_pi_kiosk/templates/banana-pi-kiosk-supervisor.sh.j2`
+`capulus-ansible/roles/banana_pi_kiosk/templates/banana-pi-kiosk-supervisor.sh.j2`
 ist der X-Session-Client (läuft dauerhaft, damit `xinit` die Session nicht
 beendet) und:
 
@@ -223,10 +223,10 @@ vom Seiteninhalt weiter (kein Down-Alarm), und es gibt keinen Login-Screen
 (keine abgelaufene Session).
 
 **Mitigation (Feature vorhanden, aktuell deaktiviert):** Der Supervisor
-(`ansible/roles/banana_pi_kiosk/templates/banana-pi-kiosk-supervisor.sh.j2`)
+(`capulus-ansible/roles/banana_pi_kiosk/templates/banana-pi-kiosk-supervisor.sh.j2`)
 kann Chromium zusätzlich alle `banana_pi_kiosk_periodic_refresh_seconds`
 Sekunden neu starten (Rollen-Default in
-`ansible/roles/banana_pi_kiosk/defaults/main.yml`) — unabhängig von
+`capulus-ansible/roles/banana_pi_kiosk/defaults/main.yml`) — unabhängig von
 Fallback-Zustand und Crash-Erkennung, per `stop_chromium`/`start_chromium`
 (gleiche Funktionen wie beim Fallback-Wechsel, also gleiches
 Profil/gleiche Session, kein erneuter Login nötig). Der Timer wird bei
@@ -239,7 +239,7 @@ oben beschriebene Hypothese (stiller Hänger der In-Page-Live-Aktualisierung)
 **wieder ungemindert**; bewusste Entscheidung gegen die störenden
 periodischen Neustarts. Zum Reaktivieren einen Wert > 0 setzen, z. B.
 `banana_pi_kiosk_periodic_refresh_seconds: 7200` (120 Minuten, der frühere
-Default) in `ansible/host_vars/vereinsheim-alarmmonitor/`.
+Default) in `capulus-ansible/host_vars/vereinsheim-alarmmonitor/`.
 
 Loggt bei jedem periodischen Neustart eine Zeile über
 `logger -t banana-pi-kiosk` (siehe
@@ -259,7 +259,7 @@ Stattdessen **pusht der Pi seine Metriken selbst**:
 
 ```
 node_exporter (Port 9100, nur localhost)
-  → vmagent (ansible/roles/vmagent, scraped lokal)
+  → vmagent (capulus-ansible/roles/vmagent, scraped lokal)
   → remote_write über https://vm-write.tech.homeserver/api/v1/write
     (argocd/apps/tech/monitoring/templates/ingress-vm-write.yaml,
      nur /api/v1/write freigegeben, nicht die volle VM-API)
@@ -303,7 +303,7 @@ Kein Dashboard-Change nötig — die Hardware-Dashboards (Ordner "Hardware",
 filtern dynamisch über das Label `host`; der Pi taucht automatisch auf, sobald
 seine Metriken mit `host`/`kind` ankommen. Die Labels ergänzt VictoriaMetrics
 beim Empfang (`argocd/apps/tech/monitoring/templates/configmap-vmsingle-relabel.yaml`),
-die `vmagent`-Rolle (`ansible/roles/vmagent/templates/vmagent-scrape.yml.j2`)
+die `vmagent`-Rolle (`capulus-ansible/roles/vmagent/templates/vmagent-scrape.yml.j2`)
 setzt sie ab dem nächsten `make banana-pi-kiosks` zusätzlich selbst — ein
 Ansible-Lauf gegen den Pi ist dafür nicht nötig. Zusätzlich hat der Pi (fest verdrahtet, nicht über `host`) eigene
 Detail-Panels im Standort-Dashboard **"1002011-pis"**
@@ -416,7 +416,7 @@ Für dieses Gerät ist bewusst **kein** dauerhafter Remote-Zugriff (VNC o. Ä.)
 eingerichtet — anders als bei den Hardware-Checks über `journalctl`/`ps`
 lässt sich die *visuelle* Korrektheit der Anzeige damit nicht automatisiert
 prüfen. Stattdessen ein On-Demand-Screenshot-Skript
-(`ansible/roles/banana_pi_kiosk/templates/banana-pi-screenshot.sh.j2`), das
+(`capulus-ansible/roles/banana_pi_kiosk/templates/banana-pi-screenshot.sh.j2`), das
 nur bei Bedarf per SSH läuft — kein Timer, kein dauerhaft offener Port:
 
 ```bash
@@ -439,10 +439,10 @@ Tailnet-Maschine, analog zum Screenshot-Skript unten:
 ssh pela@vereinsheim-alarmmonitor banana-pi-wol.sh windows-pc
 ```
 
-MAC-Adressen-Tabelle: `ansible/host_vars/vereinsheim-alarmmonitor/vars.yml`
+MAC-Adressen-Tabelle: `capulus-ansible/host_vars/vereinsheim-alarmmonitor/vars.yml`
 (`banana_pi_kiosk_wol_devices`, Alias → MAC). Rollen-Implementierung:
-`ansible/roles/banana_pi_kiosk/templates/banana-pi-wol.sh.j2` +
-`ansible/roles/banana_pi_kiosk/tasks/main.yml` (Kill-switch
+`capulus-ansible/roles/banana_pi_kiosk/templates/banana-pi-wol.sh.j2` +
+`capulus-ansible/roles/banana_pi_kiosk/tasks/main.yml` (Kill-switch
 `banana_pi_kiosk_wol_enabled`).
 
 **Voraussetzungen (einmalig, nicht per Ansible automatisierbar):**
@@ -501,7 +501,7 @@ Online-Status prüfen und den PC wieder herunterfahren: siehe
 
 | Symptom | Check |
 |---|---|
-| `make banana-pi-kiosks` erreicht den Pi nicht mehr | Phase 1 vs. Phase 2? `ansible_host` in `ansible/inventory/hosts.yml` noch auf der alten LAN-IP, obwohl der Pi schon umgezogen ist? |
+| `make banana-pi-kiosks` erreicht den Pi nicht mehr | Phase 1 vs. Phase 2? `ansible_host` in `capulus-ansible/inventory/hosts.yml` noch auf der alten LAN-IP, obwohl der Pi schon umgezogen ist? |
 | Kiosk zeigt weder Redirect noch Fallback (Chromium-Fehlerseite) | `nslookup alamos-apager.prod.homeserver` auf dem Pi — löst das auf? Tailscale Split-DNS eingerichtet (siehe oben)? |
 | DNS löst auf, aber Verbindung timeout | Subnetz-Route `192.168.178.0/24` im Tailscale-Adminpanel genehmigt? `tailscale_accept_routes: true` beim Pi angekommen (`tailscale status` auf dem Pi prüfen)? |
 | Pi taucht nicht in Grafana auf | `systemctl status vmagent` auf dem Pi, `journalctl -u vmagent` — Fehler beim remote_write? `curl -I https://vm-write.tech.homeserver/api/v1/write` vom Pi aus erreichbar? |
@@ -516,8 +516,8 @@ Online-Status prüfen und den PC wieder herunterfahren: siehe
 | n8n-Workflow schlägt am Zammad-Node fehl | Header-Auth-Credential zugewiesen? Token gültig/`ticket.agent`-Berechtigung? |
 | `banana-pi-wol.sh` läuft durch, PC wacht trotzdem nicht auf | WoL im BIOS/NIC des PCs aktiv? Windows-Schnellstart deaktiviert? Client-/AP-Isolation im Router/Repeater aktiv? Pi und PC wirklich im selben Subnetz (`ip a`)? |
 | iOS-App: "Aufwecken" bei Windows-PC schlägt fehl (401) | Token in der App aktuell? Neu auslesen: `ssh pela@vereinsheim-alarmmonitor sudo cat /etc/banana-pi-wol-agent/token` |
-| iOS-App: "Aufwecken" bei Windows-PC meldet einen TLS-/Verbindungsfehler, obwohl `curl --cacert docs/assets/homeserver-root-ca.pem -X POST https://100.123.214.4:9102/wol` eine HTTP-Antwort liefert | Root-CA auf dem iPhone installiert **und** aktiviert? Zertifikat abgelaufen (`openssl s_client -connect 100.123.214.4:9102` und `openssl x509 -noout -enddate`, Eintrag `vereinsheim-wol-agent-cert` im Token-Register)? App-Build noch mit `http://` (der Agent spricht nur HTTPS)? |
-| iOS-App: "Aufwecken" bei Windows-PC ohne Antwort/Timeout | Tailscale auf dem Handy aktiv? `systemctl status banana-pi-wol-agent` auf dem Pi — läuft der Dienst? `curl --cacert docs/assets/homeserver-root-ca.pem -X POST https://100.123.214.4:9102/wol -H "Authorization: Bearer <token>" -d '{"target":"windows-pc"}'` von einer Tailnet-Maschine zum Gegenchecken |
+| iOS-App: "Aufwecken" bei Windows-PC meldet einen TLS-/Verbindungsfehler, obwohl `curl --cacert pki/homeserver-root-ca.pem -X POST https://100.123.214.4:9102/wol` eine HTTP-Antwort liefert | Root-CA auf dem iPhone installiert **und** aktiviert? Zertifikat abgelaufen (`openssl s_client -connect 100.123.214.4:9102` und `openssl x509 -noout -enddate`, Eintrag `vereinsheim-wol-agent-cert` im Token-Register)? App-Build noch mit `http://` (der Agent spricht nur HTTPS)? |
+| iOS-App: "Aufwecken" bei Windows-PC ohne Antwort/Timeout | Tailscale auf dem Handy aktiv? `systemctl status banana-pi-wol-agent` auf dem Pi — läuft der Dienst? `curl --cacert pki/homeserver-root-ca.pem -X POST https://100.123.214.4:9102/wol -H "Authorization: Bearer <token>" -d '{"target":"windows-pc"}'` von einer Tailnet-Maschine zum Gegenchecken |
 | Nachträgliche Analyse eines Vorfalls (z. B. "Alarm wurde nicht angezeigt") — lokales `journalctl` reicht nicht mehr zurück | Journal auf dem Pi ist auf ~3,5 Tage begrenzt (täglicher Reboot + 20-MB-Limit) — stattdessen Grafana/VictoriaLogs abfragen (Retention 14 Tage), siehe [docs/3-apps-workloads/300j0-logging.md](300j0-logging.md) |
 | Prüfen, ob der periodische Chromium-Neustart läuft (nur relevant, falls wieder aktiviert) | `journalctl -t banana-pi-kiosk` auf dem Pi bzw. in VictoriaLogs nach `periodischer Neustart` filtern (siehe [Periodischer Seiten-Neustart](#periodischer-seiten-neustart)) |
 

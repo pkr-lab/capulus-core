@@ -67,7 +67,7 @@ Die Dateien werden ignoriert, das zweite Kommando liefert nichts.
 |---|---|
 | `git ls-files -ci --exclude-standard` (getrackte Dateien, die unter ein Muster fallen) | leer |
 | `git check-ignore` für `x.key`, `id_ed25519`, `.env.local`, `kubeconfig-prod`, `.vault_pass`, `app.sqlite`, `docs/assets/neu.pem` | alle ignoriert |
-| `git check-ignore -v docs/assets/homeserver-root-ca.pem` | nicht ignoriert |
+| `git check-ignore -v pki/homeserver-root-ca.pem` | nicht ignoriert |
 
 **Geänderte Dateien.**
 

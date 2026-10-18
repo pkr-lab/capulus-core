@@ -33,7 +33,7 @@ Bei einem Fork stattdessen die URL des Forks verwenden.
 Inventory-Datei öffnen und die Platzhalter-IP durch die tatsächliche IP des Servers ersetzen:
 
 ```bash
-$EDITOR ansible/inventory/hosts.yml
+$EDITOR capulus-ansible/inventory/hosts.yml
 ```
 
 `192.168.1.100` durch die eigene Server-IP ersetzen:
@@ -53,7 +53,7 @@ Liegt der Private Key woanders, `ansible_ssh_private_key_file` setzen.
 Verbindung testen:
 
 ```bash
-ansible -i ansible/inventory/hosts.yml homeserver -m ping
+ansible -i capulus-ansible/inventory/hosts.yml homeserver -m ping
 # Erwartet: homeserver | SUCCESS => { "ping": "pong" }
 ```
 
@@ -64,7 +64,7 @@ ansible -i ansible/inventory/hosts.yml homeserver -m ping
 Variablendatei öffnen und alle Werte durchgehen:
 
 ```bash
-$EDITOR ansible/group_vars/all.yml
+$EDITOR capulus-ansible/group_vars/all.yml
 ```
 
 **Pflicht-Änderungen:**
@@ -84,7 +84,7 @@ $EDITOR ansible/group_vars/all.yml
 | `auto_reboot_if_required`   | `true`        | Auto-Reboot, wenn APT `/var/run/reboot-required` setzt                 |
 | `k3s_version`               | `""` (leer)   | Leer ⇒ `k3s_channel` folgen. Pin auf z. B. `v1.30.2+k3s1`              |
 | `k3s_channel`               | `stable`      | Wird genutzt, wenn `k3s_version` leer ist                              |
-| `helm_version`              | `""` (leer)   | Ohne Wirkung seit Incident 017. Die Helm-Version steht in `ansible/roles/k3s/defaults/main.yml` (`k3s_helm_release`), Renovate hebt sie an |
+| `helm_version`              | `""` (leer)   | Ohne Wirkung seit Incident 017. Die Helm-Version steht in `capulus-ansible/roles/k3s/defaults/main.yml` (`k3s_helm_release`), Renovate hebt sie an |
 | `argocd_version`            | `""` (leer)   | Leer ⇒ neuestes Argo-Helm-Chart                                        |
 | `hostname`                  | `homeserver`  | Hostname des Servers                                                   |
 | `dnsmasq_prod_vm_hosts`     | Hostliste     | Hosts unter `*.prod.homeserver`, die auf die PROD-VM (`.99`) statt auf den TECH-Cluster zeigen |
@@ -124,13 +124,13 @@ tailscale_auth_key: !vault |
 Encryption successful
 ```
 
-4. Den kompletten Block in `ansible/group_vars/all.yml` als Wert für
+4. Den kompletten Block in `capulus-ansible/group_vars/all.yml` als Wert für
    `tailscale_auth_key` einsetzen (von `tailscale_auth_key:` bis zur letzten Zeile).
 
 5. Verifizieren:
 
 ```bash
-grep -A5 "tailscale_auth_key:" ansible/group_vars/all.yml
+grep -A5 "tailscale_auth_key:" capulus-ansible/group_vars/all.yml
 # Korrekt: tailscale_auth_key: !vault |
 # Falsch:  tailscale_auth_key: "tskey-auth-..."
 ```
@@ -142,7 +142,7 @@ grep -A5 "tailscale_auth_key:" ansible/group_vars/all.yml
 Galaxy-Collections auf der Control-Machine installieren:
 
 ```bash
-ansible-galaxy collection install -r ansible/requirements.yml
+ansible-galaxy collection install -r capulus-ansible/requirements.yml
 ```
 
 Installiert:
@@ -171,8 +171,8 @@ Oder Ansible direkt:
 
 ```bash
 ansible-playbook \
-  -i ansible/inventory/hosts.yml \
-  ansible/site.yml \
+  -i capulus-ansible/inventory/hosts.yml \
+  capulus-ansible/site.yml \
   --ask-vault-pass
 ```
 
@@ -197,22 +197,22 @@ Im Anschluss an die host-zentrischen Rollen laufen zwei zusätzliche Plays:
 
 Am Ende druckt das Playbook eine Summary mit den URLs.
 
-**Nur bestimmte Rollen ausführen** (via Tags, siehe Tag pro Rolle in `ansible/site.yml`):
+**Nur bestimmte Rollen ausführen** (via Tags, siehe Tag pro Rolle in `capulus-ansible/site.yml`):
 
 ```bash
 # Nur common
 make common
 # oder:
-ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --tags common --ask-vault-pass
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/site.yml --tags common --ask-vault-pass
 
 # Nur k3s + argocd
-ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --tags k3s,argocd --ask-vault-pass
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/site.yml --tags k3s,argocd --ask-vault-pass
 
 # Nur die Split-DNS-Schicht (nach Änderung von dnsmasq_prod_vm_hosts)
 make dnsmasq
 
 # Tailscale komplett überspringen
-ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --skip-tags tailscale --ask-vault-pass
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/site.yml --skip-tags tailscale --ask-vault-pass
 ```
 
 Alle Convenience-Targets siehst du mit `make help`.
@@ -372,7 +372,7 @@ Nachdem `make install` auf homeserver abgeschlossen ist, kann worker-0
 **Voraussetzungen:**
 
 - k3s läuft auf homeserver (Schritt 6 abgeschlossen)
-- worker-0 ist per SSH erreichbar (Ansible-Konnektivität testen: `ansible -i ansible/inventory/hosts.yml worker-0 -m ping`)
+- worker-0 ist per SSH erreichbar (Ansible-Konnektivität testen: `ansible -i capulus-ansible/inventory/hosts.yml worker-0 -m ping`)
 - `vault_worker-0_become_password` in `group_vars/all.yml` gesetzt
 
 **worker-0 provisionieren:**
@@ -416,7 +416,7 @@ worker-0   Ready    <none>                 2m    v1.36.4+k3s1    192.168.178.95
 ```
 
 **Weiterer Worker (worker-1):** folgt demselben Muster über
-`make worker-1` (Playbook `ansible/worker-1.yml`) — inhaltlich identisch zu
+`make worker-1` (Playbook `capulus-ansible/worker-1.yml`) — inhaltlich identisch zu
 `worker-0.yml`, beide sind reine k3s-Compute-Nodes. Details siehe
 [docs/b-kubernetes-gitops/b0000-k3s.md](../b-kubernetes-gitops/b0000-k3s.md).
 
@@ -472,7 +472,7 @@ Um Konfigurationsänderungen nach dem ersten Setup anzuwenden, einfach das
 Playbook erneut laufen lassen:
 
 ```bash
-ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --ask-vault-pass
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/site.yml --ask-vault-pass
 ```
 
 Für Application-Changes, die ArgoCD verwaltet: commit + push ins Git-Repo —

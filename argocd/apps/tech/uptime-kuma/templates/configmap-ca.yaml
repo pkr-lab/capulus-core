@@ -1,4 +1,4 @@
-# Kopie von docs/assets/homeserver-root-ca.pem — Helms .Files kann nur
+# Kopie von pki/homeserver-root-ca.pem — Helms .Files kann nur
 # innerhalb des Chart-Verzeichnisses lesen, kein Verweis auf den Repo-Pfad
 # moeglich (gleiche Einschraenkung wie bei den Ansible-Rollen, dort per
 # playbook_dir umgangen, hier nicht verfuegbar). Bei einer CA-Rotation

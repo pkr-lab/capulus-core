@@ -5,7 +5,7 @@ _Datum: 2026-05-22_
 ## Problem
 
 Neue ArgoCD-Apps mit Ingress sind im Homelab (LAN + Tailnet) nicht automatisch per DNS erreichbar. Jede neue App erfordert bisher:
-1. Eintrag in `dnsmasq_hosts` in `ansible/group_vars/all.yml`
+1. Eintrag in `dnsmasq_hosts` in `capulus-ansible/group_vars/all.yml`
 2. Ausführen von `make dnsmasq`
 
 ## Ziel
@@ -22,7 +22,7 @@ Verworfene Alternativen:
 
 ## Änderungen
 
-### `ansible/roles/dnsmasq/templates/dnsmasq.conf.j2`
+### `capulus-ansible/roles/dnsmasq/templates/dnsmasq.conf.j2`
 
 Die `{% for host in dnsmasq_hosts %}`-Schleife entfällt. Ersatz:
 
@@ -32,7 +32,7 @@ address=/homeserver/{{ network_static_ip }}
 
 dnsmasq matcht damit `homeserver` und alle Subdomains (`*.homeserver`) → `network_static_ip`. Traefik routet den eingehenden Traffic per Ingress-Hostname zum richtigen Service.
 
-### `ansible/group_vars/all.yml`
+### `capulus-ansible/group_vars/all.yml`
 
 Der `dnsmasq_hosts:`-Block wird entfernt. Die Variable ist nach der Änderung unbenutzt.
 

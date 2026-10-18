@@ -1,6 +1,6 @@
 /.github/ @pkr-lab
-/ansible/ @pkr-lab
 /argocd/bootstrap/ @pkr-lab
 /argocd/bootstrap-prod/ @pkr-lab
 /ops/ @pkr-lab
 /scripts/ @pkr-lab
+/pki/ @pkr-lab
