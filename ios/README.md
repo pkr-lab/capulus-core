@@ -10,26 +10,29 @@ No CarPlay: the CarPlay scene, its entitlement, and the `CarPlay.framework`
 dependency have all been removed — this is a normal, App-Store-shippable
 app with no special Apple entitlement request needed for any of it.
 
-## Transport: HTTP in the code, HTTPS in the cluster
+## Transport: HTTPS to carplay-api
 
-`Constants.swift` points at `http://carplay-api.prod.homeserver`, with an
-`NSAppTransportSecurity` exception for the `homeserver` domain generated into
-`Info.plist` from `project.yml` (see "Structure" below — this is *not* a
-hand-edited plist file). The backend runs in the **TECH** cluster
-(`argocd/apps/tech/carplay-api/`), the `prod` in the hostname is only the URL
-tier (see `docs/c-netzwerk-dns/c0040-domain-tiers.md`).
+`Constants.swift` points at `https://carplay-api.prod.homeserver`. The backend
+runs in the **TECH** cluster (`argocd/apps/tech/carplay-api/`), the `prod` in
+the hostname is only the URL tier (see
+`docs/c-netzwerk-dns/c0040-domain-tiers.md`). Traefik redirects HTTP → HTTPS
+globally (`argocd/apps/tech/traefik-config/helmchartconfig.yaml`) and serves
+`*.tech.homeserver` / `*.prod.homeserver` with certificates from a private root
+CA (`docs/d-sicherheit/d0040-internal-tls.md`,
+`docs/assets/homeserver-root-ca.pem`).
 
-**The cluster has moved on since this was written:** Traefik now redirects
-HTTP → HTTPS globally (`argocd/apps/tech/traefik-config/helmchartconfig.yaml`)
-and serves `*.tech.homeserver` / `*.prod.homeserver` with certificates from a
-private root CA (`docs/d-sicherheit/d0040-internal-tls.md`,
-`docs/assets/homeserver-root-ca.pem`). An `http://` request therefore ends up
-on HTTPS with a certificate iOS only trusts once the root CA is installed and
-enabled on the device (Settings → General → About → Certificate Trust
-Settings). If the app cannot reach the API, check this first: install the CA
-profile and switch `apiBaseURL` to `https://`. `MTLSDelegate.swift` documents
-what to change for client-certificate mTLS, which is still not implemented for
-carplay-api.
+The app has **no App Transport Security exception**: every request to a
+hostname must be HTTPS with a certificate iOS trusts. That requires the root CA
+to be installed *and* enabled on the device (Settings → General → VPN & Device
+Management for the profile, then Settings → General → About → Certificate Trust
+Settings). If the app shows a connection error, check this first: open
+`https://carplay-api.prod.homeserver/health` in Safari, which must load without
+a certificate warning.
+
+The only plain-HTTP URL left is the WoL agent on the Pi
+(`http://100.123.214.4:9102`). It is a numeric IP, listens on the Tailscale
+address only and is therefore carried by WireGuard; its token is not sent in
+clear text over the home network.
 
 ## Structure
 
@@ -91,7 +94,7 @@ Set `PRODUCT_BUNDLE_IDENTIFIER` / your Team in Xcode's Signing & Capabilities
 if `com.yourname.homeserver-dashboard` (`project.yml`) isn't yours.
 
 **Every field the app bundle needs — display name, launch screen,
-supported orientation, the `*.homeserver` ATS exception — lives in
+supported orientation — lives in
 `project.yml`'s `targets.HomeserverDashboard.info.properties`, not in
 `Info.plist` itself.** XcodeGen overwrites `Info.plist` from those
 properties on every `generate` run rather than merging with whatever's
@@ -122,7 +125,7 @@ tunnel as the homeserver.
 
 | Setting | Where | Default |
 |---|---|---|
-| API base URL | `Utilities/Constants.swift` → `apiBaseURL` | `http://carplay-api.prod.homeserver` |
+| API base URL | `Utilities/Constants.swift` → `apiBaseURL` | `https://carplay-api.prod.homeserver` |
 | WoL agent base URL (vereinsheim-alarmmonitor) | `Constants.swift` → `wolAgentBaseURL` | `http://100.123.214.4:9102` (Tailscale IP) |
 | Refresh interval | `Constants.swift` → `refreshInterval` | 30s |
 | Bearer token | Settings screen (gear icon) → iOS Keychain | none until set |
