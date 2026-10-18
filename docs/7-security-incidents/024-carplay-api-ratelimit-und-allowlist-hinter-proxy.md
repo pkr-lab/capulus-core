@@ -3,7 +3,7 @@
 - Severity: Low
 - Bereich: Repo
 - Betroffen: `argocd/apps/tech/carplay-api/src/cmd/server/main.go:69,87,94`, `argocd/apps/tech/carplay-api/values.yaml:82-86`
-- Status: Behoben am 2026-10-18 (im Code, gestaged; wirkt nach Merge, dem Image-Build von `build-images.yml` und dem Tag-Bump-PR)
+- Status: Teilweise behoben am 2026-10-18 (Punkte 2 und 3 live bestätigt; Punkt 1 wirkt nicht, weil die Client-Adresse schon vor Traefik verloren geht)
 
 ## Beschreibung
 
@@ -78,3 +78,16 @@ Niedrig.
 - Doku: `docs/3-apps-workloads/300d0-carplay-api.md`, `docs/6-hintergruende/60080-carplay-api-und-ios-app.md`
 
 **Rollback.** `git revert`; alternativ das Image-Tag auf den vorherigen `sha-…` zurücksetzen (aktuell `sha-4e05141`) und `trustedProxies: ""` setzen.
+
+## Messung nach dem Rollout (2026-10-18)
+
+| Test | Ergebnis |
+|---|---|
+| `curl https://carplay-api.prod.homeserver/metrics` ohne Token | `401`, im Log `path=/metrics status=401` (Image `sha-7bebe51`): Punkt 3 wirkt |
+| Start ohne Token | im Test belegt, im Cluster nicht ausprobiert (Secret ist gesetzt) |
+| `client_ip` im Log für diese Anfrage | `10.42.2.102`, das ist der Pod `svclb-traefik-…` (K3s-ServiceLB), nicht mein PC (192.168.178.66) und nicht der Traefik-Pod (`10.42.2.132`) |
+
+**Folgerung.** `trustedProxies: 10.42.0.0/16` ist korrekt gesetzt, bringt aber nichts: Der ServiceLB-Pod vor Traefik übersetzt die Quelladresse (`externalTrafficPolicy: Cluster` am Service `traefik`), Traefik und damit `carplay-api` sehen nie die echte Client-IP. Rate-Limit und eine spätere Allowlist arbeiten damit weiter auf einer einzigen Adresse (alle Clients teilen sich 100 Anfragen pro Minute). Punkt 1 ist nicht erreicht.
+
+**Weg zur Behebung (braucht dich, betrifft alle Dienste hinter Traefik).** `externalTrafficPolicy: Local` am Traefik-Service (HelmChartConfig `service.spec.externalTrafficPolicy: Local`), geprüft werden müsste, ob die Quelladresse dann bis Traefik erhalten bleibt (MetalLB und ServiceLB laufen beide). Das ändert den Eingangspfad aller Hosts und braucht ein Zeitfenster; ohne diese Änderung bleibt die IP-Allowlist wirkungslos und gehört ausgeschaltet (`ipAllowlist.enabled: false`, ist sie).
+

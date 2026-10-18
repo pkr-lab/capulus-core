@@ -3,7 +3,7 @@
 - Severity: Info
 - Bereich: Repo
 - Betroffen: 99 Dateien mit RFC1918-Adressen, 26 mit Tailnet-IPs, 6 mit MAC-Adressen, E-Mail-Adressen (`edv-kretzer.de`, `dlrg.org`, `gmail.com`), SIP-Ziel `sip:…@sip.linphone.org`, Cloudflare-Tunnel-ID
-- Status: Teilweise behoben am 2026-10-18 (private Adresse aus der Doku entfernt; Gesamtentscheidung „akzeptieren oder auslagern“ liegt bei dir)
+- Status: Akzeptiertes Risiko (Betreiber, 2026-10-18): Mail-Adressen und Heimnetz-Daten
 
 ## Beschreibung
 
@@ -49,3 +49,11 @@ Entscheidung dokumentieren (Status `Akzeptiertes Risiko`) oder die Dateien aus d
 **Geänderte Dateien.** `docs/e-externe-erreichbarkeit/e0000-cloudflare-tunnel.md`
 
 **Rollback.** Nicht erforderlich.
+
+## Entscheidung des Betreibers (2026-10-18)
+
+Die Mail-Adressen (Funktionspostfach `info@edv-kretzer.de`, Dienstadressen, die Liste in `PaperlessWorkflow.json`) sind **akzeptiert**. Zu den „Heimnetz-Daten“ aus dem Befund: gemeint sind die internen IP-Adressen (`192.168.178.94`, `.95`, `.96`, `.97`, `.98`, `.99`, `.100`), die Tailscale-Adressen der Geräte (`100.x.x.x`), die MAC-Adressen der Worker für Wake-on-LAN (in `host_vars/worker-*/vars.yml`), die Cloudflare-Tunnel-ID, interne Hostnamen (`*.homeserver`) und die Namespaces/Ingresses in den Charts. Sie stehen in über 100 Dateien, vor allem in `ansible/` und `docs/`. Allein nützen sie einem Angreifer nichts, sie erleichtern aber die Aufklärung, wenn ein Zugang schon besteht. Auslagern in ein privates Repo hieße, Inventar und Doku zu trennen (und die Spiegelung nach Wiki.js zu ändern); die pragmatische Linie wäre, sie als akzeptiert zu verbuchen und nur neue private Telefonnummern und Mobil-Mailadressen draußen zu halten. Auf dein Wort setze ich den Status dann auf „Akzeptiertes Risiko“.
+
+## Entscheidung des Betreibers (2026-10-18)
+
+Auch die Heimnetz-Daten (interne und Tailscale-IP-Adressen, MAC-Adressen für Wake-on-LAN, Tunnel-ID, interne Hostnamen) sind **akzeptiertes Risiko**. Die Regel bleibt: keine neuen privaten Telefonnummern, Mobil-Mailadressen oder SIP-Ziele ins Repo.
