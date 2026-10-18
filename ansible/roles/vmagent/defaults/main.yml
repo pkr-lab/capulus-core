@@ -17,3 +17,7 @@ vmagent_node_exporter_port: 9100
 vmagent_scrape_interval: "30s"
 
 vmagent_remote_write_queues: 1
+
+vmagent_remote_write_basic_auth_user: "{{ vault_vm_write_auth_user | default('') }}"
+vmagent_remote_write_basic_auth_password: "{{ vault_vm_write_auth_password | default('') }}"
+vmagent_remote_write_password_file: /etc/vmagent/write-auth-password

@@ -3,7 +3,7 @@
 - Severity: Low
 - Bereich: Repo
 - Betroffen: `argocd/bootstrap-prod/appproject.yaml:44-46` (`clusterResourceWhitelist: */*`), `argocd/bootstrap/projects.yaml`, `scripts/setup-main-ruleset.sh:16,24`
-- Status: Teilweise behoben am 2026-10-18 (PROD-Whitelist und CODEOWNERS im Code, gestaged; Anwenden im Hub, TECH/ENTW-Projekte und Review-Pflicht im Ruleset offen)
+- Status: Behoben am 2026-10-18 (PROD-Whitelist angewendet; Pflicht-Review entfällt, ein einziger Betreiber, Restrisiko akzeptiert)
 
 ## Beschreibung
 
@@ -71,3 +71,7 @@ Niedrig: Die Whitelist-Einschränkung muss die tatsächlich benötigten Cluster-
 **Offen.**
 
 - **Ruleset `main: PR + CI`:** `required_approving_review_count` steht auf 0 mit Bypass `pull_request` für die Admin-Rolle. Mit einem Betreiber würde ein Pflicht-Review jeden Merge nur über den Bypass erlauben; wer Vier-Augen will, braucht eine zweite Person. Das ändere ich nicht ohne dich.
+
+## Entscheidung des Betreibers (2026-10-18)
+
+Die Whitelist im Projekt `prod` wurde im Hub angewendet. Eine zweite Person für ein Pflicht-Review gibt es nicht; `required_approving_review_count` bleibt 0 mit Bypass für die Admin-Rolle. Das Restrisiko (ein kompromittierter Zugang zum Repo genügt für eine Cluster-Übernahme, siehe Beschreibung) ist **akzeptiert** und wird nur durch CI, `CODEOWNERS` (informativ), Push Protection und die Token-Fristen abgemildert. Die Projekte `tech` und `entw` bleiben offen (generiert, Wirkung gering, solange das Repo die einzige Schranke ist).

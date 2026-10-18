@@ -95,3 +95,14 @@ Bei der Umstellung des power-agent kam von der App keine einzige Anfrage bei `ca
 - **Token (erledigt 2026-10-18):** Das WoL-Token stand im Prüflauf-Diff im Klartext (Terminal und Chat) und wurde deshalb von Hand rotiert (neuer Wert in `token` und `config.env`, Agent neu gestartet). Alter Wert liefert `401`, neuer Wert wird akzeptiert (Test mit unbekanntem Ziel, es wurde nichts geweckt). **Der neue Wert muss in der App eingetragen werden:** `ssh pela@vereinsheim-alarmmonitor sudo cat /etc/banana-pi-wol-agent/token`, dann Zahnrad → Vereinsheim-WoL-Agent-Token. Bis dahin liefert „Aufwecken“ in der App `401`.
 - **Zertifikat:** Läuft am 2027-10-18 ab, Erneuerung nach d0040.
 - **Pinning (Schritt 4):** `SecTrustSetAnchorCertificates` für `*.homeserver` mit der Root-CA als Resource. Macht die Profil-Installation für die App überflüssig.
+
+## Nachtrag: Pinning (2026-10-18)
+
+Auf Wunsch umgesetzt (Punkt 4 der Empfehlung): `MTLSDelegate` prüft Hosts auf `.homeserver` und `100.123.214.4` nur gegen die eingebettete Root-CA (`SecTrustSetAnchorCertificates` plus `SecTrustSetAnchorCertificatesOnly`), `project.yml` bindet `docs/assets/homeserver-root-ca.pem` als Resource ins Bundle ein. Andere Hosts bleiben bei der Systemprüfung. Fehlt die Datei im Bundle, scheitern die gepinnten Anfragen (fail closed).
+
+**Nachweis.** `swiftc -parse` (Swift 6.0 im Container) meldet keine Syntaxfehler; die Typprüfung und der Lauf sind in dieser Linux-Umgebung nicht möglich (kein `Security`-Framework).
+
+**Du testest:** `cd ios && xcodegen generate`, bauen, starten. Dashboard lädt, Helligkeit, „Aufwecken“. Gegenprobe: auf dem iPhone das CA-Profil entfernen (oder Vertrauen abschalten): die App muss trotzdem laden, Safari zeigt für `https://carplay-api.prod.homeserver` dann eine Warnung. Schlägt alles fehl, prüfen, ob `homeserver-root-ca.pem` unter *Build Phases → Copy Bundle Resources* steht.
+
+**Rollback.** `MTLSDelegate.swift` und `project.yml` per `git revert`; die App prüft dann wieder gegen den Gerätespeicher.
+

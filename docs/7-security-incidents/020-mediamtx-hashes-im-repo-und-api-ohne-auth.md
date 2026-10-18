@@ -3,7 +3,7 @@
 - Severity: Medium
 - Bereich: Repo
 - Betroffen: `argocd/apps/tech/mediamtx/values.yaml:73-77`, `argocd/apps/tech/mediamtx/templates/configmap.yaml:29-49`, NodePorts `31935` und `31554`
-- Status: Teilweise behoben am 2026-10-18 (Punkt 2 im Code, gestaged, wirkt nach Merge; Punkte 1 und 3 brauchen deine Entscheidung)
+- Status: Teilweise behoben am 2026-10-18 (API entfernt; Rotation der Zugangsdaten und RTMPS vom Betreiber bewusst nicht gewünscht)
 
 ## Beschreibung
 
@@ -86,3 +86,7 @@ Niedrig bis mittel: Der Readiness-Probe-Zugriff und das Monitoring dürfen durch
 
 - **Punkt 1, Zugangsdaten:** Die Hashes sind weiter `sha256:` in `values.yaml`. Der Wechsel auf `argon2:` aus einem SealedSecret setzt neue Passwörter für `streamer` und `viewer` voraus (alle Encoder, zum Beispiel OBS, und alle Zuschauer müssen sie bekommen). Das ist eine Rotation, die ich ohne dich nicht anstoße. Mindestens sollten die Passwörter lang und zufällig sein.
 - **Punkt 3, Klartext RTMP/RTSP:** Die NodePorts `31935` und `31554` bleiben unverschlüsselt. Umstellen auf RTMPS/RTSPS braucht ein Zertifikat im Pod und neue URLs in allen Encodern. Nötig nur, wenn Streamer außerhalb vertrauter Netze senden; sonst Restrisiko LAN. Im Pod startet außerdem der Standard-Listener MoQ (`:8892`, `:8893`), der nicht im Service steht und nicht genutzt wird.
+
+## Entscheidung des Betreibers (2026-10-18)
+
+Keine Rotation der Zugangsdaten `streamer` und `viewer`; Punkt 1 (Wechsel auf `argon2:` mit SealedSecret) und Punkt 3 (RTMPS/RTSPS) sind damit als **akzeptiertes Restrisiko** verbucht. Die `sha256:`-Hashes bleiben in `values.yaml` im öffentlichen Repo; ihre Stärke hängt allein von der Passwortlänge ab. Wer sie später ändern will: neues langes Zufallspasswort wählen, den Hash nach dem Verfahren in `docs/3-apps-workloads/30040-mediamtx.md` erzeugen, in `values.yaml` eintragen und Encoder sowie Zuschauer informieren.

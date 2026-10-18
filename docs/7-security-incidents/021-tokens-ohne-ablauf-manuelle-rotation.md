@@ -3,7 +3,7 @@
 - Severity: Low
 - Bereich: Repo
 - Betroffen: `ops/token-register.yaml`, `scripts/check-token-register.py`, `scripts/token-watch.py`
-- Status: Teilweise behoben am 2026-10-18 (Prüfregeln und Fristen im Code, gestaged; Anlegedaten und Rotation der Altbestände offen)
+- Status: Teilweise behoben am 2026-10-18 (Fristen und Prüfung im Code; 25 Anlegedaten als Näherung nachgetragen, 9 unbekannt, Rotationen offen)
 
 ## Beschreibung
 
@@ -70,3 +70,8 @@ Das Skript meldet fehlende Ablaufdaten und beendet mit Exit-Code `1`, solange si
 
 - `issued` für die 34 Einträge nachtragen, sobald das Datum bekannt ist (zum Beispiel aus dem Alter der SealedSecret-Datei im Git-Verlauf oder bei der nächsten Rotation). Erst dann greift die Fristprüfung.
 - Die Rotation selbst (Empfehlung Punkt 3) und die n8n-Erinnerung sind nicht angefasst; Rotationen sind Entscheidungen von dir.
+
+## Nachtrag (2026-10-18)
+
+Auf Wunsch sind 25 der 34 fehlenden `issued`-Daten nachgetragen. Quelle ist das Datum, an dem die Datei mit dem SealedSecret am heutigen Pfad zuerst eingecheckt wurde. Das ist eine Näherung nach oben: Für 22 Einträge ist es der 2026-09-19 (Verschiebung nach `argocd/apps/tech/`), die Secrets sind älter. Ein Versuch mit `git log --follow` (Rename-Verfolgung) lieferte zum Teil falsche Vorgänger-Dateien (zum Beispiel Juni-Daten für Dienste aus dem Oktober) und wurde verworfen. Die Fristprüfung läuft für diese 25 Einträge; keiner ist überfällig. Unbekannt bleiben 9 Einträge ohne Datei im Repo (Vault-Variablen, GitHub-PATs, Tailscale-Auth-Key und -Federated-Identity, ArgoCD-CI-Tokens, Sealed-Secrets-Schlüssel, Vault-Passwort); dort trägst du das Datum bei der nächsten Rotation ein. Die Rotationen selbst sind weiter deine Entscheidung.
+

@@ -85,6 +85,7 @@ statische Slideshow-Seite aus, und Chromium zeigt sie im Kiosk-Modus.
 - Die Worker-Liste (`cluster_power_manager_workers`) gibt die **Weck-Reihenfolge** vor, das Herunterfahren läuft in umgekehrter Reihenfolge. `nightly_worker_wake` führt
   eine identische Liste. Hochskalieren (Homeserver überlastet → Worker wecken) und Herunterskalieren (Last wieder niedrig → Worker ausschalten) haben getrennte Schwellen,
   dazu kommt eine Wartezeit auf „Ready“ nach dem WoL und ein SSH-Zugang für den ferngesteuerten Poweroff.
+- **`wake_on_lan_interface` muss die physische Schnittstelle sein, nicht die Bridge.** Der Default ist `ansible_default_ipv4.interface`. Auf worker-1 ist das `br0` (Bridge für die ENTW-VM), `ethtool -s br0 wol g` scheitert dort mit „netlink error: Operation not supported“, `enable-wol.service` stand auf `failed` und die NIC `enp2s0` blieb auf `Wake-on: d`: worker-1 ließ sich nicht per Magic Packet wecken. `host_vars/worker-1` setzt deshalb `wake_on_lan_interface: "enp2s0"`. Prüfen: `sudo ethtool enp2s0 | grep Wake-on` muss `g` zeigen.
 - `wake_on_lan` setzt `ethtool wol g` bei **jedem** Boot: Die meisten NIC-Treiber vergessen „Wake-on-LAN: enabled“ nach einem
   Kaltstart. Das BIOS/UEFI sorgt nur dafür, dass die NIC im ausgeschalteten Zustand Strom bekommt, der Magic-Packet-Modus wird vom
   Linux-Treiber beim Boot zurückgesetzt. Voraussetzung ist WoL im BIOS/UEFI (je nach Hersteller „Power On by PCI-E/PCIE“,
@@ -190,6 +191,10 @@ Bildschirmhelligkeit (sysfs), manuelles Wake-on-LAN und Poweroff für worker-0/w
   virtio-Platten ohne SMART, das NAS hat seinen eigenen Docker-Exporter. Der Exporter läuft als root (Zugriff auf `/dev/sd*`,
   `/dev/nvme*`) und scannt alle Platten selbst (`smartctl --scan`). Er lauscht auf dem Default-Port `9633` des Ubuntu-Pakets
   `prometheus-smartctl-exporter`, der Cluster scrapt ihn per `VMStaticScrape`.
+
+### k3s_agent: Host-Firewall
+
+`k3s_agent_ufw_enable` (Standard `false`, auf worker-1 `true`) schaltet UFW auf einem Worker scharf: Vollzugriff nur für `k3s_agent_ufw_trusted_hosts` (homeserver, worker-0), SSH aus dem LAN, Tailscale `41641/udp`, Flannel aus dem LAN, Pod- und Service-Netz, `default deny`. Mit `k3s_agent_ufw_vm_bridge: br0` kommt `ufw route allow in on br0 out on br0` dazu: worker-1 betreibt die ENTW-VM über die Bridge, und weil `net.bridge.bridge-nf-call-iptables=1` gesetzt ist, läuft deren Verkehr durch die iptables-`FORWARD`-Kette; ohne diese Regel (`deny routed`) wäre die VM vom LAN getrennt. Ohne den Schalter legt die Rolle nur die Regeln an, **aktiviert aber UFW nie**; bis zum 2026-10-18 stand worker-1 deshalb mit „inactive“ da, obwohl die Regeln vorgemerkt waren und `ufw` laut systemd `active` meldete. Vor dem Einschalten auf einem Worker: Backup von `/etc/ufw`, Rollback-Timer (`systemd-run --on-active=15min ufw disable`), danach zweite SSH-Session und Prüfung von Node-Status, Exportern und (worker-1) der ENTW-VM. Tailscale-Verkehr läuft über `ts-input` vor UFW und ist von den Regeln nicht betroffen.
 
 ### journal_upload
 

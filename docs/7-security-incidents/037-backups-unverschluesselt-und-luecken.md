@@ -3,7 +3,7 @@
 - Severity: Medium
 - Bereich: Repo
 - Betroffen: `argocd/apps/tech/vaultwarden` (CronJob `vaultwarden-backup`), `argocd/apps/prod/immich` (`immich-postgres-backup`), `docs/2-betrieb-hardware/20010-nas-backup.md`
-- Status: Offen
+- Status: Teilweise (Vaultwarden) im Code vorbereitet am 2026-10-18 (restic-Job hinter Schalter; Passwort versiegeln und einschalten: Schritte unten; weitere Dienste offen)
 
 ## Beschreibung
 
@@ -67,4 +67,16 @@ Nicht umgesetzt. Die Maßnahme führt ein neues Backup-System mit eigenem Versch
 - **Restore-Test:** vierteljährlich auf ENTW, Ergebnis in `20010-nas-backup.md` eintragen.
 
 Nächster Schritt: Sag, ob `restic` auf dem NAS-Volume in Ordnung ist und für welchen Dienst ich anfangen soll (Vorschlag: Vaultwarden). Das Repository-Passwort versiegelst du bitte selbst (`printf '%s' "$PW" | kubeseal --raw …`), ich bereite Chart und CronJob vor.
+
+## Umsetzung Vaultwarden (2026-10-18, nach Freigabe)
+
+Wie vereinbart: restic auf dem NAS-Volume, Vaultwarden zuerst. Gebaut ist `argocd/apps/tech/vaultwarden/templates/restic-cronjob.yaml` (täglich 02:10), `restic-pvc.yaml` (`vaultwarden-restic`, `nas`, 5 Gi) und `restic-sealedsecret.yaml`, alles hinter `resticBackup.enabled` (Standard `false`, erst `scripts/seal-restic-password.sh` setzt Passwort und Schalter). Aufbewahrung 7 tägliche, 4 wöchentliche, 6 monatliche Snapshots, danach `restic check --read-data-subset=5%`; der Name enthält `backup`, damit deckt `BackupJobStale` den Job ab. Beschreibung, Einrichtung, Restore-Test: `docs/2-betrieb-hardware/20010-nas-backup.md#restic-für-vaultwarden-im-cluster`.
+
+**Nachweis.** Den Skriptablauf (`sqlite3 .backup`, `restic init`, zwei Läufe, `forget --prune`, `check`, `restore`) habe ich in `alpine:3.24` mit Testdaten durchgespielt: zwei Snapshots, `no errors were found`, wiederhergestellte Datenbank liefert die Testzeilen, die Ausschlüsse (`icon_cache`, `tmp`, `db.sqlite3*` aus `/source`) greifen. `helm template` mit und ohne Schalter: ohne keine restic-Objekte, mit Schalter PVC, SealedSecret und CronJob. Der echte Lauf im Cluster steht aus.
+
+**Offen (du).** `./scripts/seal-restic-password.sh` (Passwort in den Passwortmanager), Merge, Test-Job auslösen (Befehle in der Doku). Danach die weiteren Dienste in der Reihenfolge Zammad (`pg_dump`), Nextcloud, Paperless, Wiki.js, Xibo, n8n, Semaphore, lldap, Uptime Kuma, jeweils mit eigenem Job im selben Muster; und die Rolle `vaultwarden_restore` auf `restic restore` umstellen, dann den unverschlüsselten Spiegel abschalten.
+
+## Stand der Einrichtung (2026-10-18)
+
+`./scripts/seal-restic-password.sh` wurde ausgeführt: `resticBackup.encryptedPassword` ist in `argocd/apps/tech/vaultwarden/values.yaml` versiegelt und `resticBackup.enabled` steht auf `true`. Das Passwort liegt beim Betreiber (Passwortmanager). Als Nächstes: Merge, Testlauf `kubectl -n vaultwarden create job --from=cronjob/vaultwarden-restic-backup restic-test` und Restore-Test aus `20010-nas-backup.md`.
 

@@ -11,3 +11,7 @@ journal_upload_ca_dest: /usr/local/share/ca-certificates/homeserver-root-ca.crt
 journal_upload_hosts_entry_enabled: true
 journal_upload_hosts_entry_name: "logs-write.tech.homeserver"
 journal_upload_hosts_entry_ip: "127.0.0.1"
+
+journal_upload_basic_auth_user: "{{ vault_logs_write_auth_user | default('') }}"
+journal_upload_basic_auth_password: "{{ vault_logs_write_auth_password | default('') }}"
+journal_upload_credentials_group: jupload-cred
