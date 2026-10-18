@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Prueft ops/token-register.yaml: Pflichtfelder, Datumsformat, Vollstaendigkeit gegen die
-SealedSecrets im Repo. Exit-Code 1 bei jedem Fehler. Beschreibung: docs/f-cicd-automatisierung/f0070-ci-lint.md
+SealedSecrets im Repo. Exit-Code 1 bei jedem Fehler. Beschreibung: https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus-core/f-cicd-automatisierung/f0070-ci-lint.md
 """
 import datetime
 import re

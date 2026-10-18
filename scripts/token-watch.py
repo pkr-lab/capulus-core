@@ -4,7 +4,7 @@ dem Register. Legt bei 60/30/14/7/1 Tagen ein Issue mit Label token-expiry an bz
 kommentiert es bei jeder neu erreichten Schwelle, und schliesst es wieder, sobald ein
 Token nicht mehr innerhalb von 60 Tagen faellig ist. Exit-Code 1, sobald ein Token unter
 7 Tagen liegt (der Workflow-Lauf wird dadurch rot). Beschreibung:
-docs/4-planung/40090-standby-cluster-ha-paar.md#ablaufüberwachung-token-watch
+https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus-core/4-planung/40090-standby-cluster-ha-paar.md#ablaufüberwachung-token-watch
 """
 import datetime
 import json
@@ -116,11 +116,21 @@ def find_issue(title: str):
     return issues[0] if issues else None
 
 
+DOCS_PREFIX = "pkr-lab-docs:"
+DOCS_URL = "https://github.com/pkr-lab/pkr-lab-docs/blob/main/"
+
+
+def runbook_link(runbook: str) -> str:
+    if runbook.startswith(DOCS_PREFIX):
+        return DOCS_URL + runbook[len(DOCS_PREFIX):]
+    return runbook
+
+
 def upsert_issue(entry: dict, days_left: int, threshold: int, source: str, expiry: datetime.date):
     title = f"{TITLE_PREFIX}{entry['id']}"
     detail = (
         f"**{days_left} Tage** bis zum Ablauf, faellig am {expiry.isoformat()} ({source}).\n\n"
-        f"Runbook: {entry['rotation'].get('runbook', '-')}\n\nBlast Radius: {entry['blast_radius']}"
+        f"Runbook: {runbook_link(entry['rotation'].get('runbook', '-'))}\n\nBlast Radius: {entry['blast_radius']}"
     )
     marker = f"<!-- token-watch:threshold={threshold} -->"
     existing = find_issue(title)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Promotion-Kette ENTW -> TECH -> PROD: Versionen nach bestandenem Gesundheits-Gate als PR uebernehmen.
 
-Beschreibung, Betrieb, Voraussetzungen: docs/f-cicd-automatisierung/f00b0-promotion-chain.md
+Beschreibung, Betrieb, Voraussetzungen: https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus-core/f-cicd-automatisierung/f00b0-promotion-chain.md
 
 Stufen (--stage):
   entw  argocd/apps/entw/<app> -> erstes Ziel der App (tech, sonst prod). Gate: >= gates.entw_hours
@@ -276,7 +276,7 @@ def pr_body(item: Item) -> str:
         f"Automatisch erzeugt von der Promotion-Kette ({item.src} -> {item.dst}), nur Versionsfelder.\n\n"
         f"| Datei | Feld | vorher ({item.dst}) | nachher (aus {item.src}) |\n|---|---|---|---|\n{rows}\n\n"
         f"### Gate ({item.src})\n{ev}\n\n{manual}\n\n"
-        "Details: docs/f-cicd-automatisierung/f00b0-promotion-chain.md"
+        "Details: https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus-core/f-cicd-automatisierung/f00b0-promotion-chain.md"
     )
 
 
@@ -389,7 +389,7 @@ def sticky_issue(unreachable: list, dry: bool) -> None:
         body = (
             f"ArgoCD nicht erreichbar: {', '.join(unreachable)}. Die Gates dieser Umgebung sind blockiert, es wird nichts "
             "promotet. Pruefen: Tailscale-Verbindung/ACL (tcp:443), Token-Secrets, Zertifikat und Host des ArgoCD-Ingress "
-            "(docs/f-cicd-automatisierung/f00b0-promotion-chain.md#voraussetzungen). Schliesst sich selbst."
+            "(https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus-core/f-cicd-automatisierung/f00b0-promotion-chain.md#voraussetzungen). Schliesst sich selbst."
         )
         gh("issue", "create", "--label", "promotion-gate", "--title", title, "--body", body, dry=dry)
     elif not unreachable and existing:

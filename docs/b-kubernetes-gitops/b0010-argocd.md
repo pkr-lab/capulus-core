@@ -181,7 +181,7 @@ spec:
   plain Manifeste, Kustomize oder ein Helm-Chart (`Chart.yaml` + `values.yaml`).
 
 **Verzeichnisstruktur** (Auszug, die vollständige Liste steht im
-[README → Repository-Layout](../../README.md#repository-layout)):
+[README → Repository-Layout](https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus-core/index.md#repository-layout)):
 
 ```
 argocd/apps/

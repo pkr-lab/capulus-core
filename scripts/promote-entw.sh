@@ -217,7 +217,7 @@ ${list_skipped}${draft_note}
 
 **Merge = Rollout:** \`main\` ist die Quelle fuer TECH und PROD, ArgoCD synct nach dem Merge sofort. Deshalb kein Auto-Merge - bitte pruefen, ob der Stand auf ENTW wirklich gesund ist. Der Tag \`${TAG}\` steht schon auf \`$(short "$head")\`, dieselben Commits kommen also nicht erneut.
 
-Details: docs/f-cicd-automatisierung/f0080-entw-promotion.md"
+Details: https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus-core/f-cicd-automatisierung/f0080-entw-promotion.md"
 
   ensure_label "$PR_LABEL" 0e8a16 "Automatische Promotion aus ENTW"
   local existing=""
