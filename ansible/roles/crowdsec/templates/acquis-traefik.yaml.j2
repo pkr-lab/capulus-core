@@ -1,8 +1,0 @@
-# Managed by Ansible (crowdsec role) — do not edit by hand.
-# Traefik access-log source. Path depends on the k3s/containerd log layout —
-# verify this actually matches a file after rollout, see
-# docs/d-sicherheit/d0020-crowdsec.md#traefik-log-verifizieren.
-filenames:
-  - {{ crowdsec_traefik_log_glob }}
-labels:
-  type: traefik

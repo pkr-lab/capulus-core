@@ -1,4 +1,0 @@
----
-wake_on_lan_enabled: true
-
-wake_on_lan_interface: "{{ ansible_default_ipv4.interface }}"
