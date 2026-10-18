@@ -1,5 +1,9 @@
 [Upload]
+{% if journal_upload_basic_auth_password | length > 0 %}
+URL={{ journal_upload_push_url | regex_replace('^(https?://)', '\\1' ~ (journal_upload_basic_auth_user | urlencode) ~ ':' ~ (journal_upload_basic_auth_password | urlencode) ~ '@') }}
+{% else %}
 URL={{ journal_upload_push_url }}
+{% endif %}
 {% if journal_upload_push_url.startswith('https://') %}
 TrustedCertificateFile={{ journal_upload_ca_dest }}
 ServerKeyFile=-

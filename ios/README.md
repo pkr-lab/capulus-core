@@ -34,6 +34,8 @@ certificate is issued by the same root CA and carries the Tailscale IP as a
 subject alternative name, so no additional trust setup is needed on the device.
 There is no plain-HTTP URL left in the app.
 
+**Root-CA pinning.** `MTLSDelegate` (used by the carplay-api and WoL-agent sessions) validates the server certificate of every host ending in `.homeserver` and of `100.123.214.4` against the bundled root CA only (`SecTrustSetAnchorCertificates` plus `SecTrustSetAnchorCertificatesOnly`), not against the device trust store. A certificate from any other CA, even one the user installed on the phone, is rejected; the installed profile is no longer needed for this app. The CA file is `docs/assets/homeserver-root-ca.pem`, `project.yml` adds it to the bundle as a resource (`homeserver-root-ca.pem`). If it is missing from the bundle, all pinned requests fail (fail closed). All other hosts (weather, news, fuel prices) use the system default. When the root CA is replaced (expires 2036-08-10), rebuild the app with the new file.
+
 ## Structure
 
 ```
