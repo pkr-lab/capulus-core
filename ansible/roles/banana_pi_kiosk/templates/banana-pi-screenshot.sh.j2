@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-OUT="${1:-/home/{{ banana_pi_kiosk_user }}/kiosk-screenshot.png}"
-DISPLAY=:0 scrot --overwrite "${OUT}"
-echo "Screenshot gespeichert: ${OUT}"
-echo "Abholen z. B. mit: scp {{ banana_pi_kiosk_user }}@vereinsheim-alarmmonitor:${OUT} ."
