@@ -3,7 +3,7 @@
 Liest die "Versionsfelder" einer App mit exakter Textposition und schreibt sie zurueck,
 ohne den Rest der Datei anzufassen (Kommentare, Einrueckung und Anfuehrungszeichen bleiben).
 
-Versionsfelder sind bewusst eng gefasst (docs/f-cicd-automatisierung/f00b0-promotion-chain.md):
+Versionsfelder sind bewusst eng gefasst (https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus-core/f-cicd-automatisierung/f00b0-promotion-chain.md):
   values.yaml  jedes Skalar `tag` unterhalb eines Schluessels `image` (z. B. `image.tag`,
                `sealed-secrets.image.tag`, `server.image.tag`)
   Chart.yaml   `dependencies[*].version`, sofern es eine exakte Version ist (kein `*`, `^`, `~`, `>=`)
