@@ -237,6 +237,52 @@ erweitern — bewusst nicht Teil dieser ersten Iteration.
 
 ---
 
+## restic für Vaultwarden (im Cluster)
+
+Zusätzlich zur NAS-seitigen Sicherung läuft im Cluster ein eigener, verschlüsselter und versionierter Vaultwarden-Backup-Job (`vaultwarden-restic-backup`, täglich 02:10, nach dem bestehenden Spiegel-Job um 01:30). Der alte Job `vaultwarden-backup` bleibt vorerst bestehen, weil die Rolle `vaultwarden_restore` aus ihm wiederherstellt; er überschreibt seine Kopie bei jedem Lauf, ist unverschlüsselt und kennt keine Versionen.
+
+- **Was:** Ein konsistenter `sqlite3 .backup` der Datenbank (`/stage/db.sqlite3`) plus das übrige Datenverzeichnis (`rsa_key*`, Anhänge, Sends, `config.json`; ohne `icon_cache` und `tmp`) in ein restic-Repository auf dem NAS-Volume (PVC `vaultwarden-restic`, StorageClass `nas`, 5 Gi). Aufbewahrung: 7 tägliche, 4 wöchentliche, 6 monatliche Snapshots (`restic forget --prune`); danach `restic check --read-data-subset=5%`.
+- **Einrichten (einmalig):** `./scripts/seal-restic-password.sh` fragt das Repository-Passwort ab (leer = zufällig, wird einmal angezeigt), versiegelt es als `vaultwarden-restic` und schaltet `resticBackup.enabled` in `argocd/apps/tech/vaultwarden/values.yaml` ein. Das Passwort in den Passwortmanager legen, **ohne es sind alle Snapshots unlesbar**. Danach Merge. Der Job legt das Repository beim ersten Lauf an (`restic init`).
+- **Prüfen:** Ersten Lauf auslösen: `kubectl -n vaultwarden create job --from=cronjob/vaultwarden-restic-backup restic-test`, `kubectl -n vaultwarden logs job/restic-test` (endet mit `fertig:`), danach `kubectl -n vaultwarden delete job restic-test`. Der vorhandene Alarm `BackupJobStale` (Name enthält `backup`) meldet, wenn der letzte Erfolg über 30 Stunden zurückliegt.
+- **Snapshots ansehen und Wiederherstellung testen (vierteljährlich, nicht im Live-Datenverzeichnis):**
+
+```bash
+kubectl -n vaultwarden apply -f - <<'YAML'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: restic-restore-test
+spec:
+  restartPolicy: Never
+  containers:
+    - name: restic
+      image: alpine:3.24
+      command: ["sh", "-c", "apk add --no-cache restic sqlite >/dev/null && restic snapshots && restic restore latest --target /restore && ls -R /restore | head -20 && sqlite3 /restore/stage/db.sqlite3 'select count(*) from users' ; sleep 3600"]
+      env:
+        - name: RESTIC_REPOSITORY
+          value: /repo
+        - name: RESTIC_CACHE_DIR
+          value: /tmp/cache
+        - name: RESTIC_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vaultwarden-restic, key: password}
+      volumeMounts:
+        - {name: repo, mountPath: /repo, readOnly: true}
+        - {name: restore, mountPath: /restore}
+  volumes:
+    - name: repo
+      persistentVolumeClaim: {claimName: vaultwarden-restic}
+    - name: restore
+      emptyDir: {}
+YAML
+kubectl -n vaultwarden logs -f pod/restic-restore-test
+kubectl -n vaultwarden delete pod restic-restore-test
+```
+
+Ein echtes Zurückspielen in das Datenverzeichnis läuft weiter über die Rolle `vaultwarden_restore` (aus dem Spiegel); eine Umstellung der Rolle auf `restic restore` und das Abschalten des Spiegel-Jobs ist der nächste Schritt, sobald ein Restore-Test aus dem Repository bestanden ist.
+
+---
+
 ## Fehlerbehebung
 
 **Task Scheduler zeigt Fehler / Backup läuft nicht:**

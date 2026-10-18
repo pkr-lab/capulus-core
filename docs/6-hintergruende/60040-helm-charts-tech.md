@@ -371,6 +371,8 @@ weil ein Ausfall des Clusters (und damit kein Anruf) bewusst in Kauf genommen wi
 
 ### ollama
 
+- **Dauerhaft `Pending` (2026-10-06 bis 2026-10-18):** Der Pod hat ein `nodeSelector` auf `worker-0`. Stand das Deployment nach einem Lauf des n8n-Workflows auf `replicas: 1` und war `worker-0` zugleich gesperrt (`SchedulingDisabled`), blieb der Pod zwölf Tage `Pending` („0/3 nodes are available“). Die Sperre setzt `power-agent` beim Herunterfahren (`kubectl cordon`); wird ein Worker von Hand eingeschaltet, hebt sie niemand auf (nur `cluster-power-manager` und `nightly-worker-wake` rufen `uncordon` beim eigenen Wecken). Behoben mit `kubectl -n ollama scale deploy ollama --replicas=0` (ArgoCD ignoriert die Replikazahl) und `kubectl uncordon worker-0 worker-1`. Nach dem manuellen Einschalten eines Workers deshalb immer `kubectl uncordon <worker>`.
+
 - Wird ausschließlich vom n8n-Workflow „Zammad Externer KI-Lauf (täglich)“ zwischen 0 und 1 hin- und hergeschaltet (PATCH auf die
   Scale-Subresource). ArgoCD ignoriert `/spec/replicas` bewusst ([60030](60030-argocd-und-bootstrap.md#ignoredifferences-im-applicationset-template)).
   Die Rolle `role-n8n-scaler` erlaubt dem n8n-ServiceAccount (anderer Namespace) **nur** die Scale-Subresource dieses einen Deployments. Der
@@ -489,5 +491,5 @@ Update-Strategie und Readiness (seit dem Vorfall [50020](../5-incidents/50020-pi
 | headlamp | Eigene HPA, siehe „HPA und `replicas: null`“. Anmeldung und Rechte: Abschnitt „headlamp“ oben. |
 | kubeseal-webgui | `autoFetchCert` lässt die App den Public Key beim Start selbst holen, statt ein statisches Zertifikat einzubetten. `apiUrl` ist die URL, die der **Browser** für das API-Backend nutzt und muss zum Ingress-Hostnamen passen, sonst funktioniert die UI nicht. Alle Keys liegen unter `kubeseal-webgui:`, weil das der Dependency-Name ist. |
 | sealed-secrets | Vorhersagbarer Service-Name, damit die `kubeseal`-CLI und kubeseal-webgui den Controller ohne zusätzliche Flags finden. |
-| logging | Der Grafana-Sidecar im Namespace `monitoring` sucht per `searchNamespace: ALL` nach ConfigMaps mit dem Datasource-Label, darüber findet er die VictoriaLogs-Datasource. Der Collector hängt bei einer URL ohne Pfad automatisch `/insert/native` an. |
+| logging | Der Grafana-Sidecar im Namespace `monitoring` sucht nach ConfigMaps mit dem Datasource-Label (ohne `searchNamespace` nur im eigenen Namespace `monitoring`), darüber findet er die VictoriaLogs-Datasource. Der Collector hängt bei einer URL ohne Pfad automatisch `/insert/native` an. |
 | immich-storage, nas-storage | Siehe „Speicher“ oben. |
