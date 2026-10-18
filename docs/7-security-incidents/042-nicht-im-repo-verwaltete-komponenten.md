@@ -3,7 +3,7 @@
 - Severity: Info
 - Bereich: Repo
 - Betroffen: TECH: Namespace `metallb-system` (seit 2026-06-03); PROD: Namespaces `mealie`, `tinyteller`; ENTW: k3s-Konfiguration
-- Status: Teilweise behoben am 2026-10-18 (MetalLB dokumentiert; Namespaces, ENTW-Verschlüsselung und GitOps-Aufnahme brauchen deine Entscheidung)
+- Status: Teilweise behoben am 2026-10-18 (Namespaces gelöscht, ENTW als Testumgebung akzeptiert; MetalLB-Übernahme vorbereitet, Ausführung durch dich)
 
 ## Beschreibung
 
@@ -57,3 +57,10 @@ Nicht erforderlich.
 - **ENTW verschlüsseln oder als Testumgebung akzeptieren:** `sudo k3s secrets-encrypt enable` plus Neustart von k3s auf entw-vm (kurze Unterbrechung nur der Testumgebung). Ob die Abweichung bewusst ist, entscheidest du.
 
 **Geänderte Dateien.** `docs/b-kubernetes-gitops/b0060-metallb.md` (neu), `README.md`
+
+## Entscheidungen und Stand (2026-10-18)
+
+- `mealie` und `tinyteller` (leer) hat der Betreiber gelöscht.
+- **ENTW ohne `secrets-encryption`:** Testumgebung, **akzeptiert** (kein Produktivdatum, keine echten Zugangsdaten). Änderung nur nötig, wenn ENTW echte Daten bekommt.
+- **MetalLB in GitOps:** Chart vorbereitet unter `argocd/pending/metallb-system/` mit abgeschaltetem FRR; Ablauf der Übernahme (Workloads löschen, nicht `helm uninstall`: die CRDs gehören zum Release; `make render-bootstrap`; Verzeichnis nach `argocd/apps/tech/` verschieben) steht in `docs/b-kubernetes-gitops/b0060-metallb.md`. Wegen unveränderlicher Selektoren ist ein direktes Überschreiben nicht möglich. `ansible/roles/argocd/templates/bootstrap-appprojects.yaml.j2` trägt `metallb-system` schon als festes Ziel ein; das generierte `argocd/bootstrap/projects.yaml` entsteht erst beim Render-Lauf.
+

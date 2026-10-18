@@ -4,6 +4,13 @@ hostname: worker-1
 k3s_agent_hostname: worker-1
 
 wake_on_lan_mac_address: "b8:97:5a:ea:a4:fa"
+wake_on_lan_interface: "enp2s0"
+
+k3s_agent_ufw_enable: true
+k3s_agent_ufw_trusted_hosts:
+  - "192.168.178.94"
+  - "192.168.178.95"
+k3s_agent_ufw_vm_bridge: br0
 
 worker_apt_update_dns_fallback_enabled: true
 worker_apt_update_dns_fallback_interface: "enp2s0"

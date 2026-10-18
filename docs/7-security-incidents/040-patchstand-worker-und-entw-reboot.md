@@ -68,3 +68,8 @@ Die ENTW-VM läuft (`virsh list`: `entw-vm` running). `unattended-upgrades` ist 
 - **Reboot-Hinweis sichtbar machen:** Der node_exporter liefert kein `node_reboot_required`. Ein Alarm bräuchte den Textfile-Collector mit einem kleinen Skript (`/var/run/reboot-required` prüfen); das ist eine eigene Ergänzung der Rolle `node_exporter` und ich habe sie nicht umgesetzt.
 
 **Geänderte Dateien.** Keine.
+
+## Nachtrag worker-0 (2026-10-18)
+
+worker-0 ist erreichbar und wurde gemessen (nur lesend): 22 offene Pakete (darunter `docker-ce`, `containerd.io`, `tailscale`, `snapd`, `open-iscsi`), Kernel `7.0.0-34` läuft, `7.0.0-38` ist installiert, `/var/run/reboot-required` existiert, Betriebszeit 20 Stunden, `unattended-upgrades` aktiv. Zwei Units sind `failed`: `grub-initrd-fallback.service` und `grub2-common.service` („GRUB failed boot detection“, „Record successful boot for GRUB“); sie hängen am unsauberen Herunterfahren vom 17.10. und sollten nach einem sauberen Neustart wieder grün sein. **Offen: Neustart von worker-0** (Host-Neustart, nur mit deiner ausdrücklichen Freigabe): `kubectl drain worker-0 --ignore-daemonsets --delete-emptydir-data`, `sudo reboot`, danach `kubectl uncordon worker-0` und `uname -r` (soll `-38` zeigen). Die 22 Pakete danach über das Nacht-Update.
+

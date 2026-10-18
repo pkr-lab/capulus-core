@@ -1,0 +1,13 @@
+metallb:
+  fullnameOverride: metallb
+
+  frrk8s:
+    enabled: false
+
+addressPool:
+  name: homelab-pool
+  addresses:
+    - 192.168.178.200-192.168.178.210
+
+l2Advertisement:
+  name: homelab-l2

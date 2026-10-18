@@ -92,3 +92,10 @@ Mittel: Image-Wechsel bei Datenbanken (Zammad-PostgreSQL) erfordert Backup und g
 **Rollback.** `git revert`.
 
 **Offen (deine Entscheidung).** Zammad-Datenbank-Image (nach Backup-Konzept 037), ein Image-Scan-Job in der CI, ein Ersatz für kaniko, Wechsel von `uptime-kuma` auf ein schlankeres Image ohne eingebettetes Chromium.
+
+## Umsetzung nach Rückfrage (2026-10-18, „deine Empfehlung“)
+
+- **CI-Scan:** `.github/workflows/image-scan.yml`, wöchentlich und auf Abruf, nicht blockierend (Begründung in `f0070`). `scripts/scan-cluster-images.sh --charts` liest die Images aus `helm template` aller Charts (54 Images), `--summary` liefert die Tabelle.
+- **Zammad-PostgreSQL:** Reihenfolge festgelegt: erst die verschlüsselte Sicherung (Incident 037: Zammad als nächster Dienst nach Vaultwarden, `pg_dump`), danach der Wechsel von `bitnamilegacy/postgresql` auf ein gepflegtes Image mit Restore-Probe auf ENTW. Nicht vorher.
+- **kaniko:** Das WorkflowTemplate `kaniko-build-push` ist durch `build-images.yml` ersetzt (nur noch manuell nutzbar). Empfehlung: das Template entfernen, statt ein archiviertes Projekt zu pflegen; bis dahin bleibt es auf `v1.24.0` fixiert. Entfernen ist deine Entscheidung (Doku `f0000` beschreibt es noch).
+

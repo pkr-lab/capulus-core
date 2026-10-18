@@ -3,7 +3,7 @@
 - Severity: Low
 - Bereich: Netzwerk
 - Betroffen: homeserver (`:631`, `:6566`, `:111`, `:5353/udp`, `:2623`, `:19443`), worker-1 (`:111`, `:2623`), alle Hosts (`:9100`, `:9633`)
-- Status: Teilweise behoben am 2026-10-18 (Homeserver durch Incident 008 aus dem LAN geschlossen, geprüft; worker-1 hängt an 035, CUPS/SANE/Avahi bewusst offen)
+- Status: Behoben am 2026-10-18 im Rahmen des Betreiber-Beschlusses (CUPS und SANE bleiben bewusst offen; worker-1 durch 035 geschlossen; NFSv4 braucht erst NAS-Konfiguration)
 
 ## Beschreibung
 
@@ -78,3 +78,13 @@ Keine neue Änderung, aber eine Messung: Die Härtung aus 008 hat den größten 
 **Offen (deine Entscheidung).** Client-Liste für CUPS/SANE; NFSv4.1 für die NAS-Volumes (danach `rpcbind` abschalten); worker-1 über 035.
 
 **Geänderte Dateien.** Keine.
+
+## Antworten und Messung (2026-10-18)
+
+- **CUPS** ist der Druckserver des Homeservers (Port 631), **SANE** der Scannerdienst (Port 6566, `saned` über `inetd`). Beide laufen bewusst über die Rollen `cups_print_server` und `scanner`, damit Rechner und Telefone im Haus über den Homeserver drucken und scannen. Sie sind aus dem LAN offen, weil die Geräte im LAN sie nutzen. Beschränkt wird erst, wenn die Liste der nutzenden Geräte feststeht (`ufw allow from <IP> to any port 631`).
+- **NFS auf v4.1 (vom Betreiber freigegeben):** Der Test-Mount `mount -t nfs -o vers=4.1,ro 192.168.178.97:/volume1/k8s-storage` (und mit 4.2, 4.0 und den Pfaden `/`, `/k8s-storage`, `/volume1`) scheitert mit „reason given by server: No such file or directory“. Der NAS antwortet auf NFSv4, hat aber **keinen v4-Exportbaum** für diese Freigaben (selbst das Wurzelverzeichnis `/` fehlt). Die Umstellung ist deshalb nicht möglich, bevor am NAS NFSv4 für die Freigaben `k8s-storage` und `immich-storage` aktiviert ist (UGOS: Dateidienste → NFS → NFSv4 an, Freigaben `192.168.178.0/24` erneut speichern). Danach derselbe Test wiederholen. Die Mounts sind weiter `vers=3`. Test-Mount wurde sofort wieder ausgehängt, nichts geändert.
+- **Wenn der Test besteht:** Die StorageClass-Option reicht nicht, denn vorhandene PVs behalten ihre Optionen. Pro App einzeln: Pod stoppen, PV auf `mountOptions: [nfsvers=4.1]` setzen, Pod starten, Berechtigungen prüfen (NFSv4 ordnet Benutzer per Namen zu; bei `all_squash` am NAS meist unkritisch). Mit einem unwichtigen Volume beginnen (zum Beispiel Xibo), Nextcloud und Immich zuletzt.
+
+## Entscheidung des Betreibers (2026-10-18)
+
+CUPS (Druckserver, `631`) und SANE (Scanserver, `6566`) bleiben aus dem LAN offen, weil Geräte im Haus damit drucken und scannen (**akzeptiertes Restrisiko**, auf den Homeserver und das LAN begrenzt). Die Exporter und `rpcbind` sind auf dem homeserver (008) und auf worker-1 (035) aus dem LAN geschlossen. Offen bleibt als Option die Umstellung der NAS-Volumes auf NFSv4.1: Sie scheitert, solange am NAS kein NFSv4-Exportbaum für die Freigaben besteht (Messung oben); danach würde `rpcbind` überflüssig.

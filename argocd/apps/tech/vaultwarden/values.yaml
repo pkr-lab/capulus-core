@@ -94,6 +94,23 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
+resticBackup:
+  enabled: true
+  secretName: vaultwarden-restic
+  encryptedPassword: "AgBT3waux4cVLI6P6UG1eFA9u/ZYI9+FYFl1cJwbCfPyln5huXUyWz5on57fR6uuSK0tlharbTsztsw1oRuvQvos1amE3pVwTpRUGJDRYXG/P5A8XnG9ju5JT8tbCxwXc5ge0NETbvI+gQiokXAlf/8Vz0R7DQLRQTdiRP8nYxBeuJmQox+r5JApUbPVVxhY9gSQVKsiqeqoamfRjpAVYnSdRs47ZwvatnIwyF2YRlV1aP3KmqAFZUbmJ8JR3ucipqgPWaDKif+ETQw6VXWKQuHqWEZsqU7LRvGO+fXgivu9lbZ+Zv0I3bj4JLGtBJJYJKLOAcZDmKnOZ/x5XT+QOgE4SwMtTiAK0V8B7n32Fdb1e7FpvBKYV5cp5mbY49z+vc75ZEuGz1FZqR31UpNFE/kxAqbF6F9U/mZcuFwqnLAX75nbRt/KNAG7GiPu+1S9SSuLY6nYOb2VvgGkxI/erjoYYKDfhc9HcdqKw63Mh/25JW4e8QDhi+fDt3e6fMWEU3PFrMpp0vwwhkzrmul4GoRn/EZjGZOgDJy5q2LSznKcQRjstmQmnVPNXjL3zKb/92fLIIYBQE3Sl5iK+hIhIGLNnVKfGOAprA81gA7qGWVePXf281kpv5jepQedr5kNnoAQVyMUH0SXV/OoKriyFJLgzMxkpG4veLsknefUHeotLsIOEJzAg/dKQJmZLy0fnlXAysrAZItJ+yPhDk/Jab6JRgFAyPdoyolGlVP15608aVq9Ek+03IFU"
+  schedule: "10 2 * * *"
+  storageClassName: nas
+  size: 5Gi
+  keepDaily: 7
+  keepWeekly: 4
+  keepMonthly: 6
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
 backup:
   enabled: true
   schedule: "30 1 * * *"

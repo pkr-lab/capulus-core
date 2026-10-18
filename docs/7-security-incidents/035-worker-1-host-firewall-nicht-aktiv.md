@@ -3,7 +3,7 @@
 - Severity: Medium
 - Bereich: worker1
 - Betroffen: worker-1 (`192.168.178.96`), `ansible/roles/k3s_agent/tasks/main.yml:62-90`, `ansible/worker-1.yml`
-- Status: Offen
+- Status: Behoben am 2026-10-18 für worker-1 (live bestätigt vom Betreiber, Timer gestoppt); worker-0 offen
 
 ## Beschreibung
 
@@ -133,3 +133,28 @@ ufw --force enable
 
 **Offen.** Auf worker-0 ist derselbe Zustand zu erwarten (ausgeschaltet, nicht geprüft). Sag Bescheid, wenn ein Zeitfenster passt, dann führen wir den Ablauf zusammen aus.
 
+## Umsetzung (2026-10-18, nach Freigabe)
+
+**Live.** Backup `/root/ufw-backup-035-<zeit>.tgz` plus `iptables-save`/`ip6tables-save` auf worker-1, Rollback-Timer `ufw-rollback-035` (15 Minuten, `ufw disable`), dann Regeln und `ufw --force enable`:
+
+| Regel | Zweck |
+|---|---|
+| `allow from 192.168.178.94` und `.95` | Infrastruktur-Hosts (homeserver, worker-0) mit Vollzugriff: Exporter, kubelet, Flannel, MetalLB-Memberlist |
+| `allow from 10.42.0.0/16`, `10.43.0.0/16` (bereits vorgemerkt) | Pod- und Service-Netz |
+| `allow from 192.168.178.0/24 to port 22/tcp` | SSH aus dem LAN |
+| `allow 41641/udp` | Tailscale (das Tailnet läuft ohnehin über `ts-input` vor UFW) |
+| `allow from 192.168.178.0/24 to port 8472/udp`, ersetzt die offene Regel | Flannel nur aus dem LAN |
+| `route allow in on br0 out on br0` | Verkehr der ENTW-VM über die Bridge (`bridge-nf-call-iptables=1`) |
+| `default deny incoming`, `deny routed` | Standard |
+
+**Prüfung nach dem Einschalten** (alle bestanden): neue SSH-Verbindung aus dem LAN; `kubectl get nodes` alle `Ready`; `node_exporter` (`9100`) und `smartctl` (`9633`) von homeserver mit `200`, Metriken `up=1`; aus dem LAN sind `9100`, `111`, `10250` jetzt zu, `22` offen; ENTW-VM erreichbar (SSH, Ping in LAN und zum Homeserver, `https://github.com` mit `200`, k3s `Ready`, drei ArgoCD-Anwendungen `Synced`/`Healthy`); UFW-Log zeigt nur geblockte Probes vom Admin-PC und IPv6-Multicast im `cni0`-Netz.
+
+**Code.** Rolle `k3s_agent`: Schalter `k3s_agent_ufw_enable` (Standard `false`), `k3s_agent_ufw_trusted_hosts`, `k3s_agent_ufw_vm_bridge`; `host_vars/worker-1` schaltet ein (`.94`, `.95`, `br0`). Der Rollenlauf (`worker-1.yml --tags k3s-agent` bzw. voller Lauf) ändert danach nichts mehr am Live-Stand.
+
+**Rollback.** `ssh ubuntu@192.168.178.96 sudo ufw disable`; Konfiguration aus dem Backup nur bei Bedarf zurückkopieren.
+
+**Offen.** worker-0 hat denselben Ausgangszustand (UFW aus, `111`, `2623`, Exporter offen) und ist noch nicht umgestellt: gleiches Muster mit `k3s_agent_ufw_enable: true` in `host_vars/worker-0` (kein VM-Bridge nötig), vor dem Rollenlauf den Ablauf wie bei worker-1 mit Timer wiederholen.
+
+## Bestätigung (2026-10-18)
+
+Der Betreiber hat die Firewall in einem zweiten Terminal geprüft (SSH, `kubectl get nodes` alle `Ready`, aus der ENTW-VM Ping zum Homeserver und `https://github.com` mit `200`). Der Rollback-Timer `ufw-rollback-035` wurde um 12:19 UTC gestoppt (`inactive`), UFW bleibt aktiv (11 Regeln). worker-0 folgt nach demselben Muster auf Freigabe.

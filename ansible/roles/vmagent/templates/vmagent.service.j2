@@ -9,6 +9,10 @@ Group=vmagent
 ExecStart={{ vmagent_install_dir }}/vmagent-prod \
   -promscrape.config=/etc/vmagent/scrape.yml \
   -remoteWrite.url={{ vmagent_remote_write_url }} \
+{% if vmagent_remote_write_basic_auth_password | length > 0 %}
+  -remoteWrite.basicAuth.username={{ vmagent_remote_write_basic_auth_user }} \
+  -remoteWrite.basicAuth.passwordFile={{ vmagent_remote_write_password_file }} \
+{% endif %}
   -remoteWrite.tmpDataPath=/var/lib/vmagent \
   -remoteWrite.queues={{ vmagent_remote_write_queues }} \
   -loggerLevel=WARN
