@@ -32,7 +32,7 @@ wikijs:
   locale: "en"
   pathPrefix: "docs"
   legacyPrefixes: []
-  dryRun: true
+  dryRun: false
   minPages: 20
   tokenSecretName: wiki-docs-sync-wikijs-token
   tokenSecretKey: token
