@@ -50,7 +50,7 @@ jobs:
           [ -n "$PROMOTE_PAT" ] || missing="$missing PROMOTE_TOKEN/RENOVATE_TOKEN"
           if [ -n "$missing" ]; then
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::notice title=Promotion-Kette inaktiv::Es fehlen die Repo-Secrets:$missing (docs/f-cicd-automatisierung/f00b0-promotion-chain.md#einrichtung)"
+            echo "::notice title=Promotion-Kette inaktiv::Es fehlen die Repo-Secrets:$missing (https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus-core/f-cicd-automatisierung/f00b0-promotion-chain.md#einrichtung)"
           else
             echo "configured=true" >> "$GITHUB_OUTPUT"
           fi
