@@ -62,6 +62,12 @@
       "pinDigests": false
     },
     {
+      "description": "capulus-wiki-sync: versioniertes Image aus eigenem Repo (vX.Y.Z), Updates kommen als Renovate-PR.",
+      "matchPackageNames": ["ghcr.io/pkr-lab/capulus-wiki-sync"],
+      "versioning": "semver",
+      "pinDigests": false
+    },
+    {
       "description": "Group all Helm chart + image tag bumps for a single app into one PR instead of one PR per field.",
       "matchFileNames": ["argocd/apps/**"],
       "groupName": "{{packageFileDir}}"
