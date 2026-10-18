@@ -22,7 +22,7 @@ jobs:
       - name: Self-hosted Renovate
         uses: renovatebot/github-action@f0f41e5f2e706165f6814b1d0f0d0e319de7d1d9 # v46.3.8
         env:
-          RENOVATE_REPOSITORIES: pkr-lab/capulus-core,pkr-lab/capulus-ansible,pkr-lab/capulus-ios
+          RENOVATE_REPOSITORIES: pkr-lab/capulus-core,pkr-lab/capulus-ansible,pkr-lab/capulus-ios,pkr-lab/capulus-wiki-sync,pkr-lab/pkr-lab-docs,pkr-lab/.github
           LOG_LEVEL: debug
         with:
           configurationFile: renovate.json
