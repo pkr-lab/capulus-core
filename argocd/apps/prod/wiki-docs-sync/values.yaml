@@ -1,8 +1,10 @@
 ---
 image:
-  repository: python
-  tag: "3.14-slim"
+  repository: ghcr.io/pkr-lab/capulus-wiki-sync
+  tag: "v1.0.0"
   pullPolicy: IfNotPresent
+
+imagePullSecrets: []
 
 schedule: "*/15 * * * *"
 timezone: "Europe/Berlin"
@@ -13,20 +15,25 @@ successfulJobsHistoryLimit: 3
 
 github:
   owner: "pkr-lab"
-  repo: "capulus-core"
+  repo: "pkr-lab-docs"
   branch: "main"
-  docsPath: "docs"
-  extraFiles:
-    - path: "README.md"
-      slug: "ReadMe"
+  exclude:
+    - ".github/**"
+    - "scripts/**"
+    - "CLAUDE.md"
+    - "LICENSE"
+    - "CHANGELOG.md"
+    - "capulus-core/archiv/**"
   tokenSecretName: "github-api-token"
   tokenSecretKey: token
 
 wikijs:
   url: "http://wikijs.wikijs.svc.cluster.local"
   locale: "en"
-  pathPrefix: "Github/capulus-core"
-  docsSubpath: "docs"
+  pathPrefix: "docs"
+  legacyPrefixes: []
+  dryRun: false
+  minPages: 20
   tokenSecretName: wiki-docs-sync-wikijs-token
   tokenSecretKey: token
 
@@ -51,10 +58,10 @@ securityContext:
 resources:
   requests:
     cpu: 5m
-    memory: 32Mi
+    memory: 48Mi
   limits:
-    cpu: 100m
-    memory: 64Mi
+    cpu: 200m
+    memory: 128Mi
 
 nodeSelector: {}
 tolerations: []
