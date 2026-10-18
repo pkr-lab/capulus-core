@@ -108,6 +108,10 @@ zammad:
             memory: 256Mi
           limits:
             memory: 1Gi
+      volumePermissions:
+        securityContext:
+          privileged: false
+          allowPrivilegeEscalation: false
 
   postgresql:
     enabled: true

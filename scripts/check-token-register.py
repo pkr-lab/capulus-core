@@ -2,6 +2,7 @@
 """Prueft ops/token-register.yaml: Pflichtfelder, Datumsformat, Vollstaendigkeit gegen die
 SealedSecrets im Repo. Exit-Code 1 bei jedem Fehler. Beschreibung: docs/f-cicd-automatisierung/f0070-ci-lint.md
 """
+import datetime
 import re
 import subprocess
 import sys
@@ -13,6 +14,16 @@ DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 KINDS = {"api-token", "auth-key", "password", "encryption-key", "ssh-key", "tunnel-credential", "certificate"}
 MODES = {"auto", "scripted", "manual"}
 LIVE_CHECKS = {"tailscale-device", "github-pat"}
+TODAY = datetime.date.today()
+
+
+def parse_date(value):
+    if not isinstance(value, str) or not DATE.match(value):
+        return None
+    try:
+        return datetime.date.fromisoformat(value)
+    except ValueError:
+        return None
 
 
 def check_date(value, field, id_, problems):
@@ -46,8 +57,17 @@ def check_entry(e, problems):
         check_date(e.get(field), field, id_, problems)
 
     max_age = e.get("max_age_days")
-    if max_age is not None and (not isinstance(max_age, int) or isinstance(max_age, bool) or max_age <= 0):
+    if max_age is None:
+        problems.append(f"{id_}: max_age_days fehlt")
+    elif not isinstance(max_age, int) or isinstance(max_age, bool) or max_age <= 0:
         problems.append(f"{id_}: max_age_days muss eine positive Zahl sein: {max_age!r}")
+    else:
+        issued = parse_date(e.get("issued"))
+        if issued is not None and issued + datetime.timedelta(days=max_age) < TODAY:
+            problems.append(f"{id_}: Rotation ueberfaellig (issued {e.get('issued')}, max_age_days {max_age})")
+    expires = parse_date(e.get("expires"))
+    if expires is not None and expires < TODAY:
+        problems.append(f"{id_}: abgelaufen am {e.get('expires')}")
 
     live_check = e.get("live_check")
     if live_check is not None and live_check not in LIVE_CHECKS:
@@ -88,6 +108,10 @@ def main() -> int:
     for f in sealed_secret_files():
         if f not in referenced:
             problems.append(f"SealedSecret ohne Register-Eintrag: {f}")
+
+    unknown_age = [e.get("id") for e in entries if e.get("issued") is None]
+    if unknown_age:
+        print(f"Hinweis: issued unbekannt, Alter nicht pruefbar bei {len(unknown_age)} von {len(entries)} Eintraegen", file=sys.stderr)
 
     for p in problems:
         print(p)

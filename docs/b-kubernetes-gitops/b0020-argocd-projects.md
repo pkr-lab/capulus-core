@@ -35,11 +35,13 @@ Projects grenzen das ein:
 - **`sourceRepos`**: nur dieses Repo, keine Application kann auf ein fremdes Git-Repo zeigen.
 - **`destinations`**: nur die Namespaces, die der Cluster kennt (TECH und PROD als
   ausdrückliche Liste, ENTW mit `*`, siehe unten).
-- **`clusterResourceWhitelist` / `namespaceResourceWhitelist`**: **bewusst nicht
-  eingeschränkt** (so offen wie das `default`-Project). Mehrere Apps installieren eigene
-  CRDs (victoria-metrics-operator, sealed-secrets, cert-manager); Ressourcentypen ohne
-  vorherige Beobachtung der echten Nutzung einzuschränken riskiert kaputte Syncs. Das ist
-  eine spätere, eigene Verschärfung, kein Versehen.
+- **`clusterResourceWhitelist`**: im Projekt `prod` eingeschränkt auf die tatsächlich genutzten
+  clusterweiten Typen (`Namespace`, `CustomResourceDefinition`, `ClusterRole`, `ClusterRoleBinding`,
+  `StorageClass`, `ClusterIssuer`, `Mutating-`/`ValidatingWebhookConfiguration`), abgeleitet aus den
+  Ressourcen der `prod-*`-Applications im Hub. Neue Typen (zum Beispiel `PersistentVolume`,
+  `APIService`) bricht der Sync ab, bis der Typ hier ergänzt ist. In `tech` und `entw` bleibt es
+  offen (generierte Projekte, siehe [60030](../6-hintergruende/60030-argocd-und-bootstrap.md)).
+  `namespaceResourceWhitelist` bleibt offen.
 
 Wichtig: **Jede App behält ihren eigenen Namespace** (`destination.namespace` = Ordnername,
 z. B. `vaultwarden` oder `semaphore`). Es gibt keinen gemeinsamen Namespace pro Tier.

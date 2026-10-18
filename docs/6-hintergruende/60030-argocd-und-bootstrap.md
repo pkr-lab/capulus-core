@@ -24,10 +24,14 @@ und zum Versiegeln von Secrets. Bedienung: [b0010](../b-kubernetes-gitops/b0010-
   verworfen (Details in [b0020](../b-kubernetes-gitops/b0020-argocd-projects.md)): ein ApplicationSet mit `template.spec.project` je
   Generator (die CRD kennt `spec.generators[].template` außerhalb von `matrix`/`merge` nicht, `kubectl apply` scheitert mit „unknown
   field“) und eines, das `spec.project` per Go-Template aus dem Pfad ableitet (nie gegen den echten Controller verifiziert).
-- **Kein Wildcard bei den AppProject-Ressourcentypen:** `clusterResourceWhitelist`/`namespaceResourceWhitelist` sind bewusst so
-  offen wie ArgoCDs eingebautes Projekt `default`, weil mehrere Apps CRDs installieren (victoria-metrics-operator, sealed-secrets,
-  cert-manager). Der Sicherheitsgewinn liegt bei `sourceRepos` (nur dieses Repo) und `destinations` (nur die Namespaces des Clusters),
-  die Einschränkung nach Ressourcentyp ist eine bewusst spätere Verschärfung, kein Versehen.
+- **AppProject-Ressourcentypen:** `clusterResourceWhitelist` ist im Projekt `prod` (handgeschrieben, `argocd/bootstrap-prod/appproject.yaml`)
+  auf die beobachtete Nutzung eingeschränkt (`Namespace`, `CustomResourceDefinition`, `ClusterRole`/`ClusterRoleBinding`, `StorageClass`,
+  `ClusterIssuer`, `Mutating-`/`ValidatingWebhookConfiguration`; Quelle: die `status.resources` der `prod-*`-Applications). Vorher stand `*/*`: Jede
+  App im Projekt hätte beliebige clusterweite Objekte anlegen können, die Hürde war allein das Repo. In `tech` und `entw` bleibt es offen, weil
+  diese Projekte aus der Rolle `argocd` generiert werden (`make render-bootstrap` braucht das Vault-Passwort); `namespaceResourceWhitelist` ist
+  überall offen. Die Datei muss im Hub von Hand angewendet werden (`kubectl apply -f argocd/bootstrap-prod/appproject.yaml`, Ablauf in der README
+  von `bootstrap-prod`). **Vor dem Anwenden `kubectl diff` ansehen:** Das Projekt im Hub enthält Namespaces, die nicht in der Datei stehen
+  (`authentik`, `mealie`, `github-release-watcher`, `tinyteller`, …); das Anwenden entfernt sie.
 - `traefik-config` und `coredns-custom` deployen nach `kube-system`, weil `HelmChartConfig` bzw. `ConfigMap` dort liegen müssen, wo
   Traefik/CoreDNS sie lesen. `cert-manager` hat einen eigenen Namespace, steht aber bewusst **nicht** in `argocd_platform_apps`: Das ist
   Cluster-Infrastruktur wie `kube-system`/`argocd`, kein App-Tier-Namespace, und soll deshalb keine tier-default-ingress-NetworkPolicy

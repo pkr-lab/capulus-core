@@ -16,9 +16,5 @@ spec:
       targetPort: webrtc
       protocol: TCP
       name: webrtc
-    - port: {{ .Values.service.ports.api }}
-      targetPort: api
-      protocol: TCP
-      name: api
   selector:
     {{- include "mediamtx.selectorLabels" . | nindent 4 }}

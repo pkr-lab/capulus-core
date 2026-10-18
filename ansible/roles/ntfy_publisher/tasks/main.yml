@@ -19,3 +19,11 @@
   when:
     - ntfy_publisher_token is defined
     - ntfy_publisher_token | length > 0
+
+- name: homeserver-root-ca für die ntfy-meldungen ablegen
+  ansible.builtin.copy:
+    src: "{{ ntfy_publisher_ca_src }}"
+    dest: "{{ ntfy_publisher_dir }}/ca.pem"
+    owner: root
+    group: root
+    mode: "0644"

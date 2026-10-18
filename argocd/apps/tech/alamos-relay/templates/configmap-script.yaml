@@ -12,7 +12,7 @@ data:
     import os
     import urllib.error
     import urllib.request
-    from http.server import BaseHTTPRequestHandler, HTTPServer
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
     from urllib.parse import urlsplit
 
     # .strip() faengt ein versehentlich mitversiegeltes Newline ab (z. B.
@@ -25,11 +25,14 @@ data:
     N8N_AUTH_TOKEN = os.environ.get("N8N_AUTH_TOKEN", "").strip()
     EXPECTED_PATH = f"/relay/{RELAY_TOKEN}"
     TIMEOUT_SECONDS = 10
+    MAX_BODY_BYTES = 1048576
 
     ALLOWED_METHODS = ("GET", "POST")
 
 
     class Handler(BaseHTTPRequestHandler):
+        timeout = TIMEOUT_SECONDS
+
         def _respond(self, status, body=b"", headers=None):
             self.send_response(status)
             for key, value in (headers or {}).items():
@@ -54,7 +57,14 @@ data:
             target_url = N8N_TARGET_URL + (f"?{query}" if query else "")
 
             body = None
-            content_length = int(self.headers.get("Content-Length", 0) or 0)
+            try:
+                content_length = int(self.headers.get("Content-Length", 0) or 0)
+            except ValueError:
+                self._respond(400, b"bad request")
+                return
+            if content_length < 0 or content_length > MAX_BODY_BYTES:
+                self._respond(413, b"payload too large")
+                return
             if content_length:
                 body = self.rfile.read(content_length)
 
@@ -100,7 +110,10 @@ data:
             self._respond(405, b"method not allowed")
 
         def log_message(self, fmt, *args):
-            print(fmt % args)
+            message = fmt % args
+            if RELAY_TOKEN:
+                message = message.replace(RELAY_TOKEN, "***")
+            print(message)
 
 
     if __name__ == "__main__":
@@ -108,4 +121,4 @@ data:
             raise SystemExit("RELAY_TOKEN und N8N_TARGET_URL muessen gesetzt sein")
         port = int(os.environ.get("PORT", 8080))
         print(f"alamos-relay listening on :{port}")
-        HTTPServer(("0.0.0.0", port), Handler).serve_forever()
+        ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()
