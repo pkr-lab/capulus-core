@@ -106,6 +106,19 @@
   loop: "{{ k3s_agent_ufw_trusted_hosts }}"
   when: k3s_agent_ufw_enable | bool
 
+- name: veraltete offene regeln entfernen
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.port | default(omit) }}"
+    proto: "{{ item.proto | default(omit) }}"
+    src: "{{ item.src | default(omit) }}"
+    delete: true
+  loop:
+    - {port: "22", proto: tcp}
+    - {src: "{{ local_subnet }}"}
+    - {port: "10250", proto: tcp, src: "{{ local_subnet }}"}
+  when: k3s_agent_ufw_enable | bool
+
 - name: ssh aus dem lan erlauben
   community.general.ufw:
     rule: allow
