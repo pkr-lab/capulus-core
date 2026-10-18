@@ -33,9 +33,9 @@ Traefik-Logs ──────┘         │
   den bestehenden UFW-Regeln, kein Konflikt.
 - **Whitelist:** LAN (`local_subnet`) und Tailscale (`100.64.0.0/10`) sind
   explizit von Sperren ausgenommen, damit sich niemand aus dem eigenen
-  Netz aussperrt (siehe `ansible/roles/crowdsec/templates/whitelist.yaml.j2`).
+  Netz aussperrt (siehe `capulus-ansible/roles/crowdsec/templates/whitelist.yaml.j2`).
 
-Rolle: `ansible/roles/crowdsec/`, eingebunden in `ansible/site.yml` direkt
+Rolle: `capulus-ansible/roles/crowdsec/`, eingebunden in `capulus-ansible/site.yml` direkt
 nach der `common`-Rolle (die UFW aktiviert).
 
 ---
@@ -74,7 +74,7 @@ werden muss.** Traefik läuft als Pod im k3s-Cluster, CrowdSec läuft auf dem
 Host — die Rolle geht davon aus, dass containerd (k3s' Container-Runtime)
 die Pod-Logs unter einem Pfad ablegt, der auf
 `/var/log/containers/*traefik*.log` passt (`crowdsec_traefik_log_glob` in
-`ansible/roles/crowdsec/defaults/main.yml`). Der genaue Pfad hängt von der
+`capulus-ansible/roles/crowdsec/defaults/main.yml`). Der genaue Pfad hängt von der
 k3s-/containerd-Version ab.
 
 **Prüfen:**
@@ -88,7 +88,7 @@ sudo cscli metrics
 ```
 
 Falls die Glob nichts trifft: den tatsächlichen Pfad ermitteln und
-`crowdsec_traefik_log_glob` in `ansible/group_vars/all.yml` überschreiben,
+`crowdsec_traefik_log_glob` in `capulus-ansible/group_vars/all.yml` überschreiben,
 dann `make crowdsec` erneut laufen lassen.
 
 ---
@@ -133,7 +133,7 @@ sudo cscli alerts list
 | Symptom | Hinweis |
 |---|---|
 | `cscli bouncers list` zeigt keinen Bouncer | `crowdsec-firewall-bouncer-iptables` wurde evtl. installiert, bevor `crowdsec` lief — Rolle erneut laufen lassen (`make crowdsec`), Reihenfolge in `tasks/main.yml` prüfen |
-| SSH-Login aus dem eigenen LAN/Tailnet wird geblockt | Whitelist prüfen: `cat /etc/crowdsec/parsers/s02-enrich/local-whitelist.yaml` — `local_subnet` in `ansible/group_vars/all.yml` muss zum tatsächlichen LAN passen |
+| SSH-Login aus dem eigenen LAN/Tailnet wird geblockt | Whitelist prüfen: `cat /etc/crowdsec/parsers/s02-enrich/local-whitelist.yaml` — `local_subnet` in `capulus-ansible/group_vars/all.yml` muss zum tatsächlichen LAN passen |
 | Traefik-Collection löst nie aus | Siehe [Traefik-Log verifizieren](#traefik-log-verifizieren) oben |
 | Nach `journalctl_filter`-Änderung keine SSH-Events mehr | `sudo systemctl restart crowdsec`, dann `sudo cscli metrics` erneut prüfen |
 | Versehentlich die eigene IP gesperrt | `sudo cscli decisions delete --ip <eigene-ip>` — danach ggf. die Whitelist ergänzen, damit es nicht wieder passiert |

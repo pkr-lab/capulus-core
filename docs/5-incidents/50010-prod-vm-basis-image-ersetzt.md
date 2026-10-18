@@ -86,7 +86,7 @@ Zeitangaben in Ortszeit (CEST). „Beleg" sagt, woher die Angabe stammt.
 
 ### Der auslösende Fehler
 
-Der Task in `ansible/roles/libvirt_host/tasks/main.yml` lautete sinngemäß:
+Der Task in `capulus-ansible/roles/libvirt_host/tasks/main.yml` lautete sinngemäß:
 
 ```yaml
 - name: Basis-Cloud-Image herunterladen (einmalig, VMs nutzen es als Backing-File)
@@ -98,7 +98,7 @@ Der Task in `ansible/roles/libvirt_host/tasks/main.yml` lautete sinngemäß:
 
 Der Kommentar sagt „einmalig". Der Task ist es aber nicht: Ist das Ziel schon vorhanden und keine `checksum` angegeben, sendet `get_url` ein `If-Modified-Since` mit der Änderungszeit der lokalen Datei. Hat der Server eine **neuere** Version, wird sie in eine temporäre Datei geladen und die vorhandene Datei per Umbenennen **ersetzt**. Die URL zeigt auf `…/releases/resolute/release/`, also immer auf das jeweils aktuelle Build. Damit war „einmalig" nur so lange wahr, bis Canonical neu baute.
 
-Die Rolle steht in `site.yml`, und Semaphore führt `site.yml` **jeden Tag um 06:00** aus (`ansible/roles/semaphore_bootstrap/defaults/main.yml`, `cron: "0 6 * * *"`). Der Task lief also täglich und ersetzte die Datei beim ersten Lauf nach jedem neuen Build.
+Die Rolle steht in `site.yml`, und Semaphore führt `site.yml` **jeden Tag um 06:00** aus (`capulus-ansible/roles/semaphore_bootstrap/defaults/main.yml`, `cron: "0 6 * * *"`). Der Task lief also täglich und ersetzte die Datei beim ersten Lauf nach jedem neuen Build.
 
 ### Warum die VM davon nichts merkte, der nächste Start aber scheiterte
 
@@ -131,7 +131,7 @@ Das erklärt auch, warum der Fehler **verzögert** auftrat (Basis am 21.09. erse
 | Manuelle, nicht dokumentierte Anbindung PROD an den Hub | Nach dem Neuaufbau musste sie von Hand neu gemacht werden, und der Verlust fiel erst beim manuellen Prüfen am 24.09. auf |
 | Ubuntu-Default `ON_SHUTDOWN=suspend` bei `libvirt-guests` | 24 GiB Arbeitsspeicher würden beim Host-Neustart auf die Platte gesichert statt die VM sauber herunterzufahren (kein Auslöser dieses Vorfalls, aber ein Risiko beim Neustart) |
 
-**Dieselbe Rolle** läuft auf `worker-1` für die ENTW-VM (`ansible/worker-1.yml`, nächtlich über `nightly_worker_wake`). Die `entw-vm` ist daher vermutlich betroffen und war zum Zeitpunkt des Berichts nicht prüfbar (worker-1 ist per Wake-on-LAN geschaltet und war aus).
+**Dieselbe Rolle** läuft auf `worker-1` für die ENTW-VM (`capulus-ansible/worker-1.yml`, nächtlich über `nightly_worker_wake`). Die `entw-vm` ist daher vermutlich betroffen und war zum Zeitpunkt des Berichts nicht prüfbar (worker-1 ist per Wake-on-LAN geschaltet und war aus).
 
 ---
 
@@ -257,14 +257,14 @@ Lokal lagen nur der Intermediate-**Key** und die CSR, das Zertifikat fehlte. Das
 
 | Maßnahme | Datei |
 |---|---|
-| Basis-Image wird **nur heruntergeladen, wenn es fehlt** (`stat` + `force: false`), nie ersetzt | `ansible/roles/libvirt_host/tasks/main.yml` |
-| Neue VMs bekommen eine **eigenständige Disk** (`qemu-img convert` + `resize`), kein Overlay | `ansible/roles/libvirt_host/tasks/vm.yml` |
-| Bestehende Overlay-Disks erzeugen bei jedem Lauf eine **Warnung** (`qemu-img info --force-share`) | `ansible/roles/libvirt_host/tasks/vm.yml` |
-| VMs fahren beim Host-Neustart **sauber herunter** (`ON_SHUTDOWN=shutdown`, `SHUTDOWN_TIMEOUT=300`, `ON_BOOT=start`) statt den Arbeitsspeicher zu sichern | `ansible/roles/libvirt_host/tasks/main.yml`, `defaults/main.yml` |
+| Basis-Image wird **nur heruntergeladen, wenn es fehlt** (`stat` + `force: false`), nie ersetzt | `capulus-ansible/roles/libvirt_host/tasks/main.yml` |
+| Neue VMs bekommen eine **eigenständige Disk** (`qemu-img convert` + `resize`), kein Overlay | `capulus-ansible/roles/libvirt_host/tasks/vm.yml` |
+| Bestehende Overlay-Disks erzeugen bei jedem Lauf eine **Warnung** (`qemu-img info --force-share`) | `capulus-ansible/roles/libvirt_host/tasks/vm.yml` |
+| VMs fahren beim Host-Neustart **sauber herunter** (`ON_SHUTDOWN=shutdown`, `SHUTDOWN_TIMEOUT=300`, `ON_BOOT=start`) statt den Arbeitsspeicher zu sichern | `capulus-ansible/roles/libvirt_host/tasks/main.yml`, `defaults/main.yml` |
 | `libvirt-guests` startet **nach** dnsmasq und Tailscale (die prod-vm löst Namen über den dnsmasq des Hosts auf) | Drop-in `libvirt-guests.service.d/10-ordering.conf` |
-| dnsmasq startet bei Fehlern **automatisch neu** (`Restart=on-failure`, kein Start-Limit) | `ansible/roles/dnsmasq/tasks/main.yml` |
-| ArgoCD-Web-UI per HTTPS über Traefik (`argocd.tech.homeserver`), als **Helm-Wert der Rolle** | `ansible/roles/argocd`, `host_vars/homeserver` |
-| UFW: Port 30080 (Klartext-NodePort für CLI/CI) nur aus LAN, Tailnet und WireGuard; unbeschränkte und wirkungslose 30443-Regel entfernt | `ansible/roles/common/tasks/main.yml` |
+| dnsmasq startet bei Fehlern **automatisch neu** (`Restart=on-failure`, kein Start-Limit) | `capulus-ansible/roles/dnsmasq/tasks/main.yml` |
+| ArgoCD-Web-UI per HTTPS über Traefik (`argocd.tech.homeserver`), als **Helm-Wert der Rolle** | `capulus-ansible/roles/argocd`, `host_vars/homeserver` |
+| UFW: Port 30080 (Klartext-NodePort für CLI/CI) nur aus LAN, Tailnet und WireGuard; unbeschränkte und wirkungslose 30443-Regel entfernt | `capulus-ansible/roles/common/tasks/main.yml` |
 
 Geprüft wurde mit `ansible-playbook --syntax-check` (`site.yml`, `worker-1.yml`, `entw.yml`), dem Rendern des ArgoCD-Templates für Hub und ENTW, den `qemu-img`-Befehlen im Kleinen auf dem homeserver (flache Disk: kein Backing-File, Overlay: `full-backing-filename` vorhanden) und dem Link-Checker `scripts/check-doc-links.py`. Der Ansible-Lauf selbst wurde nicht von Hand ausgeführt.
 

@@ -106,7 +106,7 @@ Both templates get `vault_key: vault-password`:
 ```yaml
 templates:
   - name: "Deploy Home Server"
-    playbook: ansible/site.yml
+    playbook: capulus-ansible/site.yml
     inventory: homeservers
     vault_key: vault-password
     description: "..."
@@ -142,5 +142,5 @@ templates:
 After implementation, the user runs:
 ```bash
 ansible-vault encrypt_string 'the-vault-password' --name 'semaphore_vault_password'
-# paste output into ansible/group_vars/all.yml
+# paste output into capulus-ansible/group_vars/all.yml
 ```

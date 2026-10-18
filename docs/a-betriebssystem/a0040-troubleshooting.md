@@ -83,7 +83,7 @@ python3 -c "import yaml; yaml.safe_load(open('/etc/rancher/k3s/config.yaml'))"
 sudo /usr/local/bin/k3s-uninstall.sh
 
 # Re-Install via Ansible
-ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --tags k3s --ask-vault-pass
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/site.yml --tags k3s --ask-vault-pass
 ```
 
 ---
@@ -473,7 +473,7 @@ kubectl get pods -n <namespace> -l <selector-key>=<selector-value>
 ssh -i ~/.ssh/id_rsa ubuntu@192.168.1.100 "echo connected"
 
 # Inventory
-ansible -i ansible/inventory/hosts.yml homeserver -m ping
+ansible -i capulus-ansible/inventory/hosts.yml homeserver -m ping
 ```
 
 **sudo verlangt Passwort:**
@@ -487,7 +487,7 @@ echo "ubuntu ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/ubuntu-nopasswd
 **Galaxy-Collection fehlt:**
 
 ```bash
-ansible-galaxy collection install -r ansible/requirements.yml --force
+ansible-galaxy collection install -r capulus-ansible/requirements.yml --force
 ```
 
 **Falsches Vault-Passwort:**
@@ -507,7 +507,7 @@ Alle Abschnitte oben gelten für den TECH-Cluster. Für PROD und ENTW kommen die
 
 | Symptom | Ursache / Prüfung | Fix |
 |---|---|---|
-| `https://<app>.prod.homeserver` liefert 404 oder die falsche App, obwohl die App in PROD läuft | Der Host löst auf den TECH-Traefik (`.94`) statt auf die PROD-VM (`.99`) auf: `dig +short <host> @192.168.178.94` | Host in `dnsmasq_prod_vm_hosts` (`ansible/group_vars/all.yml`) eintragen, `make dnsmasq` |
+| `https://<app>.prod.homeserver` liefert 404 oder die falsche App, obwohl die App in PROD läuft | Der Host löst auf den TECH-Traefik (`.94`) statt auf die PROD-VM (`.99`) auf: `dig +short <host> @192.168.178.94` | Host in `dnsmasq_prod_vm_hosts` (`capulus-ansible/group_vars/all.yml`) eintragen, `make dnsmasq` |
 | Application `prod-<app>` steht auf `InvalidSpecError`/`Unknown`, Meldung „destination … not permitted in project 'prod'“ | Namespace fehlt in `argocd/bootstrap-prod/appproject.yaml` (oder wurde dort ergänzt, aber nicht im Hub angewendet) | Datei im **TECH-Hub** anwenden (`kubectl apply -f argocd/bootstrap-prod/appproject.yaml`), dann `kubectl -n argocd annotate application prod-<app> argocd.argoproj.io/refresh=hard --overwrite` |
 | Für einen neuen PROD-Ordner entsteht keine `prod-<app>`-Application | Reiner Manifest-Ordner (ohne `Chart.yaml`) fehlt in `home-server-apps-prod`, oder der Ordner liegt noch nicht auf `main` (die ApplicationSets lesen `main`) | `path` in `argocd/bootstrap-prod/applicationset.yaml` ergänzen und im Hub anwenden; Ordner mergen |
 | SealedSecret in PROD bleibt ohne Secret, Controller meldet „no key could decrypt secret“ | Mit dem TECH-Schlüssel versiegelt, jeder Cluster hat eigene Schlüssel | Für den PROD-Controller neu versiegeln (`scripts/reseal-for-prod.sh`, Kopf des Skripts) |

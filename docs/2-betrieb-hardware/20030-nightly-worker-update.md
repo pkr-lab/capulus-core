@@ -1,7 +1,7 @@
 # Nightly Worker Update: automatisches apt-Update für worker-0/worker-1
 
 worker-0 und worker-1 sind reine k3s-Compute-Nodes ohne die volle
-[`common`-Rolle](../../ansible/roles/common) des Homeservers — sie bekommen
+[`common`-Rolle](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/common) des Homeservers — sie bekommen
 dadurch nie ein OS-Update, zumal sie die meiste Zeit per
 [Cluster Power Manager](20020-cluster-power-manager.md) ausgeschaltet sind.
 `nightly_worker_wake` schließt diese Lücke: jede Nacht um 01:00 Uhr Berlin
@@ -75,7 +75,7 @@ Der SSH-Zugang von n8n zum homeserver ist über einen dedizierten Key
 abgesichert, der per **forced command** (siehe `authorized_keys`) exakt
 auf `sudo systemctl start nightly-worker-wake.service` beschränkt ist —
 identisches Muster wie der poweroff-only-Key von
-[`cluster_power_manager_target`](../../ansible/roles/cluster_power_manager_target)
+[`cluster_power_manager_target`](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/cluster_power_manager_target)
 (dort: Homeserver → Worker, hier: n8n → Homeserver). Selbst wenn der
 private Schlüssel abfließen sollte, kann er ausschließlich diesen einen
 Service starten — kein interaktives Shell-Login, kein Port-/Agent-
@@ -95,7 +95,7 @@ Bericht — mit einem generischen "Skript brach ab"-Hinweis, falls der
 Abbruch unerwartet war.
 
 **Warum über Semaphore statt eines eigenen Update-SSH-Keys?** Semaphore
-hat über [`semaphore_targets`](../../ansible/roles/semaphore_targets) bereits
+hat über [`semaphore_targets`](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/semaphore_targets) bereits
 vollen, Vault-fähigen SSH-Zugriff auf beide Worker und führt bereits
 `worker-0.yml`/`worker-1.yml` aus (siehe [../b-kubernetes-gitops/b0030-semaphore.md](../b-kubernetes-gitops/b0030-semaphore.md)).
 `nightly_worker_wake` triggert nur ein bestehendes Template zur richtigen
@@ -139,9 +139,9 @@ rebooteten Worker mit `"rebooted": true`.
 
 | Rolle | Läuft auf | Zweck |
 |---|---|---|
-| [`worker_apt_update`](../../ansible/roles/worker_apt_update) | worker-0, worker-1 | `apt update && apt dist-upgrade`; bei `/var/run/reboot-required` automatisch cordon+drain (delegiert auf homeserver) + Reboot. Deployt auf beiden zusätzlich statische Fallback-Nameserver (siehe [Fehlerbehebung](#fehlerbehebung) unten) — bei worker-0 notwendig (kein nutzbares DHCPv6-DNS), bei worker-1 nur zusätzliche Absicherung |
-| [`tailscale`](../../ansible/roles/tailscale) | worker-0, worker-1 | Seit 2026-09-15 Ansible-verwaltet statt manuell installiert, siehe [Fehlerbehebung](#fehlerbehebung) unten. Reiner Tailnet-Client (`tailscale_advertise_routes: ""`), kein Subnet-Router |
-| [`nightly_worker_wake`](../../ansible/roles/nightly_worker_wake) | homeserver | Skript + SSH-Forced-Command-Key für den n8n-Trigger: wecken, Semaphore-Template triggern, Zeitbudget überwachen, herunterfahren, Bericht an n8n |
+| [`worker_apt_update`](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/worker_apt_update) | worker-0, worker-1 | `apt update && apt dist-upgrade`; bei `/var/run/reboot-required` automatisch cordon+drain (delegiert auf homeserver) + Reboot. Deployt auf beiden zusätzlich statische Fallback-Nameserver (siehe [Fehlerbehebung](#fehlerbehebung) unten) — bei worker-0 notwendig (kein nutzbares DHCPv6-DNS), bei worker-1 nur zusätzliche Absicherung |
+| [`tailscale`](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/tailscale) | worker-0, worker-1 | Seit 2026-09-15 Ansible-verwaltet statt manuell installiert, siehe [Fehlerbehebung](#fehlerbehebung) unten. Reiner Tailnet-Client (`tailscale_advertise_routes: ""`), kein Subnet-Router |
+| [`nightly_worker_wake`](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/nightly_worker_wake) | homeserver | Skript + SSH-Forced-Command-Key für den n8n-Trigger: wecken, Semaphore-Template triggern, Zeitbudget überwachen, herunterfahren, Bericht an n8n |
 
 `worker_apt_update` ist der erste Schritt in `worker-0.yml`/`worker-1.yml`
 und läuft damit bei **jedem** Lauf dieser Playbooks — auch bei einem
@@ -352,7 +352,7 @@ zeigt auf einen veralteten privaten Schlüssel (z.B. nach einem Neu-
 Provisionieren des homeserver, das den Key unter
 `/etc/nightly-worker-wake/n8n_trigger_ed25519` neu erzeugt hätte —
 passiert normalerweise NICHT, da `ssh-keygen` idempotent mit `creates:`
-läuft, siehe `ansible/roles/nightly_worker_wake/tasks/main.yml`), oder
+läuft, siehe `capulus-ansible/roles/nightly_worker_wake/tasks/main.yml`), oder
 der sudoers-Eintrag fehlt (`nightly_worker_wake_enabled: false` gesetzt
 gewesen?). Manuell nachvollziehen:
 
@@ -429,13 +429,13 @@ ssh ubuntu@192.168.178.95 'resolvectl status; getent hosts archive.ubuntu.com; s
 
 Zeigt `resolvectl status` für jedes Link `Current Scopes: none`, ist das
 der Fall. Fix: `worker_apt_update_dns_fallback_enabled: true` (in
-[`host_vars/worker-0/vars.yml`](../../ansible/host_vars/worker-0/vars.yml)
+[`host_vars/worker-0/vars.yml`](https://github.com/pkr-lab/capulus-ansible/blob/main/host_vars/worker-0/vars.yml)
 und, aus Konsistenzgründen, auch in
-[`host_vars/worker-1/vars.yml`](../../ansible/host_vars/worker-1/vars.yml)
+[`host_vars/worker-1/vars.yml`](https://github.com/pkr-lab/capulus-ansible/blob/main/host_vars/worker-1/vars.yml)
 gesetzt) lässt `worker_apt_update` vor dem `apt update` einen
 Netplan-Drop-in (`/etc/netplan/90-dns-fallback.yaml`, statische
 Nameserver `1.1.1.1`/`8.8.8.8`) deployen — siehe
-[`ansible/roles/worker_apt_update/defaults/main.yml`](../../ansible/roles/worker_apt_update/defaults/main.yml).
+[`capulus-ansible/roles/worker_apt_update/defaults/main.yml`](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/worker_apt_update/defaults/main.yml).
 Das läuft bei jedem `worker-0.yml`/`worker-1.yml`-Durchlauf idempotent
 mit, macht DNS also unabhängig vom Tailscale-Login. Bei worker-1 ist das
 nur zusätzliche Absicherung — es bekommt per DHCPv6 vom Router ohnehin

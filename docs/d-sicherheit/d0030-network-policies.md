@@ -19,7 +19,7 @@ pauschale Tier-Erlaubnis mehr). Verifiziert: ArgoCD weiterhin 35/36
 HTTP-Stichproben lokal (`*.homeserver`) **und** extern über den
 Cloudflare-Tunnel (`*.pke-lab.de`) erfolgreich, `cloudflared`-Logs sauber.
 `argocd_apply_network_policies: true` ist dauerhafter Default in
-[ansible/roles/argocd/defaults/main.yml](../../ansible/roles/argocd/defaults/main.yml).
+[capulus-ansible/roles/argocd/defaults/main.yml](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/argocd/defaults/main.yml).
 
 ---
 
@@ -84,7 +84,7 @@ NetworkPolicies" fehl: `namespaces "authelia" not found`. Ursache: der
 ArgoCD-Sync, der den `authelia`-Namespace anlegt, kann hinter diesem
 Playbook-Lauf zurücklagen (derselbe Effekt wie bei den
 `security-tier`-Label-Tasks, siehe [60030](../6-hintergruende/60030-argocd-und-bootstrap.md#rolle-argocd) und
-[ansible/roles/argocd/tasks/main.yml](../../ansible/roles/argocd/tasks/main.yml)).
+[capulus-ansible/roles/argocd/tasks/main.yml](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/argocd/tasks/main.yml)).
 Anders als bei den Label-Tasks (ein `kubectl`-Aufruf pro Namespace) wird die
 NetworkPolicy-Datei aber als **eine** Multi-Dokument-YAML mit einem
 einzigen `kubectl apply -f` angewendet — ein fehlender Namespace ließ damit
@@ -94,7 +94,7 @@ Dokument, meldet aber am Ende den Gesamtfehler).
 
 **Fix:** Neuer Task „Get existing namespaces" vor dem Templating holt die
 aktuell existierenden Namespaces per `kubectl get namespaces`; das Template
-([bootstrap-networkpolicies.yaml.j2](../../ansible/roles/argocd/templates/bootstrap-networkpolicies.yaml.j2))
+([bootstrap-networkpolicies.yaml.j2](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/argocd/templates/bootstrap-networkpolicies.yaml.j2))
 überspringt Apps, deren Namespace noch nicht existiert. Ein fehlender
 Namespace fällt beim nächsten `make argocd`-Lauf nach, statt den gesamten
 Apply-Schritt zu blockieren — dasselbe Best-effort-Verhalten wie bei den
@@ -202,7 +202,7 @@ für die grobe Tier-Regel (1).
 ### Ausgeschlossene Namespaces
 
 Nur Namespaces aus `argocd_platform_apps`/`argocd_workloads_apps`
-([ansible/roles/argocd/defaults/main.yml](../../ansible/roles/argocd/defaults/main.yml))
+([capulus-ansible/roles/argocd/defaults/main.yml](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/argocd/defaults/main.yml))
 bekommen eine Policy. Bewusst **keine** Policy für: `kube-system`,
 `argocd`, `cert-manager`, `metallb-system` — das sind Cluster-Grundlagen,
 keine "Apps" im Tier-Sinn, und ein zu aggressiv geschnittener Ingress-Deny
@@ -289,12 +289,12 @@ kubectl delete networkpolicy tier-default-ingress -n example-whoami -n tinytelle
 ```bash
 # make argocd reicht keine Extra-Vars durch, deshalb direkt ansible-playbook
 # aufrufen (Inventory/Playbook-Pfade wie im Makefile-Target `argocd`):
-ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --tags argocd \
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/site.yml --tags argocd \
   --ask-vault-pass -e argocd_apply_network_policies=true
 ```
 
 Danach `argocd_apply_network_policies: true` auch dauerhaft in
-[ansible/roles/argocd/defaults/main.yml](../../ansible/roles/argocd/defaults/main.yml)
+[capulus-ansible/roles/argocd/defaults/main.yml](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/argocd/defaults/main.yml)
 setzen (committen), sonst rollt der nächste normale `make argocd`-Lauf die
 Policies beim Re-Templaten wieder auf `false` zurück — genauer: er wendet
 sie schlicht nicht mehr erneut an (bereits angewendete Policies bleiben im
@@ -341,7 +341,7 @@ Workload-Apps) konnten sich unter Schritt 1 immer noch gegenseitig
 erreichen.
 
 Gesteuert über eine einzige Liste,
-[`argocd_network_policy_refined_namespaces`](../../ansible/roles/argocd/defaults/main.yml) —
+[`argocd_network_policy_refined_namespaces`](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/argocd/defaults/main.yml) —
 ein Namespace-Name in dieser Liste bekommt die strikte Variante, alle
 anderen bleiben auf der groben Tier-Regel aus Schritt 1. So lässt sich
 Namespace für Namespace migrieren, ohne die anderen 34 anzufassen —
@@ -371,7 +371,7 @@ Abhängigkeit für den Normalbetrieb.
 > nicht wer **von außen** reinruft). Der nächste Cron-Lauf nach dem
 > Rollout wäre damit fehlgeschlagen. Gefixt, bevor er lief: neuer
 > Mechanismus `argocd_network_policy_extra_ingress` (Template + defaults,
-> siehe [ansible/roles/argocd/defaults/main.yml](../../ansible/roles/argocd/defaults/main.yml))
+> siehe [capulus-ansible/roles/argocd/defaults/main.yml](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/argocd/defaults/main.yml))
 > für gezielte Zusatz-Ausnahmen bei verfeinerten Namespaces — `wikijs`
 > erlaubt jetzt explizit zusätzlich Ingress aus `wiki-docs-sync`.
 >

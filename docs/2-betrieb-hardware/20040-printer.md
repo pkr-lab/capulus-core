@@ -45,7 +45,7 @@ Tailscale-Subnet-Route auf `local_subnet` (siehe
 jeglichen Traffic aus `local_subnet` und dem Tailscale-Netz
 (`100.64.0.0/10`) — Port 631 (IPP/CUPS-Web-UI) und mDNS (UDP 5353) sind
 darüber schon abgedeckt, siehe
-[ansible/roles/common/tasks/main.yml](../../ansible/roles/common/tasks/main.yml).
+[capulus-ansible/roles/common/tasks/main.yml](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/common/tasks/main.yml).
 
 **Warum `cupsctl` statt `cupsd.conf` templaten?** `cupsctl` ändert die
 laufende Konfiguration live über die vom `cups`-Paket gepflegte Datei,
@@ -59,7 +59,7 @@ den aktuellen Stand vorher per `cupsctl` ohne Argumente aus).
 
 | Rolle | Läuft auf | Zweck |
 |---|---|---|
-| [`cups_print_server`](../../ansible/roles/cups_print_server) | homeserver | Installiert CUPS + Treiber, aktiviert Sharing, legt die Warteschlange an |
+| [`cups_print_server`](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/cups_print_server) | homeserver | Installiert CUPS + Treiber, aktiviert Sharing, legt die Warteschlange an |
 
 ---
 
@@ -73,7 +73,7 @@ den aktuellen Stand vorher per `cupsctl` ohne Argumente aus).
    Device-URIs (`lpinfo -v`) sowie zum Samsung/SPL passende PPDs
    (`lpinfo -m`) an.
 3. Den passenden PPD-Wert aus Schritt 2 in
-   `ansible/group_vars/all.yml` eintragen (Device-URI ist für den M2026
+   `capulus-ansible/group_vars/all.yml` eintragen (Device-URI ist für den M2026
    bereits eingetragen):
    ```yaml
    cups_print_server_ppd: "samsung/m2020.ppd"   # bestätigter Treffer für den M2026
@@ -354,7 +354,7 @@ bedeuten — der ML-1630W braucht keinen USB-Passthrough, nur eine
 zusätzliche Warteschlange mit `socket://`-Device-URI. Die Rolle
 `cups_print_server` wurde daher um eine generische, vom M2026-Codepfad
 unabhängige Liste `cups_print_server_extra_queues` erweitert (siehe
-[ansible/roles/cups_print_server/tasks/main.yml](../../ansible/roles/cups_print_server/tasks/main.yml)) —
+[capulus-ansible/roles/cups_print_server/tasks/main.yml](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/cups_print_server/tasks/main.yml)) —
 QPDL-Build und PageSize-Patch bleiben ausschließlich dem M2026 vorbehalten
 und werden vom ML-1630W-Setup nicht berührt.
 
@@ -365,7 +365,7 @@ steht) — Vault wird in diesem Repo ausschließlich für echte Secrets
 
 ### Einrichtung
 
-`cups_print_server_extra_queues` in `ansible/group_vars/all.yml` enthält
+`cups_print_server_extra_queues` in `capulus-ansible/group_vars/all.yml` enthält
 bereits den vollständigen Eintrag für `Samsung_ML-1630` —
 `device_uri: "socket://192.168.178.57:9100"` und `ppd:
 "drv:///splix-samsung.drv/ml1630.ppd"` (exakter Treffer im
@@ -390,6 +390,6 @@ M2026-Abschnitt oben (Warteschlangenname `Samsung_ML-1630` statt
 ## Relevante Links
 
 - [Tailscale-Referenz (Subnet-Routing)](../c-netzwerk-dns/c0010-tailscale.md)
-- [ansible/roles/cups_print_server](../../ansible/roles/cups_print_server)
+- [capulus-ansible/roles/cups_print_server](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/cups_print_server)
 - [OpenPrinting/splix (offizielles Upstream-Repo)](https://github.com/OpenPrinting/splix)
 - [gitlab.com/ScumCoder/splix, Branch `patches` (QPDL-Treiber-Quelle)](https://gitlab.com/ScumCoder/splix/-/tree/patches)

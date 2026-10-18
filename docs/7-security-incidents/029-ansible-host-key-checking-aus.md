@@ -2,7 +2,7 @@
 
 - Severity: Low
 - Bereich: Repo
-- Betroffen: `ansible/ansible.cfg:5,16`, `ansible/roles/vaultwarden_restore/tasks/main.yml:63`
+- Betroffen: `capulus-ansible/ansible.cfg:5,16`, `capulus-ansible/roles/vaultwarden_restore/tasks/main.yml:63`
 - Status: Behoben am 2026-10-18 (im Code, gestaged; gilt ab dem nächsten Ansible-Lauf)
 
 ## Beschreibung
@@ -12,10 +12,10 @@
 ## Nachweis
 
 ```
-$ sed -n '5p;16p' ansible/ansible.cfg
+$ sed -n '5p;16p' capulus-ansible/ansible.cfg
 host_key_checking = False
 fact_caching_connection = /tmp/ansible-facts
-$ sed -n 63p ansible/roles/vaultwarden_restore/tasks/main.yml
+$ sed -n 63p capulus-ansible/roles/vaultwarden_restore/tasks/main.yml
     validate_certs: false
 ```
 
@@ -49,7 +49,7 @@ Niedrig: Beim ersten Lauf nach der Änderung müssen die Hostschlüssel bestäti
 
 **Fix.**
 
-- `ansible/ansible.cfg`: `host_key_checking = True`, `ssh_args` ergänzt um `-o StrictHostKeyChecking=accept-new`. Unbekannte Hosts werden beim ersten Kontakt aufgenommen (wichtig für Semaphore und frische Umgebungen ohne `known_hosts`), geänderte Schlüssel brechen die Verbindung ab. Die Empfehlung `ssh-keyscan` entfällt damit; ein vorheriges Eintragen der Schlüssel wäre sicherer als Aufnahme beim ersten Kontakt, für den Heimbetrieb ist TOFU vertretbar.
+- `capulus-ansible/ansible.cfg`: `host_key_checking = True`, `ssh_args` ergänzt um `-o StrictHostKeyChecking=accept-new`. Unbekannte Hosts werden beim ersten Kontakt aufgenommen (wichtig für Semaphore und frische Umgebungen ohne `known_hosts`), geänderte Schlüssel brechen die Verbindung ab. Die Empfehlung `ssh-keyscan` entfällt damit; ein vorheriges Eintragen der Schlüssel wäre sicherer als Aufnahme beim ersten Kontakt, für den Heimbetrieb ist TOFU vertretbar.
 - `fact_caching_connection = ~/.cache/ansible-facts` statt `/tmp/ansible-facts`, Verzeichnis mit `0700`.
 - `vaultwarden_restore`: `validate_certs: true`. Der Homeserver vertraut der Root-CA im System-Trust-Store.
 
@@ -65,7 +65,7 @@ Niedrig: Beim ersten Lauf nach der Änderung müssen die Hostschlüssel bestäti
 
 **Geänderte Dateien.**
 
-- `ansible/ansible.cfg`, `ansible/roles/vaultwarden_restore/tasks/main.yml`
+- `capulus-ansible/ansible.cfg`, `capulus-ansible/roles/vaultwarden_restore/tasks/main.yml`
 - Doku: `docs/6-hintergruende/60010-ansible-hosts-und-playbooks.md`
 
 **Rollback.** `git revert` oder in `ansible.cfg` `host_key_checking = False` zurücksetzen.

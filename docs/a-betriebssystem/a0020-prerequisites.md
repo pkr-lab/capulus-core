@@ -73,7 +73,7 @@ ssh-copy-id -i ~/.ssh/id_ed25519.pub ubuntu@192.168.1.100
 ssh -i ~/.ssh/id_ed25519 ubuntu@192.168.1.100 "echo 'SSH-Key-Login funktioniert'"
 ```
 
-Liegt der Private Key woanders, in `ansible/inventory/hosts.yml` entsprechend
+Liegt der Private Key woanders, in `capulus-ansible/inventory/hosts.yml` entsprechend
 `ansible_ssh_private_key_file` anpassen.
 
 Der Schlüssel-Login ist die einzige Anmeldeart: Die Rolle `ssh_hardening` schaltet Passwort-Login und `root`-Login auf homeserver, Workern, prod-vm und entw-vm ab
@@ -113,7 +113,7 @@ ArgoCD zieht die Manifests aus einem Git-Repository. Möglichkeiten:
 Das Repository muss **öffentlich** sein oder ArgoCD mit Credentials für
 private Repos versorgt werden.
 
-`argocd_repo_url` in `ansible/group_vars/all.yml` auf die eigene Repo-URL setzen.
+`argocd_repo_url` in `capulus-ansible/group_vars/all.yml` auf die eigene Repo-URL setzen.
 
 ---
 
@@ -122,10 +122,10 @@ private Repos versorgt werden.
 Vor dem Playbook-Run die benötigten Collections installieren:
 
 ```bash
-ansible-galaxy collection install -r ansible/requirements.yml
+ansible-galaxy collection install -r capulus-ansible/requirements.yml
 ```
 
-Die `ansible/requirements.yml` liefert:
+Die `capulus-ansible/requirements.yml` liefert:
 
 | Collection           | Version     | Zweck                                      |
 |----------------------|-------------|--------------------------------------------|
@@ -158,7 +158,7 @@ ssh ubuntu@192.168.1.100 "sudo whoami"
 ### 3. Ansible-Ping
 
 ```bash
-ansible -i ansible/inventory/hosts.yml homeserver -m ping
+ansible -i capulus-ansible/inventory/hosts.yml homeserver -m ping
 # Erwartet:
 # homeserver | SUCCESS => { "ping": "pong" }
 ```
@@ -166,7 +166,7 @@ ansible -i ansible/inventory/hosts.yml homeserver -m ping
 ### 4. Python auf dem Ziel verfügbar
 
 ```bash
-ansible -i ansible/inventory/hosts.yml homeserver -m ansible.builtin.command \
+ansible -i capulus-ansible/inventory/hosts.yml homeserver -m ansible.builtin.command \
   -a "python3 --version"
 # Erwartet: python3 3.x.x
 ```
@@ -195,21 +195,21 @@ ssh ubuntu@192.168.1.100 "free -h"
 ### 8. Inventory aktualisiert
 
 ```bash
-grep "192.168.1.100" ansible/inventory/hosts.yml
+grep "192.168.1.100" capulus-ansible/inventory/hosts.yml
 # Liefert das den Default-Wert, wurde die Datei noch nicht angepasst.
 ```
 
 ### 9. group_vars aktualisiert
 
 ```bash
-grep "YOUR_USER\|CHANGE_ME\|CHANGE_THIS" ansible/group_vars/all.yml
+grep "YOUR_USER\|CHANGE_ME\|CHANGE_THIS" capulus-ansible/group_vars/all.yml
 # Sollte KEINE Treffer liefern — sonst stehen noch Platzhalter drin.
 ```
 
 ### 10. Vault-Secret verschlüsselt
 
 ```bash
-grep "tailscale_auth_key:" ansible/group_vars/all.yml
+grep "tailscale_auth_key:" capulus-ansible/group_vars/all.yml
 # Korrekt: tailscale_auth_key: !vault |
 # Falsch:  tailscale_auth_key: "CHANGE_ME_USE_VAULT"
 ```

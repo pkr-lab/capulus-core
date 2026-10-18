@@ -44,7 +44,7 @@ ArgoCD-Instanz als Vorbild), [d0060](../d-sicherheit/d0060-secrets-rotation.md)
 | ntfy | [values.yaml](../../argocd/apps/tech/ntfy/values.yaml) | SQLite (`cache.db`, `auth.db`) auf `local-path` (1 Gi). `upstream-base-url: https://ntfy.sh` für iOS-Push. | `ntfy-tech.pke-lab.de` |
 | Gotify | `argocd/apps/tech/gotify/values.yaml` (entfernt) | SQLite auf `local-path` (1 Gi) | keiner (nur `gotify.tech.homeserver`, `gotify-api.tech.homeserver`) |
 | cloudflared | [values.yaml](../../argocd/apps/tech/cloudflared/values.yaml), zwei Tunnel: `homeserver` (TECH), `homeserver-prod` (PROD). Wildcard `*.pke-lab.de` → Traefik. | Credentials als SealedSecret | — |
-| Tailscale | Host-Ebene per [Ansible-Rolle](../../ansible/roles/tailscale/tasks/main.yml), Tags `tag:tech-node`, `tag:prod-node`, `tag:entw-node`. Split-DNS nur für `*.homeserver`. | Auth-Key als Ansible-Vault-Wert | — |
+| Tailscale | Host-Ebene per [Ansible-Rolle](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/tailscale/tasks/main.yml), Tags `tag:tech-node`, `tag:prod-node`, `tag:entw-node`. Split-DNS nur für `*.homeserver`. | Auth-Key als Ansible-Vault-Wert | — |
 
 Weitere Randbedingungen, die den Plan prägen:
 
@@ -222,7 +222,7 @@ plus Schleifenintervall. Erwartete Übernahmezeit (RTO): ca. 10 bis 12 Minuten.
 ### Primary-Fence-Agent (systemd auf dem homeserver)
 
 Neue Ansible-Rolle nach dem Muster der vorhandenen Watchdogs, z. B.
-[resource_watchdog](../../ansible/roles/resource_watchdog/). Alle 30 s:
+[resource_watchdog](https://github.com/pkr-lab/capulus-ansible/tree/main/roles/resource_watchdog). Alle 30 s:
 
 1. Lokale Gesundheit prüfen (Vaultwarden `/alive`) und `_active` per DoH lesen.
 2. Ist beides in Ordnung, Herzschlag an Healthchecks senden.
@@ -237,7 +237,7 @@ Neue Ansible-Rolle nach dem Muster der vorhandenen Watchdogs, z. B.
    Isolationsfall können Workflows mit Standby-Freigabe kurzzeitig doppelt feuern.
 6. ArgoCD bekommt für diese vier Deployments ein `ignoreDifferences` auf `/spec/replicas`
    (Muster wie bei `ollama` im
-   [ApplicationSet-Template](../../ansible/roles/argocd/templates/bootstrap-applicationset.yaml.j2),
+   [ApplicationSet-Template](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/argocd/templates/bootstrap-applicationset.yaml.j2),
    danach `make render-bootstrap`). Sonst setzt `selfHeal` das Fencing zurück.
 
 ### Standby-Watchdog (systemd auf dem Standby-Host)
@@ -408,7 +408,7 @@ Eine Datei `ops/token-register.yaml` im Repo, **ohne Werte**. Ein Eintrag je Tok
   service: cloudflare
   kind: api-token            # api-token | auth-key | password | encryption-key | ssh-key | tunnel-credential | certificate
   stored_in:
-    - ansible/host_vars/standby/vault.yml   # Ansible-Vault, nur Standby-Host
+    - capulus-ansible/host_vars/standby/vault.yml   # Ansible-Vault, nur Standby-Host
   issued: 2026-10-01
   expires: 2027-03-30        # oder null plus max_age_days
   max_age_days: 180
@@ -500,7 +500,7 @@ Passwort-Manager, wird bei der Umsetzung entsprechend korrigiert.
 
 | Bereich | Änderung |
 |---|---|
-| `ansible/` | Inventargruppe `standby` (Host `standby-node`, `ansible_host` = Tailscale-IP), Playbook `standby.yml` nach dem Muster von [entw.yml](../../ansible/entw.yml) mit den Rollen `common`, `k3s`, `tailscale`, `argocd`, dazu neue Rollen `standby_watchdog` (Standby) und `primary_fence_agent` (homeserver). Makefile-Ziele `standby` und `standby-check`. Variable `tailscale_accept_dns`. |
+| `ansible/` | Inventargruppe `standby` (Host `standby-node`, `ansible_host` = Tailscale-IP), Playbook `standby.yml` nach dem Muster von [entw.yml](https://github.com/pkr-lab/capulus-ansible/blob/main/entw.yml) mit den Rollen `common`, `k3s`, `tailscale`, `argocd`, dazu neue Rollen `standby_watchdog` (Standby) und `primary_fence_agent` (homeserver). Makefile-Ziele `standby` und `standby-check`. Variable `tailscale_accept_dns`. |
 | Ansible-Ausführung | vom Arbeitsplatz aus über Tailscale, **nicht** über Semaphore. Semaphore liegt im Primary und fiele mit ihm aus. |
 | `argocd/` | Layout-Schalter `argocd_standby_layout` in der argocd-Rolle. Ordner `argocd/apps/standby/{vaultwarden,n8n,ntfy,gotify,cloudflared}/values.yaml` als Overlays. `ignoreDifferences` auf `/spec/replicas` für die vier Deployments im TECH-ApplicationSet. |
 | Charts unter `tech/` | Wert `replication` (CronJob-Push, Gate auf `_active`), Wert `activeGate` (initContainer), NetworkPolicy für den Push-Egress, neuer externer Host für Gotify, n8n: `N8N_ENCRYPTION_KEY` aus SealedSecret. |

@@ -47,9 +47,9 @@ containerd / ArgoCD / CoreDNS TECH auf dem homeserver
 
 | Baustein | Konfiguration | Rolle im Vorfall |
 |---|---|---|
-| `dnsmasq` (homeserver) | `ansible/roles/dnsmasq/templates/dnsmasq.conf.j2`, `no-resolv`, ein einziges `server=` | Kein Fallback, sobald Pi-hole fehlt, Timeouts für alle externen Namen |
+| `dnsmasq` (homeserver) | `capulus-ansible/roles/dnsmasq/templates/dnsmasq.conf.j2`, `no-resolv`, ein einziges `server=` | Kein Fallback, sobald Pi-hole fehlt, Timeouts für alle externen Namen |
 | systemd-resolved (homeserver) | `DNS=192.168.178.94`, `FallbackDNS=192.168.178.1` | `FallbackDNS` greift nur, wenn **kein** DNS konfiguriert ist, hier also nie |
-| PROD-VM | cloud-init `nameservers: [192.168.178.94]` (`ansible/host_vars/homeserver/vars.yml`) | Hängt vollständig an dnsmasq auf dem homeserver |
+| PROD-VM | cloud-init `nameservers: [192.168.178.94]` (`capulus-ansible/host_vars/homeserver/vars.yml`) | Hängt vollständig an dnsmasq auf dem homeserver |
 | Pi-hole | `argocd/apps/tech/pihole`, `replicaCount: 1`, damals `strategy: Recreate`, Readiness nur TCP-Port 53 | Auslöser |
 | cloudflared PROD | `argocd/apps/prod/cloudflared`, Tunnel `3faaf987…` | Symptomträger |
 
@@ -83,7 +83,7 @@ ERR Initiating shutdown error="Couldn't resolve SRV record &{region2.v2.argotunn
 ```
 
 - Tunnel-ID `3faaf987-…` gehört zu `argocd/apps/prod/cloudflared/values.yaml`, also PROD.
-- `10.47.0.10` ist CoreDNS im PROD-Cluster (Service-CIDR `10.47.0.0/16`, `ansible/host_vars/prod-vm/vars.yml`).
+- `10.47.0.10` ist CoreDNS im PROD-Cluster (Service-CIDR `10.47.0.0/16`, `capulus-ansible/host_vars/prod-vm/vars.yml`).
 - `server misbehaving` ist Gos Meldung für **SERVFAIL**. CoreDNS war also erreichbar, bekam aber selbst keine Antwort von seinem
   Upstream. Eine NetworkPolicy scheidet damit aus, sie hätte einen Timeout erzeugt.
 - Schon die allererste Abfrage schlug fehl: DNS war beim Start bereits kaputt, nicht erst durch cloudflared.

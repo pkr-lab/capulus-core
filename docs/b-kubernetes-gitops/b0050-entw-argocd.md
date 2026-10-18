@@ -52,7 +52,7 @@ gegen `ref=entw`, nicht schon im PR auf `entw`. Vor dem Push also lokal
 Es gibt bewusst keine Namespace-Liste: das Projekt `entw` erlaubt jeden
 Namespace und alle Ressourcentypen. ENTW ist die absichtlich verwundbare
 Trainings-/Experimentierumgebung, Schutz kommt aus der Isolation des Clusters
-(siehe [`host_vars/entw-vm/vars.yml`](../../ansible/host_vars/entw-vm/vars.yml)),
+(siehe [`host_vars/entw-vm/vars.yml`](https://github.com/pkr-lab/capulus-ansible/blob/main/host_vars/entw-vm/vars.yml)),
 nicht aus Einschränkungen im Projekt.
 
 Ein Ordner wieder entfernen = Application wird pruned, die Ressourcen werden mit
@@ -74,9 +74,9 @@ gelöscht (`prune: true`).
 
 | Was | Wo |
 |---|---|
-| Schalter `argocd_entw_layout: true` und Revision `argocd_repo_revision: entw` | [`ansible/host_vars/entw-vm/vars.yml`](../../ansible/host_vars/entw-vm/vars.yml), Default `false` in [`ansible/roles/argocd/defaults/main.yml`](../../ansible/roles/argocd/defaults/main.yml) |
-| ApplicationSet `home-server-apps-entw` (Generator `argocd/apps/entw/*`, Revision `entw`) | [`bootstrap-applicationset.yaml.j2`](../../ansible/roles/argocd/templates/bootstrap-applicationset.yaml.j2), gerendert und angewendet von der `argocd`-Rolle |
-| AppProject `entw` (jeder Namespace, nur dieses Repo als Quelle) | [`bootstrap-appprojects.yaml.j2`](../../ansible/roles/argocd/templates/bootstrap-appprojects.yaml.j2) |
+| Schalter `argocd_entw_layout: true` und Revision `argocd_repo_revision: entw` | [`capulus-ansible/host_vars/entw-vm/vars.yml`](https://github.com/pkr-lab/capulus-ansible/blob/main/host_vars/entw-vm/vars.yml), Default `false` in [`capulus-ansible/roles/argocd/defaults/main.yml`](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/argocd/defaults/main.yml) |
+| ApplicationSet `home-server-apps-entw` (Generator `argocd/apps/entw/*`, Revision `entw`) | [`bootstrap-applicationset.yaml.j2`](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/argocd/templates/bootstrap-applicationset.yaml.j2), gerendert und angewendet von der `argocd`-Rolle |
+| AppProject `entw` (jeder Namespace, nur dieses Repo als Quelle) | [`bootstrap-appprojects.yaml.j2`](https://github.com/pkr-lab/capulus-ansible/blob/main/roles/argocd/templates/bootstrap-appprojects.yaml.j2) |
 
 Die committeten TECH-Dateien `argocd/bootstrap/*` bleiben vom ENTW-Layout
 unberührt (`make render-bootstrap` rendert mit dem Standard der Rolle, dem TECH-Layout).
@@ -100,7 +100,7 @@ Application weiter, ohne dass ArgoCD sie noch verwaltet.
 3. Playbook aus einem Checkout ausführen, der die Rollen-Änderung enthält:
 
 ```bash
-ansible-playbook -i ansible/inventory/hosts.yml ansible/entw.yml --tags argocd --vault-password-file ~/.vault_pass
+ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/entw.yml --tags argocd --vault-password-file ~/.vault_pass
 ```
 
 Die `argocd`-Rolle löscht dabei zuerst die alten ApplicationSets

@@ -42,7 +42,7 @@ jobs:
           echo
 
           printf '%s\n' "192.168.178.94 argocd.tech.homeserver" "192.168.178.100 argocd.dev.homeserver" | sudo tee -a /etc/hosts >/dev/null
-          ca="$GITHUB_WORKSPACE/docs/assets/homeserver-root-ca.pem"
+          ca="$GITHUB_WORKSPACE/pki/homeserver-root-ca.pem"
 
           tcp() { timeout 6 bash -c "</dev/tcp/$1/$2" 2>/dev/null && echo offen || echo "zu/gefiltert"; }
           http() { curl -s -m 8 --cacert "$ca" -o /dev/null -w '%{http_code}' "$@" 2>/dev/null || true; }

@@ -6,7 +6,7 @@ Bündelt zwei unabhängig gewachsene Teile zu einem Gesamtbild:
    deployt VictoriaLogs (single-node, Filesystem-Storage) plus
    `victoria-logs-collector` (DaemonSet), der auf jedem k3s-Node
    Container-/Pod-Logs einsammelt und weiterleitet.
-2. **Host-journald** (neu, siehe [Anlass](#anlass)): `ansible/roles/journal_upload`
+2. **Host-journald** (neu, siehe [Anlass](#anlass)): `capulus-ansible/roles/journal_upload`
    pusht das systemd-Journal jedes Ansible-verwalteten Hosts — egal ob
    k3s-Cluster-Mitglied oder eigenständiger Kiosk-Pi — zusätzlich an
    dieselbe VictoriaLogs-Instanz.
@@ -95,7 +95,7 @@ Schutz ist die LAN/Tailscale-Netzwerkgrenze, nicht Kryptografie.
 
 ## Ansible-Rolle `journal_upload`
 
-`ansible/roles/journal_upload/` — in **allen** Playbooks eingebunden, die
+`capulus-ansible/roles/journal_upload/` — in **allen** Playbooks eingebunden, die
 einen Host provisionieren (`site.yml`, `worker-0.yml`, `worker-1.yml`,
 `xibo-kiosks.yml`, `banana-pi-kiosks.yml`, `alarm-kiosks.yml`).
 
@@ -119,7 +119,7 @@ Promtail/Grafana Alloy/Vector:**
 | Key | Bedeutung |
 |---|---|
 | `journal_upload_enabled` | Kill-switch, Default `true` |
-| `journal_upload_push_url` | Ziel-URL, Default `https://logs-write.tech.homeserver:443/insert/journald` (HTTPS **und** Port sind Pflicht, siehe unten) — bewusst ein **globaler** Default für alle Hosts (anders als `vmagent_remote_write_url`, das nur für Tailscale-only-Hosts gilt, siehe [ansible/roles/vmagent](30020-vereinsheim-alarmmonitor.md)) |
+| `journal_upload_push_url` | Ziel-URL, Default `https://logs-write.tech.homeserver:443/insert/journald` (HTTPS **und** Port sind Pflicht, siehe unten) — bewusst ein **globaler** Default für alle Hosts (anders als `vmagent_remote_write_url`, das nur für Tailscale-only-Hosts gilt, siehe [capulus-ansible/roles/vmagent](30020-vereinsheim-alarmmonitor.md)) |
 
 Die Rolle installiert nur das Paket, templated `/etc/systemd/journal-upload.conf`
 (`[Upload]\nURL=...`) und aktiviert `systemd-journal-upload.service` — kein
@@ -135,7 +135,7 @@ in VictoriaLogs an**. Die Rolle setzt jetzt:
 
 - `URL=https://logs-write.tech.homeserver:443/insert/journald` (der Port ist Pflicht: ohne Port hängt `systemd-journal-upload` selbst `:19532/upload` an den Pfad und trifft `/insert/journald:19532/upload`, den VictoriaLogs nicht kennt; mit Port wird `/insert/journald/upload` getroffen), `ServerKeyFile=-`/`ServerCertificateFile=-` (kein Client-Zertifikat; sonst bricht der Dienst mit `could not load PEM client certificate` ab) und
   `TrustedCertificateFile=` auf die interne Root-CA
-  (`docs/assets/homeserver-root-ca.pem` → `/usr/local/share/ca-certificates/homeserver-root-ca.crt`,
+  (`pki/homeserver-root-ca.pem` → `/usr/local/share/ca-certificates/homeserver-root-ca.crt`,
   gleiche Datei wie in den Kiosk-Rollen; `update-ca-certificates` läuft per Handler).
 - Das Zertifikat hat **keine Wildcard**, nur die feste SAN-Liste in
   `argocd/apps/tech/cert-manager/templates/certificate-homeserver-wildcard.yaml`.
@@ -182,7 +182,7 @@ vorher bot.
 | `journalctl -u systemd-journal-upload`: `failed with code 308: Permanent Redirect` | Die Upload-URL steht noch auf `http://` — Rolle neu ausrollen (`journal_upload_push_url` ist `https://`). |
 | `journalctl -u systemd-journal-upload`: Zertifikatsfehler / `SSL certificate problem` | (a) steht `logs-write.tech.homeserver` in der SAN-Liste des ausgelieferten Zertifikats (Befehl siehe Abschnitt Rolle)? Sonst `certificate-homeserver-wildcard.yaml` prüfen und ArgoCD syncen. (b) liegt `/usr/local/share/ca-certificates/homeserver-root-ca.crt` auf dem Host und zeigt `TrustedCertificateFile=` in `/etc/systemd/journal-upload.conf` darauf? |
 | Worker: `Could not resolve host: logs-write.tech.homeserver` | `/etc/hosts`-Eintrag fehlt — Rolle ausrollen (`journal_upload_hosts_entry_enabled: true`). Die Worker lösen `*.homeserver` nicht per DNS auf. |
-| Ausrollen auf einzelne Hosts | Homeserver: `ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml --limit homeserver --tags journal-upload`; Pi: `ansible-playbook … ansible/banana-pi-kiosks.yml --tags journal-upload`; worker: `… worker-1.yml --tags journal-upload` (jeweils mit `--vault-password-file`). |
+| Ausrollen auf einzelne Hosts | Homeserver: `ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/site.yml --limit homeserver --tags journal-upload`; Pi: `ansible-playbook … capulus-ansible/banana-pi-kiosks.yml --tags journal-upload`; worker: `… worker-1.yml --tags journal-upload` (jeweils mit `--vault-password-file`). |
 | `logs-write.tech.homeserver` löst nicht auf / Timeout | Gleiche Checks wie bei `alamos-apager.prod.homeserver` (Wildcard-DNS, bei Tailscale-only-Hosts zusätzlich Split-DNS + Subnetz-Route), siehe [docs/3-apps-workloads/30010-alamos-apager.md, Fehlerbehebung](30010-alamos-apager.md#fehlerbehebung) |
 | Dienst läuft, aber keine neuen Logs seit Neustart | `/var/lib/systemd/journal-upload/state` prüfen (Cursor) — bei sehr altem Cursor kann ein initialer Nachtrag laenger dauern, bis aktuelle Zeilen erscheinen |
 | `journalctl -u systemd-journal-upload`: `Buffer space is too small to write entry` + `operation aborted by callback`, Dienst im Restart-Loop bis `Start request repeated too quickly`, **keine** State-Datei unter `/var/lib/private/systemd/journal-upload/` | Ohne State startet der Uploader am Journal-**Anfang** und schickt das ganze Alt-Journal (homeserver: ~5 GB) als einen Request — bricht ab, bevor je ein Cursor gespeichert wird (Vorfall 2026-09-24). Rolle ausrollen: sie setzt bei fehlender State-Datei den Startpunkt auf das Journal-Ende (`--tags journal-upload`). Manuell: Datei mit `LAST_CURSOR=<Ausgabe von journalctl -q -n 1 --show-cursor>` anlegen, **Besitzer = Besitzer des State-Verzeichnisses** (sonst `Failed to read state file: Permission denied`), dann `systemctl reset-failed systemd-journal-upload && systemctl start systemd-journal-upload`. |

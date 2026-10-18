@@ -4,7 +4,7 @@
 übergibt Änderungen, die auf dem Branch `entw` gelandet sind, als **Pull
 Request an `main`** — aber erst, wenn die CI auf `entw` grün ist. `entw` ist
 die Git-Quelle des ENTW-Clusters (`argocd_repo_revision: entw` in
-`ansible/host_vars/entw-vm/vars.yml`); `main` ist die Quelle von TECH und PROD.
+`capulus-ansible/host_vars/entw-vm/vars.yml`); `main` ist die Quelle von TECH und PROD.
 Was auf ENTW getestet wurde, kommt so ohne Handarbeit als fertiger PR nach
 `main`, wo [das Ruleset](f0090-branch-schutz-main.md) die Pflicht-Checks prüft und
 du den Merge bestätigst.

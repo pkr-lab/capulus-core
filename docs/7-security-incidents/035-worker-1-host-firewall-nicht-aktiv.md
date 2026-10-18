@@ -2,7 +2,7 @@
 
 - Severity: Medium
 - Bereich: worker1
-- Betroffen: worker-1 (`192.168.178.96`), `ansible/roles/k3s_agent/tasks/main.yml:62-90`, `ansible/worker-1.yml`
+- Betroffen: worker-1 (`192.168.178.96`), `capulus-ansible/roles/k3s_agent/tasks/main.yml:62-90`, `capulus-ansible/worker-1.yml`
 - Status: Behoben am 2026-10-18 für worker-1 und worker-0 (beide live, vom Betreiber bestätigt, Rollback-Timer gestoppt)
 
 ## Beschreibung
@@ -36,9 +36,9 @@ ufw allow 8472/udp comment 'Flannel VXLAN pod overlay network'
 ufw allow from 10.42.0.0/16 comment 'k3s pod CIDR traffic'
 ufw allow from 10.43.0.0/16 comment 'k3s service CIDR traffic'
 
-$ grep -c common ansible/worker-1.yml ansible/worker-0.yml
-ansible/worker-1.yml:0
-ansible/worker-0.yml:0
+$ grep -c common capulus-ansible/worker-1.yml capulus-ansible/worker-0.yml
+capulus-ansible/worker-1.yml:0
+capulus-ansible/worker-0.yml:0
 ```
 
 ## Risiko / Angriffsszenario
@@ -127,7 +127,7 @@ ufw --force enable
 2. Regeln wie oben anlegen (noch ohne `enable`), `ufw show added` prüfen.
 3. `ufw --force enable`, sofort neue SSH-Verbindung testen, `kubectl get nodes` (worker-1 `Ready`), `curl http://192.168.178.96:9100/metrics` vom Homeserver, Ping und HTTP **aus der ENTW-VM** ins LAN (`virsh console` oder SSH auf die VM), ArgoCD-Sync der ENTW-Apps.
 4. Erst nach deiner Bestätigung den Timer abbrechen (`systemctl stop ufw-rollback.timer`).
-5. Danach die Regeln in `ansible/roles/k3s_agent/tasks/main.yml` übernehmen (die Rolle legt heute vier Regeln an, aktiviert aber nie) und `worker-1.yml` um `common` bzw. um die Aktivierung ergänzen.
+5. Danach die Regeln in `capulus-ansible/roles/k3s_agent/tasks/main.yml` übernehmen (die Rolle legt heute vier Regeln an, aktiviert aber nie) und `worker-1.yml` um `common` bzw. um die Aktivierung ergänzen.
 
 **Rollback.** `ufw disable`; Konfiguration aus dem Backup `/etc/ufw.bak-<zeit>` zurückkopieren.
 

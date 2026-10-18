@@ -2,7 +2,7 @@
 
 - Severity: Medium
 - Bereich: Netzwerk
-- Betroffen: `ansible/roles/common/tasks/main.yml:188-263`, `ansible/roles/k3s_agent/tasks/main.yml:72-77`
+- Betroffen: `capulus-ansible/roles/common/tasks/main.yml:188-263`, `capulus-ansible/roles/k3s_agent/tasks/main.yml:72-77`
 - Status: Teilweise behoben am 2026-10-17 (homeserver vollständig, worker-0, prod-vm und entw-vm nur die offenen Cluster-Ports; offen: LAN-Pauschale dort, worker-1, Tailscale-ACL, NodePorts)
 
 ## Beschreibung
@@ -14,14 +14,14 @@ Die tatsächlich wirksame Absicherung hängt damit an der Tailscale-ACL (nicht i
 ## Nachweis
 
 ```
-$ grep -n -E 'name: Allow (k3s API|Flannel|kubelet|all traffic from (local|Tailscale))' ansible/roles/common/tasks/main.yml
+$ grep -n -E 'name: Allow (k3s API|Flannel|kubelet|all traffic from (local|Tailscale))' capulus-ansible/roles/common/tasks/main.yml
 188:- name: Allow k3s API server (port 6443)
 228:- name: Allow Flannel VXLAN overlay network (UDP 8472)
 235:- name: Allow kubelet API (port 10250)
 254:- name: Allow all traffic from local LAN subnet
 260:- name: Allow all traffic from Tailscale network
 
-$ sed -n 254,263p ansible/roles/common/tasks/main.yml
+$ sed -n 254,263p capulus-ansible/roles/common/tasks/main.yml
 - name: Allow all traffic from local LAN subnet
   community.general.ufw:
     rule: allow
@@ -33,7 +33,7 @@ $ sed -n 254,263p ansible/roles/common/tasks/main.yml
     rule: allow
     src: "100.64.0.0/10"
 
-$ sed -n 72,77p ansible/roles/k3s_agent/tasks/main.yml
+$ sed -n 72,77p capulus-ansible/roles/k3s_agent/tasks/main.yml
 - name: Allow Flannel VXLAN (UDP 8472) for pod overlay
     port: "8472"
 ```
@@ -125,7 +125,7 @@ Die Regeln wurden live mit `ufw` gesetzt (je Host Backup und Rollback-Timer, in 
 
 **Geänderte Dateien.**
 
-- `ansible/roles/common/defaults/main.yml` (neu), `ansible/roles/common/tasks/main.yml`, `ansible/roles/k3s_agent/tasks/main.yml`, `ansible/host_vars/homeserver/vars.yml`
+- `capulus-ansible/roles/common/defaults/main.yml` (neu), `capulus-ansible/roles/common/tasks/main.yml`, `capulus-ansible/roles/k3s_agent/tasks/main.yml`, `capulus-ansible/host_vars/homeserver/vars.yml`
 - Doku: `docs/6-hintergruende/60010-ansible-hosts-und-playbooks.md` (Abschnitt „Firewall (UFW, Rolle `common`)“), `docs/c-netzwerk-dns/c0030-port-uebersicht.md`, `docs/a-betriebssystem/a0010-overview.md`
 
 **Rollback.** Die Sicherungskopien von `/etc/ufw` (`/root/ufw-backup-20261017-*`, fünf Stück auf vier Hosts) wurden am 2026-10-17 nach der Bestätigung gelöscht. Zurück geht es über den Code: die Variablen `common_ufw_lan_allow_all` und `common_ufw_tailnet_allow_all` des homeservers auf `true`, die Regeländerungen im Repo zurücknehmen und `make common` ausführen. Einzelne Regeln lassen sich von Hand wiederherstellen, zum Beispiel `sudo ufw allow from 192.168.178.0/24` für die LAN-Pauschale. Wird `user.rules` selbst überschrieben, danach `sudo ufw disable && sudo ufw --force enable` (nicht `ufw reload`, beide Teile mit `sudo`) und die Loopback-Regel prüfen.

@@ -8,7 +8,7 @@ Legende: `[ ]` offen, `[x]` erledigt.
 
 ## Außerhalb der Incidents (aus dem Test von 017)
 
-- [ ] **worker-1, Rolle `libvirt_host`: Drift prüfen und abarbeiten.** Der Check-Lauf zeigt 15 offene Änderungen: `99-libvirt-bridge.yaml` mit `ra-overrides`, Entfernen von `90-dns-fallback.yaml`, `Netplan anwenden`. Erst die Diffs lesen (`ansible-playbook … ansible/worker-1.yml --check --diff --tags libvirt-host`), dann mit Rollback-Timer anwenden, weil `Netplan anwenden` die Verbindung kurz trennen kann.
+- [ ] **worker-1, Rolle `libvirt_host`: Drift prüfen und abarbeiten.** Der Check-Lauf zeigt 15 offene Änderungen: `99-libvirt-bridge.yaml` mit `ra-overrides`, Entfernen von `90-dns-fallback.yaml`, `Netplan anwenden`. Erst die Diffs lesen (`ansible-playbook … capulus-ansible/worker-1.yml --check --diff --tags libvirt-host`), dann mit Rollback-Timer anwenden, weil `Netplan anwenden` die Verbindung kurz trennen kann.
 - [ ] **`libvirt_host` im Check-Modus lauffähig machen.** Der Task `Warnen, wenn die Disk einer bestehenden VM am Basis-Image haengt` bricht im Check-Lauf mit `from_json` ab (übersprungener `command`). Gleiche Fehlerklasse wie in `tailscale`, `k3s` und `crowdsec` (siehe [60020](../6-hintergruende/60020-ansible-rollen.md), Abschnitt „Installer und Prüfsummen“).
 - [ ] **Check-Modus der übrigen Rollen prüfen.** Nur `k3s`, `k3s_agent`, `crowdsec`, `tailscale`, `vmagent` und die Lesezugriffe von `libvirt_host` wurden gegen die Hosts im Check-Modus geprüft.
 
@@ -44,7 +44,7 @@ Legende: `[ ]` offen, `[x]` erledigt.
 ## 017 Ansible-Installer
 
 - [ ] Echter Lauf der Rollen (nicht `--check`) planen, Host für Host. Er hebt wegen `auto_upgrade: true` auch Tailscale-Pakete an und lässt k3s dem Kanal `stable` folgen.
-- [ ] Optional: Zeile `helm_version` in `ansible/group_vars/all.yml` entfernen (hat keine Wirkung mehr, Vault-Datei).
+- [ ] Optional: Zeile `helm_version` in `capulus-ansible/group_vars/all.yml` entfernen (hat keine Wirkung mehr, Vault-Datei).
 - [ ] Pins bei Bedarf erneuern (k3s-Installer, vmagent-Tarball, Cloud-Image, Fingerprints): Befehle in [60020](../6-hintergruende/60020-ansible-rollen.md).
 - [ ] `ansible.builtin.apt_repository` auf `deb822_repository` umstellen (in ansible-core 2.25 entfernt).
 - [ ] `infotafel` im Check-Lauf von `vmagent` mitprüfen (war nicht Teil des Laufs).

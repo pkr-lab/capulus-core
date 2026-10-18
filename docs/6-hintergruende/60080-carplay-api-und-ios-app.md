@@ -1,7 +1,7 @@
 # carplay-api und iOS-App — Hintergründe
 
 Begründungen zum Go-Backend `argocd/apps/tech/carplay-api/` und zur SwiftUI-App unter `ios/`. Bedienung, Einrichtung und Konfiguration:
-[300d0](../3-apps-workloads/300d0-carplay-api.md) und [ios/README](../../ios/README.md) (dort auch der Abschnitt zum Transport HTTP/HTTPS).
+[300d0](../3-apps-workloads/300d0-carplay-api.md) und [capulus-ios/README](https://github.com/pkr-lab/capulus-ios/blob/main/README.md) (dort auch der Abschnitt zum Transport HTTP/HTTPS).
 Der Verzeichnisname `carplay-api` ist historisch (aus der CarPlay-Vorversion), das Backend bedient heute die reine iOS-App „Homeserver Dashboard“.
 Übersicht dieser Kategorie: [60000](60000-uebersicht.md).
 
@@ -95,7 +95,7 @@ Der Verzeichnisname `carplay-api` ist historisch (aus der CarPlay-Vorversion), d
 ### Transport und Schlüssel
 
 - **HTTPS ohne ATS-Ausnahme.** `Constants.swift` verweist auf `https://carplay-api.prod.homeserver`, die App enthält keinen `NSAppTransportSecurity`-Eintrag mehr (siehe
-  [ios/README](../../ios/README.md), Abschnitt Transport). Vorher stand dort `http://` mit `NSExceptionAllowsInsecureHTTPLoads` für die Domain `homeserver` samt Subdomains: Bearer-Token und Dashboard-Daten liefen
+  [capulus-ios/README](https://github.com/pkr-lab/capulus-ios/blob/main/README.md), Abschnitt Transport). Vorher stand dort `http://` mit `NSExceptionAllowsInsecureHTTPLoads` für die Domain `homeserver` samt Subdomains: Bearer-Token und Dashboard-Daten liefen
   im Heim-WLAN im Klartext, und seit der globalen HTTP→HTTPS-Umleitung von Traefik (2026-09-13) ging jeder Aufruf ohnehin erst über einen `301`/`308`. Die Umleitung war kein Schutz, weil der erste Request mit
   dem Token schon im Klartext hinausging. Der Hostname steht seit der Tier-Migration in der SAN-Liste des cert-manager-Zertifikats, deshalb brauchte es keine Serveränderung und keinen eigenen TLS-Block im Ingress
   (der Standard-`TLSStore` greift).
@@ -110,7 +110,7 @@ Der Verzeichnisname `carplay-api` ist historisch (aus der CarPlay-Vorversion), d
   trägt die IP als Subject Alternative Name, weil es für das Gerät keinen DNS-Namen gibt und `*.homeserver`-Namen im Tailnet nicht zuverlässig auflösen. Die Root-CA ist dieselbe wie bei `carplay-api`, auf dem iPhone
   ist nichts zusätzlich zu installieren. Der Agent lauscht weiter nur auf der Tailscale-Adresse ([60020](60020-ansible-rollen.md#banana_pi_kiosk-vereinsheim-alarmmonitor)); TLS schützt zusätzlich gegen einen
   Mitleser im Tailnet und gegen einen Agent-Impostor.
-- **`MTLSDelegate` pinnt die Root-CA, mTLS gibt es nicht.** Die ursprüngliche Spezifikation wollte Zertifikats-Pinning. Der Delegate prüft für Hosts auf `.homeserver` und die WoL-Agent-IP `100.123.214.4` das Serverzertifikat **nur gegen die eingebettete Root-CA** (`SecTrustSetAnchorCertificates` mit `SecTrustSetAnchorCertificatesOnly`), nicht gegen den Vertrauensspeicher des Geräts. Eine fremde, auf dem iPhone installierte CA reicht damit für einen Mitleser nicht mehr, und das CA-Profil auf dem Gerät ist für die App nicht mehr nötig. Für alle anderen Hosts (Wetter, Pegel, Tankerkönig, News) gilt `performDefaultHandling`. Die Datei `docs/assets/homeserver-root-ca.pem` kommt als Resource ins Bundle (`project.yml`); fehlt sie, scheitern alle gepinnten Anfragen (fail closed), statt das Pinning still auszulassen. Bei einem CA-Wechsel (Ablauf 2036-08-10) die App neu bauen.
+- **`MTLSDelegate` pinnt die Root-CA, mTLS gibt es nicht.** Die ursprüngliche Spezifikation wollte Zertifikats-Pinning. Der Delegate prüft für Hosts auf `.homeserver` und die WoL-Agent-IP `100.123.214.4` das Serverzertifikat **nur gegen die eingebettete Root-CA** (`SecTrustSetAnchorCertificates` mit `SecTrustSetAnchorCertificatesOnly`), nicht gegen den Vertrauensspeicher des Geräts. Eine fremde, auf dem iPhone installierte CA reicht damit für einen Mitleser nicht mehr, und das CA-Profil auf dem Gerät ist für die App nicht mehr nötig. Für alle anderen Hosts (Wetter, Pegel, Tankerkönig, News) gilt `performDefaultHandling`. Die Datei `pki/homeserver-root-ca.pem` kommt als Resource ins Bundle (`project.yml`); fehlt sie, scheitern alle gepinnten Anfragen (fail closed), statt das Pinning still auszulassen. Bei einem CA-Wechsel (Ablauf 2036-08-10) die App neu bauen.
   Echtes Client-Zertifikats-mTLS (Home-Lab-CA plus `RequireAndVerifyClientCert` am Traefik) ist eine unimplementierte Idee. Kommt sie, muss die IngressRoute die TLSOption `mtls-homelab` referenzieren, der
   Client-Identity-Zweig im Delegate aktiviert und das `.p12` des Geräts per Keychain bereitgestellt werden. Ein Client-Zertifikat verlangt der Server nicht (kein mTLS).
 - **Keychain statt „Secure Enclave“.** Die Spezifikation nannte die Secure Enclave, sie schützt aber private **Schlüssel** für Signieren/Entschlüsseln und hat keine API für ein beliebiges opakes Token wie ein
@@ -138,7 +138,7 @@ Der Verzeichnisname `carplay-api` ist historisch (aus der CarPlay-Vorversion), d
 | `alerts`/`hosts` per `decodeIfPresent` | Go serialisiert ein leeres/nil Slice als JSON `null`, nicht `[]`. `decodeIfPresent` behandelt ein explizites `null` wie einen fehlenden Schlüssel und fällt auf `[]` zurück, statt dass der `JSONDecoder` wirft. |
 | `PowerTarget`-Rohwerte mit Bindestrich (`worker-0`) | Sie werden verbatim als JSON gesendet und müssen den Go-String-Konstanten exakt entsprechen. |
 | Offline-Hosts werden ausgeblendet | Ein Host, der aus ist (herunterskalierter Worker, NAS im Reboot), wird nicht ausgegraut mit 0 % gezeigt, weil 0 % für einen Offline-Host keine echte Messung ist. |
-| Letzter bekannter Stand bleibt bei Fehlern | Ein veralteter Wert ist besser als ein leerer Bildschirm ([ios/README](../../ios/README.md), „Offline-Verhalten“). Die Update-Karte scheitert **still** (nice-to-know, kein Banner über der Flottenübersicht). |
+| Letzter bekannter Stand bleibt bei Fehlern | Ein veralteter Wert ist besser als ein leerer Bildschirm ([capulus-ios/README](https://github.com/pkr-lab/capulus-ios/blob/main/README.md), „Offline-Verhalten“). Die Update-Karte scheitert **still** (nice-to-know, kein Banner über der Flottenübersicht). |
 | Ein `DashboardViewModel` für alle Tabs | Ein Poll-Loop insgesamt statt einer pro Screen. Die Update-Abfrage liegt bewusst nicht im 30-Sekunden-Loop (Cache 15 min, Watcher alle 2 h), sondern einmal pro Ansicht bzw. Pull-to-Refresh. |
 | Helligkeits-Slider schreibt erst beim Loslassen | Helligkeit schreibt über zwei Netzwerk-Hops (App → carplay-api → power-agent) in sysfs des Homeservers. Jeden Zwischenwert zu streamen würde veraltete Schreibvorgänge hinter dem aktuellen aufstauen. Die lokale Anzeige wird optimistisch aktualisiert und mit dem serverseitig begrenzten Wert abgeglichen. |
 | Wake-on-LAN am Vereinsheim ohne Shutdown, ohne Online-Punkt | Das Ziel hat keinen Host-Eintrag in carplay-apis Dashboard, es gibt keinen Status außer dem Ergebnis des letzten Weckversuchs. capulus-core hat dafür auch keinen Remote-Shutdown-Pfad. |

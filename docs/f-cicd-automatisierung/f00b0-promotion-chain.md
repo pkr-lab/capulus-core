@@ -132,7 +132,7 @@ Tailnet bewirbt. Damit kommen beide ArgoCD-Instanzen über ihre LAN-Adresse, ohn
 | ENTW-Ingress | `192.168.178.100:80` (Host-Header) | Smoke-Checks |
 
 Der Runner hat kein Heim-DNS. Der Workflow trägt die beiden ArgoCD-Hosts in `/etc/hosts` ein und kopiert
-`docs/assets/homeserver-root-ca.pem` nach `$RUNNER_TEMP/argocd-ca.pem`; `promote-chain.py` prüft das Zertifikat
+`pki/homeserver-root-ca.pem` nach `$RUNNER_TEMP/argocd-ca.pem`; `promote-chain.py` prüft das Zertifikat
 dagegen (Umgebungsvariable `ARGOCD_CA_FILE`). Die Zertifikatsprüfung ist nicht abschaltbar: Ist die CA nicht passend
 oder das Zertifikat abgelaufen, gilt ArgoCD als nicht erreichbar und das Gate blockiert. Die Gründe der Umstellung
 von `http://…:30080`: [60030](../6-hintergruende/60030-argocd-und-bootstrap.md#rolle-argocd).
@@ -180,7 +180,7 @@ Reihenfolge (nach dem Merge der Änderungen, die diese Pipeline einführen):
 2. **ArgoCD-Konto `ci` ausrollen** (Nur-Lese-Rolle, nur API-Token): Ansible-Rolle `argocd`, Schalter
    `argocd_ci_account_enabled` (Standard `true`).
    - Hub: `make argocd`
-   - ENTW: `ansible-playbook -i ansible/inventory/hosts.yml ansible/entw.yml --tags argocd --vault-password-file ~/.vault_pass`
+   - ENTW: `ansible-playbook -i capulus-ansible/inventory/hosts.yml capulus-ansible/entw.yml --tags argocd --vault-password-file ~/.vault_pass`
 3. **Tokens erzeugen und als Secret hinterlegen** (nichts wird ausgegeben):
    `scripts/create-argocd-ci-token.sh hub` und `scripts/create-argocd-ci-token.sh entw`
    → Secrets `ARGOCD_HUB_TOKEN`, `ARGOCD_ENTW_TOKEN` (365 Tage gültig).
