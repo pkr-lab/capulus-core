@@ -3,6 +3,10 @@ kind: Ingress
 metadata:
   name: logs-write
   namespace: {{ .Release.Namespace }}
+  {{- if and .Values.writeAuth.enabled .Values.writeAuth.encryptedUsers }}
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: {{ .Release.Namespace }}-{{ .Values.writeAuth.secretName }}@kubernetescrd
+  {{- end }}
 spec:
   ingressClassName: traefik
   rules:

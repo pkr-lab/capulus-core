@@ -98,6 +98,47 @@
     src: "{{ k3s_service_cidr }}"
     comment: "k3s service CIDR traffic"
 
+- name: infrastruktur-hosts vollständig erlauben
+  community.general.ufw:
+    rule: allow
+    src: "{{ item }}"
+    comment: "Infrastruktur-Host (Vollzugriff)"
+  loop: "{{ k3s_agent_ufw_trusted_hosts }}"
+  when: k3s_agent_ufw_enable | bool
+
+- name: ssh aus dem lan erlauben
+  community.general.ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+    src: "{{ local_subnet }}"
+    comment: "SSH (LAN)"
+  when: k3s_agent_ufw_enable | bool
+
+- name: tailscale-wireguard erlauben
+  community.general.ufw:
+    rule: allow
+    port: "41641"
+    proto: udp
+    comment: "Tailscale WireGuard VPN"
+  when: k3s_agent_ufw_enable | bool
+
+- name: bridge für virtuelle maschinen weiterleiten
+  community.general.ufw:
+    rule: allow
+    route: true
+    interface_in: "{{ k3s_agent_ufw_vm_bridge }}"
+    interface_out: "{{ k3s_agent_ufw_vm_bridge }}"
+    comment: "libvirt bridge LAN <-> VM"
+  when: k3s_agent_ufw_enable | bool and k3s_agent_ufw_vm_bridge | length > 0
+
+- name: ufw aktivieren
+  community.general.ufw:
+    state: enabled
+    default: deny
+    direction: incoming
+  when: k3s_agent_ufw_enable | bool
+
 - name: Read k3s node-token from server
   ansible.builtin.slurp:
     src: /var/lib/rancher/k3s/server/node-token

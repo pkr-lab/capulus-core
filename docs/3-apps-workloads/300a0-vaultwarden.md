@@ -285,6 +285,8 @@ per `sqlite3 .backup` (nutzt SQLites eigene Online-Backup-API, sicher auch
 bei einer laufenden, offenen DB) auf das NAS — Details:
 [docs/2-betrieb-hardware/20010-nas-backup.md](../2-betrieb-hardware/20010-nas-backup.md).
 
+Zusätzlich läuft ein verschlüsselter, versionierter restic-Job (`restic-cronjob.yaml`, Einrichtung und Wiederherstellungstest: [20010](../2-betrieb-hardware/20010-nas-backup.md#restic-für-vaultwarden-im-cluster)). Der Spiegel oben bleibt, bis die Rolle `vaultwarden_restore` aus restic wiederherstellen kann.
+
 ---
 
 ## 8. Restore nach Redeploy / Disaster Recovery

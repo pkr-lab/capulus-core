@@ -3,7 +3,7 @@
   kind: password
   stored_in:
     - argocd/apps/tech/alamos-apager/templates/sealedsecret-stations.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -18,7 +18,7 @@
   kind: api-token
   stored_in:
     - argocd/apps/tech/alamos-relay/templates/sealedsecret.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -108,7 +108,7 @@
   kind: api-token
   stored_in:
     - argocd/apps/tech/argo-workflows/templates/artifact-secret-sealedsecret.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -123,7 +123,7 @@
   kind: api-token
   stored_in:
     - argocd/apps/tech/argo-workflows/templates/ghcr-push-sealedsecret.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -138,7 +138,7 @@
   kind: api-token
   stored_in:
     - argocd/apps/tech/carplay-api/templates/secret-api-token.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -231,7 +231,7 @@
   kind: api-token
   stored_in:
     - argocd/apps/tech/carplay-api/templates/secret-power-agent-token.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -246,7 +246,7 @@
   kind: password
   stored_in:
     - argocd/apps/tech/carplay-api/templates/secret-shutdown-code.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -261,7 +261,7 @@
   kind: tunnel-credential
   stored_in:
     - argocd/apps/tech/cloudflared/templates/sealedsecret.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -276,7 +276,7 @@
   kind: tunnel-credential
   stored_in:
     - argocd/apps/prod/cloudflared/templates/sealedsecret.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -292,7 +292,7 @@
   stored_in:
     - argocd/apps/tech/github-release-watcher/templates/sealedsecret-github-token.yaml
     - argocd/apps/prod/wiki-docs-sync/templates/sealedsecret-github-token.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -307,7 +307,7 @@
   kind: api-token
   stored_in:
     - argocd/apps/tech/github-release-watcher/templates/sealedsecret.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -322,7 +322,7 @@
   kind: password
   stored_in:
     - argocd/apps/tech/lldap/templates/sealedsecret.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -337,7 +337,7 @@
   kind: password
   stored_in:
     - argocd/apps/tech/minio/templates/root-creds-sealedsecret.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -352,7 +352,7 @@
   kind: password
   stored_in:
     - argocd/apps/tech/pihole/templates/sealedsecret.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -367,7 +367,7 @@
   kind: password
   stored_in:
     - argocd/apps/tech/vaultwarden/templates/sealedsecret.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -382,7 +382,7 @@
   kind: password
   stored_in:
     - argocd/apps/tech/vaultwarden/templates/sealedsecret.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -397,7 +397,7 @@
   kind: password
   stored_in:
     - argocd/apps/tech/zammad/templates/sealedsecret.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -412,7 +412,7 @@
   kind: password
   stored_in:
     - argocd/apps/prod/immich/templates/sealedsecret.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -427,7 +427,7 @@
   kind: password
   stored_in:
     - argocd/apps/prod/nextcloud/templates/sealedsecret.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -442,7 +442,7 @@
   kind: password
   stored_in:
     - argocd/apps/prod/wikijs/templates/sealedsecret.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -457,7 +457,7 @@
   kind: api-token
   stored_in:
     - argocd/apps/prod/wiki-docs-sync/templates/sealedsecret.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -472,7 +472,7 @@
   kind: password
   stored_in:
     - argocd/apps/prod/xibosignage/templates/secret.yaml
-  issued: null
+  issued: "2026-09-19"
   expires: null
   max_age_days: 365
   rotation:
@@ -633,7 +633,7 @@
   kind: password
   stored_in:
     - argocd/apps/tech/isc-news-bot/templates/sealedsecret.yaml
-  issued: null
+  issued: "2026-10-05"
   expires: null
   max_age_days: 365
   rotation:
@@ -648,7 +648,7 @@
   kind: api-token
   stored_in:
     - argocd/apps/tech/isc-news-bot/templates/sealedsecret.yaml
-  issued: null
+  issued: "2026-10-05"
   expires: null
   max_age_days: 365
   rotation:
@@ -663,7 +663,7 @@
   kind: password
   stored_in:
     - argocd/apps/tech/alert-caller/templates/sealedsecret.yaml
-  issued: null
+  issued: "2026-10-11"
   expires: null
   max_age_days: 365
   rotation:
@@ -672,3 +672,51 @@
     overlap: true
   owner: peter
   blast_radius: "Passwort des Linphone-Kontos capulus-core: wer es hat, kann damit auf sip.linphone.org anrufen und Anrufe als capulus-core ausloesen. Das Konto hat keine weiteren Rechte."
+
+- id: vm-write-auth
+  service: monitoring
+  kind: password
+  stored_in:
+    - argocd/apps/tech/monitoring/templates/write-auth.yaml
+    - ansible/group_vars/all.yml
+  issued: null
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: scripted
+    runbook: docs/6-hintergruende/60060-monitoring-und-alerting.md#schreib-endpunkte-vm-write-und-logs-write-basic-auth
+    overlap: false
+  owner: peter
+  blast_radius: "Basic-Auth-Zugang vm-writer: Metriken in VictoriaMetrics einspeisen (vmagent aller Hosts). Gleicher Wert als Vault-Variable vault_vm_write_auth_password. Erst nach dem Einschalten von writeAuth.enabled aktiv."
+
+- id: logs-write-auth
+  service: logging
+  kind: password
+  stored_in:
+    - argocd/apps/tech/logging/templates/write-auth.yaml
+    - ansible/group_vars/all.yml
+  issued: null
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: scripted
+    runbook: docs/6-hintergruende/60060-monitoring-und-alerting.md#schreib-endpunkte-vm-write-und-logs-write-basic-auth
+    overlap: false
+  owner: peter
+  blast_radius: "Basic-Auth-Zugang logs-writer: Journal-Zeilen in VictoriaLogs einspeisen (systemd-journal-upload aller Hosts). Gleicher Wert als Vault-Variable vault_logs_write_auth_password; kann bei Upload-Fehlern im Journal stehen."
+
+- id: vaultwarden-restic-password
+  service: vaultwarden
+  kind: password
+  stored_in:
+    - argocd/apps/tech/vaultwarden/templates/restic-sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: 3650
+  rotation:
+    mode: manual
+    runbook: docs/2-betrieb-hardware/20010-nas-backup.md#restic-für-vaultwarden-im-cluster
+    overlap: false
+  owner: peter
+  blast_radius: "Repository-Passwort der verschluesselten Vaultwarden-Sicherung (restic auf dem NAS-Volume). Wer es und das Volume hat, liest Datenbank, rsa_key und config.json. Nicht routinemaessig wechseln: ein Wechsel macht alle bisherigen Snapshots unlesbar, ausser sie werden per restic key passwd umgeschluesselt. Zusaetzlich im Passwortmanager ablegen."
+
