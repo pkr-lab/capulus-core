@@ -3,6 +3,8 @@ tailscale_repo_codename: "{{ ansible_distribution_release }}"
 
 tailscale_repo_os: "{{ 'debian' if ansible_distribution == 'Debian' else 'ubuntu' }}"
 
+tailscale_signing_key_fingerprint: "2596A99EAAB33821893C0A79458CA832957F5868"
+
 tailscale_accept_routes: false
 
 tailscale_advertise_routes: "{{ local_subnet }}"
