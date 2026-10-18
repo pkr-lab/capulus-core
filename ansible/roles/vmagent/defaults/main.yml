@@ -5,6 +5,9 @@ vmagent_version: "1.149.0"
 
 vmagent_arch: "arm"
 
+vmagent_sha256:
+  arm: b87fdf5bb91978bd183bf284e90930f8f1fd083b8e1151ef8bc46614435b146e
+
 vmagent_download_url: >-
   https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v{{ vmagent_version }}/vmutils-linux-{{ vmagent_arch }}-v{{ vmagent_version }}.tar.gz
 
