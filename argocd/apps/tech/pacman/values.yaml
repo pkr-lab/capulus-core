@@ -59,5 +59,9 @@ geoip:
     repository: curlimages/curl
     tag: "8.22.0"
 
+config:
+  trustedProxyCidrs: "10.42.0.0/16"
+  rateLimitPerMinute: 60
+
 trainingMode:
   enabled: true

@@ -3,3 +3,18 @@ AGENTS.md
 # Python-Bytecode der scripts/ (promotelib wird importiert)
 __pycache__/
 .idea/
+*.pem
+!homeserver-root-ca.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+*.kdbx
+.env
+.env.*
+kubeconfig*
+*.kubeconfig
+.vault_pass*
+vault-password*
+*.sqlite

@@ -386,3 +386,63 @@ curl -s --cacert docs/assets/homeserver-root-ca.pem https://argocd.dev.homeserve
 Das Ablaufdatum steht in `ops/token-register.yaml` (`entw-argocd-ingress-cert`). Läuft das Zertifikat ab, antwortet der Ingress weiter, aber die
 Promotion-Kette lehnt es ab und das Gate der ENTW-Stufe blockiert. **Rollback:** die Variablen entfernen, der Ingress rendert dann ohne TLS.
 
+---
+
+## Zertifikat für den WoL-Agent auf dem Vereinsheim-Pi
+
+Der `banana-pi-wol-agent` ([60020](../6-hintergruende/60020-ansible-rollen.md)) spricht HTTPS mit einem Zertifikat der Homeserver-Root-CA, das die Tailscale-IP `100.123.214.4` als IP-SAN trägt. Der Pi hat kein cert-manager,
+deshalb stellt der Betreiber es von Hand aus (Gültigkeit 365 Tage) und legt es als Vault-Variablen `vault_vereinsheim_wol_agent_tls_crt` und `vault_vereinsheim_wol_agent_tls_key` in
+`ansible/host_vars/vereinsheim-alarmmonitor/vault.yml` ab. Der CA-Schlüssel verlässt dabei den Cluster nicht: cert-manager stellt das Blatt-Zertifikat selbst aus.
+
+```bash
+cat > cert.yaml <<'EOF'
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wol-agent-tls-tmp
+  namespace: cert-manager
+spec:
+  secretName: wol-agent-tls-tmp
+  issuerRef:
+    name: homeserver-ca-issuer
+    kind: ClusterIssuer
+  commonName: vereinsheim-wol-agent
+  ipAddresses:
+    - 100.123.214.4
+  duration: 8760h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    encoding: PKCS8
+  usages:
+    - digital signature
+    - server auth
+EOF
+kubectl apply -f cert.yaml
+kubectl -n cert-manager wait certificate/wol-agent-tls-tmp --for=condition=Ready --timeout=60s
+
+umask 077
+kubectl -n cert-manager get secret wol-agent-tls-tmp -o jsonpath='{.data.tls\.crt}' | base64 -d > tls.crt
+kubectl -n cert-manager get secret wol-agent-tls-tmp -o jsonpath='{.data.tls\.key}' | base64 -d > tls.key
+openssl verify -CAfile docs/assets/homeserver-root-ca.pem -verify_ip 100.123.214.4 tls.crt
+
+kubectl -n cert-manager delete certificate wol-agent-tls-tmp
+kubectl -n cert-manager delete secret wol-agent-tls-tmp
+
+ansible-vault encrypt_string --name vault_vereinsheim_wol_agent_tls_crt < tls.crt
+ansible-vault encrypt_string --name vault_vereinsheim_wol_agent_tls_key < tls.key
+shred -u tls.key; rm -f tls.crt cert.yaml
+```
+
+Die zwei Ausgaben ersetzen die gleichnamigen Einträge in `vault.yml`. Danach `issued` und `expires` des Eintrags `vereinsheim-wol-agent-cert` im Token-Register anpassen und den Pi ausrollen, erst als Prüflauf:
+
+```bash
+ansible-playbook -i ansible/inventory/hosts.yml ansible/banana-pi-kiosks.yml --limit vereinsheim-alarmmonitor --tags banana-pi-kiosk --check --diff --ask-vault-pass
+ansible-playbook -i ansible/inventory/hosts.yml ansible/banana-pi-kiosks.yml --limit vereinsheim-alarmmonitor --tags banana-pi-kiosk --ask-vault-pass
+curl -s -o /dev/null -w '%{http_code}\n' --cacert docs/assets/homeserver-root-ca.pem -X POST https://100.123.214.4:9102/wol
+```
+
+Erwartung der letzten Zeile: `401` (kein Token, es wird nichts geweckt). Läuft das Zertifikat ab, lehnt die iOS-App den Agent ab und das Aufwecken aus der App fällt aus, der Agent selbst läuft weiter.
+**Rollback:** `banana_pi_kiosk_wol_agent_tls_enabled: false` in `host_vars/vereinsheim-alarmmonitor/vars.yml` und Rollenlauf (der Agent spricht dann wieder HTTP, die Rolle löscht Zertifikat und Schlüssel vom Pi), in der App
+`wolAgentBaseURL` zurück auf `http://`.
+

@@ -38,7 +38,7 @@ alamos-apager auf eine lokal hinterlegte, vault-verschlüsselte Fallback-URL ums
 | `make banana-pi-kiosks-restart-session` | Der Handler „Reload getty@tty1“ läuft nur bei Ansible-`changed`. Liegt das Skript schon korrekt auf der Platte (z. B. weil ein früherer Lauf es geschrieben hat, bevor der `notify` existierte), meldet der Task `ok`, und der längst laufende Prozess bleibt mit veralteten Werten (z. B. `BASE_URL`) im Speicher, weil er sich nicht selbst neu einliest. Das Target erzwingt den Neustart unabhängig von einem Playbook-Diff und braucht kein Vault-Passwort, da der Ad-hoc-Befehl keine verschlüsselten Variablen referenziert. |
 | Screenshot-Skript nur manuell per SSH, kein Timer/Dienst (kein x11vnc, kein Cron) | Nur für die Sichtprüfung ([30020](../3-apps-workloads/30020-vereinsheim-alarmmonitor.md), „Sichtprüfung ohne physischen Zugriff“). Läuft als Kiosk-User (gleicher User wie die X-Session auf `:0`), daher kein `XAUTHORITY`-Handling. |
 | Wake-on-LAN-Skript nur manuell per SSH | Der Pi ist per Tailscale erreichbar (Semaphore und n8n haben **keinen** Pfad zu Tailscale-Peers), broadcastet das Magic Packet aber lokal. Das funktioniert nur, wenn Zielgerät und Pi im selben L2-Segment hängen (keine Client-/AP-Isolation im Router oder Repeater). |
-| WoL-HTTP-Agent (`banana-pi-wol-agent.py`) direkt am Pi | Dünner HTTP-Wrapper um `banana-pi-wol.sh`, damit die iOS-App ein Magic Packet ins Standort-LAN auslösen kann. Er spiegelt strukturell `power-agent.py`, ist aber sonst unabhängig: Der power-agent läuft im LAN des Homeservers und wird vom carplay-api-Pod gerufen, dieser hier läuft im reinen Tailscale-Netz des Pi und wird **direkt** von der App gerufen, weil der carplay-api-Pod keine Route zu Tailscale-Peers hat ([40020](../4-planung/40020-vereinsheim-wol-router-vpn.md)). Er kennt keine MACs, Gültigkeit des Ziels und MAC-Lookup bleiben in `banana-pi-wol.sh` / `banana_pi_kiosk_wol_devices`, er reicht nur den Alias weiter. Er lauscht auf `banana_pi_kiosk_wol_agent_bind_address`: Im Standard `0.0.0.0`, für den Alarmmonitor per `host_vars` auf seine Tailscale-Adresse (`ansible_host`), damit das Vereinsheim-LAN den Port nicht erreicht. Steht `ansible_host` auf einer LAN-Adresse (Ersteinrichtung), lauscht der Agent dort statt am Tailnet. Timeouts, Body-Grenze und systemd-Härtung wie beim [power_agent](#power_agent). |
+| WoL-HTTP-Agent (`banana-pi-wol-agent.py`) direkt am Pi | Dünner HTTP-Wrapper um `banana-pi-wol.sh`, damit die iOS-App ein Magic Packet ins Standort-LAN auslösen kann. Er spiegelt strukturell `power-agent.py`, ist aber sonst unabhängig: Der power-agent läuft im LAN des Homeservers und wird vom carplay-api-Pod gerufen, dieser hier läuft im reinen Tailscale-Netz des Pi und wird **direkt** von der App gerufen, weil der carplay-api-Pod keine Route zu Tailscale-Peers hat ([40020](../4-planung/40020-vereinsheim-wol-router-vpn.md)). Er kennt keine MACs, Gültigkeit des Ziels und MAC-Lookup bleiben in `banana-pi-wol.sh` / `banana_pi_kiosk_wol_devices`, er reicht nur den Alias weiter. Er lauscht auf `banana_pi_kiosk_wol_agent_bind_address`: Im Standard `0.0.0.0`, für den Alarmmonitor per `host_vars` auf seine Tailscale-Adresse (`ansible_host`), damit das Vereinsheim-LAN den Port nicht erreicht. Steht `ansible_host` auf einer LAN-Adresse (Ersteinrichtung), lauscht der Agent dort statt am Tailnet. Timeouts, Body-Grenze und systemd-Härtung wie beim [power_agent](#power_agent). **TLS** schaltet `banana_pi_kiosk_wol_agent_tls_enabled` ein (Zertifikat und Schlüssel als Vault-Variablen, die Rolle legt sie mit `0600` ab, der Schlüssel mit `no_log`; fehlt eines, bricht ein `assert` ab). Der Agent aktiviert TLS nur, wenn `TLS_CERT` und `TLS_KEY` gesetzt sind, ohne diese Werte läuft er wie vorher mit HTTP, das ist der Rollback-Schalter. Mindestens TLS 1.2. Der Handshake läuft im Handler-Thread mit dem 10-Sekunden-Timeout und nicht im Accept-Loop, sonst könnte ein Client, der nur verbindet und nichts sendet, den ganzen Agent blockieren. Fehlgeschlagene Handshakes (Klartext-Client, Scanner) landen als eine Logzeile im Journal statt als Traceback. Das Zertifikat ist von Hand ausgestellt (365 Tage, Ablauf im Token-Register), weil cert-manager es nicht auf den Pi verteilen kann: [d0040](../d-sicherheit/d0040-internal-tls.md#zertifikat-für-den-wol-agent-auf-dem-vereinsheim-pi). |
 
 ### xibo_kiosk (Raspberry Pi 3 B+, Bilder-Slideshow)
 
@@ -141,7 +141,7 @@ Bildschirmhelligkeit (sysfs), manuelles Wake-on-LAN und Poweroff für worker-0/w
   Sensor `THRESHOLD_C` für `SUSTAIN_SECONDS` erreicht (90 s = Mitte der gewünschten 1–2 Minuten), vorher geht eine ntfy-Meldung raus.
   Er läuft bewusst **unabhängig vom Cluster**, damit der Schutz auch greift, wenn der Cluster wegen der Hitze schon klemmt. Er
   ergänzt den Alert ab 95 °C über 3 Minuten ([60060](60060-monitoring-und-alerting.md#lautstärke-der-ntfy-meldungen)).
-- Die ntfy-Meldung wird per `curl --resolve` direkt auf die statische Server-IP aufgelöst, damit sie auch rausgeht, wenn auf dem
+- Die ntfy-Meldung geht per **HTTPS** (`https://ntfy.tech.homeserver/<Topic>`, Port 443) hinaus und wird per `curl --resolve` direkt auf die statische Server-IP aufgelöst, damit sie auch rausgeht, wenn auf dem
   Host kein `*.homeserver`-DNS eingerichtet ist.
 - `DRY_RUN=1` (z. B. `systemctl edit --runtime thermal-watchdog`) testet den kompletten Pfad Erkennung → Meldung, ohne auszuschalten.
 - Der `resource_watchdog` ist das Gegenstück für CPU/RAM (Schwelle 90 %): Ist `WARN_THRESHOLD` leer, entfällt die Vorwarnstufe.
@@ -151,8 +151,11 @@ Bildschirmhelligkeit (sysfs), manuelles Wake-on-LAN und Poweroff für worker-0/w
   noch in `systemctl show`. Fehlt die Datei, senden sie anonym weiter (sonst hinge die Reihenfolge Rolle → ntfy-Umstellung an einem Zeitpunkt). Die Datei schreibt die Rolle
   `ntfy_publisher` aus der Vault-Variable `ntfy_publisher_token`, sie ist in allen Playbooks mit Watchdogs vor diesen eingetragen (Tag `ntfy-publisher`). Ist die Variable
   nicht gesetzt, überspringt die Rolle den Schreib-Task, ein bestehender Header bleibt liegen.
-- Der Token läuft über `http://ntfy.tech.homeserver` (Port 80) im Klartext durch LAN bzw. Tailscale. Das ist beabsichtigt, weil `--resolve` auf die statische Server-IP
-  auch ohne DNS funktioniert. Der Publisher darf nur schreiben, ein Mitschnitt erlaubt also gefälschte Meldungen, kein Mitlesen.
+- **HTTPS ist Pflicht (Vorfall 2026-09-13 bis 2026-10-18).** Der TECH-Traefik leitet HTTP global per `308` um; `curl` folgt dem ohne `-L` nicht, `--fail` greift erst ab Status 400 und `|| true` verschluckte jeden Fehler.
+  Alle vier Skripte (`thermal-watchdog`, `resource-watchdog`, `cluster-power-manager`, `nightly-worker-wake`) hatten deshalb seit dem 13.09. keine einzige Meldung zugestellt, ohne dass ein Dienst einen Fehler zeigte.
+  Sie nutzen jetzt `--resolve "${NTFY_HOST}:443:${NTFY_IP}"` (weiterhin ohne DNS) und prüfen das Zertifikat mit `--cacert "$NTFY_CA_FILE"` (Standard `/etc/ntfy-publisher/ca.pem`). Die Datei legt die Rolle
+  `ntfy_publisher` aus `docs/assets/homeserver-root-ca.pem` ab (`ntfy_publisher_ca_src`), nur diese Datei, nicht der System-Trust-Store: So geht es auch auf worker-0 und worker-1 ohne `update-ca-certificates`.
+  Ein Fehlschlag steht jetzt im Journal (`logger -t <skript> "ntfy-Meldung fehlgeschlagen"`), der Dienst läuft weiter (die Abschaltlogik darf nicht an einer Meldung hängen). Der Token verlässt den Host damit verschlüsselt.
 - Mehrere Rollen haben einen Kill-Switch (`*_enabled: false`, z. B. in `host_vars`), um sie auf einem Host abzuschalten, ohne die
   Rolle aus dem Playbook zu nehmen: `thermal_watchdog`, `vmagent`, `node_exporter`, `smartctl_exporter`, `wake_on_lan`,
   `worker_apt_update`, `alamos_kiosk` und `xibo_kiosk`.
@@ -200,7 +203,19 @@ Bildschirmhelligkeit (sysfs), manuelles Wake-on-LAN und Poweroff für worker-0/w
   nicht ([60040](60040-helm-charts-tech.md#zertifikate-und-tls)).
 - **Namensauflösung ohne DNS-Abhängigkeit:** worker-0/worker-1 lösen `*.homeserver` nicht auf (kein dnsmasq als Resolver), die
   Pis nur über Tailscale-Split-DNS. Ein fester `/etc/hosts`-Eintrag auf die LAN-IP des Homeservers macht den Upload unabhängig davon.
-  Nur abschalten, wenn der Host `*.homeserver` zuverlässig per DNS auflöst.
+  Nur abschalten, wenn der Host `*.homeserver` zuverlässig per DNS auflöst. **Der Default `127.0.0.1` stimmt nur auf dem Homeserver und den
+  k3s-Knoten** (dort leitet ServiceLB Port 443 an Traefik). Auf Hosts außerhalb des Clusters (Pis, Infotafel) zeigt er ins Leere: Der Upload
+  scheiterte dort mit „Failed to connect … port 443“. Diese Gruppen setzen deshalb `journal_upload_hosts_entry_ip: "192.168.178.94"` in
+  `group_vars/banana_pis.yml` und `xibo_displays.yml`. Auch der DNS-Weg hilft nicht: Der Eintrag `127.0.0.1 logs-write.tech.homeserver` steht
+  in `/etc/hosts` des Homeservers, und Pi-hole/dnsmasq liest diese Datei und liefert den Namen allen DNS-Clients mit `127.0.0.1` aus.
+- **Neustart-Drop-in (Vorfall 2026-10-16 bis 2026-10-18):** Der Dienst gibt nach fünf schnellen Fehlschlägen auf („Start request repeated too
+  quickly“) und bleibt `failed`. Ein Drop-in `restart.conf` (`StartLimitIntervalSec=0`, `Restart=always`, `RestartSec=30`) startet ihn
+  dauerhaft neu. Ursache des Ausfalls auf Homeserver und worker-1 war wieder das Backlog: Der Cursor stand auf dem 2026-10-02, danach
+  hatten sich 1,29 Millionen Einträge angesammelt, der Upload schickt sie in einem Request und bricht mit „Buffer space is too small to
+  write entry“ ab, ohne den Cursor zu bewegen. Jede längere Unterbrechung des Log-Endpunkts kann das auslösen. Behoben wird es durch das Setzen
+  von `LAST_CURSOR` in `/var/lib/private/systemd/journal-upload/state` auf das Journal-Ende (`journalctl -q -n 1 --show-cursor`), danach
+  `systemctl reset-failed` und `restart`; das Alt-Journal bleibt lokal, geht nur der zentralen Ablage verloren. Der Alarm `JournalUploadFailed`
+  ([60060](60060-monitoring-und-alerting.md)) meldet den Zustand nach 15 Minuten.
 - **State-Datei (Vorfall 2026-09-24):** Ohne State-Datei beginnt `systemd-journal-upload` am Journal-**Anfang** und schickt das
   komplette Backlog als einen einzigen Request. Auf dem Homeserver (5 GB Journal) brach das jedes Mal mit „Buffer space is too small
   to write entry“ / „operation aborted by callback“ ab, bevor je ein Cursor gespeichert wurde, eine Endlosschleife bis zum

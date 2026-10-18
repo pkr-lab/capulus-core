@@ -196,6 +196,9 @@ victoria-metrics-k8s-stack:
     admin:
       existingSecret: "grafana-admin"
 
+    rbac:
+      create: false
+
     securityContext:
       runAsNonRoot: true
       runAsUser: 472
@@ -224,15 +227,17 @@ victoria-metrics-k8s-stack:
     sidecar:
       datasources:
         enabled: true
+        resource: configmap
         label: grafana_datasource
         labelValue: "1"
       dashboards:
         enabled: true
+        resource: configmap
         label: grafana_dashboard
         labelValue: "1"
         folder: /var/lib/grafana/dashboards
         folderAnnotation: grafana_folder
-        searchNamespace: ALL
+        searchNamespace: monitoring,pacman
         provider:
           name: default
           orgid: 1

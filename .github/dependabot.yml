@@ -8,6 +8,8 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 0
+    cooldown:
+      default-days: 3
     labels:
       - dependencies
       - security
@@ -25,6 +27,8 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 0
+    cooldown:
+      default-days: 3
     labels:
       - dependencies
       - security

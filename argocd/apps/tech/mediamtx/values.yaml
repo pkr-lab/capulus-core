@@ -31,6 +31,8 @@ securityContext:
   runAsUser: 1000
   runAsGroup: 1000
   allowPrivilegeEscalation: false
+  seccompProfile:
+    type: RuntimeDefault
   readOnlyRootFilesystem: true
   capabilities:
     drop:
@@ -41,7 +43,6 @@ service:
   ports:
     hls: 8888
     webrtc: 8889
-    api: 9997
 
 publishService:
   type: NodePort

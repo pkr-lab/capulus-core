@@ -116,8 +116,8 @@ Ausnahmen aus dem [Abschnitt darüber](#dns-tier-und-cluster-sind-zwei-verschied
 
 `cloudflared` enthält **nicht** eine Ingress-Regel pro extern freigegebener App, sondern nur
 **eine einzige** Wildcard-Regel für die ganze Zone (`*.pke-lab.de`). Sie zeigt auf den Traefik des
-jeweiligen Clusters (`https://traefik.kube-system.svc.cluster.local:443`, `noTLSVerify`, weil das
-interne Zertifikat von der privaten Homeserver-CA stammt), genau wie der interne LAN-Pfad das für
+jeweiligen Clusters (`https://traefik.kube-system.svc.cluster.local:443`, Zertifikatsprüfung
+mit der privaten Homeserver-CA über `caPool` und `originServerName`), genau wie der interne LAN-Pfad das für
 `*.homeserver` tut.
 
 **Zwei Tunnel, ein Wildcard:** TECH und PROD haben je ein eigenes `cloudflared` mit eigenem Tunnel

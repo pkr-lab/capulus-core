@@ -45,6 +45,7 @@
       "datasourceTemplate": "github-releases"
     }
   ],
+  "minimumReleaseAge": "3 days",
   "vulnerabilityAlerts": {
     "enabled": false
   },
@@ -63,6 +64,15 @@
       "description": "Vendored/pulled-in subcharts (Chart.lock, charts/*.tgz) are refreshed manually via `helm dependency update`, not by Renovate opening PRs against generated lockfiles.",
       "matchFileNames": ["**/charts/**", "**/Chart.lock"],
       "enabled": false
+    },
+    {
+      "description": "Docker-Images mit Digest festschreiben, damit ein Neustart keine andere Software zieht. Selbst gebaute Images (sha-<commit>) bleiben ausgenommen, build-images.yml und bump-image-tag.py ersetzen deren Tag.",
+      "matchDatasources": ["docker"],
+      "pinDigests": true
+    },
+    {
+      "matchPackageNames": ["ghcr.io/pkr-lab/**"],
+      "pinDigests": false
     },
     {
       "description": "Group all Helm chart + image tag bumps for a single app into one PR instead of one PR per field.",

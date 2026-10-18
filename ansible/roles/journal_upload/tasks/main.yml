@@ -31,6 +31,31 @@
   when: journal_upload_enabled | bool and journal_upload_hosts_entry_enabled | bool
   notify: Restart systemd-journal-upload
 
+- name: Drop-in-Verzeichnis fuer systemd-journal-upload anlegen
+  ansible.builtin.file:
+    path: /etc/systemd/system/systemd-journal-upload.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: journal_upload_enabled | bool
+
+- name: Dauerhaften Neustart fuer systemd-journal-upload konfigurieren
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/systemd-journal-upload.service.d/restart.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Unit]
+      StartLimitIntervalSec=0
+
+      [Service]
+      Restart=always
+      RestartSec=30
+  when: journal_upload_enabled | bool
+  notify: Restart systemd-journal-upload
+
 - name: journal-upload.conf deployen
   ansible.builtin.template:
     src: journal-upload.conf.j2
