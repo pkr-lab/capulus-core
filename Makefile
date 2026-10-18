@@ -20,3 +20,7 @@ lint: ## Lint YAML and ALL Helm charts.
 	else \
 	    echo "helm not installed — skipping chart lint"; \
 	fi
+
+.PHONY: hooks
+hooks: ## Install the commit-msg hook (Conventional Commits).
+	git config core.hooksPath .githooks
