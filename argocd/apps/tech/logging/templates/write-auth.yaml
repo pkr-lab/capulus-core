@@ -1,0 +1,27 @@
+{{- if .Values.writeAuth.encryptedUsers }}
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: {{ .Values.writeAuth.secretName }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  encryptedData:
+    users: {{ .Values.writeAuth.encryptedUsers | quote }}
+  template:
+    metadata:
+      name: {{ .Values.writeAuth.secretName }}
+      namespace: {{ .Release.Namespace }}
+    type: Opaque
+{{- end }}
+{{- if and .Values.writeAuth.enabled .Values.writeAuth.encryptedUsers }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ .Values.writeAuth.secretName }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  basicAuth:
+    secret: {{ .Values.writeAuth.secretName }}
+    removeHeader: true
+{{- end }}

@@ -1,0 +1,16 @@
+{{- if .Values.resticBackup.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "vaultwarden.fullname" . }}-restic
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "vaultwarden.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.resticBackup.size }}
+  storageClassName: {{ .Values.resticBackup.storageClassName }}
+{{- end }}

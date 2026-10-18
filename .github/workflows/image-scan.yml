@@ -1,0 +1,34 @@
+name: Image scan
+
+on:
+  schedule:
+    - cron: "30 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: trivy über alle Chart-Images
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+
+      - name: Images der Charts scannen
+        env:
+          TRIVY_IMAGE: aquasec/trivy:0.76.0
+        run: |
+          mkdir -p "$HOME/.cache/trivy"
+          ./scripts/scan-cluster-images.sh --charts --summary | sort -k2,2nr -k3,3nr > scan.tsv
+          {
+            echo "## Image-Scan (behebbare Funde, HIGH und CRITICAL)"
+            echo
+            echo "| Image | CRITICAL | HIGH |"
+            echo "|---|---|---|"
+            awk -F'\t' '{split($2, c, " "); print "| `" $1 "` | " c[1] " | " c[2] " |"}' scan.tsv
+          } >> "$GITHUB_STEP_SUMMARY"

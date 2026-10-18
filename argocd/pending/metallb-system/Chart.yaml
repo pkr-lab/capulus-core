@@ -1,0 +1,10 @@
+apiVersion: v2
+name: metallb-system
+description: MetalLB (Layer 2) mit dem Adresspool homelab-pool, ausgelagert aus der Handinstallation.
+type: application
+version: 0.1.0
+appVersion: "v0.16.1"
+dependencies:
+  - name: metallb
+    repository: https://metallb.github.io/metallb
+    version: 0.16.1

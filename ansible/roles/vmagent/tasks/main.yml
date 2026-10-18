@@ -70,6 +70,17 @@
     mode: "0755"
   when: vmagent_enabled | bool
 
+- name: Zugangsdaten fuer den Schreib-Endpunkt ablegen
+  ansible.builtin.copy:
+    content: "{{ vmagent_remote_write_basic_auth_password }}"
+    dest: "{{ vmagent_remote_write_password_file }}"
+    owner: root
+    group: vmagent
+    mode: "0640"
+  no_log: true
+  when: vmagent_enabled | bool and vmagent_remote_write_basic_auth_password | length > 0
+  notify: Restart vmagent
+
 - name: Scrape-Konfiguration deployen
   ansible.builtin.template:
     src: vmagent-scrape.yml.j2
