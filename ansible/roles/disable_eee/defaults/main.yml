@@ -1,4 +1,0 @@
----
-disable_eee_enabled: true
-
-disable_eee_interface: "{{ ansible_default_ipv4.interface }}"

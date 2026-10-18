@@ -1,9 +1,0 @@
----
-hostname: prod-vm
-timezone: Europe/Berlin
-
-network_configure_static_ip: false
-
-k3s_pod_cidr: "10.46.0.0/16"
-k3s_service_cidr: "10.47.0.0/16"
-k3s_server_ip: "192.168.178.99"

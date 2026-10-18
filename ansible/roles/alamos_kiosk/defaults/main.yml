@@ -1,8 +1,0 @@
----
-alamos_kiosk_enabled: true
-
-alamos_kiosk_base_url: "https://alamos-apager.prod.homeserver"
-
-alamos_kiosk_heartbeat_interval: 60
-
-alamos_kiosk_user: "pela"
