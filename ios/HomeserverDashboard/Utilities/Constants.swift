@@ -3,7 +3,7 @@ import Foundation
 enum Constants {
     static let apiBaseURL = URL(string: "https://carplay-api.prod.homeserver")!
 
-    static let wolAgentBaseURL = URL(string: "http://100.123.214.4:9102")!
+    static let wolAgentBaseURL = URL(string: "https://100.123.214.4:9102")!
 
     static let refreshInterval: TimeInterval = 30
 

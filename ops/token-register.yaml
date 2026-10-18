@@ -88,6 +88,21 @@
   owner: peter
   blast_radius: "TLS-Zertifikat des ENTW-ArgoCD-Ingress (argocd.dev.homeserver). Bei Ablauf blockiert das Gate der ENTW-Stufe in der Promotion-Kette."
 
+- id: vereinsheim-wol-agent-cert
+  service: banana-pi-wol-agent
+  kind: certificate
+  stored_in:
+    - ansible/host_vars/vereinsheim-alarmmonitor/vault.yml
+  issued: "2026-10-18"
+  expires: "2027-10-18"
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: docs/d-sicherheit/d0040-internal-tls.md#zertifikat-für-den-wol-agent-auf-dem-vereinsheim-pi
+    overlap: false
+  owner: peter
+  blast_radius: "TLS-Zertifikat und Schlüssel des WoL-Agents (IP-SAN 100.123.214.4). Bei Ablauf lehnt die iOS-App den Agent ab und Aufwecken des Vereinsheim-PCs aus der App fällt aus. Ein abgeflossener Schlüssel erlaubt einen Mitschnitt des WoL-Tokens im Tailnet nur zusammen mit einem Man-in-the-Middle-Platz."
+
 - id: argo-workflows-artifact-creds
   service: argo-workflows
   kind: api-token

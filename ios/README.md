@@ -29,10 +29,10 @@ Settings). If the app shows a connection error, check this first: open
 `https://carplay-api.prod.homeserver/health` in Safari, which must load without
 a certificate warning.
 
-The only plain-HTTP URL left is the WoL agent on the Pi
-(`http://100.123.214.4:9102`). It is a numeric IP, listens on the Tailscale
-address only and is therefore carried by WireGuard; its token is not sent in
-clear text over the home network.
+The WoL agent on the Pi is HTTPS as well (`https://100.123.214.4:9102`). Its
+certificate is issued by the same root CA and carries the Tailscale IP as a
+subject alternative name, so no additional trust setup is needed on the device.
+There is no plain-HTTP URL left in the app.
 
 ## Structure
 
@@ -126,7 +126,7 @@ tunnel as the homeserver.
 | Setting | Where | Default |
 |---|---|---|
 | API base URL | `Utilities/Constants.swift` → `apiBaseURL` | `https://carplay-api.prod.homeserver` |
-| WoL agent base URL (vereinsheim-alarmmonitor) | `Constants.swift` → `wolAgentBaseURL` | `http://100.123.214.4:9102` (Tailscale IP) |
+| WoL agent base URL (vereinsheim-alarmmonitor) | `Constants.swift` → `wolAgentBaseURL` | `https://100.123.214.4:9102` (Tailscale IP) |
 | Refresh interval | `Constants.swift` → `refreshInterval` | 30s |
 | Bearer token | Settings screen (gear icon) → iOS Keychain | none until set |
 | WoL agent bearer token | Settings screen (gear icon) → iOS Keychain | none until set |
