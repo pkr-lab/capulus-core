@@ -30,11 +30,6 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        NSAppTransportSecurity:
-          NSExceptionDomains:
-            homeserver:
-              NSIncludesSubdomains: true
-              NSExceptionAllowsInsecureHTTPLoads: true
         NSLocationWhenInUseUsageDescription: "Wird verwendet, um im Alltag-Modus die nächstgelegene Tankstelle (ohne Shell/Aral) zu finden."
         NSLocationTemporaryUsageDescriptionDictionary:
           TankstellenSuche: "Für die Umkreissuche nach Tankstellen wird kurzzeitig eine genaue Standortangabe benötigt — sonst kann eine tatsächlich nahe Tankstelle knapp außerhalb des Suchradius fallen."

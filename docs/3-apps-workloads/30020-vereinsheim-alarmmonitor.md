@@ -471,6 +471,12 @@ Tailscale-Peers) — die App spricht stattdessen einen kleinen HTTP-Agenten
 Tailscale-IP des Pi an, Port 9102, Bearer-Token-gesichert. Der Agent ruft
 intern nur `banana-pi-wol.sh` auf — keine doppelte MAC-Verwaltung.
 
+Der Agent spricht Klartext-HTTP, lauscht aber ausschließlich auf der
+Tailscale-Adresse des Pi (`banana_pi_kiosk_wol_agent_bind_address`), der Token
+läuft damit im WireGuard-Tunnel und nicht über das Heim-WLAN. Die App hat keine
+ATS-Ausnahme mehr; für die numerische IP braucht sie keine, siehe
+[60080](../6-hintergruende/60080-carplay-api-und-ios-app.md#transport-und-schlüssel).
+
 Token für die App-Einstellungen auslesen:
 
 ```bash
