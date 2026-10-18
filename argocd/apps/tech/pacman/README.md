@@ -55,9 +55,7 @@ Tag ⇒ ein Node mit lokal gecachtem Image pullt neuen Inhalt unter
 gleichem Tag nicht automatisch nach) von vornherein — jeder Build erzeugt
 zwangsläufig einen neuen Tag, nie eine Wiederverwendung.
 
-Das `kaniko-build-push`-Argo-WorkflowTemplate (`argocd/apps/tech/argo-workflows/`)
-bleibt als manueller Fallback für Ad-hoc-Images außerhalb dieser drei Apps
-bestehen, siehe [docs/f-cicd-automatisierung/f0000-argo-workflows.md](../../../../docs/f-cicd-automatisierung/f0000-argo-workflows.md#32-image-build-kaniko-build-push).
+Das frühere Argo-WorkflowTemplate `kaniko-build-push` ist entfernt, Builds laufen über `.github/workflows/build-images.yml`.
 
 **GHCR-Package-Sichtbarkeit:** frisch gepushte GHCR-Packages sind
 standardmäßig **privat** — der Pod scheitert dann mit

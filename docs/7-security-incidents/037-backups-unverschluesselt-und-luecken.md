@@ -80,3 +80,6 @@ Wie vereinbart: restic auf dem NAS-Volume, Vaultwarden zuerst. Gebaut ist `argoc
 
 `./scripts/seal-restic-password.sh` wurde ausgeführt: `resticBackup.encryptedPassword` ist in `argocd/apps/tech/vaultwarden/values.yaml` versiegelt und `resticBackup.enabled` steht auf `true`. Das Passwort liegt beim Betreiber (Passwortmanager). Als Nächstes: Merge, Testlauf `kubectl -n vaultwarden create job --from=cronjob/vaultwarden-restic-backup restic-test` und Restore-Test aus `20010-nas-backup.md`.
 
+## Test des restic-Jobs (2026-10-18)
+
+`kubectl -n vaultwarden create job --from=cronjob/vaultwarden-restic-backup restic-test` lief durch: Snapshot gespeichert, Aufbewahrung `keep 7 daily, 4 weekly, 6 monthly` angewandt, `restic check` mit „no errors were found“. Ein erster Aufruf wurde vom Nutzer zu früh gelöscht (Pod noch `ContainerCreating`); der Job hatte trotzdem einen Snapshot geschrieben, daher zwei Snapshots im Repository. Testjob danach gelöscht.
