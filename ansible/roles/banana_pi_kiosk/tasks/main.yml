@@ -200,6 +200,44 @@
   register: banana_pi_kiosk_wol_agent_token_raw
   when: banana_pi_kiosk_enabled | bool and banana_pi_kiosk_wol_agent_enabled | bool
 
+- name: TLS-Zertifikat und -Schlüssel für den WoL-HTTP-Agent prüfen
+  ansible.builtin.assert:
+    that:
+      - banana_pi_kiosk_wol_agent_tls_crt | length > 0
+      - banana_pi_kiosk_wol_agent_tls_key | length > 0
+    fail_msg: "banana_pi_kiosk_wol_agent_tls_enabled verlangt banana_pi_kiosk_wol_agent_tls_crt und banana_pi_kiosk_wol_agent_tls_key"
+  when: banana_pi_kiosk_enabled | bool and banana_pi_kiosk_wol_agent_enabled | bool and banana_pi_kiosk_wol_agent_tls_enabled | bool
+
+- name: TLS-Zertifikat für den WoL-HTTP-Agent ablegen
+  ansible.builtin.copy:
+    content: "{{ banana_pi_kiosk_wol_agent_tls_crt | trim }}\n"
+    dest: "{{ banana_pi_kiosk_wol_agent_tls_crt_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  when: banana_pi_kiosk_enabled | bool and banana_pi_kiosk_wol_agent_enabled | bool and banana_pi_kiosk_wol_agent_tls_enabled | bool
+  notify: Restart banana-pi wol agent
+
+- name: TLS-Schlüssel für den WoL-HTTP-Agent ablegen
+  ansible.builtin.copy:
+    content: "{{ banana_pi_kiosk_wol_agent_tls_key | trim }}\n"
+    dest: "{{ banana_pi_kiosk_wol_agent_tls_key_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  when: banana_pi_kiosk_enabled | bool and banana_pi_kiosk_wol_agent_enabled | bool and banana_pi_kiosk_wol_agent_tls_enabled | bool
+  notify: Restart banana-pi wol agent
+
+- name: TLS-Dateien des WoL-HTTP-Agent entfernen, falls TLS aus
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ banana_pi_kiosk_wol_agent_tls_crt_path }}"
+    - "{{ banana_pi_kiosk_wol_agent_tls_key_path }}"
+  when: banana_pi_kiosk_enabled | bool and banana_pi_kiosk_wol_agent_enabled | bool and not (banana_pi_kiosk_wol_agent_tls_enabled | bool)
+
 - name: WoL-HTTP-Agent-Skript deployen
   ansible.builtin.copy:
     src: banana-pi-wol-agent.py

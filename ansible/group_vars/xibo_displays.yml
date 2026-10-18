@@ -16,3 +16,5 @@ tailscale_auth_key: !vault |
 
 xibo_kiosk_nfs_server: "192.168.178.97"
 xibo_kiosk_nfs_path: "/volume1/k8s-storage/xibosignage-display"
+
+journal_upload_hosts_entry_ip: "192.168.178.94"

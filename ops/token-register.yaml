@@ -5,7 +5,7 @@
     - argocd/apps/tech/alamos-apager/templates/sealedsecret-stations.yaml
   issued: null
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
@@ -20,7 +20,7 @@
     - argocd/apps/tech/alamos-relay/templates/sealedsecret.yaml
   issued: null
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
@@ -35,7 +35,7 @@
     - argocd/apps/tech/alamos-relay/templates/sealedsecret.yaml
   issued: "2026-10-17"
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/3-apps-workloads/30070-n8n.md#webhook-authentifizierung
@@ -50,7 +50,7 @@
     - argocd/apps/tech/monitoring/templates/sealedsecret-n8n-webhook-token.yaml
   issued: "2026-10-17"
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/3-apps-workloads/30070-n8n.md#webhook-authentifizierung
@@ -65,7 +65,7 @@
     - ansible/group_vars/all.yml
   issued: "2026-10-17"
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/3-apps-workloads/30070-n8n.md#webhook-authentifizierung
@@ -88,6 +88,21 @@
   owner: peter
   blast_radius: "TLS-Zertifikat des ENTW-ArgoCD-Ingress (argocd.dev.homeserver). Bei Ablauf blockiert das Gate der ENTW-Stufe in der Promotion-Kette."
 
+- id: vereinsheim-wol-agent-cert
+  service: banana-pi-wol-agent
+  kind: certificate
+  stored_in:
+    - ansible/host_vars/vereinsheim-alarmmonitor/vault.yml
+  issued: "2026-10-18"
+  expires: "2027-10-18"
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: docs/d-sicherheit/d0040-internal-tls.md#zertifikat-für-den-wol-agent-auf-dem-vereinsheim-pi
+    overlap: false
+  owner: peter
+  blast_radius: "TLS-Zertifikat und Schlüssel des WoL-Agents (IP-SAN 100.123.214.4). Bei Ablauf lehnt die iOS-App den Agent ab und Aufwecken des Vereinsheim-PCs aus der App fällt aus. Ein abgeflossener Schlüssel erlaubt einen Mitschnitt des WoL-Tokens im Tailnet nur zusammen mit einem Man-in-the-Middle-Platz."
+
 - id: argo-workflows-artifact-creds
   service: argo-workflows
   kind: api-token
@@ -95,7 +110,7 @@
     - argocd/apps/tech/argo-workflows/templates/artifact-secret-sealedsecret.yaml
   issued: null
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
@@ -110,7 +125,7 @@
     - argocd/apps/tech/argo-workflows/templates/ghcr-push-sealedsecret.yaml
   issued: null
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
@@ -125,7 +140,7 @@
     - argocd/apps/tech/carplay-api/templates/secret-api-token.yaml
   issued: null
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
@@ -140,7 +155,7 @@
     - argocd/apps/tech/carplay-api/templates/secret-ntfy-token.yaml
   issued: "2026-10-17"
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/1-benachrichtigungen/10010-ntfy.md#zugangsdaten-und-token-rotation
@@ -155,7 +170,7 @@
     - argocd/apps/tech/ntfy-bridge/templates/secret-ntfy-token.yaml
   issued: "2026-10-17"
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/1-benachrichtigungen/10010-ntfy.md#zugangsdaten-und-token-rotation
@@ -170,7 +185,7 @@
     - argocd/apps/tech/alamos-apager/templates/secret-ntfy-token.yaml
   issued: "2026-10-17"
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/1-benachrichtigungen/10010-ntfy.md#zugangsdaten-und-token-rotation
@@ -186,7 +201,7 @@
     - ansible/roles/ntfy_publisher/tasks/main.yml
   issued: "2026-10-17"
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/1-benachrichtigungen/10010-ntfy.md#zugangsdaten-und-token-rotation
@@ -203,7 +218,7 @@
     - ansible/roles/alert_caller/templates/alert-caller.env.j2
   issued: "2026-10-17"
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/1-benachrichtigungen/10020-telefon-alarm.md#zugriffsschutz-token
@@ -218,7 +233,7 @@
     - argocd/apps/tech/carplay-api/templates/secret-power-agent-token.yaml
   issued: null
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
@@ -233,7 +248,7 @@
     - argocd/apps/tech/carplay-api/templates/secret-shutdown-code.yaml
   issued: null
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
@@ -294,7 +309,7 @@
     - argocd/apps/tech/github-release-watcher/templates/sealedsecret.yaml
   issued: null
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/f-cicd-automatisierung/f0040-github-release-watcher.md
@@ -309,7 +324,7 @@
     - argocd/apps/tech/lldap/templates/sealedsecret.yaml
   issued: null
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/d-sicherheit/d0072-lldap.md
@@ -324,7 +339,7 @@
     - argocd/apps/tech/minio/templates/root-creds-sealedsecret.yaml
   issued: null
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
@@ -339,7 +354,7 @@
     - argocd/apps/tech/pihole/templates/sealedsecret.yaml
   issued: null
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
@@ -384,7 +399,7 @@
     - argocd/apps/tech/zammad/templates/sealedsecret.yaml
   issued: null
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
@@ -399,7 +414,7 @@
     - argocd/apps/prod/immich/templates/sealedsecret.yaml
   issued: null
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
@@ -414,7 +429,7 @@
     - argocd/apps/prod/nextcloud/templates/sealedsecret.yaml
   issued: null
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
@@ -429,7 +444,7 @@
     - argocd/apps/prod/wikijs/templates/sealedsecret.yaml
   issued: null
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
@@ -444,7 +459,7 @@
     - argocd/apps/prod/wiki-docs-sync/templates/sealedsecret.yaml
   issued: null
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
@@ -459,7 +474,7 @@
     - argocd/apps/prod/xibosignage/templates/secret.yaml
   issued: null
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/4-planung/40090-standby-cluster-ha-paar.md#rotation
@@ -511,7 +526,7 @@
     - "GitHub Actions Secret: TS_AUDIENCE"
   issued: null
   expires: null
-  max_age_days: null
+  max_age_days: 365
   rotation:
     mode: manual
     runbook: docs/f-cicd-automatisierung/f00a0-tailscale-runner-poc.md
