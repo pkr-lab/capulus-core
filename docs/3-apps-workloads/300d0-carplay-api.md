@@ -235,13 +235,14 @@ GHCR-Package privat, zusätzlich ein `imagePullSecrets`-Secret anlegen (siehe [6
 
 Vier unabhängige Schichten, keine davon mTLS (siehe oben):
 
-1. **Bearer-Token** (`CARPLAY_API_TOKEN`) — Pflicht in Produktion, prüft
-   jeder Request an `/api/*`. Ohne gesetztes Token läuft die API ungeschützt
-   und loggt das laut beim Start.
+1. **Bearer-Token** (`CARPLAY_API_TOKEN`) — Pflicht, prüft jeder Request an
+   `/api/*` und `/metrics`. Ohne gesetztes Token startet der Server nicht
+   (`CARPLAY_API_TOKEN is not set`, der Pod steht dann in `CrashLoopBackOff`).
+   Nur `/health` bleibt offen, die Probes des kubelet brauchen es.
 2. **IP-Allowlist** (`config.ipAllowlist`, default **deaktiviert**) —
    beschränkt `/api/*` auf CIDR-Bereiche (Default-Vorschlag: Tailscale-CGNAT
    `100.64.0.0/10` + LAN `192.168.178.0/24`). Braucht `config.trustedProxies`
-   korrekt gesetzt (Traefik-Pod-CIDR), sonst sieht die App Traefiks
+   korrekt gesetzt (steht auf dem Pod-CIDR `10.42.0.0/16`), sonst sieht die App Traefiks
    Pod-IP statt der echten Client-IP und sperrt alles aus — deshalb vor dem
    Aktivieren einmal `kubectl -n carplay-api logs deploy/carplay-api` prüfen,
    ob `client_ip` in den Request-Logs die erwartete Adresse zeigt.

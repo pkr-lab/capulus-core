@@ -53,9 +53,6 @@ spec:
             - name: webrtc
               containerPort: {{ .Values.service.ports.webrtc }}
               protocol: TCP
-            - name: api
-              containerPort: {{ .Values.service.ports.api }}
-              protocol: TCP
           livenessProbe:
             tcpSocket:
               port: rtsp
@@ -64,9 +61,8 @@ spec:
             timeoutSeconds: 3
             failureThreshold: 3
           readinessProbe:
-            httpGet:
-              path: /v3/paths/list
-              port: api
+            tcpSocket:
+              port: hls
             initialDelaySeconds: 3
             periodSeconds: 10
             timeoutSeconds: 3

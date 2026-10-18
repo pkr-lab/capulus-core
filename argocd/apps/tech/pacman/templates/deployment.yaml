@@ -64,6 +64,10 @@ spec:
           env:
             - name: TRAINING_MODE
               value: {{ .Values.trainingMode.enabled | quote }}
+            - name: TRUSTED_PROXY_CIDRS
+              value: {{ .Values.config.trustedProxyCidrs | quote }}
+            - name: RATE_LIMIT_PER_MINUTE
+              value: {{ .Values.config.rateLimitPerMinute | quote }}
             {{- if .Values.geoip.enabled }}
             - name: GEOIP_DB_PATH
               value: /geoip/city.mmdb

@@ -8,6 +8,14 @@ zum Vorfall mit dem Basis-Image siehe [50010](../5-incidents/50010-prod-vm-basis
 
 ---
 
+## ansible.cfg: Host-Keys, Fact-Cache
+
+- **`host_key_checking = True` mit `-o StrictHostKeyChecking=accept-new`.** Früher stand `host_key_checking = False`: Ansible baute zu jedem Host ohne jede Prüfung eine Verbindung auf, ein Man-in-the-Middle im LAN hätte Vault-Variablen und Tokens aus dem Lauf abgegriffen. `accept-new` nimmt einen unbekannten Host beim ersten Kontakt auf (kein Rückfragen-Dialog in Semaphore und CI), meldet aber `REMOTE HOST IDENTIFICATION HAS CHANGED` und bricht ab, sobald sich der Schlüssel eines bekannten Hosts ändert. Nach einem Neuaufbau eines Hosts (VM neu, Pi neu geflasht) muss man den alten Eintrag selbst löschen: `ssh-keygen -R <ip>`. Genau das war vorher unsichtbar.
+- **Fact-Cache in `~/.cache/ansible-facts`** statt `/tmp/ansible-facts` (dort für andere lokale Benutzer lesbar). Ansible legt das Verzeichnis mit der Umask an; einmalig `chmod 700 ~/.cache/ansible-facts` setzen.
+- **`vaultwarden_restore` prüft das Zertifikat** der Health-URL (`validate_certs: true`). Der Homeserver hat die Homeserver-Root-CA im System-Trust-Store (`update-ca-certificates`), ein Aufruf von `https://vault.tech.homeserver/alive` ohne `-k` liefert dort `200`.
+
+---
+
 ## Inventar
 
 Aufbau von `ansible/inventory/hosts.yml`:

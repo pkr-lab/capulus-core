@@ -4,7 +4,7 @@ replicaCount: 1
 image:
   repository: lldap/lldap
   pullPolicy: IfNotPresent
-  tag: "stable"
+  tag: "v0.6.3"
 
 nameOverride: ""
 fullnameOverride: ""

@@ -86,6 +86,8 @@ securityContext:
   runAsUser: 1000
   runAsGroup: 1000
   allowPrivilegeEscalation: false
+  seccompProfile:
+    type: RuntimeDefault
   readOnlyRootFilesystem: true
   capabilities:
     drop:
