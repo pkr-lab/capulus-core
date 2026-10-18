@@ -1,21 +1,77 @@
-- name: Check whether cscli is already installed
+- name: Install gnupg for the key handling
+  ansible.builtin.apt:
+    name: gnupg
+    state: present
+
+- name: Create APT keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Check whether the CrowdSec repository keyring exists
   ansible.builtin.stat:
-    path: /usr/bin/cscli
-  register: crowdsec_cscli_present
+    path: /etc/apt/keyrings/crowdsec_crowdsec-archive-keyring.gpg
+  register: crowdsec_keyring
 
-- name: Download official CrowdSec repository install script
+- name: Download CrowdSec repository key
   ansible.builtin.get_url:
-    url: https://install.crowdsec.net
-    dest: /tmp/crowdsec-install.sh
-    mode: '0700'
-  when: not crowdsec_cscli_present.stat.exists
+    url: https://packagecloud.io/crowdsec/crowdsec/gpgkey
+    dest: /tmp/crowdsec-repo.gpgkey
+    mode: '0600'
+  when: not crowdsec_keyring.stat.exists
 
-- name: Run CrowdSec repository install script
-  ansible.builtin.command: /tmp/crowdsec-install.sh
-  when: not crowdsec_cscli_present.stat.exists
-  changed_when: true
-  environment:
-    DEBIAN_FRONTEND: noninteractive
+- name: Create temporary GnuPG home
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: crowdsec-gnupg-
+  register: crowdsec_gnupg_home
+  changed_when: false
+
+- name: Convert CrowdSec repository key to a keyring
+  ansible.builtin.command: >-
+    gpg --homedir {{ crowdsec_gnupg_home.path }} --dearmor
+    --output /etc/apt/keyrings/crowdsec_crowdsec-archive-keyring.gpg /tmp/crowdsec-repo.gpgkey
+  when: not crowdsec_keyring.stat.exists
+
+- name: Remove downloaded CrowdSec repository key
+  ansible.builtin.file:
+    path: /tmp/crowdsec-repo.gpgkey
+    state: absent
+
+- name: Read CrowdSec keyring fingerprint
+  ansible.builtin.command: >-
+    gpg --homedir {{ crowdsec_gnupg_home.path }} --show-keys --with-colons --fingerprint
+    /etc/apt/keyrings/crowdsec_crowdsec-archive-keyring.gpg
+  register: crowdsec_key_info
+  changed_when: false
+
+- name: Remove temporary GnuPG home
+  ansible.builtin.file:
+    path: "{{ crowdsec_gnupg_home.path }}"
+    state: absent
+  changed_when: false
+
+- name: Verify CrowdSec repository key fingerprint
+  ansible.builtin.assert:
+    that:
+      - "('fpr:::::::::' ~ crowdsec_repo_key_fingerprint ~ ':') in crowdsec_key_info.stdout"
+    fail_msg: >-
+      Der Fingerprint von /etc/apt/keyrings/crowdsec_crowdsec-archive-keyring.gpg weicht von
+      crowdsec_repo_key_fingerprint ab. Schlüssel nicht vertrauen, Ursache klären
+      (docs/6-hintergruende/60020-ansible-rollen.md, Abschnitt Installer und Prüfsummen).
+
+- name: Write CrowdSec APT repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/crowdsec_crowdsec.list
+    content: |
+      deb [signed-by=/etc/apt/keyrings/crowdsec_crowdsec-archive-keyring.gpg] https://packagecloud.io/crowdsec/crowdsec/any/ any main
+      deb-src [signed-by=/etc/apt/keyrings/crowdsec_crowdsec-archive-keyring.gpg] https://packagecloud.io/crowdsec/crowdsec/any/ any main
+    owner: root
+    group: root
+    mode: '0644'
 
 - name: Install crowdsec package
   ansible.builtin.apt:

@@ -17,6 +17,7 @@ Sicherheitsupdates.
 | `argocd/apps/*/Chart.yaml` | `helmv3` | `dependencies[].version` (Subchart-Versionen) |
 | `.github/workflows/*.yml` | `github-actions` | `uses: actions/checkout@<Commit-SHA> # vX.Y.Z` (gepinnt, Preset `helpers:pinGitHubActionDigests`) |
 | `.github/workflows/promote-chain.yml`, `tailscale-poc.yml` | `customManagers` (Regex) | Tailscale-Client hinter `tags: tag:ci` (`version: 1.104.1`), nur Stable-Releases |
+| `ansible/roles/k3s/defaults/main.yml` | `customManagers` (Regex) | Helm-Release der Rolle k3s (`k3s_helm_release: "v3.22.1"`), nur Helm 3. Die Prüfsumme kommt bei der Installation live von `get.helm.sh`, ein Bump braucht keinen Hash ([60020](../6-hintergruende/60020-ansible-rollen.md#installer-und-prüfsummen-incident-017)). |
 
 Config liegt in [`renovate.json`](../../renovate.json) im Repo-Root.
 

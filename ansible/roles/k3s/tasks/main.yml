@@ -57,7 +57,8 @@
 
 - name: Download k3s install script
   ansible.builtin.get_url:
-    url: https://get.k3s.io
+    url: "{{ k3s_installer_url }}"
+    checksum: "sha256:{{ k3s_installer_sha256 }}"
     dest: /tmp/get-k3s.sh
     mode: '0755'
     force: true
@@ -167,36 +168,51 @@
     path: /usr/local/bin/helm
   register: k3s_helm_binary
 
+- name: Get installed Helm version
+  ansible.builtin.command: /usr/local/bin/helm version --short
+  register: k3s_helm_installed
+  changed_when: false
+  failed_when: false
+  when: k3s_helm_binary.stat.exists
+
 - name: Decide whether to (re)install Helm
   ansible.builtin.set_fact:
     k3s_install_helm: >-
       {{
         (not k3s_helm_binary.stat.exists)
-        or (helm_version | length > 0)
-        or (auto_upgrade | bool)
+        or (k3s_helm_release not in (k3s_helm_installed.stdout | default('')))
       }}
 
-- name: Download Helm install script
+- name: Download Helm release
   ansible.builtin.get_url:
-    url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-    dest: /tmp/get-helm-3.sh
+    url: "https://get.helm.sh/helm-{{ k3s_helm_release }}-linux-{{ k3s_helm_arch }}.tar.gz"
+    checksum: "sha256:https://get.helm.sh/helm-{{ k3s_helm_release }}-linux-{{ k3s_helm_arch }}.tar.gz.sha256sum"
+    dest: /tmp/helm.tar.gz
+    mode: '0644'
+  when: k3s_install_helm
+
+- name: Install Helm binary
+  ansible.builtin.unarchive:
+    src: /tmp/helm.tar.gz
+    dest: /usr/local/bin
+    remote_src: true
+    include:
+      - "linux-{{ k3s_helm_arch }}/helm"
+    extra_opts:
+      - --strip-components=1
+  when: k3s_install_helm
+
+- name: Set Helm binary permissions
+  ansible.builtin.file:
+    path: /usr/local/bin/helm
+    owner: root
+    group: root
     mode: '0755'
   when: k3s_install_helm
 
-- name: Install (or upgrade) Helm
-  ansible.builtin.command: /tmp/get-helm-3.sh
-  environment:
-    DESIRED_VERSION: "{{ helm_version }}"
-    HELM_INSTALL_DIR: /usr/local/bin
-  register: k3s_helm_install
-  changed_when:
-    - k3s_helm_install.rc == 0
-    - "'is already' not in (k3s_helm_install.stdout | default(''))"
-  when: k3s_install_helm
-
-- name: Remove Helm install script
+- name: Remove Helm archive
   ansible.builtin.file:
-    path: /tmp/get-helm-3.sh
+    path: /tmp/helm.tar.gz
     state: absent
 
 - name: Verify Helm installation
