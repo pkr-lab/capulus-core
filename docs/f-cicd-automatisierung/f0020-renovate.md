@@ -21,6 +21,8 @@ Sicherheitsupdates.
 
 Config liegt in [`renovate.json`](../../renovate.json) im Repo-Root.
 
+**Digest-Pinning:** Für Docker-Images gilt `pinDigests: true`. Renovate hängt an jeden Tag den Digest (`tag@sha256:…`), die Charts setzen `repository:tag` zusammen, das bleibt gültig. Ausgenommen sind die selbst gebauten Images unter `ghcr.io/pkr-lab/**`: Deren Tag (`sha-<commit>`) setzen `build-images.yml` und `bump-image-tag.py` neu, ein von Renovate festgeschriebener Digest würde dabei veralten. Der erste Lauf öffnet einen größeren PR je App, der die Digests ergänzt.
+
 **Bewusst ausgenommen:** `**/charts/**` (vendored `.tgz`-Subcharts, z. B.
 `argocd/apps/tech/headlamp/charts/headlamp-*.tgz`) und `Chart.lock` — die werden
 weiterhin manuell per `helm dependency update` aktualisiert, nicht per
@@ -43,7 +45,8 @@ Renovate-PR gegen eine generierte Lockdatei.
 - **Dependency Dashboard:** Renovate legt ein offenes GitHub-Issue
   „Dependency Dashboard" an, das den Status aller erkannten Updates auflistet
   (auch die, die z. B. wegen offener Major-Version zurückgehalten werden).
-- **Keine Sicherheits-PRs:** `vulnerabilityAlerts` ist abgeschaltet. PRs für bekannte
+- **Karenzzeit:** `minimumReleaseAge: 3 days`. Ein neues Release wird frühestens drei Tage nach Veröffentlichung vorgeschlagen, damit kompromittierte oder zurückgezogene Versionen (typisch bei Paketen und Images) auffallen, bevor sie im Cluster landen. Das gilt auch für Patch-Updates; der Zeitplan „sofort“ oben legt nur fest, *wann* der PR öffnen darf, sobald die Karenzzeit um ist. Dependabot hat dieselbe Karenzzeit (`cooldown: default-days: 3`) für seine Versions-Updates; Sicherheits-PRs sind davon ausgenommen.
+- **Keine Sicherheits-PRs:** `vulnerabilityAlerts` ist abgeschaltet und bleibt es: GitHubs Advisory-Datenbank kennt Go-Module und Actions (das deckt Dependabot ab), aber keine Docker-Images und Helm-Charts, Renovate würde also nur doppelte PRs öffnen. PRs für bekannte
   Sicherheitslücken öffnet Dependabot, der innerhalb von Stunden reagiert statt im
   Wochenrhythmus des [Fallback-Workflows](#self-hosted-fallback-github-actions)
   ([d0080](../d-sicherheit/d0080-codeql-dependabot.md)).

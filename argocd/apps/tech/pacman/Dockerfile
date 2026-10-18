@@ -15,4 +15,6 @@ COPY src/ /usr/share/pacman/html/
 
 EXPOSE 8080
 
+USER 65532:65532
+
 ENTRYPOINT ["/pacman-server"]

@@ -40,65 +40,10 @@ func run(cfg config, logger *slog.Logger) error {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	vm := clients.NewVictoriaMetricsClient(cfg.vmURL, 3*time.Second, logger)
-	ntfy := clients.NewNtfyClient(cfg.ntfyURL, cfg.ntfyTopic, cfg.ntfyToken, 2*time.Second, logger)
-	kuma := clients.NewUptimeKumaClient(cfg.kumaURL, cfg.kumaSlug, 2*time.Second, logger)
-	powerAgent := clients.NewPowerAgentClient(cfg.powerAgentURL, cfg.powerAgentToken, cfg.powerAgentTimeout)
-
-	stats := metrics.NewRegistry()
-	dashboardHandler := handlers.NewDashboardHandler(
-		vm, ntfy, kuma, cfg.hosts, cfg.services,
-		cfg.cacheTTL, cfg.apiTimeout,
-		cfg.ntfyLimit, cfg.ntfySince,
-		stats, logger,
-	)
-	healthHandler := handlers.NewHealthHandler(cfg.vmURL, cfg.ntfyURL, cfg.kumaURL, 2*time.Second)
-	powerHandler := handlers.NewPowerHandler(powerAgent, cfg.shutdownConfirmationCode, logger)
-
-	k8sConfigMaps, err := clients.NewK8sConfigMapClient()
+	router, err := newRouter(cfg, logger)
 	if err != nil {
-		logger.Warn("k8s in-cluster client unavailable, /api/updates will always be empty", "error", err)
-		k8sConfigMaps = nil
+		return err
 	}
-	updatesHandler := handlers.NewUpdatesHandler(
-		k8sConfigMaps, cfg.updatesNamespace, cfg.updatesConfigMapName,
-		cfg.updatesCacheTTL, logger,
-	)
-
-	router := gin.New()
-	if err := router.SetTrustedProxies(cfg.trustedProxies); err != nil {
-		return fmt.Errorf("setting trusted proxies: %w", err)
-	}
-
-	router.Use(gin.Recovery())
-	router.Use(requestLogger(logger))
-	router.Use(stats.Middleware())
-
-	if len(cfg.corsAllowedOrigins) > 0 {
-		router.Use(auth.CORS(cfg.corsAllowedOrigins))
-	}
-	if len(cfg.ipAllowlist) > 0 {
-		router.Use(auth.IPAllowlist(cfg.ipAllowlist))
-	}
-
-	rateLimiter := auth.NewRateLimiter(cfg.rateLimitPerMinute, time.Minute)
-
-	router.GET("/health", healthHandler.Handle)
-	router.GET("/metrics", stats.Handler())
-
-	api := router.Group("/api")
-	api.Use(rateLimiter.Middleware())
-	if cfg.bearerToken != "" {
-		api.Use(auth.BearerAuth(cfg.bearerToken))
-	} else {
-		logger.Warn("CARPLAY_API_TOKEN not set — /api/dashboard is running WITHOUT authentication")
-	}
-	api.GET("/dashboard", dashboardHandler.Handle)
-	api.GET("/updates", updatesHandler.Handle)
-	api.GET("/brightness", powerHandler.GetBrightness)
-	api.PUT("/brightness", powerHandler.SetBrightness)
-	api.POST("/power/wake", powerHandler.Wake)
-	api.POST("/power/shutdown", powerHandler.Shutdown)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.port,
@@ -127,6 +72,73 @@ func run(cfg config, logger *slog.Logger) error {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	return srv.Shutdown(shutdownCtx)
+}
+
+var errMissingToken = errors.New("CARPLAY_API_TOKEN is not set")
+
+func newRouter(cfg config, logger *slog.Logger) (*gin.Engine, error) {
+	if cfg.bearerToken == "" {
+		return nil, errMissingToken
+	}
+
+	vm := clients.NewVictoriaMetricsClient(cfg.vmURL, 3*time.Second, logger)
+	ntfy := clients.NewNtfyClient(cfg.ntfyURL, cfg.ntfyTopic, cfg.ntfyToken, 2*time.Second, logger)
+	kuma := clients.NewUptimeKumaClient(cfg.kumaURL, cfg.kumaSlug, 2*time.Second, logger)
+	powerAgent := clients.NewPowerAgentClient(cfg.powerAgentURL, cfg.powerAgentToken, cfg.powerAgentTimeout)
+
+	stats := metrics.NewRegistry()
+	dashboardHandler := handlers.NewDashboardHandler(
+		vm, ntfy, kuma, cfg.hosts, cfg.services,
+		cfg.cacheTTL, cfg.apiTimeout,
+		cfg.ntfyLimit, cfg.ntfySince,
+		stats, logger,
+	)
+	healthHandler := handlers.NewHealthHandler(cfg.vmURL, cfg.ntfyURL, cfg.kumaURL, 2*time.Second)
+	powerHandler := handlers.NewPowerHandler(powerAgent, cfg.shutdownConfirmationCode, logger)
+
+	k8sConfigMaps, err := clients.NewK8sConfigMapClient()
+	if err != nil {
+		logger.Warn("k8s in-cluster client unavailable, /api/updates will always be empty", "error", err)
+		k8sConfigMaps = nil
+	}
+	updatesHandler := handlers.NewUpdatesHandler(
+		k8sConfigMaps, cfg.updatesNamespace, cfg.updatesConfigMapName,
+		cfg.updatesCacheTTL, logger,
+	)
+
+	router := gin.New()
+	if err := router.SetTrustedProxies(cfg.trustedProxies); err != nil {
+		return nil, fmt.Errorf("setting trusted proxies: %w", err)
+	}
+
+	router.Use(gin.Recovery())
+	router.Use(requestLogger(logger))
+	router.Use(stats.Middleware())
+
+	if len(cfg.corsAllowedOrigins) > 0 {
+		router.Use(auth.CORS(cfg.corsAllowedOrigins))
+	}
+	if len(cfg.ipAllowlist) > 0 {
+		router.Use(auth.IPAllowlist(cfg.ipAllowlist))
+	}
+
+	rateLimiter := auth.NewRateLimiter(cfg.rateLimitPerMinute, time.Minute)
+	bearer := auth.BearerAuth(cfg.bearerToken)
+
+	router.GET("/health", healthHandler.Handle)
+	router.GET("/metrics", bearer, stats.Handler())
+
+	api := router.Group("/api")
+	api.Use(rateLimiter.Middleware())
+	api.Use(bearer)
+	api.GET("/dashboard", dashboardHandler.Handle)
+	api.GET("/updates", updatesHandler.Handle)
+	api.GET("/brightness", powerHandler.GetBrightness)
+	api.PUT("/brightness", powerHandler.SetBrightness)
+	api.POST("/power/wake", powerHandler.Wake)
+	api.POST("/power/shutdown", powerHandler.Shutdown)
+
+	return router, nil
 }
 
 func requestLogger(logger *slog.Logger) gin.HandlerFunc {
