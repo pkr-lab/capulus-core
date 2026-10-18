@@ -50,11 +50,11 @@ make install
 
 Was die Rolle macht:
 
-1. Installiert das offizielle CrowdSec-APT-Repository (per
-   `install.crowdsec.net`-Skript — analog zur Tailscale-Client-Installation
-   in [docs/c-netzwerk-dns/c0010-tailscale.md](../c-netzwerk-dns/c0010-tailscale.md), weil das die vom Hersteller
-   gepflegte Methode ist, das richtige Repo für die laufende Distribution zu
-   finden, statt einen Codename hart zu verdrahten).
+1. Richtet das offizielle CrowdSec-APT-Repository ein: Die Rolle lädt den Repository-Schlüssel von
+   `packagecloud.io/crowdsec/crowdsec/gpgkey`, legt ihn als `/etc/apt/keyrings/crowdsec_crowdsec-archive-keyring.gpg`
+   ab, prüft seinen Fingerprint (`crowdsec_repo_key_fingerprint`) und schreibt die Repository-Datei
+   `/etc/apt/sources.list.d/crowdsec_crowdsec.list` mit `signed-by`. Ein Installationsskript des Herstellers
+   führt sie nicht mehr aus, siehe [60020](../6-hintergruende/60020-ansible-rollen.md#installer-und-prüfsummen-incident-017).
 2. Installiert und startet `crowdsec` (Agent + lokale API).
 3. Installiert **danach** `crowdsec-firewall-bouncer-iptables` — die
    Reihenfolge ist wichtig, weil sich der Bouncer beim Installieren

@@ -84,7 +84,7 @@ $EDITOR ansible/group_vars/all.yml
 | `auto_reboot_if_required`   | `true`        | Auto-Reboot, wenn APT `/var/run/reboot-required` setzt                 |
 | `k3s_version`               | `""` (leer)   | Leer ⇒ `k3s_channel` folgen. Pin auf z. B. `v1.30.2+k3s1`              |
 | `k3s_channel`               | `stable`      | Wird genutzt, wenn `k3s_version` leer ist                              |
-| `helm_version`              | `""` (leer)   | Leer ⇒ neuestes Helm 3                                                 |
+| `helm_version`              | `""` (leer)   | Ohne Wirkung seit Incident 017. Die Helm-Version steht in `ansible/roles/k3s/defaults/main.yml` (`k3s_helm_release`), Renovate hebt sie an |
 | `argocd_version`            | `""` (leer)   | Leer ⇒ neuestes Argo-Helm-Chart                                        |
 | `hostname`                  | `homeserver`  | Hostname des Servers                                                   |
 | `dnsmasq_prod_vm_hosts`     | Hostliste     | Hosts unter `*.prod.homeserver`, die auf die PROD-VM (`.99`) statt auf den TECH-Cluster zeigen |

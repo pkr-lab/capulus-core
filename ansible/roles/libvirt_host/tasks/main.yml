@@ -212,6 +212,7 @@
 - name: Basis-Cloud-Image herunterladen (nur wenn es fehlt, bestehende Datei wird nie ersetzt)
   ansible.builtin.get_url:
     url: "{{ libvirt_host_base_image_url }}"
+    checksum: "sha256:{{ libvirt_host_base_image_sha256 }}"
     dest: "{{ libvirt_host_pool_dir }}/{{ libvirt_host_base_image_name }}"
     mode: "0644"
     force: false
