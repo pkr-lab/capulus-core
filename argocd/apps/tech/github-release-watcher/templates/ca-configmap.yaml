@@ -1,5 +1,5 @@
 # Oeffentliches Zertifikat der Homeserver-Root-CA (kein Geheimnis), damit der
-# Zammad-Aufruf per https die interne CA prueft. Quelle: docs/assets/
+# Zammad-Aufruf per https die interne CA prueft. Quelle: pki/
 # homeserver-root-ca.pem, als files/homeserver-root-ca.pem ins Chart kopiert
 # (Helm kann keine Dateien ausserhalb des Chart-Ordners lesen). Bei einem
 # Tausch der Root-CA beide Kopien aktualisieren.
