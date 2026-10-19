@@ -2,7 +2,10 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-values="$repo_root/argocd/apps/tech/vaultwarden/values.yaml"
+app="${1:-vaultwarden}"
+values="$repo_root/argocd/apps/tech/$app/values.yaml"
+
+[[ -f "$values" ]] || { echo "Fehler: $values nicht gefunden (Aufruf: $0 [vaultwarden|n8n])" >&2; exit 1; }
 
 command -v kubeseal >/dev/null || { echo "Fehler: kubeseal nicht gefunden" >&2; exit 1; }
 command -v openssl >/dev/null || { echo "Fehler: openssl nicht gefunden" >&2; exit 1; }
@@ -17,7 +20,7 @@ if [[ -z "$password" ]]; then
 fi
 
 sealed="$(printf '%s' "$password" | kubeseal --raw \
-  --namespace vaultwarden --name vaultwarden-restic \
+  --namespace "$app" --name "$app-restic" \
   --controller-namespace sealed-secrets --controller-name sealed-secrets-controller \
   --from-file=/dev/stdin)"
 [[ -n "$sealed" ]] || { echo "Fehler: kubeseal lieferte nichts" >&2; exit 1; }

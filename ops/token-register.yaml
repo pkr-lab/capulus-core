@@ -720,3 +720,17 @@
   owner: peter
   blast_radius: "Repository-Passwort der verschluesselten Vaultwarden-Sicherung (restic auf dem NAS-Volume). Wer es und das Volume hat, liest Datenbank, rsa_key und config.json. Nicht routinemaessig wechseln: ein Wechsel macht alle bisherigen Snapshots unlesbar, ausser sie werden per restic key passwd umgeschluesselt. Zusaetzlich im Passwortmanager ablegen."
 
+- id: n8n-restic-password
+  service: n8n
+  kind: password
+  stored_in:
+    - argocd/apps/tech/n8n/templates/restic-sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: 3650
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/2-betrieb-hardware/20010-nas-backup.md#restic-für-n8n-im-cluster
+    overlap: false
+  owner: peter
+  blast_radius: "Repository-Passwort der verschluesselten n8n-Sicherung (restic auf dem NAS-Volume). Wer es und das Volume hat, liest Datenbank, Credentials-Schluessel (config) und WhatsApp-Session. Nicht routinemaessig wechseln: ein Wechsel macht alle bisherigen Snapshots unlesbar, ausser sie werden per restic key passwd umgeschluesselt. Zusaetzlich im Passwortmanager ablegen."
