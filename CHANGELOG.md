@@ -1,3 +1,15 @@
+## [3.55.0](https://github.com/pkr-lab/capulus-core/compare/v3.54.0...v3.55.0) (2026-10-19)
+
+### Features
+
+* **n8n:** enable restic backup and add encrypted password ([df2886c](https://github.com/pkr-lab/capulus-core/commit/df2886ce7151cab59f6b1b50aef22303648062f3))
+
+## [3.54.0](https://github.com/pkr-lab/capulus-core/compare/v3.53.0...v3.54.0) (2026-10-19)
+
+### Features
+
+* **uptime-kuma:** CORS-Header für die öffentliche Status-Page der Website ([d31fdca](https://github.com/pkr-lab/capulus-core/commit/d31fdcaee1d4bfc6eca47c1a2c1d66ff4bd05115))
+
 ## [3.53.0](https://github.com/pkr-lab/capulus-core/compare/v3.52.2...v3.53.0) (2026-10-19)
 
 ### Features
