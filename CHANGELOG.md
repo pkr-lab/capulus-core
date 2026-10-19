@@ -1,3 +1,9 @@
+## [3.55.0](https://github.com/pkr-lab/capulus-core/compare/v3.54.0...v3.55.0) (2026-10-19)
+
+### Features
+
+* **n8n:** enable restic backup and add encrypted password ([df2886c](https://github.com/pkr-lab/capulus-core/commit/df2886ce7151cab59f6b1b50aef22303648062f3))
+
 ## [3.54.0](https://github.com/pkr-lab/capulus-core/compare/v3.53.0...v3.54.0) (2026-10-19)
 
 ### Features
