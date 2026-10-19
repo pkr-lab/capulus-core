@@ -1,0 +1,18 @@
+{{- if .Values.resticBackup.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: Delete=false
+  name: {{ include "n8n.fullname" . }}-restic
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.resticBackup.size }}
+  storageClassName: {{ .Values.resticBackup.storageClassName }}
+{{- end }}
