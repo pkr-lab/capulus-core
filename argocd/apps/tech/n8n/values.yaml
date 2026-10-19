@@ -46,7 +46,7 @@ ingress:
 
 persistence:
   enabled: true
-  storageClassName: nas
+  storageClassName: local-path
   size: 5Gi
   accessMode: ReadWriteOnce
   mountPath: /home/node/.n8n
@@ -74,7 +74,8 @@ resources:
 
 affinity: {}
 
-nodeSelector: {}
+nodeSelector:
+  kubernetes.io/hostname: homeserver
 tolerations: []
 
 xibosignage:
