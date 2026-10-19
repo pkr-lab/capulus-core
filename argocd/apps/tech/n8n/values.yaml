@@ -79,9 +79,9 @@ nodeSelector:
 tolerations: []
 
 resticBackup:
-  enabled: false
+  enabled: true
   secretName: n8n-restic
-  encryptedPassword: ""
+  encryptedPassword: "AgBRhE2cKUo0T3U9kF7LGFwlpOsdZXSNNueuVDBhFd39sdpLIABGzfYSFq1v78ayFenrfYNqms4eHOtEKxM+EqT8fDC2fdL0aXpzi36JJ85rdzdv43U8NiFKOvdTVyiXczieFm7zAff6VP/iRRm4nOHqOeW0YDkmTBoPzpxRwWX5lhJRJxdieK6FDjD6a/Gbrsj1vEUxS08w+Vx9ZH8+SIntyqXySMeXS3qTM5UgwN7UDztAmiV9ZOu17xITJ9oCjDlJ9YooaoiFs4RR16skk2nT0h3rDsY+5munHO68UkJKim5tbWbFbVgkzhs7Jd4B3IsDFlAPIsIX1Qs5UPTR+gX3mgLNysxMykI0iMLjbDP2jh27fkeORXO3w7GlUnj5hmk3yWLQHXQlSCGHtyC0cc1Kd2LVuS+7SjyTm9W1VwiCX9rBjAQ6VmBcr9AOER8ZBnuIAPy4cJInvSq0EEftqFE74VqmjTPLi0knKzYAbt8GfEl1ZJHYUO1UuqQIAH9ja92TmnnsnqlRRrr4Dk2ffqJxtYdR23UWnGXJf9zhavq0yqB9x1P5j+T1RYcF6WbNAoNMCikdM1RcrjYmt3qbF2/KG7qPZMjOU1OX9XSVP1IzftYZXg4gA8MHYIW7RghoMoI2qwNpmmNC+qNthL9LII7hYsnXoIRrPKcWaezj/38/nFJWkd0iI8qQIehT9PTIIB56VUvDGzONrWazfJdd7rDdra/QkyDaeMP9fpVEk34Hfr6HA+3WWz0Ldb2w8KazC/ueCkJyNj0l46MPapSRWh7X"
   image: alpine:3.24
   schedule: "20 2 * * *"
   timezone: "Europe/Berlin"
