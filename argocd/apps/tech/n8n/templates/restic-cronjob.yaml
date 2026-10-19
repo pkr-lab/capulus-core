@@ -1,0 +1,78 @@
+{{- if and .Values.resticBackup.enabled .Values.resticBackup.encryptedPassword -}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "n8n.fullname" . }}-restic-backup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.resticBackup.schedule | quote }}
+  timeZone: {{ .Values.resticBackup.timezone | quote }}
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: {{ .Values.resticBackup.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.resticBackup.successfulJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: {{ include "n8n.name" . }}-restic-backup
+            app.kubernetes.io/instance: {{ .Release.Name }}
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: restic
+              image: "{{ .Values.resticBackup.image }}"
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: RESTIC_REPOSITORY
+                  value: /repo
+                - name: RESTIC_CACHE_DIR
+                  value: /cache
+                - name: RESTIC_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.resticBackup.secretName }}
+                      key: password
+              command:
+                - sh
+                - -c
+                - |
+                  set -eu
+                  apk add --no-cache sqlite restic >/dev/null
+                  sqlite3 -readonly /source/database.sqlite ".backup '/stage/database.sqlite'"
+                  sqlite3 /stage/database.sqlite "pragma integrity_check" | grep -qx ok
+                  restic cat config >/dev/null 2>&1 || restic init
+                  restic backup /stage /source --host n8n --tag n8n \
+                    --exclude '/source/database.sqlite*' --exclude '/source/binaryData' \
+                    --exclude '/source/n8nEventLog*' --exclude '/source/crash.journal' \
+                    --exclude 'Cache' --exclude 'Code Cache' --exclude 'GPUCache' \
+                    --exclude 'DawnGraphiteCache' --exclude 'DawnWebGPUCache' --exclude 'GPUPersistentCache'
+                  restic forget --host n8n --keep-daily {{ .Values.resticBackup.keepDaily }} --keep-weekly {{ .Values.resticBackup.keepWeekly }} --keep-monthly {{ .Values.resticBackup.keepMonthly }} --prune
+                  restic check --read-data-subset=5%
+                  echo "fertig: $(date -Iseconds)"
+              resources:
+                {{- toYaml .Values.resticBackup.resources | nindent 16 }}
+              volumeMounts:
+                - name: source
+                  mountPath: /source
+                - name: repo
+                  mountPath: /repo
+                - name: stage
+                  mountPath: /stage
+                - name: cache
+                  mountPath: /cache
+          volumes:
+            - name: source
+              persistentVolumeClaim:
+                claimName: {{ include "n8n.fullname" . }}-data
+            - name: repo
+              persistentVolumeClaim:
+                claimName: {{ include "n8n.fullname" . }}-restic
+            - name: stage
+              emptyDir: {}
+            - name: cache
+              emptyDir: {}
+{{- end }}
