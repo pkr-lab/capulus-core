@@ -46,7 +46,7 @@ ingress:
 
 persistence:
   enabled: true
-  storageClassName: nas
+  storageClassName: local-path
   size: 5Gi
   accessMode: ReadWriteOnce
   mountPath: /home/node/.n8n
@@ -74,8 +74,30 @@ resources:
 
 affinity: {}
 
-nodeSelector: {}
+nodeSelector:
+  kubernetes.io/hostname: homeserver
 tolerations: []
+
+resticBackup:
+  enabled: false
+  secretName: n8n-restic
+  encryptedPassword: ""
+  image: alpine:3.24
+  schedule: "20 2 * * *"
+  timezone: "Europe/Berlin"
+  storageClassName: nas
+  size: 5Gi
+  keepDaily: 7
+  keepWeekly: 4
+  keepMonthly: 6
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 3
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
 
 xibosignage:
   enabled: true
