@@ -45,6 +45,9 @@ ingress:
 ingressPublic:
   enabled: true
   host: status-prod.pke-lab.de
+  corsOrigins:
+    - https://www.edv-kretzer.de
+    - https://edv-kretzer.de
 
 ingressNative:
   enabled: true
