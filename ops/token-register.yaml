@@ -734,3 +734,18 @@
     overlap: false
   owner: peter
   blast_radius: "Repository-Passwort der verschluesselten n8n-Sicherung (restic auf dem NAS-Volume). Wer es und das Volume hat, liest Datenbank, Credentials-Schluessel (config) und WhatsApp-Session. Nicht routinemaessig wechseln: ein Wechsel macht alle bisherigen Snapshots unlesbar, ausser sie werden per restic key passwd umgeschluesselt. Zusaetzlich im Passwortmanager ablegen."
+
+- id: n8n-github-status-schalter
+  service: n8n
+  kind: api-token
+  stored_in:
+    - "n8n-Credential: GitHub PAT (Status-Schalter)"
+  issued: "2026-10-19"
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:EDV-Kretzer/nutzung.md#status-hinweis-wartung-störung
+    overlap: true
+  owner: peter
+  blast_radius: "Fine-grained Token mit Actions: Read and write nur auf pkr-lab/EDV-Kretzer. Kann dort Workflows starten (Status-Hinweis, damit auch das Deployment nach netcup), sonst nichts."
