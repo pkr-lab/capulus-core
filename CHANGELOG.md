@@ -1,3 +1,9 @@
+## [3.52.2](https://github.com/pkr-lab/capulus-core/compare/v3.52.1...v3.52.2) (2026-10-19)
+
+### Bug Fixes
+
+* **n8n:** update storageClassName to local-path and add nodeSelector ([77a1d35](https://github.com/pkr-lab/capulus-core/commit/77a1d3550658e15e3a6bed73c6ed9635309c1a8c))
+
 ## [3.52.1](https://github.com/pkr-lab/capulus-core/compare/v3.52.0...v3.52.1) (2026-10-19)
 
 ### Bug Fixes
