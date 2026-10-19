@@ -10,7 +10,7 @@
     "entw"
   ],
   "timezone": "Europe/Berlin",
-  "schedule": ["before 6am on monday"],
+  "schedule": ["on monday"],
   "labels": ["dependencies"],
   "commitMessagePrefix": "feat(deps):",
   "helm-values": {
