@@ -1,0 +1,19 @@
+{{- if and .Values.ingressPublic.enabled .Values.ingressPublic.corsOrigins }}
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "uptime-kuma.fullname" . }}-cors
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "uptime-kuma.labels" . | nindent 4 }}
+spec:
+  headers:
+    accessControlAllowMethods:
+      - GET
+      - HEAD
+      - OPTIONS
+    accessControlAllowOriginList:
+      {{- toYaml .Values.ingressPublic.corsOrigins | nindent 6 }}
+    accessControlMaxAge: 600
+    addVaryHeader: true
+{{- end }}
