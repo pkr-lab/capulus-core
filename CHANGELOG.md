@@ -1,3 +1,9 @@
+## [3.53.0](https://github.com/pkr-lab/capulus-core/compare/v3.52.2...v3.53.0) (2026-10-19)
+
+### Features
+
+* **n8n:** verschlüsseltes restic-Backup hinter Schalter (Incident 037) ([073b487](https://github.com/pkr-lab/capulus-core/commit/073b487cfda76c9a23e0c1c44cb6ff9a8f5665dd))
+
 ## [3.52.2](https://github.com/pkr-lab/capulus-core/compare/v3.52.1...v3.52.2) (2026-10-19)
 
 ### Bug Fixes
