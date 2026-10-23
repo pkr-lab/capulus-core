@@ -1,4 +1,4 @@
-FROM ubuntu:24.04 AS build
+FROM ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac AS build
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG BARESIP_VERSION=4.12.0
@@ -32,7 +32,7 @@ RUN python3 -m venv /opt/piper/venv \
  && /opt/piper/venv/bin/pip install --no-cache-dir --require-hashes -r /tmp/requirements.txt \
  && /opt/piper/venv/bin/python -m piper.download_voices "${PIPER_VOICE}" --download-dir /opt/piper
 
-FROM ubuntu:24.04
+FROM ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac
 
 ARG DEBIAN_FRONTEND=noninteractive
 
