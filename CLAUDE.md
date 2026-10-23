@@ -20,6 +20,7 @@ provisioniert [capulus-ansible](https://github.com/pkr-lab/capulus-ansible), die
 - **Niemals Klartext-Secrets committen.** Nur `SealedSecret` (je Cluster eigener Schlüssel). gitleaks läuft in der CI.
   Neue Tokens/Passwörter in `ops/token-register.yaml` eintragen (`stored_in` muss auf existierende Dateien zeigen).
 - **`main` ist geschützt** (PR + grüne CI). Ein Merge nach `main` rollt sofort auf TECH/PROD aus.
+- **Nie direkt auf `main` arbeiten.** Änderungen gehen nur per PR hinein. Steht das Arbeitsverzeichnis auf `main`, vor der ersten Änderung einen neuen Branch anlegen (`git switch -c <typ>/<kurzbeschreibung>`, z. B. `feat/backup-retention`, `fix/ca-pin`) und nur dort arbeiten. Den Branch legt Claude an, Commit, Push und PR macht der Nutzer.
 - `argocd/bootstrap/*` ist **generiert** — nie von Hand ändern, sondern Template/Defaults in `roles/argocd/` von
   capulus-ansible anpassen und dort `make render-bootstrap CORE_DIR=<Pfad zu diesem Repo>` ausführen (im Container meist nicht
   möglich → dem Nutzer sagen).
