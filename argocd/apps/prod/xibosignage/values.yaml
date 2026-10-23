@@ -10,7 +10,7 @@ mysql:
   image:
     repository: mysql
     pullPolicy: IfNotPresent
-    tag: "26.7"
+    tag: "26.7@sha256:625f74ddf93652d9d0f8d4ea7d741b9189554a5e96d27bb770abd0902d89c6e3"
 
   database: cms
   username: cms
@@ -53,7 +53,7 @@ memcached:
   image:
     repository: memcached
     pullPolicy: IfNotPresent
-    tag: "alpine"
+    tag: "alpine@sha256:6d687bc26426d092694743054fc674fc54d3c161fefa1ad20b54192f8580a8c1"
   args: ["-m", "15"]
 
   resources:
@@ -68,7 +68,7 @@ quickchart:
   image:
     repository: ianw/quickchart
     pullPolicy: IfNotPresent
-    tag: "v1.8.1"
+    tag: "v1.8.1@sha256:12e2d442e2db9974f2b310b72fadd4f6d595d0a0bf5480c3d50ef5cb5967ee56"
 
   resources:
     requests:
@@ -83,7 +83,7 @@ cms:
   image:
     repository: ghcr.io/xibosignage/xibo-cms
     pullPolicy: IfNotPresent
-    tag: "release-4.5.0"
+    tag: "release-4.5.0@sha256:eb2e09964a19e76baf88f1ec5145c191241e3d2e9d73ab9adbc14676d48b7a1f"
 
   service:
     type: ClusterIP
