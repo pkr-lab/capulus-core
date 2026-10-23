@@ -2,10 +2,11 @@ name: Mirror to GitLab
 
 on:
   push:
-    branches: [main]
+    branches: ["**"]
     tags: ["**"]
+  delete: {}
   schedule:
-    - cron: "0 */6 * * *"
+    - cron: "17 */6 * * *"
   workflow_dispatch: {}
 
 permissions:
@@ -18,6 +19,7 @@ concurrency:
 jobs:
   mirror:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Mirror GitHub -> GitLab
         env:
@@ -27,6 +29,11 @@ jobs:
           GITLAB_TOKEN: ${{ secrets.GITLAB_MIRROR_TOKEN }}
         run: |
           set -euo pipefail
-          git clone --mirror "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" mirror.git
+          if [ -z "${GITLAB_REMOTE}" ] || [ -z "${GITLAB_USER}" ] || [ -z "${GITLAB_TOKEN}" ]; then
+            echo "::warning::GITLAB_MIRROR_* Secrets fehlen, Mirror übersprungen"
+            exit 0
+          fi
+          git clone --bare "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" mirror.git
           cd mirror.git
-          git push --mirror "https://${GITLAB_USER}:${GITLAB_TOKEN}@${GITLAB_REMOTE}"
+          git push --prune "https://${GITLAB_USER}:${GITLAB_TOKEN}@${GITLAB_REMOTE}" \
+            '+refs/heads/*:refs/heads/*' '+refs/tags/*:refs/tags/*'
