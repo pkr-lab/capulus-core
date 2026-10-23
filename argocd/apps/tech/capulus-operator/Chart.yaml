@@ -1,0 +1,14 @@
+apiVersion: v2
+name: capulus-operator
+description: Kubernetes-Operator des Capulus-Homelabs (Backups, Datenbanken, Zertifikate, Secret-Rotation).
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - operator
+  - backup
+  - restic
+sources:
+  - https://github.com/pkr-lab/capulus-operator
+maintainers:
+  - name: home-server-admin

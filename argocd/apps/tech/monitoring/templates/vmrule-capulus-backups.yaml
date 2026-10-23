@@ -1,0 +1,50 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: capulus-backups
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: capulus.backups
+      interval: 1m
+      rules:
+
+        - alert: CapulusBackupStale
+          expr: |
+            (time() - capulus_backup_last_success_timestamp_seconds) > 30 * 3600
+              unless on(namespace, name)
+            capulus_backup_suspended == 1
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Backup {{`{{ $labels.namespace }}`}}/{{`{{ $labels.name }}`}} seit ueber 30 h ohne Erfolg"
+            description: >-
+              Das Backup {{`{{ $labels.name }}`}} (Namespace {{`{{ $labels.namespace }}`}}) war zuletzt vor mehr als
+              30 Stunden erfolgreich. Status mit `kubectl -n {{`{{ $labels.namespace }}`}} get backup {{`{{ $labels.name }}`}}`
+              und Job-Logs pruefen; es fehlt mindestens eine Datensicherung.
+
+        - alert: CapulusBackupFailed
+          expr: |
+            capulus_backup_failed == 1
+              unless on(namespace, name)
+            capulus_backup_suspended == 1
+          for: 15m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Backup {{`{{ $labels.namespace }}`}}/{{`{{ $labels.name }}`}} ist fehlgeschlagen"
+            description: >-
+              Der letzte Lauf von {{`{{ $labels.name }}`}} (Namespace {{`{{ $labels.namespace }}`}}) ist fehlgeschlagen.
+              Greift auch, wenn das Backup noch nie erfolgreich war (dann fehlt die Zeitreihe fuer CapulusBackupStale).
+
+        - alert: CapulusBackupOperatorDown
+          expr: absent(up{job=~".*capulus-operator.*"} == 1)
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "capulus-operator nicht erreichbar"
+            description: >-
+              Der Operator liefert keine Metriken. Bestehende CronJobs laufen weiter, Aenderungen an Backup-Ressourcen
+              werden nicht umgesetzt und die Alerts CapulusBackupStale/-Failed haben keine Daten.
