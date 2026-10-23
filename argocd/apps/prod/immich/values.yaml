@@ -160,7 +160,7 @@ redis:
   image:
     repository: docker.io/valkey/valkey
     pullPolicy: IfNotPresent
-    tag: "9-alpine"
+    tag: "9-alpine@sha256:48332870af354a799964c0012ae1194a0bf2bf894eb508f945810596dc2d8d11"
 
   service:
     port: 6379
