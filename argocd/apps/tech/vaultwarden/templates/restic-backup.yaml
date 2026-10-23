@@ -1,0 +1,36 @@
+{{- if and .Values.resticBackup.enabled .Values.resticBackup.encryptedPassword -}}
+apiVersion: capulus.homeserver/v1alpha1
+kind: Backup
+metadata:
+  name: {{ include "vaultwarden.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "vaultwarden.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.resticBackup.schedule | quote }}
+  timeZone: {{ .Values.backup.timezone | quote }}
+  repository:
+    pvcName: {{ include "vaultwarden.fullname" . }}-restic
+    passwordSecretRef:
+      name: {{ .Values.resticBackup.secretName }}
+      key: password
+  sources:
+    - name: data
+      type: SQLite
+      pvcName: {{ include "vaultwarden.fullname" . }}-data
+      sqlite:
+        file: db.sqlite3
+  exclude:
+    - /sources/data/icon_cache
+    - /sources/data/tmp
+  retention:
+    keepDaily: {{ .Values.resticBackup.keepDaily }}
+    keepWeekly: {{ .Values.resticBackup.keepWeekly }}
+    keepMonthly: {{ .Values.resticBackup.keepMonthly }}
+  images:
+    sqlite: {{ .Values.backup.image | quote }}
+  failedJobsHistoryLimit: {{ .Values.backup.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.backup.successfulJobsHistoryLimit }}
+  resources:
+    {{- toYaml .Values.resticBackup.resources | nindent 4 }}
+{{- end }}
