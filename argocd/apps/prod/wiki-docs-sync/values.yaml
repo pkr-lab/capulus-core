@@ -1,7 +1,7 @@
 ---
 image:
   repository: ghcr.io/pkr-lab/capulus-wiki-sync
-  tag: "v1.0.0"
+  tag: "v1.1.1"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
