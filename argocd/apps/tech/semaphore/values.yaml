@@ -5,7 +5,7 @@ replicaCount: 1
 image:
   repository: semaphoreui/semaphore
   pullPolicy: IfNotPresent
-  tag: "v2.19.16"
+  tag: "v2.19.17@sha256:008dacd9f1adbd92e8a048f1786ae1dd9bed2a352aca2eb30b9837de5706e7f7"
 
 nameOverride: ""
 fullnameOverride: ""
