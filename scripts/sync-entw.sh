@@ -47,12 +47,28 @@ else
   log "PR #${pr} ist schon offen."
 fi
 
-if ! out=$(gh pr merge "$pr" --auto --merge 2>&1); then
+merged=0
+out=""
+for attempt in 1 2 3 4 5 6; do
+  if out=$(gh pr merge "$pr" --auto --merge 2>&1); then
+    merged=1
+    break
+  fi
   if echo "$out" | grep -qi "clean status"; then
     gh pr merge "$pr" --merge
-  else
-    echo "$out" >&2
-    exit 1
+    merged=1
+    break
   fi
+  if echo "$out" | grep -qi "unstable status"; then
+    log "PR ${pr} ist noch unstable, Versuch ${attempt}/6."
+    sleep 10
+    continue
+  fi
+  echo "$out" >&2
+  exit 1
+done
+if [ "$merged" != 1 ]; then
+  echo "$out" >&2
+  exit 1
 fi
 log "PR ${pr} wird gemergt (Auto-Merge/Merge)."
