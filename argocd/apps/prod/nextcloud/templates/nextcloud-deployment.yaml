@@ -42,6 +42,19 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      initContainers:
+        - name: php-conf
+          securityContext:
+            {{- toYaml .Values.nextcloud.securityContext | nindent 12 }}
+          image: "{{ .Values.nextcloud.image.repository }}:{{ .Values.nextcloud.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.nextcloud.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - cp -r /usr/local/etc/php/conf.d/. /php-conf/
+          volumeMounts:
+            - name: php-conf
+              mountPath: /php-conf
       containers:
         - name: nextcloud
           securityContext:
@@ -111,7 +124,11 @@ spec:
               mountPath: /var/www/html
             - name: data
               mountPath: /var/www/html/data
+            - name: php-conf
+              mountPath: /usr/local/etc/php/conf.d
       volumes:
+        - name: php-conf
+          emptyDir: {}
         - name: html
           {{- if .Values.nextcloud.persistence.html.enabled }}
           persistentVolumeClaim:

@@ -22,7 +22,10 @@ nextcloud:
     pullPolicy: IfNotPresent
     tag: "34.0.5-apache"
 
-  podSecurityContext: {}
+  podSecurityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    runAsNonRoot: true
   securityContext:
     allowPrivilegeEscalation: false
 
