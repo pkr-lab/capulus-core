@@ -70,6 +70,11 @@
       "schedule": ["at any time"]
     },
     {
+      "description": "isc-news-bot: das Playwright-Basisimage muss zur npm-Version von playwright passen, sonst fehlt der erwartete Chromium-Build und /readyz bleibt 503. Das MCR-Image liefert keinen Release-Zeitpunkt, daher keine Wartezeit, damit es gemeinsam mit dem npm-Paket angehoben wird.",
+      "matchPackageNames": ["mcr.microsoft.com/playwright"],
+      "minimumReleaseAge": null
+    },
+    {
       "description": "Group all Helm chart + image tag bumps for a single app into one PR instead of one PR per field.",
       "matchFileNames": ["argocd/apps/**"],
       "groupName": "{{packageFileDir}}"
