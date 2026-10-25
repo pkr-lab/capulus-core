@@ -35,5 +35,9 @@ jobs:
           fi
           git clone --bare "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" mirror.git
           cd mirror.git
-          git push --prune "https://${GITLAB_USER}:${GITLAB_TOKEN}@${GITLAB_REMOTE}" \
-            '+refs/heads/*:refs/heads/*' '+refs/tags/*:refs/tags/*'
+          for attempt in 1 2 3; do
+            git push --prune "https://${GITLAB_USER}:${GITLAB_TOKEN}@${GITLAB_REMOTE}" \
+              '+refs/heads/*:refs/heads/*' '+refs/tags/*:refs/tags/*' && exit 0
+            sleep $((attempt * 30))
+          done
+          exit 1
