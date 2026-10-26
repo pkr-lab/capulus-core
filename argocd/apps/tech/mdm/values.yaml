@@ -6,7 +6,7 @@ timezone: Europe/Berlin
 image:
   repository: ghcr.io/pkr-lab/mdm-scep
   pullPolicy: IfNotPresent
-  tag: "sha-0000000"
+  tag: "sha-056a07b"
 
 nanomdm:
   image:
