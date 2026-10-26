@@ -107,22 +107,59 @@ VALUES ('app-blocklist',
             'BLOCKED_APPS', jsonb_build_array('com.apple.mobilephone', 'com.apple.MobileSMS', 'com.apple.camera')
         ));
 
-INSERT INTO automation.profile_state (name, template, params)
-VALUES ('webclips',
+\set listsiconb64 `base64 -w0 /init-files/icon-lists.png`
+\set iscicon64 `base64 -w0 /init-files/icon-isc.png`
+
+INSERT INTO automation.profile_state (name, kind, enabled, template, params)
+VALUES ('webclip-isc', 'webclip', false,
         :'webclipstemplate',
         jsonb_build_object(
-            'IDENTIFIER', :'profileprefix' || '.webclips',
-            'PROFILE_UUID', 'b8582656-abe4-4f10-971e-3ec138980ca3',
-            'ISC_UUID', '2ad08709-cb6e-420e-86da-eddbf05fab7e',
-            'ISC_URL', 'https://dlrg.net/apps/training',
-            'L1_UUID', '065bc162-037d-4e3d-9e5c-0041107de122',
-            'L1_URL', 'https://dlrgorg.sharepoint.com/:l:/r/sites/andernach.ausbildung-Ausbildungundco/Lists/Gruppe_1_Stunde_1?e=WGaw5f',
-            'L2_UUID', '66e13375-448c-4b09-b8ea-d2ba6b830c2a',
-            'L2_URL', 'https://dlrgorg.sharepoint.com/:l:/r/sites/andernach.ausbildung-Ausbildungundco/Lists/Gruppe_1_Stunde_2?e=rdQeeo',
-            'L3_UUID', '3e4e6176-2c78-4488-bd07-67f8fc06df3e',
-            'L3_URL', 'https://dlrgorg.sharepoint.com/:l:/r/sites/andernach.ausbildung/Lists/Gruppe_2_Stunde_1?e=xsV16J',
-            'L4_UUID', '247d9463-d92c-4d73-9b44-642744bb9b4d',
-            'L4_URL', 'https://dlrgorg.sharepoint.com/:l:/r/sites/andernach.ausbildung/Lists/Gruppe_2_Stunde_2?e=YLlhW9'
+            'IDENTIFIER', :'profileprefix' || '.webclip-isc',
+            'PROFILE_UUID', '6f14dd83-6a91-45ac-9feb-ceb7a143c437',
+            'PAYLOAD_UUID', 'eb6618f9-b9a9-4d39-ba40-0d0c9032d95d',
+            'LABEL', 'ISC',
+            'URL', 'https://dlrg.net/apps/training',
+            'ICON_B64', :'iscicon64'
+        )),
+       ('webclip-g1s1', 'webclip', false,
+        :'webclipstemplate',
+        jsonb_build_object(
+            'IDENTIFIER', :'profileprefix' || '.webclip-g1s1',
+            'PROFILE_UUID', '22c118c8-c35f-460c-858a-b842421340f9',
+            'PAYLOAD_UUID', '13544b16-2910-4628-8a40-8d887c694424',
+            'LABEL', 'G1 Stunde 1',
+            'URL', 'https://dlrgorg.sharepoint.com/:l:/r/sites/andernach.ausbildung-Ausbildungundco/Lists/Gruppe_1_Stunde_1?e=WGaw5f',
+            'ICON_B64', :'listsiconb64'
+        )),
+       ('webclip-g1s2', 'webclip', false,
+        :'webclipstemplate',
+        jsonb_build_object(
+            'IDENTIFIER', :'profileprefix' || '.webclip-g1s2',
+            'PROFILE_UUID', '520e9144-212d-4654-8b56-61b4a2cfca30',
+            'PAYLOAD_UUID', '0e8a22f9-a653-4ce0-ad5b-80d6ff0f340c',
+            'LABEL', 'G1 Stunde 2',
+            'URL', 'https://dlrgorg.sharepoint.com/:l:/r/sites/andernach.ausbildung-Ausbildungundco/Lists/Gruppe_1_Stunde_2?e=rdQeeo',
+            'ICON_B64', :'listsiconb64'
+        )),
+       ('webclip-g2s1', 'webclip', false,
+        :'webclipstemplate',
+        jsonb_build_object(
+            'IDENTIFIER', :'profileprefix' || '.webclip-g2s1',
+            'PROFILE_UUID', '7b232ed0-b0f6-411b-825c-d5a222b1aaf0',
+            'PAYLOAD_UUID', '6218f37f-b7fb-461e-bb28-137e4499f4e4',
+            'LABEL', 'G2 Stunde 1',
+            'URL', 'https://dlrgorg.sharepoint.com/:l:/r/sites/andernach.ausbildung/Lists/Gruppe_2_Stunde_1?e=xsV16J',
+            'ICON_B64', :'listsiconb64'
+        )),
+       ('webclip-g2s2', 'webclip', false,
+        :'webclipstemplate',
+        jsonb_build_object(
+            'IDENTIFIER', :'profileprefix' || '.webclip-g2s2',
+            'PROFILE_UUID', 'a866b6ae-5ed2-48f2-81b4-91fbd8457a62',
+            'PAYLOAD_UUID', '625142d8-5501-4bc1-b82e-635484359c38',
+            'LABEL', 'G2 Stunde 2',
+            'URL', 'https://dlrgorg.sharepoint.com/:l:/r/sites/andernach.ausbildung/Lists/Gruppe_2_Stunde_2?e=YLlhW9',
+            'ICON_B64', :'listsiconb64'
         ));
 
 INSERT INTO automation.profile_state (name, template, params)
