@@ -83,7 +83,7 @@ cms:
   image:
     repository: ghcr.io/xibosignage/xibo-cms
     pullPolicy: IfNotPresent
-    tag: "release-4.5.5"
+    tag: "release-4.5.5@sha256:b77cd669890aff293a76bf120ce28b2c0b20ff08b29d5fe8ae8fbccf255886ea"
 
   service:
     type: ClusterIP
