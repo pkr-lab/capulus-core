@@ -133,7 +133,7 @@ automation:
   n8nNamespace: n8n
   n8nService: n8n.n8n.svc.cluster.local
   profilePrefix: de.pke-lab.mdm
-  lockScreenText: "Dieses iPad gehört der Organisation. Gefunden? Bitte beim Eigentümer melden."
+  lockScreenText: "DLRG OG Andernach | Admin bei Fragen Peter Kretzer"
 
 ingress:
   enabled: true

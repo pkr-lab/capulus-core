@@ -1,0 +1,531 @@
+{
+  "name": "MDM: Apps aufraeumen starten",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "basicAuth",
+        "formTitle": "Apps aufraeumen",
+        "formDescription": "Entfernt von den iPads alle Apps, die nicht auf der Erlaubt-Liste stehen. Die iPads melden zuerst ihre installierten Apps, die Entfernung folgt automatisch nach wenigen Minuten.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Seriennummer (leer = alle iPads)",
+              "fieldType": "text",
+              "requiredField": false
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "path": "mdm-apps-aufraeumen"
+        }
+      },
+      "id": "69301dd5-caeb-58ae-b5c2-71abc0f641b0",
+      "name": "Formular Aufraeumen",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "d0dde6cc-2646-5062-bc5e-ce1efdff97a0",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Formulare"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "id": "eb574cba-668c-5bfd-9507-e064153ed860",
+      "name": "Alle 10 Minuten",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const input = $('Formular Aufraeumen').first().json;\nconst serial = String(input['Seriennummer (leer = alle iPads)'] || '').trim();\nif (serial.length > 40 || !/^[A-Za-z0-9]*$/.test(serial)) {\n  return [{ json: { ok: false, mode: 'manual', title: 'Nichts gestartet', message: 'Die Seriennummer darf nur Buchstaben und Ziffern enthalten.' } }];\n}\nreturn [{ json: { ok: true, mode: 'manual', serial } }];\n"
+      },
+      "id": "7c784288-71b3-594b-ba36-c591ceddd166",
+      "name": "Eingabe pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: { ok: true, mode: 'auto', serial: '' } }];\n"
+      },
+      "id": "76a1a488-4c19-5c7c-9c0e-3f5adfab3795",
+      "name": "Zeitplan Start",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "97626067-9e5c-5fc1-9ed4-8c628692fdd2"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "1f2a5182-72f9-50ca-82ae-fcde151fc3b2",
+      "name": "Eingabe gueltig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const input = $input.first().json;\nconst cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  mode: input.mode,\n  serial: input.serial\n};\nreturn [{ json: cfg }];\n"
+      },
+      "id": "cb3ba685-aefc-553c-ba48-4baa54758f0f",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        690,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT e.id AS enrollment_id, d.serial_number FROM public.enrollments e JOIN public.devices d ON d.id = e.device_id WHERE e.type = 'Device' AND e.enabled AND ($1::text = '' OR d.serial_number = $1::text) AND ($2::text = 'manual' OR (EXISTS (SELECT 1 FROM automation.setting g WHERE g.key = 'grundeinrichtung:' || e.id) AND NOT EXISTS (SELECT 1 FROM automation.setting s WHERE s.key = 'aufraeumen:' || e.id))) ORDER BY d.serial_number",
+        "options": {
+          "queryReplacement": "={{ [$('Konfiguration').first().json.serial, $('Konfiguration').first().json.mode] }}"
+        }
+      },
+      "id": "9c4a2d1f-cdd5-5f18-b1f1-a53398ec48a9",
+      "name": "Geraete suchen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        920,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst head = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n  + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n  + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n';\nconst tail = (commandUuid) => '\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>' + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\nconst escapeXml = (value) => String(value)\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;');\nconst cfg = $('Konfiguration').first().json;\nconst devices = $input.all().map((item) => item.json).filter((row) => row.enrollment_id);\nif (devices.length === 0) {\n  const message = cfg.serial\n    ? 'Es gibt kein angemeldetes iPad mit der Seriennummer ' + cfg.serial + '.'\n    : (cfg.mode === 'auto' ? 'Kein iPad wartet auf das Aufraeumen.' : 'Es ist noch kein iPad angemeldet.');\n  return [{ json: { skip: true, message } }];\n}\nreturn devices.map((device) => {\n  const commandUuid = crypto.randomUUID();\n  const plist = head\n    + '\\t\\t<key>ManagedAppsOnly</key>\\n\\t\\t<false/>\\n'\n    + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>InstalledApplicationList</string>\\n'\n    + tail(commandUuid);\n  return { json: { skip: false, enrollment_id: device.enrollment_id, serial_number: device.serial_number, command_uuid: commandUuid, plist } };\n});\n"
+      },
+      "id": "3b377d54-115e-59fe-afd3-b9907bb891cd",
+      "name": "Inventurbefehle bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1150,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "b1f4a1cb-e99e-58bb-9921-fd7ab1a2fc88"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "3472c2d8-674b-5a2a-abd1-9bfc1cb7ac31",
+      "name": "Befehle vorhanden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1380,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Konfiguration').first().json.nanomdmUrl }}/v1/enqueue/{{ $json.enrollment_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/xml",
+        "body": "={{ $json.plist }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "838a7281-e852-5147-b773-94692cad0369",
+      "name": "Inventur einreihen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1610,
+        200
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoMDM API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const sent = $('Inventurbefehle bauen').all().map((item) => item.json);\nconst queued = [];\nconst failed = [];\n$input.all().forEach((response, index) => {\n  const source = sent[index];\n  const body = response.json.body || {};\n  if (body.command_uuid === source.command_uuid) {\n    queued.push({ id: source.enrollment_id, uuid: source.command_uuid, serial: source.serial_number });\n  } else {\n    failed.push({ serial: source.serial_number || source.enrollment_id, detail: String(response.json.statusCode || response.json.error || 'keine Antwort') });\n  }\n});\nreturn [{ json: { ids: queued.map((q) => q.id).join(','), uuids: queued.map((q) => q.uuid).join(','), queued, failed } }];\n"
+      },
+      "id": "2f631932-784a-5d6e-9d49-3fe817e66eab",
+      "name": "Inventur auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO automation.setting (key, value)\nSELECT 'aufraeumen:' || t.id, 'inventur:' || t.uuid FROM unnest(string_to_array($1, ','), string_to_array($2, ',')) AS t(id, uuid)\nON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()\nRETURNING key",
+        "options": {
+          "queryReplacement": "={{ [$('Inventur auswerten').first().json.ids, $('Inventur auswerten').first().json.uuids] }}"
+        }
+      },
+      "id": "8a96bb61-4750-5611-acd8-93643f700d4c",
+      "name": "Inventur vermerken",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2070,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "let manual = false;\ntry {\n  manual = $('Eingabe pruefen').all().length > 0;\n} catch (e) {\n  manual = false;\n}\nconst first = $input.first().json;\nif (first.ok === false) return [{ json: { title: first.title, message: first.message, manual } }];\nconst built = $('Inventurbefehle bauen').first().json;\nif (built.skip === true) return [{ json: { title: 'Nichts zu tun', message: built.message, manual } }];\nconst result = $('Inventur auswerten').first().json;\nconst lines = [];\nif (result.queued.length > 0) {\n  lines.push('Inventur angefordert bei: ' + result.queued.map((q) => q.serial || q.id).join(', ') + '.');\n  lines.push('Sobald ein iPad antwortet, werden alle Apps ausserhalb der Erlaubt-Liste entfernt. Das Ergebnis kommt per ntfy (Home-Lab-MDM).');\n}\nif (result.failed.length > 0) lines.push('Nicht eingereiht: ' + result.failed.map((f) => f.serial + ' (' + f.detail + ')').join(', ') + '.');\nreturn [{ json: { title: result.failed.length > 0 ? 'Aufraeumen mit Problemen gestartet' : 'Aufraeumen gestartet', message: lines.join(' '), manual } }];\n"
+      },
+      "id": "48b3c44e-43fc-5745-b08c-aa26ddd214e7",
+      "name": "Meldung bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.manual }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "14ee836c-4f29-5aff-9136-ff3ab27a7431"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "d4f6b94f-476f-59b3-9859-adab6ccca955",
+      "name": "Manuell?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2530,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "={{ $('Meldung bauen').first().json.title }}",
+        "completionMessage": "={{ $('Meldung bauen').first().json.message }}",
+        "options": {}
+      },
+      "id": "9825c0e1-a9a8-54dd-a766-0b07025c0a17",
+      "name": "Abschluss",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        2760,
+        300
+      ],
+      "webhookId": "b0b4da1a-4867-5805-9cac-2148004cb2ae"
+    }
+  ],
+  "connections": {
+    "Formular Aufraeumen": {
+      "main": [
+        [
+          {
+            "node": "Eingabe pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alle 10 Minuten": {
+      "main": [
+        [
+          {
+            "node": "Zeitplan Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingabe pruefen": {
+      "main": [
+        [
+          {
+            "node": "Eingabe gueltig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zeitplan Start": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingabe gueltig?": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meldung bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Geraete suchen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geraete suchen": {
+      "main": [
+        [
+          {
+            "node": "Inventurbefehle bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inventurbefehle bauen": {
+      "main": [
+        [
+          {
+            "node": "Befehle vorhanden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Befehle vorhanden?": {
+      "main": [
+        [
+          {
+            "node": "Inventur einreihen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meldung bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inventur einreihen": {
+      "main": [
+        [
+          {
+            "node": "Inventur auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inventur auswerten": {
+      "main": [
+        [
+          {
+            "node": "Inventur vermerken",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inventur vermerken": {
+      "main": [
+        [
+          {
+            "node": "Meldung bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung bauen": {
+      "main": [
+        [
+          {
+            "node": "Manuell?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manuell?": {
+      "main": [
+        [
+          {
+            "node": "Abschluss",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "Europe/Berlin"
+  },
+  "meta": {
+    "description": "Formular (und alle 10 Minuten fuer iPads nach der Grundeinrichtung) fordert bei den iPads die Liste der installierten Apps an (InstalledApplicationList) und vermerkt den Befehl in automation.setting (aufraeumen:<Enrollment>). Die Auswertung und das Entfernen uebernimmt MDM: Apps aufraeumen auswerten. Credentials: MDM Formulare, MDM NanoMDM API, MDM Automation DB."
+  },
+  "pinData": {},
+  "active": false
+}
