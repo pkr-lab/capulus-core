@@ -5,9 +5,24 @@
       "parameters": {
         "authentication": "basicAuth",
         "formTitle": "App auf iPads installieren",
-        "formDescription": "Die Lizenz wird den Geraeten zugewiesen, die App ohne Apple-ID installiert und die Liste der erlaubten Apps aktualisiert. Web-Links (ISC, Lists) kommen als Kachel auf den Home-Bildschirm. Unter iPads wird eine Gruppe, alle iPads oder ein einzelnes iPad gewaehlt.",
+        "formDescription": "Installiert oder deinstalliert eine App oder einen Web-Link (ISC, Lists) auf den gewaehlten iPads. Bei der Installation wird die Lizenz den Geraeten zugewiesen, die App ohne Apple-ID installiert und die Liste der erlaubten Apps aktualisiert. Unter iPads wird eine Gruppe, alle iPads oder ein einzelnes iPad gewaehlt.",
         "formFields": {
           "values": [
+            {
+              "fieldLabel": "Aktion",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Installieren"
+                  },
+                  {
+                    "option": "Deinstallieren"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
             {
               "fieldLabel": "App",
               "fieldType": "dropdown",
@@ -131,7 +146,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const input = $('Formular App').first().json;\nconst cfg = $('Konfiguration').first().json;\nconst choice = String(input['App'] || '');\nconst idField = String(input['App-Store-ID oder Link (nur bei Andere App)'] || '').trim();\nconst ipadChoice = String(input['iPads'] || '').trim();\nconst serial = String(input['Seriennummer (nur bei Einzelnes iPad)'] || '').trim();\nconst fail = (text) => [{ json: { ok: false, title: 'Nichts installiert', message: text } }];\nconst norm = (value) => String(value)\n  .toLowerCase()\n  .replace(/ä/g, 'ae')\n  .replace(/ö/g, 'oe')\n  .replace(/ü/g, 'ue')\n  .replace(/ß/g, 'ss')\n  .replace(/[^a-z0-9]+/g, '-')\n  .replace(/^-+|-+$/g, '');\nlet alle = false;\nlet serials = [];\nlet target = '';\nif (ipadChoice === 'Alle iPads') {\n  alle = true;\n  target = 'alle iPads';\n} else if (ipadChoice.indexOf('Einzelnes iPad') === 0) {\n  if (serial.length === 0 || serial.length > 40 || !/^[A-Za-z0-9]+$/.test(serial)) return fail('Bitte die Seriennummer eintragen (nur Buchstaben und Ziffern).');\n  serials = [serial];\n  target = serial;\n} else {\n  const group = Object.values(cfg.ipads).find((entry) => norm(entry.name) === norm(ipadChoice));\n  if (!group) return fail('Bitte unter iPads eine Auswahl treffen.');\n  serials = [].concat(group.serial);\n  if (serials.some((entry) => /^CHANGE-ME/.test(entry))) return fail('Fuer ' + group.name + ' ist im Workflow noch keine Seriennummer eingetragen.');\n  target = group.name;\n}\nconst web = {\n  'Web: ISC': ['webclip-isc'],\n  'Web: Lists Gruppe 1 Stunde 1': ['webclip-g1s1'],\n  'Web: Lists Gruppe 1 Stunde 2': ['webclip-g1s2'],\n  'Web: Lists Gruppe 2 Stunde 1': ['webclip-g2s1'],\n  'Web: Lists Gruppe 2 Stunde 2': ['webclip-g2s2'],\n  'Web: Alle Web-Links': ['webclip-isc', 'webclip-g1s1', 'webclip-g1s2', 'webclip-g2s1', 'webclip-g2s2']\n};\nif (web[choice]) return [{ json: { ok: true, mode: 'webclip', profiles: web[choice], alle, serials, target } }];\nif (choice === 'Andere App (ID unten)') {\n  const match = /(?:id)?(\\d{6,12})/.exec(idField);\n  if (!match) return fail('Bitte die App-Store-ID (Ziffern) oder den App-Store-Link eintragen.');\n  return [{ json: { ok: true, mode: 'other', adamId: match[1], alle, serials, target } }];\n}\nif (choice === 'Alle Apps der Liste') return [{ json: { ok: true, mode: 'all', alle, serials, target } }];\nreturn [{ json: { ok: true, mode: 'one', appName: choice, alle, serials, target } }];\n"
+        "jsCode": "const input = $('Formular App').first().json;\nconst cfg = $('Konfiguration').first().json;\nconst choice = String(input['App'] || '');\nconst idField = String(input['App-Store-ID oder Link (nur bei Andere App)'] || '').trim();\nconst ipadChoice = String(input['iPads'] || '').trim();\nconst uninstall = String(input['Aktion'] || '') === 'Deinstallieren';\nconst serial = String(input['Seriennummer (nur bei Einzelnes iPad)'] || '').trim();\nconst fail = (text) => [{ json: { ok: false, title: uninstall ? 'Nichts deinstalliert' : 'Nichts installiert', message: text } }];\nconst norm = (value) => String(value)\n  .toLowerCase()\n  .replace(/ä/g, 'ae')\n  .replace(/ö/g, 'oe')\n  .replace(/ü/g, 'ue')\n  .replace(/ß/g, 'ss')\n  .replace(/[^a-z0-9]+/g, '-')\n  .replace(/^-+|-+$/g, '');\nif (uninstall && choice === 'Alle Apps der Liste') return fail('Alle Apps der Liste kann nicht auf einmal deinstalliert werden. Bitte eine einzelne App waehlen.');\nlet alle = false;\nlet serials = [];\nlet target = '';\nif (ipadChoice === 'Alle iPads') {\n  alle = true;\n  target = 'alle iPads';\n} else if (ipadChoice.indexOf('Einzelnes iPad') === 0) {\n  if (serial.length === 0 || serial.length > 40 || !/^[A-Za-z0-9]+$/.test(serial)) return fail('Bitte die Seriennummer eintragen (nur Buchstaben und Ziffern).');\n  serials = [serial];\n  target = serial;\n} else {\n  const group = Object.values(cfg.ipads).find((entry) => norm(entry.name) === norm(ipadChoice));\n  if (!group) return fail('Bitte unter iPads eine Auswahl treffen.');\n  serials = [].concat(group.serial);\n  if (serials.some((entry) => /^CHANGE-ME/.test(entry))) return fail('Fuer ' + group.name + ' ist im Workflow noch keine Seriennummer eingetragen.');\n  target = group.name;\n}\nconst web = {\n  'Web: ISC': ['webclip-isc'],\n  'Web: Lists Gruppe 1 Stunde 1': ['webclip-g1s1'],\n  'Web: Lists Gruppe 1 Stunde 2': ['webclip-g1s2'],\n  'Web: Lists Gruppe 2 Stunde 1': ['webclip-g2s1'],\n  'Web: Lists Gruppe 2 Stunde 2': ['webclip-g2s2'],\n  'Web: Alle Web-Links': ['webclip-isc', 'webclip-g1s1', 'webclip-g1s2', 'webclip-g2s1', 'webclip-g2s2']\n};\nif (web[choice]) return [{ json: { ok: true, mode: 'webclip', profiles: web[choice], alle, serials, target, uninstall } }];\nif (choice === 'Andere App (ID unten)') {\n  const match = /(?:id)?(\\d{6,12})/.exec(idField);\n  if (!match) return fail('Bitte die App-Store-ID (Ziffern) oder den App-Store-Link eintragen.');\n  return [{ json: { ok: true, mode: 'other', adamId: match[1], alle, serials, target, uninstall } }];\n}\nif (choice === 'Alle Apps der Liste') return [{ json: { ok: true, mode: 'all', alle, serials, target, uninstall } }];\nreturn [{ json: { ok: true, mode: 'one', appName: choice, alle, serials, target, uninstall } }];\n"
       },
       "id": "ab714799-f865-51e5-be75-31ce7d39f127",
       "name": "Eingabe pruefen",
@@ -1127,6 +1142,186 @@
         2070,
         660
       ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.uninstall === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "577b4768-51ac-5cd0-9897-772369840a17"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "fc5177c8-2049-5b64-aa16-6d67b2401995",
+      "name": "Deinstallieren?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        690,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT 'app' AS kind, adam_id AS key, name, bundle_id AS ref FROM automation.app_catalog UNION ALL SELECT 'web', name, params->>'LABEL', params->>'IDENTIFIER' FROM automation.profile_state WHERE kind = 'webclip' ORDER BY 1, 3",
+        "options": {}
+      },
+      "id": "75aeb69e-4c69-56e5-a0d4-f9f63e93ad22",
+      "name": "Deinstall Katalog lesen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        920,
+        1000
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT e.id AS enrollment_id, d.serial_number FROM public.enrollments e JOIN public.devices d ON d.id = e.device_id WHERE e.type = 'Device' AND e.enabled AND ($1::text = 'yes' OR d.serial_number IN (SELECT jsonb_array_elements_text($2::jsonb))) ORDER BY d.serial_number",
+        "options": {
+          "queryReplacement": "={{ [$('Eingabe pruefen').first().json.alle ? 'yes' : 'no', JSON.stringify($('Eingabe pruefen').first().json.serials)] }}"
+        }
+      },
+      "id": "553504d1-2bb2-5d32-a90b-00e943e85045",
+      "name": "Deinstall Geraete suchen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1150,
+        1000
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst input = $('Eingabe pruefen').first().json;\nconst rows = $('Deinstall Katalog lesen').all().map((item) => item.json).filter((row) => row.ref);\nconst devices = $input.all().map((item) => item.json).filter((row) => row.enrollment_id);\nconst skip = (message) => [{ json: { skip: true, title: 'Nichts deinstalliert', message } }];\nif (devices.length === 0) return skip(input.alle ? 'Es ist noch kein iPad angemeldet.' : 'Keines der gewaehlten iPads ist angemeldet: ' + input.target + '.');\nlet targets = [];\nif (input.mode === 'webclip') targets = rows.filter((row) => row.kind === 'web' && input.profiles.includes(row.key)).map((row) => ({ type: 'profile', label: row.name, ref: row.ref }));\nif (input.mode === 'one') targets = rows.filter((row) => row.kind === 'app' && row.name === input.appName).map((row) => ({ type: 'app', label: row.name, ref: row.ref }));\nif (input.mode === 'other') targets = rows.filter((row) => row.kind === 'app' && row.key === input.adamId).map((row) => ({ type: 'app', label: row.name, ref: row.ref }));\nif (input.mode === 'webclip' ? targets.length !== input.profiles.length : targets.length === 0) return skip('Diese App oder dieser Web-Link steht nicht im Katalog und kann deshalb nicht gezielt deinstalliert werden.');\nconst escapeXml = (value) => String(value)\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;');\nconst head = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n  + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n  + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n';\nconst tail = (commandUuid) => '\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>' + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\nconst out = [];\nfor (const device of devices) {\n  for (const target of targets) {\n    const commandUuid = crypto.randomUUID();\n    const plist = head\n      + '\\t\\t<key>Identifier</key>\\n\\t\\t<string>' + escapeXml(target.ref) + '</string>\\n'\n      + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>' + (target.type === 'app' ? 'RemoveApplication' : 'RemoveProfile') + '</string>\\n'\n      + tail(commandUuid);\n    out.push({ json: { skip: false, enrollment_id: device.enrollment_id, serial_number: device.serial_number, label: target.label, command_uuid: commandUuid, plist } });\n  }\n}\nreturn out;\n"
+      },
+      "id": "077d5af4-c4b8-5eef-8d92-2cb8dbe298d0",
+      "name": "Deinstall Befehle bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1380,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "cb92c001-c6e7-5799-bb7b-457c2ed5e9ff"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "1f6a7508-ab45-51ce-8abf-cb83db3751aa",
+      "name": "Deinstall Befehle?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1610,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Konfiguration').first().json.nanomdmUrl }}/v1/enqueue/{{ $json.enrollment_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/xml",
+        "body": "={{ $json.plist }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "fbf1fdf7-5cf1-5e3d-a352-7d7bbe9567ac",
+      "name": "Deinstall einreihen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1840,
+        900
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoMDM API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const sent = $('Deinstall Befehle bauen').all().map((item) => item.json);\nconst results = $input.all().map((response, index) => {\n  const source = sent[index];\n  const body = response.json.body || {};\n  const queued = body.command_uuid === source.command_uuid;\n  return { serial: source.serial_number || source.enrollment_id, label: source.label, queued, detail: queued ? '' : String(response.json.statusCode || response.json.error || 'keine Antwort') };\n});\nconst failed = results.filter((row) => !row.queued);\nconst labels = [...new Set(results.map((row) => row.label))];\nconst serials = [...new Set(results.filter((row) => row.queued).map((row) => row.serial))];\nconst lines = [(results.length - failed.length) + ' von ' + results.length + ' Befehl(en) eingereiht. Deinstalliert wird: ' + labels.join(', ') + '. iPads: ' + (serials.join(', ') || 'keine') + '.'];\nif (failed.length > 0) lines.push('Nicht eingereiht: ' + failed.map((row) => row.serial + '/' + row.label + ' (' + row.detail + ')').join(', ') + '.');\nlines.push('Die App verschwindet, sobald das iPad den Befehl abholt. Ist sie nicht installiert, passiert nichts.');\nreturn [{ json: { title: failed.length === 0 ? 'Deinstallation gestartet' : 'Deinstallation mit Problemen', message: lines.join(' ') } }];\n"
+      },
+      "id": "13f0bdb0-b3bc-5f74-9957-63aecc18590f",
+      "name": "Deinstall auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2070,
+        900
+      ]
     }
   ],
   "pinData": {},
@@ -1168,7 +1363,7 @@
       "main": [
         [
           {
-            "node": "Web-Link?",
+            "node": "Deinstallieren?",
             "type": "main",
             "index": 0
           }
@@ -1646,6 +1841,97 @@
       ]
     },
     "Web-Link auswerten": {
+      "main": [
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deinstallieren?": {
+      "main": [
+        [
+          {
+            "node": "Deinstall Katalog lesen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Web-Link?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deinstall Katalog lesen": {
+      "main": [
+        [
+          {
+            "node": "Deinstall Geraete suchen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deinstall Geraete suchen": {
+      "main": [
+        [
+          {
+            "node": "Deinstall Befehle bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deinstall Befehle bauen": {
+      "main": [
+        [
+          {
+            "node": "Deinstall Befehle?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deinstall Befehle?": {
+      "main": [
+        [
+          {
+            "node": "Deinstall einreihen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deinstall einreihen": {
+      "main": [
+        [
+          {
+            "node": "Deinstall auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deinstall auswerten": {
       "main": [
         [
           {
