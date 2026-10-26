@@ -75,6 +75,7 @@ VALUES ('lockscreen',
 
 INSERT INTO automation.app_catalog (adam_id, name, bundle_id, config)
 VALUES ('1625396347', 'ntfy', 'io.heckel.ntfy', '{}'::jsonb),
+       ('983156458', 'Microsoft Authenticator', 'com.microsoft.azureauthenticator', '{}'::jsonb),
        ('1659881569', 'DLRG Trainer', 'app.dlrg.trainer', '{}'::jsonb),
        ('1113153706', 'Microsoft Teams', 'com.microsoft.skype.teams', '{}'::jsonb),
        ('1137397744', 'Bitwarden Passwortmanager', 'com.8bit.bitwarden', jsonb_build_object('baseEnvironmentUrl', 'https://vault-tech.pke-lab.de'));
@@ -94,7 +95,35 @@ SELECT 'app-allowlist',
                      SELECT bundle_id FROM automation.app_catalog WHERE enabled) u
            )
        )
-FROM (SELECT '["com.apple.AppStore","com.apple.Preferences","com.apple.mobilesafari","com.apple.mobileslideshow","com.apple.DocumentsApp","com.apple.mobiletimer"]'::jsonb AS system_apps) s;
+FROM (SELECT '["com.apple.AppStore","com.apple.Preferences","com.apple.mobilesafari","com.apple.mobileslideshow","com.apple.DocumentsApp","com.apple.mobiletimer","com.apple.webapp"]'::jsonb AS system_apps) s;
+
+INSERT INTO automation.profile_state (name, template, params)
+VALUES ('app-blocklist',
+        :'blocklisttemplate',
+        jsonb_build_object(
+            'IDENTIFIER', :'profileprefix' || '.blocklist',
+            'PAYLOAD_UUID', 'a99aab28-4708-4ad2-95ad-ea69d91f5709',
+            'PROFILE_UUID', '91cb9a10-c975-4612-829d-c103c4e6a943',
+            'BLOCKED_APPS', jsonb_build_array('com.apple.mobilephone', 'com.apple.MobileSMS', 'com.apple.camera')
+        ));
+
+INSERT INTO automation.profile_state (name, template, params)
+VALUES ('webclips',
+        :'webclipstemplate',
+        jsonb_build_object(
+            'IDENTIFIER', :'profileprefix' || '.webclips',
+            'PROFILE_UUID', 'b8582656-abe4-4f10-971e-3ec138980ca3',
+            'ISC_UUID', '2ad08709-cb6e-420e-86da-eddbf05fab7e',
+            'ISC_URL', 'https://dlrg.net/apps/training',
+            'L1_UUID', '065bc162-037d-4e3d-9e5c-0041107de122',
+            'L1_URL', 'https://dlrgorg.sharepoint.com/:l:/r/sites/andernach.ausbildung-Ausbildungundco/Lists/Gruppe_1_Stunde_1?e=WGaw5f',
+            'L2_UUID', '66e13375-448c-4b09-b8ea-d2ba6b830c2a',
+            'L2_URL', 'https://dlrgorg.sharepoint.com/:l:/r/sites/andernach.ausbildung-Ausbildungundco/Lists/Gruppe_1_Stunde_2?e=rdQeeo',
+            'L3_UUID', '3e4e6176-2c78-4488-bd07-67f8fc06df3e',
+            'L3_URL', 'https://dlrgorg.sharepoint.com/:l:/r/sites/andernach.ausbildung/Lists/Gruppe_2_Stunde_1?e=xsV16J',
+            'L4_UUID', '247d9463-d92c-4d73-9b44-642744bb9b4d',
+            'L4_URL', 'https://dlrgorg.sharepoint.com/:l:/r/sites/andernach.ausbildung/Lists/Gruppe_2_Stunde_2?e=YLlhW9'
+        ));
 
 INSERT INTO automation.profile_state (name, template, params)
 VALUES ('wallpaper-lock',
