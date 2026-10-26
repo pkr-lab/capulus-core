@@ -1,0 +1,1381 @@
+{
+  "name": "MDM: iPad Grundeinrichtung",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "basicAuth",
+        "formTitle": "iPad Grundeinrichtung",
+        "formDescription": "Installiert DLRG Trainer, ntfy und Bitwarden, entfernt alle anderen Apps der Liste, blendet alle uebrigen Apps aus und setzt den Hintergrund samt Sperrbildschirm-Text.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Seriennummer (leer = alle iPads)",
+              "fieldType": "text",
+              "requiredField": false
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "path": "mdm-grundeinrichtung"
+        }
+      },
+      "id": "85c2c113-fdfb-53fd-8498-0ba167a97030",
+      "name": "Formular Grundeinrichtung",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        200
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Formulare"
+        }
+      },
+      "webhookId": "c0081d81-c628-518f-b45d-a2159af89812"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "id": "84722f83-5855-5faa-8949-421af02980e8",
+      "name": "Alle 10 Minuten",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const input = $('Formular Grundeinrichtung').first().json;\nconst serial = String(input['Seriennummer (leer = alle iPads)'] || '').trim();\nif (serial.length > 40 || !/^[A-Za-z0-9]*$/.test(serial)) {\n  return [{ json: { ok: false, mode: 'manual', title: 'Nichts eingerichtet', message: 'Die Seriennummer darf nur Buchstaben und Ziffern enthalten.' } }];\n}\nreturn [{ json: { ok: true, mode: 'manual', serial } }];\n"
+      },
+      "id": "45ef6687-14e7-5636-86be-066fb5872a42",
+      "name": "Eingabe pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: { ok: true, mode: 'auto', serial: '' } }];\n"
+      },
+      "id": "b0604660-812e-556b-90b8-5f0c3d2efdd4",
+      "name": "Zeitplan Start",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "2b3d0118-22cb-591e-a2c3-5049778fc41d"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "9d1418f2-7d19-5c58-aac0-486c1110a235",
+      "name": "Eingabe gueltig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const input = $input.first().json;\nconst cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  depserverUrl: 'http://mdm-depserver.mdm.svc.cluster.local:9001',\n  scepUrl: 'http://mdm-scep.mdm.svc.cluster.local:8080',\n  publicHost: 'mdm-prod.pke-lab.de',\n  depName: 'capulus',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM',\n  vmUrl: 'http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428',\n  n8nUrl: 'https://n8n.prod.homeserver',\n  mode: input.mode,\n  serial: input.serial,\n  standardBundleIds: ['app.dlrg.trainer', 'io.heckel.ntfy', 'com.8bit.bitwarden'],\n  lockScreenText: 'DLRG OG Andernach | Admin bei Fragen Peter Kretzer'\n};\nreturn [{ json: cfg }];\n"
+      },
+      "id": "bfe11d7c-575f-5320-847f-b5865658f2a6",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        690,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT e.id AS enrollment_id, d.serial_number FROM public.enrollments e JOIN public.devices d ON d.id = e.device_id WHERE e.type = 'Device' AND e.enabled AND ($1::text = '' OR d.serial_number = $1::text) AND ($2::text = 'manual' OR NOT EXISTS (SELECT 1 FROM automation.setting s WHERE s.key = 'grundeinrichtung:' || e.id)) ORDER BY d.serial_number",
+        "options": {
+          "queryReplacement": "={{ [$('Konfiguration').first().json.serial, $('Konfiguration').first().json.mode] }}"
+        }
+      },
+      "id": "1fe13a56-0ae0-5c97-ae79-1df8adca968d",
+      "name": "Geraete suchen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        920,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const devices = $input.all().map((item) => item.json).filter((row) => row.enrollment_id);\nif (devices.length === 0) return [{ json: { skip: true } }];\nreturn [{ json: { skip: false, serials: devices.map((row) => row.serial_number).filter(Boolean), enrollmentIds: devices.map((row) => row.enrollment_id) } }];\n"
+      },
+      "id": "b3300057-f1f5-5a76-8a28-fe19f8219ee6",
+      "name": "Lizenzdaten bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1150,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "c8d8bc6c-6221-57a1-a779-cabb016b068a"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "a0b9bd5b-1d23-525c-acad-52901b656f34",
+      "name": "Geraete gefunden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1380,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = $('Konfiguration').first().json;\nconst message = cfg.serial ? 'Es gibt kein angemeldetes iPad mit der Seriennummer ' + cfg.serial + '.' : 'Es ist noch kein iPad angemeldet.';\nreturn [{ json: { silent: cfg.mode === 'auto', title: 'Nichts eingerichtet', message } }];\n"
+      },
+      "id": "20bb9bcb-0854-5ae1-854a-b82f9cc944aa",
+      "name": "Keine Geraete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1610,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO automation.setting (key, value)\nSELECT 'grundeinrichtung:' || id, now()::text FROM unnest(string_to_array($1, ',')) AS id\nON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()\nRETURNING key",
+        "options": {
+          "queryReplacement": "={{ [$('Lizenzdaten bauen').first().json.enrollmentIds.join(',')] }}"
+        }
+      },
+      "id": "1dfc3d34-6e8f-5451-aeb2-64a6eb24e814",
+      "name": "Geraete vormerken",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1610,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE automation.app_catalog\nSET enabled = (bundle_id = ANY (string_to_array($1, ',')))\nRETURNING adam_id, name, bundle_id, config, enabled",
+        "options": {
+          "queryReplacement": "={{ [$('Konfiguration').first().json.standardBundleIds.join(',')] }}"
+        }
+      },
+      "id": "c5efc75c-a8f3-535a-8005-eae57677f3a9",
+      "name": "Katalog auf Standard setzen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1840,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = $('Konfiguration').first().json;\nconst rows = [...new Map($input.all().map((item) => item.json).filter((row) => row.adam_id).map((row) => [row.adam_id, row])).values()];\nconst parse = (config) => (typeof config === 'string' ? JSON.parse(config) : (config || {}));\nconst apps = rows.filter((row) => row.enabled).map((row) => ({ adamId: row.adam_id, name: row.name, bundleId: row.bundle_id, config: parse(row.config) }));\nconst remove = rows.filter((row) => !row.enabled).map((row) => ({ name: row.name, bundleId: row.bundle_id }));\nconst missing = cfg.standardBundleIds.filter((id) => !apps.some((app) => app.bundleId === id));\nif (missing.length > 0) {\n  return [{ json: { ok: false, title: 'Nichts eingerichtet', message: 'Diese Standard-App fehlt im Katalog: ' + missing.join(', ') + '. Bitte zuerst ueber App auf iPads installieren (Andere App) aufnehmen und die Grundeinrichtung erneut starten.' } }];\n}\nreturn [{ json: { ok: true, apps, remove } }];\n"
+      },
+      "id": "3e1ec4c7-80f7-5d18-9b09-fe7dc51428e6",
+      "name": "Katalog auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2070,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "ceaab218-699d-59fe-a773-08ca7668c8e1"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "6a913402-7a05-516e-92ac-00086515868e",
+      "name": "Katalog gueltig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://vpp.itunes.apple.com/mdm/v2/assets",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "5df5b9e5-8f2b-502c-8430-1bbc7c8a9ac5",
+      "name": "Verfuegbare Lizenzen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2530,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "Apple Apps Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const apps = $('Katalog auswerten').first().json.apps;\nconst serials = $('Lizenzdaten bauen').first().json.serials;\nconst res = $input.first().json;\nconst body = typeof res.body === 'string' ? JSON.parse(res.body || '{}') : (res.body || {});\nconst known = new Set((body.assets || []).map((asset) => String(asset.adamId)));\nif (res.statusCode !== 200) {\n  return [{ json: { skip: true, title: 'Nichts eingerichtet', message: 'Die Lizenzliste bei Apple ist nicht abrufbar (HTTP ' + (res.statusCode || res.error || 'keine Antwort') + (body.errorMessage ? ', ' + body.errorMessage : '') + '). Ist das Credential Apple Apps Token gueltig?' } }];\n}\nconst licensed = apps.filter((app) => known.has(app.adamId));\nconst missing = apps.filter((app) => !known.has(app.adamId));\nif (licensed.length === 0) {\n  return [{ json: { skip: true, title: 'Nichts eingerichtet', message: 'Diese Apps sind in Apple Business nicht fuer den Standort abgerufen: ' + missing.map((app) => app.name + ' (ID ' + app.adamId + ')').join(', ') + '. Unter Apps und Buecher abrufen, dann die Grundeinrichtung erneut starten.' } }];\n}\nreturn [{ json: { skip: false, licensed, missing, body: JSON.stringify({ assets: licensed.map((app) => ({ adamId: app.adamId, pricingParam: 'STDQ' })), serialNumbers: serials }) } }];\n"
+      },
+      "id": "b29f3c8f-7d48-512b-87fe-d2c68dfb3f7a",
+      "name": "Lizenzen pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2760,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "a3defe41-83f0-550e-ba55-9fcadb160610"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "d99b3db4-bd66-58d4-b1d5-a4f0a216a4ec",
+      "name": "Lizenzierte Apps?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2990,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: { title: $input.first().json.title, message: $input.first().json.message } }];\n"
+      },
+      "id": "a00ad6b9-b71b-588b-bfc6-317aa4b88a81",
+      "name": "Keine Lizenz",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3220,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vpp.itunes.apple.com/mdm/v2/assets/associate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "b47e511b-93c4-5e4f-b7be-f20ea8147637",
+      "name": "Lizenz zuweisen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3220,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "Apple Apps Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst apps = $('Lizenzen pruefen').first().json.licensed;\nconst remove = $('Katalog auswerten').first().json.remove;\nconst devices = $('Geraete suchen').all().map((item) => item.json).filter((row) => row.enrollment_id);\nconst escapeXml = (value) => String(value)\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;');\nconst configXml = (config) => {\n  const keys = Object.keys(config || {});\n  if (keys.length === 0) return '';\n  let xml = '\\t\\t<key>Configuration</key>\\n\\t\\t<dict>\\n';\n  for (const key of keys) {\n    const value = config[key];\n    xml += '\\t\\t\\t<key>' + escapeXml(key) + '</key>\\n';\n    if (typeof value === 'boolean') xml += '\\t\\t\\t' + (value ? '<true/>' : '<false/>') + '\\n';\n    else if (typeof value === 'number') xml += '\\t\\t\\t<integer>' + value + '</integer>\\n';\n    else xml += '\\t\\t\\t<string>' + escapeXml(value) + '</string>\\n';\n  }\n  return xml + '\\t\\t</dict>\\n';\n};\nconst head = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n  + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n  + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n';\nconst tail = (commandUuid) => '\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>' + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\nconst out = [];\nfor (const device of devices) {\n  for (const app of apps) {\n    const commandUuid = crypto.randomUUID();\n    const plist = head\n      + configXml(app.config)\n      + '\\t\\t<key>ChangeManagementState</key>\\n\\t\\t<string>Managed</string>\\n'\n      + '\\t\\t<key>Options</key>\\n\\t\\t<dict>\\n\\t\\t\\t<key>PurchaseMethod</key>\\n\\t\\t\\t<integer>1</integer>\\n\\t\\t</dict>\\n'\n      + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>InstallApplication</string>\\n'\n      + '\\t\\t<key>iTunesStoreID</key>\\n\\t\\t<integer>' + Number(app.adamId) + '</integer>\\n'\n      + tail(commandUuid);\n    out.push({ json: { enrollment_id: device.enrollment_id, serial_number: device.serial_number, app: app.name, action: 'install', command_uuid: commandUuid, plist } });\n  }\n  for (const app of remove) {\n    const commandUuid = crypto.randomUUID();\n    const plist = head\n      + '\\t\\t<key>Identifier</key>\\n\\t\\t<string>' + escapeXml(app.bundleId) + '</string>\\n'\n      + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>RemoveApplication</string>\\n'\n      + tail(commandUuid);\n    out.push({ json: { enrollment_id: device.enrollment_id, serial_number: device.serial_number, app: app.name, action: 'remove', command_uuid: commandUuid, plist } });\n  }\n}\nreturn out;\n"
+      },
+      "id": "a41a6f83-2125-5099-a9b6-5aa787d5ca99",
+      "name": "App-Befehle bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Konfiguration').first().json.nanomdmUrl }}/v1/enqueue/{{ $json.enrollment_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/xml",
+        "body": "={{ $json.plist }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "76d6b14d-6535-555a-941d-37f1e08486fb",
+      "name": "App-Befehle einreihen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3680,
+        300
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoMDM API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const license = $('Lizenz zuweisen').first().json;\nconst check = $('Lizenzen pruefen').first().json;\nconst sent = $('App-Befehle bauen').all().map((item) => item.json);\nconst results = $input.all().map((response, index) => {\n  const source = sent[index];\n  const body = response.json.body || {};\n  const queued = body.command_uuid === source.command_uuid;\n  return { serial: source.serial_number || source.enrollment_id, app: source.app, action: source.action, queued, detail: queued ? '' : String(response.json.statusCode || response.json.error || 'keine Antwort') };\n});\nconst failed = results.filter((row) => !row.queued);\nconst unique = (action) => [...new Set(results.filter((row) => row.action === action).map((row) => row.app))];\nconst lines = [];\nconst licenseBody = license.body || {};\nif (license.statusCode === 200) {\n  lines.push('Lizenz zugewiesen fuer ' + check.licensed.map((app) => app.name).join(', ') + '.');\n} else {\n  lines.push('ACHTUNG: Die Lizenzzuweisung bei Apple schlug fehl (HTTP ' + (license.statusCode || license.error || 'keine Antwort') + (licenseBody.errorMessage ? ', ' + licenseBody.errorMessage : '') + '). Ohne Lizenz kann ein iPad ohne Apple-ID die App nicht installieren.');\n}\nlines.push((results.length - failed.length) + ' von ' + results.length + ' App-Befehl(en) eingereiht. Installieren: ' + (unique('install').join(', ') || 'nichts') + '. Entfernen: ' + (unique('remove').join(', ') || 'nichts') + '.');\nif (check.missing.length > 0) lines.push('Nicht in Apple Business abgerufen und uebersprungen: ' + check.missing.map((app) => app.name).join(', ') + '.');\nif (failed.length > 0) lines.push('Nicht eingereiht: ' + failed.map((row) => row.serial + '/' + row.app + ' (' + row.detail + ')').join(', ') + '.');\nconst good = license.statusCode === 200 && failed.length === 0 && check.missing.length === 0;\nreturn [{ json: { good, text: lines.join(' ') } }];\n"
+      },
+      "id": "bf5d7833-ac97-568d-8f8c-4236313c7a01",
+      "name": "App-Ergebnis auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3910,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE automation.profile_state p\nSET params = jsonb_set(p.params, '{ALLOWED_APPS}', n.list), version = p.version + 1, updated_at = now()\nFROM (\n  SELECT coalesce(jsonb_agg(b ORDER BY b), '[]'::jsonb) AS list\n  FROM (\n    SELECT jsonb_array_elements_text(params->'SYSTEM_APPS') AS b FROM automation.profile_state WHERE name = 'app-allowlist'\n    UNION\n    SELECT bundle_id FROM automation.app_catalog WHERE enabled\n  ) u\n) n\nWHERE p.name = 'app-allowlist' AND p.params->'ALLOWED_APPS' IS DISTINCT FROM n.list\nRETURNING p.version",
+        "options": {}
+      },
+      "id": "185ff883-85dd-5886-be13-70257b34674d",
+      "name": "Erlaubt-Liste aktualisieren",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4140,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH claimed AS (\n  INSERT INTO automation.device_profile AS d (enrollment_id, profile_name, version, state, claimed_at)\n  SELECT e.id, p.name, p.version, 'claimed', now()\n  FROM public.enrollments e CROSS JOIN automation.profile_state p\n  WHERE e.id = ANY (string_to_array($1, ',')) AND e.type = 'Device' AND e.enabled AND p.enabled\n  ON CONFLICT (enrollment_id, profile_name) DO UPDATE\n    SET version = EXCLUDED.version, state = 'claimed', claimed_at = now(), command_uuid = NULL, sent_at = NULL\n    WHERE d.version < EXCLUDED.version\n       OR d.state IN ('failed', 'error')\n       OR EXCLUDED.profile_name = 'wallpaper'\n       OR (d.state = 'claimed' AND d.claimed_at < now() - interval '10 minutes')\n  RETURNING d.enrollment_id, d.profile_name, d.version\n)\nSELECT c.enrollment_id, c.profile_name, c.version, p.kind, p.template, p.params\nFROM claimed c JOIN automation.profile_state p ON p.name = c.profile_name\nORDER BY (p.kind <> 'wallpaper'), c.profile_name",
+        "options": {
+          "queryReplacement": "={{ [$('Lizenzdaten bauen').first().json.enrollmentIds.join(',')] }}"
+        }
+      },
+      "id": "8c3126c7-cd86-5b55-a29d-9f6f589f93b8",
+      "name": "Profile beanspruchen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4370,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE automation.profile_state\nSET params = jsonb_set(params, '{TEXT}', to_jsonb($1::text)), version = version + 1, updated_at = now()\nWHERE name = 'lockscreen' AND params->>'TEXT' IS DISTINCT FROM $1::text\nRETURNING version",
+        "options": {
+          "queryReplacement": "={{ [$('Konfiguration').first().json.lockScreenText] }}"
+        }
+      },
+      "id": "56196aab-fa3e-515a-9101-7fd59402e577",
+      "name": "Sperrbildschirm-Text setzen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4370,
+        420
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst claimed = $input.all().map((item) => item.json).filter((row) => row.profile_name);\nif (claimed.length === 0) return [{ json: { skip: true } }];\nconst escapeXml = (value) => String(value)\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;');\nreturn claimed.map((row) => {\n  const params = typeof row.params === 'string' ? JSON.parse(row.params) : row.params;\n  let profile = row.template;\n  for (const [key, value] of Object.entries(params)) {\n    const text = Array.isArray(value)\n      ? value.map((item) => '\\t\\t\\t\\t<string>' + escapeXml(item) + '</string>').join('\\n')\n      : escapeXml(value);\n    profile = profile.split('__' + key + '__').join(text);\n  }\n  profile = profile.split('__VERSION__').join(String(row.version));\n  const commandUuid = crypto.randomUUID();\n  if (row.kind === 'wallpaper') {\n    const settings = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n      + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n      + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n\\t\\t<key>RequestType</key>\\n\\t\\t<string>Settings</string>\\n'\n      + '\\t\\t<key>Settings</key>\\n\\t\\t<array>\\n\\t\\t\\t<dict>\\n\\t\\t\\t\\t<key>Image</key>\\n\\t\\t\\t\\t<data>' + params.IMAGE_B64 + '</data>\\n'\n      + '\\t\\t\\t\\t<key>Item</key>\\n\\t\\t\\t\\t<string>Wallpaper</string>\\n'\n      + '\\t\\t\\t\\t<key>Where</key>\\n\\t\\t\\t\\t<integer>' + Number(params.WHERE || 3) + '</integer>\\n\\t\\t\\t</dict>\\n\\t\\t</array>\\n'\n      + '\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>' + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\n    return { json: { skip: false, enrollment_id: row.enrollment_id, profile_name: row.profile_name, version: row.version, command_uuid: commandUuid, plist: settings } };\n  }\n  const plist = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n    + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n    + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n\\t\\t<key>Payload</key>\\n\\t\\t<data>'\n    + Buffer.from(profile, 'utf8').toString('base64')\n    + '</data>\\n\\t\\t<key>RequestType</key>\\n\\t\\t<string>InstallProfile</string>\\n\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>'\n    + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\n  return { json: { skip: false, enrollment_id: row.enrollment_id, profile_name: row.profile_name, version: row.version, command_uuid: commandUuid, plist } };\n});\n"
+      },
+      "id": "77953fcc-3fd3-5402-8220-696562980a7f",
+      "name": "Profil-Befehle bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4600,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "36f33ed5-10a5-5345-be26-0744e89d852b"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "4fcb1040-ccec-5a40-abe0-81b9c35043ad",
+      "name": "Profile zu senden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4830,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Konfiguration').first().json.nanomdmUrl }}/v1/enqueue/{{ $json.enrollment_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/xml",
+        "body": "={{ $json.plist }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "096dff7d-641d-5bf4-b52c-5f1a441a333e",
+      "name": "Profile einreihen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5060,
+        180
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoMDM API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const sent = $('Profil-Befehle bauen').all().map((item) => item.json).filter((row) => !row.skip);\nreturn $input.all().map((response, index) => {\n  const source = sent[index];\n  const body = response.json.body || {};\n  const queued = body.command_uuid === source.command_uuid;\n  const results = Object.values(body.status || {});\n  const pushError = results.map((entry) => entry.push_error).filter(Boolean).join('; ');\n  const detail = queued ? pushError : String(response.json.statusCode || response.json.error || 'keine Antwort');\n  return { json: { enrollment_id: source.enrollment_id, profile_name: source.profile_name, command_uuid: source.command_uuid, ok: queued ? 'yes' : 'no', detail } };\n});\n"
+      },
+      "id": "20ad1dca-37f0-5dff-af10-7bdc32680709",
+      "name": "Profile auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5290,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE automation.device_profile\nSET state = CASE WHEN $4 = 'yes' THEN 'queued' ELSE 'failed' END,\n    command_uuid = CASE WHEN $4 = 'yes' THEN $3 ELSE NULL END,\n    sent_at = now()\nWHERE enrollment_id = $1 AND profile_name = $2\nRETURNING enrollment_id, profile_name, state, $5::text AS detail",
+        "options": {
+          "queryReplacement": "={{ [$json.enrollment_id, $json.profile_name, $json.command_uuid, $json.ok, $json.detail] }}"
+        }
+      },
+      "id": "bd63cbce-d677-59b8-987d-a17ff27fcd76",
+      "name": "Profile vermerken",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5520,
+        180
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const apps = $('App-Ergebnis auswerten').first().json;\nconst serials = $('Lizenzdaten bauen').first().json.serials;\nconst cfg = $('Konfiguration').first().json;\nconst rows = $input.all().map((item) => item.json).filter((row) => row.enrollment_id);\nconst failed = rows.filter((row) => row.state === 'failed');\nconst lines = [(cfg.mode === 'auto' ? 'Automatisch fuer neu angemeldete iPads: ' : 'iPads: ') + (serials.join(', ') || 'keine Seriennummer bekannt') + '.'];\nlines.push(apps.text);\nlines.push(rows.length === 0\n  ? 'Hintergrund und Profile wurden nicht gesendet.'\n  : 'Hintergrund, Sperrbildschirm-Text (' + cfg.lockScreenText + ') und Erlaubt-Liste: ' + (rows.length - failed.length) + ' von ' + rows.length + ' Befehl(en) eingereiht' + (failed.length > 0 ? ', ' + failed.length + ' fehlgeschlagen' : '') + '.');\nlines.push('Alle Apps ausserhalb der Liste werden ausgeblendet. Das wirkt nur auf beaufsichtigten iPads.');\nconst good = apps.good && failed.length === 0 && rows.length > 0;\nreturn [{ json: { silent: true, title: good ? 'iPad Grundeinrichtung gestartet' : 'iPad Grundeinrichtung mit Problemen', message: lines.join(' '), priority: good ? 'default' : 'high' } }];\n"
+      },
+      "id": "ae2575f5-70f8-55fd-98e0-24af23ef017b",
+      "name": "Meldung bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5750,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            },
+            {
+              "name": "Tags",
+              "value": "package"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.message }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "991f7888-1419-5cd3-a536-45a2399d2f3c",
+      "name": "Protokoll melden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5980,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: $('Meldung bauen').first().json }];\n"
+      },
+      "id": "8830b3fc-b628-58b2-a4f4-a90f7a4f4c23",
+      "name": "Meldung Ergebnis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6210,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "let manual = false;\ntry {\n  manual = $('Eingabe pruefen').all().length > 0;\n} catch (e) {\n  manual = false;\n}\nreturn $input.all().map((item) => ({ json: { ...item.json, manual } }));\n"
+      },
+      "id": "63f0bbcb-05db-5a4e-b61b-66957f1d08dc",
+      "name": "Meldung",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.manual }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "005cc2bf-2b3a-5dd1-a731-576f56459fd2"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "dd87df51-96a0-5a6e-846f-b511482f15ee",
+      "name": "Manuell?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6670,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "={{ $('Meldung').first().json.title }}",
+        "completionMessage": "={{ $('Meldung').first().json.message }}",
+        "options": {}
+      },
+      "id": "e3f9a664-b83e-59bc-bb02-15ab4514505f",
+      "name": "Abschluss",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        6900,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.silent !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "338ff2f8-ace2-5e2a-9803-9b57c4cbd704"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "72d843e0-acb5-5c52-ac51-3f9497269880",
+      "name": "Zeitplan melden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6900,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Priority",
+              "value": "high"
+            },
+            {
+              "name": "Tags",
+              "value": "warning"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.message }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "9c916752-9074-5c97-847f-4c06d3313a85",
+      "name": "Zeitplan Protokoll",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7130,
+        420
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Formular Grundeinrichtung": {
+      "main": [
+        [
+          {
+            "node": "Eingabe pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alle 10 Minuten": {
+      "main": [
+        [
+          {
+            "node": "Zeitplan Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingabe pruefen": {
+      "main": [
+        [
+          {
+            "node": "Eingabe gueltig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zeitplan Start": {
+      "main": [
+        [
+          {
+            "node": "Eingabe gueltig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingabe gueltig?": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Geraete suchen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geraete suchen": {
+      "main": [
+        [
+          {
+            "node": "Lizenzdaten bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lizenzdaten bauen": {
+      "main": [
+        [
+          {
+            "node": "Geraete gefunden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geraete gefunden?": {
+      "main": [
+        [
+          {
+            "node": "Geraete vormerken",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Keine Geraete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geraete vormerken": {
+      "main": [
+        [
+          {
+            "node": "Katalog auf Standard setzen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Katalog auf Standard setzen": {
+      "main": [
+        [
+          {
+            "node": "Katalog auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Katalog auswerten": {
+      "main": [
+        [
+          {
+            "node": "Katalog gueltig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Katalog gueltig?": {
+      "main": [
+        [
+          {
+            "node": "Verfuegbare Lizenzen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verfuegbare Lizenzen": {
+      "main": [
+        [
+          {
+            "node": "Lizenzen pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lizenzen pruefen": {
+      "main": [
+        [
+          {
+            "node": "Lizenzierte Apps?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lizenzierte Apps?": {
+      "main": [
+        [
+          {
+            "node": "Lizenz zuweisen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Keine Lizenz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lizenz zuweisen": {
+      "main": [
+        [
+          {
+            "node": "App-Befehle bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "App-Befehle bauen": {
+      "main": [
+        [
+          {
+            "node": "App-Befehle einreihen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "App-Befehle einreihen": {
+      "main": [
+        [
+          {
+            "node": "App-Ergebnis auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "App-Ergebnis auswerten": {
+      "main": [
+        [
+          {
+            "node": "Erlaubt-Liste aktualisieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Erlaubt-Liste aktualisieren": {
+      "main": [
+        [
+          {
+            "node": "Sperrbildschirm-Text setzen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sperrbildschirm-Text setzen": {
+      "main": [
+        [
+          {
+            "node": "Profile beanspruchen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Profile beanspruchen": {
+      "main": [
+        [
+          {
+            "node": "Profil-Befehle bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Profil-Befehle bauen": {
+      "main": [
+        [
+          {
+            "node": "Profile zu senden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Profile zu senden?": {
+      "main": [
+        [
+          {
+            "node": "Profile einreihen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meldung bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Profile einreihen": {
+      "main": [
+        [
+          {
+            "node": "Profile auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Profile auswerten": {
+      "main": [
+        [
+          {
+            "node": "Profile vermerken",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Profile vermerken": {
+      "main": [
+        [
+          {
+            "node": "Meldung bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung bauen": {
+      "main": [
+        [
+          {
+            "node": "Protokoll melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Protokoll melden": {
+      "main": [
+        [
+          {
+            "node": "Meldung Ergebnis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung Ergebnis": {
+      "main": [
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keine Lizenz": {
+      "main": [
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keine Geraete": {
+      "main": [
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung": {
+      "main": [
+        [
+          {
+            "node": "Manuell?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manuell?": {
+      "main": [
+        [
+          {
+            "node": "Abschluss",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Zeitplan melden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zeitplan melden?": {
+      "main": [
+        [
+          {
+            "node": "Zeitplan Protokoll",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "Europe/Berlin"
+  },
+  "versionId": "cc1c732d-2825-5366-a29b-8a015defcfdd",
+  "meta": {
+    "description": "Richtet iPads mit den Standard-Apps ein: DLRG Trainer, ntfy und Bitwarden. Ablauf: Katalog automation.app_catalog auf genau diese drei Apps setzen (alle anderen Katalog-Apps deaktivieren), Lizenz geraetegebunden zuweisen (POST /mdm/v2/assets/associate), InstallApplication fuer die Standard-Apps und RemoveApplication fuer alle uebrigen Katalog-Apps einreihen, die Erlaubt-Liste (Profil app-allowlist) neu berechnen, den Sperrbildschirm-Text (Profil lockscreen) auf DLRG OG Andernach | Admin bei Fragen Peter Kretzer setzen, dann Hintergrund (wallpaper wird immer neu gesendet), wallpaper-lock, lockscreen und app-allowlist per automation.device_profile an die Geraete schicken. Alle Apps ausserhalb der Erlaubt-Liste werden auf beaufsichtigten iPads ausgeblendet; deinstalliert werden koennen nur verwaltete Apps. Zwei Trigger: Formular (Seriennummer leer = alle iPads, jederzeit wiederholbar) und alle 10 Minuten (nur iPads ohne Eintrag grundeinrichtung:<Enrollment-ID> in automation.setting, also jedes neue iPad genau einmal; ohne Meldung, wenn es nichts zu tun gibt). Credentials: MDM Formulare, MDM NanoMDM API, MDM Automation DB, Apple Apps Token, ntfy-publisher."
+  }
+}
