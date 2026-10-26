@@ -371,7 +371,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const input = $('Eingabe pruefen').first().json;\nconst apps = $('Auswahl bestimmen').first().json.apps;\nconst devices = $input.all().map((item) => item.json).filter((row) => row.enrollment_id);\nif (devices.length === 0) return [{ json: { skip: true } }];\nconst serials = devices.map((row) => row.serial_number).filter(Boolean);\nreturn [{ json: { skip: false, body: JSON.stringify({ assets: apps.map((app) => ({ adamId: app.adamId, pricingParam: 'STDQ' })), serialNumbers: serials }) } }];\n"
+        "jsCode": "const devices = $input.all().map((item) => item.json).filter((row) => row.enrollment_id);\nif (devices.length === 0) return [{ json: { skip: true } }];\nreturn [{ json: { skip: false, serials: devices.map((row) => row.serial_number).filter(Boolean) } }];\n"
       },
       "id": "e0e2af52-cf40-5a6c-9513-67fd88760e18",
       "name": "Lizenzdaten bauen",
@@ -419,6 +419,100 @@
     },
     {
       "parameters": {
+        "method": "GET",
+        "url": "https://vpp.itunes.apple.com/mdm/v2/assets",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "9d813222-7ab3-5e6f-b21a-4f2429c3d587",
+      "name": "Verfuegbare Lizenzen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3450,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "Apple Apps Token"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const apps = $('Auswahl bestimmen').first().json.apps;\nconst serials = $('Lizenzdaten bauen').first().json.serials;\nconst res = $input.first().json;\nconst body = typeof res.body === 'string' ? JSON.parse(res.body || '{}') : (res.body || {});\nconst known = new Set((body.assets || []).map((asset) => String(asset.adamId)));\nif (res.statusCode !== 200) {\n  return [{ json: { skip: true, title: 'Nichts installiert', message: 'Die Lizenzliste bei Apple ist nicht abrufbar (HTTP ' + (res.statusCode || res.error || 'keine Antwort') + (body.errorMessage ? ', ' + body.errorMessage : '') + '). Ist das Credential Apple Apps Token gueltig?' } }];\n}\nconst licensed = apps.filter((app) => known.has(app.adamId));\nconst missing = apps.filter((app) => !known.has(app.adamId));\nif (licensed.length === 0) {\n  return [{ json: { skip: true, title: 'Nichts installiert', message: 'Diese App ist in Apple Business nicht fuer den Standort abgerufen: ' + missing.map((app) => app.name + ' (ID ' + app.adamId + ')').join(', ') + '. Unter Apps und Buecher abrufen, dann erneut versuchen.' } }];\n}\nreturn [{ json: { skip: false, licensed, missing, body: JSON.stringify({ assets: licensed.map((app) => ({ adamId: app.adamId, pricingParam: 'STDQ' })), serialNumbers: serials }) } }];\n"
+      },
+      "id": "5920a778-2c98-57df-93c4-d464c8e3e4af",
+      "name": "Lizenzen pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "2f3b738e-a558-55a7-a444-d8d32eb0ca46"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "501949d8-7ca6-548e-97a5-d59cf9053ad4",
+      "name": "Lizenzierte Apps?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3910,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: { title: $input.first().json.title, message: $input.first().json.message } }];\n"
+      },
+      "id": "3e9362a5-666e-596a-b770-426095815f1e",
+      "name": "Keine Lizenz",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4140,
+        300
+      ]
+    },
+    {
+      "parameters": {
         "method": "POST",
         "url": "https://vpp.itunes.apple.com/mdm/v2/assets/associate",
         "authentication": "genericCredentialType",
@@ -441,7 +535,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3450,
+        4370,
         300
       ],
       "credentials": {
@@ -455,14 +549,14 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const crypto = require('crypto');\nconst apps = $('Auswahl bestimmen').first().json.apps;\nconst devices = $('Geraete suchen').all().map((item) => item.json).filter((row) => row.enrollment_id);\nconst out = [];\nfor (const device of devices) {\n  for (const app of apps) {\n    const commandUuid = crypto.randomUUID();\n    const plist = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n      + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n      + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n'\n      + '\\t\\t<key>ChangeManagementState</key>\\n\\t\\t<string>Managed</string>\\n'\n      + '\\t\\t<key>Options</key>\\n\\t\\t<dict>\\n\\t\\t\\t<key>PurchaseMethod</key>\\n\\t\\t\\t<integer>1</integer>\\n\\t\\t</dict>\\n'\n      + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>InstallApplication</string>\\n'\n      + '\\t\\t<key>iTunesStoreID</key>\\n\\t\\t<integer>' + Number(app.adamId) + '</integer>\\n'\n      + '\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>' + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\n    out.push({ json: { enrollment_id: device.enrollment_id, serial_number: device.serial_number, app: app.name, command_uuid: commandUuid, plist } });\n  }\n}\nreturn out;\n"
+        "jsCode": "const crypto = require('crypto');\nconst apps = $('Lizenzen pruefen').first().json.licensed;\nconst devices = $('Geraete suchen').all().map((item) => item.json).filter((row) => row.enrollment_id);\nconst out = [];\nfor (const device of devices) {\n  for (const app of apps) {\n    const commandUuid = crypto.randomUUID();\n    const plist = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n      + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n      + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n'\n      + '\\t\\t<key>ChangeManagementState</key>\\n\\t\\t<string>Managed</string>\\n'\n      + '\\t\\t<key>Options</key>\\n\\t\\t<dict>\\n\\t\\t\\t<key>PurchaseMethod</key>\\n\\t\\t\\t<integer>1</integer>\\n\\t\\t</dict>\\n'\n      + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>InstallApplication</string>\\n'\n      + '\\t\\t<key>iTunesStoreID</key>\\n\\t\\t<integer>' + Number(app.adamId) + '</integer>\\n'\n      + '\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>' + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\n    out.push({ json: { enrollment_id: device.enrollment_id, serial_number: device.serial_number, app: app.name, command_uuid: commandUuid, plist } });\n  }\n}\nreturn out;\n"
       },
       "id": "47b2f82c-0a8c-56db-841b-40b658a893ad",
       "name": "Befehle bauen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3680,
+        4600,
         300
       ]
     },
@@ -490,7 +584,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3910,
+        4830,
         300
       ],
       "credentials": {
@@ -504,14 +598,14 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const license = $('Lizenz zuweisen').first().json;\nconst apps = $('Auswahl bestimmen').first().json.apps;\nconst sent = $('Befehle bauen').all().map((item) => item.json);\nconst results = $input.all().map((response, index) => {\n  const source = sent[index];\n  const body = response.json.body || {};\n  const queued = body.command_uuid === source.command_uuid;\n  return { serial: source.serial_number || source.enrollment_id, app: source.app, queued, detail: queued ? '' : String(response.json.statusCode || response.json.error || 'keine Antwort') };\n});\nconst ok = results.filter((row) => row.queued);\nconst failed = results.filter((row) => !row.queued);\nconst lines = [];\nconst licenseBody = license.body || {};\nconst names = apps.map((app) => app.name).join(', ');\nif (license.statusCode === 200) {\n  lines.push('Lizenz fuer ' + names + ' wurde zugewiesen.');\n} else {\n  lines.push('ACHTUNG: Die Lizenzzuweisung bei Apple schlug fehl (HTTP ' + (license.statusCode || license.error || 'keine Antwort') + (licenseBody.errorMessage ? ', ' + licenseBody.errorMessage : '') + '). Ohne Lizenz kann ein iPad ohne Apple-ID die App nicht installieren.');\n}\nlines.push(ok.length + ' von ' + results.length + ' Installationsbefehl(en) eingereiht.');\nif (failed.length > 0) lines.push('Nicht eingereiht: ' + failed.map((row) => row.serial + '/' + row.app + ' (' + row.detail + ')').join(', ') + '.');\nconst good = license.statusCode === 200 && failed.length === 0;\nreturn [{ json: { good, names, text: lines.join(' ') } }];\n"
+        "jsCode": "const license = $('Lizenz zuweisen').first().json;\nconst check = $('Lizenzen pruefen').first().json;\nconst apps = check.licensed;\nconst sent = $('Befehle bauen').all().map((item) => item.json);\nconst results = $input.all().map((response, index) => {\n  const source = sent[index];\n  const body = response.json.body || {};\n  const queued = body.command_uuid === source.command_uuid;\n  return { serial: source.serial_number || source.enrollment_id, app: source.app, queued, detail: queued ? '' : String(response.json.statusCode || response.json.error || 'keine Antwort') };\n});\nconst ok = results.filter((row) => row.queued);\nconst failed = results.filter((row) => !row.queued);\nconst lines = [];\nconst licenseBody = license.body || {};\nconst names = apps.map((app) => app.name).join(', ');\nif (license.statusCode === 200) {\n  lines.push('Lizenz fuer ' + names + ' wurde zugewiesen.');\n} else {\n  lines.push('ACHTUNG: Die Lizenzzuweisung bei Apple schlug fehl (HTTP ' + (license.statusCode || license.error || 'keine Antwort') + (licenseBody.errorMessage ? ', ' + licenseBody.errorMessage : '') + '). Ohne Lizenz kann ein iPad ohne Apple-ID die App nicht installieren.');\n}\nlines.push(ok.length + ' von ' + results.length + ' Installationsbefehl(en) eingereiht.');\nif (check.missing.length > 0) lines.push('Nicht in Apple Business abgerufen und uebersprungen: ' + check.missing.map((app) => app.name).join(', ') + '.');\nif (failed.length > 0) lines.push('Nicht eingereiht: ' + failed.map((row) => row.serial + '/' + row.app + ' (' + row.detail + ')').join(', ') + '.');\nconst good = license.statusCode === 200 && failed.length === 0 && check.missing.length === 0;\nreturn [{ json: { good, names, text: lines.join(' ') } }];\n"
       },
       "id": "260e1863-66b3-51b6-b6a2-d83cf84f52a0",
       "name": "Ergebnis auswerten",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4140,
+        5060,
         300
       ]
     },
@@ -526,7 +620,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        4370,
+        5290,
         300
       ],
       "credentials": {
@@ -540,7 +634,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "WITH claimed AS (\n  INSERT INTO automation.device_profile AS d (enrollment_id, profile_name, version, state, claimed_at)\n  SELECT e.id, p.name, p.version, 'claimed', now()\n  FROM public.enrollments e CROSS JOIN automation.profile_state p\n  WHERE e.type = 'Device' AND e.enabled AND p.name = 'app-allowlist' AND p.enabled\n  ON CONFLICT (enrollment_id, profile_name) DO UPDATE\n    SET version = EXCLUDED.version, state = 'claimed', claimed_at = now(), command_uuid = NULL, sent_at = NULL\n    WHERE d.version < EXCLUDED.version OR d.state = 'failed'\n  RETURNING d.enrollment_id, d.profile_name, d.version\n)\nSELECT c.enrollment_id, c.profile_name, c.version, p.template, p.params\nFROM claimed c JOIN automation.profile_state p ON p.name = c.profile_name",
+        "query": "WITH claimed AS (\n  INSERT INTO automation.device_profile AS d (enrollment_id, profile_name, version, state, claimed_at)\n  SELECT e.id, p.name, p.version, 'claimed', now()\n  FROM public.enrollments e CROSS JOIN automation.profile_state p\n  WHERE e.type = 'Device' AND e.enabled AND p.name = 'app-allowlist' AND p.enabled\n  ON CONFLICT (enrollment_id, profile_name) DO UPDATE\n    SET version = EXCLUDED.version, state = 'claimed', claimed_at = now(), command_uuid = NULL, sent_at = NULL\n    WHERE d.version < EXCLUDED.version OR d.state = 'failed'\n  RETURNING d.enrollment_id, d.profile_name, d.version\n)\nSELECT c.enrollment_id, c.profile_name, c.version, p.kind, p.template, p.params\nFROM claimed c JOIN automation.profile_state p ON p.name = c.profile_name\nORDER BY (p.kind <> 'wallpaper'), c.profile_name",
         "options": {}
       },
       "id": "730a8c83-bb6a-5b39-af06-bab743fc118f",
@@ -548,7 +642,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        4600,
+        5520,
         300
       ],
       "credentials": {
@@ -562,14 +656,14 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const crypto = require('crypto');\nconst claimed = $input.all().map((item) => item.json).filter((row) => row.profile_name);\nif (claimed.length === 0) return [{ json: { skip: true } }];\nconst escapeXml = (value) => String(value)\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;');\nreturn claimed.map((row) => {\n  const params = typeof row.params === 'string' ? JSON.parse(row.params) : row.params;\n  let profile = row.template;\n  for (const [key, value] of Object.entries(params)) {\n    const text = Array.isArray(value)\n      ? value.map((item) => '\\t\\t\\t\\t<string>' + escapeXml(item) + '</string>').join('\\n')\n      : escapeXml(value);\n    profile = profile.split('__' + key + '__').join(text);\n  }\n  profile = profile.split('__VERSION__').join(String(row.version));\n  const commandUuid = crypto.randomUUID();\n  const plist = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n    + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n    + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n\\t\\t<key>Payload</key>\\n\\t\\t<data>'\n    + Buffer.from(profile, 'utf8').toString('base64')\n    + '</data>\\n\\t\\t<key>RequestType</key>\\n\\t\\t<string>InstallProfile</string>\\n\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>'\n    + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\n  return { json: { skip: false, enrollment_id: row.enrollment_id, profile_name: row.profile_name, version: row.version, command_uuid: commandUuid, plist } };\n});\n"
+        "jsCode": "const crypto = require('crypto');\nconst claimed = $input.all().map((item) => item.json).filter((row) => row.profile_name);\nif (claimed.length === 0) return [{ json: { skip: true } }];\nconst escapeXml = (value) => String(value)\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;');\nreturn claimed.map((row) => {\n  const params = typeof row.params === 'string' ? JSON.parse(row.params) : row.params;\n  let profile = row.template;\n  for (const [key, value] of Object.entries(params)) {\n    const text = Array.isArray(value)\n      ? value.map((item) => '\\t\\t\\t\\t<string>' + escapeXml(item) + '</string>').join('\\n')\n      : escapeXml(value);\n    profile = profile.split('__' + key + '__').join(text);\n  }\n  profile = profile.split('__VERSION__').join(String(row.version));\n  const commandUuid = crypto.randomUUID();\n  if (row.kind === 'wallpaper') {\n    const settings = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n      + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n      + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n\\t\\t<key>RequestType</key>\\n\\t\\t<string>Settings</string>\\n'\n      + '\\t\\t<key>Settings</key>\\n\\t\\t<array>\\n\\t\\t\\t<dict>\\n\\t\\t\\t\\t<key>Image</key>\\n\\t\\t\\t\\t<data>' + params.IMAGE_B64 + '</data>\\n'\n      + '\\t\\t\\t\\t<key>Item</key>\\n\\t\\t\\t\\t<string>Wallpaper</string>\\n'\n      + '\\t\\t\\t\\t<key>Where</key>\\n\\t\\t\\t\\t<integer>' + Number(params.WHERE || 3) + '</integer>\\n\\t\\t\\t</dict>\\n\\t\\t</array>\\n'\n      + '\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>' + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\n    return { json: { skip: false, enrollment_id: row.enrollment_id, profile_name: row.profile_name, version: row.version, command_uuid: commandUuid, plist: settings } };\n  }\n  const plist = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n    + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n    + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n\\t\\t<key>Payload</key>\\n\\t\\t<data>'\n    + Buffer.from(profile, 'utf8').toString('base64')\n    + '</data>\\n\\t\\t<key>RequestType</key>\\n\\t\\t<string>InstallProfile</string>\\n\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>'\n    + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\n  return { json: { skip: false, enrollment_id: row.enrollment_id, profile_name: row.profile_name, version: row.version, command_uuid: commandUuid, plist } };\n});\n"
       },
       "id": "78c30360-fd4b-579e-93be-0a1fa1986a12",
       "name": "Liste Befehle bauen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4830,
+        5750,
         300
       ]
     },
@@ -604,7 +698,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        5060,
+        5980,
         300
       ]
     },
@@ -632,7 +726,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        5290,
+        6210,
         300
       ],
       "credentials": {
@@ -653,7 +747,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5520,
+        6440,
         300
       ]
     },
@@ -670,7 +764,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        5750,
+        6670,
         300
       ],
       "credentials": {
@@ -690,7 +784,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5980,
+        6900,
         300
       ]
     },
@@ -734,7 +828,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        6210,
+        7130,
         300
       ],
       "credentials": {
@@ -755,7 +849,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6440,
+        7360,
         300
       ]
     },
@@ -769,7 +863,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6670,
+        7590,
         300
       ]
     },
@@ -783,7 +877,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6900,
+        7820,
         300
       ]
     },
@@ -800,7 +894,7 @@
       "type": "n8n-nodes-base.form",
       "typeVersion": 2.5,
       "position": [
-        7130,
+        8050,
         300
       ]
     }
@@ -993,7 +1087,7 @@
       "main": [
         [
           {
-            "node": "Lizenz zuweisen",
+            "node": "Verfuegbare Lizenzen",
             "type": "main",
             "index": 0
           }
@@ -1001,6 +1095,57 @@
         [
           {
             "node": "Keine Geraete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verfuegbare Lizenzen": {
+      "main": [
+        [
+          {
+            "node": "Lizenzen pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lizenzen pruefen": {
+      "main": [
+        [
+          {
+            "node": "Lizenzierte Apps?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lizenzierte Apps?": {
+      "main": [
+        [
+          {
+            "node": "Lizenz zuweisen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Keine Lizenz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keine Lizenz": {
+      "main": [
+        [
+          {
+            "node": "Meldung",
             "type": "main",
             "index": 0
           }
