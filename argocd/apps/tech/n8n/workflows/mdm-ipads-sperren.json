@@ -1,0 +1,531 @@
+{
+  "name": "MDM: iPads sperren mit Nachricht",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "basicAuth",
+        "formTitle": "iPads sperren mit Nachricht",
+        "formDescription": "ACHTUNG: Die iPads sperren sich sofort und zeigen die Nachricht auf dem Sperrbildschirm. Entsperrt wird mit dem Code des iPads.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Nachricht",
+              "fieldType": "textarea",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Telefonnummer (optional)",
+              "fieldType": "text",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Seriennummer (leer = alle iPads)",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "z. B. FVQ99FKFPX"
+            },
+            {
+              "fieldLabel": "Bestaetigung",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Nein"
+                  },
+                  {
+                    "option": "Ja, jetzt sperren"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "path": "mdm-sperren"
+        }
+      },
+      "id": "0ced7ddc-3482-5302-b726-99d6be154807",
+      "name": "Formular Sperren",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        300
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Formulare"
+        }
+      },
+      "webhookId": "41052c71-6755-5fc7-bd75-95bdfc2aa272"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  depserverUrl: 'http://mdm-depserver.mdm.svc.cluster.local:9001',\n  scepUrl: 'http://mdm-scep.mdm.svc.cluster.local:8080',\n  publicHost: 'mdm-prod.pke-lab.de',\n  depName: 'capulus',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM',\n  vmUrl: 'http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428',\n  n8nUrl: 'https://n8n.prod.homeserver'\n};\nreturn [{ json: cfg }];\n"
+      },
+      "id": "32456572-0074-5737-a1b7-857111bd0ba9",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const input = $('Formular Sperren').first().json;\nconst message = String(input['Nachricht'] || '').trim();\nconst phone = String(input['Telefonnummer (optional)'] || '').trim();\nconst serial = String(input['Seriennummer (leer = alle iPads)'] || '').trim();\nconst fail = (text) => [{ json: { ok: false, title: 'Nichts gesperrt', message: text } }];\nif (input['Bestaetigung'] !== 'Ja, jetzt sperren') return fail('Die Bestaetigung steht nicht auf \\\"Ja, jetzt sperren\\\". Es wurde kein Geraet gesperrt.');\nif (message.length === 0 || message.length > 300) return fail('Die Nachricht muss 1 bis 300 Zeichen lang sein.');\nif (phone.length > 40 || !/^[0-9+() \\/.-]*$/.test(phone)) return fail('Die Telefonnummer darf nur Ziffern, Leerzeichen und + ( ) / . - enthalten.');\nif (serial.length > 40 || !/^[A-Za-z0-9]*$/.test(serial)) return fail('Die Seriennummer darf nur Buchstaben und Ziffern enthalten.');\nreturn [{ json: { ok: true, message, phone, serial } }];\n"
+      },
+      "id": "49f3c39f-a69b-5375-83fd-a6644bb3bd98",
+      "name": "Eingabe pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "c5d56c7d-0f17-5af8-bec5-096700d4dbec"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "e78fa7ba-ad7a-5be7-9298-2a8c41ec16ed",
+      "name": "Eingabe gueltig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        690,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT e.id AS enrollment_id, d.serial_number FROM public.enrollments e JOIN public.devices d ON d.id = e.device_id WHERE e.type = 'Device' AND e.enabled AND ($1::text IS NULL OR $1::text = '' OR d.serial_number = $1::text) ORDER BY d.serial_number",
+        "options": {
+          "queryReplacement": "={{ [$json.serial] }}"
+        }
+      },
+      "id": "cd90da85-ebbb-583f-ac1f-238bdc1d2ff2",
+      "name": "Geraete suchen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        920,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst input = $('Eingabe pruefen').first().json;\nconst devices = $input.all().map((item) => item.json).filter((row) => row.enrollment_id);\nif (devices.length === 0) return [{ json: { skip: true } }];\nconst escapeXml = (value) => String(value)\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;');\nreturn devices.map((device) => {\n  const commandUuid = crypto.randomUUID();\n  let command = '\\t\\t<key>Message</key>\\n\\t\\t<string>' + escapeXml(input.message) + '</string>\\n';\n  if (input.phone) command += '\\t\\t<key>PhoneNumber</key>\\n\\t\\t<string>' + escapeXml(input.phone) + '</string>\\n';\n  const plist = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n    + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n    + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n' + command\n    + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>DeviceLock</string>\\n\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>'\n    + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\n  return { json: { skip: false, enrollment_id: device.enrollment_id, serial_number: device.serial_number, command_uuid: commandUuid, plist } };\n});\n"
+      },
+      "id": "503ed388-053b-5a63-b7f6-088cf5211971",
+      "name": "Befehle bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1150,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "0269896e-6ab4-5ab4-9a41-ccf937f4582a"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "2c003354-a976-5e3f-bdd5-bea62ac5410b",
+      "name": "Geraete gefunden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1380,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Konfiguration').first().json.nanomdmUrl }}/v1/enqueue/{{ $json.enrollment_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/xml",
+        "body": "={{ $json.plist }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "59b95bef-85d2-5231-b255-b42a8e252483",
+      "name": "DeviceLock einreihen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1610,
+        300
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoMDM API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const sent = $('Befehle bauen').all().map((item) => item.json).filter((row) => !row.skip);\nconst results = $input.all().map((response, index) => {\n  const source = sent[index];\n  const body = response.json.body || {};\n  const queued = body.command_uuid === source.command_uuid;\n  const pushError = Object.values(body.status || {}).map((entry) => entry.push_error).filter(Boolean).join('; ');\n  return { serial: source.serial_number || source.enrollment_id, queued, pushError, detail: queued ? '' : String(response.json.statusCode || response.json.error || 'keine Antwort') };\n});\nconst ok = results.filter((row) => row.queued);\nconst failed = results.filter((row) => !row.queued);\nconst pushErrors = ok.filter((row) => row.pushError);\nconst lines = [ok.length + ' von ' + results.length + ' iPad(s) erhalten den Sperrbefehl: ' + (ok.map((row) => row.serial).join(', ') || '-') + '.'];\nif (failed.length > 0) lines.push('Nicht eingereiht: ' + failed.map((row) => row.serial + ' (' + row.detail + ')').join(', ') + '.');\nif (pushErrors.length > 0) lines.push('Push fehlgeschlagen, diese iPads sperren sich erst beim naechsten Check-in: ' + pushErrors.map((row) => row.serial).join(', ') + '.');\nreturn [{ json: { title: failed.length > 0 ? 'Sperren teilweise fehlgeschlagen' : 'Sperrbefehl gesendet', message: lines.join(' '), priority: failed.length > 0 ? 'high' : 'default' } }];\n"
+      },
+      "id": "7879d005-1011-59ea-ab30-fd22291d7aa9",
+      "name": "Ergebnis auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "MDM: iPads gesperrt"
+            },
+            {
+              "name": "Priority",
+              "value": "high"
+            },
+            {
+              "name": "Tags",
+              "value": "lock"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.message }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "998849e2-a041-5ce5-903d-7dd08ed3693f",
+      "name": "Protokoll melden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2070,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const serial = $('Eingabe pruefen').first().json.serial;\nreturn [{ json: { title: 'Nichts gesperrt', message: serial ? 'Es gibt kein angemeldetes iPad mit der Seriennummer ' + serial + '.' : 'Es ist noch kein iPad angemeldet.' } }];\n"
+      },
+      "id": "5acc7b9f-6cbf-5ea1-86f7-303dfe221048",
+      "name": "Keine Geraete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: $('Ergebnis auswerten').first().json }];\n"
+      },
+      "id": "56d6dec9-e449-5d81-ad76-b99fe1615cf7",
+      "name": "Meldung Ergebnis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2530,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return $input.all();\n"
+      },
+      "id": "49d641db-ae82-5ed7-bd40-24a99783f367",
+      "name": "Meldung",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2760,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "={{ $('Meldung').first().json.title }}",
+        "completionMessage": "={{ $('Meldung').first().json.message }}",
+        "options": {}
+      },
+      "id": "1624fb7e-8ea7-52b0-bfff-957201725af0",
+      "name": "Abschluss",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        2990,
+        300
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Formular Sperren": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Eingabe pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingabe pruefen": {
+      "main": [
+        [
+          {
+            "node": "Eingabe gueltig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingabe gueltig?": {
+      "main": [
+        [
+          {
+            "node": "Geraete suchen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geraete suchen": {
+      "main": [
+        [
+          {
+            "node": "Befehle bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Befehle bauen": {
+      "main": [
+        [
+          {
+            "node": "Geraete gefunden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geraete gefunden?": {
+      "main": [
+        [
+          {
+            "node": "DeviceLock einreihen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Keine Geraete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeviceLock einreihen": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnis auswerten": {
+      "main": [
+        [
+          {
+            "node": "Protokoll melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Protokoll melden": {
+      "main": [
+        [
+          {
+            "node": "Meldung Ergebnis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung Ergebnis": {
+      "main": [
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keine Geraete": {
+      "main": [
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung": {
+      "main": [
+        [
+          {
+            "node": "Abschluss",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "Europe/Berlin"
+  },
+  "versionId": "38812ba5-2502-5eb9-8212-f09d55bfe7c4",
+  "meta": {
+    "description": "Formular, das per MDM-Befehl DeviceLock alle (oder ein) iPad sofort sperrt und eine Nachricht samt optionaler Telefonnummer auf dem Sperrbildschirm anzeigt. Zum Entsperren braucht das iPad den Code. Schutz gegen Fehlbedienung: Das Formular verlangt die Bestaetigung Ja, jetzt sperren. Jede Ausfuehrung wird per ntfy auf Home-Lab-MDM gemeldet. Credentials: MDM Formulare, MDM NanoMDM API, MDM Automation DB, ntfy-publisher."
+  }
+}
