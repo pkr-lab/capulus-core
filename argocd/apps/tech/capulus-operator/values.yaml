@@ -18,7 +18,7 @@ serviceAccount:
 backup:
   resticImage: restic/restic:0.18.1@sha256:39d9072fb5651c80d75c7a811612eb60b4c06b32ffe87c2e9f3c7222e1797e76
   sqliteImage: alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
-  postgresImage: postgres:17-alpine
+  postgresImage: postgres:17-alpine@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b
 
 leaderElect: true
 
