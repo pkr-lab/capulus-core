@@ -28,7 +28,7 @@ data:
       -v lockscreentemplate="$(cat /init-files/lockscreen.mobileconfig.tmpl)" \
       -v allowlisttemplate="$(cat /init-files/app-allowlist.mobileconfig.tmpl)" \
       -v blocklisttemplate="$(cat /init-files/app-blocklist.mobileconfig.tmpl)" \
-      -v webclipstemplate="$(cat /init-files/webclips.mobileconfig.tmpl)" \
+      -v webclipstemplate="$(cat /init-files/webclip.mobileconfig.tmpl)" \
       -v wallpaperlocktemplate="$(cat /init-files/wallpaper-lock.mobileconfig.tmpl)" \
       -v lockscreentext="$LOCKSCREEN_TEXT" \
       -v profileprefix="$PROFILE_PREFIX" \
@@ -54,11 +54,13 @@ data:
     {{- .Files.Get "profiles/app-allowlist.mobileconfig.tmpl" | nindent 4 }}
   app-blocklist.mobileconfig.tmpl: |
     {{- .Files.Get "profiles/app-blocklist.mobileconfig.tmpl" | nindent 4 }}
-  webclips.mobileconfig.tmpl: |
-    {{- .Files.Get "profiles/webclips.mobileconfig.tmpl" | nindent 4 }}
+  webclip.mobileconfig.tmpl: |
+    {{- .Files.Get "profiles/webclip.mobileconfig.tmpl" | nindent 4 }}
   wallpaper-lock.mobileconfig.tmpl: |
     {{- .Files.Get "profiles/wallpaper-lock.mobileconfig.tmpl" | nindent 4 }}
 binaryData:
   ipad-wallpaper.png: {{ .Files.Get "profiles/ipad-wallpaper.png" | b64enc }}
+  icon-lists.png: {{ .Files.Get "profiles/icon-lists.png" | b64enc }}
+  icon-isc.png: {{ .Files.Get "profiles/icon-isc.png" | b64enc }}
   dep-enrollment-profile.json: |
     {{- .Files.Get "profiles/dep-enrollment-profile.json" | nindent 4 }}
