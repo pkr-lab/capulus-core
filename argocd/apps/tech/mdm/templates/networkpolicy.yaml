@@ -1,0 +1,278 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- $ns := .Release.Namespace }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: {{ $ns }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: {{ $ns }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ingress-device-endpoints
+  namespace: {{ $ns }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+          - nanomdm
+          - scep
+          - enroll
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        {{- range .Values.networkPolicy.ingressNamespaces }}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ . }}
+        {{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ingress-admin-api-from-n8n
+  namespace: {{ $ns }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+          - nanomdm
+          - depserver
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.automation.n8nNamespace }}
+      ports:
+        - port: {{ .Values.nanomdm.port }}
+          protocol: TCP
+        - port: {{ .Values.nanodep.port }}
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ingress-depserver-from-depsyncer
+  namespace: {{ $ns }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: depserver
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: depsyncer
+      ports:
+        - port: {{ .Values.nanodep.port }}
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ingress-postgres
+  namespace: {{ $ns }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - nanomdm
+                  - depserver
+                  - depsyncer
+                  - backup
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.automation.n8nNamespace }}
+      ports:
+        - port: {{ .Values.postgres.port }}
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: egress-postgres
+  namespace: {{ $ns }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+          - nanomdm
+          - depserver
+          - depsyncer
+          - backup
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: postgres
+      ports:
+        - port: {{ .Values.postgres.port }}
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: egress-internet
+  namespace: {{ $ns }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+          - nanomdm
+          - depserver
+          - depsyncer
+          - backup
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        {{- range .Values.networkPolicy.internetEgressPorts }}
+        - port: {{ . }}
+          protocol: TCP
+        {{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: egress-backup-packages
+  namespace: {{ $ns }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: backup
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - port: 80
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: egress-webhook-to-n8n
+  namespace: {{ $ns }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+          - nanomdm
+          - depsyncer
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.automation.n8nNamespace }}
+      ports:
+        - port: 5678
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: egress-depsyncer-to-depserver
+  namespace: {{ $ns }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: depsyncer
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: depserver
+      ports:
+        - port: {{ .Values.nanodep.port }}
+          protocol: TCP
+{{- end }}

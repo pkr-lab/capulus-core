@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mdm.fullname" . }}-postgres
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "mdm.selectorLabels" (dict "ctx" . "component" "postgres") | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/init: {{ include (print $.Template.BasePath "/postgres-configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "mdm.selectorLabels" (dict "ctx" . "component" "postgres") | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "mdm.fullname" . }}
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "mdm.podSecurityContext" (dict "uid" 70) | nindent 8 }}
+      containers:
+        - name: postgres
+          image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            {{- include "mdm.containerSecurityContext" . | nindent 12 }}
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            {{- include "mdm.secretEnv" (dict "name" "POSTGRES_PASSWORD" "secret" .Values.secrets.main.secretName "key" "postgres-password") | nindent 12 }}
+            {{- include "mdm.secretEnv" (dict "name" "NANOMDM_DB_PASSWORD" "secret" .Values.secrets.main.secretName "key" "nanomdm-db-password") | nindent 12 }}
+            {{- include "mdm.secretEnv" (dict "name" "NANODEP_DB_PASSWORD" "secret" .Values.secrets.main.secretName "key" "nanodep-db-password") | nindent 12 }}
+            {{- include "mdm.secretEnv" (dict "name" "AUTOMATION_DB_PASSWORD" "secret" .Values.secrets.main.secretName "key" "automation-db-password") | nindent 12 }}
+            - name: DEP_NAME
+              value: {{ .Values.nanodep.depName | quote }}
+            - name: ENROLL_URL
+              value: {{ printf "https://%s/mdm/enroll" .Values.publicHost | quote }}
+            - name: LOCKSCREEN_TEXT
+              value: {{ .Values.automation.lockScreenText | quote }}
+            - name: PROFILE_PREFIX
+              value: {{ .Values.automation.profilePrefix | quote }}
+          ports:
+            - name: postgres
+              containerPort: {{ .Values.postgres.port }}
+              protocol: TCP
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.postgres.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: run
+              mountPath: /var/run/postgresql
+            - name: tmp
+              mountPath: /tmp
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+            - name: init-files
+              mountPath: /init-files
+              readOnly: true
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "mdm.fullname" . }}-postgres-data
+        - name: run
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+        - name: init
+          configMap:
+            name: {{ include "mdm.fullname" . }}-postgres-init
+            defaultMode: 0555
+            items:
+              - key: init.sh
+                path: init.sh
+        - name: init-files
+          configMap:
+            name: {{ include "mdm.fullname" . }}-postgres-files
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mdm.fullname" . }}-postgres
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: postgres
+      port: {{ .Values.postgres.port }}
+      targetPort: postgres
+      protocol: TCP
+  selector:
+    {{- include "mdm.selectorLabels" (dict "ctx" . "component" "postgres") | nindent 4 }}

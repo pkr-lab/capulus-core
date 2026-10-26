@@ -1,0 +1,50 @@
+{{- if .Values.secrets.enrollmentProfile.encryptedData }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mdm.fullname" . }}-enroll-nginx
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+data:
+  nginx.conf: |
+    worker_processes 1;
+    pid /tmp/nginx.pid;
+    error_log /dev/stderr warn;
+    events {
+      worker_connections 64;
+    }
+    http {
+      access_log /dev/stdout;
+      client_body_temp_path /tmp/client_body;
+      proxy_temp_path /tmp/proxy;
+      fastcgi_temp_path /tmp/fastcgi;
+      uwsgi_temp_path /tmp/uwsgi;
+      scgi_temp_path /tmp/scgi;
+      server_tokens off;
+      client_max_body_size 1m;
+      server {
+        listen 127.0.0.1:8081;
+        root /profile;
+        location = /enroll.mobileconfig {
+          default_type application/x-apple-aspen-config;
+        }
+      }
+      server {
+        listen {{ .Values.enroll.port }};
+        location = /healthz {
+          default_type text/plain;
+          return 200 "ok";
+        }
+        location = /mdm/enroll {
+          proxy_method GET;
+          proxy_pass_request_body off;
+          proxy_set_header Content-Length "";
+          proxy_pass http://127.0.0.1:8081/enroll.mobileconfig;
+        }
+        location / {
+          return 404;
+        }
+      }
+    }
+{{- end }}
