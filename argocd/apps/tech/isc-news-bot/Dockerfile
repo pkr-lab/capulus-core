@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright:v1.64.1-noble AS build
+FROM mcr.microsoft.com/playwright:v1.64.1-noble@sha256:47b510dd9230bf0b9bfc9b20102241e577ea7a99334ab4c3ca19f19770e9b8ea AS build
 
 WORKDIR /build
 
@@ -11,7 +11,7 @@ COPY test ./test
 COPY scripts ./scripts
 RUN npm run build && npm prune --omit=dev
 
-FROM mcr.microsoft.com/playwright:v1.64.1-noble
+FROM mcr.microsoft.com/playwright:v1.64.1-noble@sha256:47b510dd9230bf0b9bfc9b20102241e577ea7a99334ab4c3ca19f19770e9b8ea
 
 ENV NODE_ENV=production \
     TZ=Europe/Berlin \
