@@ -3,7 +3,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/pkr-lab/alert-caller
-  tag: "sha-e399f22"
+  tag: "sha-ced9c98"
   pullPolicy: IfNotPresent
 
 imagePullSecrets:

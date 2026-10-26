@@ -1,0 +1,1352 @@
+{
+  "name": "MDM: App auf iPads installieren",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "basicAuth",
+        "formTitle": "App auf iPads installieren",
+        "formDescription": "Die Lizenz wird den Geraeten zugewiesen, die App ohne Apple-ID installiert und die Liste der erlaubten Apps aktualisiert.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "App",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "ntfy"
+                  },
+                  {
+                    "option": "DLRG Trainer"
+                  },
+                  {
+                    "option": "Microsoft Teams"
+                  },
+                  {
+                    "option": "Bitwarden Passwortmanager"
+                  },
+                  {
+                    "option": "Alle Apps der Liste"
+                  },
+                  {
+                    "option": "Andere App (ID unten)"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "App-Store-ID oder Link (nur bei Andere App)",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "z. B. https://apps.apple.com/de/app/ntfy/id1625396347"
+            },
+            {
+              "fieldLabel": "Seriennummer (leer = alle iPads)",
+              "fieldType": "text",
+              "requiredField": false
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "path": "mdm-app-installieren"
+        }
+      },
+      "id": "a51c1981-e679-55b1-83b8-7637a44f66ff",
+      "name": "Formular App",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        300
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Formulare"
+        }
+      },
+      "webhookId": "ca8930b8-21a1-5096-b2ad-557581de018c"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  depserverUrl: 'http://mdm-depserver.mdm.svc.cluster.local:9001',\n  scepUrl: 'http://mdm-scep.mdm.svc.cluster.local:8080',\n  publicHost: 'mdm-prod.pke-lab.de',\n  depName: 'capulus',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM',\n  vmUrl: 'http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428',\n  n8nUrl: 'https://n8n.prod.homeserver'\n};\nreturn [{ json: cfg }];\n"
+      },
+      "id": "70ebb6d3-793f-5575-82b8-a93d13b66037",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const input = $('Formular App').first().json;\nconst choice = String(input['App'] || '');\nconst idField = String(input['App-Store-ID oder Link (nur bei Andere App)'] || '').trim();\nconst serial = String(input['Seriennummer (leer = alle iPads)'] || '').trim();\nconst fail = (text) => [{ json: { ok: false, title: 'Nichts installiert', message: text } }];\nif (serial.length > 40 || !/^[A-Za-z0-9]*$/.test(serial)) return fail('Die Seriennummer darf nur Buchstaben und Ziffern enthalten.');\nif (choice === 'Andere App (ID unten)') {\n  const match = /(?:id)?(\\d{6,12})/.exec(idField);\n  if (!match) return fail('Bitte die App-Store-ID (Ziffern) oder den App-Store-Link eintragen.');\n  return [{ json: { ok: true, mode: 'other', adamId: match[1], serial } }];\n}\nif (choice === 'Alle Apps der Liste') return [{ json: { ok: true, mode: 'all', serial } }];\nreturn [{ json: { ok: true, mode: 'one', appName: choice, serial } }];\n"
+      },
+      "id": "ab714799-f865-51e5-be75-31ce7d39f127",
+      "name": "Eingabe pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "0ff678a1-ce32-54dd-893d-834fc90975a2"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bdad0872-9850-55a3-85de-4b125f1e678e",
+      "name": "Eingabe gueltig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        690,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.mode === 'other' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "83c7dea6-369e-5f48-a8a2-ca8d8464daf0"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "78606de6-3716-5eda-95fb-63109dad3139",
+      "name": "Neue App?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        920,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://itunes.apple.com/lookup",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ $('Eingabe pruefen').first().json.adamId }}"
+            },
+            {
+              "name": "country",
+              "value": "de"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "3e629c04-043b-5d0d-8c19-7288751dcfca",
+      "name": "App-Store abfragen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1150,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const adamId = $('Eingabe pruefen').first().json.adamId;\nconst res = $input.first().json;\nconst raw = res.data !== undefined ? res.data : res.body;\nlet body = {};\ntry {\n  body = typeof raw === 'string' ? JSON.parse(raw || '{}') : (raw || {});\n} catch (e) {\n  body = {};\n}\nconst hit = (body.results || [])[0];\nconst fail = (text) => [{ json: { ok: false, title: 'Nichts installiert', message: text } }];\nif (!hit) return fail('Im App Store (Deutschland) gibt es keine App mit der ID ' + adamId + '.');\nif (hit.kind !== 'software' || !hit.bundleId) return fail('Die ID ' + adamId + ' ist keine iOS-App.');\nif (!(hit.supportedDevices || []).some((device) => /iPad/.test(device))) return fail(hit.trackName + ' laeuft nicht auf iPads.');\nif (Number(hit.price) > 0) return fail(hit.trackName + ' kostet Geld (' + hit.formattedPrice + '). Bezahlte Apps muessen in Apple Business gekauft werden, dieser Workflow installiert nur kostenlose Apps.');\nreturn [{ json: { ok: true, adamId: String(hit.trackId), name: hit.trackName, bundleId: hit.bundleId } }];\n"
+      },
+      "id": "13a61048-97b7-5533-bdad-2b344ed30c10",
+      "name": "App pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1380,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "8320ed85-bc39-5229-9b97-6c171205d7db"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "acd17879-6a7f-5072-9847-825ef445c85a",
+      "name": "App gueltig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1610,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO automation.app_catalog (adam_id, name, bundle_id)\nVALUES ($1, $2, $3)\nON CONFLICT (adam_id) DO UPDATE SET name = EXCLUDED.name, bundle_id = EXCLUDED.bundle_id, enabled = true\nRETURNING adam_id",
+        "options": {
+          "queryReplacement": "={{ [$json.adamId, $json.name, $json.bundleId] }}"
+        }
+      },
+      "id": "85285059-749d-5e2f-848d-04cfe9c7e3b4",
+      "name": "App merken",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1840,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT adam_id, name, bundle_id, config FROM automation.app_catalog WHERE enabled ORDER BY name",
+        "options": {}
+      },
+      "id": "3959fdbb-4a21-5758-ac0f-cf86f7e2baeb",
+      "name": "Katalog lesen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2070,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const input = $('Eingabe pruefen').first().json;\nconst catalog = $input.all().map((item) => item.json).filter((row) => row.adam_id);\nlet apps = catalog;\nif (input.mode === 'one') apps = catalog.filter((row) => row.name === input.appName);\nif (input.mode === 'other') apps = catalog.filter((row) => row.adam_id === input.adamId);\nif (apps.length === 0) return [{ json: { ok: false, title: 'Nichts installiert', message: 'Die App steht nicht in der Liste.' } }];\nreturn [{ json: { ok: true, apps: apps.map((row) => ({ adamId: row.adam_id, name: row.name, bundleId: row.bundle_id, config: typeof row.config === 'string' ? JSON.parse(row.config) : (row.config || {}) })) } }];\n"
+      },
+      "id": "14101aec-c849-59da-aaab-39df8da5a618",
+      "name": "Auswahl bestimmen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "9aad0b72-019a-5e7d-8749-a8f5315e8ec2"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "08c19d28-6882-5f19-8190-2c43212ff530",
+      "name": "App gefunden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2530,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT e.id AS enrollment_id, d.serial_number FROM public.enrollments e JOIN public.devices d ON d.id = e.device_id WHERE e.type = 'Device' AND e.enabled AND ($1::text IS NULL OR $1::text = '' OR d.serial_number = $1::text) ORDER BY d.serial_number",
+        "options": {
+          "queryReplacement": "={{ [$('Eingabe pruefen').first().json.serial] }}"
+        }
+      },
+      "id": "be1944ed-e791-5346-bcac-fa317410af6f",
+      "name": "Geraete suchen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2760,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const devices = $input.all().map((item) => item.json).filter((row) => row.enrollment_id);\nif (devices.length === 0) return [{ json: { skip: true } }];\nreturn [{ json: { skip: false, serials: devices.map((row) => row.serial_number).filter(Boolean) } }];\n"
+      },
+      "id": "e0e2af52-cf40-5a6c-9513-67fd88760e18",
+      "name": "Lizenzdaten bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2990,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "f7a9fa1e-27c0-57ec-bcaa-0d2be19bef79"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "42574b7e-f276-5b89-8816-18c09e2260ad",
+      "name": "Geraete gefunden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://vpp.itunes.apple.com/mdm/v2/assets",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "9d813222-7ab3-5e6f-b21a-4f2429c3d587",
+      "name": "Verfuegbare Lizenzen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3450,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "Apple Apps Token"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const apps = $('Auswahl bestimmen').first().json.apps;\nconst serials = $('Lizenzdaten bauen').first().json.serials;\nconst res = $input.first().json;\nconst body = typeof res.body === 'string' ? JSON.parse(res.body || '{}') : (res.body || {});\nconst known = new Set((body.assets || []).map((asset) => String(asset.adamId)));\nif (res.statusCode !== 200) {\n  return [{ json: { skip: true, title: 'Nichts installiert', message: 'Die Lizenzliste bei Apple ist nicht abrufbar (HTTP ' + (res.statusCode || res.error || 'keine Antwort') + (body.errorMessage ? ', ' + body.errorMessage : '') + '). Ist das Credential Apple Apps Token gueltig?' } }];\n}\nconst licensed = apps.filter((app) => known.has(app.adamId));\nconst missing = apps.filter((app) => !known.has(app.adamId));\nif (licensed.length === 0) {\n  return [{ json: { skip: true, title: 'Nichts installiert', message: 'Diese App ist in Apple Business nicht fuer den Standort abgerufen: ' + missing.map((app) => app.name + ' (ID ' + app.adamId + ')').join(', ') + '. Unter Apps und Buecher abrufen, dann erneut versuchen.' } }];\n}\nreturn [{ json: { skip: false, licensed, missing, body: JSON.stringify({ assets: licensed.map((app) => ({ adamId: app.adamId, pricingParam: 'STDQ' })), serialNumbers: serials }) } }];\n"
+      },
+      "id": "5920a778-2c98-57df-93c4-d464c8e3e4af",
+      "name": "Lizenzen pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "2f3b738e-a558-55a7-a444-d8d32eb0ca46"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "501949d8-7ca6-548e-97a5-d59cf9053ad4",
+      "name": "Lizenzierte Apps?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3910,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: { title: $input.first().json.title, message: $input.first().json.message } }];\n"
+      },
+      "id": "3e9362a5-666e-596a-b770-426095815f1e",
+      "name": "Keine Lizenz",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4140,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vpp.itunes.apple.com/mdm/v2/assets/associate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "12aa1e4e-7fc3-5012-8469-91affa6e0501",
+      "name": "Lizenz zuweisen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4370,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "Apple Apps Token"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst apps = $('Lizenzen pruefen').first().json.licensed;\nconst devices = $('Geraete suchen').all().map((item) => item.json).filter((row) => row.enrollment_id);\nconst escapeXml = (value) => String(value)\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;');\nconst configXml = (config) => {\n  const keys = Object.keys(config || {});\n  if (keys.length === 0) return '';\n  let xml = '\\t\\t<key>Configuration</key>\\n\\t\\t<dict>\\n';\n  for (const key of keys) {\n    const value = config[key];\n    xml += '\\t\\t\\t<key>' + escapeXml(key) + '</key>\\n';\n    if (typeof value === 'boolean') xml += '\\t\\t\\t' + (value ? '<true/>' : '<false/>') + '\\n';\n    else if (typeof value === 'number') xml += '\\t\\t\\t<integer>' + value + '</integer>\\n';\n    else xml += '\\t\\t\\t<string>' + escapeXml(value) + '</string>\\n';\n  }\n  return xml + '\\t\\t</dict>\\n';\n};\nconst out = [];\nfor (const device of devices) {\n  for (const app of apps) {\n    const commandUuid = crypto.randomUUID();\n    const plist = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n      + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n      + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n'\n      + configXml(app.config)\n      + '\\t\\t<key>ChangeManagementState</key>\\n\\t\\t<string>Managed</string>\\n'\n      + '\\t\\t<key>Options</key>\\n\\t\\t<dict>\\n\\t\\t\\t<key>PurchaseMethod</key>\\n\\t\\t\\t<integer>1</integer>\\n\\t\\t</dict>\\n'\n      + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>InstallApplication</string>\\n'\n      + '\\t\\t<key>iTunesStoreID</key>\\n\\t\\t<integer>' + Number(app.adamId) + '</integer>\\n'\n      + '\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>' + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\n    out.push({ json: { enrollment_id: device.enrollment_id, serial_number: device.serial_number, app: app.name, command_uuid: commandUuid, plist } });\n  }\n}\nreturn out;\n"
+      },
+      "id": "47b2f82c-0a8c-56db-841b-40b658a893ad",
+      "name": "Befehle bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4600,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Konfiguration').first().json.nanomdmUrl }}/v1/enqueue/{{ $json.enrollment_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/xml",
+        "body": "={{ $json.plist }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "57a7006d-aaec-56ab-ba81-2cba6c4b02b3",
+      "name": "InstallApplication einreihen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4830,
+        300
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoMDM API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const license = $('Lizenz zuweisen').first().json;\nconst check = $('Lizenzen pruefen').first().json;\nconst apps = check.licensed;\nconst sent = $('Befehle bauen').all().map((item) => item.json);\nconst results = $input.all().map((response, index) => {\n  const source = sent[index];\n  const body = response.json.body || {};\n  const queued = body.command_uuid === source.command_uuid;\n  return { serial: source.serial_number || source.enrollment_id, app: source.app, queued, detail: queued ? '' : String(response.json.statusCode || response.json.error || 'keine Antwort') };\n});\nconst ok = results.filter((row) => row.queued);\nconst failed = results.filter((row) => !row.queued);\nconst lines = [];\nconst licenseBody = license.body || {};\nconst names = apps.map((app) => app.name).join(', ');\nif (license.statusCode === 200) {\n  lines.push('Lizenz fuer ' + names + ' wurde zugewiesen.');\n} else {\n  lines.push('ACHTUNG: Die Lizenzzuweisung bei Apple schlug fehl (HTTP ' + (license.statusCode || license.error || 'keine Antwort') + (licenseBody.errorMessage ? ', ' + licenseBody.errorMessage : '') + '). Ohne Lizenz kann ein iPad ohne Apple-ID die App nicht installieren.');\n}\nlines.push(ok.length + ' von ' + results.length + ' Installationsbefehl(en) eingereiht.');\nif (check.missing.length > 0) lines.push('Nicht in Apple Business abgerufen und uebersprungen: ' + check.missing.map((app) => app.name).join(', ') + '.');\nif (failed.length > 0) lines.push('Nicht eingereiht: ' + failed.map((row) => row.serial + '/' + row.app + ' (' + row.detail + ')').join(', ') + '.');\nconst good = license.statusCode === 200 && failed.length === 0 && check.missing.length === 0;\nreturn [{ json: { good, names, text: lines.join(' ') } }];\n"
+      },
+      "id": "260e1863-66b3-51b6-b6a2-d83cf84f52a0",
+      "name": "Ergebnis auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5060,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE automation.profile_state p\nSET params = jsonb_set(p.params, '{ALLOWED_APPS}', n.list), version = p.version + 1, updated_at = now()\nFROM (\n  SELECT coalesce(jsonb_agg(b ORDER BY b), '[]'::jsonb) AS list\n  FROM (\n    SELECT jsonb_array_elements_text(params->'SYSTEM_APPS') AS b FROM automation.profile_state WHERE name = 'app-allowlist'\n    UNION\n    SELECT bundle_id FROM automation.app_catalog WHERE enabled\n  ) u\n) n\nWHERE p.name = 'app-allowlist' AND p.params->'ALLOWED_APPS' IS DISTINCT FROM n.list\nRETURNING p.version",
+        "options": {}
+      },
+      "id": "1692b52f-c8a6-52e7-8ed9-aa2eaa0bc5a2",
+      "name": "Erlaubt-Liste aktualisieren",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5290,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH claimed AS (\n  INSERT INTO automation.device_profile AS d (enrollment_id, profile_name, version, state, claimed_at)\n  SELECT e.id, p.name, p.version, 'claimed', now()\n  FROM public.enrollments e CROSS JOIN automation.profile_state p\n  WHERE e.type = 'Device' AND e.enabled AND p.name = 'app-allowlist' AND p.enabled\n  ON CONFLICT (enrollment_id, profile_name) DO UPDATE\n    SET version = EXCLUDED.version, state = 'claimed', claimed_at = now(), command_uuid = NULL, sent_at = NULL\n    WHERE d.version < EXCLUDED.version OR d.state = 'failed'\n  RETURNING d.enrollment_id, d.profile_name, d.version\n)\nSELECT c.enrollment_id, c.profile_name, c.version, p.kind, p.template, p.params\nFROM claimed c JOIN automation.profile_state p ON p.name = c.profile_name\nORDER BY (p.kind <> 'wallpaper'), c.profile_name",
+        "options": {}
+      },
+      "id": "730a8c83-bb6a-5b39-af06-bab743fc118f",
+      "name": "Liste beanspruchen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5520,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst claimed = $input.all().map((item) => item.json).filter((row) => row.profile_name);\nif (claimed.length === 0) return [{ json: { skip: true } }];\nconst escapeXml = (value) => String(value)\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;');\nreturn claimed.map((row) => {\n  const params = typeof row.params === 'string' ? JSON.parse(row.params) : row.params;\n  let profile = row.template;\n  for (const [key, value] of Object.entries(params)) {\n    const text = Array.isArray(value)\n      ? value.map((item) => '\\t\\t\\t\\t<string>' + escapeXml(item) + '</string>').join('\\n')\n      : escapeXml(value);\n    profile = profile.split('__' + key + '__').join(text);\n  }\n  profile = profile.split('__VERSION__').join(String(row.version));\n  const commandUuid = crypto.randomUUID();\n  if (row.kind === 'wallpaper') {\n    const settings = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n      + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n      + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n\\t\\t<key>RequestType</key>\\n\\t\\t<string>Settings</string>\\n'\n      + '\\t\\t<key>Settings</key>\\n\\t\\t<array>\\n\\t\\t\\t<dict>\\n\\t\\t\\t\\t<key>Image</key>\\n\\t\\t\\t\\t<data>' + params.IMAGE_B64 + '</data>\\n'\n      + '\\t\\t\\t\\t<key>Item</key>\\n\\t\\t\\t\\t<string>Wallpaper</string>\\n'\n      + '\\t\\t\\t\\t<key>Where</key>\\n\\t\\t\\t\\t<integer>' + Number(params.WHERE || 3) + '</integer>\\n\\t\\t\\t</dict>\\n\\t\\t</array>\\n'\n      + '\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>' + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\n    return { json: { skip: false, enrollment_id: row.enrollment_id, profile_name: row.profile_name, version: row.version, command_uuid: commandUuid, plist: settings } };\n  }\n  const plist = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n    + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n    + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n\\t\\t<key>Payload</key>\\n\\t\\t<data>'\n    + Buffer.from(profile, 'utf8').toString('base64')\n    + '</data>\\n\\t\\t<key>RequestType</key>\\n\\t\\t<string>InstallProfile</string>\\n\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>'\n    + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\n  return { json: { skip: false, enrollment_id: row.enrollment_id, profile_name: row.profile_name, version: row.version, command_uuid: commandUuid, plist } };\n});\n"
+      },
+      "id": "78c30360-fd4b-579e-93be-0a1fa1986a12",
+      "name": "Liste Befehle bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5750,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "d2145144-7d30-54d5-abbc-93270b6465dc"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "8251bd94-ccd8-57ea-89b1-c1fef020243c",
+      "name": "Liste zu senden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5980,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Konfiguration').first().json.nanomdmUrl }}/v1/enqueue/{{ $json.enrollment_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/xml",
+        "body": "={{ $json.plist }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "8f567811-106b-575c-a644-b1efb583b784",
+      "name": "Liste einreihen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6210,
+        300
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoMDM API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const sent = $('Liste Befehle bauen').all().map((item) => item.json).filter((row) => !row.skip);\nreturn $input.all().map((response, index) => {\n  const source = sent[index];\n  const body = response.json.body || {};\n  const queued = body.command_uuid === source.command_uuid;\n  const results = Object.values(body.status || {});\n  const pushError = results.map((entry) => entry.push_error).filter(Boolean).join('; ');\n  const detail = queued ? pushError : String(response.json.statusCode || response.json.error || 'keine Antwort');\n  return { json: { enrollment_id: source.enrollment_id, profile_name: source.profile_name, command_uuid: source.command_uuid, ok: queued ? 'yes' : 'no', detail } };\n});\n"
+      },
+      "id": "157d4ded-8105-5141-872f-505c01d00a2d",
+      "name": "Liste auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE automation.device_profile\nSET state = CASE WHEN $4 = 'yes' THEN 'queued' ELSE 'failed' END,\n    command_uuid = CASE WHEN $4 = 'yes' THEN $3 ELSE NULL END,\n    sent_at = now()\nWHERE enrollment_id = $1 AND profile_name = $2\nRETURNING enrollment_id, profile_name, state, $5::text AS detail",
+        "options": {
+          "queryReplacement": "={{ [$json.enrollment_id, $json.profile_name, $json.command_uuid, $json.ok, $json.detail] }}"
+        }
+      },
+      "id": "a19dd607-9f80-595a-8146-0c10b172a4ef",
+      "name": "Liste vermerken",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        6670,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const install = $('Ergebnis auswerten').first().json;\nlet listLine = 'Die Erlaubt-Liste ist unveraendert.';\nconst sentRows = $input.all().map((item) => item.json).filter((row) => row.enrollment_id);\nif (sentRows.length > 0) {\n  const failed = sentRows.filter((row) => row.state === 'failed');\n  listLine = 'Die Erlaubt-Liste wurde an ' + (sentRows.length - failed.length) + ' von ' + sentRows.length + ' iPad(s) gesendet' + (failed.length > 0 ? ', ' + failed.length + ' fehlgeschlagen' : '') + '.';\n}\nreturn [{ json: { title: install.good ? install.names + ' wird installiert' : 'Installation mit Problemen: ' + install.names, message: install.text + ' ' + listLine + ' Die Liste greift nur auf beaufsichtigten iPads.', priority: install.good ? 'default' : 'high' } }];\n"
+      },
+      "id": "618405ab-9c73-5df5-8881-ee4ffb165aab",
+      "name": "Meldung bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            },
+            {
+              "name": "Tags",
+              "value": "package"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.message }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "6eba0a70-8925-5fc0-ae9b-83e9e96ce36b",
+      "name": "Protokoll melden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7130,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: $('Meldung bauen').first().json }];\n"
+      },
+      "id": "261436c3-fedd-53cc-b458-9f70c2225ea4",
+      "name": "Meldung Ergebnis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7360,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const serial = $('Eingabe pruefen').first().json.serial;\nreturn [{ json: { title: 'Nichts installiert', message: serial ? 'Es gibt kein angemeldetes iPad mit der Seriennummer ' + serial + '.' : 'Es ist noch kein iPad angemeldet.' } }];\n"
+      },
+      "id": "4957f02e-5d87-5b1e-b4dc-21e731fc7af3",
+      "name": "Keine Geraete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7590,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return $input.all();\n"
+      },
+      "id": "7c1535bd-4764-5f7e-82b4-635d985f8ee7",
+      "name": "Meldung",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7820,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "={{ $('Meldung').first().json.title }}",
+        "completionMessage": "={{ $('Meldung').first().json.message }}",
+        "options": {}
+      },
+      "id": "5e8aa1fc-1e46-55e4-bfdd-beeeaa5cf27c",
+      "name": "Abschluss",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        8050,
+        300
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Formular App": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Eingabe pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingabe pruefen": {
+      "main": [
+        [
+          {
+            "node": "Eingabe gueltig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingabe gueltig?": {
+      "main": [
+        [
+          {
+            "node": "Neue App?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Neue App?": {
+      "main": [
+        [
+          {
+            "node": "App-Store abfragen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Katalog lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "App-Store abfragen": {
+      "main": [
+        [
+          {
+            "node": "App pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "App pruefen": {
+      "main": [
+        [
+          {
+            "node": "App gueltig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "App gueltig?": {
+      "main": [
+        [
+          {
+            "node": "App merken",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "App merken": {
+      "main": [
+        [
+          {
+            "node": "Katalog lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Katalog lesen": {
+      "main": [
+        [
+          {
+            "node": "Auswahl bestimmen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auswahl bestimmen": {
+      "main": [
+        [
+          {
+            "node": "App gefunden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "App gefunden?": {
+      "main": [
+        [
+          {
+            "node": "Geraete suchen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geraete suchen": {
+      "main": [
+        [
+          {
+            "node": "Lizenzdaten bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lizenzdaten bauen": {
+      "main": [
+        [
+          {
+            "node": "Geraete gefunden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geraete gefunden?": {
+      "main": [
+        [
+          {
+            "node": "Verfuegbare Lizenzen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Keine Geraete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verfuegbare Lizenzen": {
+      "main": [
+        [
+          {
+            "node": "Lizenzen pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lizenzen pruefen": {
+      "main": [
+        [
+          {
+            "node": "Lizenzierte Apps?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lizenzierte Apps?": {
+      "main": [
+        [
+          {
+            "node": "Lizenz zuweisen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Keine Lizenz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keine Lizenz": {
+      "main": [
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lizenz zuweisen": {
+      "main": [
+        [
+          {
+            "node": "Befehle bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Befehle bauen": {
+      "main": [
+        [
+          {
+            "node": "InstallApplication einreihen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "InstallApplication einreihen": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnis auswerten": {
+      "main": [
+        [
+          {
+            "node": "Erlaubt-Liste aktualisieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Erlaubt-Liste aktualisieren": {
+      "main": [
+        [
+          {
+            "node": "Liste beanspruchen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Liste beanspruchen": {
+      "main": [
+        [
+          {
+            "node": "Liste Befehle bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Liste Befehle bauen": {
+      "main": [
+        [
+          {
+            "node": "Liste zu senden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Liste zu senden?": {
+      "main": [
+        [
+          {
+            "node": "Liste einreihen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meldung bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Liste einreihen": {
+      "main": [
+        [
+          {
+            "node": "Liste auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Liste auswerten": {
+      "main": [
+        [
+          {
+            "node": "Liste vermerken",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Liste vermerken": {
+      "main": [
+        [
+          {
+            "node": "Meldung bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung bauen": {
+      "main": [
+        [
+          {
+            "node": "Protokoll melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Protokoll melden": {
+      "main": [
+        [
+          {
+            "node": "Meldung Ergebnis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung Ergebnis": {
+      "main": [
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keine Geraete": {
+      "main": [
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung": {
+      "main": [
+        [
+          {
+            "node": "Abschluss",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "Europe/Berlin"
+  },
+  "versionId": "33f7f4f8-4c7a-544f-83dc-8aa0d882582b",
+  "meta": {
+    "description": "Formular, das eine freigegebene App (Liste: automation.app_catalog, Start: ntfy, DLRG Trainer, Microsoft Teams), alle Apps der Liste oder eine neue kostenlose App per App-Store-ID installiert. Neue Apps werden ueber die iTunes-Lookup-API gepruefte (Name, Bundle-ID, kostenlos) und in den Katalog aufgenommen. Ablauf: Lizenz geraetegebunden zuweisen (POST /mdm/v2/assets/associate), InstallApplication (PurchaseMethod 1) einreihen, dann die Erlaubt-Liste (Profil app-allowlist, com.apple.applicationaccess allowListedAppBundleIDs) aus Systemapps plus Katalog neu berechnen und bei Aenderung an alle iPads senden. Die Liste greift nur auf beaufsichtigten Geraeten. Credentials: MDM Formulare, MDM NanoMDM API, MDM Automation DB, Apple Apps Token (Header Auth, Name Authorization, Wert Bearer <Server-Token aus Apple Business>), ntfy-publisher."
+  }
+}
