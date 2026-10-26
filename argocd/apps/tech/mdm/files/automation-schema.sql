@@ -56,6 +56,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA automation TO mdmau
 GRANT USAGE ON SCHEMA public TO mdmauto;
 GRANT SELECT (id, device_id, type, enabled, token_update_tally, last_seen_at) ON public.enrollments TO mdmauto;
 GRANT SELECT (id, serial_number) ON public.devices TO mdmauto;
+GRANT SELECT (id, command_uuid, status, result) ON public.command_results TO mdmauto;
 GRANT SELECT (topic, cert_pem, updated_at) ON public.push_certs TO mdmauto;
 
 INSERT INTO automation.setting (key, value)
