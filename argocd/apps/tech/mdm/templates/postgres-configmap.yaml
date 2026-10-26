@@ -26,6 +26,8 @@ data:
       -v depname="$DEP_NAME" \
       -v depprofile="$(sed "s|__ENROLL_URL__|$ENROLL_URL|" /init-files/dep-enrollment-profile.json)" \
       -v lockscreentemplate="$(cat /init-files/lockscreen.mobileconfig.tmpl)" \
+      -v allowlisttemplate="$(cat /init-files/app-allowlist.mobileconfig.tmpl)" \
+      -v wallpaperlocktemplate="$(cat /init-files/wallpaper-lock.mobileconfig.tmpl)" \
       -v lockscreentext="$LOCKSCREEN_TEXT" \
       -v profileprefix="$PROFILE_PREFIX" \
       --username nanomdm --dbname nanomdm -f /init-files/automation-schema.sql
@@ -46,5 +48,11 @@ data:
     {{- .Files.Get "files/automation-schema.sql" | nindent 4 }}
   lockscreen.mobileconfig.tmpl: |
     {{- .Files.Get "profiles/lockscreen.mobileconfig.tmpl" | nindent 4 }}
+  app-allowlist.mobileconfig.tmpl: |
+    {{- .Files.Get "profiles/app-allowlist.mobileconfig.tmpl" | nindent 4 }}
+  wallpaper-lock.mobileconfig.tmpl: |
+    {{- .Files.Get "profiles/wallpaper-lock.mobileconfig.tmpl" | nindent 4 }}
+binaryData:
+  ipad-wallpaper.png: {{ .Files.Get "profiles/ipad-wallpaper.png" | b64enc }}
   dep-enrollment-profile.json: |
     {{- .Files.Get "profiles/dep-enrollment-profile.json" | nindent 4 }}
