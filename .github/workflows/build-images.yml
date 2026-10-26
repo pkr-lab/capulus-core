@@ -12,6 +12,7 @@ on:
       - "argocd/apps/tech/carplay-api/src/**"
       - "argocd/apps/tech/carplay-api/.dockerignore"
       - "argocd/apps/tech/n8n/image/Dockerfile"
+      - "argocd/apps/tech/mdm/image/scep/Dockerfile"
       - "argocd/apps/tech/alert-caller/Dockerfile"
       - "argocd/apps/tech/alert-caller/.dockerignore"
       - "argocd/apps/tech/alert-caller/patches/**"
@@ -35,6 +36,7 @@ on:
       - "argocd/apps/tech/carplay-api/src/**"
       - "argocd/apps/tech/carplay-api/.dockerignore"
       - "argocd/apps/tech/n8n/image/Dockerfile"
+      - "argocd/apps/tech/mdm/image/scep/Dockerfile"
       - "argocd/apps/tech/alert-caller/Dockerfile"
       - "argocd/apps/tech/alert-caller/.dockerignore"
       - "argocd/apps/tech/alert-caller/patches/**"
@@ -52,7 +54,7 @@ on:
       app:
         description: "App neu bauen (all = alle drei, z.B. nach einem reinen Base-Image-Update ohne Dateiänderung)"
         type: choice
-        options: [all, pacman, carplay-api, n8n, isc-news-bot, alert-caller]
+        options: [all, pacman, carplay-api, n8n, isc-news-bot, alert-caller, mdm-scep]
         default: all
 
 permissions:
@@ -85,6 +87,11 @@ jobs:
             values: argocd/apps/tech/n8n/values.yaml
             dockerfile: argocd/apps/tech/n8n/image/Dockerfile
             image: ghcr.io/pkr-lab/n8n-custom
+          - app: mdm-scep
+            path: argocd/apps/tech/mdm/image/scep
+            values: argocd/apps/tech/mdm/values.yaml
+            dockerfile: argocd/apps/tech/mdm/image/scep/Dockerfile
+            image: ghcr.io/pkr-lab/mdm-scep
           - app: isc-news-bot
             path: argocd/apps/tech/isc-news-bot
             values: argocd/apps/tech/isc-news-bot/values.yaml

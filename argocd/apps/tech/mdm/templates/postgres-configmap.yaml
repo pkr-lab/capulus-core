@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mdm.fullname" . }}-postgres-init
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+data:
+  init.sh: |
+    #!/bin/sh
+    set -eu
+    psql -v ON_ERROR_STOP=1 \
+      -v nanomdmpw="$NANOMDM_DB_PASSWORD" \
+      -v nanodeppw="$NANODEP_DB_PASSWORD" \
+      -v mdmautopw="$AUTOMATION_DB_PASSWORD" \
+      --username "$POSTGRES_USER" --dbname postgres <<'EOSQL'
+    CREATE ROLE nanomdm LOGIN PASSWORD :'nanomdmpw';
+    CREATE ROLE nanodep LOGIN PASSWORD :'nanodeppw';
+    CREATE ROLE mdmauto LOGIN PASSWORD :'mdmautopw';
+    CREATE DATABASE nanomdm OWNER nanomdm;
+    CREATE DATABASE nanodep OWNER nanodep;
+    EOSQL
+    psql -v ON_ERROR_STOP=1 --username nanomdm --dbname nanomdm -f /init-files/nanomdm-schema.sql
+    psql -v ON_ERROR_STOP=1 --username nanodep --dbname nanodep -f /init-files/nanodep-schema.sql
+    psql -v ON_ERROR_STOP=1 \
+      -v depname="$DEP_NAME" \
+      -v depprofile="$(sed "s|__ENROLL_URL__|$ENROLL_URL|" /init-files/dep-enrollment-profile.json)" \
+      -v lockscreentemplate="$(cat /init-files/lockscreen.mobileconfig.tmpl)" \
+      -v lockscreentext="$LOCKSCREEN_TEXT" \
+      -v profileprefix="$PROFILE_PREFIX" \
+      --username nanomdm --dbname nanomdm -f /init-files/automation-schema.sql
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mdm.fullname" . }}-postgres-files
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+data:
+  nanomdm-schema.sql: |
+    {{- .Files.Get "files/nanomdm-schema.sql" | nindent 4 }}
+  nanodep-schema.sql: |
+    {{- .Files.Get "files/nanodep-schema.sql" | nindent 4 }}
+  automation-schema.sql: |
+    {{- .Files.Get "files/automation-schema.sql" | nindent 4 }}
+  lockscreen.mobileconfig.tmpl: |
+    {{- .Files.Get "profiles/lockscreen.mobileconfig.tmpl" | nindent 4 }}
+  dep-enrollment-profile.json: |
+    {{- .Files.Get "profiles/dep-enrollment-profile.json" | nindent 4 }}

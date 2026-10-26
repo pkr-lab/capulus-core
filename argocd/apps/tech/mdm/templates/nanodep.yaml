@@ -1,0 +1,145 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mdm.fullname" . }}-depserver
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "mdm.selectorLabels" (dict "ctx" . "component" "depserver") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mdm.selectorLabels" (dict "ctx" . "component" "depserver") | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "mdm.fullname" . }}
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "mdm.podSecurityContext" (dict "uid" 65532) | nindent 8 }}
+      containers:
+        - name: depserver
+          image: "{{ .Values.nanodep.image.repository }}:{{ .Values.nanodep.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            {{- include "mdm.containerSecurityContext" . | nindent 12 }}
+          env:
+            {{- include "mdm.secretEnv" (dict "name" "NANODEP_API" "secret" .Values.secrets.main.secretName "key" "nanodep-api-key") | nindent 12 }}
+            {{- include "mdm.secretEnv" (dict "name" "NANODEP_DB_PASSWORD" "secret" .Values.secrets.main.secretName "key" "nanodep-db-password") | nindent 12 }}
+            - name: NANODEP_LISTEN
+              value: ":{{ .Values.nanodep.port }}"
+            - name: NANODEP_STORAGE
+              value: pgsql
+            - name: NANODEP_STORAGE_DSN
+              value: "postgres://nanodep:$(NANODEP_DB_PASSWORD)@{{ include "mdm.dbHost" . }}:{{ .Values.postgres.port }}/nanodep?sslmode=disable"
+          ports:
+            - name: http
+              containerPort: {{ .Values.nanodep.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /version
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /version
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.nanodep.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mdm.fullname" . }}-depserver
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ .Values.nanodep.port }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    {{- include "mdm.selectorLabels" (dict "ctx" . "component" "depserver") | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mdm.fullname" . }}-depsyncer
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "mdm.selectorLabels" (dict "ctx" . "component" "depsyncer") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mdm.selectorLabels" (dict "ctx" . "component" "depsyncer") | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "mdm.fullname" . }}
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "mdm.podSecurityContext" (dict "uid" 65532) | nindent 8 }}
+      initContainers:
+        - name: wait-for-dep-token
+          image: {{ .Values.toolbox.image }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            {{- include "mdm.containerSecurityContext" . | nindent 12 }}
+          env:
+            {{- include "mdm.secretEnv" (dict "name" "NANODEP_API" "secret" .Values.secrets.main.secretName "key" "nanodep-api-key") | nindent 12 }}
+          command:
+            - sh
+            - -c
+            - |
+              auth="$(printf 'depserver:%s' "$NANODEP_API" | base64 | tr -d '\n')"
+              until wget -q -O /dev/null --header "Authorization: Basic $auth" "http://{{ include "mdm.fullname" . }}-depserver:{{ .Values.nanodep.port }}/v1/tokens/{{ .Values.nanodep.depName }}"; do
+                echo "DEP-Token fuer {{ .Values.nanodep.depName }} noch nicht hochgeladen"
+                sleep 30
+              done
+          resources:
+            {{- toYaml .Values.toolbox.resources | nindent 12 }}
+      containers:
+        - name: depsyncer
+          image: "{{ .Values.nanodep.image.repository }}:{{ .Values.nanodep.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            {{- include "mdm.containerSecurityContext" . | nindent 12 }}
+          command:
+            - /app/depsyncer
+          args:
+            - -storage=pgsql
+            - -storage-dsn=postgres://nanodep:$(NANODEP_DB_PASSWORD)@{{ include "mdm.dbHost" . }}:{{ .Values.postgres.port }}/nanodep?sslmode=disable
+            - -duration={{ .Values.nanodep.syncer.intervalSeconds }}
+            - -webhook-url=http://{{ .Values.automation.n8nService }}/webhook/mdm-dep-sync-$(WEBHOOK_TOKEN)
+            - {{ .Values.nanodep.depName }}
+          env:
+            {{- include "mdm.secretEnv" (dict "name" "NANODEP_DB_PASSWORD" "secret" .Values.secrets.main.secretName "key" "nanodep-db-password") | nindent 12 }}
+            {{- include "mdm.secretEnv" (dict "name" "WEBHOOK_TOKEN" "secret" .Values.secrets.main.secretName "key" "webhook-token") | nindent 12 }}
+          resources:
+            {{- toYaml .Values.nanodep.syncer.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

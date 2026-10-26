@@ -1,0 +1,20 @@
+---
+apiVersion: v2
+name: mdm
+description: Self-hosted Apple MDM for iPads (NanoMDM, NanoDEP, micromdm/scep, PostgreSQL).
+type: application
+version: 0.1.0
+appVersion: "0.9.0"
+keywords:
+  - mdm
+  - nanomdm
+  - nanodep
+  - scep
+  - ipad
+home: https://github.com/micromdm/nanomdm
+sources:
+  - https://github.com/micromdm/nanomdm
+  - https://github.com/micromdm/nanodep
+  - https://github.com/micromdm/scep
+maintainers:
+  - name: home-server-admin
