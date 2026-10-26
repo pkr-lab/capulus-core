@@ -11,7 +11,7 @@ autoscaling:
 image:
   repository: cloudflare/cloudflared
   pullPolicy: IfNotPresent
-  tag: "2026.9.3"
+  tag: "2026.10.3@sha256:faa8e0a1475f137c910be6025f43c8e4092fdd35461b31e19fd1390657a1ff39"
 
 nameOverride: ""
 fullnameOverride: ""
