@@ -11,7 +11,7 @@ RUN apk add --no-cache --root /chroot --initdb --no-scripts \
 
 WORKDIR /build/wwebjs
 RUN PUPPETEER_SKIP_DOWNLOAD=true PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    npm install whatsapp-web.js@1.34.7 qrcode@1.5.4 --omit=dev --legacy-peer-deps
+    npm install whatsapp-web.js@1.34.7 qrcode@1.5.4 pdfjs-dist@5.4.149 --omit=dev --legacy-peer-deps
 
 FROM n8nio/n8n:2.45.4@sha256:80e23ced901f0e22597d4f3464e3aaf9d835372262ea6f08ef760d8ca35df25c
 

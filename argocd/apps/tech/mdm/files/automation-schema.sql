@@ -75,6 +75,7 @@ VALUES ('lockscreen',
 
 INSERT INTO automation.app_catalog (adam_id, name, bundle_id, config)
 VALUES ('1625396347', 'ntfy', 'io.heckel.ntfy', '{}'::jsonb),
+       ('983156458', 'Microsoft Authenticator', 'com.microsoft.azureauthenticator', '{}'::jsonb),
        ('1659881569', 'DLRG Trainer', 'app.dlrg.trainer', '{}'::jsonb),
        ('1113153706', 'Microsoft Teams', 'com.microsoft.skype.teams', '{}'::jsonb),
        ('1137397744', 'Bitwarden Passwortmanager', 'com.8bit.bitwarden', jsonb_build_object('baseEnvironmentUrl', 'https://vault-tech.pke-lab.de'));
@@ -94,7 +95,72 @@ SELECT 'app-allowlist',
                      SELECT bundle_id FROM automation.app_catalog WHERE enabled) u
            )
        )
-FROM (SELECT '["com.apple.AppStore","com.apple.Preferences","com.apple.mobilesafari","com.apple.mobileslideshow","com.apple.DocumentsApp","com.apple.mobiletimer"]'::jsonb AS system_apps) s;
+FROM (SELECT '["com.apple.AppStore","com.apple.Preferences","com.apple.mobilesafari","com.apple.mobileslideshow","com.apple.DocumentsApp","com.apple.mobiletimer","com.apple.webapp"]'::jsonb AS system_apps) s;
+
+INSERT INTO automation.profile_state (name, template, params)
+VALUES ('app-blocklist',
+        :'blocklisttemplate',
+        jsonb_build_object(
+            'IDENTIFIER', :'profileprefix' || '.blocklist',
+            'PAYLOAD_UUID', 'a99aab28-4708-4ad2-95ad-ea69d91f5709',
+            'PROFILE_UUID', '91cb9a10-c975-4612-829d-c103c4e6a943',
+            'BLOCKED_APPS', jsonb_build_array('com.apple.mobilephone', 'com.apple.MobileSMS', 'com.apple.camera')
+        ));
+
+\set listsiconb64 `base64 -w0 /init-files/icon-lists.png`
+\set iscicon64 `base64 -w0 /init-files/icon-isc.png`
+
+INSERT INTO automation.profile_state (name, kind, enabled, template, params)
+VALUES ('webclip-isc', 'webclip', false,
+        :'webclipstemplate',
+        jsonb_build_object(
+            'IDENTIFIER', :'profileprefix' || '.webclip-isc',
+            'PROFILE_UUID', '6f14dd83-6a91-45ac-9feb-ceb7a143c437',
+            'PAYLOAD_UUID', 'eb6618f9-b9a9-4d39-ba40-0d0c9032d95d',
+            'LABEL', 'ISC',
+            'URL', 'https://dlrg.net/apps/training',
+            'ICON_B64', :'iscicon64'
+        )),
+       ('webclip-g1s1', 'webclip', false,
+        :'webclipstemplate',
+        jsonb_build_object(
+            'IDENTIFIER', :'profileprefix' || '.webclip-g1s1',
+            'PROFILE_UUID', '22c118c8-c35f-460c-858a-b842421340f9',
+            'PAYLOAD_UUID', '13544b16-2910-4628-8a40-8d887c694424',
+            'LABEL', 'G1 Stunde 1',
+            'URL', 'https://dlrgorg.sharepoint.com/:l:/r/sites/andernach.ausbildung-Ausbildungundco/Lists/Gruppe_1_Stunde_1?e=WGaw5f',
+            'ICON_B64', :'listsiconb64'
+        )),
+       ('webclip-g1s2', 'webclip', false,
+        :'webclipstemplate',
+        jsonb_build_object(
+            'IDENTIFIER', :'profileprefix' || '.webclip-g1s2',
+            'PROFILE_UUID', '520e9144-212d-4654-8b56-61b4a2cfca30',
+            'PAYLOAD_UUID', '0e8a22f9-a653-4ce0-ad5b-80d6ff0f340c',
+            'LABEL', 'G1 Stunde 2',
+            'URL', 'https://dlrgorg.sharepoint.com/:l:/r/sites/andernach.ausbildung-Ausbildungundco/Lists/Gruppe_1_Stunde_2?e=rdQeeo',
+            'ICON_B64', :'listsiconb64'
+        )),
+       ('webclip-g2s1', 'webclip', false,
+        :'webclipstemplate',
+        jsonb_build_object(
+            'IDENTIFIER', :'profileprefix' || '.webclip-g2s1',
+            'PROFILE_UUID', '7b232ed0-b0f6-411b-825c-d5a222b1aaf0',
+            'PAYLOAD_UUID', '6218f37f-b7fb-461e-bb28-137e4499f4e4',
+            'LABEL', 'G2 Stunde 1',
+            'URL', 'https://dlrgorg.sharepoint.com/:l:/r/sites/andernach.ausbildung/Lists/Gruppe_2_Stunde_1?e=xsV16J',
+            'ICON_B64', :'listsiconb64'
+        )),
+       ('webclip-g2s2', 'webclip', false,
+        :'webclipstemplate',
+        jsonb_build_object(
+            'IDENTIFIER', :'profileprefix' || '.webclip-g2s2',
+            'PROFILE_UUID', 'a866b6ae-5ed2-48f2-81b4-91fbd8457a62',
+            'PAYLOAD_UUID', '625142d8-5501-4bc1-b82e-635484359c38',
+            'LABEL', 'G2 Stunde 2',
+            'URL', 'https://dlrgorg.sharepoint.com/:l:/r/sites/andernach.ausbildung/Lists/Gruppe_2_Stunde_2?e=YLlhW9',
+            'ICON_B64', :'listsiconb64'
+        ));
 
 INSERT INTO automation.profile_state (name, template, params)
 VALUES ('wallpaper-lock',
