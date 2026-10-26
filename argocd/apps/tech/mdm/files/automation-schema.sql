@@ -31,6 +31,7 @@ CREATE TABLE automation.app_catalog (
     adam_id   text PRIMARY KEY,
     name      text NOT NULL,
     bundle_id text NOT NULL,
+    config    jsonb NOT NULL DEFAULT '{}'::jsonb,
     enabled   boolean NOT NULL DEFAULT true,
     added_at  timestamptz NOT NULL DEFAULT now()
 );
@@ -71,10 +72,11 @@ VALUES ('lockscreen',
             'PROFILE_UUID', 'e3907677-1014-4be8-931c-6591bdb064a2'
         ));
 
-INSERT INTO automation.app_catalog (adam_id, name, bundle_id)
-VALUES ('1625396347', 'ntfy', 'io.heckel.ntfy'),
-       ('1659881569', 'DLRG Trainer', 'app.dlrg.trainer'),
-       ('1113153706', 'Microsoft Teams', 'com.microsoft.skype.teams');
+INSERT INTO automation.app_catalog (adam_id, name, bundle_id, config)
+VALUES ('1625396347', 'ntfy', 'io.heckel.ntfy', '{}'::jsonb),
+       ('1659881569', 'DLRG Trainer', 'app.dlrg.trainer', '{}'::jsonb),
+       ('1113153706', 'Microsoft Teams', 'com.microsoft.skype.teams', '{}'::jsonb),
+       ('1137397744', 'Bitwarden Passwortmanager', 'com.8bit.bitwarden', jsonb_build_object('baseEnvironmentUrl', 'https://vault-tech.pke-lab.de'));
 
 INSERT INTO automation.profile_state (name, template, params)
 SELECT 'app-allowlist',
