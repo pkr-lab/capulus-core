@@ -1,0 +1,16 @@
+---
+apiVersion: v2
+name: ticket-gate
+description: >
+  Vorschaltdienst (Go, nur Standardbibliothek) für das Ticketformular von
+  www.edv-kretzer.de: bestätigt die E-Mail-Adresse per 6-stelligem Code und legt
+  das Ticket erst danach in Zammad an.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - zammad
+  - email-verification
+  - tickets
+maintainers:
+  - name: home-server-admin
