@@ -1,0 +1,719 @@
+{
+  "name": "MDM: Zeitzone setzen",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "basicAuth",
+        "formTitle": "Zeitzone der iPads setzen",
+        "formDescription": "Setzt die Zeitzone Berlin (Deutschland) auf allen beaufsichtigten iPads. Neu angemeldete iPads bekommen sie automatisch.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Seriennummer (leer = alle iPads)",
+              "fieldType": "text",
+              "requiredField": false
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "path": "mdm-zeitzone"
+        }
+      },
+      "id": "93dad7d2-2278-5ca9-a20f-e47321ae5000",
+      "name": "Formular Zeitzone",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        200
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Formulare"
+        }
+      },
+      "webhookId": "96225975-b430-5951-b5ec-0944dd989ed4"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "id": "174d4127-90ec-5bfd-b44f-b49e0ee28449",
+      "name": "Alle 10 Minuten",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const input = $('Formular Zeitzone').first().json;\nconst serial = String(input['Seriennummer (leer = alle iPads)'] || '').trim();\nif (serial.length > 40 || !/^[A-Za-z0-9]*$/.test(serial)) {\n  return [{ json: { ok: false, mode: 'manual', title: 'Nichts gesendet', message: 'Die Seriennummer darf nur Buchstaben und Ziffern enthalten.' } }];\n}\nreturn [{ json: { ok: true, mode: 'manual', serial } }];\n"
+      },
+      "id": "187e42f0-48c5-5c45-a9ca-f7fb03b1da39",
+      "name": "Eingabe pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: { ok: true, mode: 'auto', serial: '' } }];\n"
+      },
+      "id": "9b834f55-13c4-5f62-b21d-a77751e63c7f",
+      "name": "Zeitplan Start",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "89bd9b82-1008-580c-bb5b-5a8b703da021"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "c6ecfaa5-4de4-5c41-81a6-ea5f5709d7a7",
+      "name": "Eingabe gueltig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const input = $input.first().json;\nconst cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM',\n  timeZone: 'Europe/Berlin',\n  mode: input.mode,\n  serial: input.serial || ''\n};\nreturn [{ json: cfg }];\n"
+      },
+      "id": "24a20732-6ea8-5b29-8c55-65c4f0ceb873",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        690,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT e.id AS enrollment_id, d.serial_number FROM public.enrollments e JOIN public.devices d ON d.id = e.device_id WHERE e.type = 'Device' AND e.enabled AND ($1::text = '' OR d.serial_number = $1::text) AND ($2::text = 'manual' OR NOT EXISTS (SELECT 1 FROM automation.setting s WHERE s.key = 'zeitzone:' || e.id AND s.value = $3::text)) ORDER BY d.serial_number",
+        "options": {
+          "queryReplacement": "={{ [$('Konfiguration').first().json.serial, $('Konfiguration').first().json.mode, $('Konfiguration').first().json.timeZone] }}"
+        }
+      },
+      "id": "34a48b53-5cd5-5bbb-8275-2f3e8afee4b6",
+      "name": "Geraete suchen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        920,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst cfg = $('Konfiguration').first().json;\nconst rows = $input.all().map((item) => item.json).filter((row) => row.enrollment_id);\nif (rows.length === 0) return [{ json: { skip: true } }];\nreturn rows.map((row) => {\n  const commandUuid = crypto.randomUUID();\n  const plist = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n    + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n    + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n\\t\\t<key>RequestType</key>\\n\\t\\t<string>Settings</string>\\n'\n    + '\\t\\t<key>Settings</key>\\n\\t\\t<array>\\n\\t\\t\\t<dict>\\n\\t\\t\\t\\t<key>Item</key>\\n\\t\\t\\t\\t<string>TimeZone</string>\\n'\n    + '\\t\\t\\t\\t<key>TimeZone</key>\\n\\t\\t\\t\\t<string>' + cfg.timeZone + '</string>\\n\\t\\t\\t</dict>\\n\\t\\t</array>\\n'\n    + '\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>' + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\n  return { json: { skip: false, enrollment_id: row.enrollment_id, serial_number: row.serial_number, command_uuid: commandUuid, plist } };\n});\n"
+      },
+      "id": "dadb63ba-e23a-5ea3-b921-62a6f1c3600b",
+      "name": "Befehle bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1150,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "95de8038-aba1-5351-ae8a-07f1ff1ce367"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "596d1959-1120-5138-8c3d-cabda4b0dc85",
+      "name": "Befehle vorhanden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1380,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Konfiguration').first().json.nanomdmUrl }}/v1/enqueue/{{ $json.enrollment_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/xml",
+        "body": "={{ $json.plist }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "1ed9b0f3-9167-5088-8f13-f192bead7a8b",
+      "name": "Zeitzone einreihen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1610,
+        200
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoMDM API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const sent = $('Befehle bauen').all().map((item) => item.json).filter((row) => !row.skip);\nreturn $input.all().map((response, index) => {\n  const source = sent[index];\n  const body = response.json.body || {};\n  const queued = body.command_uuid === source.command_uuid;\n  const results = Object.values(body.status || {});\n  const pushError = results.map((entry) => entry.push_error).filter(Boolean).join('; ');\n  const detail = queued ? pushError : String(response.json.statusCode || response.json.error || 'keine Antwort');\n  return { json: { enrollment_id: source.enrollment_id, serial_number: source.serial_number, command_uuid: source.command_uuid, ok: queued ? 'yes' : 'no', detail } };\n});\n"
+      },
+      "id": "abc4f84f-af36-5978-802d-e20d140e238d",
+      "name": "Ergebnis auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH marked AS (\n  INSERT INTO automation.setting (key, value)\n  SELECT 'zeitzone:' || $1::text, $5::text WHERE $4::text = 'yes'\n  ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()\n  RETURNING key\n)\nSELECT $1::text AS enrollment_id, $2::text AS serial_number, CASE WHEN $4::text = 'yes' THEN 'queued' ELSE 'failed' END AS state, $3::text AS command_uuid",
+        "options": {
+          "queryReplacement": "={{ [$json.enrollment_id, $json.serial_number, $json.command_uuid, $json.ok, $('Konfiguration').first().json.timeZone] }}"
+        }
+      },
+      "id": "6f4d9c72-a5a9-5af3-90c7-d39d49f5c49f",
+      "name": "Status vermerken",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2070,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = $('Konfiguration').first().json;\nconst rows = $input.all().map((item) => item.json).filter((row) => row.enrollment_id);\nconst failed = rows.filter((row) => row.state === 'failed');\nconst names = rows.map((row) => row.serial_number || row.enrollment_id).join(', ');\nconst text = 'Zeitzone ' + cfg.timeZone + ' (Berlin, Deutschland): ' + (rows.length - failed.length) + ' von ' + rows.length + ' iPad(s) haben den Befehl erhalten' + (failed.length > 0 ? ', ' + failed.length + ' fehlgeschlagen' : '') + ' (' + names + '). Das wirkt nur auf beaufsichtigten iPads; die Zeitzone ist danach nicht mehr automatisch.';\nconst auto = cfg.mode === 'auto';\nreturn [{ json: { silent: auto && failed.length === 0, title: failed.length > 0 ? 'Zeitzone mit Fehlern gesendet' : 'Zeitzone gesendet', message: text, priority: failed.length > 0 ? 'high' : 'default' } }];\n"
+      },
+      "id": "38fb4368-fba9-5563-a61d-3d8087da70ba",
+      "name": "Meldung bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2300,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.silent !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "51eb7213-46ee-5228-a83f-d6571a8a043e"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "5b1d50cf-18b8-5cdd-8957-269a73ad7d25",
+      "name": "Melden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2530,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority || 'default' }}"
+            },
+            {
+              "name": "Tags",
+              "value": "alarm_clock"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.message }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "52d83abf-d734-5c26-a9b9-0d57b8f3f264",
+      "name": "Protokoll melden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2760,
+        120
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: $('Meldung bauen').first().json }];\n"
+      },
+      "id": "ac707275-ab0f-5dc6-9427-7194df2a5f70",
+      "name": "Meldung Ergebnis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2990,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = $('Konfiguration').first().json;\nconst auto = cfg.mode === 'auto';\nreturn [{ json: {\n  silent: auto,\n  title: 'Zeitzone nicht gesendet',\n  message: cfg.serial ? 'Es wurde kein angemeldetes iPad mit der Seriennummer ' + cfg.serial + ' gefunden.' : 'Es gibt keine iPads, die noch die Zeitzone bekommen muessen.'\n} }];\n"
+      },
+      "id": "821b2a5a-dada-5b28-a702-675f1e809240",
+      "name": "Keine Geraete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1610,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "let manual = false;\ntry {\n  manual = $('Eingabe pruefen').all().length > 0;\n} catch (e) {\n  manual = false;\n}\nreturn $input.all().map((item) => ({ json: { ...item.json, manual } }));\n"
+      },
+      "id": "e0b1b942-6537-5d11-b1c9-fd583a3b84f6",
+      "name": "Meldung",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.manual }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "070a7910-4336-5dde-b987-f3de38720de2"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "6d88a2ef-f525-5d05-89cb-377853f7fe36",
+      "name": "Manuell?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "={{ $('Meldung').first().json.title }}",
+        "completionMessage": "={{ $('Meldung').first().json.message }}",
+        "options": {}
+      },
+      "id": "a23af63e-001a-5935-9336-d2966a134747",
+      "name": "Abschluss",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        3680,
+        220
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Formular Zeitzone": {
+      "main": [
+        [
+          {
+            "node": "Eingabe pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alle 10 Minuten": {
+      "main": [
+        [
+          {
+            "node": "Zeitplan Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingabe pruefen": {
+      "main": [
+        [
+          {
+            "node": "Eingabe gueltig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zeitplan Start": {
+      "main": [
+        [
+          {
+            "node": "Eingabe gueltig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingabe gueltig?": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Geraete suchen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geraete suchen": {
+      "main": [
+        [
+          {
+            "node": "Befehle bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Befehle bauen": {
+      "main": [
+        [
+          {
+            "node": "Befehle vorhanden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Befehle vorhanden?": {
+      "main": [
+        [
+          {
+            "node": "Zeitzone einreihen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Keine Geraete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zeitzone einreihen": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnis auswerten": {
+      "main": [
+        [
+          {
+            "node": "Status vermerken",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status vermerken": {
+      "main": [
+        [
+          {
+            "node": "Meldung bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung bauen": {
+      "main": [
+        [
+          {
+            "node": "Melden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Melden?": {
+      "main": [
+        [
+          {
+            "node": "Protokoll melden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Protokoll melden": {
+      "main": [
+        [
+          {
+            "node": "Meldung Ergebnis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung Ergebnis": {
+      "main": [
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keine Geraete": {
+      "main": [
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung": {
+      "main": [
+        [
+          {
+            "node": "Manuell?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manuell?": {
+      "main": [
+        [
+          {
+            "node": "Abschluss",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "Europe/Berlin"
+  },
+  "versionId": "f72e7fe7-7173-5510-a28b-673c050f7eb9",
+  "meta": {
+    "description": "Setzt die Zeitzone Europe/Berlin (iOS-Anzeige Berlin, Deutschland) auf den iPads per MDM-Befehl Settings/TimeZone. Das Formular sendet an alle iPads oder an eine Seriennummer. Alle 10 Minuten holt der Zeitplan neu angemeldete iPads nach; erledigte Geraete stehen in automation.setting (Schluessel zeitzone:<Enrollment-ID>), das Formular sendet immer erneut. Der Befehl wirkt nur auf beaufsichtigten iPads ab iPadOS 14, schaltet dort die automatische Zeitzone ab und scheitert, wenn die Einschraenkung forceAutomaticDateAndTime gesetzt ist. Credentials: MDM Formulare, MDM NanoMDM API, MDM Automation DB, ntfy-publisher."
+  }
+}

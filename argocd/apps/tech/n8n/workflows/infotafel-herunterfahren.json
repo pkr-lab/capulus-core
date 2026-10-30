@@ -1,0 +1,182 @@
+{
+  "name": "Infotafel: Herunterfahren",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "15 19 * * 4"
+            }
+          ]
+        }
+      },
+      "id": "f79c63b2-4f7d-52d6-a6e3-54ce461f8f30",
+      "name": "Donnerstag 19:15",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = {\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-System'\n};\nreturn [{ json: cfg }];\n"
+      },
+      "id": "0e52a7a1-92c8-510e-bb8c-680a83169c3b",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "privateKey",
+        "command": "sudo /usr/bin/systemctl poweroff"
+      },
+      "id": "7f3845cf-9c8c-5a26-bb8d-e3c691127d7c",
+      "name": "Herunterfahren per SSH",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "sshPrivateKey": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "SSH Infotafel (Herunterfahren)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const result = $input.first().json;\nconst failed = !!result.error || (result.code !== undefined && result.code !== 0);\nconst detail = String(result.stderr || result.error || '').trim();\nreturn [{ json: {\n  title: failed ? 'Infotafel nicht heruntergefahren' : 'Infotafel wird heruntergefahren',\n  message: failed\n    ? 'Der SSH-Befehl zum Herunterfahren ist fehlgeschlagen' + (detail ? ': ' + detail : ' (Rueckgabecode ' + result.code + ')') + '. Ist die Infotafel online und der n8n-Key freigeschaltet (Ansible-Rolle infotafel_poweroff)?'\n    : 'Der Befehl zum Herunterfahren wurde an die Infotafel gesendet.',\n  priority: failed ? 'high' : 'default',\n  tags: failed ? 'warning' : 'zzz'\n} }];\n"
+      },
+      "id": "ac962b83-e22a-5895-b955-476fd221c06e",
+      "name": "Ergebnis auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        690,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            },
+            {
+              "name": "Tags",
+              "value": "={{ $json.tags }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.message }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "901bcdf8-b6f1-5ac1-bff3-3e6316da6348",
+      "name": "Protokoll melden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Donnerstag 19:15": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Herunterfahren per SSH",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Herunterfahren per SSH": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnis auswerten": {
+      "main": [
+        [
+          {
+            "node": "Protokoll melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "Europe/Berlin"
+  },
+  "versionId": "71b7f71b-0d12-5dd8-b4a2-3e299c5d2b56",
+  "meta": {
+    "description": "Jeden Donnerstag um 19:15 Uhr (Europe/Berlin) faehrt der Workflow die Infotafel (Raspberry Pi, Tailscale 100.105.105.92) per SSH herunter. Der Key im Credential SSH Infotafel (Herunterfahren) ist auf dem Pi per forced command auf sudo /usr/bin/systemctl poweroff beschraenkt (Ansible-Rolle infotafel_poweroff). Ein heruntergefahrener Pi muss per Stromtrennung oder Zeitschaltuhr wieder gestartet werden. Ergebnis und Fehler gehen per ntfy an Home-Lab-System. Credentials: SSH Infotafel (Herunterfahren), ntfy-publisher."
+  }
+}

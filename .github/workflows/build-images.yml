@@ -15,6 +15,7 @@ on:
       - "argocd/apps/tech/ticket-gate/src/**"
       - "argocd/apps/tech/ticket-gate/.dockerignore"
       - "argocd/apps/tech/n8n/image/Dockerfile"
+      - "argocd/apps/tech/mdm/image/scep/Dockerfile"
       - "argocd/apps/tech/alert-caller/Dockerfile"
       - "argocd/apps/tech/alert-caller/.dockerignore"
       - "argocd/apps/tech/alert-caller/patches/**"
@@ -41,6 +42,7 @@ on:
       - "argocd/apps/tech/ticket-gate/src/**"
       - "argocd/apps/tech/ticket-gate/.dockerignore"
       - "argocd/apps/tech/n8n/image/Dockerfile"
+      - "argocd/apps/tech/mdm/image/scep/Dockerfile"
       - "argocd/apps/tech/alert-caller/Dockerfile"
       - "argocd/apps/tech/alert-caller/.dockerignore"
       - "argocd/apps/tech/alert-caller/patches/**"
@@ -96,6 +98,11 @@ jobs:
             values: argocd/apps/tech/n8n/values.yaml
             dockerfile: argocd/apps/tech/n8n/image/Dockerfile
             image: ghcr.io/pkr-lab/n8n-custom
+          - app: mdm-scep
+            path: argocd/apps/tech/mdm/image/scep
+            values: argocd/apps/tech/mdm/values.yaml
+            dockerfile: argocd/apps/tech/mdm/image/scep/Dockerfile
+            image: ghcr.io/pkr-lab/mdm-scep
           - app: isc-news-bot
             path: argocd/apps/tech/isc-news-bot
             values: argocd/apps/tech/isc-news-bot/values.yaml
@@ -152,7 +159,7 @@ jobs:
 
       - name: Log in to GHCR
         if: steps.gate.outputs.build == 'true' && github.event_name != 'pull_request'
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}

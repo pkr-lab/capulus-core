@@ -4,7 +4,7 @@ replicaCount: 0
 image:
   repository: ollama/ollama
   pullPolicy: IfNotPresent
-  tag: "0.35.1"
+  tag: "0.40.11@sha256:dea72d1e22270fe095b68fdf756d2b489d615643c5a2eaebbc5f569181e322d8"
 
 nameOverride: ""
 fullnameOverride: ""

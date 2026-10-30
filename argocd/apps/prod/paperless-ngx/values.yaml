@@ -4,10 +4,10 @@ replicaCount: 1
 image:
   repository: ghcr.io/paperless-ngx/paperless-ngx
   pullPolicy: IfNotPresent
-  tag: "3.2.1"
+  tag: "3.3.4@sha256:9bc6e8248891bcfa6f52fffe8b81e4ea8cae75790c3ec1b9906961a7ba55c969"
 
 redis:
-  image: redis:8-alpine
+  image: redis:8-alpine@sha256:0bf6577d7774e592b29d093e3ac9390eb91e13d72c21e506afce736de5e0eeb0
   resources:
     requests:
       cpu: 25m
