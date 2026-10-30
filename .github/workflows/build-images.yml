@@ -11,6 +11,9 @@ on:
       - "argocd/apps/tech/carplay-api/Dockerfile"
       - "argocd/apps/tech/carplay-api/src/**"
       - "argocd/apps/tech/carplay-api/.dockerignore"
+      - "argocd/apps/tech/ticket-gate/Dockerfile"
+      - "argocd/apps/tech/ticket-gate/src/**"
+      - "argocd/apps/tech/ticket-gate/.dockerignore"
       - "argocd/apps/tech/n8n/image/Dockerfile"
       - "argocd/apps/tech/mdm/image/scep/Dockerfile"
       - "argocd/apps/tech/alert-caller/Dockerfile"
@@ -35,6 +38,9 @@ on:
       - "argocd/apps/tech/carplay-api/Dockerfile"
       - "argocd/apps/tech/carplay-api/src/**"
       - "argocd/apps/tech/carplay-api/.dockerignore"
+      - "argocd/apps/tech/ticket-gate/Dockerfile"
+      - "argocd/apps/tech/ticket-gate/src/**"
+      - "argocd/apps/tech/ticket-gate/.dockerignore"
       - "argocd/apps/tech/n8n/image/Dockerfile"
       - "argocd/apps/tech/mdm/image/scep/Dockerfile"
       - "argocd/apps/tech/alert-caller/Dockerfile"
@@ -54,7 +60,7 @@ on:
       app:
         description: "App neu bauen (all = alle drei, z.B. nach einem reinen Base-Image-Update ohne Dateiänderung)"
         type: choice
-        options: [all, pacman, carplay-api, n8n, isc-news-bot, alert-caller, mdm-scep]
+        options: [all, pacman, carplay-api, ticket-gate, n8n, isc-news-bot, alert-caller]
         default: all
 
 permissions:
@@ -82,6 +88,11 @@ jobs:
             values: argocd/apps/tech/carplay-api/values.yaml
             dockerfile: argocd/apps/tech/carplay-api/Dockerfile
             image: ghcr.io/pkr-lab/carplay-api
+          - app: ticket-gate
+            path: argocd/apps/tech/ticket-gate
+            values: argocd/apps/tech/ticket-gate/values.yaml
+            dockerfile: argocd/apps/tech/ticket-gate/Dockerfile
+            image: ghcr.io/pkr-lab/ticket-gate
           - app: n8n
             path: argocd/apps/tech/n8n/image
             values: argocd/apps/tech/n8n/values.yaml

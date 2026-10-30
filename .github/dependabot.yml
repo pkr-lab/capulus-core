@@ -5,6 +5,7 @@ updates:
     directories:
       - "/argocd/apps/tech/pacman/server"
       - "/argocd/apps/tech/carplay-api/src"
+      - "/argocd/apps/tech/ticket-gate/src"
     schedule:
       interval: weekly
     open-pull-requests-limit: 0
