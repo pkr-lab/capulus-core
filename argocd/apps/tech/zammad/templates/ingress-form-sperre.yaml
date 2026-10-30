@@ -1,0 +1,29 @@
+{{- if .Values.formSperre.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: zammad-form-sperre
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zammad-wrapper.labels" . | nindent 4 }}
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.middlewares: {{ .Release.Namespace }}-zammad-form-sperre@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    {{- range .Values.formSperre.hosts }}
+    - host: {{ . | quote }}
+      http:
+        paths:
+          {{- range $.Values.formSperre.paths }}
+          - path: {{ . }}
+            pathType: Prefix
+            backend:
+              service:
+                name: zammad-nginx
+                port:
+                  number: 8080
+          {{- end }}
+    {{- end }}
+{{- end }}

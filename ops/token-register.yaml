@@ -749,3 +749,48 @@
     overlap: true
   owner: peter
   blast_radius: "Fine-grained Token mit Actions: Read and write nur auf pkr-lab/EDV-Kretzer. Kann dort Workflows starten (Status-Hinweis, damit auch das Deployment nach netcup), sonst nichts."
+
+- id: ticket-gate-hmac-secret
+  service: ticket-gate
+  kind: encryption-key
+  stored_in:
+    - argocd/apps/tech/ticket-gate/templates/sealedsecret.yaml
+  issued: "2026-10-30"
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: scripted
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300r0-ticket-gate.md#rotation
+    overlap: false
+  owner: peter
+  blast_radius: "Schluessel fuer Codes, Sessions und Verifikations-Token. Bei Rotation werden offene Sessions und Codes ungueltig."
+
+- id: ticket-gate-smtp-password
+  service: ticket-gate
+  kind: password
+  stored_in:
+    - argocd/apps/tech/ticket-gate/templates/sealedsecret.yaml
+  issued: "2026-10-30"
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300r0-ticket-gate.md#rotation
+    overlap: false
+  owner: peter
+  blast_radius: "Mailkonto info@edv-kretzer.de bei netcup (Versand der Bestaetigungscodes)."
+
+- id: ticket-gate-zammad-token
+  service: ticket-gate
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/ticket-gate/templates/sealedsecret.yaml
+  issued: "2026-10-30"
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300r0-ticket-gate.md#rotation
+    overlap: true
+  owner: peter
+  blast_radius: "Zammad-API mit Agent-Rechten: kann Tickets anlegen und lesen."

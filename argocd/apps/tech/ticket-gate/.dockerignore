@@ -1,0 +1,5 @@
+templates/
+values.yaml
+Chart.yaml
+README.md
+.git
