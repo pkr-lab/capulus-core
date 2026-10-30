@@ -1,0 +1,386 @@
+{
+  "name": "MDM: Apps aufraeumen auswerten",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "e484c046-cabe-5d25-9dce-b8ae34e0c0a4",
+      "name": "Alle 5 Minuten",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM'\n};\nreturn [{ json: cfg }];\n"
+      },
+      "id": "a34de814-3000-57b2-854c-00e441d92172",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT params->'ALLOWED_APPS' AS allowed FROM automation.profile_state WHERE name = 'app-allowlist'",
+        "options": {}
+      },
+      "id": "cbb4e182-7eb8-51da-8488-d3cf3af8118a",
+      "name": "Erlaubt-Liste lesen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH done AS (\n  UPDATE automation.setting s\n  SET value = 'fertig:' || now()::text, updated_at = now()\n  FROM public.command_results r\n  WHERE s.key LIKE 'aufraeumen:%' AND s.value LIKE 'inventur:%'\n    AND r.id = substring(s.key from 12) AND r.command_uuid = substring(s.value from 10)\n    AND r.status IN ('Acknowledged', 'Error', 'CommandFormatError')\n    AND EXISTS (SELECT 1 FROM automation.profile_state p WHERE p.name = 'app-allowlist' AND p.params->'ALLOWED_APPS' @> '[\"com.apple.Preferences\",\"com.apple.AppStore\"]'::jsonb)\n  RETURNING substring(s.key from 12) AS enrollment_id, r.status, r.result\n)\nSELECT done.enrollment_id, done.status, done.result, d.serial_number FROM done JOIN public.enrollments e ON e.id = done.enrollment_id JOIN public.devices d ON d.id = e.device_id",
+        "options": {}
+      },
+      "id": "61f5fb3b-3401-51ba-a7d6-336023737c58",
+      "name": "Inventuren abholen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        690,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst head = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n  + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n  + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n';\nconst tail = (commandUuid) => '\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>' + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\nconst escapeXml = (value) => String(value)\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;');\nconst rows = $input.all().map((item) => item.json).filter((row) => row.enrollment_id);\nif (rows.length === 0) return [{ json: { skip: true, silent: true } }];\nconst allowedRaw = $('Erlaubt-Liste lesen').first().json.allowed;\nconst allowed = new Set(Array.isArray(allowedRaw) ? allowedRaw : (typeof allowedRaw === 'string' ? JSON.parse(allowedRaw) : []));\nif (!allowed.has('com.apple.Preferences') || !allowed.has('com.apple.AppStore')) {\n  return [{ json: { skip: true, silent: false, priority: 'high', title: 'Aufraeumen abgebrochen', message: 'Die Erlaubt-Liste (Profil app-allowlist) ist unvollstaendig, es wurde nichts entfernt.' } }];\n}\nconst unescapeXml = (value) => value.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '\"').replace(/&apos;/g, \"'\").replace(/&amp;/g, '&');\nconst parseApps = (plist) => {\n  const apps = [];\n  const dicts = String(plist).match(/<dict>(?:(?!<dict>)[\\s\\S])*?<\\/dict>/g) || [];\n  for (const dict of dicts) {\n    const id = dict.match(/<key>Identifier<\\/key>\\s*<string>([^<]+)<\\/string>/);\n    if (!id) continue;\n    const name = dict.match(/<key>Name<\\/key>\\s*<string>([^<]*)<\\/string>/);\n    apps.push({ id: unescapeXml(id[1]), name: name ? unescapeXml(name[1]) : unescapeXml(id[1]) });\n  }\n  return apps;\n};\nconst notRemovable = new Set(['com.apple.camera', 'com.apple.mobilephone', 'com.apple.MobileSMS']);\nconst commands = [];\nconst issues = [];\nconst checked = [];\nfor (const row of rows) {\n  const serial = row.serial_number || row.enrollment_id;\n  if (row.status !== 'Acknowledged') {\n    issues.push(serial + ': Inventur fehlgeschlagen (' + row.status + ')');\n    continue;\n  }\n  const apps = parseApps(row.result);\n  if (apps.length === 0) {\n    issues.push(serial + ': keine App-Liste empfangen');\n    continue;\n  }\n  checked.push(serial);\n  for (const app of apps.filter((entry) => !allowed.has(entry.id) && !notRemovable.has(entry.id))) {\n    const commandUuid = crypto.randomUUID();\n    const plist = head\n      + '\\t\\t<key>Identifier</key>\\n\\t\\t<string>' + escapeXml(app.id) + '</string>\\n'\n      + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>RemoveApplication</string>\\n'\n      + tail(commandUuid);\n    commands.push({ json: { skip: false, enrollment_id: row.enrollment_id, serial_number: serial, app: app.name, bundle_id: app.id, command_uuid: commandUuid, plist, issues, checked } });\n  }\n}\nif (commands.length === 0) {\n  const lines = [];\n  if (checked.length > 0) lines.push('Auf ' + checked.join(', ') + ' ist nichts ausserhalb der Erlaubt-Liste installiert.');\n  if (issues.length > 0) lines.push('Probleme: ' + issues.join('; ') + '.');\n  return [{ json: { skip: true, silent: false, priority: issues.length > 0 ? 'high' : 'default', title: issues.length > 0 ? 'Aufraeumen mit Problemen' : 'iPads sind aufgeraeumt', message: lines.join(' ') } }];\n}\nreturn commands;\n"
+      },
+      "id": "61a78791-e15e-5457-946d-7916937beacc",
+      "name": "Entfernen bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        920,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "819d7c5b-2b93-5ac6-ba12-4b6d8f33b3dd"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "1c87e23a-6f53-5cd8-b64b-a2f289a882f4",
+      "name": "Entfernen noetig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1150,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Konfiguration').first().json.nanomdmUrl }}/v1/enqueue/{{ $json.enrollment_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/xml",
+        "body": "={{ $json.plist }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "f0a85534-b123-5058-88c1-7230b45b675e",
+      "name": "Entfernen einreihen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1380,
+        200
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoMDM API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const built = $('Entfernen bauen').all().map((item) => item.json);\nif (built[0].skip === true) {\n  return [{ json: { silent: built[0].silent === true, title: built[0].title, message: built[0].message, priority: built[0].priority || 'default' } }];\n}\nconst results = $input.all().map((response, index) => {\n  const source = built[index];\n  const body = response.json.body || {};\n  const queued = body.command_uuid === source.command_uuid;\n  return { serial: source.serial_number, app: source.app, queued, detail: queued ? '' : String(response.json.statusCode || response.json.error || 'keine Antwort') };\n});\nconst failed = results.filter((row) => !row.queued);\nconst bySerial = {};\nfor (const row of results.filter((entry) => entry.queued)) (bySerial[row.serial] = bySerial[row.serial] || []).push(row.app);\nconst lines = [];\nfor (const serial of Object.keys(bySerial)) lines.push(serial + ': ' + bySerial[serial].join(', ') + ' (' + bySerial[serial].length + ').');\nconst issues = built[0].issues || [];\nconst lead = 'Zum Entfernen eingereiht: ' + (lines.join(' ') || 'nichts') ;\nconst extra = [];\nif (failed.length > 0) extra.push('Nicht eingereiht: ' + failed.map((row) => row.serial + '/' + row.app + ' (' + row.detail + ')').join(', ') + '.');\nif (issues.length > 0) extra.push('Probleme: ' + issues.join('; ') + '.');\nconst good = failed.length === 0 && issues.length === 0;\nreturn [{ json: { silent: false, title: good ? 'Apps werden entfernt' : 'Apps entfernen mit Problemen', message: [lead].concat(extra).join(' '), priority: good ? 'default' : 'high' } }];\n"
+      },
+      "id": "35a41405-9ac1-5db5-b9d9-6fcfd712172d",
+      "name": "Ergebnis auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1610,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.silent !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "ac35e519-4348-5503-8584-ee186d223f8c"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "7bb70ed3-3053-591d-b831-7c30d54c68d2",
+      "name": "Melden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1840,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            },
+            {
+              "name": "Tags",
+              "value": "broom"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.message }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "ef3e3276-2df2-590c-917e-e1808ec81319",
+      "name": "Protokoll melden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2070,
+        100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Alle 5 Minuten": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Erlaubt-Liste lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Erlaubt-Liste lesen": {
+      "main": [
+        [
+          {
+            "node": "Inventuren abholen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inventuren abholen": {
+      "main": [
+        [
+          {
+            "node": "Entfernen bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entfernen bauen": {
+      "main": [
+        [
+          {
+            "node": "Entfernen noetig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entfernen noetig?": {
+      "main": [
+        [
+          {
+            "node": "Entfernen einreihen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ergebnis auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entfernen einreihen": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnis auswerten": {
+      "main": [
+        [
+          {
+            "node": "Melden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Melden?": {
+      "main": [
+        [
+          {
+            "node": "Protokoll melden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "Europe/Berlin"
+  },
+  "meta": {
+    "description": "Alle 5 Minuten: holt, falls ueber das Formular eine Inventur angefordert wurde, die Antworten auf InstalledApplicationList (nanomdm command_results), vergleicht mit der Erlaubt-Liste (Profil app-allowlist: Systemapps plus Katalog) und reiht fuer alles Uebrige RemoveApplication ein. Das Ergebnis geht per ntfy an Home-Lab-MDM. Bricht ab, wenn die Erlaubt-Liste leer oder unvollstaendig ist. Credentials: MDM Automation DB, MDM NanoMDM API, ntfy-publisher."
+  },
+  "pinData": {},
+  "active": false
+}

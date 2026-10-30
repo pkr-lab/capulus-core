@@ -1,0 +1,459 @@
+{
+  "name": "MDM: Neues Geraet -> Basisprofile",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mdm-event-__WEBHOOK_TOKEN__",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "5bb8e282-022f-5b33-9b32-256717ea8350",
+      "name": "MDM-Event",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "929a4230-a13c-5ac5-beed-1b045f1a2970"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  depserverUrl: 'http://mdm-depserver.mdm.svc.cluster.local:9001',\n  scepUrl: 'http://mdm-scep.mdm.svc.cluster.local:8080',\n  publicHost: 'mdm-prod.pke-lab.de',\n  depName: 'capulus',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM',\n  vmUrl: 'http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428',\n  n8nUrl: 'https://n8n.prod.homeserver'\n};\nreturn [{ json: cfg }];\n"
+      },
+      "id": "7db1609f-e7aa-52c2-8470-841965ff3f7c",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const body = $('MDM-Event').first().json.body || {};\nif (body.topic === 'mdm.TokenUpdate') {\n  const ids = (body.checkin_event || {}).ids || {};\n  if (ids.type !== 'Device' || !ids.id) return [];\n  return [{ json: { kind: 'token', enrollment_id: ids.id } }];\n}\nif (body.topic === 'mdm.Connect') {\n  const event = body.acknowledge_event || {};\n  if (!event.command_uuid || !['Acknowledged', 'Error', 'CommandFormatError'].includes(event.status)) return [];\n  return [{ json: { kind: 'ack', command_uuid: event.command_uuid, status: event.status } }];\n}\nreturn [];\n"
+      },
+      "id": "921064e3-1451-5246-9f47-c06e02bb6f1f",
+      "name": "Event auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.kind === 'token' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "e77213ef-92af-52e3-98d6-c2677067a057"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "d6667c67-ee9a-58e9-b337-4f1ad7c54f52",
+      "name": "Ist TokenUpdate?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH claimed AS (\n  INSERT INTO automation.device_profile AS d (enrollment_id, profile_name, version, state, claimed_at)\n  SELECT $1, p.name, p.version, 'claimed', now()\n  FROM automation.profile_state p\n  WHERE p.enabled\n    AND EXISTS (SELECT 1 FROM public.enrollments e WHERE e.id = $1 AND e.enabled)\n  ON CONFLICT (enrollment_id, profile_name) DO UPDATE\n    SET version = EXCLUDED.version, state = 'claimed', claimed_at = now(), command_uuid = NULL, sent_at = NULL\n    WHERE d.version < EXCLUDED.version\n       OR d.state = 'failed'\n       OR (d.state = 'claimed' AND d.claimed_at < now() - interval '10 minutes')\n  RETURNING d.enrollment_id, d.profile_name, d.version\n)\nSELECT c.enrollment_id, c.profile_name, c.version, p.kind, p.template, p.params\nFROM claimed c JOIN automation.profile_state p ON p.name = c.profile_name\nORDER BY (p.kind <> 'wallpaper'), c.profile_name",
+        "options": {
+          "queryReplacement": "={{ [$json.enrollment_id] }}"
+        }
+      },
+      "id": "3113719f-7f5c-5a43-a83f-faf360efb282",
+      "name": "Profile beanspruchen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        900,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst claimed = $input.all().map((item) => item.json).filter((row) => row.profile_name);\nif (claimed.length === 0) return [{ json: { skip: true } }];\nconst escapeXml = (value) => String(value)\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;');\nreturn claimed.map((row) => {\n  const params = typeof row.params === 'string' ? JSON.parse(row.params) : row.params;\n  let profile = row.template;\n  for (const [key, value] of Object.entries(params)) {\n    const text = Array.isArray(value)\n      ? value.map((item) => '\\t\\t\\t\\t<string>' + escapeXml(item) + '</string>').join('\\n')\n      : escapeXml(value);\n    profile = profile.split('__' + key + '__').join(text);\n  }\n  profile = profile.split('__VERSION__').join(String(row.version));\n  const commandUuid = crypto.randomUUID();\n  if (row.kind === 'wallpaper') {\n    const settings = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n      + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n      + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n\\t\\t<key>RequestType</key>\\n\\t\\t<string>Settings</string>\\n'\n      + '\\t\\t<key>Settings</key>\\n\\t\\t<array>\\n\\t\\t\\t<dict>\\n\\t\\t\\t\\t<key>Image</key>\\n\\t\\t\\t\\t<data>' + params.IMAGE_B64 + '</data>\\n'\n      + '\\t\\t\\t\\t<key>Item</key>\\n\\t\\t\\t\\t<string>Wallpaper</string>\\n'\n      + '\\t\\t\\t\\t<key>Where</key>\\n\\t\\t\\t\\t<integer>' + Number(params.WHERE || 3) + '</integer>\\n\\t\\t\\t</dict>\\n\\t\\t</array>\\n'\n      + '\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>' + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\n    return { json: { skip: false, enrollment_id: row.enrollment_id, profile_name: row.profile_name, version: row.version, command_uuid: commandUuid, plist: settings } };\n  }\n  const plist = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n    + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n    + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n\\t\\t<key>Payload</key>\\n\\t\\t<data>'\n    + Buffer.from(profile, 'utf8').toString('base64')\n    + '</data>\\n\\t\\t<key>RequestType</key>\\n\\t\\t<string>InstallProfile</string>\\n\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>'\n    + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\n  return { json: { skip: false, enrollment_id: row.enrollment_id, profile_name: row.profile_name, version: row.version, command_uuid: commandUuid, plist } };\n});\n"
+      },
+      "id": "38b39eda-bda6-5d23-9108-6f5735706eb3",
+      "name": "Befehle bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "41536069-bf19-52cd-b451-eebc94f3a87a"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "f5bf2b25-51c1-5ce1-89ef-85cdb20d08a9",
+      "name": "Befehle vorhanden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1340,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Konfiguration').first().json.nanomdmUrl }}/v1/enqueue/{{ $json.enrollment_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/xml",
+        "body": "={{ $json.plist }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "2a6bd618-1156-52ef-813a-0db027f8edc2",
+      "name": "InstallProfile einreihen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1580,
+        120
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoMDM API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const sent = $('Befehle bauen').all().map((item) => item.json).filter((row) => !row.skip);\nreturn $input.all().map((response, index) => {\n  const source = sent[index];\n  const body = response.json.body || {};\n  const queued = body.command_uuid === source.command_uuid;\n  const results = Object.values(body.status || {});\n  const pushError = results.map((entry) => entry.push_error).filter(Boolean).join('; ');\n  const detail = queued ? pushError : String(response.json.statusCode || response.json.error || 'keine Antwort');\n  return { json: { enrollment_id: source.enrollment_id, profile_name: source.profile_name, command_uuid: source.command_uuid, ok: queued ? 'yes' : 'no', detail } };\n});\n"
+      },
+      "id": "f774ef11-a5f0-5268-8892-a8c3f6eada71",
+      "name": "Ergebnis auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE automation.device_profile\nSET state = CASE WHEN $4 = 'yes' THEN 'queued' ELSE 'failed' END,\n    command_uuid = CASE WHEN $4 = 'yes' THEN $3 ELSE NULL END,\n    sent_at = now()\nWHERE enrollment_id = $1 AND profile_name = $2\nRETURNING enrollment_id, profile_name, state, $5::text AS detail",
+        "options": {
+          "queryReplacement": "={{ [$json.enrollment_id, $json.profile_name, $json.command_uuid, $json.ok, $json.detail] }}"
+        }
+      },
+      "id": "70203e11-30b6-5fca-8d2e-ba440b5fe1db",
+      "name": "Status vermerken",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2040,
+        120
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const rows = $input.all().map((item) => item.json);\nconst failed = rows.filter((row) => row.state === 'failed');\nconst pushErrors = rows.filter((row) => row.state === 'queued' && row.detail);\nif (failed.length === 0 && pushErrors.length === 0) return [];\nconst lines = [];\nfor (const row of failed) lines.push('nicht eingereiht: ' + row.enrollment_id + ' (' + row.profile_name + ', ' + row.detail + ')');\nfor (const row of pushErrors) lines.push('Push fehlgeschlagen, Geraet holt den Befehl beim naechsten Check-in: ' + row.enrollment_id + ' (' + row.detail + ')');\nreturn [{ json: { message: lines.join('\\n'), priority: failed.length > 0 ? 'high' : 'default' } }];\n"
+      },
+      "id": "6843d667-751d-5fc9-a949-a90d09f4352e",
+      "name": "Fehlgeschlagene sammeln",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2260,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "MDM: Profil nicht eingereiht"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            },
+            {
+              "name": "Tags",
+              "value": "warning"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.message }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "b088c4fc-cbec-502d-9768-0ea3f11b0a88",
+      "name": "Fehler melden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2480,
+        120
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE automation.device_profile\nSET state = CASE WHEN $2 = 'Acknowledged' THEN 'installed' ELSE 'error' END\nWHERE command_uuid = $1 AND state = 'queued'\nRETURNING enrollment_id, profile_name, state",
+        "options": {
+          "queryReplacement": "={{ [$json.command_uuid, $json.status] }}"
+        }
+      },
+      "id": "c3160601-6a31-5827-be62-708e291064b5",
+      "name": "Quittung vermerken",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        900,
+        440
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Status vermerken": {
+      "main": [
+        [
+          {
+            "node": "Fehlgeschlagene sammeln",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fehlgeschlagene sammeln": {
+      "main": [
+        [
+          {
+            "node": "Fehler melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MDM-Event": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Event auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Event auswerten": {
+      "main": [
+        [
+          {
+            "node": "Ist TokenUpdate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ist TokenUpdate?": {
+      "main": [
+        [
+          {
+            "node": "Profile beanspruchen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Quittung vermerken",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Profile beanspruchen": {
+      "main": [
+        [
+          {
+            "node": "Befehle bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Befehle bauen": {
+      "main": [
+        [
+          {
+            "node": "Befehle vorhanden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Befehle vorhanden?": {
+      "main": [
+        [
+          {
+            "node": "InstallProfile einreihen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "InstallProfile einreihen": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnis auswerten": {
+      "main": [
+        [
+          {
+            "node": "Status vermerken",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "Europe/Berlin"
+  },
+  "versionId": "0ea297d3-a181-5b54-a041-10c3007347fc",
+  "meta": {
+    "description": "Empfaengt NanoMDM-Webhooks. Bei TokenUpdate eines Geraets werden alle aktiven Basisprofile aus automation.profile_state einmalig per InstallProfile eingereiht (idempotent ueber automation.device_profile). Quittungen (mdm.Connect) setzen den Status auf installed bzw. error. Der Webhook-Pfad enthaelt das Token aus dem SealedSecret mdm-secrets (Schluessel webhook-token); mdm-n8n-setup.sh ersetzt __WEBHOOK_TOKEN__ beim Import. Credentials: MDM NanoMDM API (Basic Auth, Benutzer nanomdm), MDM Automation DB (Postgres), ntfy-publisher."
+  }
+}

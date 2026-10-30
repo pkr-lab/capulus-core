@@ -9,4 +9,4 @@ permissions:
 
 jobs:
   commitlint:
-    uses: pkr-lab/.github/.github/workflows/commitlint.yml@e44248cf042c1ec7d3d0aa0f99765c40b5565765 # v1.0.1
+    uses: pkr-lab/.github/.github/workflows/commitlint.yml@c2aab65b86ebe3710b2947b100e49a7a33d9455e # v1.2.0

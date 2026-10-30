@@ -17,7 +17,7 @@ server:
   image:
     repository: ghcr.io/immich-app/immich-server
     pullPolicy: IfNotPresent
-    tag: "v3.2.4"
+    tag: "v3.3.5@sha256:485d546a2e31d6a8b4db8423fcba5c109de8c218d93410af115fd1ccfc4352a6"
 
   podSecurityContext: {}
   securityContext:
@@ -83,7 +83,7 @@ machineLearning:
   image:
     repository: ghcr.io/immich-app/immich-machine-learning
     pullPolicy: IfNotPresent
-    tag: "v3.2.4"
+    tag: "v3.3.5@sha256:5b28c9352c8374b8a1ed96fbdd8d6755fea6e43510ec43fdf6538aa02ea40f56"
 
   podSecurityContext: {}
   securityContext:
@@ -115,7 +115,7 @@ postgresql:
   image:
     repository: ghcr.io/immich-app/postgres
     pullPolicy: IfNotPresent
-    tag: "16-vectorchord0.4.3-pgvectors0.2.1"
+    tag: "16-vectorchord0.4.3-pgvectors0.2.1@sha256:13d1ff1638f54be482620d0ef1eb2b004c99bfd674d06359ae0b91d8f5b5696b"
 
   database: immich
   username: immich
