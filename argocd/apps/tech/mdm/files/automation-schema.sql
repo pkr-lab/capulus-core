@@ -51,6 +51,20 @@ CREATE TABLE automation.alert_state (
     detail        text
 );
 
+CREATE TABLE automation.ipad_group (
+    key        text PRIMARY KEY,
+    name       text NOT NULL UNIQUE,
+    ntfy_topic text NOT NULL DEFAULT ''
+);
+
+CREATE TABLE automation.ipad (
+    serial_number text PRIMARY KEY,
+    name          text NOT NULL DEFAULT '',
+    group_key     text REFERENCES automation.ipad_group (key) ON UPDATE CASCADE ON DELETE SET NULL,
+    enabled       boolean NOT NULL DEFAULT true,
+    added_at      timestamptz NOT NULL DEFAULT now()
+);
+
 GRANT USAGE ON SCHEMA automation TO mdmauto;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA automation TO mdmauto;
 GRANT USAGE ON SCHEMA public TO mdmauto;
@@ -62,6 +76,21 @@ GRANT SELECT (topic, cert_pem, updated_at) ON public.push_certs TO mdmauto;
 INSERT INTO automation.setting (key, value)
 VALUES ('dep_name', :'depname'),
        ('dep_profile_json', :'depprofile');
+
+INSERT INTO automation.ipad_group (key, name)
+VALUES ('kleines-becken', 'Kleines Becken'),
+       ('grosses-becken', 'Grosses Becken'),
+       ('vorstands-tisch', 'Vorstands-Tisch');
+
+INSERT INTO automation.ipad (serial_number, name, group_key)
+VALUES ('FVQ99FKFPX', 'Kleines Becken Gruppe 1', 'kleines-becken'),
+       ('JXF7J61RWP', 'Kleines Becken Gruppe 2', 'kleines-becken'),
+       ('DYD6FXG02W', 'Seepferdchen', 'grosses-becken'),
+       ('GCFG7XT6XJ', 'Bronze', 'grosses-becken'),
+       ('JLXJ6KPYVP', 'Silber', 'grosses-becken'),
+       ('DN4LTQ402C', 'Gold', 'grosses-becken'),
+       ('D2LTC9DDJW', 'Juniorretter', 'grosses-becken'),
+       ('DT7HGM9FPG', 'Vorstands-Tisch', 'vorstands-tisch');
 
 INSERT INTO automation.profile_state (name, template, params)
 VALUES ('lockscreen',
