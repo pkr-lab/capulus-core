@@ -31,29 +31,191 @@
     },
     {
       "parameters": {
+        "authentication": "basicAuth",
+        "formTitle": "iPad-Auftrag",
+        "formDescription": "Aendert Einstellungen auf Gruppen, einzelnen oder allen iPads. Alle Aktionen sind optional, mindestens eine ist noetig. ACHTUNG: Eine Sperrbildschirm-Nachricht sperrt die gewaehlten iPads sofort.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "iPads",
+              "fieldType": "checkbox",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Alle iPads"
+                  },
+                  {
+                    "option": "Kleines Becken"
+                  },
+                  {
+                    "option": "Grosses Becken"
+                  },
+                  {
+                    "option": "Vorstands-Tisch"
+                  }
+                ]
+              },
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Einzelne iPads",
+              "fieldType": "checkbox",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Kleines Becken Gruppe 1"
+                  },
+                  {
+                    "option": "Kleines Becken Gruppe 2"
+                  },
+                  {
+                    "option": "Seepferdchen"
+                  },
+                  {
+                    "option": "Bronze"
+                  },
+                  {
+                    "option": "Silber"
+                  },
+                  {
+                    "option": "Gold"
+                  },
+                  {
+                    "option": "Juniorretter"
+                  }
+                ]
+              },
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Seriennummern (optional, mehrere mit Komma)",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "z. B. FVQ99FKFPX, JXF7J61RWP"
+            },
+            {
+              "fieldLabel": "Hintergrundbild (optional)",
+              "fieldType": "file",
+              "multipleFiles": false,
+              "acceptFileTypes": ".jpg,.jpeg,.png",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Push-Nachricht (optional)",
+              "fieldType": "textarea",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Push-Titel (optional)",
+              "fieldType": "text",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Push-Dringlichkeit",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "normal"
+                  },
+                  {
+                    "option": "hoch"
+                  },
+                  {
+                    "option": "dringend"
+                  }
+                ]
+              },
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Sperrbildschirm-Nachricht (optional)",
+              "fieldType": "textarea",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Sperrbildschirm-Telefon (optional)",
+              "fieldType": "text",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "App (optional)",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "Name aus dem Katalog, App-Store-ID oder App-Store-Link"
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "path": "mdm-auftrag"
+        }
+      },
+      "id": "eab6250d-16fb-5d7e-8a88-e45029e4c034",
+      "name": "Formular Auftrag",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        520
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Formulare"
+        }
+      },
+      "webhookId": "bbff19e6-995e-5365-941d-ff96fec24510"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT g.key AS group_key, g.name AS group_name, g.ntfy_topic, i.serial_number, i.name AS ipad_name FROM automation.ipad_group g FULL JOIN automation.ipad i ON i.group_key = g.key WHERE COALESCE(i.enabled, true) ORDER BY g.key, i.serial_number",
+        "options": {}
+      },
+      "id": "2592d3c8-48f2-59db-9ed9-9391bab5bcb6",
+      "name": "iPads lesen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        230,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM',\n  ntfyIpadTopic: 'Home-Lab-iPad',\n  sender: ['peter.kretzer@dlrg.org'],\n  maxBildBytes: 4 * 1024 * 1024,\n  // serial: eine Seriennummer oder eine Liste (ein Name, mehrere iPads), z. B. ['SERIAL1', 'SERIAL2'].\n  ipads: {\n    'kleines-becken': { name: 'Kleines Becken', serial: 'FVQ99FKFPX', ntfyTopic: '' },\n    'grosses-becken': { name: 'Grosses Becken', serial: 'CHANGE-ME-SERIENNUMMER-GROSSES-BECKEN', ntfyTopic: '' },\n    'vorstands-tisch': { name: 'Vorstands-Tisch', serial: 'CHANGE-ME-SERIENNUMMER-VORSTANDS-TISCH', ntfyTopic: '' }\n  }\n};\nreturn $input.all().map((item) => ({ json: { ...item.json, cfg }, binary: item.binary }));\n"
+        "jsCode": "const rows = $input.all().map((item) => item.json);\nconst slug = (value) => String(value)\n  .toLowerCase()\n  .replace(/ä/g, 'ae')\n  .replace(/ö/g, 'oe')\n  .replace(/ü/g, 'ue')\n  .replace(/ß/g, 'ss')\n  .replace(/[^a-z0-9]+/g, '-')\n  .replace(/^-+|-+$/g, '');\nconst ipads = {};\nfor (const row of rows.filter((entry) => entry.group_key)) {\n  if (!ipads[row.group_key]) ipads[row.group_key] = { name: row.group_name, serial: [], ntfyTopic: row.ntfy_topic || '' };\n  if (row.serial_number) ipads[row.group_key].serial.push(row.serial_number);\n}\nfor (const row of rows.filter((entry) => entry.serial_number && entry.ipad_name)) {\n  const key = slug(row.ipad_name);\n  if (!ipads[key]) ipads[key] = { name: row.ipad_name, serial: [row.serial_number], ntfyTopic: row.ntfy_topic || '' };\n}\nconst ipadsError = rows.some((row) => row.error) ? 'Die iPad-Liste (automation.ipad) ist in der Datenbank nicht lesbar.' : '';\nconst cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM',\n  ntfyIpadTopic: 'Home-Lab-iPad',\n  sender: ['peter.kretzer@dlrg.org'],\n  maxBildBytes: 4 * 1024 * 1024,\n  ipads,\n  ipadsError\n};\nconst trigger = $('Formular Auftrag').isExecuted ? $('Formular Auftrag') : $('E-Mail empfangen');\nreturn trigger.all().map((item) => ({ json: { ...item.json, cfg }, binary: item.binary }));\n"
       },
       "id": "0d0ca93e-440f-500c-ba96-92d82e011d3a",
       "name": "Konfiguration",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        230,
+        460,
         300
       ]
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const items = $input.all();\nconst item = items[0];\nconst cfg = item.json.cfg;\nconst subject = String(item.json.subject || '').trim();\nconst title = 'iPad-Auftrag nicht ausgefuehrt';\nconst fail = (text) => ({ json: { ok: false, title, message: 'Mail \"' + subject + '\": ' + text } });\nconst skipped = items.slice(1).map((other) => ({\n  json: { ok: false, title, message: 'Mail \"' + String(other.json.subject || '').trim() + '\" wurde nicht verarbeitet, weil mehrere Mails gleichzeitig kamen. Bitte erneut senden.' }\n}));\nconst result = (first) => [first, ...skipped];\n\nconst from = typeof item.json.from === 'string' ? item.json.from : ((item.json.from && item.json.from.text) || '');\nif (!cfg.sender.some((sender) => from.toLowerCase().includes(sender.toLowerCase()))) {\n  return result(fail('Der Absender ' + (from || 'unbekannt') + ' ist nicht erlaubt.'));\n}\n\nconst binary = item.binary || {};\nconst keys = Object.keys(binary);\nconst isJson = (key) => binary[key].mimeType === 'application/json' || /\\.json$/i.test(binary[key].fileName || '');\nconst isImage = (key) => /^image\\//.test(binary[key].mimeType || '') || /\\.(jpe?g|png)$/i.test(binary[key].fileName || '');\nconst jsonKey = keys.find(isJson);\nif (!jsonKey) return result(fail('Kein JSON-Anhang gefunden.'));\n\nconst tryParse = (text) => {\n  try {\n    return JSON.parse(text);\n  } catch (error) {\n    return null;\n  }\n};\nconst jsonText = (await this.helpers.getBinaryDataBuffer(0, jsonKey)).toString('utf8').replace(/^﻿/, '').trim();\nlet post = tryParse(jsonText);\nif (post === null && /^[A-Za-z0-9+/=\\s]+$/.test(jsonText)) post = tryParse(Buffer.from(jsonText, 'base64').toString('utf8'));\nif (!post || typeof post !== 'object' || Array.isArray(post)) return result(fail('Der JSON-Anhang ist nicht lesbar.'));\n\nif (post.antwortId !== undefined || post.ipadAuswahl !== undefined) {\n  const form = post;\n  const text = (value) => (typeof value === 'string' || typeof value === 'number' ? String(value).trim() : '');\n  const devices = (Array.isArray(form.geraete) ? form.geraete : [form.geraete]).map(text).filter(Boolean);\n  post = {};\n  if (/alle/i.test(text(form.ipadAuswahl))) post.ipads = 'alle';\n  else if (devices.length > 0) post.ipads = devices;\n  if (Array.isArray(form.hintergrundBild) && form.hintergrundBild.length > 0) post.hintergrund = true;\n  if (text(form.pushBenachrichtigung)) post.push = text(form.pushBenachrichtigung);\n  if (text(form.sperrbildschirmNachricht)) post.sperrbildschirm = text(form.sperrbildschirmNachricht);\n  if (text(form.neueApp)) post.app = text(form.neueApp);\n}\n\nconst errors = [];\nconst warnings = [];\nconst known = ['ipads', 'hintergrund', 'push', 'sperrbildschirm', 'app'];\nconst unknown = Object.keys(post).filter((key) => !known.includes(key));\nif (unknown.length > 0) errors.push('Unbekannte Felder im JSON: ' + unknown.join(', ') + ' (erlaubt: ' + known.join(', ') + ').');\n\nconst norm = (value) => String(value)\n  .toLowerCase()\n  .replace(/ä/g, 'ae')\n  .replace(/ö/g, 'oe')\n  .replace(/ü/g, 'ue')\n  .replace(/ß/g, 'ss')\n  .replace(/[^a-z0-9]+/g, '-')\n  .replace(/^-+|-+$/g, '');\nconst lookup = new Map();\nfor (const [key, config] of Object.entries(cfg.ipads)) {\n  // serial darf eine Seriennummer oder eine Liste sein (z. B. Grosses Becken mit 9 iPads).\n  const ipad = { ...config, serials: [].concat(config.serial) };\n  lookup.set(norm(key), ipad);\n  lookup.set(norm(ipad.name), ipad);\n}\nconst knownIpads = Object.keys(cfg.ipads).join(', ');\nconst rawTargets = post.ipads === undefined || post.ipads === null || post.ipads === ''\n  ? []\n  : (Array.isArray(post.ipads) ? post.ipads : [post.ipads]);\nif (rawTargets.length === 0) errors.push('Im JSON fehlt \"ipads\" (' + knownIpads + ' oder \"alle\").');\nlet alle = false;\nconst picked = [];\nfor (const value of rawTargets) {\n  const text = String(value).trim();\n  const ipad = lookup.get(norm(text));\n  if (norm(text) === 'alle') {\n    alle = true;\n  } else if (ipad) {\n    if (ipad.serials.some((serial) => /^CHANGE-ME/.test(serial))) errors.push('Fuer ' + ipad.name + ' ist im Workflow noch keine Seriennummer eingetragen.');\n    else picked.push({ name: ipad.name, serials: ipad.serials, ntfyTopic: ipad.ntfyTopic || '' });\n  } else if (/^(?=.*\\d)[A-Z0-9]{8,20}$/.test(text)) {\n    picked.push({ name: text, serials: [text], ntfyTopic: '' });\n  } else {\n    errors.push('Unbekanntes iPad \"' + text + '\" (bekannt: ' + knownIpads + ').');\n  }\n}\nconst targets = picked.filter((target, index) => picked.findIndex((other) => other.serials.join() === target.serials.join()) === index);\n\nconst imageKeys = keys.filter((key) => key !== jsonKey && isImage(key));\nconst ignored = keys.filter((key) => key !== jsonKey && !isImage(key)).map((key) => binary[key].fileName || key);\nif (ignored.length > 0) warnings.push('Nicht verwendete Anhaenge: ' + ignored.join(', ') + '.');\nlet wallpaper = null;\nconst wantWallpaper = post.hintergrund === false ? false : (imageKeys.length > 0 || post.hintergrund === true);\nif (wantWallpaper) {\n  if (imageKeys.length === 0) {\n    errors.push('\"hintergrund\" verlangt ein Bild als Anhang.');\n  } else {\n    if (imageKeys.length > 1) warnings.push('Es sind mehrere Bilder angehaengt, nur das erste wird verwendet.');\n    const buffer = await this.helpers.getBinaryDataBuffer(0, imageKeys[0]);\n    const png = buffer.length > 8 && buffer.subarray(0, 8).toString('hex') === '89504e470d0a1a0a';\n    const jpeg = buffer.length > 3 && buffer.subarray(0, 3).toString('hex') === 'ffd8ff';\n    if (!png && !jpeg) errors.push('Das Bild muss eine PNG- oder JPG-Datei sein.');\n    else if (buffer.length > cfg.maxBildBytes) errors.push('Das Bild ist groesser als 4 MB. Bitte verkleinern (empfohlen: 2048 x 2732 Pixel).');\n    else wallpaper = { b64: buffer.toString('base64'), bytes: buffer.length, type: png ? 'PNG' : 'JPG' };\n  }\n}\n\nlet push = null;\nif (post.push !== undefined && post.push !== null) {\n  const spec = typeof post.push === 'string' ? { nachricht: post.push } : post.push;\n  if (typeof spec !== 'object' || Array.isArray(spec)) {\n    errors.push('push: Text oder Objekt mit nachricht, titel und dringlichkeit angeben.');\n  } else {\n    const message = String(spec.nachricht || '').trim();\n    const pushTitle = String(spec.titel || '').trim();\n    const level = String(spec.dringlichkeit || '').toLowerCase();\n    if (message.length === 0 || message.length > 500 || pushTitle.length > 80) {\n      errors.push('push: Die Nachricht muss 1 bis 500 Zeichen lang sein, der Titel hoechstens 80.');\n    } else {\n      push = { title: pushTitle, message, priority: level === 'dringend' ? 5 : level === 'hoch' ? 4 : 3 };\n    }\n  }\n}\n\nlet lock = null;\nif (post.sperrbildschirm !== undefined && post.sperrbildschirm !== null) {\n  const spec = typeof post.sperrbildschirm === 'string' ? { nachricht: post.sperrbildschirm } : post.sperrbildschirm;\n  if (typeof spec !== 'object' || Array.isArray(spec)) {\n    errors.push('sperrbildschirm: Text oder Objekt mit nachricht und telefon angeben.');\n  } else {\n    const message = String(spec.nachricht || '').replace(/\\s+/g, ' ').trim();\n    const phone = String(spec.telefon || '').trim();\n    if (message.length === 0 || message.length > 300) errors.push('sperrbildschirm: Die Nachricht muss 1 bis 300 Zeichen lang sein.');\n    else if (phone.length > 40 || !/^[0-9+() \\/.-]*$/.test(phone)) errors.push('sperrbildschirm: Die Telefonnummer darf nur Ziffern, Leerzeichen und + ( ) / . - enthalten.');\n    else lock = { message, phone };\n  }\n}\n\nlet app = null;\nif (post.app !== undefined && post.app !== null) {\n  if (typeof post.app !== 'string' && typeof post.app !== 'number') {\n    errors.push('app: Name aus der Liste, App-Store-ID oder App-Store-Link als Text angeben.');\n  } else {\n    const spec = String(post.app).trim();\n    const idMatch = /^(?:id)?(\\d{6,12})$/.exec(spec) || /apps\\.apple\\.com\\/.*\\/id(\\d{6,12})/.exec(spec);\n    if (spec.length === 0 || spec.length > 100) errors.push('app: Der Name darf nicht leer und hoechstens 100 Zeichen lang sein.');\n    else app = idMatch ? { adamId: idMatch[1] } : { name: spec };\n  }\n}\n\nif (!wallpaper && !push && !lock && !app && errors.length === 0) {\n  errors.push('Der JSON-Anhang enthaelt keine Aktion (Bild als Anhang, push, sperrbildschirm oder app).');\n}\nif (errors.length > 0) return result(fail(errors.join(' ')));\n\nreturn result({ json: { ok: true, subject, alle, targets, wallpaper, push, lock, app, warnings } });\n"
+        "jsCode": "const items = $input.all();\nconst item = items[0];\nconst cfg = item.json.cfg;\nconst fromForm = $('Formular Auftrag').isExecuted;\nconst subject = String(item.json.subject || '').trim();\nconst source = fromForm ? 'Formular' : 'Mail \"' + subject + '\"';\nconst title = 'iPad-Auftrag nicht ausgefuehrt';\nconst fail = (text) => ({ json: { ok: false, title, message: source + ': ' + text } });\nconst skipped = items.slice(1).map((other) => ({\n  json: { ok: false, title, message: 'Mail \"' + String(other.json.subject || '').trim() + '\" wurde nicht verarbeitet, weil mehrere Mails gleichzeitig kamen. Bitte erneut senden.' }\n}));\nconst result = (first) => [first, ...skipped];\nconst text = (value) => (typeof value === 'string' || typeof value === 'number' ? String(value).trim() : '');\n\nconst binary = item.binary || {};\nconst keys = Object.keys(binary);\nconst isJson = (key) => binary[key].mimeType === 'application/json' || /\\.json$/i.test(binary[key].fileName || '');\nconst isImage = (key) => /^image\\//.test(binary[key].mimeType || '') || /\\.(jpe?g|png)$/i.test(binary[key].fileName || '');\n\nlet post = null;\nlet jsonKey = null;\nif (fromForm) {\n  const form = item.json;\n  const chosen = [].concat(form['iPads'] || [], form['Einzelne iPads'] || []).map(text).filter(Boolean);\n  const serials = text(form['Seriennummern (optional, mehrere mit Komma)']).split(/[\\s,;]+/).filter(Boolean);\n  const named = chosen.filter((entry) => !/^alle/i.test(entry)).concat(serials);\n  post = {};\n  if (chosen.some((entry) => /^alle/i.test(entry))) post.ipads = 'alle';\n  else if (named.length > 0) post.ipads = named;\n  const pushText = text(form['Push-Nachricht (optional)']);\n  if (pushText) post.push = { nachricht: pushText, titel: text(form['Push-Titel (optional)']), dringlichkeit: text(form['Push-Dringlichkeit']) };\n  const lockText = text(form['Sperrbildschirm-Nachricht (optional)']);\n  if (lockText) post.sperrbildschirm = { nachricht: lockText, telefon: text(form['Sperrbildschirm-Telefon (optional)']) };\n  const appText = text(form['App (optional)']);\n  if (appText) post.app = appText;\n} else {\n  const from = typeof item.json.from === 'string' ? item.json.from : ((item.json.from && item.json.from.text) || '');\n  if (!cfg.sender.some((sender) => from.toLowerCase().includes(sender.toLowerCase()))) {\n    return result(fail('Der Absender ' + (from || 'unbekannt') + ' ist nicht erlaubt.'));\n  }\n\n  jsonKey = keys.find(isJson);\n  if (!jsonKey) return result(fail('Kein JSON-Anhang gefunden.'));\n\n  const tryParse = (value) => {\n    try {\n      return JSON.parse(value);\n    } catch (error) {\n      return null;\n    }\n  };\n  const jsonText = (await this.helpers.getBinaryDataBuffer(0, jsonKey)).toString('utf8').replace(/^\\uFEFF/, '').trim();\n  post = tryParse(jsonText);\n  if (post === null && /^[A-Za-z0-9+/=\\s]+$/.test(jsonText)) post = tryParse(Buffer.from(jsonText, 'base64').toString('utf8'));\n  if (!post || typeof post !== 'object' || Array.isArray(post)) return result(fail('Der JSON-Anhang ist nicht lesbar.'));\n\n  if (post.antwortId !== undefined || post.ipadAuswahl !== undefined) {\n    const form = post;\n    const devices = (Array.isArray(form.geraete) ? form.geraete : [form.geraete]).map(text).filter(Boolean);\n    post = {};\n    if (/alle/i.test(text(form.ipadAuswahl))) post.ipads = 'alle';\n    else if (devices.length > 0) post.ipads = devices;\n    if (Array.isArray(form.hintergrundBild) && form.hintergrundBild.length > 0) post.hintergrund = true;\n    if (text(form.pushBenachrichtigung)) post.push = text(form.pushBenachrichtigung);\n    if (text(form.sperrbildschirmNachricht)) post.sperrbildschirm = text(form.sperrbildschirmNachricht);\n    if (text(form.neueApp)) post.app = text(form.neueApp);\n  }\n}\n\nconst errors = [];\nconst warnings = [];\nconst known = ['ipads', 'hintergrund', 'push', 'sperrbildschirm', 'app'];\nconst unknown = Object.keys(post).filter((key) => !known.includes(key));\nif (unknown.length > 0) errors.push('Unbekannte Felder im JSON: ' + unknown.join(', ') + ' (erlaubt: ' + known.join(', ') + ').');\n\nconst norm = (value) => String(value)\n  .toLowerCase()\n  .replace(/ä/g, 'ae')\n  .replace(/ö/g, 'oe')\n  .replace(/ü/g, 'ue')\n  .replace(/ß/g, 'ss')\n  .replace(/[^a-z0-9]+/g, '-')\n  .replace(/^-+|-+$/g, '');\nconst lookup = new Map();\nfor (const [key, config] of Object.entries(cfg.ipads)) {\n  const ipad = { ...config, serials: [].concat(config.serial) };\n  lookup.set(norm(key), ipad);\n  lookup.set(norm(ipad.name), ipad);\n}\nconst knownIpads = Object.keys(cfg.ipads).join(', ');\nconst rawTargets = post.ipads === undefined || post.ipads === null || post.ipads === ''\n  ? []\n  : (Array.isArray(post.ipads) ? post.ipads : [post.ipads]);\nif (rawTargets.length === 0) errors.push('Es fehlt die Auswahl der iPads (' + knownIpads + ', Seriennummer oder \"alle\").');\nlet alle = false;\nconst picked = [];\nfor (const value of rawTargets) {\n  const entry = String(value).trim();\n  const ipad = lookup.get(norm(entry));\n  if (norm(entry) === 'alle') {\n    alle = true;\n  } else if (ipad) {\n    if (ipad.serials.length === 0) errors.push('Fuer ' + ipad.name + ' ist in der Datenbank (automation.ipad) noch kein iPad eingetragen.');\n    else picked.push({ name: ipad.name, serials: ipad.serials, ntfyTopic: ipad.ntfyTopic || '' });\n  } else if (/^(?=.*\\d)[A-Z0-9]{8,20}$/.test(entry)) {\n    picked.push({ name: entry, serials: [entry], ntfyTopic: '' });\n  } else {\n    errors.push(cfg.ipadsError || 'Unbekanntes iPad \"' + entry + '\" (bekannt: ' + knownIpads + ').');\n  }\n}\nconst targets = picked.filter((target, index) => picked.findIndex((other) => other.serials.join() === target.serials.join()) === index);\n\nconst imageKeys = keys.filter((key) => key !== jsonKey && isImage(key));\nconst ignored = keys.filter((key) => key !== jsonKey && !isImage(key)).map((key) => binary[key].fileName || key);\nif (ignored.length > 0) warnings.push('Nicht verwendete Anhaenge: ' + ignored.join(', ') + '.');\nlet wallpaper = null;\nconst wantWallpaper = post.hintergrund === false ? false : (imageKeys.length > 0 || post.hintergrund === true);\nif (wantWallpaper) {\n  if (imageKeys.length === 0) {\n    errors.push('\"hintergrund\" verlangt ein Bild als Anhang.');\n  } else {\n    if (imageKeys.length > 1) warnings.push('Es sind mehrere Bilder angehaengt, nur das erste wird verwendet.');\n    const buffer = await this.helpers.getBinaryDataBuffer(0, imageKeys[0]);\n    const png = buffer.length > 8 && buffer.subarray(0, 8).toString('hex') === '89504e470d0a1a0a';\n    const jpeg = buffer.length > 3 && buffer.subarray(0, 3).toString('hex') === 'ffd8ff';\n    if (!png && !jpeg) errors.push('Das Bild muss eine PNG- oder JPG-Datei sein.');\n    else if (buffer.length > cfg.maxBildBytes) errors.push('Das Bild ist groesser als 4 MB. Bitte verkleinern (empfohlen: 2048 x 2732 Pixel).');\n    else wallpaper = { b64: buffer.toString('base64'), bytes: buffer.length, type: png ? 'PNG' : 'JPG' };\n  }\n}\n\nlet push = null;\nif (post.push !== undefined && post.push !== null) {\n  const spec = typeof post.push === 'string' ? { nachricht: post.push } : post.push;\n  if (typeof spec !== 'object' || Array.isArray(spec)) {\n    errors.push('push: Text oder Objekt mit nachricht, titel und dringlichkeit angeben.');\n  } else {\n    const message = String(spec.nachricht || '').trim();\n    const pushTitle = String(spec.titel || '').trim();\n    const level = String(spec.dringlichkeit || '').toLowerCase();\n    if (message.length === 0 || message.length > 500 || pushTitle.length > 80) {\n      errors.push('push: Die Nachricht muss 1 bis 500 Zeichen lang sein, der Titel hoechstens 80.');\n    } else {\n      push = { title: pushTitle, message, priority: level === 'dringend' ? 5 : level === 'hoch' ? 4 : 3 };\n    }\n  }\n}\n\nlet lock = null;\nif (post.sperrbildschirm !== undefined && post.sperrbildschirm !== null) {\n  const spec = typeof post.sperrbildschirm === 'string' ? { nachricht: post.sperrbildschirm } : post.sperrbildschirm;\n  if (typeof spec !== 'object' || Array.isArray(spec)) {\n    errors.push('sperrbildschirm: Text oder Objekt mit nachricht und telefon angeben.');\n  } else {\n    const message = String(spec.nachricht || '').replace(/\\s+/g, ' ').trim();\n    const phone = String(spec.telefon || '').trim();\n    if (message.length === 0 || message.length > 300) errors.push('sperrbildschirm: Die Nachricht muss 1 bis 300 Zeichen lang sein.');\n    else if (phone.length > 40 || !/^[0-9+() \\/.-]*$/.test(phone)) errors.push('sperrbildschirm: Die Telefonnummer darf nur Ziffern, Leerzeichen und + ( ) / . - enthalten.');\n    else lock = { message, phone };\n  }\n}\n\nlet app = null;\nif (post.app !== undefined && post.app !== null) {\n  if (typeof post.app !== 'string' && typeof post.app !== 'number') {\n    errors.push('app: Name aus der Liste, App-Store-ID oder App-Store-Link als Text angeben.');\n  } else {\n    const spec = String(post.app).trim();\n    const idMatch = /^(?:id)?(\\d{6,12})$/.exec(spec) || /apps\\.apple\\.com\\/.*\\/id(\\d{6,12})/.exec(spec);\n    if (spec.length === 0 || spec.length > 100) errors.push('app: Der Name darf nicht leer und hoechstens 100 Zeichen lang sein.');\n    else app = idMatch ? { adamId: idMatch[1] } : { name: spec };\n  }\n}\n\nif (!wallpaper && !push && !lock && !app && errors.length === 0) {\n  errors.push(fromForm ? 'Das Formular enthaelt keine Aktion (Hintergrundbild, Push, Sperrbildschirm oder App).' : 'Der JSON-Anhang enthaelt keine Aktion (Bild als Anhang, push, sperrbildschirm oder app).');\n}\nif (errors.length > 0) return result(fail(errors.join(' ')));\n\nreturn result({ json: { ok: true, source, alle, targets, wallpaper, push, lock, app, warnings } });\n"
       },
       "id": "d42175d6-d057-5ff9-8745-b65c59e23cd0",
-      "name": "Mail lesen",
+      "name": "Auftrag lesen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        460,
+        690,
         300
       ]
     },
@@ -88,7 +250,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        690,
+        920,
         300
       ]
     },
@@ -97,7 +259,7 @@
         "operation": "executeQuery",
         "query": "SELECT e.id AS enrollment_id, d.serial_number FROM public.enrollments e JOIN public.devices d ON d.id = e.device_id WHERE e.type = 'Device' AND e.enabled AND ($2::text = 'yes' OR d.serial_number IN (SELECT jsonb_array_elements_text($1::jsonb))) ORDER BY d.serial_number",
         "options": {
-          "queryReplacement": "={{ [JSON.stringify($('Mail lesen').first().json.targets.flatMap((target) => target.serials)), $('Mail lesen').first().json.alle ? 'yes' : 'no'] }}"
+          "queryReplacement": "={{ [JSON.stringify($('Auftrag lesen').first().json.targets.flatMap((target) => target.serials)), $('Auftrag lesen').first().json.alle ? 'yes' : 'no'] }}"
         }
       },
       "id": "8ba08612-1ee3-5615-941b-f79d6c7ec644",
@@ -105,7 +267,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        920,
+        1150,
         300
       ],
       "credentials": {
@@ -119,14 +281,14 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const plan = $('Mail lesen').first().json;\nconst devices = $input.all().map((item) => item.json).filter((row) => row.enrollment_id);\nconst found = new Set(devices.map((device) => device.serial_number));\nconst missing = plan.alle ? [] : plan.targets.flatMap((target) => target.serials\n  .filter((serial) => !found.has(serial))\n  .map((serial) => (target.serials.length > 1 ? target.name + ' (' + serial + ')' : target.name)));\nif (devices.length === 0) {\n  return [{ json: { ok: false, title: 'iPad-Auftrag nicht ausgefuehrt', message: 'Mail \"' + plan.subject + '\": ' + (plan.alle ? 'Es ist noch kein iPad angemeldet.' : 'Keines der gewaehlten iPads ist angemeldet: ' + missing.join(', ') + '.') } }];\n}\nreturn [{ json: { ok: true, devices, missing } }];\n"
+        "jsCode": "const plan = $('Auftrag lesen').first().json;\nconst devices = $input.all().map((item) => item.json).filter((row) => row.enrollment_id);\nconst found = new Set(devices.map((device) => device.serial_number));\nconst missing = plan.alle ? [] : plan.targets.flatMap((target) => target.serials\n  .filter((serial) => !found.has(serial))\n  .map((serial) => (target.serials.length > 1 ? target.name + ' (' + serial + ')' : target.name)));\nif (devices.length === 0) {\n  return [{ json: { ok: false, title: 'iPad-Auftrag nicht ausgefuehrt', message: plan.source + ': ' + (plan.alle ? 'Es ist noch kein iPad angemeldet.' : 'Keines der gewaehlten iPads ist angemeldet: ' + missing.join(', ') + '.') } }];\n}\nreturn [{ json: { ok: true, devices, missing } }];\n"
       },
       "id": "d685f232-7055-5480-9993-72514491100a",
       "name": "Geraete pruefen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1150,
+        1380,
         300
       ]
     },
@@ -161,21 +323,21 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1380,
+        1610,
         300
       ]
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const plan = $('Mail lesen').first().json;\nif (!plan.push) return [{ json: { skip: true } }];\nconst ipadTopic = $('Konfiguration').first().json.cfg.ntfyIpadTopic;\nconst groups = new Map();\nif (plan.alle) {\n  groups.set(ipadTopic, []);\n} else {\n  for (const target of plan.targets) {\n    const topic = target.ntfyTopic || ipadTopic;\n    if (!groups.has(topic)) groups.set(topic, []);\n    groups.get(topic).push(target.name);\n  }\n}\nreturn Array.from(groups, ([topic, names]) => {\n  const label = topic === ipadTopic && names.length > 0 ? '[' + names.join(', ') + '] ' : '';\n  const body = JSON.stringify({ topic, title: label + (plan.push.title || 'Nachricht'), message: plan.push.message, priority: plan.push.priority, tags: ['speech_balloon'] });\n  return { json: { skip: false, topic, names, shared: topic === ipadTopic && names.length > 0, body } };\n});\n"
+        "jsCode": "const plan = $('Auftrag lesen').first().json;\nif (!plan.push) return [{ json: { skip: true } }];\nconst ipadTopic = $('Konfiguration').first().json.cfg.ntfyIpadTopic;\nconst groups = new Map();\nif (plan.alle) {\n  groups.set(ipadTopic, []);\n} else {\n  for (const target of plan.targets) {\n    const topic = target.ntfyTopic || ipadTopic;\n    if (!groups.has(topic)) groups.set(topic, []);\n    groups.get(topic).push(target.name);\n  }\n}\nreturn Array.from(groups, ([topic, names]) => {\n  const label = topic === ipadTopic && names.length > 0 ? '[' + names.join(', ') + '] ' : '';\n  const body = JSON.stringify({ topic, title: label + (plan.push.title || 'Nachricht'), message: plan.push.message, priority: plan.push.priority, tags: ['speech_balloon'] });\n  return { json: { skip: false, topic, names, shared: topic === ipadTopic && names.length > 0, body } };\n});\n"
       },
       "id": "a42d120c-e63f-5622-8654-9a022abb1f67",
       "name": "Push vorbereiten",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1610,
+        1840,
         300
       ]
     },
@@ -210,7 +372,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1840,
+        2070,
         300
       ]
     },
@@ -238,7 +400,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2070,
+        2300,
         160
       ],
       "credentials": {
@@ -259,7 +421,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2300,
+        2530,
         160
       ]
     },
@@ -268,7 +430,7 @@
         "operation": "executeQuery",
         "query": "UPDATE automation.profile_state\nSET params = jsonb_set(params, '{IMAGE_B64}', to_jsonb($1::text)), version = version + 1, updated_at = now()\nWHERE name = 'wallpaper' AND $1::text <> ''\nRETURNING version AS wallpaper_version",
         "options": {
-          "queryReplacement": "={{ [$('Mail lesen').first().json.alle && $('Mail lesen').first().json.wallpaper ? $('Mail lesen').first().json.wallpaper.b64 : ''] }}"
+          "queryReplacement": "={{ [$('Auftrag lesen').first().json.alle && $('Auftrag lesen').first().json.wallpaper ? $('Auftrag lesen').first().json.wallpaper.b64 : ''] }}"
         }
       },
       "id": "f64cc18e-14fb-5264-8e9c-d7d80c2b855e",
@@ -276,7 +438,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        2530,
+        2760,
         300
       ],
       "credentials": {
@@ -300,7 +462,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        2760,
+        2990,
         300
       ],
       "credentials": {
@@ -321,7 +483,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2990,
+        3220,
         300
       ]
     },
@@ -336,7 +498,7 @@
           },
           "conditions": [
             {
-              "leftValue": "={{ !!$('Mail lesen').first().json.app }}",
+              "leftValue": "={{ !!$('Auftrag lesen').first().json.app }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -356,7 +518,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        3220,
+        3450,
         300
       ]
     },
@@ -371,7 +533,7 @@
           },
           "conditions": [
             {
-              "leftValue": "={{ !!$('Mail lesen').first().json.app.adamId }}",
+              "leftValue": "={{ !!$('Auftrag lesen').first().json.app.adamId }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -391,7 +553,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        3450,
+        3680,
         600
       ]
     },
@@ -404,7 +566,7 @@
           "parameters": [
             {
               "name": "id",
-              "value": "={{ $('Mail lesen').first().json.app.adamId }}"
+              "value": "={{ $('Auftrag lesen').first().json.app.adamId }}"
             },
             {
               "name": "country",
@@ -427,21 +589,21 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3680,
+        3910,
         600
       ]
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const adamId = $('Mail lesen').first().json.app.adamId;\nconst res = $input.first().json;\nconst raw = res.data !== undefined ? res.data : res.body;\nlet body = {};\ntry {\n  body = typeof raw === 'string' ? JSON.parse(raw || '{}') : (raw || {});\n} catch (e) {\n  body = {};\n}\nconst hit = (body.results || [])[0];\nconst fail = (text) => [{ json: { ok: false, message: text } }];\nif (!hit) return fail('Im App Store (Deutschland) gibt es keine App mit der ID ' + adamId + '.');\nif (hit.kind !== 'software' || !hit.bundleId) return fail('Die ID ' + adamId + ' ist keine iOS-App.');\nif (!(hit.supportedDevices || []).some((device) => /iPad/.test(device))) return fail(hit.trackName + ' laeuft nicht auf iPads.');\nif (Number(hit.price) > 0) return fail(hit.trackName + ' kostet Geld (' + hit.formattedPrice + '). Bezahlte Apps muessen in Apple Business gekauft werden, dieser Workflow installiert nur kostenlose Apps.');\nreturn [{ json: { ok: true, adamId: String(hit.trackId), name: hit.trackName, bundleId: hit.bundleId } }];\n"
+        "jsCode": "const adamId = $('Auftrag lesen').first().json.app.adamId;\nconst res = $input.first().json;\nconst raw = res.data !== undefined ? res.data : res.body;\nlet body = {};\ntry {\n  body = typeof raw === 'string' ? JSON.parse(raw || '{}') : (raw || {});\n} catch (e) {\n  body = {};\n}\nconst hit = (body.results || [])[0];\nconst fail = (text) => [{ json: { ok: false, message: text } }];\nif (!hit) return fail('Im App Store (Deutschland) gibt es keine App mit der ID ' + adamId + '.');\nif (hit.kind !== 'software' || !hit.bundleId) return fail('Die ID ' + adamId + ' ist keine iOS-App.');\nif (!(hit.supportedDevices || []).some((device) => /iPad/.test(device))) return fail(hit.trackName + ' laeuft nicht auf iPads.');\nif (Number(hit.price) > 0) return fail(hit.trackName + ' kostet Geld (' + hit.formattedPrice + '). Bezahlte Apps muessen in Apple Business gekauft werden, dieser Workflow installiert nur kostenlose Apps.');\nreturn [{ json: { ok: true, adamId: String(hit.trackId), name: hit.trackName, bundleId: hit.bundleId } }];\n"
       },
       "id": "52e8bd1d-3b39-5656-acc4-71498b20d306",
       "name": "App pruefen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3910,
+        4140,
         600
       ]
     },
@@ -476,7 +638,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        4140,
+        4370,
         600
       ]
     },
@@ -493,7 +655,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        4370,
+        4600,
         600
       ],
       "credentials": {
@@ -514,7 +676,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        4600,
+        4830,
         600
       ],
       "credentials": {
@@ -528,14 +690,14 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const spec = $('Mail lesen').first().json.app;\nconst catalog = $input.all().map((item) => item.json).filter((row) => row.adam_id);\nconst apps = spec.adamId\n  ? catalog.filter((row) => row.adam_id === spec.adamId)\n  : catalog.filter((row) => row.name.toLowerCase() === spec.name.toLowerCase());\nif (apps.length === 0) {\n  return [{ json: { ok: false, message: 'Die App \"' + (spec.name || spec.adamId) + '\" steht nicht in der Liste (' + catalog.map((row) => row.name).join(', ') + '). Neue Apps mit der App-Store-ID oder dem Link angeben.' } }];\n}\nreturn [{ json: { ok: true, apps: apps.map((row) => ({ adamId: row.adam_id, name: row.name, bundleId: row.bundle_id, config: typeof row.config === 'string' ? JSON.parse(row.config) : (row.config || {}) })) } }];\n"
+        "jsCode": "const spec = $('Auftrag lesen').first().json.app;\nconst catalog = $input.all().map((item) => item.json).filter((row) => row.adam_id);\nconst apps = spec.adamId\n  ? catalog.filter((row) => row.adam_id === spec.adamId)\n  : catalog.filter((row) => row.name.toLowerCase() === spec.name.toLowerCase());\nif (apps.length === 0) {\n  return [{ json: { ok: false, message: 'Die App \"' + (spec.name || spec.adamId) + '\" steht nicht in der Liste (' + catalog.map((row) => row.name).join(', ') + '). Neue Apps mit der App-Store-ID oder dem Link angeben.' } }];\n}\nreturn [{ json: { ok: true, apps: apps.map((row) => ({ adamId: row.adam_id, name: row.name, bundleId: row.bundle_id, config: typeof row.config === 'string' ? JSON.parse(row.config) : (row.config || {}) })) } }];\n"
       },
       "id": "559c2981-d60d-5e9f-9af1-a4cb39ca2f94",
       "name": "Auswahl bestimmen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4830,
+        5060,
         600
       ]
     },
@@ -570,7 +732,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        5060,
+        5290,
         600
       ]
     },
@@ -594,7 +756,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        5290,
+        5520,
         600
       ],
       "credentials": {
@@ -615,7 +777,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5520,
+        5750,
         600
       ]
     },
@@ -650,7 +812,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        5750,
+        5980,
         600
       ]
     },
@@ -678,7 +840,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        5980,
+        6210,
         600
       ],
       "credentials": {
@@ -700,7 +862,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        6210,
+        6440,
         600
       ],
       "credentials": {
@@ -722,7 +884,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        6440,
+        6670,
         600
       ],
       "credentials": {
@@ -736,14 +898,14 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const crypto = require('crypto');\nconst ran = (name) => {\n  try {\n    return $(name).all().map((item) => item.json);\n  } catch (error) {\n    return [];\n  }\n};\nconst plan = $('Mail lesen').first().json;\nconst devices = $('Geraete pruefen').first().json.devices;\nconst serialOf = new Map(devices.map((device) => [device.enrollment_id, device.serial_number || '']));\nconst escapeXml = (value) => String(value)\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;');\nconst head = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n  + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n  + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n';\nconst tail = (uuid) => '\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>' + uuid + '</string>\\n</dict>\\n</plist>\\n';\nconst wallpaperPlist = (b64, where, uuid) => head\n  + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>Settings</string>\\n'\n  + '\\t\\t<key>Settings</key>\\n\\t\\t<array>\\n\\t\\t\\t<dict>\\n\\t\\t\\t\\t<key>Image</key>\\n\\t\\t\\t\\t<data>' + b64 + '</data>\\n'\n  + '\\t\\t\\t\\t<key>Item</key>\\n\\t\\t\\t\\t<string>Wallpaper</string>\\n'\n  + '\\t\\t\\t\\t<key>Where</key>\\n\\t\\t\\t\\t<integer>' + Number(where || 3) + '</integer>\\n\\t\\t\\t</dict>\\n\\t\\t</array>\\n'\n  + tail(uuid);\nconst profilePlist = (profile, uuid) => head\n  + '\\t\\t<key>Payload</key>\\n\\t\\t<data>' + Buffer.from(profile, 'utf8').toString('base64') + '</data>\\n'\n  + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>InstallProfile</string>\\n'\n  + tail(uuid);\nconst lockPlist = (lock, uuid) => head\n  + '\\t\\t<key>Message</key>\\n\\t\\t<string>' + escapeXml(lock.message) + '</string>\\n'\n  + (lock.phone ? '\\t\\t<key>PhoneNumber</key>\\n\\t\\t<string>' + escapeXml(lock.phone) + '</string>\\n' : '')\n  + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>DeviceLock</string>\\n'\n  + tail(uuid);\nconst configXml = (config) => {\n  const keys = Object.keys(config || {});\n  if (keys.length === 0) return '';\n  let xml = '\\t\\t<key>Configuration</key>\\n\\t\\t<dict>\\n';\n  for (const key of keys) {\n    const value = config[key];\n    xml += '\\t\\t\\t<key>' + escapeXml(key) + '</key>\\n';\n    if (typeof value === 'boolean') xml += '\\t\\t\\t' + (value ? '<true/>' : '<false/>') + '\\n';\n    else if (typeof value === 'number') xml += '\\t\\t\\t<integer>' + value + '</integer>\\n';\n    else xml += '\\t\\t\\t<string>' + escapeXml(value) + '</string>\\n';\n  }\n  return xml + '\\t\\t</dict>\\n';\n};\nconst installPlist = (app, uuid) => head\n  + configXml(app.config)\n  + '\\t\\t<key>ChangeManagementState</key>\\n\\t\\t<string>Managed</string>\\n'\n  + '\\t\\t<key>Options</key>\\n\\t\\t<dict>\\n\\t\\t\\t<key>PurchaseMethod</key>\\n\\t\\t\\t<integer>1</integer>\\n\\t\\t</dict>\\n'\n  + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>InstallApplication</string>\\n'\n  + '\\t\\t<key>iTunesStoreID</key>\\n\\t\\t<integer>' + Number(app.adamId) + '</integer>\\n'\n  + tail(uuid);\nconst parseParams = (value) => (typeof value === 'string' ? JSON.parse(value) : (value || {}));\nconst render = (template, params, version) => {\n  let profile = template;\n  for (const [key, value] of Object.entries(params)) {\n    const text = Array.isArray(value)\n      ? value.map((item) => '\\t\\t\\t\\t<string>' + escapeXml(item) + '</string>').join('\\n')\n      : escapeXml(value);\n    profile = profile.split('__' + key + '__').join(text);\n  }\n  return profile.split('__VERSION__').join(String(version));\n};\n\nconst out = [];\nconst add = (enrollmentId, label, profileName, version, build) => {\n  const commandUuid = crypto.randomUUID();\n  out.push({ json: { skip: false, enrollment_id: enrollmentId, serial_number: serialOf.get(enrollmentId) || '', label, profile_name: profileName, version, command_uuid: commandUuid, plist: build(commandUuid) } });\n};\nconst labelOf = (row) => {\n  if (row.kind === 'wallpaper') return 'Hintergrund';\n  if (row.profile_name === 'app-allowlist') return 'Erlaubt-Liste';\n  return 'Hintergrund-Sperre';\n};\nconst addRow = (row) => {\n  const params = parseParams(row.params);\n  if (row.kind === 'wallpaper') {\n    add(row.enrollment_id, labelOf(row), row.profile_name, row.version, (uuid) => wallpaperPlist(params.IMAGE_B64, params.WHERE, uuid));\n  } else {\n    const profile = render(row.template, params, row.version);\n    add(row.enrollment_id, labelOf(row), row.profile_name, row.version, (uuid) => profilePlist(profile, uuid));\n  }\n};\n\nran('Globale Profile beanspruchen').filter((row) => row.profile_name).forEach(addRow);\n\nif (!plan.alle && plan.wallpaper) {\n  devices.forEach((device) => add(device.enrollment_id, 'Hintergrund', '', 0, (uuid) => wallpaperPlist(plan.wallpaper.b64, 3, uuid)));\n}\n\nconst license = ran('Lizenzen pruefen')[0];\nif (license && license.skip === false) {\n  for (const device of devices) {\n    for (const app of license.licensed) {\n      add(device.enrollment_id, 'App ' + app.name, '', 0, (uuid) => installPlist(app, uuid));\n    }\n  }\n}\n\nran('Liste beanspruchen').filter((row) => row.profile_name).forEach(addRow);\n\nif (plan.lock) {\n  devices.forEach((device) => add(device.enrollment_id, 'Sperren', '', 0, (uuid) => lockPlist(plan.lock, uuid)));\n}\n\nreturn out.length > 0 ? out : [{ json: { skip: true } }];\n"
+        "jsCode": "const crypto = require('crypto');\nconst ran = (name) => {\n  try {\n    return $(name).all().map((item) => item.json);\n  } catch (error) {\n    return [];\n  }\n};\nconst plan = $('Auftrag lesen').first().json;\nconst devices = $('Geraete pruefen').first().json.devices;\nconst serialOf = new Map(devices.map((device) => [device.enrollment_id, device.serial_number || '']));\nconst escapeXml = (value) => String(value)\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;');\nconst head = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n  + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n  + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n';\nconst tail = (uuid) => '\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>' + uuid + '</string>\\n</dict>\\n</plist>\\n';\nconst wallpaperPlist = (b64, where, uuid) => head\n  + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>Settings</string>\\n'\n  + '\\t\\t<key>Settings</key>\\n\\t\\t<array>\\n\\t\\t\\t<dict>\\n\\t\\t\\t\\t<key>Image</key>\\n\\t\\t\\t\\t<data>' + b64 + '</data>\\n'\n  + '\\t\\t\\t\\t<key>Item</key>\\n\\t\\t\\t\\t<string>Wallpaper</string>\\n'\n  + '\\t\\t\\t\\t<key>Where</key>\\n\\t\\t\\t\\t<integer>' + Number(where || 3) + '</integer>\\n\\t\\t\\t</dict>\\n\\t\\t</array>\\n'\n  + tail(uuid);\nconst profilePlist = (profile, uuid) => head\n  + '\\t\\t<key>Payload</key>\\n\\t\\t<data>' + Buffer.from(profile, 'utf8').toString('base64') + '</data>\\n'\n  + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>InstallProfile</string>\\n'\n  + tail(uuid);\nconst lockPlist = (lock, uuid) => head\n  + '\\t\\t<key>Message</key>\\n\\t\\t<string>' + escapeXml(lock.message) + '</string>\\n'\n  + (lock.phone ? '\\t\\t<key>PhoneNumber</key>\\n\\t\\t<string>' + escapeXml(lock.phone) + '</string>\\n' : '')\n  + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>DeviceLock</string>\\n'\n  + tail(uuid);\nconst configXml = (config) => {\n  const keys = Object.keys(config || {});\n  if (keys.length === 0) return '';\n  let xml = '\\t\\t<key>Configuration</key>\\n\\t\\t<dict>\\n';\n  for (const key of keys) {\n    const value = config[key];\n    xml += '\\t\\t\\t<key>' + escapeXml(key) + '</key>\\n';\n    if (typeof value === 'boolean') xml += '\\t\\t\\t' + (value ? '<true/>' : '<false/>') + '\\n';\n    else if (typeof value === 'number') xml += '\\t\\t\\t<integer>' + value + '</integer>\\n';\n    else xml += '\\t\\t\\t<string>' + escapeXml(value) + '</string>\\n';\n  }\n  return xml + '\\t\\t</dict>\\n';\n};\nconst installPlist = (app, uuid) => head\n  + configXml(app.config)\n  + '\\t\\t<key>ChangeManagementState</key>\\n\\t\\t<string>Managed</string>\\n'\n  + '\\t\\t<key>Options</key>\\n\\t\\t<dict>\\n\\t\\t\\t<key>PurchaseMethod</key>\\n\\t\\t\\t<integer>1</integer>\\n\\t\\t</dict>\\n'\n  + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>InstallApplication</string>\\n'\n  + '\\t\\t<key>iTunesStoreID</key>\\n\\t\\t<integer>' + Number(app.adamId) + '</integer>\\n'\n  + tail(uuid);\nconst parseParams = (value) => (typeof value === 'string' ? JSON.parse(value) : (value || {}));\nconst render = (template, params, version) => {\n  let profile = template;\n  for (const [key, value] of Object.entries(params)) {\n    const text = Array.isArray(value)\n      ? value.map((item) => '\\t\\t\\t\\t<string>' + escapeXml(item) + '</string>').join('\\n')\n      : escapeXml(value);\n    profile = profile.split('__' + key + '__').join(text);\n  }\n  return profile.split('__VERSION__').join(String(version));\n};\n\nconst out = [];\nconst add = (enrollmentId, label, profileName, version, build) => {\n  const commandUuid = crypto.randomUUID();\n  out.push({ json: { skip: false, enrollment_id: enrollmentId, serial_number: serialOf.get(enrollmentId) || '', label, profile_name: profileName, version, command_uuid: commandUuid, plist: build(commandUuid) } });\n};\nconst labelOf = (row) => {\n  if (row.kind === 'wallpaper') return 'Hintergrund';\n  if (row.profile_name === 'app-allowlist') return 'Erlaubt-Liste';\n  return 'Hintergrund-Sperre';\n};\nconst addRow = (row) => {\n  const params = parseParams(row.params);\n  if (row.kind === 'wallpaper') {\n    add(row.enrollment_id, labelOf(row), row.profile_name, row.version, (uuid) => wallpaperPlist(params.IMAGE_B64, params.WHERE, uuid));\n  } else {\n    const profile = render(row.template, params, row.version);\n    add(row.enrollment_id, labelOf(row), row.profile_name, row.version, (uuid) => profilePlist(profile, uuid));\n  }\n};\n\nran('Globale Profile beanspruchen').filter((row) => row.profile_name).forEach(addRow);\n\nif (!plan.alle && plan.wallpaper) {\n  devices.forEach((device) => add(device.enrollment_id, 'Hintergrund', '', 0, (uuid) => wallpaperPlist(plan.wallpaper.b64, 3, uuid)));\n}\n\nconst license = ran('Lizenzen pruefen')[0];\nif (license && license.skip === false) {\n  for (const device of devices) {\n    for (const app of license.licensed) {\n      add(device.enrollment_id, 'App ' + app.name, '', 0, (uuid) => installPlist(app, uuid));\n    }\n  }\n}\n\nran('Liste beanspruchen').filter((row) => row.profile_name).forEach(addRow);\n\nif (plan.lock) {\n  devices.forEach((device) => add(device.enrollment_id, 'Sperren', '', 0, (uuid) => lockPlist(plan.lock, uuid)));\n}\n\nreturn out.length > 0 ? out : [{ json: { skip: true } }];\n"
       },
       "id": "757ba151-9211-5fde-aaa5-3da2e71bc391",
       "name": "Befehle bauen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6670,
+        6900,
         300
       ]
     },
@@ -778,7 +940,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        6900,
+        7130,
         300
       ]
     },
@@ -806,7 +968,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        7130,
+        7360,
         300
       ],
       "credentials": {
@@ -827,7 +989,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        7360,
+        7590,
         300
       ]
     },
@@ -844,7 +1006,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        7590,
+        7820,
         300
       ],
       "credentials": {
@@ -858,14 +1020,14 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const ran = (name) => {\n  try {\n    return $(name).all().map((item) => item.json);\n  } catch (error) {\n    return [];\n  }\n};\nconst plan = $('Mail lesen').first().json;\nconst found = $('Geraete pruefen').first().json;\nconst results = ran('Ergebnis auswerten');\nconst lines = ['Mail: ' + plan.subject];\nconst problems = [];\nlines.push('Ziel: ' + (plan.alle ? 'alle angemeldeten iPads (' + found.devices.length + ')' : plan.targets.map((target) => target.name).join(', ')) + '.');\nif (found.missing.length > 0) problems.push('Nicht angemeldet und uebersprungen: ' + found.missing.join(', ') + '.');\nplan.warnings.forEach((warning) => problems.push(warning));\n\nconst report = (title, label) => {\n  const rows = results.filter((row) => row.label === label);\n  if (rows.length === 0) {\n    problems.push(title + ': kein Befehl eingereiht.');\n    return;\n  }\n  const ok = rows.filter((row) => row.ok === 'yes');\n  const failed = rows.filter((row) => row.ok !== 'yes');\n  const waiting = ok.filter((row) => row.detail);\n  lines.push(title + ': ' + ok.length + ' von ' + rows.length + ' Befehl(en) eingereiht.');\n  if (failed.length > 0) problems.push(title + ' nicht eingereiht: ' + failed.map((row) => (row.serial_number || row.enrollment_id) + ' (' + row.detail + ')').join(', ') + '.');\n  if (waiting.length > 0) problems.push(title + ': Der Befehl wartet bis zum naechsten Check-in, APNs-Push meldet: ' + waiting[0].detail + '.');\n};\n\nif (plan.wallpaper) report('Hintergrund', 'Hintergrund');\nif (plan.lock) report('Sperren', 'Sperren');\n\nif (plan.app) {\n  const blocker = [ran('App pruefen')[0], ran('Auswahl bestimmen')[0]].find((row) => row && row.ok === false);\n  const licenses = ran('Lizenzen pruefen')[0];\n  const assign = ran('Lizenz zuweisen')[0];\n  if (blocker) {\n    problems.push('App nicht installiert: ' + blocker.message);\n  } else if (!licenses) {\n    problems.push('App nicht installiert: Die App wurde nicht verarbeitet.');\n  } else if (licenses.skip) {\n    problems.push('App nicht installiert: ' + licenses.message);\n  } else {\n    const names = licenses.licensed.map((app) => app.name);\n    names.forEach((name) => report('App ' + name, 'App ' + name));\n    if (assign && assign.statusCode === 200) {\n      lines.push('Lizenz fuer ' + names.join(', ') + ' wurde zugewiesen.');\n    } else {\n      const body = (assign && assign.body) || {};\n      problems.push('Die Lizenzzuweisung bei Apple schlug fehl (HTTP ' + ((assign && (assign.statusCode || assign.error)) || 'keine Antwort') + (body.errorMessage ? ', ' + body.errorMessage : '') + '). Ohne Lizenz kann ein iPad ohne Apple-ID die App nicht installieren.');\n    }\n    if (licenses.missing.length > 0) problems.push('Nicht in Apple Business abgerufen und uebersprungen: ' + licenses.missing.map((app) => app.name).join(', ') + '.');\n    if (results.some((row) => row.label === 'Erlaubt-Liste')) report('Erlaubt-Liste', 'Erlaubt-Liste');\n    else lines.push('Die Erlaubt-Liste ist unveraendert.');\n  }\n}\n\nif (plan.push) {\n  const pushed = ran('Push auswerten')[0];\n  lines.push(pushed ? pushed.text : 'Push: nicht gesendet.');\n  if (pushed && pushed.failed.length > 0) problems.push('Push nicht uebergeben: ' + pushed.failed.join(', ') + '.');\n}\n\nreturn [{\n  json: {\n    title: problems.length > 0 ? 'iPad-Auftrag mit Problemen' : 'iPad-Auftrag ausgefuehrt',\n    message: lines.concat(problems.map((problem) => 'ACHTUNG: ' + problem)).join('\\n'),\n    priority: problems.length > 0 ? 'high' : 'default'\n  }\n}];\n"
+        "jsCode": "const ran = (name) => {\n  try {\n    return $(name).all().map((item) => item.json);\n  } catch (error) {\n    return [];\n  }\n};\nconst plan = $('Auftrag lesen').first().json;\nconst found = $('Geraete pruefen').first().json;\nconst results = ran('Ergebnis auswerten');\nconst lines = ['Auftrag: ' + plan.source];\nconst problems = [];\nlines.push('Ziel: ' + (plan.alle ? 'alle angemeldeten iPads (' + found.devices.length + ')' : plan.targets.map((target) => target.name).join(', ')) + '.');\nif (found.missing.length > 0) problems.push('Nicht angemeldet und uebersprungen: ' + found.missing.join(', ') + '.');\nplan.warnings.forEach((warning) => problems.push(warning));\n\nconst report = (title, label) => {\n  const rows = results.filter((row) => row.label === label);\n  if (rows.length === 0) {\n    problems.push(title + ': kein Befehl eingereiht.');\n    return;\n  }\n  const ok = rows.filter((row) => row.ok === 'yes');\n  const failed = rows.filter((row) => row.ok !== 'yes');\n  const waiting = ok.filter((row) => row.detail);\n  lines.push(title + ': ' + ok.length + ' von ' + rows.length + ' Befehl(en) eingereiht.');\n  if (failed.length > 0) problems.push(title + ' nicht eingereiht: ' + failed.map((row) => (row.serial_number || row.enrollment_id) + ' (' + row.detail + ')').join(', ') + '.');\n  if (waiting.length > 0) problems.push(title + ': Der Befehl wartet bis zum naechsten Check-in, APNs-Push meldet: ' + waiting[0].detail + '.');\n};\n\nif (plan.wallpaper) report('Hintergrund', 'Hintergrund');\nif (plan.lock) report('Sperren', 'Sperren');\n\nif (plan.app) {\n  const blocker = [ran('App pruefen')[0], ran('Auswahl bestimmen')[0]].find((row) => row && row.ok === false);\n  const licenses = ran('Lizenzen pruefen')[0];\n  const assign = ran('Lizenz zuweisen')[0];\n  if (blocker) {\n    problems.push('App nicht installiert: ' + blocker.message);\n  } else if (!licenses) {\n    problems.push('App nicht installiert: Die App wurde nicht verarbeitet.');\n  } else if (licenses.skip) {\n    problems.push('App nicht installiert: ' + licenses.message);\n  } else {\n    const names = licenses.licensed.map((app) => app.name);\n    names.forEach((name) => report('App ' + name, 'App ' + name));\n    if (assign && assign.statusCode === 200) {\n      lines.push('Lizenz fuer ' + names.join(', ') + ' wurde zugewiesen.');\n    } else {\n      const body = (assign && assign.body) || {};\n      problems.push('Die Lizenzzuweisung bei Apple schlug fehl (HTTP ' + ((assign && (assign.statusCode || assign.error)) || 'keine Antwort') + (body.errorMessage ? ', ' + body.errorMessage : '') + '). Ohne Lizenz kann ein iPad ohne Apple-ID die App nicht installieren.');\n    }\n    if (licenses.missing.length > 0) problems.push('Nicht in Apple Business abgerufen und uebersprungen: ' + licenses.missing.map((app) => app.name).join(', ') + '.');\n    if (results.some((row) => row.label === 'Erlaubt-Liste')) report('Erlaubt-Liste', 'Erlaubt-Liste');\n    else lines.push('Die Erlaubt-Liste ist unveraendert.');\n  }\n}\n\nif (plan.push) {\n  const pushed = ran('Push auswerten')[0];\n  lines.push(pushed ? pushed.text : 'Push: nicht gesendet.');\n  if (pushed && pushed.failed.length > 0) problems.push('Push nicht uebergeben: ' + pushed.failed.join(', ') + '.');\n}\n\nreturn [{\n  json: {\n    title: problems.length > 0 ? 'iPad-Auftrag mit Problemen' : 'iPad-Auftrag ausgefuehrt',\n    message: lines.concat(problems.map((problem) => 'ACHTUNG: ' + problem)).join('\\n'),\n    priority: problems.length > 0 ? 'high' : 'default'\n  }\n}];\n"
       },
       "id": "1ac8f684-fc7f-5f49-9f35-a72c8c59fdf2",
       "name": "Meldung bauen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        7820,
+        8050,
         300
       ]
     },
@@ -909,7 +1071,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        8050,
+        8280,
         300
       ],
       "credentials": {
@@ -960,7 +1122,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1610,
+        1840,
         740
       ],
       "credentials": {
@@ -973,7 +1135,73 @@
     },
     {
       "parameters": {
-        "content": "## MDM: Auftrag per Mail\n\nEine Mail im IMAP-Ordner `Ausbildung-Ipads` loest Aenderungen auf einem, mehreren oder allen iPads aus. Der Workflow liest nur ungelesene Mails von den Absendern aus `sender` im Node **Konfiguration**.\n\n**Schritte nach dem Import**\n1. Der Node **E-Mail empfangen** nutzt das IMAP-Credential `Netcup Automation` (dasselbe wie Instagram-Post per Mail). Den Absender auch im Feld *Custom Email Config* des Nodes eintragen. Heisst der Ordner auf dem Server anders (zum Beispiel `INBOX.Ausbildung-Ipads`), den Node **E-Mail empfangen** anpassen.\n2. Node **Konfiguration**: bei `ipads` fuer jedes iPad die Seriennummer statt `CHANGE-ME-...` eintragen. Gehoeren mehrere iPads zu einem Namen, bei `serial` eine Liste eintragen: `serial: ['SERIAL1', 'SERIAL2', ...]`. Optional `ntfyTopic` je iPad (siehe unten).\n3. Die Credentials `MDM NanoMDM API`, `MDM Automation DB`, `Apple Apps Token` und `ntfy-publisher` pruefen, Workflow aktivieren.\n\n**Mail:** genau ein JSON-Anhang, dazu optional ein Bild (PNG oder JPG, bis 4 MB). Der Betreff ist egal.\n\n```\n{\n  \"ipads\": [\"kleines-becken\", \"vorstands-tisch\"],\n  \"push\": { \"titel\": \"Training\", \"nachricht\": \"Treffpunkt 18 Uhr\", \"dringlichkeit\": \"hoch\" },\n  \"sperrbildschirm\": { \"nachricht\": \"Training faellt aus\", \"telefon\": \"0123 456789\" },\n  \"app\": \"DLRG Trainer\"\n}\n```\n\n- `ipads` (Pflicht): Liste aus `kleines-becken`, `grosses-becken`, `vorstands-tisch`, einer Seriennummer oder `\"alle\"`.\n- **Hintergrund:** wird gesetzt, sobald ein Bild an der Mail haengt. `\"hintergrund\": false` ignoriert das Bild.\n- `push`: Text oder Objekt mit `nachricht` (bis 500 Zeichen), `titel` (bis 80) und `dringlichkeit` (`normal`, `hoch`, `dringend`).\n- `sperrbildschirm`: sperrt das iPad sofort und zeigt die Nachricht auf dem Sperrbildschirm. Text (bis 300 Zeichen) oder Objekt mit `nachricht` und optional `telefon`. Entsperrt wird mit dem Code des iPads. Der dauerhafte Fusszeilen-Text ist per Mail bewusst nicht aenderbar.\n- `app`: Name aus dem Katalog, App-Store-ID oder App-Store-Link. Neue kostenlose Apps werden in den Katalog aufgenommen.\n- Alle Aktionen sind optional, mindestens eine ist noetig. Unbekannte Felder lehnt der Workflow ab.\n\n**Wirkung je Ziel:** Bei `\"alle\"` wird das Bild wie im Formular-Workflow als Standard gespeichert, damit neue iPads es bekommen. Bei einzelnen iPads geht der Befehl nur an diese, der gespeicherte Standard bleibt unveraendert. Sperren, Push und App-Installation speichern nichts. Die Erlaubt-Liste fuer Apps gilt immer fuer alle iPads.\n\n**Push:** ntfy kann einzelne iPads nicht ansprechen. Ohne `ntfyTopic` geht die Meldung an `Home-Lab-iPad`, also an alle iPads, mit dem iPad-Namen im Titel. Mit eigenem Topic je iPad (in der ntfy-App dieses iPads abonnieren, Schreibrecht fuer `ipad` einrichten) erreicht sie nur dieses iPad.\n\nDas Ergebnis meldet der Workflow auf dem ntfy-Topic `Home-Lab-MDM`, Fehler ebenfalls.\n",
+        "mode": "runOnceForAllItems",
+        "jsCode": "const ran = (name) => ($(name).isExecuted ? $(name).all().map((item) => item.json) : []);\nconst built = ran('Meldung bauen')[0];\nconst checked = ran('Geraete pruefen')[0];\nconst parsed = ran('Auftrag lesen')[0];\nconst result = built || (checked && !checked.ok ? checked : parsed) || {};\nreturn [{ json: { title: String(result.title || 'iPad-Auftrag'), message: String(result.message || '') } }];\n"
+      },
+      "id": "e64f0de2-d21a-5af5-b886-f5e99446de20",
+      "name": "Rueckmeldung",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8510,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Formular Auftrag').isExecuted }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "d06b30e3-e6d8-51a8-8781-8e7b7eaa5f95"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "7166adf6-49a0-5ca6-b074-6e1ae873f937",
+      "name": "Aus Formular?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        8740,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "={{ $('Rueckmeldung').first().json.title }}",
+        "completionMessage": "={{ $('Rueckmeldung').first().json.message }}",
+        "options": {}
+      },
+      "id": "f3823e82-3ab5-5794-b20c-c03bf7e4dfc6",
+      "name": "Abschluss",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        8970,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## MDM: Auftrag per Mail oder Formular\n\nZwei Wege fuehren in denselben Ablauf und loesen Aenderungen auf einem, mehreren oder allen iPads aus:\n\n- **Mail** im IMAP-Ordner `Ausbildung-Ipads`. Der Workflow liest nur ungelesene Mails von den Absendern aus `sender` im Node **Konfiguration**.\n- **Formular** unter `https://n8n.prod.homeserver/form/mdm-auftrag` (Basic Auth, Credential `MDM Formulare`). Die Felder entsprechen dem JSON der Mail, das Hintergrundbild wird direkt hochgeladen. Die Antwortseite zeigt das Ergebnis, ntfy bekommt es zusaetzlich.\n\n**iPads in der Datenbank:** Der Node **iPads lesen** holt Gruppen und Seriennummern aus `automation.ipad_group` und `automation.ipad` (Datenbank `nanomdm`). Neue iPads dort eintragen, im Workflow muss nichts geaendert werden. Hat ein iPad einen Namen (Spalte `name`, zum Beispiel `Seepferdchen`), ist es auch einzeln waehlbar. Neue Gruppen und neue Namen brauchen zusaetzlich eine Checkbox-Option im Formular (Node **Formular Auftrag**).\n\n**Schritte nach dem Import**\n1. Der Node **E-Mail empfangen** nutzt das IMAP-Credential `Netcup Automation` (dasselbe wie Instagram-Post per Mail). Den Absender auch im Feld *Custom Email Config* des Nodes eintragen. Heisst der Ordner auf dem Server anders (zum Beispiel `INBOX.Ausbildung-Ipads`), den Node **E-Mail empfangen** anpassen.\n2. Die Credentials `MDM Formulare`, `MDM NanoMDM API`, `MDM Automation DB`, `Apple Apps Token` und `ntfy-publisher` pruefen, Workflow aktivieren.\n\n**Mail:** genau ein JSON-Anhang, dazu optional ein Bild (PNG oder JPG, bis 4 MB). Der Betreff ist egal.\n\n```\n{\n  \"ipads\": [\"kleines-becken\", \"vorstands-tisch\"],\n  \"push\": { \"titel\": \"Training\", \"nachricht\": \"Treffpunkt 18 Uhr\", \"dringlichkeit\": \"hoch\" },\n  \"sperrbildschirm\": { \"nachricht\": \"Training faellt aus\", \"telefon\": \"0123 456789\" },\n  \"app\": \"DLRG Trainer\"\n}\n```\n\n- `ipads` (Pflicht): Liste aus Gruppenschluesseln oder -namen aus `automation.ipad_group`, iPad-Namen aus `automation.ipad`, einer Seriennummer oder `\"alle\"`.\n- **Hintergrund:** wird gesetzt, sobald ein Bild an der Mail haengt. `\"hintergrund\": false` ignoriert das Bild.\n- `push`: Text oder Objekt mit `nachricht` (bis 500 Zeichen), `titel` (bis 80) und `dringlichkeit` (`normal`, `hoch`, `dringend`).\n- `sperrbildschirm`: sperrt das iPad sofort und zeigt die Nachricht auf dem Sperrbildschirm. Text (bis 300 Zeichen) oder Objekt mit `nachricht` und optional `telefon`. Entsperrt wird mit dem Code des iPads. Der dauerhafte Fusszeilen-Text ist hier bewusst nicht aenderbar.\n- `app`: Name aus dem Katalog, App-Store-ID oder App-Store-Link. Neue kostenlose Apps werden in den Katalog aufgenommen.\n- Alle Aktionen sind optional, mindestens eine ist noetig. Unbekannte Felder lehnt der Workflow ab.\n\n**Wirkung je Ziel:** Bei `\"alle\"` wird das Bild wie im Formular-Workflow als Standard gespeichert, damit neue iPads es bekommen. Bei einzelnen iPads geht der Befehl nur an diese, der gespeicherte Standard bleibt unveraendert. Sperren, Push und App-Installation speichern nichts. Die Erlaubt-Liste fuer Apps gilt immer fuer alle iPads.\n\n**Push:** ntfy kann einzelne iPads nicht ansprechen. Ohne `ntfy_topic` an der Gruppe geht die Meldung an `Home-Lab-iPad`, also an alle iPads, mit dem iPad-Namen im Titel. Mit eigenem Topic je Gruppe (in der ntfy-App dieser iPads abonnieren, Schreibrecht fuer `ipad` einrichten) erreicht sie nur diese iPads.\n\nDas Ergebnis meldet der Workflow auf dem ntfy-Topic `Home-Lab-MDM`, Fehler ebenfalls.\n",
         "height": 700,
         "width": 760,
         "color": 4
@@ -994,7 +1222,7 @@
       "main": [
         [
           {
-            "node": "Konfiguration",
+            "node": "iPads lesen",
             "type": "main",
             "index": 0
           }
@@ -1005,14 +1233,14 @@
       "main": [
         [
           {
-            "node": "Mail lesen",
+            "node": "Auftrag lesen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Mail lesen": {
+    "Auftrag lesen": {
       "main": [
         [
           {
@@ -1437,6 +1665,72 @@
           }
         ]
       ]
+    },
+    "Formular Auftrag": {
+      "main": [
+        [
+          {
+            "node": "iPads lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "iPads lesen": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnis melden": {
+      "main": [
+        [
+          {
+            "node": "Rueckmeldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fehler melden": {
+      "main": [
+        [
+          {
+            "node": "Rueckmeldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rueckmeldung": {
+      "main": [
+        [
+          {
+            "node": "Aus Formular?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aus Formular?": {
+      "main": [
+        [
+          {
+            "node": "Abschluss",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
@@ -1447,6 +1741,6 @@
   },
   "versionId": "00530ade-28fa-5dfc-8796-7e8a2204e3ee",
   "meta": {
-    "description": "Mail-Trigger (IMAP-Ordner Ausbildung-Ipads) fuer Aenderungen an einzelnen oder allen iPads. Der JSON-Anhang waehlt die iPads (Name aus der Tabelle im Node Konfiguration, Seriennummer oder alle) und die Aktionen: Hintergrundbild (Bild als Mail-Anhang, Settings/Wallpaper), Push-Benachrichtigung ueber ntfy (JSON-Publish auf Home-Lab-iPad oder ein eigenes Topic je iPad), iPad sperren mit Nachricht auf dem Sperrbildschirm (DeviceLock, wie mdm-ipads-sperren) und App installieren (Katalog automation.app_catalog oder neue kostenlose App per App-Store-ID, Lizenz ueber Apple Business, Erlaubt-Liste wird fuer alle iPads neu berechnet). Bei alle wird das Bild wie im Formular-Workflow in automation.profile_state gespeichert und fuer alle Geraete beansprucht, bei einzelnen iPads geht der Befehl direkt an diese und der gespeicherte Standard bleibt unveraendert. Der Footer-Text des Sperrbildschirms ist per Mail nicht aenderbar. Ergebnis und Fehler gehen per ntfy an Home-Lab-MDM. Credentials: Netcup Automation, MDM NanoMDM API, MDM Automation DB, Apple Apps Token, ntfy-publisher."
+    "description": "Zwei Trigger fuer Aenderungen an einzelnen oder allen iPads: eine Mail (IMAP-Ordner Ausbildung-Ipads, JSON-Anhang) oder das Formular unter /form/mdm-auftrag. Beide waehlen die iPads (Gruppe aus automation.ipad_group, einzelnes iPad per Name aus automation.ipad, Seriennummer oder alle) und die Aktionen: Hintergrundbild (Settings/Wallpaper), Push-Benachrichtigung ueber ntfy (JSON-Publish auf Home-Lab-iPad oder ein eigenes Topic je Gruppe), iPad sperren mit Nachricht auf dem Sperrbildschirm (DeviceLock, wie mdm-ipads-sperren) und App installieren (Katalog automation.app_catalog oder neue kostenlose App per App-Store-ID, Lizenz ueber Apple Business, Erlaubt-Liste wird fuer alle iPads neu berechnet). Die Zuordnung Gruppe zu Seriennummer liest der Node iPads lesen aus automation.ipad. Bei alle wird das Bild wie im Formular-Workflow in automation.profile_state gespeichert und fuer alle Geraete beansprucht, bei einzelnen iPads geht der Befehl direkt an diese und der gespeicherte Standard bleibt unveraendert. Der Footer-Text des Sperrbildschirms ist hier nicht aenderbar. Ergebnis und Fehler gehen per ntfy an Home-Lab-MDM, beim Formular zusaetzlich als Antwortseite. Credentials: Netcup Automation, MDM Formulare, MDM NanoMDM API, MDM Automation DB, Apple Apps Token, ntfy-publisher."
   }
 }

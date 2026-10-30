@@ -95,6 +95,27 @@
                     "option": "Vorstands-Tisch"
                   },
                   {
+                    "option": "Kleines Becken Gruppe 1"
+                  },
+                  {
+                    "option": "Kleines Becken Gruppe 2"
+                  },
+                  {
+                    "option": "Seepferdchen"
+                  },
+                  {
+                    "option": "Bronze"
+                  },
+                  {
+                    "option": "Silber"
+                  },
+                  {
+                    "option": "Gold"
+                  },
+                  {
+                    "option": "Juniorretter"
+                  },
+                  {
                     "option": "Einzelnes iPad (Seriennummer unten)"
                   }
                 ]
@@ -131,29 +152,53 @@
     },
     {
       "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT g.key AS group_key, g.name AS group_name, g.ntfy_topic, i.serial_number, i.name AS ipad_name FROM automation.ipad_group g FULL JOIN automation.ipad i ON i.group_key = g.key WHERE COALESCE(i.enabled, true) ORDER BY g.key, i.serial_number",
+        "options": {}
+      },
+      "id": "bcf773ee-c64d-5d4a-bccb-fd6247fdd594",
+      "name": "iPads lesen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        230,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  depserverUrl: 'http://mdm-depserver.mdm.svc.cluster.local:9001',\n  scepUrl: 'http://mdm-scep.mdm.svc.cluster.local:8080',\n  publicHost: 'mdm-prod.pke-lab.de',\n  depName: 'capulus',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM',\n  vmUrl: 'http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428',\n  n8nUrl: 'https://n8n.prod.homeserver',\n  ipads: {\n    'kleines-becken': { name: 'Kleines Becken', serial: ['FVQ99FKFPX', 'JXF7J61RWP'], ntfyTopic: '' },\n    'grosses-becken': { name: 'Grosses Becken', serial: ['DYD6FXG02W', 'GCFG7XT6XJ', 'JLXJ6KPYVP', 'DN4LTQ402C', 'D2LTC9DDJW'], ntfyTopic: '' },\n    'vorstands-tisch': { name: 'Vorstands-Tisch', serial: 'CHANGE-ME-SERIENNUMMER-VORSTANDS-TISCH', ntfyTopic: '' }\n  }\n};\nreturn [{ json: cfg }];\n"
+        "jsCode": "const rows = $input.all().map((item) => item.json);\nconst slug = (value) => String(value)\n  .toLowerCase()\n  .replace(/ä/g, 'ae')\n  .replace(/ö/g, 'oe')\n  .replace(/ü/g, 'ue')\n  .replace(/ß/g, 'ss')\n  .replace(/[^a-z0-9]+/g, '-')\n  .replace(/^-+|-+$/g, '');\nconst ipads = {};\nfor (const row of rows.filter((entry) => entry.group_key)) {\n  if (!ipads[row.group_key]) ipads[row.group_key] = { name: row.group_name, serial: [], ntfyTopic: row.ntfy_topic || '' };\n  if (row.serial_number) ipads[row.group_key].serial.push(row.serial_number);\n}\nfor (const row of rows.filter((entry) => entry.serial_number && entry.ipad_name)) {\n  const key = slug(row.ipad_name);\n  if (!ipads[key]) ipads[key] = { name: row.ipad_name, serial: [row.serial_number], ntfyTopic: row.ntfy_topic || '' };\n}\nconst ipadsError = rows.some((row) => row.error) ? 'Die iPad-Liste (automation.ipad) ist in der Datenbank nicht lesbar.' : '';\nconst cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  depserverUrl: 'http://mdm-depserver.mdm.svc.cluster.local:9001',\n  scepUrl: 'http://mdm-scep.mdm.svc.cluster.local:8080',\n  publicHost: 'mdm-prod.pke-lab.de',\n  depName: 'capulus',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM',\n  vmUrl: 'http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428',\n  n8nUrl: 'https://n8n.prod.homeserver',\n  ipads,\n  ipadsError\n};\nreturn [{ json: cfg }];\n"
       },
       "id": "70ebb6d3-793f-5575-82b8-a93d13b66037",
       "name": "Konfiguration",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        230,
+        460,
         300
       ]
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const input = $('Formular App').first().json;\nconst cfg = $('Konfiguration').first().json;\nconst choice = String(input['App'] || '');\nconst idField = String(input['App-Store-ID oder Link (nur bei Andere App)'] || '').trim();\nconst ipadChoice = String(input['iPads'] || '').trim();\nconst uninstall = String(input['Aktion'] || '') === 'Deinstallieren';\nconst serial = String(input['Seriennummer (nur bei Einzelnes iPad)'] || '').trim();\nconst fail = (text) => [{ json: { ok: false, title: uninstall ? 'Nichts deinstalliert' : 'Nichts installiert', message: text } }];\nconst norm = (value) => String(value)\n  .toLowerCase()\n  .replace(/ä/g, 'ae')\n  .replace(/ö/g, 'oe')\n  .replace(/ü/g, 'ue')\n  .replace(/ß/g, 'ss')\n  .replace(/[^a-z0-9]+/g, '-')\n  .replace(/^-+|-+$/g, '');\nif (uninstall && choice === 'Alle Apps der Liste') return fail('Alle Apps der Liste kann nicht auf einmal deinstalliert werden. Bitte eine einzelne App waehlen.');\nlet alle = false;\nlet serials = [];\nlet target = '';\nif (ipadChoice === 'Alle iPads') {\n  alle = true;\n  target = 'alle iPads';\n} else if (ipadChoice.indexOf('Einzelnes iPad') === 0) {\n  if (serial.length === 0 || serial.length > 40 || !/^[A-Za-z0-9]+$/.test(serial)) return fail('Bitte die Seriennummer eintragen (nur Buchstaben und Ziffern).');\n  serials = [serial];\n  target = serial;\n} else {\n  const group = Object.values(cfg.ipads).find((entry) => norm(entry.name) === norm(ipadChoice));\n  if (!group) return fail('Bitte unter iPads eine Auswahl treffen.');\n  serials = [].concat(group.serial);\n  if (serials.some((entry) => /^CHANGE-ME/.test(entry))) return fail('Fuer ' + group.name + ' ist im Workflow noch keine Seriennummer eingetragen.');\n  target = group.name;\n}\nconst web = {\n  'Web: ISC': ['webclip-isc'],\n  'Web: Lists Gruppe 1 Stunde 1': ['webclip-g1s1'],\n  'Web: Lists Gruppe 1 Stunde 2': ['webclip-g1s2'],\n  'Web: Lists Gruppe 2 Stunde 1': ['webclip-g2s1'],\n  'Web: Lists Gruppe 2 Stunde 2': ['webclip-g2s2'],\n  'Web: Alle Web-Links': ['webclip-isc', 'webclip-g1s1', 'webclip-g1s2', 'webclip-g2s1', 'webclip-g2s2']\n};\nif (web[choice]) return [{ json: { ok: true, mode: 'webclip', profiles: web[choice], alle, serials, target, uninstall } }];\nif (choice === 'Andere App (ID unten)') {\n  const match = /(?:id)?(\\d{6,12})/.exec(idField);\n  if (!match) return fail('Bitte die App-Store-ID (Ziffern) oder den App-Store-Link eintragen.');\n  return [{ json: { ok: true, mode: 'other', adamId: match[1], alle, serials, target, uninstall } }];\n}\nif (choice === 'Alle Apps der Liste') return [{ json: { ok: true, mode: 'all', alle, serials, target, uninstall } }];\nreturn [{ json: { ok: true, mode: 'one', appName: choice, alle, serials, target, uninstall } }];\n"
+        "jsCode": "const input = $('Formular App').first().json;\nconst cfg = $('Konfiguration').first().json;\nconst choice = String(input['App'] || '');\nconst idField = String(input['App-Store-ID oder Link (nur bei Andere App)'] || '').trim();\nconst ipadChoice = String(input['iPads'] || '').trim();\nconst uninstall = String(input['Aktion'] || '') === 'Deinstallieren';\nconst serial = String(input['Seriennummer (nur bei Einzelnes iPad)'] || '').trim();\nconst fail = (text) => [{ json: { ok: false, title: uninstall ? 'Nichts deinstalliert' : 'Nichts installiert', message: text } }];\nconst norm = (value) => String(value)\n  .toLowerCase()\n  .replace(/ä/g, 'ae')\n  .replace(/ö/g, 'oe')\n  .replace(/ü/g, 'ue')\n  .replace(/ß/g, 'ss')\n  .replace(/[^a-z0-9]+/g, '-')\n  .replace(/^-+|-+$/g, '');\nif (uninstall && choice === 'Alle Apps der Liste') return fail('Alle Apps der Liste kann nicht auf einmal deinstalliert werden. Bitte eine einzelne App waehlen.');\nlet alle = false;\nlet serials = [];\nlet target = '';\nif (ipadChoice === 'Alle iPads') {\n  alle = true;\n  target = 'alle iPads';\n} else if (ipadChoice.indexOf('Einzelnes iPad') === 0) {\n  if (serial.length === 0 || serial.length > 40 || !/^[A-Za-z0-9]+$/.test(serial)) return fail('Bitte die Seriennummer eintragen (nur Buchstaben und Ziffern).');\n  serials = [serial];\n  target = serial;\n} else {\n  const group = Object.values(cfg.ipads).find((entry) => norm(entry.name) === norm(ipadChoice));\n  if (!group) return fail(cfg.ipadsError || 'Bitte unter iPads eine Auswahl treffen.');\n  serials = [].concat(group.serial);\n  if (serials.length === 0) return fail('Fuer ' + group.name + ' ist in der Datenbank (automation.ipad) noch kein iPad eingetragen.');\n  target = group.name;\n}\nconst web = {\n  'Web: ISC': ['webclip-isc'],\n  'Web: Lists Gruppe 1 Stunde 1': ['webclip-g1s1'],\n  'Web: Lists Gruppe 1 Stunde 2': ['webclip-g1s2'],\n  'Web: Lists Gruppe 2 Stunde 1': ['webclip-g2s1'],\n  'Web: Lists Gruppe 2 Stunde 2': ['webclip-g2s2'],\n  'Web: Alle Web-Links': ['webclip-isc', 'webclip-g1s1', 'webclip-g1s2', 'webclip-g2s1', 'webclip-g2s2']\n};\nif (web[choice]) return [{ json: { ok: true, mode: 'webclip', profiles: web[choice], alle, serials, target, uninstall } }];\nif (choice === 'Andere App (ID unten)') {\n  const match = /(?:id)?(\\d{6,12})/.exec(idField);\n  if (!match) return fail('Bitte die App-Store-ID (Ziffern) oder den App-Store-Link eintragen.');\n  return [{ json: { ok: true, mode: 'other', adamId: match[1], alle, serials, target, uninstall } }];\n}\nif (choice === 'Alle Apps der Liste') return [{ json: { ok: true, mode: 'all', alle, serials, target, uninstall } }];\nreturn [{ json: { ok: true, mode: 'one', appName: choice, alle, serials, target, uninstall } }];\n"
       },
       "id": "ab714799-f865-51e5-be75-31ce7d39f127",
       "name": "Eingabe pruefen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        460,
+        690,
         300
       ]
     },
@@ -188,7 +233,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        690,
+        920,
         300
       ]
     },
@@ -223,7 +268,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        920,
+        1150,
         300
       ]
     },
@@ -259,7 +304,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1150,
+        1380,
         300
       ],
       "onError": "continueRegularOutput"
@@ -274,7 +319,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1380,
+        1610,
         300
       ]
     },
@@ -309,7 +354,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1610,
+        1840,
         300
       ]
     },
@@ -326,7 +371,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        1840,
+        2070,
         300
       ],
       "credentials": {
@@ -347,7 +392,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        2070,
+        2300,
         300
       ],
       "credentials": {
@@ -368,7 +413,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2300,
+        2530,
         300
       ]
     },
@@ -403,7 +448,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        2530,
+        2760,
         300
       ]
     },
@@ -420,7 +465,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        2760,
+        2990,
         300
       ],
       "credentials": {
@@ -441,7 +486,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2990,
+        3220,
         300
       ]
     },
@@ -476,7 +521,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        3220,
+        3450,
         300
       ]
     },
@@ -500,7 +545,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3450,
+        3680,
         300
       ],
       "credentials": {
@@ -521,7 +566,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3680,
+        3910,
         300
       ]
     },
@@ -556,7 +601,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        3910,
+        4140,
         300
       ]
     },
@@ -570,7 +615,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4140,
+        4370,
         300
       ]
     },
@@ -598,7 +643,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4370,
+        4600,
         300
       ],
       "credentials": {
@@ -619,7 +664,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4600,
+        4830,
         300
       ]
     },
@@ -647,7 +692,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4830,
+        5060,
         300
       ],
       "credentials": {
@@ -668,7 +713,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5060,
+        5290,
         300
       ]
     },
@@ -683,7 +728,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        5290,
+        5520,
         300
       ],
       "credentials": {
@@ -705,7 +750,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        5520,
+        5750,
         300
       ],
       "credentials": {
@@ -726,7 +771,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5750,
+        5980,
         300
       ]
     },
@@ -761,7 +806,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        5980,
+        6210,
         300
       ]
     },
@@ -789,7 +834,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        6210,
+        6440,
         300
       ],
       "credentials": {
@@ -810,7 +855,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6440,
+        6670,
         300
       ]
     },
@@ -827,7 +872,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        6670,
+        6900,
         300
       ],
       "credentials": {
@@ -847,7 +892,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6900,
+        7130,
         300
       ]
     },
@@ -891,7 +936,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        7130,
+        7360,
         300
       ],
       "credentials": {
@@ -912,7 +957,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        7360,
+        7590,
         300
       ]
     },
@@ -926,7 +971,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        7590,
+        7820,
         300
       ]
     },
@@ -940,7 +985,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        7820,
+        8050,
         300
       ]
     },
@@ -957,7 +1002,7 @@
       "type": "n8n-nodes-base.form",
       "typeVersion": 2.5,
       "position": [
-        8050,
+        8280,
         300
       ]
     },
@@ -992,7 +1037,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        690,
+        920,
         540
       ]
     },
@@ -1009,7 +1054,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        920,
+        1150,
         760
       ],
       "credentials": {
@@ -1034,7 +1079,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        1150,
+        1380,
         760
       ],
       "credentials": {
@@ -1055,7 +1100,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1380,
+        1610,
         760
       ]
     },
@@ -1090,7 +1135,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1610,
+        1840,
         760
       ]
     },
@@ -1118,7 +1163,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1840,
+        2070,
         660
       ],
       "credentials": {
@@ -1139,7 +1184,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2070,
+        2300,
         660
       ]
     },
@@ -1174,7 +1219,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        690,
+        920,
         780
       ]
     },
@@ -1189,7 +1234,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        920,
+        1150,
         1000
       ],
       "credentials": {
@@ -1214,7 +1259,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        1150,
+        1380,
         1000
       ],
       "credentials": {
@@ -1235,7 +1280,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1380,
+        1610,
         1000
       ]
     },
@@ -1270,7 +1315,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1610,
+        1840,
         1000
       ]
     },
@@ -1298,7 +1343,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1840,
+        2070,
         900
       ],
       "credentials": {
@@ -1319,7 +1364,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2070,
+        2300,
         900
       ]
     }
@@ -1330,7 +1375,7 @@
       "main": [
         [
           {
-            "node": "Konfiguration",
+            "node": "iPads lesen",
             "type": "main",
             "index": 0
           }
@@ -1941,6 +1986,17 @@
           }
         ]
       ]
+    },
+    "iPads lesen": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
@@ -1951,6 +2007,6 @@
   },
   "versionId": "33f7f4f8-4c7a-544f-83dc-8aa0d882582b",
   "meta": {
-    "description": "Formular, das eine freigegebene App (Liste: automation.app_catalog, Start: ntfy, DLRG Trainer, Microsoft Teams), alle Apps der Liste oder eine neue kostenlose App per App-Store-ID installiert. Neue Apps werden ueber die iTunes-Lookup-API gepruefte (Name, Bundle-ID, kostenlos) und in den Katalog aufgenommen. Ablauf: Lizenz geraetegebunden zuweisen (POST /mdm/v2/assets/associate), InstallApplication (PurchaseMethod 1) einreihen, dann die Erlaubt-Liste (Profil app-allowlist, com.apple.applicationaccess allowListedAppBundleIDs) aus Systemapps plus Katalog neu berechnen und bei Aenderung an alle iPads senden. Die Liste greift nur auf beaufsichtigten Geraeten. Credentials: MDM Formulare, MDM NanoMDM API, MDM Automation DB, Apple Apps Token (Header Auth, Name Authorization, Wert Bearer <Server-Token aus Apple Business>), ntfy-publisher. Zielauswahl wie im Mail-Workflow (Gruppen aus dem Node Konfiguration: Kleines Becken, Grosses Becken, Vorstands-Tisch, alle oder eine Seriennummer)."
+    "description": "Formular, das eine freigegebene App (Liste: automation.app_catalog, Start: ntfy, DLRG Trainer, Microsoft Teams), alle Apps der Liste oder eine neue kostenlose App per App-Store-ID installiert. Neue Apps werden ueber die iTunes-Lookup-API gepruefte (Name, Bundle-ID, kostenlos) und in den Katalog aufgenommen. Ablauf: Lizenz geraetegebunden zuweisen (POST /mdm/v2/assets/associate), InstallApplication (PurchaseMethod 1) einreihen, dann die Erlaubt-Liste (Profil app-allowlist, com.apple.applicationaccess allowListedAppBundleIDs) aus Systemapps plus Katalog neu berechnen und bei Aenderung an alle iPads senden. Die Liste greift nur auf beaufsichtigten Geraeten. Credentials: MDM Formulare, MDM NanoMDM API, MDM Automation DB, Apple Apps Token (Header Auth, Name Authorization, Wert Bearer <Server-Token aus Apple Business>), ntfy-publisher. Zielauswahl wie im Mail-Workflow (Gruppen und Seriennummern aus den Tabellen automation.ipad_group und automation.ipad: Kleines Becken, Grosses Becken, Vorstands-Tisch, alle oder eine Seriennummer)."
   }
 }
