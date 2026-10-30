@@ -756,6 +756,29 @@
   stored_in:
     - argocd/apps/tech/ticket-gate/templates/sealedsecret.yaml
   issued: "2026-10-30"
+- id: mdm-postgres-passwords
+  service: mdm
+  kind: password
+  stored_in:
+    - argocd/apps/tech/mdm/templates/sealedsecret.yaml
+    - argocd/apps/tech/mdm/values.yaml
+  issued: "2026-10-26"
+  expires: null
+  max_age_days: 730
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300v0-mdm-betrieb.md#datenbank-passwörter-rotieren
+    overlap: false
+  owner: peter
+  blast_radius: "Datenbank-Passwoerter (Superuser, nanomdm, nanodep, mdmauto) der MDM-Postgres. Der Superuser liest alle Tabellen inklusive Push-Zertifikat-Schluessel, DEP-Token und DEP-Schluessel; mdmauto liest nur Geraete-IDs, Seriennummern und das Push-Zertifikat ohne Schluessel. Ein Wechsel erfordert ALTER ROLE in der Datenbank und neues Versiegeln."
+
+- id: mdm-api-keys
+  service: mdm
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/mdm/templates/sealedsecret.yaml
+    - argocd/apps/tech/mdm/values.yaml
+  issued: "2026-10-26"
   expires: null
   max_age_days: 365
   rotation:
@@ -771,6 +794,18 @@
   stored_in:
     - argocd/apps/tech/ticket-gate/templates/sealedsecret.yaml
   issued: "2026-10-30"
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300v0-mdm-betrieb.md#api-schlüssel-rotieren
+    overlap: false
+  owner: peter
+  blast_radius: "Admin-API-Schluessel von NanoMDM und NanoDEP. Wer sie hat, kann alle iPads sperren, loeschen oder umkonfigurieren und das DEP-Konto ueber den Proxy ansprechen. Gleiche Werte in den n8n-Credentials MDM NanoMDM API und MDM NanoDEP API."
+
+- id: mdm-scep-challenge
+  service: mdm
+  kind: password
+  stored_in:
+    - argocd/apps/tech/mdm/templates/sealedsecret.yaml
+    - argocd/apps/tech/mdm/values.yaml
+  issued: "2026-10-26"
   expires: null
   max_age_days: 365
   rotation:
@@ -794,3 +829,85 @@
     overlap: true
   owner: peter
   blast_radius: "Zammad-API mit Agent-Rechten: kann Tickets anlegen und lesen."
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300v0-mdm-betrieb.md#scep-challenge-rotieren
+    overlap: false
+  owner: peter
+  blast_radius: "SCEP-Challenge, steht auch im Enrollment-Profil. Wer sie kennt, kann ein Geraetezertifikat der MDM-CA beziehen und ein fremdes Geraet beim MDM anmelden. Ein Wechsel erfordert ein neues Enrollment-Profil."
+
+- id: mdm-webhook-token
+  service: mdm
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/mdm/templates/sealedsecret.yaml
+    - argocd/apps/tech/mdm/values.yaml
+  issued: "2026-10-26"
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: scripted
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300v0-mdm-betrieb.md#webhook-token-rotieren
+    overlap: false
+  owner: peter
+  blast_radius: "Geheimer Teil der Webhook-Pfade, mit denen NanoMDM und depsyncer n8n aufrufen. Wer ihn kennt und n8n erreicht, kann Geraete-Events vortaeuschen und damit Profil-Installationen anstossen."
+
+- id: mdm-restic-password
+  service: mdm
+  kind: password
+  stored_in:
+    - argocd/apps/tech/mdm/templates/sealedsecret.yaml
+    - argocd/apps/tech/mdm/values.yaml
+  issued: null
+  expires: null
+  max_age_days: 3650
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300v0-mdm-betrieb.md#backup-und-restore
+    overlap: false
+  owner: peter
+  blast_radius: "Repository-Passwort der verschluesselten MDM-Sicherung (restic auf dem NAS-Volume). Wer es und das Volume hat, liest beide Datenbanken inklusive Push-Zertifikat-Schluessel, DEP-Token und SCEP-CA-Schluessel. Nicht routinemaessig wechseln: ein Wechsel macht alle bisherigen Snapshots unlesbar. Zusaetzlich im Passwortmanager ablegen."
+
+- id: mdm-scep-ca
+  service: mdm
+  kind: certificate
+  stored_in:
+    - argocd/apps/tech/mdm/templates/sealedsecret.yaml
+    - argocd/apps/tech/mdm/values.yaml
+  issued: "2026-10-26"
+  expires: "2046-10-21"
+  max_age_days: 7300
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300v0-mdm-betrieb.md#scep-ca-erneuern
+    overlap: false
+  owner: peter
+  blast_radius: "Schluessel und Zertifikat der SCEP-CA, die die Identitaet aller iPads gegenueber dem MDM ausstellt. Wer den Schluessel hat, kann beliebige Geraetezertifikate ausstellen. Eine neue CA bedeutet Neu-Enrollment aller iPads."
+
+- id: mdm-apns-push-certificate
+  service: mdm
+  kind: certificate
+  stored_in:
+    - "NanoMDM-Datenbank (Tabelle push_certs), Sicherung ueber den CronJob mdm-backup"
+  issued: null
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300v0-mdm-betrieb.md#jährliche-verlängerung
+    overlap: false
+  owner: peter
+  blast_radius: "APNs-Push-Zertifikat samt Schluessel fuer den MDM-Push. Wer es hat, kann Push-Benachrichtigungen an alle iPads senden. Laeuft nach einem Jahr ab; Verlaengerung ueber das n8n-Formular MDM Verlaengerung, mit Renew und derselben Apple Account."
+
+- id: mdm-dep-token
+  service: mdm
+  kind: api-token
+  stored_in:
+    - "NanoDEP-Datenbank (Tabelle dep_names), Sicherung ueber den CronJob mdm-backup"
+  issued: null
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300v0-mdm-betrieb.md#jährliche-verlängerung
+    overlap: false
+  owner: peter
+  blast_radius: "DEP-Token und Schluesselpaar fuer Apple Business. Wer sie hat, kann Geraete des Kontos abfragen und Enrollment-Profile zuweisen. Laeuft nach einem Jahr ab; Verlaengerung ueber das n8n-Formular MDM Verlaengerung."

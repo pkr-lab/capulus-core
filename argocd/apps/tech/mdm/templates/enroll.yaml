@@ -1,0 +1,98 @@
+{{- if .Values.secrets.enrollmentProfile.encryptedData }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mdm.fullname" . }}-enroll
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "mdm.selectorLabels" (dict "ctx" . "component" "enroll") | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/enroll-configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "mdm.selectorLabels" (dict "ctx" . "component" "enroll") | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "mdm.fullname" . }}
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "mdm.podSecurityContext" (dict "uid" 101) | nindent 8 }}
+      containers:
+        - name: nginx
+          image: "{{ .Values.enroll.image.repository }}:{{ .Values.enroll.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            {{- include "mdm.containerSecurityContext" . | nindent 12 }}
+          args:
+            - nginx
+            - -c
+            - /etc/nginx-custom/nginx.conf
+            - -g
+            - daemon off;
+          ports:
+            - name: http
+              containerPort: {{ .Values.enroll.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.enroll.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nginx-custom
+              readOnly: true
+            - name: profile
+              mountPath: /profile
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "mdm.fullname" . }}-enroll-nginx
+        - name: profile
+          secret:
+            secretName: {{ .Values.secrets.enrollmentProfile.secretName }}
+        - name: tmp
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mdm.fullname" . }}-enroll
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ .Values.enroll.port }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    {{- include "mdm.selectorLabels" (dict "ctx" . "component" "enroll") | nindent 4 }}
+{{- end }}

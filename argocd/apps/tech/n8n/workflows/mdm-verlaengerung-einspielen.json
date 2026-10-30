@@ -1,0 +1,975 @@
+{
+  "name": "MDM: Verlaengerung einspielen",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "basicAuth",
+        "formTitle": "MDM Verlaengerung einspielen",
+        "formDescription": "Push-Zertifikat (push.pem und push.key) oder DEP-Token (.p7m) hochladen.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Was wird eingespielt?",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Push-Zertifikat erneuern"
+                  },
+                  {
+                    "option": "DEP-Token erneuern"
+                  },
+                  {
+                    "option": "DEP-Token fuer neuen MDM-Server in Apple Business (Pruefung ueberspringen)"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Datei 1: Zertifikat (.pem) oder Token (.p7m)",
+              "fieldType": "file",
+              "multipleFiles": false,
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Datei 2: privater Schluessel (.key, nur Push-Zertifikat)",
+              "fieldType": "file",
+              "multipleFiles": false,
+              "requiredField": false
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "path": "mdm-verlaengerung"
+        }
+      },
+      "id": "3f35344f-1602-5e9c-998e-0c80e428e5c7",
+      "name": "Formular Verlaengerung",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        300
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Formulare"
+        }
+      },
+      "webhookId": "09fe46c4-7d9d-5134-b18a-5917205a3ca2"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  depserverUrl: 'http://mdm-depserver.mdm.svc.cluster.local:9001',\n  scepUrl: 'http://mdm-scep.mdm.svc.cluster.local:8080',\n  publicHost: 'mdm-prod.pke-lab.de',\n  depName: 'capulus',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM',\n  vmUrl: 'http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428',\n  n8nUrl: 'https://n8n.prod.homeserver'\n};\nreturn [{ json: cfg }];\n"
+      },
+      "id": "3bee5847-238f-5401-8833-a0354219d1bd",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const item = $('Formular Verlaengerung').first();\nconst kind = String(item.json['Was wird eingespielt?'] || '');\nconst names = Object.keys(item.binary || {});\nconst existingTopic = $('Vorhandenes Topic lesen').first().json.topic || '';\nconst result = { existing_topic: existingTopic, kind: kind.indexOf('Push') === 0 ? 'apns' : 'dep', force: kind.indexOf('neuen MDM-Server') !== -1 ? '1' : '0' };\nif (names.length === 0) {\n  return [{ json: { ok: false, title: 'Keine Datei hochgeladen', message: 'Bitte die Datei aus dem Apple-Portal hochladen.', priority: 'default', tags: 'warning' } }];\n}\nif (result.kind === 'apns' && names.length < 2) {\n  return [{ json: { ok: false, title: 'Privater Schluessel fehlt', message: 'Fuer das Push-Zertifikat werden push.pem UND push.key benoetigt.', priority: 'default', tags: 'warning' } }];\n}\nconst binary = { cert: item.binary[names[0]] };\nif (result.kind === 'apns') binary.key = item.binary[names[1]];\nreturn [{ json: Object.assign({ ok: true }, result), binary }];\n"
+      },
+      "id": "bb38424b-7e02-5b7a-9240-e6b9bcd0e022",
+      "name": "Eingabe pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "a6b2e5cf-9e3f-5f58-9abc-ec5c14e29057"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "04c66fb3-31e5-50d6-9082-a2a2ea3482ad",
+      "name": "Eingabe vollstaendig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.kind === 'apns' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "3a4bbfb4-6b16-5234-ad8d-743fe54b01ab"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "b883d2d7-9d2d-5adc-b939-2096dc9203c1",
+      "name": "Push-Zertifikat?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT topic FROM public.push_certs ORDER BY updated_at DESC LIMIT 1",
+        "options": {}
+      },
+      "id": "d0b70111-e0cd-51c8-a266-bf8d7fc27c97",
+      "name": "Vorhandenes Topic lesen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        440,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const { X509Certificate, createPrivateKey, createPublicKey } = require('crypto');\nconst fail = (message) => [{ json: { ok: false, title: 'Push-Zertifikat abgelehnt', message, priority: 'high', tags: 'x' } }];\nconst certText = (await this.helpers.getBinaryDataBuffer(0, 'cert')).toString('utf8');\nconst keyText = (await this.helpers.getBinaryDataBuffer(0, 'key')).toString('utf8');\nif (/ENCRYPTED/.test(keyText)) return fail('Der private Schluessel ist passwortgeschuetzt. NanoMDM braucht einen unverschluesselten Schluessel (push.key aus mdm-apns.sh).');\nlet cert;\nlet privateKey;\ntry {\n  cert = new X509Certificate(certText);\n} catch (e) {\n  return fail('Die erste Datei ist kein gueltiges PEM-Zertifikat: ' + e.message);\n}\ntry {\n  privateKey = createPrivateKey(keyText);\n} catch (e) {\n  return fail('Die zweite Datei ist kein gueltiger privater Schluessel: ' + e.message);\n}\nconst spki = (key) => key.export({ type: 'spki', format: 'der' }).toString('base64');\nif (spki(createPublicKey(privateKey)) !== spki(cert.publicKey)) {\n  return fail('Zertifikat und privater Schluessel gehoeren nicht zusammen. Es muss der push.key aus derselben Anfrage (mdm-apns.sh request) sein.');\n}\nconst match = /UID=(com\\.apple\\.mgmt\\.External\\.[0-9a-fA-F-]+)/.exec(cert.subject);\nif (!match) return fail('Im Zertifikat steht kein MDM-Push-Topic (UID=com.apple.mgmt.External...). Das ist kein Apple-MDM-Push-Zertifikat.');\nconst topic = match[1];\nconst existing = $input.first().json.existing_topic;\nif (existing && existing !== topic) {\n  return fail('Das Topic ' + topic + ' weicht vom aktuellen Topic ' + existing + ' ab. Bei Apple muss \\\"Renew\\\" benutzt werden, sonst muessen alle iPads neu enrollt werden. Nichts wurde geaendert.');\n}\nconst days = Math.floor((new Date(cert.validTo).getTime() - Date.now()) / 86400000);\nif (days < 300) return fail('Das Zertifikat ist nur noch ' + days + ' Tage gueltig. Es wurde vermutlich das alte Zertifikat hochgeladen. Nichts wurde geaendert.');\nconst body = await this.helpers.prepareBinaryData(Buffer.from(certText.trim() + '\\n' + keyText.trim() + '\\n', 'utf8'), 'push.pem', 'application/x-pem-file');\nreturn [{ json: { ok: true, topic, days }, binary: { body } }];\n"
+      },
+      "id": "8735829e-b591-52e1-9d54-a6c7c879b7f0",
+      "name": "Push-Zertifikat pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1380,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "5f043b3e-53a6-57c6-9a83-0799cd105e17"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "42cdc1b5-1248-587a-927c-4f53c4d892e3",
+      "name": "Push-Material gueltig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1620,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Konfiguration').first().json.nanomdmUrl }}/v1/pushcert",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "body",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "73c25f09-03e5-5644-80d1-2464a7700e96",
+      "name": "Push-Zertifikat einspielen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1860,
+        60
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoMDM API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT topic, cert_pem FROM public.push_certs ORDER BY updated_at DESC LIMIT 1",
+        "options": {}
+      },
+      "id": "852ade72-cf97-5d58-adbd-c0a0f16a573c",
+      "name": "Gespeichertes Zertifikat lesen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2100,
+        60
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const { X509Certificate } = require('crypto');\nconst put = $('Push-Zertifikat einspielen').first().json;\nif (put.statusCode !== 200) {\n  return [{ json: { title: 'Push-Zertifikat nicht eingespielt', message: 'NanoMDM antwortete mit HTTP ' + (put.statusCode || put.error) + ': ' + JSON.stringify(put.body || {}), priority: 'high', tags: 'x' } }];\n}\nconst stored = $input.first().json;\nconst cert = new X509Certificate(stored.cert_pem);\nconst days = Math.floor((new Date(cert.validTo).getTime() - Date.now()) / 86400000);\nconst expiry = new Date(cert.validTo).toISOString().slice(0, 10);\nreturn [{ json: { title: 'Push-Zertifikat erneuert', message: 'Topic ' + stored.topic + '. Neues Ablaufdatum: ' + expiry + ' (' + days + ' Tage).', priority: 'default', tags: 'white_check_mark' } }];\n"
+      },
+      "id": "c9f64a68-7c63-501f-acd6-61e6121c205b",
+      "name": "Push-Ergebnis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2340,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Konfiguration').first().json.depserverUrl }}/v1/tokenpki/{{ $('Konfiguration').first().json.depName }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "force",
+              "value": "={{ $('Eingabe pruefen').first().json.force }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "cert",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "ac97e8e4-ac3f-5319-bb3c-a3545e9378fd",
+      "name": "DEP-Token einspielen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1140,
+        360
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoDEP API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Konfiguration').first().json.depserverUrl }}/v1/tokens/{{ $('Konfiguration').first().json.depName }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "cf4b493f-b687-5052-89a9-d4b890a0ac58",
+      "name": "DEP-Ablauf lesen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1380,
+        360
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoDEP API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Konfiguration').first().json.depserverUrl }}/proxy/{{ $('Konfiguration').first().json.depName }}/account",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "c4ad18a9-e8fb-564e-af1f-091c99e1c524",
+      "name": "DEP-Konto lesen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1620,
+        360
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoDEP API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Konfiguration').first().json.depserverUrl }}/v1/assigner/{{ $('Konfiguration').first().json.depName }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "d2a6f390-d8cf-510e-9f04-d3fcefc447ff",
+      "name": "Assigner lesen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1860,
+        360
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoDEP API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const put = $('DEP-Token einspielen').first().json;\nif (put.statusCode !== 200) {\n  return [{ json: { title: 'DEP-Token nicht eingespielt', message: 'NanoDEP antwortete mit HTTP ' + (put.statusCode || put.error) + ': ' + JSON.stringify(put.body || {}) + '\\nBei einem neuen MDM-Server in Apple Business die Option \\\"Pruefung ueberspringen\\\" waehlen.', priority: 'high', tags: 'x', needsProfile: false } }];\n}\nconst tokens = $('DEP-Ablauf lesen').first().json;\nconst account = $('DEP-Konto lesen').first().json;\nconst assigner = $('Assigner lesen').first().json;\nconst expiry = tokens.body && tokens.body.access_token_expiry ? String(tokens.body.access_token_expiry).slice(0, 10) : 'unbekannt';\nconst accountOk = account.statusCode === 200 && account.body;\nconst assignerSet = assigner.statusCode === 200 && assigner.body && assigner.body.profile_uuid;\nconst lines = ['Neues Ablaufdatum: ' + expiry + '.'];\nlines.push(accountOk ? 'Apple Business antwortet: ' + (account.body.server_name || '') + ' (' + (account.body.org_name || '') + ').' : 'Achtung: Der Konto-Abruf bei Apple schlug fehl (HTTP ' + (account.statusCode || account.error) + ').');\nreturn [{ json: { title: accountOk ? 'DEP-Token erneuert' : 'DEP-Token eingespielt, Apple-Abruf fehlgeschlagen', message: lines.join(' '), priority: accountOk ? 'default' : 'high', tags: accountOk ? 'white_check_mark' : 'warning', needsProfile: accountOk && !assignerSet } }];\n"
+      },
+      "id": "071203da-9ea4-50a1-ba8a-de06e94f7711",
+      "name": "DEP-Ergebnis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2100,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.needsProfile }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "5094ccdd-fceb-5f86-b3e5-78e767e14621"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "22c3ad54-50c4-5c63-b7cd-b08d3aba3fbb",
+      "name": "Assigner fehlt?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2340,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT value FROM automation.setting WHERE key = 'dep_profile_json'",
+        "options": {}
+      },
+      "id": "b731f100-b6a4-5d3e-bf05-c05d6ca42b53",
+      "name": "DEP-Profil lesen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2580,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.depserverUrl }}/proxy/{{ $('Konfiguration').first().json.depName }}/profile",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.value }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "88dec0c2-d6ca-5043-b4d6-fe64c1fca525",
+      "name": "DEP-Profil definieren",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2820,
+        300
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoDEP API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Konfiguration').first().json.depserverUrl }}/v1/assigner/{{ $('Konfiguration').first().json.depName }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "profile_uuid",
+              "value": "={{ $('DEP-Profil definieren').first().json.body.profile_uuid }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "0a32e773-4a44-56b7-8dd8-1d105eb3a4d1",
+      "name": "Assigner setzen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3060,
+        300
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoDEP API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const base = $('DEP-Ergebnis').first().json;\nconst profile = $('DEP-Profil definieren').first().json;\nconst assigner = $('Assigner setzen').first().json;\nconst uuid = profile.body && profile.body.profile_uuid;\nif (profile.statusCode !== 200 || !uuid) {\n  return [{ json: { title: 'DEP-Token erneuert, Profil fehlt', message: base.message + ' Das DEP-Enrollment-Profil konnte nicht angelegt werden (HTTP ' + (profile.statusCode || profile.error) + '): ' + JSON.stringify(profile.body || {}) + '. Manuell: scripts/mdm-dep-profile.sh', priority: 'high', tags: 'warning' } }];\n}\nif (assigner.statusCode !== 200) {\n  return [{ json: { title: 'DEP-Token erneuert, Assigner fehlt', message: base.message + ' Profil ' + uuid + ' wurde angelegt, der Assigner konnte nicht gesetzt werden (HTTP ' + (assigner.statusCode || assigner.error) + ').', priority: 'high', tags: 'warning' } }];\n}\nreturn [{ json: { title: base.title, message: base.message + ' DEP-Enrollment-Profil ' + uuid + ' wurde angelegt und als Assigner gesetzt.', priority: 'default', tags: 'white_check_mark' } }];\n"
+      },
+      "id": "ebfccd5e-c545-51c5-9cc4-3c83f3f9c55c",
+      "name": "DEP-Profil-Ergebnis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            },
+            {
+              "name": "Tags",
+              "value": "={{ $json.tags }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.message }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a0f058f3-29c6-5a75-b092-0284b443223f",
+      "name": "Ergebnis melden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3800,
+        200
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "={{ $('Meldung').first().json.title }}",
+        "completionMessage": "={{ $('Meldung').first().json.message }}",
+        "options": {}
+      },
+      "id": "6ef9ce28-30d8-50e2-af5e-edebe4a720c4",
+      "name": "Abschluss",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        4040,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return $input.all();\n"
+      },
+      "id": "bb457eef-053e-509c-bc91-89c309a8b090",
+      "name": "Meldung",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3560,
+        200
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Formular Verlaengerung": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Vorhandenes Topic lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vorhandenes Topic lesen": {
+      "main": [
+        [
+          {
+            "node": "Eingabe pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingabe pruefen": {
+      "main": [
+        [
+          {
+            "node": "Eingabe vollstaendig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingabe vollstaendig?": {
+      "main": [
+        [
+          {
+            "node": "Push-Zertifikat?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Push-Zertifikat?": {
+      "main": [
+        [
+          {
+            "node": "Push-Zertifikat pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "DEP-Token einspielen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Push-Zertifikat pruefen": {
+      "main": [
+        [
+          {
+            "node": "Push-Material gueltig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Push-Material gueltig?": {
+      "main": [
+        [
+          {
+            "node": "Push-Zertifikat einspielen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Push-Zertifikat einspielen": {
+      "main": [
+        [
+          {
+            "node": "Gespeichertes Zertifikat lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gespeichertes Zertifikat lesen": {
+      "main": [
+        [
+          {
+            "node": "Push-Ergebnis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Push-Ergebnis": {
+      "main": [
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DEP-Token einspielen": {
+      "main": [
+        [
+          {
+            "node": "DEP-Ablauf lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DEP-Ablauf lesen": {
+      "main": [
+        [
+          {
+            "node": "DEP-Konto lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DEP-Konto lesen": {
+      "main": [
+        [
+          {
+            "node": "Assigner lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assigner lesen": {
+      "main": [
+        [
+          {
+            "node": "DEP-Ergebnis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DEP-Ergebnis": {
+      "main": [
+        [
+          {
+            "node": "Assigner fehlt?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assigner fehlt?": {
+      "main": [
+        [
+          {
+            "node": "DEP-Profil lesen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DEP-Profil lesen": {
+      "main": [
+        [
+          {
+            "node": "DEP-Profil definieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DEP-Profil definieren": {
+      "main": [
+        [
+          {
+            "node": "Assigner setzen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assigner setzen": {
+      "main": [
+        [
+          {
+            "node": "DEP-Profil-Ergebnis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DEP-Profil-Ergebnis": {
+      "main": [
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnis melden": {
+      "main": [
+        [
+          {
+            "node": "Abschluss",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "Europe/Berlin"
+  },
+  "versionId": "5246481f-3a1e-50a7-8bf8-5fe4804b20d0",
+  "meta": {
+    "description": "Formular fuer die jaehrliche Verlaengerung. Push-Zertifikat: push.pem und push.key werden geprueft (Schluesselpaar, Topic unveraendert, frisch) und per PUT /v1/pushcert in NanoMDM eingespielt, danach wird das gespeicherte Ablaufdatum aus der Datenbank gelesen. DEP-Token: die .p7m-Datei geht per PUT /v1/tokenpki/<name> an NanoDEP, danach werden Ablaufdatum, Apple-Konto und Assigner geprueft; fehlt der Assigner, wird das DEP-Enrollment-Profil aus automation.setting angelegt und gesetzt. Credentials: MDM Formulare, MDM NanoMDM API, MDM NanoDEP API, MDM Automation DB, ntfy-publisher."
+  }
+}

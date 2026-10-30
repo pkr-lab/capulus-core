@@ -1,0 +1,102 @@
+{{- if .Values.backup.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: Delete=false
+  name: {{ include "mdm.fullname" . }}-restic
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.backup.storageClassName }}
+  resources:
+    requests:
+      storage: {{ .Values.backup.size }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "mdm.fullname" . }}-backup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  timeZone: {{ .Values.backup.timezone | quote }}
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: {{ .Values.backup.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.backup.successfulJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            {{- include "mdm.selectorLabels" (dict "ctx" . "component" "backup") | nindent 12 }}
+        spec:
+          restartPolicy: Never
+          serviceAccountName: {{ include "mdm.fullname" . }}
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: false
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: restic
+              image: {{ .Values.toolbox.image }}
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: RESTIC_REPOSITORY
+                  value: /repo
+                - name: RESTIC_CACHE_DIR
+                  value: /cache
+                - name: PGHOST
+                  value: {{ include "mdm.dbHost" . }}
+                {{- include "mdm.secretEnv" (dict "name" "RESTIC_PASSWORD" "secret" .Values.secrets.main.secretName "key" "restic-password") | nindent 16 }}
+                {{- include "mdm.secretEnv" (dict "name" "PGPASSWORD" "secret" .Values.secrets.main.secretName "key" "postgres-password") | nindent 16 }}
+              command:
+                - sh
+                - -c
+                - |
+                  set -eu
+                  apk add --no-cache postgresql17-client restic >/dev/null
+                  pg_dump -U postgres -Fc nanomdm > /stage/nanomdm.dump
+                  pg_dump -U postgres -Fc nanodep > /stage/nanodep.dump
+                  test -s /stage/nanomdm.dump
+                  test -s /stage/nanodep.dump
+                  restic cat config >/dev/null 2>&1 || restic init
+                  restic backup /stage /scep-depot --host mdm --tag mdm
+                  restic forget --host mdm --keep-daily {{ .Values.backup.keepDaily }} --keep-weekly {{ .Values.backup.keepWeekly }} --keep-monthly {{ .Values.backup.keepMonthly }} --prune
+                  restic check --read-data-subset=5%
+                  echo "fertig: $(date -Iseconds)"
+              resources:
+                {{- toYaml .Values.backup.resources | nindent 16 }}
+              volumeMounts:
+                - name: repo
+                  mountPath: /repo
+                - name: stage
+                  mountPath: /stage
+                - name: cache
+                  mountPath: /cache
+                - name: scep-depot
+                  mountPath: /scep-depot
+                  readOnly: true
+          volumes:
+            - name: repo
+              persistentVolumeClaim:
+                claimName: {{ include "mdm.fullname" . }}-restic
+            - name: scep-depot
+              persistentVolumeClaim:
+                claimName: {{ include "mdm.fullname" . }}-scep-depot
+            - name: stage
+              emptyDir: {}
+            - name: cache
+              emptyDir: {}
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}
