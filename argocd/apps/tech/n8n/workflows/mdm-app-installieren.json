@@ -384,8 +384,10 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT adam_id, name, bundle_id, config FROM automation.app_catalog WHERE enabled ORDER BY name",
-        "options": {}
+        "query": "WITH picked AS (\n  UPDATE automation.app_catalog SET enabled = true\n  WHERE NOT enabled AND $1::text <> '' AND name = $1::text\n  RETURNING adam_id\n)\nSELECT adam_id, name, bundle_id, config FROM automation.app_catalog\nWHERE enabled OR adam_id IN (SELECT adam_id FROM picked)\nORDER BY name",
+        "options": {
+          "queryReplacement": "={{ [$('Eingabe pruefen').first().json.mode === 'one' ? $('Eingabe pruefen').first().json.appName : ''] }}"
+        }
       },
       "id": "3959fdbb-4a21-5758-ac0f-cf86f7e2baeb",
       "name": "Katalog lesen",
