@@ -5,7 +5,7 @@
       "parameters": {
         "authentication": "basicAuth",
         "formTitle": "iPads sperren mit Nachricht",
-        "formDescription": "ACHTUNG: Die iPads sperren sich sofort und zeigen die Nachricht auf dem Sperrbildschirm. Entsperrt wird mit dem Code des iPads.",
+        "formDescription": "ACHTUNG: Die iPads sperren sich sofort und zeigen die Nachricht auf dem Sperrbildschirm. Entsperrt wird mit dem Code des iPads. Vor deiner Nachricht steht automatisch: Das iPad ist nicht verloren gegangen, es gibt nur eine dringende Mitteilung.",
         "formFields": {
           "values": [
             {
@@ -152,7 +152,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const crypto = require('crypto');\nconst input = $('Eingabe pruefen').first().json;\nconst devices = $input.all().map((item) => item.json).filter((row) => row.enrollment_id);\nif (devices.length === 0) return [{ json: { skip: true } }];\nconst escapeXml = (value) => String(value)\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;');\nreturn devices.map((device) => {\n  const commandUuid = crypto.randomUUID();\n  let command = '\\t\\t<key>Message</key>\\n\\t\\t<string>' + escapeXml(input.message) + '</string>\\n';\n  if (input.phone) command += '\\t\\t<key>PhoneNumber</key>\\n\\t\\t<string>' + escapeXml(input.phone) + '</string>\\n';\n  const plist = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n    + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n    + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n' + command\n    + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>DeviceLock</string>\\n\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>'\n    + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\n  return { json: { skip: false, enrollment_id: device.enrollment_id, serial_number: device.serial_number, command_uuid: commandUuid, plist } };\n});\n"
+        "jsCode": "const lockPrefix = 'Das iPad ist nicht verloren gegangen, es gibt nur eine dringende Mitteilung:';\nconst crypto = require('crypto');\nconst input = $('Eingabe pruefen').first().json;\nconst devices = $input.all().map((item) => item.json).filter((row) => row.enrollment_id);\nif (devices.length === 0) return [{ json: { skip: true } }];\nconst escapeXml = (value) => String(value)\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;');\nreturn devices.map((device) => {\n  const commandUuid = crypto.randomUUID();\n  let command = '\\t\\t<key>Message</key>\\n\\t\\t<string>' + escapeXml(lockPrefix + ' ' + input.message) + '</string>\\n';\n  if (input.phone) command += '\\t\\t<key>PhoneNumber</key>\\n\\t\\t<string>' + escapeXml(input.phone) + '</string>\\n';\n  const plist = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n    + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n    + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n' + command\n    + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>DeviceLock</string>\\n\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>'\n    + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\n  return { json: { skip: false, enrollment_id: device.enrollment_id, serial_number: device.serial_number, command_uuid: commandUuid, plist } };\n});\n"
       },
       "id": "503ed388-053b-5a63-b7f6-088cf5211971",
       "name": "Befehle bauen",
