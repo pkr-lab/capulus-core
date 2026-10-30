@@ -1,0 +1,107 @@
+---
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/pkr-lab/ticket-gate
+  tag: "sha-0000000"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: ghcr-pull
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations: {}
+  hosts:
+    - ticket-gate.tech.homeserver
+    - ticket-gate-tech.pke-lab.de
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  seccompProfile:
+    type: RuntimeDefault
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  requests:
+    cpu: 20m
+    memory: 32Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+livenessProbe:
+  initialDelaySeconds: 3
+  periodSeconds: 15
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  initialDelaySeconds: 2
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+config:
+  PORT: "8080"
+  LOG_LEVEL: info
+  ALLOWED_ORIGINS: "https://www.edv-kretzer.de,https://edv-kretzer.de"
+  CLIENT_IP_HEADER: CF-Connecting-IP
+  CODE_TTL_SECONDS: "600"
+  TOKEN_TTL_SECONDS: "1800"
+  SESSION_TTL_SECONDS: "7200"
+  MAX_ATTEMPTS: "5"
+  MAIL_COOLDOWN_SECONDS: "60"
+  MAIL_PER_EMAIL_PER_HOUR: "5"
+  MAIL_PER_IP_PER_HOUR: "10"
+  CONFIRM_PER_IP: "20"
+  CONFIRM_WINDOW_SECONDS: "600"
+  SESSION_PER_IP_PER_HOUR: "30"
+  TICKET_PER_IP_PER_HOUR: "10"
+  MAX_SESSIONS: "50000"
+  SMTP_HOST: mxe9f8.netcup.net
+  SMTP_PORT: "465"
+  SMTP_SECURITY: tls
+  SMTP_USERNAME: info@edv-kretzer.de
+  SMTP_FROM: info@edv-kretzer.de
+  SMTP_FROM_NAME: EDV-Kretzer
+  ZAMMAD_URL: http://zammad-nginx.zammad.svc.cluster.local:8080
+  ZAMMAD_GROUP: Users
+
+secrets:
+  enabled: false
+  name: ticket-gate-secrets
+  encryptedHmacSecret: ""
+  encryptedSmtpPassword: ""
+  encryptedZammadToken: ""
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
