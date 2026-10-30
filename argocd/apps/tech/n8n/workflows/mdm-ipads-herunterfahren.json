@@ -1,0 +1,332 @@
+{
+  "name": "MDM: iPads herunterfahren",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 19 * * 4"
+            }
+          ]
+        }
+      },
+      "id": "34b0ea20-673f-5b2f-b27b-001893e33417",
+      "name": "Donnerstag 19:30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM'\n};\nreturn [{ json: cfg }];\n"
+      },
+      "id": "c02f6bd4-c294-5b52-a3dd-9b982af4168a",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT e.id AS enrollment_id, d.serial_number FROM public.enrollments e JOIN public.devices d ON d.id = e.device_id WHERE e.type = 'Device' AND e.enabled ORDER BY d.serial_number",
+        "options": {}
+      },
+      "id": "bf24f7d9-7962-5a3c-9c80-9b0815c46ef1",
+      "name": "Geraete suchen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst devices = $input.all().map((item) => item.json).filter((row) => row.enrollment_id);\nif (devices.length === 0) return [{ json: { skip: true } }];\nreturn devices.map((device) => {\n  const commandUuid = crypto.randomUUID();\n  const plist = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n    + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n    + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n'\n    + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>ShutDownDevice</string>\\n\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>'\n    + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\n  return { json: { skip: false, enrollment_id: device.enrollment_id, serial_number: device.serial_number, command_uuid: commandUuid, plist } };\n});\n"
+      },
+      "id": "2f6d81a6-a3d8-5c54-a811-c5c8f9e749d7",
+      "name": "Befehle bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        690,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              },
+              "id": "2303540c-8c41-55e4-81cb-460e21f32a13"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "78aaadd5-ce5e-5173-8e04-cdd08315e110",
+      "name": "Geraete gefunden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        920,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Konfiguration').first().json.nanomdmUrl }}/v1/enqueue/{{ $json.enrollment_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/xml",
+        "body": "={{ $json.plist }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "1e2a68da-49db-5f57-bc5b-bf5ab2c9ed22",
+      "name": "Herunterfahren einreihen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1150,
+        160
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoMDM API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const sent = $('Befehle bauen').all().map((item) => item.json).filter((row) => !row.skip);\nconst results = $input.all().map((response, index) => {\n  const source = sent[index];\n  const body = response.json.body || {};\n  const queued = body.command_uuid === source.command_uuid;\n  const pushError = Object.values(body.status || {}).map((entry) => entry.push_error).filter(Boolean).join('; ');\n  return { serial: source.serial_number || source.enrollment_id, queued, pushError, detail: queued ? '' : String(response.json.statusCode || response.json.error || 'keine Antwort') };\n});\nconst ok = results.filter((row) => row.queued);\nconst failed = results.filter((row) => !row.queued);\nconst waiting = ok.filter((row) => row.pushError);\nconst lines = [ok.length + ' von ' + results.length + ' iPad(s) erhalten den Befehl zum Herunterfahren: ' + (ok.map((row) => row.serial).join(', ') || '-') + '.'];\nif (failed.length > 0) lines.push('Nicht eingereiht: ' + failed.map((row) => row.serial + ' (' + row.detail + ')').join(', ') + '.');\nif (waiting.length > 0) lines.push('Push fehlgeschlagen, diese iPads fahren erst herunter, wenn sie wieder online sind: ' + waiting.map((row) => row.serial).join(', ') + '.');\nconst problems = failed.length > 0 || waiting.length > 0;\nreturn [{ json: { title: problems ? 'iPads herunterfahren mit Problemen' : 'iPads werden heruntergefahren', message: lines.join(' '), priority: problems ? 'high' : 'default', tags: problems ? 'warning' : 'zzz' } }];\n"
+      },
+      "id": "cfc1c7b9-5873-522c-a9ca-b262817ff7d1",
+      "name": "Ergebnis auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1380,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: { title: 'iPads nicht heruntergefahren', message: 'Es ist kein iPad angemeldet, deshalb wurde nichts gesendet.', priority: 'high', tags: 'x' } }];\n"
+      },
+      "id": "74b61b7b-fbf1-5f1c-9da3-10c7d02fec23",
+      "name": "Keine Geraete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1150,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            },
+            {
+              "name": "Tags",
+              "value": "={{ $json.tags }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.message }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "48084820-cfb0-5a13-97e2-16a97466c57c",
+      "name": "Protokoll melden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1610,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Donnerstag 19:30": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Geraete suchen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geraete suchen": {
+      "main": [
+        [
+          {
+            "node": "Befehle bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Befehle bauen": {
+      "main": [
+        [
+          {
+            "node": "Geraete gefunden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geraete gefunden?": {
+      "main": [
+        [
+          {
+            "node": "Herunterfahren einreihen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Keine Geraete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Herunterfahren einreihen": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnis auswerten": {
+      "main": [
+        [
+          {
+            "node": "Protokoll melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keine Geraete": {
+      "main": [
+        [
+          {
+            "node": "Protokoll melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "Europe/Berlin"
+  },
+  "versionId": "9d67aa0e-bd21-5c55-9825-9e6b4dede352",
+  "meta": {
+    "description": "Jeden Donnerstag um 19:30 Uhr (Europe/Berlin) faehrt der Workflow alle angemeldeten iPads herunter: je Geraete-Enrollment der MDM-Befehl ShutDownDevice ueber NanoMDM (nur auf beaufsichtigten Geraeten). Ein heruntergefahrenes iPad laesst sich nicht per MDM wieder einschalten. Ist ein iPad offline oder bereits aus, bleibt der Befehl in der Warteschlange und wird beim naechsten Verbinden ausgefuehrt. Ergebnis und Probleme gehen per ntfy an Home-Lab-MDM. Credentials: MDM Automation DB, MDM NanoMDM API, ntfy-publisher."
+  }
+}
