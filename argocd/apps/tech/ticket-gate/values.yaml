@@ -93,7 +93,7 @@ config:
   SMTP_FROM: info@edv-kretzer.de
   SMTP_FROM_NAME: EDV-Kretzer
   ZAMMAD_URL: http://zammad-nginx.zammad.svc.cluster.local:8080
-  ZAMMAD_GROUP: Users
+  ZAMMAD_GROUP: HomePage
 
 secrets:
   enabled: true
