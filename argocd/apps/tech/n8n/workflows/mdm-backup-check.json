@@ -1,0 +1,281 @@
+{
+  "name": "MDM: Backup-Check",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 8,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "id": "af3f3c2c-20f5-5964-9be2-78cdb5e98012",
+      "name": "Taeglich 08:30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  depserverUrl: 'http://mdm-depserver.mdm.svc.cluster.local:9001',\n  scepUrl: 'http://mdm-scep.mdm.svc.cluster.local:8080',\n  publicHost: 'mdm-prod.pke-lab.de',\n  depName: 'capulus',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM',\n  vmUrl: 'http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428',\n  n8nUrl: 'https://n8n.prod.homeserver'\n};\nreturn [{ json: cfg }];\n"
+      },
+      "id": "cf20869d-4e79-50b1-97a2-6d08da0496e5",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Konfiguration').first().json.vmUrl }}/api/v1/query",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "time() - kube_cronjob_status_last_successful_time{namespace=\"mdm\",cronjob=\"mdm-backup\"}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "b2ac1d3e-d94d-5a0a-bd16-48ea9a0d8401",
+      "name": "Alter des letzten Backups",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Konfiguration').first().json.vmUrl }}/api/v1/query",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "sum(kube_job_status_failed{namespace=\"mdm\"})"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "9772181c-4b09-50bb-af49-6698b31a3b44",
+      "name": "Fehlgeschlagene Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Konfiguration').first().json.vmUrl }}/api/v1/query",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "count(kube_persistentvolumeclaim_status_phase{namespace=\"mdm\",phase=\"Bound\",persistentvolumeclaim=~\"mdm-postgres-data|mdm-scep-depot|mdm-restic\"} == 1)"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "25d73cd0-8b9e-5eb9-9277-d5f6795572e5",
+      "name": "Gebundene Volumes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const value = (name) => {\n  const body = $(name).first().json.body;\n  const result = body && body.data && body.data.result;\n  if (!body || body.status !== 'success') return { error: true };\n  if (!result || result.length === 0) return { empty: true };\n  return { value: Number(result[0].value[1]) };\n};\nconst problems = [];\nconst age = value('Alter des letzten Backups');\nif (age.error) problems.push('VictoriaMetrics ist nicht abfragbar.');\nelse if (age.empty) problems.push('Es gibt keine Metrik zum CronJob mdm-backup (CronJob fehlt oder lief noch nie erfolgreich).');\nelse if (age.value > 86400) problems.push('Das letzte erfolgreiche Backup ist ' + Math.round(age.value / 3600) + ' Stunden alt (Grenze 24 Stunden).');\nconst failed = value('Fehlgeschlagene Jobs');\nif (!failed.error && !failed.empty && failed.value > 0) problems.push(failed.value + ' Backup-Job(s) im Namespace mdm sind fehlgeschlagen.');\nconst bound = value('Gebundene Volumes');\nif (!bound.error && (bound.empty || bound.value < 3)) problems.push('Nicht alle drei Volumes (mdm-postgres-data, mdm-scep-depot, mdm-restic) sind gebunden.');\nif (problems.length === 0) return [];\nconst hint = 'Fehlersuche: kubectl -n mdm get cronjob,job,pod; kubectl -n mdm logs job/<letzter mdm-backup-Job>. Gesichert werden die Datenbanken nanomdm und nanodep (Push-Zertifikat samt Schluessel, DEP-Tokens und -Schluessel, Geraete) und das SCEP-Depot (CA-Schluessel).';\nreturn [{ json: { title: 'MDM: Backup nicht in Ordnung', message: problems.map((p) => '- ' + p).join('\\n') + '\\n\\n' + hint } }];\n"
+      },
+      "id": "7f0ccc37-06fe-5925-bd51-9e334bcfdfc8",
+      "name": "Backup bewerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Priority",
+              "value": "high"
+            },
+            {
+              "name": "Tags",
+              "value": "rotating_light"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.message }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "522e6a7c-8c48-5d3d-8ac2-3e14e35c7a0d",
+      "name": "Alarm senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Taeglich 08:30": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Alter des letzten Backups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alter des letzten Backups": {
+      "main": [
+        [
+          {
+            "node": "Fehlgeschlagene Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fehlgeschlagene Jobs": {
+      "main": [
+        [
+          {
+            "node": "Gebundene Volumes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gebundene Volumes": {
+      "main": [
+        [
+          {
+            "node": "Backup bewerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Backup bewerten": {
+      "main": [
+        [
+          {
+            "node": "Alarm senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "Europe/Berlin"
+  },
+  "versionId": "f7abe040-aa1f-5dc8-b03a-3e817eaf10be",
+  "meta": {
+    "description": "Taeglich 08:30: prueft ueber VictoriaMetrics (kube-state-metrics), dass der CronJob mdm-backup (pg_dump von nanomdm und nanodep sowie SCEP-Depot mit CA-Schluessel per restic) in den letzten 24 Stunden erfolgreich lief, dass keine Jobs fehlgeschlagen sind und dass die drei Volumes (Postgres-Daten, SCEP-Depot, restic-Repository) gebunden sind. Bei Abweichung ntfy-Alarm mit Fehlersuche. Credentials: ntfy-publisher."
+  }
+}

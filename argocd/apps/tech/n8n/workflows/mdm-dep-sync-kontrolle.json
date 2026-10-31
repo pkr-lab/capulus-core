@@ -1,0 +1,482 @@
+{
+  "name": "MDM: DEP-Sync-Kontrolle",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mdm-dep-sync-__WEBHOOK_TOKEN__",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "895b886b-b50f-55c2-9c09-3e5f5aed9e93",
+      "name": "DEP-Sync",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        160
+      ],
+      "webhookId": "0c708a5d-a321-5e9e-aaa4-0a3484f25def"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "aeb2fb85-ada5-598b-914f-d7c35e71c310",
+      "name": "Taeglich 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  depserverUrl: 'http://mdm-depserver.mdm.svc.cluster.local:9001',\n  scepUrl: 'http://mdm-scep.mdm.svc.cluster.local:8080',\n  publicHost: 'mdm-prod.pke-lab.de',\n  depName: 'capulus',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM',\n  vmUrl: 'http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428',\n  n8nUrl: 'https://n8n.prod.homeserver'\n};\nreturn [{ json: cfg }];\n"
+      },
+      "id": "a03dba9f-578e-556c-adaa-24092a4948b8",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  depserverUrl: 'http://mdm-depserver.mdm.svc.cluster.local:9001',\n  scepUrl: 'http://mdm-scep.mdm.svc.cluster.local:8080',\n  publicHost: 'mdm-prod.pke-lab.de',\n  depName: 'capulus',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM',\n  vmUrl: 'http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428',\n  n8nUrl: 'https://n8n.prod.homeserver'\n};\nreturn [{ json: cfg }];\n"
+      },
+      "id": "daf27081-1495-5dd8-abbc-b3a4c38f0944",
+      "name": "Konfiguration Sync",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const body = $('DEP-Sync').first().json.body || {};\nconst response = (body.device_response_event || {}).device_response || {};\nconst serials = (response.devices || [])\n  .filter((device) => device.op_type === 'added' || device.op_type === 'modified')\n  .map((device) => device.serial_number)\n  .filter(Boolean);\nif (serials.length === 0) return [];\nreturn [{ json: { serials } }];\n"
+      },
+      "id": "faaa8c73-4a88-51e3-8240-fc80752e7034",
+      "name": "Neue Geraete aus Sync",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 2,
+        "unit": "minutes"
+      },
+      "id": "b1f1520f-e101-5bbf-9d2c-c3f5b46df852",
+      "name": "Zwei Minuten warten",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        160
+      ],
+      "webhookId": "9da6fbcd-6cc2-5c41-affe-f328b2d618c3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration Sync').first().json.depserverUrl }}/proxy/{{ $('Konfiguration Sync').first().json.depName }}/devices",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ devices: $('Neue Geraete aus Sync').first().json.serials }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "296e6e52-24cb-5a07-91bd-75ade1415b02",
+      "name": "Geraetedetails abrufen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        160
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoDEP API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Konfiguration Sync').first().json.depserverUrl }}/v1/assigner/{{ $('Konfiguration Sync').first().json.depName }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "841c597e-9950-5eab-83fa-cf7cd58f6d68",
+      "name": "Assigner pruefen Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        160
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoDEP API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const unassigned = (devices) => devices\n  .filter((device) => device.op_type !== 'deleted')\n  .filter((device) => !device.profile_uuid || device.profile_status === 'empty')\n  .map((device) => device.serial_number);\nconst cfg = $('Konfiguration Sync').first().json;\nconst details = $('Geraetedetails abrufen').first().json;\nconst assigner = $input.first().json;\nconst map = (details.body && details.body.devices) || {};\nconst list = Array.isArray(map) ? map : Object.values(map);\nreturn [{ json: { source: 'Sync', unassigned: unassigned(list), detailStatus: details.statusCode, assignerMissing: !(assigner.statusCode === 200 && assigner.body && assigner.body.profile_uuid), ntfyUrl: cfg.ntfyUrl, ntfyTopic: cfg.ntfyTopic } }];\n"
+      },
+      "id": "db9a9b36-b547-532a-b506-1931112d04d9",
+      "name": "Zuweisung pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.depserverUrl }}/proxy/{{ $('Konfiguration').first().json.depName }}/server/devices",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ limit: 1000 }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "4bd3fc22-fc8e-5a51-9b4a-f77c0b85facc",
+      "name": "Alle Geraete abrufen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        440
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoDEP API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Konfiguration').first().json.depserverUrl }}/v1/assigner/{{ $('Konfiguration').first().json.depName }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "5c9412b8-6449-5d0f-a252-4af88ee35a0f",
+      "name": "Assigner pruefen Tag",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        440
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoDEP API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const unassigned = (devices) => devices\n  .filter((device) => device.op_type !== 'deleted')\n  .filter((device) => !device.profile_uuid || device.profile_status === 'empty')\n  .map((device) => device.serial_number);\nconst cfg = $('Konfiguration').first().json;\nconst all = $('Alle Geraete abrufen').first().json;\nconst assigner = $input.first().json;\nconst list = (all.body && all.body.devices) || [];\nreturn [{ json: { source: 'Tageskontrolle', unassigned: unassigned(list), detailStatus: all.statusCode, assignerMissing: !(assigner.statusCode === 200 && assigner.body && assigner.body.profile_uuid), ntfyUrl: cfg.ntfyUrl, ntfyTopic: cfg.ntfyTopic } }];\n"
+      },
+      "id": "4af70ff6-cb35-56a7-b4f7-895ba922ca1f",
+      "name": "Tageskontrolle auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const row = $input.first().json;\nconst lines = [];\nif (row.detailStatus !== 200) lines.push('Abruf bei Apple fehlgeschlagen (HTTP ' + row.detailStatus + '). Ist der DEP-Token noch gueltig?');\nif (row.assignerMissing) lines.push('Es ist kein DEP-Profil als Assigner gesetzt, neue Geraete bekommen kein Enrollment-Profil. Abhilfe: scripts/mdm-dep-profile.sh oder das Verlaengerungs-Formular.');\nif (row.unassigned.length > 0) lines.push('Ohne DEP-Profil (' + row.unassigned.length + '): ' + row.unassigned.join(', '));\nif (lines.length === 0) return [];\nreturn [{ json: { title: 'MDM: DEP-Zuweisung pruefen (' + row.source + ')', message: lines.join('\\n'), ntfyUrl: row.ntfyUrl, ntfyTopic: row.ntfyTopic } }];\n"
+      },
+      "id": "df0e38cd-6d25-5757-ba33-2ef1415f2469",
+      "name": "Meldung bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.ntfyUrl }}/{{ $json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Priority",
+              "value": "high"
+            },
+            {
+              "name": "Tags",
+              "value": "warning"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.message }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "50105bd5-be3a-5c05-a4ba-fb7eff4fd453",
+      "name": "Unzugewiesene melden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1940,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "DEP-Sync": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Taeglich 09:00": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration Sync": {
+      "main": [
+        [
+          {
+            "node": "Neue Geraete aus Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Alle Geraete abrufen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Neue Geraete aus Sync": {
+      "main": [
+        [
+          {
+            "node": "Zwei Minuten warten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zwei Minuten warten": {
+      "main": [
+        [
+          {
+            "node": "Geraetedetails abrufen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geraetedetails abrufen": {
+      "main": [
+        [
+          {
+            "node": "Assigner pruefen Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assigner pruefen Sync": {
+      "main": [
+        [
+          {
+            "node": "Zuweisung pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zuweisung pruefen": {
+      "main": [
+        [
+          {
+            "node": "Meldung bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alle Geraete abrufen": {
+      "main": [
+        [
+          {
+            "node": "Assigner pruefen Tag",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assigner pruefen Tag": {
+      "main": [
+        [
+          {
+            "node": "Tageskontrolle auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tageskontrolle auswerten": {
+      "main": [
+        [
+          {
+            "node": "Meldung bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung bauen": {
+      "main": [
+        [
+          {
+            "node": "Unzugewiesene melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "Europe/Berlin"
+  },
+  "versionId": "77c3093e-9a31-5a21-b81d-2f274524843e",
+  "meta": {
+    "description": "Prueft, dass neue Seriennummern aus Apple Business vom NanoDEP-Assigner ein DEP-Profil bekommen. Trigger 1: Webhook von depsyncer (neue/geaenderte Geraete), zwei Minuten warten, dann Geraetedetails bei Apple abfragen. Trigger 2: taeglich 09:00 alle Geraete abrufen. Geraete ohne Profil und ein fehlender Assigner werden per ntfy gemeldet. Der Webhook-Pfad enthaelt das Token aus dem SealedSecret mdm-secrets (webhook-token). Credentials: MDM NanoDEP API, ntfy-publisher."
+  }
+}

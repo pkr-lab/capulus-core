@@ -85,7 +85,7 @@ postgresql:
   image:
     repository: postgres
     pullPolicy: IfNotPresent
-    tag: "18-alpine"
+    tag: "18-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5"
 
   database: nextcloud
   username: nextcloud
@@ -112,7 +112,7 @@ redis:
   image:
     repository: redis
     pullPolicy: IfNotPresent
-    tag: "8-alpine"
+    tag: "8-alpine@sha256:0bf6577d7774e592b29d093e3ac9390eb91e13d72c21e506afce736de5e0eeb0"
 
   service:
     port: 6379

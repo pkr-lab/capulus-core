@@ -1,0 +1,304 @@
+{
+  "name": "MDM: Nachricht an iPads",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "basicAuth",
+        "formTitle": "Nachricht an alle iPads",
+        "formDescription": "Der Text erscheint als Mitteilung auf den iPads mit der ntfy-App.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Titel",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "optional"
+            },
+            {
+              "fieldLabel": "Nachricht",
+              "fieldType": "textarea",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Dringlichkeit",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Normal"
+                  },
+                  {
+                    "option": "Hoch"
+                  },
+                  {
+                    "option": "Dringend (auch im Nicht-stoeren-Modus)"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "path": "mdm-nachricht"
+        }
+      },
+      "id": "8b7f8239-97a2-55bb-88a6-92424794eb63",
+      "name": "Formular Nachricht",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        300
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Formulare"
+        }
+      },
+      "webhookId": "a5545f15-5bb2-5e7a-bad6-8d5fcb84b025"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  depserverUrl: 'http://mdm-depserver.mdm.svc.cluster.local:9001',\n  scepUrl: 'http://mdm-scep.mdm.svc.cluster.local:8080',\n  publicHost: 'mdm-prod.pke-lab.de',\n  depName: 'capulus',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM',\n  vmUrl: 'http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428',\n  n8nUrl: 'https://n8n.prod.homeserver'\n};\ncfg.ntfyTopic = 'Home-Lab-iPad';\nreturn [{ json: cfg }];\n"
+      },
+      "id": "c22a7cce-c80f-52e7-8e18-6119dd000276",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const input = $('Formular Nachricht').first().json;\nconst message = String(input['Nachricht'] || '').trim();\nconst title = String(input['Titel'] || '').trim();\nif (message.length === 0 || message.length > 500 || title.length > 80) {\n  return [{ json: { ok: false, title: 'Nichts gesendet', message: 'Die Nachricht muss 1 bis 500 Zeichen lang sein, der Titel hoechstens 80.' } }];\n}\nconst level = String(input['Dringlichkeit'] || '');\nconst priority = level.indexOf('Dringend') === 0 ? 5 : level === 'Hoch' ? 4 : 3;\nreturn [{ json: { ok: true, title, message, priority } }];\n"
+      },
+      "id": "01ad7ee3-3eeb-5019-bc9d-590e54417df9",
+      "name": "Eingabe pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "f15e2d20-cba0-5d3e-9aa5-0c3307f961d3"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "6bb06536-c9bb-5cda-933d-21d9e6e4b762",
+      "name": "Eingabe gueltig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        690,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ topic: $('Konfiguration').first().json.ntfyTopic, title: $json.title || 'Nachricht', message: $json.message, priority: $json.priority, tags: ['speech_balloon'] }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "13fd9d92-b0e5-5767-abe0-784515e73c6e",
+      "name": "Nachricht senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const res = $input.first().json;\nif (res.statusCode === 200) {\n  return [{ json: { title: 'Nachricht gesendet', message: 'Die Mitteilung wurde an das Topic Home-Lab-iPad gesendet. iPads mit der ntfy-App und dem Benutzer ipad erhalten sie sofort.' } }];\n}\nreturn [{ json: { title: 'Senden fehlgeschlagen', message: 'ntfy antwortete mit HTTP ' + (res.statusCode || res.error || 'keine Antwort') + '. Pruefen, ob das Credential ntfy-publisher auf Home-Lab-iPad schreiben darf.' } }];\n"
+      },
+      "id": "2c7ce5d1-57b5-5693-92ac-da5e4a0c74ae",
+      "name": "Ergebnis auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1150,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return $input.all();\n"
+      },
+      "id": "b12c85dc-23a8-5e76-b2e7-0e7d755b9e96",
+      "name": "Meldung",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1380,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "={{ $('Meldung').first().json.title }}",
+        "completionMessage": "={{ $('Meldung').first().json.message }}",
+        "options": {}
+      },
+      "id": "92078448-53e1-5e6f-a916-6860e146377c",
+      "name": "Abschluss",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        1610,
+        300
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Formular Nachricht": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Eingabe pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingabe pruefen": {
+      "main": [
+        [
+          {
+            "node": "Eingabe gueltig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingabe gueltig?": {
+      "main": [
+        [
+          {
+            "node": "Nachricht senden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nachricht senden": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnis auswerten": {
+      "main": [
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung": {
+      "main": [
+        [
+          {
+            "node": "Abschluss",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "Europe/Berlin"
+  },
+  "versionId": "b88e9f21-3ee6-542b-821a-25eb0b4f4e7a",
+  "meta": {
+    "description": "Formular fuer eine einmalige Mitteilung an alle iPads. Der Text wird als Push-Benachrichtigung ueber das ntfy-Topic Home-Lab-iPad gesendet (JSON-Publish, UTF-8). Die iPads empfangen sie ueber die ntfy-App mit dem Benutzer ipad (read-only auf Home-Lab-iPad). Dringlichkeit Dringend umgeht den Nicht-stoeren-Modus. Credentials: MDM Formulare (Basic Auth), ntfy-publisher."
+  }
+}
