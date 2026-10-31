@@ -58,9 +58,9 @@ data:
     {{- .Files.Get "profiles/webclip.mobileconfig.tmpl" | nindent 4 }}
   wallpaper-lock.mobileconfig.tmpl: |
     {{- .Files.Get "profiles/wallpaper-lock.mobileconfig.tmpl" | nindent 4 }}
+  dep-enrollment-profile.json: |
+    {{- .Files.Get "profiles/dep-enrollment-profile.json" | nindent 4 }}
 binaryData:
   ipad-wallpaper.png: {{ .Files.Get "profiles/ipad-wallpaper.png" | b64enc }}
   icon-lists.png: {{ .Files.Get "profiles/icon-lists.png" | b64enc }}
   icon-isc.png: {{ .Files.Get "profiles/icon-isc.png" | b64enc }}
-  dep-enrollment-profile.json: |
-    {{- .Files.Get "profiles/dep-enrollment-profile.json" | nindent 4 }}
