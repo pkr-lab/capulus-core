@@ -1,0 +1,26 @@
+{{- if .Values.ollamaPc.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "n8n.fullname" . }}-ollama-pc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+data:
+  {{- range $path, $_ := .Files.Glob "ollama-pc/cli.js" }}
+  {{ trimPrefix "ollama-pc/" $path | replace "/" "__" | quote }}: |
+    {{- $.Files.Get $path | nindent 4 }}
+  {{- end }}
+  {{- range $path, $_ := .Files.Glob "ollama-pc/lib/*.js" }}
+  {{ trimPrefix "ollama-pc/" $path | replace "/" "__" | quote }}: |
+    {{- $.Files.Get $path | nindent 4 }}
+  {{- end }}
+  {{- range $path, $_ := .Files.Glob "ollama-pc/prompts/*.md" }}
+  {{ trimPrefix "ollama-pc/" $path | replace "/" "__" | quote }}: |
+    {{- $.Files.Get $path | nindent 4 }}
+  {{- end }}
+  {{- range $path, $_ := .Files.Glob "ollama-pc/knowledge/*.md" }}
+  {{ trimPrefix "ollama-pc/" $path | replace "/" "__" | quote }}: |
+    {{- $.Files.Get $path | nindent 4 }}
+  {{- end }}
+{{- end }}
