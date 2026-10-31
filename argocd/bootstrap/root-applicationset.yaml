@@ -41,11 +41,6 @@ spec:
           jsonPointers:
             - /spec/replicas
         - group: apps
-          kind: Deployment
-          name: ollama
-          jsonPointers:
-            - /spec/replicas
-        - group: apps
           kind: StatefulSet
           name: zammad-redis
           jsonPointers:

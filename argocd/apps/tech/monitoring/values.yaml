@@ -340,7 +340,6 @@ dashboardApps:
   - { name: carplay-api, namespace: carplay-api, folder: "Anwendungen (TECH)", hasIngress: true }
   - { name: mediamtx, namespace: mediamtx, folder: "Anwendungen (TECH)", hasIngress: true }
   - { name: n8n, namespace: n8n, folder: "Anwendungen (TECH)", hasIngress: true }
-  - { name: ollama, namespace: ollama, folder: "Anwendungen (TECH)", hasIngress: false }
   - { name: pacman, namespace: pacman, folder: "Anwendungen (TECH)", hasIngress: true }
   - { name: uptime-kuma, namespace: uptime-kuma, folder: "Anwendungen (TECH)", hasIngress: true }
   - { name: vaultwarden, namespace: vaultwarden, folder: "Anwendungen (TECH)", hasIngress: true }
