@@ -21,12 +21,12 @@ func TestCreateSendsVerifiedCustomer(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := New(config.Zammad{URL: srv.URL, Token: "geheim", Group: "Users"})
+	c := New(config.Zammad{URL: srv.URL, Token: "geheim", Group: "Users", Tag: "HomePage"})
 	number, err := c.Create(context.Background(), Ticket{Email: "ich@example.de", Name: "Max", Subject: "Hallo", Message: "Text"})
 	if err != nil || number != "10007" {
 		t.Fatalf("%q %v", number, err)
 	}
-	if auth != "Token token=geheim" || got["customer_id"] != "guess:ich@example.de" || got["group"] != "Users" {
+	if auth != "Token token=geheim" || got["customer_id"] != "guess:ich@example.de" || got["group"] != "Users" || got["tags"] != "HomePage" {
 		t.Fatalf("Request: %v %v", auth, got)
 	}
 }
