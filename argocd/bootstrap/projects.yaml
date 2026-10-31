@@ -65,8 +65,6 @@ spec:
     - server: https://kubernetes.default.svc
       namespace: n8n
     - server: https://kubernetes.default.svc
-      namespace: ollama
-    - server: https://kubernetes.default.svc
       namespace: pacman
     - server: https://kubernetes.default.svc
       namespace: ticket-gate

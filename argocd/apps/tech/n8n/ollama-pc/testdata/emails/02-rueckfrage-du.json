@@ -1,0 +1,21 @@
+{
+  "context": "",
+  "history": [
+    {
+      "from": "Jonas Bauer <jonas@example.org>",
+      "date": "2026-10-10 18:02",
+      "text": "Hi, bei mir kommt seit gestern beim Login die Meldung 'Zugriff verweigert'. Kannst du mal schauen?"
+    },
+    {
+      "from": "Support",
+      "date": "2026-10-11 08:30",
+      "text": "Hallo Jonas, danke für die Meldung. Mit welchem Gerät und welchem Browser meldest du dich an?"
+    }
+  ],
+  "mail": {
+    "from": "Jonas Bauer <jonas@example.org>",
+    "date": "2026-10-11 19:45",
+    "subject": "Re: Login Problem",
+    "text": "Hey, ich nutze mein Notebook mit Firefox. Hab auch schon den Cache geleert, hat nix gebracht. Ist wirklich dringend, morgen früh brauche ich den Zugang."
+  }
+}
