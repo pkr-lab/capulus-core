@@ -94,6 +94,7 @@ config:
   SMTP_FROM_NAME: EDV-Kretzer
   ZAMMAD_URL: http://zammad-nginx.zammad.svc.cluster.local:8080
   ZAMMAD_GROUP: HomePage
+  ZAMMAD_TAG: HomePage
 
 secrets:
   enabled: true
