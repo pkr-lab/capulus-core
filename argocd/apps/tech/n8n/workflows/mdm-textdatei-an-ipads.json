@@ -1,0 +1,330 @@
+{
+  "name": "MDM: Textdatei an iPads senden",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "basicAuth",
+        "formTitle": "Textdatei an alle iPads",
+        "formDescription": "Die Datei wird einmalig an alle iPads mit der ntfy-App gesendet und dort als Anhang einer Mitteilung angezeigt. Sie wird nicht im Repository gespeichert.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Textdatei",
+              "fieldType": "file",
+              "multipleFiles": false,
+              "requiredField": true,
+              "acceptFileTypes": ".txt,.md,.csv"
+            },
+            {
+              "fieldLabel": "Titel",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "optional"
+            },
+            {
+              "fieldLabel": "Dringlichkeit",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Normal"
+                  },
+                  {
+                    "option": "Hoch"
+                  },
+                  {
+                    "option": "Dringend (auch im Nicht-stoeren-Modus)"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "path": "mdm-textdatei"
+        }
+      },
+      "id": "3c6c7b05-593f-54b5-b894-fece05a8ef83",
+      "name": "Formular Textdatei",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        300
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Formulare"
+        }
+      },
+      "webhookId": "3e9943a9-5113-5fd2-ab2f-3902c4bd27e2"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  depserverUrl: 'http://mdm-depserver.mdm.svc.cluster.local:9001',\n  scepUrl: 'http://mdm-scep.mdm.svc.cluster.local:8080',\n  publicHost: 'mdm-prod.pke-lab.de',\n  depName: 'capulus',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM',\n  vmUrl: 'http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428',\n  n8nUrl: 'https://n8n.prod.homeserver'\n};\ncfg.ntfyTopic = 'Home-Lab-iPad';\nreturn [{ json: cfg }];\n"
+      },
+      "id": "790beca6-5d67-54b9-964f-6e9d2b314ba4",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const item = $input.first();\nconst fail = (text) => [{ json: { ok: false, title: 'Nichts gesendet', message: text } }];\nconst names = Object.keys(item.binary || {});\nif (names.length === 0) return fail('Es wurde keine Datei hochgeladen.');\nconst file = item.binary[names[0]];\nconst buffer = await this.helpers.getBinaryDataBuffer(0, names[0]);\nif (buffer.length === 0) return fail('Die Datei ist leer.');\nif (buffer.length > 1024 * 1024) return fail('Die Datei ist groesser als 1 MB. Bitte kuerzen oder aufteilen.');\nif (buffer.includes(0)) return fail('Das ist keine Textdatei (enthaelt Binaerdaten).');\nconst input = $('Formular Textdatei').first().json;\nconst title = String(input['Titel'] || '').trim();\nif (title.length > 80) return fail('Der Titel darf hoechstens 80 Zeichen lang sein.');\nconst original = String(file.fileName || 'datei.txt');\nconst dot = original.lastIndexOf('.');\nconst ext = dot > 0 ? original.slice(dot).replace(/[^A-Za-z0-9.]/g, '').slice(0, 8) : '.txt';\nconst stem = (dot > 0 ? original.slice(0, dot) : original).replace(/ß/g, 'ss').normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60) || 'datei';\nconst mime = (value) => '=?UTF-8?B?' + Buffer.from(value, 'utf8').toString('base64') + '?=';\nconst filename = stem + (ext.length > 1 ? ext : '.txt');\nconst kb = Math.max(1, Math.round(buffer.length / 1024));\nconst level = String(input['Dringlichkeit'] || '');\nconst priority = level.indexOf('Dringend') === 0 ? 5 : level === 'Hoch' ? 4 : 3;\nreturn [{\n  json: {\n    ok: true,\n    filename,\n    bytes: buffer.length,\n    priority,\n    titleHeader: mime(title || 'Textdatei'),\n    messageHeader: mime(original + ' (' + kb + ' KB) zum Oeffnen antippen')\n  },\n  binary: { data: file }\n}];\n"
+      },
+      "id": "2e0614aa-f4dd-55a8-82dc-7216172d89ca",
+      "name": "Datei pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "cf3691be-e638-5fee-b2dd-07cce0f3c2d6"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "783f04f1-0860-534c-8f1e-af9eeae2452b",
+      "name": "Datei gueltig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        690,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Filename",
+              "value": "={{ $json.filename }}"
+            },
+            {
+              "name": "Title",
+              "value": "={{ $json.titleHeader }}"
+            },
+            {
+              "name": "Message",
+              "value": "={{ $json.messageHeader }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            },
+            {
+              "name": "Tags",
+              "value": "page_facing_up"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "993758de-75f1-5df2-9436-89cae9f69a9c",
+      "name": "Datei senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const res = $input.first().json;\nconst sent = $('Datei pruefen').first().json;\nif (res.statusCode === 200) {\n  return [{ json: { title: 'Datei gesendet', message: sent.filename + ' (' + Math.max(1, Math.round(sent.bytes / 1024)) + ' KB) wurde an das Topic Home-Lab-iPad gesendet. iPads mit der ntfy-App und dem Benutzer ipad sehen sie sofort und koennen sie oeffnen. Der Anhang bleibt auf dem ntfy-Server und laeuft dort nach der eingestellten Aufbewahrungszeit (Standard 3 Stunden) ab.' } }];\n}\nreturn [{ json: { title: 'Senden fehlgeschlagen', message: 'ntfy antwortete mit HTTP ' + (res.statusCode || res.error || 'keine Antwort') + '. Pruefen, ob das Credential ntfy-publisher auf Home-Lab-iPad schreiben darf und die Datei kleiner als 5 MB ist.' } }];\n"
+      },
+      "id": "b257323b-4e14-5002-af51-77cb049ccabc",
+      "name": "Ergebnis auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1150,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return $input.all();\n"
+      },
+      "id": "399998ce-bcb3-5203-9981-b559ec05e30c",
+      "name": "Meldung",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1380,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "={{ $('Meldung').first().json.title }}",
+        "completionMessage": "={{ $('Meldung').first().json.message }}",
+        "options": {}
+      },
+      "id": "b5eb413a-ddbd-53ff-8b15-5d7da65fd2b7",
+      "name": "Abschluss",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        1610,
+        300
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Formular Textdatei": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Datei pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Datei pruefen": {
+      "main": [
+        [
+          {
+            "node": "Datei gueltig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Datei gueltig?": {
+      "main": [
+        [
+          {
+            "node": "Datei senden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Datei senden": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnis auswerten": {
+      "main": [
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung": {
+      "main": [
+        [
+          {
+            "node": "Abschluss",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "Europe/Berlin"
+  },
+  "versionId": "c751b083-68dc-5def-8679-78429ed2569d",
+  "meta": {
+    "description": "Formular, das eine Textdatei (.txt, .md, .csv, bis 1 MB) einmalig an alle iPads sendet. iPadOS erlaubt per MDM kein Ablegen beliebiger Dateien, deshalb geht die Datei als Anhang einer ntfy-Mitteilung (PUT mit Filename-Header, Binaerdaten aus dem Formular) an das Topic Home-Lab-iPad. Die iPads empfangen sie ueber die ntfy-App mit dem Benutzer ipad (read-only auf Home-Lab-iPad). Die Datei liegt nur im Speicher von n8n (Ausfuehrungsdaten) und im Anhang-Cache von ntfy auf dem Homeserver (Aufbewahrung laut ntfy-Konfiguration, Standard 3 Stunden, max. 5 MB), nie im Repository. Titel und Nachricht gehen RFC-2047-kodiert, damit Umlaute funktionieren. Credentials: MDM Formulare (Basic Auth), ntfy-publisher."
+  }
+}

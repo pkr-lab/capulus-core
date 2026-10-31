@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mdm.fullname" . }}-nanomdm
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "mdm.selectorLabels" (dict "ctx" . "component" "nanomdm") | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/ca: {{ .Values.scep.caPem | sha256sum }}
+      labels:
+        {{- include "mdm.selectorLabels" (dict "ctx" . "component" "nanomdm") | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "mdm.fullname" . }}
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "mdm.podSecurityContext" (dict "uid" 65532) | nindent 8 }}
+      containers:
+        - name: nanomdm
+          image: "{{ .Values.nanomdm.image.repository }}:{{ .Values.nanomdm.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            {{- include "mdm.containerSecurityContext" . | nindent 12 }}
+          env:
+            {{- include "mdm.secretEnv" (dict "name" "NANOMDM_API" "secret" .Values.secrets.main.secretName "key" "nanomdm-api-key") | nindent 12 }}
+            {{- include "mdm.secretEnv" (dict "name" "NANOMDM_DB_PASSWORD" "secret" .Values.secrets.main.secretName "key" "nanomdm-db-password") | nindent 12 }}
+            {{- include "mdm.secretEnv" (dict "name" "WEBHOOK_TOKEN" "secret" .Values.secrets.main.secretName "key" "webhook-token") | nindent 12 }}
+            - name: NANOMDM_LISTEN
+              value: ":{{ .Values.nanomdm.port }}"
+            - name: NANOMDM_CA
+              value: /scep-ca/ca.pem
+            - name: NANOMDM_STORAGE
+              value: pgsql
+            - name: NANOMDM_STORAGE_DSN
+              value: "postgres://nanomdm:$(NANOMDM_DB_PASSWORD)@{{ include "mdm.dbHost" . }}:{{ .Values.postgres.port }}/nanomdm?sslmode=disable"
+            - name: NANOMDM_WEBHOOK_URL
+              value: "http://{{ .Values.automation.n8nService }}/webhook/mdm-event-$(WEBHOOK_TOKEN)"
+          ports:
+            - name: http
+              containerPort: {{ .Values.nanomdm.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /version
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /version
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.nanomdm.resources | nindent 12 }}
+          volumeMounts:
+            - name: scep-ca
+              mountPath: /scep-ca
+              readOnly: true
+      volumes:
+        - name: scep-ca
+          configMap:
+            name: {{ include "mdm.fullname" . }}-scep-ca
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mdm.fullname" . }}-nanomdm
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mdm.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ .Values.nanomdm.port }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    {{- include "mdm.selectorLabels" (dict "ctx" . "component" "nanomdm") | nindent 4 }}
