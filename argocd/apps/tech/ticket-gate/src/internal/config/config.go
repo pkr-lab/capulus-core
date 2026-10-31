@@ -23,6 +23,7 @@ type Zammad struct {
 	URL   string
 	Token string
 	Group string
+	Tag   string
 }
 
 type Config struct {
@@ -146,6 +147,7 @@ func Load(get func(string) string) (Config, error) {
 		URL:   strings.TrimRight(r.required("ZAMMAD_URL"), "/"),
 		Token: r.required("ZAMMAD_TOKEN"),
 		Group: r.str("ZAMMAD_GROUP", "Users"),
+		Tag:   r.str("ZAMMAD_TAG", ""),
 	}
 
 	if len(r.errs) > 0 {

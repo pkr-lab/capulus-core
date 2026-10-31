@@ -46,6 +46,7 @@ type payload struct {
 	Group      string  `json:"group"`
 	CustomerID string  `json:"customer_id"`
 	Article    article `json:"article"`
+	Tags       string  `json:"tags,omitempty"`
 }
 
 func (c *Client) Create(ctx context.Context, t Ticket) (string, error) {
@@ -58,6 +59,7 @@ func (c *Client) Create(ctx context.Context, t Ticket) (string, error) {
 		Group:      c.cfg.Group,
 		CustomerID: "guess:" + t.Email,
 		Article:    article{Subject: t.Subject, Body: body, Type: "web", Sender: "Customer"},
+		Tags:       c.cfg.Tag,
 	})
 	if err != nil {
 		return "", err
