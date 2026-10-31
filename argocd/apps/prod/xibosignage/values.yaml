@@ -10,7 +10,7 @@ mysql:
   image:
     repository: mysql
     pullPolicy: IfNotPresent
-    tag: "26.7@sha256:625f74ddf93652d9d0f8d4ea7d741b9189554a5e96d27bb770abd0902d89c6e3"
+    tag: "26.10@sha256:f51c9c01c16b0eb5d81bb70ab7e7fcb3b96abc6a54114be3a94e8e569cae7815"
 
   database: cms
   username: cms
@@ -37,7 +37,7 @@ xmr:
   image:
     repository: ghcr.io/xibosignage/xibo-xmr
     pullPolicy: IfNotPresent
-    tag: "1.3"
+    tag: "1.3@sha256:92e60111164a1f58538134e119bb025e998127a784800f03c62e6488956cbfd3"
 
   service:
     port: 9505
@@ -83,7 +83,7 @@ cms:
   image:
     repository: ghcr.io/xibosignage/xibo-cms
     pullPolicy: IfNotPresent
-    tag: "release-4.5.5"
+    tag: "release-4.5.5@sha256:b77cd669890aff293a76bf120ce28b2c0b20ff08b29d5fe8ae8fbccf255886ea"
 
   service:
     type: ClusterIP

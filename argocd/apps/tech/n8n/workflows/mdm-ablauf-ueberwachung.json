@@ -1,0 +1,452 @@
+{
+  "name": "MDM: Ablauf-Ueberwachung",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "37a8f02b-39fc-5cdb-af7b-135d455d4cbc",
+      "name": "Taeglich 07:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  depserverUrl: 'http://mdm-depserver.mdm.svc.cluster.local:9001',\n  scepUrl: 'http://mdm-scep.mdm.svc.cluster.local:8080',\n  publicHost: 'mdm-prod.pke-lab.de',\n  depName: 'capulus',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM',\n  vmUrl: 'http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428',\n  n8nUrl: 'https://n8n.prod.homeserver'\n};\ncfg.thresholds = [30, 14, 7, 1];\ncfg.formUrl = cfg.n8nUrl + '/form/mdm-verlaengerung';\ncfg.checklists = {\n  apns: [\n    'Verlaengerung des APNs-Push-Zertifikats (einmal im Jahr):',\n    '1. Neue Anfrage erzeugen: scripts/mdm-apns.sh request <E-Mail> (Repo capulus-core, argocd/apps/tech/mdm/scripts).',\n    '2. Signierte Anfrage aus der Mail von mdmcert.download speichern und entschluesseln: scripts/mdm-apns.sh decrypt <Anhang>.',\n    '3. Auf https://identity.apple.com mit DERSELBEN Apple Account anmelden, mit der das Zertifikat erstellt wurde. Beim vorhandenen Zertifikat \"Renew\" waehlen (nicht \"Create a Certificate\"), push.req hochladen und push.pem herunterladen.',\n    '4. Im Formular ' + cfg.formUrl + ' \"Push-Zertifikat erneuern\" waehlen und push.pem sowie push.key hochladen.',\n    '5. Die Bestaetigung mit dem neuen Ablaufdatum abwarten.',\n    'Achtung: Mit \"Create\" statt \"Renew\" oder einer anderen Apple Account aendert sich das Push-Topic, dann muessen alle iPads neu enrollt werden.',\n    'Details: ' + 'https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus/capulus-core/3-apps-workloads/300v0-mdm-betrieb.md'\n  ].join('\\n'),\n  dep: [\n    'Verlaengerung des DEP-Tokens (einmal im Jahr):',\n    '1. In Apple Business (https://business.apple.com) unter Einstellungen > MDM-Server den Capulus-MDM-Server oeffnen und \"Token herunterladen\" waehlen (.p7m).',\n    '2. Im Formular ' + cfg.formUrl + ' \"DEP-Token erneuern\" waehlen und die .p7m-Datei hochladen.',\n    '3. Die Bestaetigung mit dem neuen Ablaufdatum abwarten.',\n    'Details: ' + 'https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus/capulus-core/3-apps-workloads/300v0-mdm-betrieb.md'\n  ].join('\\n'),\n  scep: [\n    'Die SCEP-CA laeuft ab. Danach koennen sich iPads nicht mehr per SCEP ausweisen und die MDM-Verbindung bricht ab.',\n    'Eine neue CA bedeutet: neues Enrollment-Profil und Neu-Enrollment aller iPads (Zuruecksetzen und erneut registrieren). Mindestens sechs Monate vorher planen.',\n    'Vorgehen: ' + 'https://github.com/pkr-lab/pkr-lab-docs/blob/main/capulus/capulus-core/3-apps-workloads/300v0-mdm-betrieb.md' + ' (Abschnitt SCEP-CA erneuern).'\n  ].join('\\n')\n};\ncfg.labels = { apns: 'APNs-Push-Zertifikat', dep: 'DEP-Token', scep: 'SCEP-CA' };\nreturn [{ json: cfg }];\n"
+      },
+      "id": "9ed6d495-24c4-5b51-ae94-24da3537927b",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT topic, cert_pem FROM public.push_certs ORDER BY updated_at DESC LIMIT 1",
+        "options": {}
+      },
+      "id": "148d1ebe-1afd-5819-b4bf-922426d561e9",
+      "name": "Push-Zertifikat lesen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        440,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Konfiguration').first().json.depserverUrl }}/v1/tokens/{{ $('Konfiguration').first().json.depName }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "e994ad3c-0d6d-5c83-bee4-590b79f90eb1",
+      "name": "DEP-Token lesen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        300
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoDEP API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Konfiguration').first().json.scepUrl }}/scep",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "operation",
+              "value": "GetCACert"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "c419c49c-951f-5732-9888-f64488674e4e",
+      "name": "SCEP-CA lesen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const { X509Certificate } = require('crypto');\nconst cfg = $('Konfiguration').first().json;\nconst today = Date.now();\nconst entry = (item, expiry, error) => {\n  const label = cfg.labels[item];\n  if (error) return { json: { item, label, error } };\n  const days = Math.floor((new Date(expiry).getTime() - today) / 86400000);\n  return { json: { item, label, expiry: new Date(expiry).toISOString().slice(0, 10), days } };\n};\nconst out = [];\nconst push = $('Push-Zertifikat lesen').first().json;\nif (push.cert_pem) {\n  try {\n    out.push(entry('apns', new X509Certificate(push.cert_pem).validTo));\n  } catch (e) {\n    out.push(entry('apns', null, 'Zertifikat nicht lesbar: ' + e.message));\n  }\n} else {\n  out.push(entry('apns', null, 'Es ist noch kein Push-Zertifikat in NanoMDM hinterlegt.'));\n}\nconst dep = $('DEP-Token lesen').first().json;\nif (dep.statusCode === 200 && dep.body && dep.body.access_token_expiry) {\n  out.push(entry('dep', dep.body.access_token_expiry));\n} else {\n  out.push(entry('dep', null, 'Es ist noch kein DEP-Token in NanoDEP hinterlegt (HTTP ' + (dep.statusCode || dep.error || 'keine Antwort') + ').'));\n}\ntry {\n  const buffer = await this.helpers.getBinaryDataBuffer(0, 'data');\n  out.push(entry('scep', new X509Certificate(buffer).validTo));\n} catch (e) {\n  out.push(entry('scep', null, 'SCEP-CA nicht abrufbar: ' + e.message));\n}\nreturn out;\n"
+      },
+      "id": "b619a108-6fb5-5ae7-97ab-e77c6ad04372",
+      "name": "Ablaufdaten berechnen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT $1::jsonb AS info, (SELECT coalesce(array_agg(threshold), '{}') FROM automation.expiry_notice WHERE item = $2 AND expiry = $3::date) AS sent",
+        "options": {
+          "queryReplacement": "={{ [JSON.stringify($json), $json.item, $json.expiry || '1970-01-01'] }}"
+        }
+      },
+      "id": "48438e2f-efdb-51ac-97fa-5a376f23aef3",
+      "name": "Bereits gemeldet",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1360,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = $('Konfiguration').first().json;\nconst out = [];\nfor (const row of $input.all().map((item) => item.json)) {\n  const info = typeof row.info === 'string' ? JSON.parse(row.info) : row.info;\n  const sent = (row.sent || []).map(Number);\n  const guide = cfg.checklists[info.item];\n  if (info.error) {\n    out.push({ json: { item: info.item, expiry: null, mark: [], ticket: false, priority: 'default', tags: 'question', title: 'MDM: ' + info.label + ' nicht pruefbar', message: info.label + ': ' + info.error + '\\n\\n' + guide } });\n    continue;\n  }\n  if (info.days <= 0) {\n    out.push({ json: { item: info.item, expiry: info.expiry, mark: [], ticket: false, priority: 'urgent', tags: 'rotating_light', title: 'MDM: ' + info.label + ' ist ABGELAUFEN', message: info.label + ' ist seit ' + info.expiry + ' abgelaufen. Notfall-Vorgehen siehe Doku (Abschnitt Zertifikat abgelaufen).\\n\\n' + guide } });\n    continue;\n  }\n  const due = cfg.thresholds.filter((t) => info.days <= t);\n  if (due.length === 0 || due.every((t) => sent.includes(t))) continue;\n  const smallest = Math.min(...due);\n  out.push({ json: {\n    item: info.item,\n    expiry: info.expiry,\n    mark: due,\n    ticket: smallest <= 7,\n    priority: smallest <= 1 ? 'urgent' : smallest <= 7 ? 'high' : 'default',\n    tags: smallest <= 7 ? 'rotating_light' : 'calendar',\n    title: 'MDM: ' + info.label + ' laeuft in ' + info.days + ' Tag(en) ab',\n    message: info.label + ' laeuft am ' + info.expiry + ' ab (noch ' + info.days + ' Tage).\\n\\n' + guide\n  } });\n}\nreturn out;\n"
+      },
+      "id": "91fce7ee-3a7d-57ac-8718-2d32268abb57",
+      "name": "Meldungen bestimmen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1580,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH inserted AS (INSERT INTO automation.expiry_notice (item, expiry, threshold) SELECT $1, $2::date, unnest($3::int[]) ON CONFLICT DO NOTHING RETURNING 1) SELECT count(*) AS marked FROM inserted",
+        "options": {
+          "queryReplacement": "={{ [$('Meldungen bestimmen').all()[$itemIndex].json.item, $('Meldungen bestimmen').all()[$itemIndex].json.expiry || '1970-01-01', '{' + $('Meldungen bestimmen').all()[$itemIndex].json.mark.join(',') + '}'] }}"
+        }
+      },
+      "id": "995dcb4b-2cfd-5f4c-9bfb-429ed405e317",
+      "name": "Meldung vermerken",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1800,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $('Meldungen bestimmen').all()[$itemIndex].json.title }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $('Meldungen bestimmen').all()[$itemIndex].json.priority }}"
+            },
+            {
+              "name": "Tags",
+              "value": "={{ $('Meldungen bestimmen').all()[$itemIndex].json.tags }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $('Meldungen bestimmen').all()[$itemIndex].json.message }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "9aa02b29-e885-5de2-89ea-1baaf0cf83a1",
+      "name": "Erinnerung senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2020,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Meldungen bestimmen').all()[$itemIndex].json.ticket }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "d380a137-d7d2-5ce8-a98b-cce180e55ca7"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "fcee03e3-4563-5a07-852a-5d367c1ca70b",
+      "name": "Ticket noetig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "basicAuth",
+        "resource": "ticket",
+        "title": "={{ $('Meldungen bestimmen').all()[$itemIndex].json.title }}",
+        "group": "Support / Administration",
+        "customer": "=info@edv-kretzer.de",
+        "article": {
+          "articleDetails": {
+            "subject": "={{ $('Meldungen bestimmen').all()[$itemIndex].json.title }}",
+            "body": "={{ $('Meldungen bestimmen').all()[$itemIndex].json.message }}",
+            "sender": "System"
+          }
+        },
+        "additionalFields": {}
+      },
+      "id": "c4dccc61-9710-5b09-97ae-c470019c59c0",
+      "name": "Ticket erstellen",
+      "type": "n8n-nodes-base.zammad",
+      "typeVersion": 1,
+      "position": [
+        2460,
+        220
+      ],
+      "credentials": {
+        "zammadBasicAuthApi": {
+          "id": "phUAvB04RmbLalky",
+          "name": "Zammad EDV-Kretzer"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Taeglich 07:00": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Push-Zertifikat lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Push-Zertifikat lesen": {
+      "main": [
+        [
+          {
+            "node": "DEP-Token lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DEP-Token lesen": {
+      "main": [
+        [
+          {
+            "node": "SCEP-CA lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SCEP-CA lesen": {
+      "main": [
+        [
+          {
+            "node": "Ablaufdaten berechnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ablaufdaten berechnen": {
+      "main": [
+        [
+          {
+            "node": "Bereits gemeldet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bereits gemeldet": {
+      "main": [
+        [
+          {
+            "node": "Meldungen bestimmen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldungen bestimmen": {
+      "main": [
+        [
+          {
+            "node": "Meldung vermerken",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung vermerken": {
+      "main": [
+        [
+          {
+            "node": "Erinnerung senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Erinnerung senden": {
+      "main": [
+        [
+          {
+            "node": "Ticket noetig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ticket noetig?": {
+      "main": [
+        [
+          {
+            "node": "Ticket erstellen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "Europe/Berlin"
+  },
+  "versionId": "8dc77dbd-a5ea-5732-995f-5c3ac8da968c",
+  "meta": {
+    "description": "Taeglich um 07:00: liest Ablaufdatum von APNs-Push-Zertifikat (aus NanoMDM-Datenbank), DEP-Token (NanoDEP-API) und SCEP-CA (SCEP-Endpunkt). Meldet bei 30, 14, 7 und 1 Tag Restlaufzeit per ntfy (Topic Home-Lab-MDM), bei 7 und 1 Tag zusaetzlich als Zammad-Ticket, jeweils mit der Verlaengerungs-Checkliste. Bereits gemeldete Schwellen merkt sich automation.expiry_notice. Abgelaufene Elemente werden taeglich dringend gemeldet. Credentials: MDM NanoDEP API, MDM Automation DB, ntfy-publisher, Zammad EDV-Kretzer."
+  }
+}

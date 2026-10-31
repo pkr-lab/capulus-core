@@ -1,0 +1,573 @@
+{
+  "name": "MDM: Hintergrundbild aendern",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "basicAuth",
+        "formTitle": "Hintergrundbild der iPads aendern",
+        "formDescription": "Das Bild wird auf allen beaufsichtigten iPads als Sperr- und Home-Bildschirm gesetzt und kann dort nicht geaendert werden.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Bild (PNG oder JPG)",
+              "fieldType": "file",
+              "multipleFiles": false,
+              "requiredField": true,
+              "acceptFileTypes": ".png,.jpg,.jpeg"
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "path": "mdm-hintergrund"
+        }
+      },
+      "id": "48517ac3-f8ea-5d57-905b-b7243a30fdca",
+      "name": "Formular Hintergrund",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        300
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Formulare"
+        }
+      },
+      "webhookId": "b6bdb61a-d2d8-5f5f-8bf2-a7e6477a15c9"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const item = $input.first();\nconst names = Object.keys(item.binary || {});\nconst fail = (text) => [{ json: { ok: false, title: 'Hintergrund nicht geaendert', message: text } }];\nif (names.length === 0) return fail('Es wurde kein Bild hochgeladen.');\nconst buffer = await this.helpers.getBinaryDataBuffer(0, names[0]);\nconst png = buffer.length > 8 && buffer.subarray(0, 8).toString('hex') === '89504e470d0a1a0a';\nconst jpeg = buffer.length > 3 && buffer.subarray(0, 3).toString('hex') === 'ffd8ff';\nif (!png && !jpeg) return fail('Das Bild muss eine PNG- oder JPG-Datei sein.');\nif (buffer.length > 4 * 1024 * 1024) return fail('Das Bild ist groesser als 4 MB. Bitte verkleinern (empfohlen: 2048 x 2732 Pixel).');\nreturn [{ json: { ok: true, b64: buffer.toString('base64'), bytes: buffer.length, type: png ? 'PNG' : 'JPG' } }];\n"
+      },
+      "id": "585d04a6-4b53-51a8-bb7f-e0ad0d8d015a",
+      "name": "Bild pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "f3f075eb-5fe5-5038-b038-5a7fcba97081"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "84f1e889-dbc5-514a-98a7-91507b08aee6",
+      "name": "Bild gueltig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  depserverUrl: 'http://mdm-depserver.mdm.svc.cluster.local:9001',\n  scepUrl: 'http://mdm-scep.mdm.svc.cluster.local:8080',\n  publicHost: 'mdm-prod.pke-lab.de',\n  depName: 'capulus',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM',\n  vmUrl: 'http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428',\n  n8nUrl: 'https://n8n.prod.homeserver'\n};\nreturn [{ json: cfg }];\n"
+      },
+      "id": "e7777356-001e-5b6b-8dc2-d59acc96e971",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        690,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE automation.profile_state SET params = jsonb_set(params, '{IMAGE_B64}', to_jsonb($1::text)), version = version + 1, updated_at = now() WHERE name = 'wallpaper' RETURNING version",
+        "options": {
+          "queryReplacement": "={{ [$('Bild pruefen').first().json.b64] }}"
+        }
+      },
+      "id": "9518a0b2-255a-58e8-8825-d20e13decf18",
+      "name": "Hintergrund speichern",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        920,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH claimed AS (\n  INSERT INTO automation.device_profile AS d (enrollment_id, profile_name, version, state, claimed_at)\n  SELECT e.id, p.name, p.version, 'claimed', now()\n  FROM public.enrollments e CROSS JOIN automation.profile_state p\n  WHERE e.type = 'Device' AND e.enabled AND p.name IN ('wallpaper', 'wallpaper-lock') AND p.enabled\n  ON CONFLICT (enrollment_id, profile_name) DO UPDATE\n    SET version = EXCLUDED.version, state = 'claimed', claimed_at = now(), command_uuid = NULL, sent_at = NULL\n    WHERE d.version < EXCLUDED.version OR d.state IN ('failed', 'error')\n  RETURNING d.enrollment_id, d.profile_name, d.version\n)\nSELECT c.enrollment_id, c.profile_name, c.version, p.kind, p.template, p.params\nFROM claimed c JOIN automation.profile_state p ON p.name = c.profile_name",
+        "options": {}
+      },
+      "id": "7bb5e3ff-f9b5-567a-b2c4-da972b6bcb7f",
+      "name": "An alle Geraete beanspruchen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1150,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst claimed = $input.all().map((item) => item.json).filter((row) => row.profile_name);\nif (claimed.length === 0) return [{ json: { skip: true } }];\nconst escapeXml = (value) => String(value)\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;');\nreturn claimed.map((row) => {\n  const params = typeof row.params === 'string' ? JSON.parse(row.params) : row.params;\n  let profile = row.template;\n  for (const [key, value] of Object.entries(params)) {\n    const text = Array.isArray(value)\n      ? value.map((item) => '\\t\\t\\t\\t<string>' + escapeXml(item) + '</string>').join('\\n')\n      : escapeXml(value);\n    profile = profile.split('__' + key + '__').join(text);\n  }\n  profile = profile.split('__VERSION__').join(String(row.version));\n  const commandUuid = crypto.randomUUID();\n  if (row.kind === 'wallpaper') {\n    const settings = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n      + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n      + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n\\t\\t<key>RequestType</key>\\n\\t\\t<string>Settings</string>\\n'\n      + '\\t\\t<key>Settings</key>\\n\\t\\t<array>\\n\\t\\t\\t<dict>\\n\\t\\t\\t\\t<key>Image</key>\\n\\t\\t\\t\\t<data>' + params.IMAGE_B64 + '</data>\\n'\n      + '\\t\\t\\t\\t<key>Item</key>\\n\\t\\t\\t\\t<string>Wallpaper</string>\\n'\n      + '\\t\\t\\t\\t<key>Where</key>\\n\\t\\t\\t\\t<integer>' + Number(params.WHERE || 3) + '</integer>\\n\\t\\t\\t</dict>\\n\\t\\t</array>\\n'\n      + '\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>' + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\n    return { json: { skip: false, enrollment_id: row.enrollment_id, profile_name: row.profile_name, version: row.version, command_uuid: commandUuid, plist: settings } };\n  }\n  const plist = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n    + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n    + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n\\t\\t<key>Payload</key>\\n\\t\\t<data>'\n    + Buffer.from(profile, 'utf8').toString('base64')\n    + '</data>\\n\\t\\t<key>RequestType</key>\\n\\t\\t<string>InstallProfile</string>\\n\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>'\n    + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\n  return { json: { skip: false, enrollment_id: row.enrollment_id, profile_name: row.profile_name, version: row.version, command_uuid: commandUuid, plist } };\n});\n"
+      },
+      "id": "eba33b7c-ec49-5355-8a37-f03d83bfda63",
+      "name": "Befehle bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1380,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "aef3cbf7-2ad4-5ee5-9ebe-e2c593d1bba3"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "c6410818-79dc-5bb3-a035-21526242bede",
+      "name": "Befehle vorhanden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1610,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Konfiguration').first().json.nanomdmUrl }}/v1/enqueue/{{ $json.enrollment_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/xml",
+        "body": "={{ $json.plist }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "698dcd80-85db-5cdd-9c2d-36da83683e83",
+      "name": "Hintergrund einreihen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1840,
+        300
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoMDM API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const sent = $('Befehle bauen').all().map((item) => item.json).filter((row) => !row.skip);\nreturn $input.all().map((response, index) => {\n  const source = sent[index];\n  const body = response.json.body || {};\n  const queued = body.command_uuid === source.command_uuid;\n  const results = Object.values(body.status || {});\n  const pushError = results.map((entry) => entry.push_error).filter(Boolean).join('; ');\n  const detail = queued ? pushError : String(response.json.statusCode || response.json.error || 'keine Antwort');\n  return { json: { enrollment_id: source.enrollment_id, profile_name: source.profile_name, command_uuid: source.command_uuid, ok: queued ? 'yes' : 'no', detail } };\n});\n"
+      },
+      "id": "e9ec0d23-d966-5926-b37b-6fa3ad153614",
+      "name": "Ergebnis auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2070,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE automation.device_profile\nSET state = CASE WHEN $4 = 'yes' THEN 'queued' ELSE 'failed' END,\n    command_uuid = CASE WHEN $4 = 'yes' THEN $3 ELSE NULL END,\n    sent_at = now()\nWHERE enrollment_id = $1 AND profile_name = $2\nRETURNING enrollment_id, profile_name, state, $5::text AS detail",
+        "options": {
+          "queryReplacement": "={{ [$json.enrollment_id, $json.profile_name, $json.command_uuid, $json.ok, $json.detail] }}"
+        }
+      },
+      "id": "91ac2184-f3dc-5def-a8dd-2543ad521e73",
+      "name": "Status vermerken",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2300,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const image = $('Bild pruefen').first().json;\nconst rows = $input.all().map((item) => item.json).filter((row) => row.enrollment_id);\nconst failed = rows.filter((row) => row.state === 'failed');\nlet text = 'Neues Bild (' + image.type + ', ' + Math.round(image.bytes / 1024) + ' KB) gespeichert. ';\ntext += rows.length === 0 ? 'Es ist noch kein iPad angemeldet, neue iPads bekommen das Bild bei der Anmeldung.' : (rows.length - failed.length) + ' von ' + rows.length + ' iPad(s) haben den Befehl erhalten' + (failed.length > 0 ? ', ' + failed.length + ' fehlgeschlagen' : '') + '. Der Hintergrund wirkt nur auf beaufsichtigten iPads.';\nreturn [{ json: { title: failed.length > 0 ? 'Hintergrund mit Fehlern gesendet' : 'Hintergrund gesendet', message: text, priority: failed.length > 0 ? 'high' : 'default' } }];\n"
+      },
+      "id": "c8e2ecaf-7016-54c0-b31e-7dc61e80b3cb",
+      "name": "Meldung bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2530,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            },
+            {
+              "name": "Tags",
+              "value": "framed_picture"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.message }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a5d23d8d-1a51-582c-8434-4503d424d8d0",
+      "name": "Protokoll melden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2760,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: $('Meldung bauen').first().json }];\n"
+      },
+      "id": "e24c6bd1-e59e-5c2f-ac76-1a74e55891a8",
+      "name": "Meldung Ergebnis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2990,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return $input.all();\n"
+      },
+      "id": "03ff4df0-32b8-5d1d-8497-fc9bf5d98219",
+      "name": "Meldung",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "={{ $('Meldung').first().json.title }}",
+        "completionMessage": "={{ $('Meldung').first().json.message }}",
+        "options": {}
+      },
+      "id": "adf4c21d-2376-5d82-b217-012d45933f69",
+      "name": "Abschluss",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        3450,
+        300
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Formular Hintergrund": {
+      "main": [
+        [
+          {
+            "node": "Bild pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bild pruefen": {
+      "main": [
+        [
+          {
+            "node": "Bild gueltig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bild gueltig?": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Hintergrund speichern",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hintergrund speichern": {
+      "main": [
+        [
+          {
+            "node": "An alle Geraete beanspruchen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "An alle Geraete beanspruchen": {
+      "main": [
+        [
+          {
+            "node": "Befehle bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Befehle bauen": {
+      "main": [
+        [
+          {
+            "node": "Befehle vorhanden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Befehle vorhanden?": {
+      "main": [
+        [
+          {
+            "node": "Hintergrund einreihen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meldung bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hintergrund einreihen": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnis auswerten": {
+      "main": [
+        [
+          {
+            "node": "Status vermerken",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status vermerken": {
+      "main": [
+        [
+          {
+            "node": "Meldung bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung bauen": {
+      "main": [
+        [
+          {
+            "node": "Protokoll melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Protokoll melden": {
+      "main": [
+        [
+          {
+            "node": "Meldung Ergebnis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung Ergebnis": {
+      "main": [
+        [
+          {
+            "node": "Meldung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung": {
+      "main": [
+        [
+          {
+            "node": "Abschluss",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "Europe/Berlin"
+  },
+  "versionId": "6e0ea8e6-c1f4-5df5-aeaa-c04e80f81742",
+  "meta": {
+    "description": "Formular fuer das Hintergrundbild der iPads (Sperr- und Home-Bildschirm). Das Bild (PNG oder JPG, bis 4 MB, empfohlen 2048 x 2732) wird in automation.profile_state (Zeile wallpaper) gespeichert, die Version erhoeht und per MDM-Befehl Settings/Wallpaper (Where 3) an alle iPads gesendet. Neue iPads bekommen es ueber den Workflow Neues Geraet automatisch. Das Profil wallpaper-lock (allowWallpaperModification false) verhindert, dass Nutzer das Bild aendern und wird mitgesendet. Beides wirkt nur auf beaufsichtigten iPads. Credentials: MDM Formulare, MDM NanoMDM API, MDM Automation DB, ntfy-publisher."
+  }
+}

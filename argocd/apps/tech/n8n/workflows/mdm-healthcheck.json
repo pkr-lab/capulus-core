@@ -1,0 +1,507 @@
+{
+  "name": "MDM: Healthcheck",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/10 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "e35115da-d301-5433-a9eb-649f65ba9444",
+      "name": "Alle 10 Minuten",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  depserverUrl: 'http://mdm-depserver.mdm.svc.cluster.local:9001',\n  scepUrl: 'http://mdm-scep.mdm.svc.cluster.local:8080',\n  publicHost: 'mdm-prod.pke-lab.de',\n  depName: 'capulus',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM',\n  vmUrl: 'http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428',\n  n8nUrl: 'https://n8n.prod.homeserver'\n};\nreturn [{ json: cfg }];\n"
+      },
+      "id": "8827cd64-9cd5-5d7c-84c9-33f2f04fdfbc",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://{{ $('Konfiguration').first().json.publicHost }}/scep",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "operation",
+              "value": "GetCACaps"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "4007130b-c869-523d-808b-ea9b1a90c18a",
+      "name": "SCEP oeffentlich",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://{{ $('Konfiguration').first().json.publicHost }}/mdm/enroll",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "07bd8e4d-03a0-5daf-9e52-78cf46a304c5",
+      "name": "Enrollment-Profil oeffentlich",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        690,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://{{ $('Konfiguration').first().json.publicHost }}/mdm",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "87d9bcf2-53ce-55b1-980e-3f9eb24b155b",
+      "name": "MDM-Endpunkt oeffentlich",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Konfiguration').first().json.depserverUrl }}/v1/tokens/{{ $('Konfiguration').first().json.depName }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "ba7104b2-e06e-5317-a40a-a59931d5afaa",
+      "name": "DEP-Token vorhanden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1150,
+        300
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoDEP API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const tls = require('tls');\nconst host = $('Konfiguration').first().json.publicHost;\nconst result = await new Promise((resolve) => {\n  const socket = tls.connect({ host, port: 443, servername: host, timeout: 10000 }, () => {\n    const cert = socket.getPeerCertificate();\n    socket.end();\n    resolve({ ok: true, days: Math.floor((new Date(cert.valid_to).getTime() - Date.now()) / 86400000) });\n  });\n  socket.on('error', (e) => resolve({ ok: false, error: e.message }));\n  socket.on('timeout', () => {\n    socket.destroy();\n    resolve({ ok: false, error: 'Zeitueberschreitung' });\n  });\n});\nreturn [{ json: result }];\n"
+      },
+      "id": "245f7309-4bb7-571b-b4d3-fcb1fe4bd02b",
+      "name": "TLS pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1380,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Konfiguration').first().json.vmUrl }}/api/v1/query",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "kube_deployment_status_replicas_unavailable{namespace=\"mdm\",deployment!=\"mdm-depsyncer\"} > 0"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "b86901f8-e9eb-5e7c-9367-c45131c5f186",
+      "name": "Nicht verfuegbare Deployments",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1610,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Konfiguration').first().json.vmUrl }}/api/v1/query",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "kube_deployment_status_replicas_unavailable{namespace=\"mdm\",deployment=\"mdm-depsyncer\"} > 0"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "c66fa73f-45a1-5e8c-9088-2855123f74b2",
+      "name": "Syncer nicht verfuegbar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1840,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT count(*) FILTER (WHERE state IN ('error', 'failed')) AS errors, count(*) FILTER (WHERE state = 'queued' AND sent_at < now() - interval '24 hours') AS stale FROM automation.device_profile",
+        "options": {}
+      },
+      "id": "d1b3c8ea-605c-5ec7-a06d-663824c56b20",
+      "name": "Geraeteprofile pruefen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2070,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = $('Konfiguration').first().json;\nconst reachable = (name, label) => {\n  const res = $(name).first().json;\n  const status = res.statusCode;\n  const ok = typeof status === 'number' && status >= 200 && status < 500 && status !== 404;\n  return { name: label, ok, detail: ok ? '' : label + ' von aussen nicht erreichbar (HTTP ' + (status || res.error || 'keine Antwort') + ')' };\n};\nconst checks = [\n  reachable('SCEP oeffentlich', 'SCEP'),\n  reachable('Enrollment-Profil oeffentlich', 'Enrollment-Profil'),\n  reachable('MDM-Endpunkt oeffentlich', 'MDM-Endpunkt')\n];\nconst tlsResult = $('TLS pruefen').first().json;\nchecks.push({ name: 'TLS', ok: tlsResult.ok && tlsResult.days >= 14, detail: tlsResult.ok ? 'TLS-Zertifikat von ' + cfg.publicHost + ' laeuft in ' + tlsResult.days + ' Tagen ab' : 'TLS-Verbindung zu ' + cfg.publicHost + ' fehlgeschlagen: ' + tlsResult.error });\nconst unavailable = $('Nicht verfuegbare Deployments').first().json.body;\nconst names = ((unavailable && unavailable.data && unavailable.data.result) || []).map((r) => r.metric.deployment);\nconst vmReachable = unavailable && unavailable.status === 'success';\nchecks.push({ name: 'Pods', ok: vmReachable && names.length === 0, detail: vmReachable ? 'Deployments nicht verfuegbar: ' + names.join(', ') : 'Pod-Status nicht abrufbar (VictoriaMetrics)' });\nconst token = $('DEP-Token vorhanden').first().json;\nconst syncer = $('Syncer nicht verfuegbar').first().json.body;\nconst syncerDown = syncer && syncer.data && syncer.data.result && syncer.data.result.length > 0;\nchecks.push({ name: 'DEP-Syncer', ok: !(token.statusCode === 200 && syncerDown), detail: 'depsyncer laeuft nicht, obwohl ein DEP-Token hinterlegt ist' });\nconst profiles = $input.first().json;\nchecks.push({ name: 'Profile', ok: Number(profiles.errors || 0) === 0 && Number(profiles.stale || 0) === 0, detail: Number(profiles.errors || 0) + ' Profil-Installation(en) fehlgeschlagen, ' + Number(profiles.stale || 0) + ' seit ueber 24 Stunden ohne Quittung' });\nreturn [{ json: { checks } }];\n"
+      },
+      "id": "368b159f-2466-59a1-89ac-6192831b6f5e",
+      "name": "Pruefungen auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH input AS (\n  SELECT * FROM jsonb_to_recordset($1::jsonb) AS x(name text, ok boolean, detail text)\n),\nfailing AS (\n  INSERT INTO automation.alert_state AS a (check_name, failing_since, last_notified, detail)\n  SELECT name, now(), now(), detail FROM input WHERE NOT ok\n  ON CONFLICT (check_name) DO UPDATE\n    SET detail = EXCLUDED.detail,\n        last_notified = CASE WHEN a.last_notified < now() - interval '6 hours' THEN now() ELSE a.last_notified END\n  RETURNING check_name, detail, (last_notified = now()) AS notify\n),\nrecovered AS (\n  DELETE FROM automation.alert_state\n  WHERE check_name IN (SELECT name FROM input WHERE ok)\n  RETURNING check_name, failing_since\n)\nSELECT 'alarm' AS kind, check_name, detail FROM failing WHERE notify\nUNION ALL\nSELECT 'ok', check_name, to_char(failing_since AT TIME ZONE 'Europe/Berlin', 'DD.MM. HH24:MI') FROM recovered",
+        "options": {
+          "queryReplacement": "={{ [JSON.stringify($json.checks)] }}"
+        }
+      },
+      "id": "8309b571-25a7-517e-bf0a-10334d562b92",
+      "name": "Alarmzustand abgleichen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2530,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const rows = $input.all().map((item) => item.json).filter((row) => row.kind);\nconst alarms = rows.filter((row) => row.kind === 'alarm');\nconst recovered = rows.filter((row) => row.kind === 'ok');\nconst out = [];\nif (alarms.length > 0) out.push({ json: { title: 'MDM: ' + alarms.length + ' Pruefung(en) fehlgeschlagen', message: alarms.map((row) => '- ' + row.detail).join('\\n') + '\\n\\nFehlersuche: Doku Betrieb, Abschnitt Troubleshooting.', priority: 'high', tags: 'rotating_light' } });\nif (recovered.length > 0) out.push({ json: { title: 'MDM: wieder in Ordnung', message: recovered.map((row) => '- ' + row.check_name + ' (Stoerung seit ' + row.detail + ')').join('\\n'), priority: 'default', tags: 'white_check_mark' } });\nreturn out;\n"
+      },
+      "id": "1fa02fa6-79c1-56e0-9c00-26fa7511026d",
+      "name": "Meldungen bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2760,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            },
+            {
+              "name": "Tags",
+              "value": "={{ $json.tags }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.message }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "513f411f-5d7f-53c4-a25e-fb4796f81160",
+      "name": "Melden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2990,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Alle 10 Minuten": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "SCEP oeffentlich",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SCEP oeffentlich": {
+      "main": [
+        [
+          {
+            "node": "Enrollment-Profil oeffentlich",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrollment-Profil oeffentlich": {
+      "main": [
+        [
+          {
+            "node": "MDM-Endpunkt oeffentlich",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MDM-Endpunkt oeffentlich": {
+      "main": [
+        [
+          {
+            "node": "DEP-Token vorhanden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DEP-Token vorhanden": {
+      "main": [
+        [
+          {
+            "node": "TLS pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TLS pruefen": {
+      "main": [
+        [
+          {
+            "node": "Nicht verfuegbare Deployments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nicht verfuegbare Deployments": {
+      "main": [
+        [
+          {
+            "node": "Syncer nicht verfuegbar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Syncer nicht verfuegbar": {
+      "main": [
+        [
+          {
+            "node": "Geraeteprofile pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geraeteprofile pruefen": {
+      "main": [
+        [
+          {
+            "node": "Pruefungen auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pruefungen auswerten": {
+      "main": [
+        [
+          {
+            "node": "Alarmzustand abgleichen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alarmzustand abgleichen": {
+      "main": [
+        [
+          {
+            "node": "Meldungen bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldungen bauen": {
+      "main": [
+        [
+          {
+            "node": "Melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "Europe/Berlin"
+  },
+  "versionId": "703fdd53-bff4-5cfa-bf51-96cb10cf947a",
+  "meta": {
+    "description": "Alle 10 Minuten: oeffentliche Endpunkte (SCEP, Enrollment-Profil, MDM-Endpunkt) von aussen ansprechen, TLS-Zertifikat des oeffentlichen Hosts auf Gueltigkeit pruefen, Pod-Gesundheit ueber VictoriaMetrics (kube-state-metrics) abfragen sowie fehlgeschlagene oder haengende Profil-Installationen melden. Alarme werden pro Pruefung hoechstens alle 6 Stunden wiederholt, die Entwarnung kommt einmal (Zustand in automation.alert_state). Credentials: MDM NanoDEP API, MDM Automation DB, ntfy-publisher."
+  }
+}
