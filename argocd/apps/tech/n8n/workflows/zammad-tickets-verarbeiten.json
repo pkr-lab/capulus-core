@@ -103,61 +103,6 @@
     },
     {
       "parameters": {
-        "jsCode": "// \"Ticket-Artikel laden\" (Zammad Ticket:Get) liefert das Ticket-Objekt UND haengt\n// zusaetzlich ein \"articles\"-Array mit dem Artikel-Verlauf an (der native Node\n// ruft dafuer intern zusaetzlich /ticket_articles/by_ticket/:id auf).\nconst { articles, ...ticket } = $input.first().json;\n\nfunction stripHtml(html) {\n  return String(html || '').replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim();\n}\n\nconst verlauf = (articles || [])\n  .map((a) => `[${a.from || 'unbekannt'}]: ${stripHtml(a.body)}`)\n  .join('\\n\\n');\n\nconst prompt = [\n  'Du bist Support-Assistent und entwirfst NUR einen Antwortvorschlag -- er wird von einem Menschen geprueft, bevor er verschickt wird.',\n  `Ticket-Titel: ${ticket.title}`,\n  '',\n  'Bisheriger Verlauf:',\n  verlauf,\n  '',\n  'Formuliere einen hoeflichen, knappen Antwortentwurf auf Deutsch. Wenn dir Informationen fehlen, formuliere stattdessen Rueckfragen statt zu raten.',\n].join('\\n');\n\nreturn [{ json: { ticket, prompt } }];"
-      },
-      "id": "f3e42360-961f-47ed-ba71-de4c541ba7e7",
-      "name": "LLM-Prompt bauen",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        7328,
-        80
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://ollama.ollama.svc.cluster.local:11434/api/generate",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: 'llama3.2:3b', prompt: $json.prompt, stream: false }) }}",
-        "options": {
-          "timeout": 3600000
-        }
-      },
-      "id": "8ac92ba5-18e4-4b86-a6a2-b555b9f71a3e",
-      "name": "LLM-Anfrage (Ollama, lokal)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        7584,
-        80
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Ollama /api/generate liefert mit stream:false ein einzelnes JSON-Objekt\n// mit dem fertigen Text im Feld \"response\" (siehe https://github.com/ollama/ollama/blob/main/docs/api.md#generate-a-completion).\nconst ticket = $('LLM-Prompt bauen').item.json.ticket;\nconst entwurf = $json.response || JSON.stringify($json);\n\nreturn [{ json: { ticket, entwurf } }];"
-      },
-      "id": "f032ec39-7f4e-42dd-9446-cdebfd0d9460",
-      "name": "Antwortentwurf extrahieren",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        7840,
-        80
-      ]
-    },
-    {
-      "parameters": {
         "authentication": "basicAuth",
         "resource": "ticket",
         "operation": "update",
@@ -173,7 +118,7 @@
       "type": "n8n-nodes-base.zammad",
       "typeVersion": 1,
       "position": [
-        8096,
+        8864,
         80
       ],
       "credentials": {
@@ -185,14 +130,14 @@
     },
     {
       "parameters": {
-        "jsCode": "// Laeuft IMMER genau einmal, unabhaengig davon, ob 0 oder mehrere Tickets\n// gefunden/verarbeitet wurden -- \"Run Once for All Items\" ignoriert die\n// tatsaechliche Item-Anzahl. Zusaetzlich direkt vom Trigger-Node gespeist\n// (siehe connections unten), damit dieser Node auch dann feuert, wenn der\n// Ticket-Zweig oben komplett leer durchlaeuft. Der Haupt-Workflow verlaesst\n// sich auf genau dieses eine Rueckgabe-Item, um zuverlaessig weiterzulaufen\n// (Ollama wieder herunterskalieren).\n//\n// $input.all() zaehlt IMMER die direkte Trigger-Passthrough-Item (+1) MIT,\n// unabhaengig davon wie viele echte Tickets den Ticket-Zweig durchlaufen haben\n// -- ungefixt meldet dieser Node faelschlich '1 verarbeitet' bei 0 echten\n// Tickets (gefunden am 27.08.2026: IF-Node liess 0 von 123 offenen Tickets\n// durch, Ticket-Artikel laden/LLM/Notiz/ntfy liefen nie, trotzdem stand\n// verarbeiteteTickets:1 im Ergebnis). Die Passthrough-Item ist strukturell\n// immer genau 1, daher hier abgezogen.\nreturn [{ json: { status: 'done', verarbeiteteTickets: Math.max($input.all().length - 1, 0) } }];"
+        "jsCode": "return [{ json: { status: 'done', verarbeiteteTickets: Math.max($input.all().length - 1, 0) } }];"
       },
       "id": "5ffdf2c9-b4c1-48e5-8041-6194fd8035ac",
       "name": "Abschluss (immer genau 1 Item)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        8592,
+        9632,
         320
       ]
     },
@@ -222,7 +167,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "text/plain",
-        "body": "={{ 'Ticket #' + $('Antwortentwurf extrahieren1').item.json.ticket.number + ': ' + $('Antwortentwurf extrahieren1').item.json.ticket.title }}",
+        "body": "={{ 'Ticket #' + $('Antwortentwurf extrahieren').item.json.ticket.number + ': ' + $('Antwortentwurf extrahieren').item.json.ticket.title }}",
         "options": {}
       },
       "id": "2d59c4a2-ffd1-46e9-a87d-070396740560",
@@ -230,7 +175,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        8320,
+        9120,
         80
       ],
       "credentials": {
@@ -239,6 +184,133 @@
           "name": "ntfy-publisher"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "const MAX_PAYLOAD_BYTES = 90000;\nconst MAX_MAIL_CHARS = 40000;\nconst MAX_CONTEXT_CHARS = 4000;\n\nfunction stripHtml(html) {\n  return String(html || '')\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<\\/(p|div|li|tr)>/gi, '\\n')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .replace(/&#39;/g, \"'\")\n    .replace(/&amp;/g, '&')\n    .replace(/[ \\t]+/g, ' ')\n    .replace(/ ?\\n ?/g, '\\n')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim();\n}\n\nfunction textOf(article) {\n  return /html/i.test(article.content_type || '') ? stripHtml(article.body) : String(article.body || '').trim();\n}\n\nfunction dateOf(article) {\n  return String(article.created_at || '').replace('T', ' ').slice(0, 16);\n}\n\nreturn $input.all().map((item) => {\n  const { articles, ...ticket } = item.json;\n  const all = (articles || [])\n    .filter((a) => a.sender !== 'System')\n    .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)) || a.id - b.id);\n\n  const context = all\n    .filter((a) => a.internal && /^\\s*Kontext:/i.test(textOf(a)))\n    .map((a) => textOf(a).replace(/^\\s*Kontext:\\s*/i, ''))\n    .join('\\n\\n')\n    .slice(0, MAX_CONTEXT_CHARS);\n\n  const mails = all.filter((a) => !a.internal && textOf(a));\n  const lastCustomer = [...mails].reverse().find((a) => a.sender === 'Customer');\n  const target = lastCustomer || mails[mails.length - 1];\n  if (!target) {\n    throw new Error(`Ticket #${ticket.number}: keine E-Mail zum Beantworten gefunden`);\n  }\n\n  const history = mails\n    .filter((a) => a.id !== target.id)\n    .map((a) => ({ from: a.from || 'unbekannt', date: dateOf(a), text: textOf(a) }));\n\n  const payload = {\n    context,\n    history,\n    mail: {\n      from: target.from || 'unbekannt',\n      date: dateOf(target),\n      subject: target.subject || ticket.title,\n      text: textOf(target).slice(0, MAX_MAIL_CHARS),\n    },\n  };\n\n  let preTrimmed = 0;\n  while (Buffer.byteLength(JSON.stringify(payload), 'utf8') > MAX_PAYLOAD_BYTES && payload.history.length > 0) {\n    payload.history.shift();\n    preTrimmed += 1;\n  }\n  if (preTrimmed > 0) {\n    console.log(`Ticket #${ticket.number}: ${preTrimmed} ältere Mail(s) vor dem Aufruf gekürzt (Payload-Limit ${MAX_PAYLOAD_BYTES} Byte)`);\n  }\n\n  return {\n    json: {\n      ticket,\n      payloadB64: Buffer.from(JSON.stringify(payload), 'utf8').toString('base64'),\n      historyCount: payload.history.length,\n      preTrimmed,\n    },\n  };\n});"
+      },
+      "id": "7265c52d-a753-44ff-869c-f9b9654ba765",
+      "name": "LLM-Eingabe bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7328,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "command": "node /opt/ollama-pc/cli.js probe"
+      },
+      "id": "e68049c5-116f-4681-9a50-0dd154e8f479",
+      "name": "Ollama erreichbar?",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        7584,
+        80
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c828926e-1d10-4e02-96df-44b24b85f183",
+              "leftValue": "={{ !String($json.stdout).includes('\"up\":true') }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "38cc6d23-69b7-4548-9a27-7276d2e70fdf",
+      "name": "PC schläft?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7840,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://carplay-api.prod.homeserver/api/power/wake",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ target: 'ollama-pc' }) }}",
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "41f1b9b7-f59c-43cf-b1a2-ce9b96fd61fd",
+      "name": "Ollama-PC wecken",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8096,
+        -60
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "qw2XzzCvd5uEKb0e",
+          "name": "carplay-api API Token"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "command": "=printf %s '{{ $('LLM-Eingabe bauen').item.json.payloadB64 }}' | base64 -d | node /opt/ollama-pc/cli.js chat"
+      },
+      "id": "a5a46407-5ed3-4ea4-9643-6309842484de",
+      "name": "Ollama-Antwort erzeugen",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        8352,
+        80
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const ticket = $('LLM-Eingabe bauen').item.json.ticket;\n\nlet parsed = null;\ntry {\n  parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n} catch (err) {\n  parsed = null;\n}\n\nif (!parsed || !parsed.ok) {\n  const detail = parsed && parsed.error\n    ? `${parsed.error.code}: ${parsed.error.message}`\n    : String($json.stderr || 'keine Ausgabe von ollama-pc/cli.js').trim();\n  throw new Error(`Ollama-Anfrage fehlgeschlagen (Ticket #${ticket.number}): ${detail}`);\n}\n\nreturn { json: { ticket, entwurf: parsed.reply, warnings: parsed.warnings, stats: parsed.stats } };"
+      },
+      "id": "ccbba3ff-f52f-4ccd-b560-8a0a447a7621",
+      "name": "Antwortentwurf extrahieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8608,
+        80
+      ]
     }
   ],
   "pinData": {},
@@ -285,40 +357,7 @@
       "main": [
         [
           {
-            "node": "LLM-Prompt bauen",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "LLM-Prompt bauen": {
-      "main": [
-        [
-          {
-            "node": "LLM-Anfrage (Ollama, lokal)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "LLM-Anfrage (Ollama, lokal)": {
-      "main": [
-        [
-          {
-            "node": "Antwortentwurf extrahieren",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Antwortentwurf extrahieren": {
-      "main": [
-        [
-          {
-            "node": "Entwurf als interne Notiz speichern + Status setzen",
+            "node": "LLM-Eingabe bauen",
             "type": "main",
             "index": 0
           }
@@ -341,6 +380,79 @@
         [
           {
             "node": "Abschluss (immer genau 1 Item)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM-Eingabe bauen": {
+      "main": [
+        [
+          {
+            "node": "Ollama erreichbar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama erreichbar?": {
+      "main": [
+        [
+          {
+            "node": "PC schläft?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PC schläft?": {
+      "main": [
+        [
+          {
+            "node": "Ollama-PC wecken",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ollama-Antwort erzeugen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama-PC wecken": {
+      "main": [
+        [
+          {
+            "node": "Ollama-Antwort erzeugen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama-Antwort erzeugen": {
+      "main": [
+        [
+          {
+            "node": "Antwortentwurf extrahieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Antwortentwurf extrahieren": {
+      "main": [
+        [
+          {
+            "node": "Entwurf als interne Notiz speichern + Status setzen",
             "type": "main",
             "index": 0
           }
