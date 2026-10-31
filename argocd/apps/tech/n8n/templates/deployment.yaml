@@ -39,6 +39,12 @@ spec:
             - name: {{ $key }}
               value: {{ $val | quote }}
             {{- end }}
+            {{- if .Values.ollamaPc.enabled }}
+            {{- range $key, $val := .Values.ollamaPc.env }}
+            - name: {{ $key }}
+              value: {{ $val | quote }}
+            {{- end }}
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /healthz
@@ -70,6 +76,11 @@ spec:
             - name: instagram-bilder
               mountPath: {{ .Values.instagram.bilder.mountPath }}
             {{- end }}
+            {{- if .Values.ollamaPc.enabled }}
+            - name: ollama-pc
+              mountPath: {{ .Values.ollamaPc.mountPath }}
+              readOnly: true
+            {{- end }}
       volumes:
         - name: data
           {{- if .Values.persistence.enabled }}
@@ -90,6 +101,28 @@ spec:
         - name: instagram-bilder
           emptyDir:
             sizeLimit: {{ .Values.instagram.bilder.sizeLimit }}
+        {{- end }}
+        {{- if .Values.ollamaPc.enabled }}
+        - name: ollama-pc
+          configMap:
+            name: {{ include "n8n.fullname" . }}-ollama-pc
+            items:
+              {{- range $path, $_ := .Files.Glob "ollama-pc/cli.js" }}
+              - key: {{ trimPrefix "ollama-pc/" $path | replace "/" "__" | quote }}
+                path: {{ trimPrefix "ollama-pc/" $path | quote }}
+              {{- end }}
+              {{- range $path, $_ := .Files.Glob "ollama-pc/lib/*.js" }}
+              - key: {{ trimPrefix "ollama-pc/" $path | replace "/" "__" | quote }}
+                path: {{ trimPrefix "ollama-pc/" $path | quote }}
+              {{- end }}
+              {{- range $path, $_ := .Files.Glob "ollama-pc/prompts/*.md" }}
+              - key: {{ trimPrefix "ollama-pc/" $path | replace "/" "__" | quote }}
+                path: {{ trimPrefix "ollama-pc/" $path | quote }}
+              {{- end }}
+              {{- range $path, $_ := .Files.Glob "ollama-pc/knowledge/*.md" }}
+              - key: {{ trimPrefix "ollama-pc/" $path | replace "/" "__" | quote }}
+                path: {{ trimPrefix "ollama-pc/" $path | quote }}
+              {{- end }}
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
