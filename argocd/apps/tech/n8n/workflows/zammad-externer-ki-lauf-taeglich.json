@@ -7,12 +7,18 @@
           "interval": [
             {
               "triggerAtHour": 7
+            },
+            {
+              "triggerAtHour": 12
+            },
+            {
+              "triggerAtHour": 17
             }
           ]
         }
       },
       "id": "8dd5c40f-aad3-4b83-9d50-4976b21660f7",
-      "name": "Einmal taeglich",
+      "name": "Um 7, 12 und 17 Uhr",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
       "position": [
@@ -62,7 +68,7 @@
   ],
   "pinData": {},
   "connections": {
-    "Einmal taeglich": {
+    "When clicking ‘Execute workflow’": {
       "main": [
         [
           {
@@ -73,7 +79,7 @@
         ]
       ]
     },
-    "When clicking ‘Execute workflow’": {
+    "Um 7, 12 und 17 Uhr": {
       "main": [
         [
           {
@@ -92,7 +98,7 @@
   },
   "versionId": "ff371da5-143b-4916-91d8-96fa5ea91c14",
   "meta": {
-    "description": "Startet 1x taeglich (07:00 Uhr) den Sub-Workflow 'Zammad Tickets verarbeiten'. Der PC mit Ollama wird dort bei Bedarf per Wake-on-LAN geweckt.",
+    "description": "Startet 3x taeglich (07:00, 12:00 und 17:00 Uhr) den Sub-Workflow 'Zammad Tickets verarbeiten'. Der PC mit Ollama wird dort bei Bedarf per Wake-on-LAN geweckt.",
     "instanceId": "d3f71021076be8bdc8614296f3c7749ae0813e877410d7e61391b83252e612f7"
   },
   "nodeGroups": [],
