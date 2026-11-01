@@ -175,7 +175,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        9120,
+        9632,
         80
       ],
       "credentials": {
@@ -301,7 +301,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const ticket = $('LLM-Eingabe bauen').item.json.ticket;\n\nlet parsed = null;\ntry {\n  parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n} catch (err) {\n  parsed = null;\n}\n\nif (!parsed || !parsed.ok) {\n  const detail = parsed && parsed.error\n    ? `${parsed.error.code}: ${parsed.error.message}`\n    : String($json.stderr || 'keine Ausgabe von ollama-pc/cli.js').trim();\n  throw new Error(`Ollama-Anfrage fehlgeschlagen (Ticket #${ticket.number}): ${detail}`);\n}\n\n// Zammad speichert die Notiz als text/html: Plaintext-Umbrüche gehen sonst verloren.\nconst escapeHtml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst entwurfHtml = String(parsed.reply || '')\n  .replace(/\\r\\n?/g, '\\n')\n  .trim()\n  .split(/\\n{2,}/)\n  .map((absatz) => '<p>' + escapeHtml(absatz)\n    .replace(/(https?:\\/\\/[^\\s<]+)/g, '<a href=\"$1\">$1</a>')\n    .replace(/\\n/g, '<br>') + '</p>')\n  .join('');\n\nreturn { json: { ticket, entwurf: parsed.reply, entwurfHtml, warnings: parsed.warnings, stats: parsed.stats } };"
+        "jsCode": "const ticket = $('LLM-Eingabe bauen').item.json.ticket;\n\nlet parsed = null;\ntry {\n  parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n} catch (err) {\n  parsed = null;\n}\n\nif (!parsed || !parsed.ok) {\n  const detail = parsed && parsed.error\n    ? `${parsed.error.code}: ${parsed.error.message}`\n    : String($json.stderr || 'keine Ausgabe von ollama-pc/cli.js').trim();\n  throw new Error(`Ollama-Anfrage fehlgeschlagen (Ticket #${ticket.number}): ${detail}`);\n}\n\n// [INTERN: ...] gehört nicht in den Entwurf, sondern in eine eigene interne Notiz.\nconst hinweise = [];\nconst entwurf = String(parsed.reply || '')\n  .replace(/[ \\t]*\\[INTERN:\\s*([^\\]]*)\\]/g, (_, hinweis) => {\n    hinweise.push(hinweis.trim());\n    return '';\n  })\n  .replace(/[ \\t]+$/gm, '')\n  .replace(/\\n{3,}/g, '\\n\\n')\n  .trim();\n\n// Zammad speichert die Notiz als text/html: Plaintext-Umbrüche gehen sonst verloren.\nconst escapeHtml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst entwurfHtml = entwurf\n  .replace(/\\r\\n?/g, '\\n')\n  .split(/\\n{2,}/)\n  .map((absatz) => '<p>' + escapeHtml(absatz)\n    .replace(/(https?:\\/\\/[^\\s<]+)/g, '<a href=\"$1\">$1</a>')\n    .replace(/\\n/g, '<br>') + '</p>')\n  .join('');\nconst hinweiseHtml = hinweise.length\n  ? '<p><b>Interne Hinweise zum KI-Entwurf</b></p><ul>' + hinweise.map((h) => '<li>' + escapeHtml(h) + '</li>').join('') + '</ul>'\n  : '';\n\nreturn { json: { ticket, entwurf, entwurfHtml, hinweise, hinweiseHtml, warnings: parsed.warnings, stats: parsed.stats } };"
       },
       "id": "ccbba3ff-f52f-4ccd-b560-8a0a447a7621",
       "name": "Antwortentwurf extrahieren",
@@ -311,6 +311,65 @@
         8608,
         80
       ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e5e5e5e5-0004-4000-8000-000000000a01",
+              "leftValue": "={{ $('Antwortentwurf extrahieren').item.json.hinweise.length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7b0f6c1e-3a52-4d6b-9a41-5c1d2e8f0a01",
+      "name": "Interne Hinweise vorhanden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        9120,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "basicAuth",
+        "resource": "ticket",
+        "operation": "update",
+        "id": "={{ $('Antwortentwurf extrahieren').item.json.ticket.id }}",
+        "updateFields": {
+          "note": "={{ $('Antwortentwurf extrahieren').item.json.hinweiseHtml }}"
+        }
+      },
+      "id": "7b0f6c1e-3a52-4d6b-9a41-5c1d2e8f0a02",
+      "name": "Interne Hinweise als Notiz speichern",
+      "type": "n8n-nodes-base.zammad",
+      "typeVersion": 1,
+      "position": [
+        9376,
+        0
+      ],
+      "credentials": {
+        "zammadBasicAuthApi": {
+          "id": "0M2CPfsvNq5Xdzfc",
+          "name": "Zammad ticket.emue365"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -368,7 +427,7 @@
       "main": [
         [
           {
-            "node": "Freigabe-Push senden",
+            "node": "Interne Hinweise vorhanden?",
             "type": "main",
             "index": 0
           }
@@ -453,6 +512,35 @@
         [
           {
             "node": "Entwurf als interne Notiz speichern + Status setzen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Interne Hinweise vorhanden?": {
+      "main": [
+        [
+          {
+            "node": "Interne Hinweise als Notiz speichern",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Freigabe-Push senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Interne Hinweise als Notiz speichern": {
+      "main": [
+        [
+          {
+            "node": "Freigabe-Push senden",
             "type": "main",
             "index": 0
           }
