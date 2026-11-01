@@ -1,46 +1,24 @@
 # Uploads und Nachweise
 
-## Das Wichtigste in einem Satz
-Alle Nachweise werden über einen persönlichen Upload-Link hochgeladen, den die Teilnehmenden per E-Mail erhalten – es ist ein und derselbe Link für alle Unterlagen.
+## Upload-Link
+- Alle Nachweise (E-Learning-Urkunden und Zertifikate, Erste-Hilfe-Nachweis, weitere Unterlagen) werden über **einen** persönlichen Upload-Link hochgeladen, der per E-Mail an die Teilnehmenden geht. Gleiches Verfahren bei Crashkursen, Prüfungskursen, Auffrischungen und weiteren Kursen.
+- Es gibt keinen öffentlichen Link auf der Website. Nie einen Upload-Link in den Entwurf schreiben oder erfinden.
+- Den Link gibt es erst mit regulärem Kursplatz. Wer auf der Warteliste steht, bekommt ihn nach dem Nachrücken (`13_warteliste_und_nachruecken.md`).
+- Nachweise möglichst früh hochladen (Fristen: Kernaussagen in `00_hinweise_fuer_die_ki.md`).
 
-## Wie kommt man an den Upload-Link?
-- Der Link wird per E-Mail an die Teilnehmenden verschickt.
-- Es gibt keinen öffentlichen Upload-Link auf der Website.
-- Die KI gibt keinen Link heraus und erfindet keinen.
+## Link fehlt oder gelöscht
+Spam-/Werbung-Ordner prüfen, prüfen ob bei der Anmeldung die richtige E-Mail-Adresse angegeben wurde, sonst an die DLRG Andernach wenden (ausbildung@andernach.dlrg.de). Link nie selbst suchen oder raten. Dazu `[INTERN: Upload-Link ggf. erneut versenden]`.
 
-## Was wird über diesen Link hochgeladen?
-Über denselben Link werden alle Nachweise hochgeladen, insbesondere:
-- E-Learning-Urkunden und digitale Zertifikate (z. B. Rettungsschwimmtheorie)
-- Erste-Hilfe-Nachweise (Kurs/Fortbildung nach BAGEH, 9 UE, nicht älter als 2 Jahre)
-- weitere geforderte Nachweise und Bescheinigungen
+## Urkunde per Mail oder zum Kurs mitbringen
+Laut Vorgabe nur über den Upload-Link. Ausnahmen entscheidet der Verein: neutral formulieren, `[INTERN: ...]`.
 
-## Für welche Kurse gilt das?
-- Crashkurse Rettungsschwimmen (Bronze/Silber)
-- Prüfungskurse und Auffrischungen
-- weitere Kurse, für die Nachweise benötigt werden
+## „Sind meine Unterlagen angekommen?“
+Intern: Das Ausbildungsteam prüft Nachweise und Zahlungseingang der Kursgebühr und schickt dann eine Bestätigung. Häufig wurde sie schon verschickt, aber übersehen oder im Spam gelandet, dann wird die frühere Nachricht erneut weitergeleitet.
 
-Das Verfahren ist überall gleich: Link aus der E-Mail öffnen, Nachweise hochladen.
+Die KI:
+- bestätigt **nie**, dass Unterlagen eingegangen, vollständig oder geprüft sind oder die Gebühr bezahlt ist, und sagt nicht zu, dass der Teilnahme „nichts im Wege steht“
+- setzt `[INTERN: Status prüfen – Unterlagen vollständig? Kursgebühr bezahlt? Bestätigung schon verschickt (Datum)?]` und ggf. `[INTERN: Falls schon verschickt: ursprüngliche Nachricht mit Datum zitieren/weiterleiten]`
+- empfiehlt, im Spam-/Werbung-Ordner zu suchen
+- erinnert kurz an die Kernaussagen
 
-## Fristen
-- Das digitale Zertifikat der Rettungsschwimmtheorie muss zu Beginn der Präsenzveranstaltung vorliegen – ohne dieses ist keine weitere Teilnahme möglich.
-- Der Erste-Hilfe-Nachweis darf zum Kursbeginn nicht älter als 2 Jahre sein.
-- Empfehlung: Nachweise möglichst frühzeitig vor dem Kurs hochladen.
-
-## Problemlösung
-
-**Ich habe keine E-Mail mit dem Link bekommen.**
-1. Spam-/Werbung-Ordner prüfen.
-2. Prüfen, ob bei der Anmeldung die richtige E-Mail-Adresse angegeben wurde.
-3. Falls weiterhin nichts da ist: direkt an die DLRG Andernach wenden.
-
-**Ich habe die E-Mail gelöscht.**
-Den Link nicht selbst suchen oder raten – an die DLRG Andernach wenden.
-
-**Kann ich die Urkunde auch per Mail schicken oder zum Kurs mitbringen?**
-Laut Vorgabe müssen die Urkunden über den Link aus der E-Mail hochgeladen werden. Für Ausnahmen bitte direkt an die DLRG Andernach wenden.
-
-**Brauche ich für den Erste-Hilfe-Nachweis einen anderen Link?**
-Nein. Es ist derselbe Link wie für die E-Learning-Urkunden.
-
-**Gilt der Link auch für den Prüfungskurs?**
-Ja, auch bei Prüfungskursen werden die Nachweise über den per E-Mail versendeten Link hochgeladen.
+Hat jemand Unterlagen „geschickt“ und ist unklar, ob per Upload-Link oder E-Mail: freundlich auf den Upload-Link hinweisen, nicht behaupten, eine per Mail geschickte PDF sei ungültig, und `[INTERN: Unklar, ob Unterlagen per Upload-Link oder per E-Mail kamen – bitte prüfen]` setzen.

@@ -1,7 +1,7 @@
 'use strict';
 
 const { ensureReady, preload, chat, stats } = require('./ollama');
-const { loadPromptFiles, buildMessages, cleanReply } = require('./prompt');
+const { loadPromptFiles, buildMessages, cleanReply, appendSignature } = require('./prompt');
 const { OllamaPcError } = require('./errors');
 
 const MAX_ATTEMPTS = 2;
@@ -50,7 +50,7 @@ async function generateReply(config, input, { log = () => {}, ready } = {}) {
   if (!reply) throw new OllamaPcError('EMPTY_REPLY', `Modell ${config.model} lieferte eine leere Antwort`);
 
   return {
-    reply,
+    reply: appendSignature(reply, prompts.signature),
     model: config.model,
     woke: readiness.woke,
     waited_ms: readiness.waitedMs,
