@@ -46,7 +46,7 @@
         336
       ],
       "parameters": {
-        "jsCode": "const OWNER_ID = 5;\nconst AUSBILDUNG_GRUPPEN = [2];\n\nreturn $input.all().filter(({ json: ticket }) => {\n  const eigenes = ticket.owner_id === OWNER_ID && [1, 2].includes(ticket.state_id);\n  const ausbildung = ticket.state_id === 2 && AUSBILDUNG_GRUPPEN.includes(ticket.group_id);\n  return eigenes || ausbildung;\n});"
+        "jsCode": "const OWNER_ID = 5;\nconst AUSBILDUNG_GRUPPEN = [2];\n\nreturn $input.all().filter(({ json: ticket }) => {\n  const eigenes = ticket.owner_id === OWNER_ID && [1, 2, 3, 6].includes(ticket.state_id);\n  const ausbildung = [2, 3, 6].includes(ticket.state_id) && AUSBILDUNG_GRUPPEN.includes(ticket.group_id);\n  return eigenes || ausbildung;\n});"
       }
     },
     {
@@ -102,7 +102,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        10752,
+        11202,
         512
       ],
       "parameters": {
@@ -115,7 +115,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        10528,
+        10978,
         336
       ],
       "parameters": {
@@ -163,7 +163,7 @@
         336
       ],
       "parameters": {
-        "jsCode": "const OWNER_ID = 5;\nconst MAX_PAYLOAD_BYTES = 90000;\nconst MAX_MAIL_CHARS = 40000;\nconst MAX_CONTEXT_CHARS = 4000;\nconst KI_MARKIERUNG = /KI-Entwurf \\(automatisch erstellt\\)|Interne Hinweise zum KI-Entwurf/;\n\nfunction stripHtml(html) {\n  return String(html || '')\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<\\/(p|div|li|tr)>/gi, '\\n')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .replace(/&#39;/g, \"'\")\n    .replace(/&amp;/g, '&')\n    .replace(/[ \\t]+/g, ' ')\n    .replace(/ ?\\n ?/g, '\\n')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim();\n}\n\nfunction textOf(article) {\n  return /html/i.test(article.content_type || '') ? stripHtml(article.body) : String(article.body || '').trim();\n}\n\nfunction dateOf(article) {\n  return String(article.created_at || '').replace('T', ' ').slice(0, 16);\n}\n\nconst ergebnis = [];\n\n$input.all().forEach((item, index) => {\n  const { articles, ...ticket } = item.json;\n  const all = (articles || [])\n    .filter((a) => a.sender !== 'System')\n    .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)) || a.id - b.id);\n\n  const oeffentlich = all.filter((a) => !a.internal);\n  const letzte = oeffentlich[oeffentlich.length - 1];\n  if (letzte && letzte.sender === 'Agent') {\n    console.log(`Ticket #${ticket.number}: Team hat bereits geantwortet, übersprungen`);\n    return;\n  }\n\n  const context = all\n    .filter((a) => a.internal && /^\\s*Kontext:/i.test(textOf(a)))\n    .map((a) => textOf(a).replace(/^\\s*Kontext:\\s*/i, ''))\n    .join('\\n\\n')\n    .slice(0, MAX_CONTEXT_CHARS);\n\n  const mails = all.filter((a) => !a.internal && textOf(a));\n  const lastCustomer = [...mails].reverse().find((a) => a.sender === 'Customer');\n  const target = lastCustomer || mails[mails.length - 1];\n  if (!target) {\n    console.log(`Ticket #${ticket.number}: keine E-Mail zum Beantworten gefunden, übersprungen`);\n    return;\n  }\n\n  if (all.some((a) => a.internal && a.id > target.id && KI_MARKIERUNG.test(textOf(a)))) {\n    console.log(`Ticket #${ticket.number}: KI-Entwurf liegt bereits vor, übersprungen`);\n    return;\n  }\n\n  const history = mails\n    .filter((a) => a.id !== target.id)\n    .map((a) => ({ from: a.from || 'unbekannt', date: dateOf(a), text: textOf(a) }));\n\n  const payload = {\n    context,\n    history,\n    mail: {\n      from: target.from || 'unbekannt',\n      date: dateOf(target),\n      subject: target.subject || ticket.title,\n      text: textOf(target).slice(0, MAX_MAIL_CHARS),\n    },\n  };\n\n  let preTrimmed = 0;\n  while (Buffer.byteLength(JSON.stringify(payload), 'utf8') > MAX_PAYLOAD_BYTES && payload.history.length > 0) {\n    payload.history.shift();\n    preTrimmed += 1;\n  }\n  if (preTrimmed > 0) {\n    console.log(`Ticket #${ticket.number}: ${preTrimmed} ältere Mail(s) vor dem Aufruf gekürzt (Payload-Limit ${MAX_PAYLOAD_BYTES} Byte)`);\n  }\n\n  ergebnis.push({\n    json: {\n      ticket,\n      modus: ticket.owner_id === OWNER_ID ? 'entwurf' : 'notiz',\n      replyTo: target.reply_to || target.from || '',\n      messageId: target.message_id || '',\n      payloadB64: Buffer.from(JSON.stringify(payload), 'utf8').toString('base64'),\n      historyCount: payload.history.length,\n      preTrimmed,\n    },\n    pairedItem: { item: index },\n  });\n});\n\nreturn ergebnis;"
+        "jsCode": "const OWNER_ID = 5;\nconst MAX_PAYLOAD_BYTES = 90000;\nconst MAX_MAIL_CHARS = 40000;\nconst MAX_CONTEXT_CHARS = 4000;\nconst KI_MARKIERUNG = /KI-Entwurf \\(automatisch erstellt\\)|Interne Hinweise zum KI-Entwurf/;\n\nfunction stripHtml(html) {\n  return String(html || '')\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<\\/(p|div|li|tr)>/gi, '\\n')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .replace(/&#39;/g, \"'\")\n    .replace(/&amp;/g, '&')\n    .replace(/[ \\t]+/g, ' ')\n    .replace(/ ?\\n ?/g, '\\n')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim();\n}\n\nfunction textOf(article) {\n  return /html/i.test(article.content_type || '') ? stripHtml(article.body) : String(article.body || '').trim();\n}\n\nfunction dateOf(article) {\n  return String(article.created_at || '').replace('T', ' ').slice(0, 16);\n}\n\nconst ergebnis = [];\n\n$input.all().forEach((item, index) => {\n  const { articles, ...ticket } = item.json;\n  const all = (articles || [])\n    .filter((a) => a.sender !== 'System')\n    .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)) || a.id - b.id);\n\n  const oeffentlich = all.filter((a) => !a.internal);\n  const letzte = oeffentlich[oeffentlich.length - 1];\n  if (letzte && letzte.sender === 'Agent') {\n    console.log(`Ticket #${ticket.number}: Team hat bereits geantwortet, übersprungen`);\n    return;\n  }\n\n  if ([3, 6].includes(ticket.state_id) && !oeffentlich.some((a) => a.sender === 'Agent')) {\n    console.log(`Ticket #${ticket.number}: wartet auf Erinnerung oder Schließen, Kunde hat nicht geantwortet, übersprungen`);\n    return;\n  }\n\n  const context = all\n    .filter((a) => a.internal && /^\\s*Kontext:/i.test(textOf(a)))\n    .map((a) => textOf(a).replace(/^\\s*Kontext:\\s*/i, ''))\n    .join('\\n\\n')\n    .slice(0, MAX_CONTEXT_CHARS);\n\n  const mails = all.filter((a) => !a.internal && textOf(a));\n  const lastCustomer = [...mails].reverse().find((a) => a.sender === 'Customer');\n  const target = lastCustomer || mails[mails.length - 1];\n  if (!target) {\n    console.log(`Ticket #${ticket.number}: keine E-Mail zum Beantworten gefunden, übersprungen`);\n    return;\n  }\n\n  if (all.some((a) => a.internal && a.id > target.id && KI_MARKIERUNG.test(textOf(a)))) {\n    console.log(`Ticket #${ticket.number}: KI-Entwurf liegt bereits vor, übersprungen`);\n    return;\n  }\n\n  const history = mails\n    .filter((a) => a.id !== target.id)\n    .map((a) => ({ from: a.from || 'unbekannt', date: dateOf(a), text: textOf(a) }));\n\n  const payload = {\n    context,\n    history,\n    mail: {\n      from: target.from || 'unbekannt',\n      date: dateOf(target),\n      subject: target.subject || ticket.title,\n      text: textOf(target).slice(0, MAX_MAIL_CHARS),\n    },\n  };\n\n  let preTrimmed = 0;\n  while (Buffer.byteLength(JSON.stringify(payload), 'utf8') > MAX_PAYLOAD_BYTES && payload.history.length > 0) {\n    payload.history.shift();\n    preTrimmed += 1;\n  }\n  if (preTrimmed > 0) {\n    console.log(`Ticket #${ticket.number}: ${preTrimmed} ältere Mail(s) vor dem Aufruf gekürzt (Payload-Limit ${MAX_PAYLOAD_BYTES} Byte)`);\n  }\n\n  ergebnis.push({\n    json: {\n      ticket,\n      modus: ticket.owner_id === OWNER_ID ? 'entwurf' : 'notiz',\n      replyTo: target.reply_to || target.from || '',\n      messageId: target.message_id || '',\n      payloadB64: Buffer.from(JSON.stringify(payload), 'utf8').toString('base64'),\n      historyCount: payload.history.length,\n      preTrimmed,\n    },\n    pairedItem: { item: index },\n  });\n});\n\nreturn ergebnis;"
       }
     },
     {
@@ -286,7 +286,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        10080,
+        10530,
         336
       ],
       "parameters": {
@@ -320,7 +320,7 @@
       "type": "n8n-nodes-base.zammad",
       "typeVersion": 1,
       "position": [
-        10304,
+        10754,
         224
       ],
       "parameters": {
@@ -497,6 +497,65 @@
         "httpHeaderAuth": {
           "id": "DYSeqKzcJFVzUL04",
           "name": "Zammad ticket.emue365 API-Token"
+        }
+      }
+    },
+    {
+      "id": "6fd716e3-3048-4e32-849c-6276c0992bb9",
+      "name": "Wartete auf Erinnerung oder Schließen?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        10080,
+        336
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e5e5e5e5-0006-4000-8000-000000000c01",
+              "leftValue": "={{ $('Antwortentwurf extrahieren').item.json.ticket.state_id === 3 || $('Antwortentwurf extrahieren').item.json.ticket.state_id === 6 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a4f3c12e-059b-453d-b4b4-0b68fa55e1a1",
+      "name": "Status wieder auf offen setzen",
+      "type": "n8n-nodes-base.zammad",
+      "typeVersion": 1,
+      "position": [
+        10304,
+        224
+      ],
+      "parameters": {
+        "authentication": "basicAuth",
+        "resource": "ticket",
+        "operation": "update",
+        "id": "={{ $('Antwortentwurf extrahieren').item.json.ticket.id }}",
+        "updateFields": {
+          "state_id": 2
+        }
+      },
+      "credentials": {
+        "zammadBasicAuthApi": {
+          "id": "0M2CPfsvNq5Xdzfc",
+          "name": "Zammad ticket.emue365"
         }
       }
     }
@@ -688,7 +747,7 @@
       "main": [
         [
           {
-            "node": "Interne Hinweise vorhanden?",
+            "node": "Wartete auf Erinnerung oder Schließen?",
             "type": "main",
             "index": 0
           }
@@ -706,7 +765,7 @@
       "main": [
         [
           {
-            "node": "Interne Hinweise vorhanden?",
+            "node": "Wartete auf Erinnerung oder Schließen?",
             "type": "main",
             "index": 0
           }
@@ -752,6 +811,35 @@
           }
         ]
       ]
+    },
+    "Status wieder auf offen setzen": {
+      "main": [
+        [
+          {
+            "node": "Interne Hinweise vorhanden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wartete auf Erinnerung oder Schließen?": {
+      "main": [
+        [
+          {
+            "node": "Status wieder auf offen setzen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Interne Hinweise vorhanden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -760,7 +848,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "3a9f27c7-5d85-456c-aca7-f923b4c13d0e",
+  "versionId": "1451005b-6568-47ba-be2e-7ff2cdb4733a",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "d3f71021076be8bdc8614296f3c7749ae0813e877410d7e61391b83252e612f7"
