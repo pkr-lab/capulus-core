@@ -13,6 +13,15 @@ const { testConfig } = require('./helpers');
 const budget = { numCtx: 4096, responseReserveTokens: 512, charsPerToken: 3 };
 const prompts = { system: 'SYSTEM', warnings: [] };
 
+function knowledgeDir(profiles) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wissen-'));
+  for (const [profile, files] of Object.entries(profiles)) {
+    fs.mkdirSync(path.join(dir, profile));
+    for (const [name, text] of Object.entries(files)) fs.writeFileSync(path.join(dir, profile, name), text);
+  }
+  return dir;
+}
+
 function history(count, size) {
   return Array.from({ length: count }, (_, i) => ({ from: `a${i}`, date: `2026-01-${String(i + 1).padStart(2, '0')}`, text: `Mail ${i} ${'x'.repeat(size)}` }));
 }
@@ -81,33 +90,33 @@ test('Firmenwissen steht als <firmenwissen> zwischen Systemprompt und Beispielen
   const prompts = loadPromptFiles(testConfig());
   const system = prompts.system;
   assert.ok(system.includes('<firmenwissen>'));
-  assert.ok(system.includes('### Datei: testwissen.md'));
+  assert.ok(system.includes('### Datei: alle/testwissen.md'));
   assert.ok(system.includes('montags bis freitags'));
   assert.ok(system.indexOf('Du schreibst Antworten.') < system.indexOf('<firmenwissen>'));
   assert.ok(system.trim().endsWith('</firmenwissen>'));
-  assert.deepEqual(prompts.knowledge.files, ['testwissen.md']);
+  assert.deepEqual(prompts.knowledge.files, ['alle/testwissen.md']);
   const built = buildMessages(prompts, { history: history(2, 10), mail: { text: 'Frage?' } }, budget);
   assert.ok(!built.messages[1].content.includes('firmenwissen'));
 });
 
 test('Firmenwissen: alle .md-Dateien sortiert, Platzhalterzeilen entfallen mit Warnung', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wissen-'));
-  fs.writeFileSync(path.join(dir, 'b.md'), '## B\n\nPreis: 10 Euro\nLink: [PLATZHALTER: URL]\n');
-  fs.writeFileSync(path.join(dir, 'a.md'), '## A\n\nKontakt: info@example.org\n');
-  fs.writeFileSync(path.join(dir, 'notiz.txt'), 'wird ignoriert');
-  fs.writeFileSync(path.join(dir, 'leer.md'), '[PLATZHALTER: alles]\n');
+  const dir = knowledgeDir({ alle: {} });
+  fs.writeFileSync(path.join(dir, 'alle', 'b.md'), '## B\n\nPreis: 10 Euro\nLink: [PLATZHALTER: URL]\n');
+  fs.writeFileSync(path.join(dir, 'alle', 'a.md'), '## A\n\nKontakt: info@example.org\n');
+  fs.writeFileSync(path.join(dir, 'alle', 'notiz.txt'), 'wird ignoriert');
+  fs.writeFileSync(path.join(dir, 'alle', 'leer.md'), '[PLATZHALTER: alles]\n');
   const prompts = loadPromptFiles(testConfig({ knowledgeDir: dir }));
-  assert.deepEqual(prompts.knowledge.files, ['a.md', 'b.md']);
-  assert.ok(prompts.system.indexOf('### Datei: a.md') < prompts.system.indexOf('### Datei: b.md'));
+  assert.deepEqual(prompts.knowledge.files, ['alle/a.md', 'alle/b.md']);
+  assert.ok(prompts.system.indexOf('### Datei: alle/a.md') < prompts.system.indexOf('### Datei: alle/b.md'));
   assert.ok(prompts.system.includes('Preis: 10 Euro'));
   assert.ok(!prompts.system.includes('PLATZHALTER'));
   assert.ok(!prompts.system.includes('wird ignoriert'));
-  assert.ok(prompts.warnings.some((w) => w.includes('b.md') && w.includes('1 Zeile')));
+  assert.ok(prompts.warnings.some((w) => w.includes('alle/b.md') && w.includes('1 Zeile')));
 });
 
 test('Firmenwissen wird bei jedem Aufruf neu gelesen', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wissen-'));
-  const file = path.join(dir, 'firma.md');
+  const dir = knowledgeDir({ alle: {} });
+  const file = path.join(dir, 'alle', 'firma.md');
   fs.writeFileSync(file, 'Preis: 10 Euro\n');
   const config = testConfig({ knowledgeDir: dir });
   assert.ok(loadPromptFiles(config).system.includes('Preis: 10 Euro'));
@@ -118,13 +127,13 @@ test('Firmenwissen wird bei jedem Aufruf neu gelesen', () => {
 });
 
 test('Firmenwissen: Größe wird gemeldet und ab 40 Prozent von num_ctx gewarnt', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wissen-'));
-  fs.writeFileSync(path.join(dir, 'gross.md'), 'x'.repeat(21000));
+  const dir = knowledgeDir({ alle: {} });
+  fs.writeFileSync(path.join(dir, 'alle', 'gross.md'), 'x'.repeat(21000));
   const warn = loadPromptFiles(testConfig({ knowledgeDir: dir }));
   assert.ok(warn.knowledge.ratio > 0.4);
   assert.ok(warn.warnings.some((w) => w.includes('Firmenwissen belegt') && w.includes('RAG')));
 
-  fs.writeFileSync(path.join(dir, 'gross.md'), 'x'.repeat(3000));
+  fs.writeFileSync(path.join(dir, 'alle', 'gross.md'), 'x'.repeat(3000));
   const ok = loadPromptFiles(testConfig({ knowledgeDir: dir }));
   assert.ok(ok.knowledge.ratio < 0.4);
   assert.ok(!ok.warnings.some((w) => w.includes('Firmenwissen belegt')));
@@ -146,4 +155,45 @@ test('appendSignature hängt die Signatur an und ersetzt eine vom Modell geschri
 
 test('fehlende Signatur-Datei ist ein Fehler', () => {
   assert.throws(() => loadPromptFiles(testConfig({ signatureFile: '/nonexistent/signatur.md' })), { code: 'SIGNATURE_MISSING' });
+});
+
+test('Wissensprofil: Gruppe "alle" plus gewähltes Profil, andere Profile bleiben draußen', () => {
+  const dir = knowledgeDir({
+    alle: { '00_regeln.md': 'Gemeinsame Regeln' },
+    ausbildung: { '02_kurse.md': 'Kurszeiten Dienstag' },
+    psg: { '10_hilfe.md': 'Hilfe bei Gewalt' },
+  });
+  const config = testConfig({ knowledgeDir: dir });
+
+  const ausbildung = loadPromptFiles(config, { profile: 'ausbildung' });
+  assert.deepEqual(ausbildung.knowledge.files, ['alle/00_regeln.md', 'ausbildung/02_kurse.md']);
+  assert.ok(ausbildung.system.includes('Kurszeiten Dienstag'));
+  assert.ok(!ausbildung.system.includes('Hilfe bei Gewalt'));
+
+  const psg = loadPromptFiles(config, { profile: 'psg' });
+  assert.deepEqual(psg.knowledge.files, ['alle/00_regeln.md', 'psg/10_hilfe.md']);
+  assert.ok(!psg.system.includes('Kurszeiten Dienstag'));
+});
+
+test('Wissensprofil: ohne Profil oder mit "alle" gilt nur das gemeinsame Wissen', () => {
+  const dir = knowledgeDir({ alle: { 'a.md': 'Gemeinsam' }, ausbildung: { 'b.md': 'Nur Ausbildung' } });
+  const config = testConfig({ knowledgeDir: dir });
+  assert.deepEqual(loadPromptFiles(config).knowledge.files, ['alle/a.md']);
+  assert.deepEqual(loadPromptFiles(config, { profile: '' }).knowledge.files, ['alle/a.md']);
+  assert.deepEqual(loadPromptFiles(config, { profile: 'alle' }).knowledge.files, ['alle/a.md']);
+});
+
+test('Wissensprofil: unbekanntes oder ungültiges Profil ist ein Fehler', () => {
+  const dir = knowledgeDir({ alle: { 'a.md': 'Gemeinsam' }, ausbildung: { 'b.md': 'Nur Ausbildung' } });
+  const config = testConfig({ knowledgeDir: dir });
+  assert.throws(() => loadPromptFiles(config, { profile: 'persoenlich' }), { code: 'UNKNOWN_PROFILE', message: /ausbildung/ });
+  assert.throws(() => loadPromptFiles(config, { profile: '../etc' }), { code: 'INVALID_INPUT' });
+  assert.throws(() => loadPromptFiles(config, { profile: 42 }), { code: 'INVALID_INPUT' });
+});
+
+test('Wissensprofil: Größenwarnung zählt nur das gewählte Profil', () => {
+  const dir = knowledgeDir({ alle: { 'a.md': 'klein' }, ausbildung: { 'gross.md': 'x'.repeat(21000) }, psg: { 'p.md': 'klein' } });
+  const config = testConfig({ knowledgeDir: dir });
+  assert.ok(loadPromptFiles(config, { profile: 'ausbildung' }).knowledge.ratio > 0.4);
+  assert.ok(loadPromptFiles(config, { profile: 'psg' }).knowledge.ratio < 0.4);
 });

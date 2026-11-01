@@ -21,7 +21,7 @@ function readOptional(file) {
   }
 }
 
-function loadPromptFiles(config) {
+function loadPromptFiles(config, { profile } = {}) {
   const warnings = [];
   const system = readOptional(config.systemPromptFile);
   if (!system) {
@@ -42,7 +42,7 @@ function loadPromptFiles(config) {
     examples = '';
   }
 
-  const knowledgeFiles = loadKnowledge(config.knowledgeDir);
+  const knowledgeFiles = loadKnowledge(config.knowledgeDir, profile);
   for (const file of knowledgeFiles) {
     if (file.ignoredLines > 0) {
       warnings.push(`Firmenwissen ${file.name}: ${file.ignoredLines} Zeile(n) mit ${PLACEHOLDER_MARKER}…] ignoriert`);
