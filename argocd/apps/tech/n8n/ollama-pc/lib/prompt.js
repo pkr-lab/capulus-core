@@ -31,6 +31,11 @@ function loadPromptFiles(config) {
     warnings.push(`Systemprompt enthält noch ${PLACEHOLDER_MARKER}…]-Platzhalter (z. B. Signatur)`);
   }
 
+  const signature = readOptional(config.signatureFile);
+  if (!signature) {
+    throw new OllamaPcError('SIGNATURE_MISSING', `Signatur-Datei fehlt oder ist leer: ${config.signatureFile}`);
+  }
+
   let examples = readOptional(config.examplesFile);
   if (examples.includes(PLACEHOLDER_MARKER)) {
     warnings.push(`Beispiel-Antworten werden ignoriert, solange sie ${PLACEHOLDER_MARKER}…]-Platzhalter enthalten`);
@@ -55,6 +60,7 @@ function loadPromptFiles(config) {
   const parts = [system, examples && `## Beispiel-Antworten\n\n${examples}`, knowledgeBlock].filter(Boolean);
   return {
     system: parts.join('\n\n'),
+    signature,
     warnings,
     knowledge: { files: knowledgeFiles.map((f) => f.name), tokens: knowledgeTokens, ratio: knowledgeRatio },
   };
@@ -152,4 +158,20 @@ function cleanReply(text) {
   return trimmed;
 }
 
-module.exports = { loadPromptFiles, buildMessages, cleanReply, estimateTokens, PLACEHOLDER_MARKER };
+const CLOSING_LINE = /^\s*(mit freundlichen|freundliche|viele|beste|herzliche|liebe|sportliche|schöne|schone)\s+gr(ü|ue|u)(ß|ss)(e|en)\s*[,.!]?\s*$/i;
+const CLOSING_LOOKBACK_LINES = 12;
+
+function stripClosing(reply) {
+  const lines = reply.split('\n');
+  const stop = Math.max(lines.length - CLOSING_LOOKBACK_LINES, 0);
+  for (let i = lines.length - 1; i >= stop; i -= 1) {
+    if (CLOSING_LINE.test(lines[i])) return lines.slice(0, i).join('\n').trimEnd();
+  }
+  return reply;
+}
+
+function appendSignature(reply, signature) {
+  return `${stripClosing(reply)}\n\n${signature}`;
+}
+
+module.exports = { loadPromptFiles, buildMessages, cleanReply, appendSignature, estimateTokens, PLACEHOLDER_MARKER };

@@ -59,6 +59,7 @@ function loadConfig(env = process.env) {
     knowledgeWarnRatio: number(env, 'OLLAMA_KNOWLEDGE_WARN_RATIO', 0.4),
     systemPromptFile: text(env, 'OLLAMA_SYSTEM_PROMPT_FILE', path.join(promptsDir, 'email_system.md')),
     examplesFile: text(env, 'OLLAMA_EXAMPLES_FILE', path.join(promptsDir, 'email_examples.md')),
+    signatureFile: text(env, 'OLLAMA_SIGNATURE_FILE', path.join(promptsDir, 'email_signatur.md')),
   };
 }
 
