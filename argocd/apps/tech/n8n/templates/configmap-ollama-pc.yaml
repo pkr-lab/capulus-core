@@ -19,7 +19,7 @@ data:
   {{ trimPrefix "ollama-pc/" $path | replace "/" "__" | quote }}: |
     {{- $.Files.Get $path | nindent 4 }}
   {{- end }}
-  {{- range $path, $_ := .Files.Glob "ollama-pc/knowledge/*.md" }}
+  {{- range $path, $_ := .Files.Glob "ollama-pc/knowledge/*/*.md" }}
   {{ trimPrefix "ollama-pc/" $path | replace "/" "__" | quote }}: |
     {{- $.Files.Get $path | nindent 4 }}
   {{- end }}
