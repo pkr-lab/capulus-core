@@ -1,6 +1,8 @@
 # Warteliste und Nachrücken
 
-Sind alle Plätze vergeben, trägt man sich über das Formular ein: https://andernach.dlrg.de/kurse-und-sicherheit/warteliste/ . Fragen: andernach.warteliste@dlrg.org
+Die Warteliste gilt **nur für Schwimmkinder im Donnerstag-Training** (`02_schwimmausbildung_trainingszeiten.md`), **nicht für Kurse** (Crashkurs, Prüfungskurse, Erwachsenenschwimmkurs u. a.). Bei Kursen nie auf die Warteliste, ihr Formular oder ihre E-Mail-Adresse verweisen und nicht dazu raten. Ist ein Kurs voll oder gibt es keinen Platz: neutral formulieren und `[BITTE PRÜFEN: Kurs voll – wie geht es weiter?]`.
+
+Sind beim Donnerstag-Training alle Plätze vergeben, trägt man sich über das Formular ein: https://andernach.dlrg.de/kurse-und-sicherheit/warteliste/ . Fragen: andernach.warteliste@dlrg.org
 
 ## Ablauf (Info für die prüfende Person)
 - Wartelisten-Personen haben noch keinen regulären Platz. Wird einer frei, rückt die nächste Person nach.

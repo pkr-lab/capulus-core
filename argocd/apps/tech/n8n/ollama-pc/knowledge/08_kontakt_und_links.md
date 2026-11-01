@@ -8,7 +8,7 @@ Anschrift: DLRG OG Andernach e.V., Balthasar-Neumann-Strasse 5, 56648 Saffig, Te
 |---|---|---|
 | Allgemein | info@andernach.dlrg.de | wenn kein anderer Bereich passt |
 | Ausbildung | ausbildung@andernach.dlrg.de | Schwimmkurse, Crashkurse, Prüfungen, E-Learning, Uploads, Erste-Hilfe-Lehrgänge |
-| Warteliste | andernach.warteliste@dlrg.org | alles zur Warteliste |
+| Warteliste | andernach.warteliste@dlrg.org | nur Warteliste Schwimmkinder (Donnerstag-Training) |
 | Wasserrettungsdienst | einsatz@andernach.dlrg.de | Mitmachen im Wasserrettungsdienst, Einsatz, Wachdienst |
 | Jugend | jugend@andernach.dlrg.de | Jugendarbeit, Jugend-Einsatz-Team (JET, für 12- bis 16-Jährige) |
 | Vorsitz | vorsitz@andernach.dlrg.de | Vorstand |
@@ -21,7 +21,7 @@ Anschrift: DLRG OG Andernach e.V., Balthasar-Neumann-Strasse 5, 56648 Saffig, Te
 | Crashkurs (was muss ich können/mitbringen) | https://andernach.dlrg.de/kurse-und-sicherheit/crashkurs/ |
 | E-Learning/ILIAS-Anleitung | https://andernach.dlrg.de/kurse-und-sicherheit/crashkurs/e-learning/ |
 | Anmeldung zu Lehrgängen | https://andernach.dlrg.de/kurse-und-sicherheit/anmeldung/ |
-| Warteliste (Kurs voll) | https://andernach.dlrg.de/kurse-und-sicherheit/warteliste/ |
+| Warteliste nur für Schwimmkinder im Donnerstag-Training, nie für Kurse | https://andernach.dlrg.de/kurse-und-sicherheit/warteliste/ |
 | Teilnahmebedingungen (Kosten, Stornierung) | https://andernach.dlrg.de/kurse-und-sicherheit/anmeldung/teilnahmebedingungen/ |
 | DLRG-Jugend Andernach (JET, Jugend) | https://andernach.dlrg-jugend.de |
 | WhatsApp-Kanal | https://whatsapp.com/channel/0029VbDbnqA8F2pCINGsId0N |
