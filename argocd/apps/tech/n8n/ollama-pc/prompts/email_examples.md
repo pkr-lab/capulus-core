@@ -24,11 +24,11 @@ https://andernach.dlrg.de/kurse-und-sicherheit/crashkurs/
 
 **Eingehende E-Mail:**
 
-Hallo, ich stehe auf der Warteliste für den Crashkurs im November. Soll ich meine Unterlagen schon schicken? Ich brauche den Schein bis Ende des Jahres für mein Studium. Danke und Gruß, Max Huber
+Hallo, ich habe für den Crashkurs im November noch keinen festen Platz. Soll ich meine Unterlagen schon schicken? Ich brauche den Schein bis Ende des Jahres für mein Studium. Danke und Gruß, Max Huber
 
 **Antwort:**
 
-[BITTE PRÜFEN: Anmeldestatus – regulärer Platz oder Warteliste?]
+[BITTE PRÜFEN: Anmeldestatus – regulärer Platz oder noch nicht zugeteilt?]
 [INTERN: Nachweise werden erst nach Nachrücken über den Upload-Link benötigt]
 [INTERN: Frist Ende des Jahres für Nachweis im Studium – bei Platzvergabe berücksichtigen]
 
@@ -40,7 +40,7 @@ Du musst uns noch keine Unterlagen schicken. Wenn du auf einen regulären Platz 
 
 Einen Platz oder die Chance aufs Nachrücken können wir dir leider nicht zusagen. Du kannst dich aber schon vorbereiten: Schließe das E-Learning ab und sichere dein Zertifikat (das ILIAS-Konto besteht nur etwa 3 bis 4 Monate). Außerdem darf dein Erste-Hilfe-Nachweis zu Kursbeginn nicht älter als 2 Jahre sein.
 
-Fragen zur Warteliste beantworten wir gern unter andernach.warteliste@dlrg.org.
+Fragen zu deinem Anmeldestatus beantwortet dir gern das Ausbildungsteam unter ausbildung@andernach.dlrg.de.
 
 ### Beispiel 3
 
