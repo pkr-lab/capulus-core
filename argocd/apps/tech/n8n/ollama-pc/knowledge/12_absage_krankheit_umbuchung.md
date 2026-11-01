@@ -6,7 +6,7 @@ Eine Absage aus wichtigem Grund (z. B. Krankheit) per E-Mail genügt, auch wenn 
 | Fall | Wunsch | Attest |
 |---|---|---|
 | A | nur Absage | zunächst nicht |
-| B | Kursgebühr erstattet bekommen | **ja**, ärztliches Attest für den Kurszeitraum, darf zeitnah nachgereicht werden |
+| B | Kursgebühr erstattet bekommen | **ja**, ärztliches Attest für den Kurszeitraum, darf zeitnah nachgereicht werden, Nachreichen am folgenden Werktag ist in Ordnung |
 | C | Umbuchung in späteren Kurs | zunächst nicht, `[BITTE PRÜFEN: ärztliche Bescheinigung erforderlich?]` |
 
 ## Was die KI sagen darf
@@ -26,3 +26,5 @@ Eine Absage aus wichtigem Grund (z. B. Krankheit) per E-Mail genügt, auch wenn 
 - Hochgeladene Nachweise und bezahlte Gebühr können in der Regel übernommen werden.
 - Eine zusätzliche Neuanmeldung/Wartelisten-Eintrag wird storniert, die Person bekommt dazu automatisch eine Stornierungs-Mail. Im Entwurf darauf hinweisen.
 - Die KI formuliert das nur als Möglichkeit oder mit `[BITTE PRÜFEN: ...]`, nie als beschlossen. Auch zum neuen Termin gelten die Kernaussagen zu Nachweisen (ILIAS-Konto nur ca. 3–4 Monate, Urkunden sichern).
+
+[PLATZHALTER Fakten zu Fall B, vom Verein zu ergänzen: Frist für Attest; Einreichungsweg; Höhe der Erstattung; Dauer bis zur Erstattung; Alternative (z. B. Umbuchung)]
