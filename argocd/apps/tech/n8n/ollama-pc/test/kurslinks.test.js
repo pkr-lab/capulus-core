@@ -43,6 +43,23 @@ test('kein Treffer ohne erkannte Kursart', () => {
   assert.deepEqual(result.matches, []);
 });
 
+test('exakter Treffer über den Kurscode, auch bei mehreren Kandidaten der Kursart', () => {
+  const { kursart, matches } = resolve('Bitte Ordner für A-02 pruefen', ENTRIES, { now: NOW });
+  assert.equal(kursart, 'CrashKurs');
+  assert.deepEqual(matches.map((m) => m.code), ['A-02']);
+});
+
+test('exakter Treffer über Kursart + genanntes Meldeschluss-Datum', () => {
+  const { kursart, matches } = resolve('CrashKurs, Meldeschluss 31.03.26', ENTRIES, { now: NOW });
+  assert.equal(kursart, 'CrashKurs');
+  assert.deepEqual(matches.map((m) => m.code), ['A-02']);
+});
+
+test('Datum ohne passende Kursart führt nicht zu einem Treffer', () => {
+  const { matches } = resolve('Meldeschluss 31.03.26', ENTRIES, { now: NOW });
+  assert.deepEqual(matches, []);
+});
+
 test('loadEntries liest die echte Kurslink-Datei des Projekts', () => {
   const entries = loadEntries(path.join(__dirname, '..', 'knowledge-refs', 'kurslinks.json'));
   assert.ok(Array.isArray(entries) && entries.length > 0);
