@@ -277,7 +277,69 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const eingabe = $('LLM-Eingabe bauen').item.json;\nconst ticket = eingabe.ticket;\n\nlet parsed = null;\ntry {\n  parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n} catch (err) {\n  parsed = null;\n}\n\nif (!parsed || !parsed.ok) {\n  const detail = parsed && parsed.error\n    ? `${parsed.error.code}: ${parsed.error.message}`\n    : String($json.stderr || $json.error || 'keine Ausgabe von ollama-pc/cli.js').trim();\n  throw new Error(`Ollama-Anfrage fehlgeschlagen (Ticket #${ticket.number}): ${detail}`);\n}\n\nconst hinweise = [];\nconst entwurf = String(parsed.reply || '')\n  .replace(/[ \\t]*\\[INTERN:\\s*([^\\]]*)\\]/g, (_, hinweis) => {\n    hinweise.push(hinweis.trim());\n    return '';\n  })\n  .replace(/[ \\t]+$/gm, '')\n  .replace(/(https?:\\/\\/\\S+) ([.,;:!?])/g, '$1$2')\n  .replace(/([^.])\\.\\.(?!\\.)/g, '$1.')\n  .replace(/\\n{3,}/g, '\\n\\n')\n  .trim();\n\nconst escapeHtml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst entwurfHtml = entwurf\n  .replace(/\\r\\n?/g, '\\n')\n  .split(/\\n{2,}/)\n  .map((absatz) => '<p>' + escapeHtml(absatz)\n    .replace(/(https?:\\/\\/[^\\s<]*[^\\s<.,;:!?])/g, '<a href=\"$1\">$1</a>')\n    .replace(/\\n/g, '<br>') + '</p>')\n  .join('');\nconst abstand = '<p><br></p><p><br></p>';\nconst notizHtml = entwurfHtml + abstand + '<p><i>KI-Entwurf (automatisch erstellt)</i></p>';\nconst hinweiseHtml = hinweise.length\n  ? '<p><b>Interne Hinweise zum KI-Entwurf</b></p><ul>' + hinweise.map((h) => '<li>' + escapeHtml(h) + '</li>').join('') + '</ul>'\n  : '';\n\nreturn { json: { ticket, modus: eingabe.modus, replyTo: eingabe.replyTo, messageId: eingabe.messageId, entwurf, entwurfHtml: entwurfHtml + abstand, notizHtml, hinweise, hinweiseHtml, warnings: parsed.warnings, stats: parsed.stats } };"
+        "jsCode": "const eingabe = $('LLM-Eingabe bauen').item.json;\nconst ticket = eingabe.ticket;\n\nlet parsed = null;\ntry {\n  parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n} catch (err) {\n  parsed = null;\n}\n\nif (!parsed || !parsed.ok) {\n  const detail = parsed && parsed.error\n    ? `${parsed.error.code}: ${parsed.error.message}`\n    : String($json.stderr || $json.error || 'keine Ausgabe von ollama-pc/cli.js').trim();\n  throw new Error(`Ollama-Anfrage fehlgeschlagen (Ticket #${ticket.number}): ${detail}`);\n}\n\nconst hinweise = [];\nconst kurslinkHinweise = [];\nconst entwurf = String(parsed.reply || '')\n  .replace(/[ \\t]*\\[INTERN:\\s*([^\\]]*)\\]/g, (_, hinweis) => {\n    hinweise.push(hinweis.trim());\n    return '';\n  })\n  .replace(/[ \\t]*\\[KURSLINK:\\s*([^\\]]*)\\]/g, (_, hinweis) => {\n    kurslinkHinweise.push(hinweis.trim());\n    return '';\n  })\n  .replace(/[ \\t]+$/gm, '')\n  .replace(/(https?:\\/\\/\\S+) ([.,;:!?])/g, '$1$2')\n  .replace(/([^.])\\.\\.(?!\\.)/g, '$1.')\n  .replace(/\\n{3,}/g, '\\n\\n')\n  .trim();\n\nconst escapeHtml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst entwurfHtml = entwurf\n  .replace(/\\r\\n?/g, '\\n')\n  .split(/\\n{2,}/)\n  .map((absatz) => '<p>' + escapeHtml(absatz)\n    .replace(/(https?:\\/\\/[^\\s<]*[^\\s<.,;:!?])/g, '<a href=\"$1\">$1</a>')\n    .replace(/\\n/g, '<br>') + '</p>')\n  .join('');\nconst abstand = '<p><br></p><p><br></p>';\nconst notizHtml = entwurfHtml + abstand + '<p><i>KI-Entwurf (automatisch erstellt)</i></p>';\nconst hinweiseHtml = hinweise.length\n  ? '<p><b>Interne Hinweise zum KI-Entwurf</b></p><ul>' + hinweise.map((h) => '<li>' + escapeHtml(h) + '</li>').join('') + '</ul>'\n  : '';\n\nreturn { json: { ticket, modus: eingabe.modus, replyTo: eingabe.replyTo, messageId: eingabe.messageId, entwurf, entwurfHtml: entwurfHtml + abstand, notizHtml, hinweise, hinweiseHtml, kurslinkHinweise, kurslinkHinweiseB64: Buffer.from(JSON.stringify(kurslinkHinweise)).toString('base64'), warnings: parsed.warnings, stats: parsed.stats } };"
+      }
+    },
+    {
+      "id": "7b0f6c1e-3a52-4d6b-9a41-5c1d2e8f0a03",
+      "name": "Kurslink-Hinweise vorhanden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        9430,
+        500
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e5e5e5e5-0004-4000-8000-000000000a03",
+              "leftValue": "={{ $('Antwortentwurf extrahieren').item.json.kurslinkHinweise.length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "7b0f6c1e-3a52-4d6b-9a41-5c1d2e8f0a04",
+      "name": "Kurslinks nachschlagen",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "onError": "continueRegularOutput",
+      "position": [
+        9430,
+        650
+      ],
+      "parameters": {
+        "command": "=printf %s '{{ $('Antwortentwurf extrahieren').item.json.kurslinkHinweiseB64 }}' | base64 -d | node /opt/ollama-pc/cli.js kurslink"
+      }
+    },
+    {
+      "id": "7b0f6c1e-3a52-4d6b-9a41-5c1d2e8f0a05",
+      "name": "Kurslinks in Hinweise einfügen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9630,
+        650
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const basis = $('Antwortentwurf extrahieren').item.json;\nconst escapeHtml = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nlet kurslinksHtml = '';\nif (basis.kurslinkHinweise.length > 0) {\n  let parsed = null;\n  try {\n    parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n  } catch (err) {\n    parsed = null;\n  }\n\n  if (parsed && parsed.ok) {\n    const zeilen = parsed.results.flatMap((r) => {\n      if (!r.matches.length) return [`<li>${escapeHtml(r.hint)}: keinen Admin-Upload-Ordner gefunden</li>`];\n      return r.matches.map((m) => {\n        const link = escapeHtml(m.url);\n        return `<li>${escapeHtml(r.hint)} → ${escapeHtml(m.kursart)} ${escapeHtml(m.code)} (Meldeschluss ${escapeHtml(m.meldeschluss)}): <a href=\"${link}\">${link}</a></li>`;\n      });\n    });\n    kurslinksHtml = '<p><b>Admin-Upload-Ordner (Seminarverwaltung)</b></p><ul>' + zeilen.join('') + '</ul>';\n  } else {\n    const detail = parsed && parsed.error\n      ? `${parsed.error.code}: ${parsed.error.message}`\n      : String($json.stderr || $json.error || 'keine Ausgabe von ollama-pc/cli.js kurslink').trim();\n    kurslinksHtml = `<p><i>Kurslink-Nachschlag fehlgeschlagen: ${escapeHtml(detail)}</i></p>`;\n  }\n}\n\nreturn { json: { ...basis, hinweiseHtml: basis.hinweiseHtml + kurslinksHtml } };"
       }
     },
     {
@@ -300,7 +362,7 @@
           "conditions": [
             {
               "id": "e5e5e5e5-0004-4000-8000-000000000a01",
-              "leftValue": "={{ $('Antwortentwurf extrahieren').item.json.hinweise.length > 0 }}",
+              "leftValue": "={{ $('Kurslinks in Hinweise einfügen').item.json.hinweiseHtml.length > 0 }}",
               "rightValue": true,
               "operator": {
                 "type": "boolean",
@@ -329,7 +391,7 @@
         "operation": "update",
         "id": "={{ $('Antwortentwurf extrahieren').item.json.ticket.id }}",
         "updateFields": {
-          "note": "={{ $('Antwortentwurf extrahieren').item.json.hinweiseHtml }}"
+          "note": "={{ $('Kurslinks in Hinweise einfügen').item.json.hinweiseHtml }}"
         }
       },
       "credentials": {
@@ -715,6 +777,46 @@
       ]
     },
     "Antwortentwurf extrahieren": {
+      "main": [
+        [
+          {
+            "node": "Kurslink-Hinweise vorhanden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kurslink-Hinweise vorhanden?": {
+      "main": [
+        [
+          {
+            "node": "Kurslinks nachschlagen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kurslinks in Hinweise einfügen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kurslinks nachschlagen": {
+      "main": [
+        [
+          {
+            "node": "Kurslinks in Hinweise einfügen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kurslinks in Hinweise einfügen": {
       "main": [
         [
           {
