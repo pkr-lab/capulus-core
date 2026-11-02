@@ -86,7 +86,7 @@
         "operation": "update",
         "id": "={{ $('Antwortentwurf extrahieren').item.json.ticket.id }}",
         "updateFields": {
-          "note": "={{ $('Antwortentwurf extrahieren').item.json.notizHtml }}"
+          "note": "={{ $('Kurslinks in Entwurf einfügen').item.json.notizHtml }}"
         }
       },
       "credentials": {
@@ -277,7 +277,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const eingabe = $('LLM-Eingabe bauen').item.json;\nconst ticket = eingabe.ticket;\n\nlet parsed = null;\ntry {\n  parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n} catch (err) {\n  parsed = null;\n}\n\nif (!parsed || !parsed.ok) {\n  const detail = parsed && parsed.error\n    ? `${parsed.error.code}: ${parsed.error.message}`\n    : String($json.stderr || $json.error || 'keine Ausgabe von ollama-pc/cli.js').trim();\n  throw new Error(`Ollama-Anfrage fehlgeschlagen (Ticket #${ticket.number}): ${detail}`);\n}\n\nconst hinweise = [];\nconst kurslinkHinweise = [];\nconst entwurf = String(parsed.reply || '')\n  .replace(/[ \\t]*\\[INTERN:\\s*([^\\]]*)\\]/g, (_, hinweis) => {\n    hinweise.push(hinweis.trim());\n    return '';\n  })\n  .replace(/[ \\t]*\\[KURSLINK:\\s*([^\\]]*)\\]/g, (_, hinweis) => {\n    kurslinkHinweise.push(hinweis.trim());\n    return '';\n  })\n  .replace(/[ \\t]+$/gm, '')\n  .replace(/(https?:\\/\\/\\S+) ([.,;:!?])/g, '$1$2')\n  .replace(/([^.])\\.\\.(?!\\.)/g, '$1.')\n  .replace(/\\n{3,}/g, '\\n\\n')\n  .trim();\n\nconst escapeHtml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst entwurfHtml = entwurf\n  .replace(/\\r\\n?/g, '\\n')\n  .split(/\\n{2,}/)\n  .map((absatz) => '<p>' + escapeHtml(absatz)\n    .replace(/(https?:\\/\\/[^\\s<]*[^\\s<.,;:!?])/g, '<a href=\"$1\">$1</a>')\n    .replace(/\\n/g, '<br>') + '</p>')\n  .join('');\nconst abstand = '<p><br></p><p><br></p>';\nconst notizHtml = entwurfHtml + abstand + '<p><i>KI-Entwurf (automatisch erstellt)</i></p>';\nconst hinweiseHtml = hinweise.length\n  ? '<p><b>Interne Hinweise zum KI-Entwurf</b></p><ul>' + hinweise.map((h) => '<li>' + escapeHtml(h) + '</li>').join('') + '</ul>'\n  : '';\n\nreturn { json: { ticket, modus: eingabe.modus, replyTo: eingabe.replyTo, messageId: eingabe.messageId, entwurf, entwurfHtml: entwurfHtml + abstand, notizHtml, hinweise, hinweiseHtml, kurslinkHinweise, kurslinkHinweiseB64: Buffer.from(JSON.stringify(kurslinkHinweise)).toString('base64'), warnings: parsed.warnings, stats: parsed.stats } };"
+        "jsCode": "const eingabe = $('LLM-Eingabe bauen').item.json;\nconst ticket = eingabe.ticket;\n\nlet parsed = null;\ntry {\n  parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n} catch (err) {\n  parsed = null;\n}\n\nif (!parsed || !parsed.ok) {\n  const detail = parsed && parsed.error\n    ? `${parsed.error.code}: ${parsed.error.message}`\n    : String($json.stderr || $json.error || 'keine Ausgabe von ollama-pc/cli.js').trim();\n  throw new Error(`Ollama-Anfrage fehlgeschlagen (Ticket #${ticket.number}): ${detail}`);\n}\n\nconst hinweise = [];\nconst entwurf = String(parsed.reply || '')\n  .replace(/[ \\t]*\\[INTERN:\\s*([^\\]]*)\\]/g, (_, hinweis) => {\n    hinweise.push(hinweis.trim());\n    return '';\n  })\n  .replace(/[ \\t]+$/gm, '')\n  .replace(/(https?:\\/\\/\\S+) ([.,;:!?])/g, '$1$2')\n  .replace(/([^.])\\.\\.(?!\\.)/g, '$1.')\n  .replace(/\\n{3,}/g, '\\n\\n')\n  .trim();\n\nconst kurslinkHinweise = Array.from(entwurf.matchAll(/\\[KURSLINK:\\s*([^\\]]*)\\]/g)).map((m) => m[1].trim());\n\nconst escapeHtml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst entwurfHtml = entwurf\n  .replace(/\\r\\n?/g, '\\n')\n  .split(/\\n{2,}/)\n  .map((absatz) => '<p>' + escapeHtml(absatz)\n    .replace(/(https?:\\/\\/[^\\s<]*[^\\s<.,;:!?])/g, '<a href=\"$1\">$1</a>')\n    .replace(/\\n/g, '<br>') + '</p>')\n  .join('');\nconst abstand = '<p><br></p><p><br></p>';\nconst notizHtml = entwurfHtml + abstand + '<p><i>KI-Entwurf (automatisch erstellt)</i></p>';\nconst hinweiseHtml = hinweise.length\n  ? '<p><b>Interne Hinweise zum KI-Entwurf</b></p><ul>' + hinweise.map((h) => '<li>' + escapeHtml(h) + '</li>').join('') + '</ul>'\n  : '';\n\nreturn { json: { ticket, modus: eingabe.modus, replyTo: eingabe.replyTo, messageId: eingabe.messageId, entwurf, entwurfHtml: entwurfHtml + abstand, notizHtml, hinweise, hinweiseHtml, kurslinkHinweise, kurslinkHinweiseB64: Buffer.from(JSON.stringify(kurslinkHinweise)).toString('base64'), warnings: parsed.warnings, stats: parsed.stats } };"
       }
     },
     {
@@ -330,7 +330,7 @@
     },
     {
       "id": "7b0f6c1e-3a52-4d6b-9a41-5c1d2e8f0a05",
-      "name": "Kurslinks in Hinweise einfügen",
+      "name": "Kurslinks in Entwurf einfügen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -339,7 +339,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const basis = $('Antwortentwurf extrahieren').item.json;\nconst escapeHtml = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nlet kurslinksHtml = '';\nif (basis.kurslinkHinweise.length > 0) {\n  let parsed = null;\n  try {\n    parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n  } catch (err) {\n    parsed = null;\n  }\n\n  if (parsed && parsed.ok) {\n    const zeilen = parsed.results.flatMap((r) => {\n      if (!r.matches.length) return [`<li>${escapeHtml(r.hint)}: keinen Admin-Upload-Ordner gefunden</li>`];\n      return r.matches.map((m) => {\n        const link = escapeHtml(m.url);\n        return `<li>${escapeHtml(r.hint)} → ${escapeHtml(m.kursart)} ${escapeHtml(m.code)} (Meldeschluss ${escapeHtml(m.meldeschluss)}): <a href=\"${link}\">${link}</a></li>`;\n      });\n    });\n    kurslinksHtml = '<p><b>Admin-Upload-Ordner (Seminarverwaltung)</b></p><ul>' + zeilen.join('') + '</ul>';\n  } else {\n    const detail = parsed && parsed.error\n      ? `${parsed.error.code}: ${parsed.error.message}`\n      : String($json.stderr || $json.error || 'keine Ausgabe von ollama-pc/cli.js kurslink').trim();\n    kurslinksHtml = `<p><i>Kurslink-Nachschlag fehlgeschlagen: ${escapeHtml(detail)}</i></p>`;\n  }\n}\n\nreturn { json: { ...basis, hinweiseHtml: basis.hinweiseHtml + kurslinksHtml } };"
+        "jsCode": "const basis = $('Antwortentwurf extrahieren').item.json;\nconst escapeHtml = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst KURSLINK_TAG = /\\[KURSLINK:\\s*([^\\]]*)\\]/g;\n\nlet parsed = null;\nif (basis.kurslinkHinweise.length > 0) {\n  try {\n    parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n  } catch (err) {\n    parsed = null;\n  }\n}\n\nfunction istAnstehend(meldeschluss, now) {\n  const m = /^(\\d{2})\\.(\\d{2})\\.(\\d{2}|\\d{4})$/.exec(String(meldeschluss || '').trim());\n  if (!m) return false;\n  const jahr = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);\n  return new Date(jahr, Number(m[2]) - 1, Number(m[1])) >= now;\n}\n\nconst now = new Date();\nconst auditZeilen = [];\nconst decisions = basis.kurslinkHinweise.map((hint, idx) => {\n  const result = parsed && parsed.ok ? parsed.results[idx] : null;\n  if (!result) {\n    auditZeilen.push(`Kurslink-Nachschlag fehlgeschlagen für „${escapeHtml(hint)}“`);\n    const fallback = `[BITTE PRÜFEN: Upload-Link für ${escapeHtml(hint)}]`;\n    return { html: fallback, plain: fallback };\n  }\n  const anstehend = result.matches.filter((m) => istAnstehend(m.meldeschluss, now));\n  if (anstehend.length !== 1) {\n    auditZeilen.push(`Kurslink nicht eindeutig: ${escapeHtml(result.kursart || hint)} (${result.matches.length} Treffer gesamt, ${anstehend.length} anstehend) – bitte im Entwurf prüfen`);\n    const fallback = `[BITTE PRÜFEN: Upload-Link für ${escapeHtml(result.kursart || hint)}]`;\n    return { html: fallback, plain: fallback };\n  }\n  const treffer = anstehend[0];\n  auditZeilen.push(`Kurslink automatisch eingefügt: ${escapeHtml(treffer.kursart)} ${escapeHtml(treffer.code)} (Meldeschluss ${escapeHtml(treffer.meldeschluss)})`);\n  const link = escapeHtml(treffer.url);\n  return { html: `<a href=\"${link}\">${link}</a>`, plain: treffer.url };\n});\n\nfunction einfuegen(text, isHtml) {\n  if (!decisions.length) return text;\n  let i = 0;\n  return text.replace(KURSLINK_TAG, () => {\n    const d = decisions[i];\n    i += 1;\n    return isHtml ? d.html : d.plain;\n  });\n}\n\nconst entwurf = einfuegen(basis.entwurf, false);\nconst entwurfHtml = einfuegen(basis.entwurfHtml, true);\nconst notizHtml = einfuegen(basis.notizHtml, true);\nconst hinweiseHtml = basis.hinweiseHtml + (auditZeilen.length\n  ? '<p><b>Kurslink-Automatik</b></p><ul>' + auditZeilen.map((z) => '<li>' + z + '</li>').join('') + '</ul>'\n  : '');\n\nreturn { json: { ...basis, entwurf, entwurfHtml, notizHtml, hinweiseHtml } };"
       }
     },
     {
@@ -362,7 +362,7 @@
           "conditions": [
             {
               "id": "e5e5e5e5-0004-4000-8000-000000000a01",
-              "leftValue": "={{ $('Kurslinks in Hinweise einfügen').item.json.hinweiseHtml.length > 0 }}",
+              "leftValue": "={{ $('Kurslinks in Entwurf einfügen').item.json.hinweiseHtml.length > 0 }}",
               "rightValue": true,
               "operator": {
                 "type": "boolean",
@@ -391,7 +391,7 @@
         "operation": "update",
         "id": "={{ $('Antwortentwurf extrahieren').item.json.ticket.id }}",
         "updateFields": {
-          "note": "={{ $('Kurslinks in Hinweise einfügen').item.json.hinweiseHtml }}"
+          "note": "={{ $('Kurslinks in Entwurf einfügen').item.json.hinweiseHtml }}"
         }
       },
       "credentials": {
@@ -552,7 +552,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ (() => { const e = $('Antwortentwurf extrahieren').item.json; return JSON.stringify({ new_article: { type: 'email', internal: false, to: e.replyTo, subject: e.ticket.title, body: e.entwurfHtml, content_type: 'text/html', in_reply_to: e.messageId }, ticket_attributes: { group_id: e.ticket.group_id } }); })() }}",
+        "jsonBody": "={{ (() => { const e = $('Kurslinks in Entwurf einfügen').item.json; return JSON.stringify({ new_article: { type: 'email', internal: false, to: e.replyTo, subject: e.ticket.title, body: e.entwurfHtml, content_type: 'text/html', in_reply_to: e.messageId }, ticket_attributes: { group_id: e.ticket.group_id } }); })() }}",
         "options": {}
       },
       "credentials": {
@@ -798,7 +798,7 @@
         ],
         [
           {
-            "node": "Kurslinks in Hinweise einfügen",
+            "node": "Kurslinks in Entwurf einfügen",
             "type": "main",
             "index": 0
           }
@@ -809,14 +809,14 @@
       "main": [
         [
           {
-            "node": "Kurslinks in Hinweise einfügen",
+            "node": "Kurslinks in Entwurf einfügen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Kurslinks in Hinweise einfügen": {
+    "Kurslinks in Entwurf einfügen": {
       "main": [
         [
           {
