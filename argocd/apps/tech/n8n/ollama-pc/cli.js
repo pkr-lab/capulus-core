@@ -4,6 +4,7 @@
 const { loadConfig } = require('./lib/config');
 const { isUp, ps, ensureReady } = require('./lib/ollama');
 const { generateReply } = require('./lib/run');
+const { resolve, loadEntries } = require('./lib/kurslinks');
 const { OllamaPcError } = require('./lib/errors');
 
 function log(message) {
@@ -50,7 +51,22 @@ async function main(argv) {
     print({ ok: true, ...(await generateReply(config, input, { log })) });
     return;
   }
-  throw new OllamaPcError('USAGE', 'Aufruf: cli.js probe | ps | wake | chat (JSON auf stdin)');
+  if (command === 'kurslink') {
+    const raw = await readStdin();
+    let hints;
+    try {
+      hints = JSON.parse(raw);
+    } catch (err) {
+      throw new OllamaPcError('INVALID_INPUT', `stdin ist kein gültiges JSON: ${err.message}`);
+    }
+    if (!Array.isArray(hints)) {
+      throw new OllamaPcError('INVALID_INPUT', 'stdin muss ein JSON-Array von Hinweistexten sein');
+    }
+    const entries = loadEntries(config.kurslinksFile);
+    print({ ok: true, results: hints.map((hint) => ({ hint, ...resolve(hint, entries) })) });
+    return;
+  }
+  throw new OllamaPcError('USAGE', 'Aufruf: cli.js probe | ps | wake | chat | kurslink (JSON auf stdin)');
 }
 
 main(process.argv).catch((err) => {

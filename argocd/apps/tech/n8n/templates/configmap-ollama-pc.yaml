@@ -23,4 +23,8 @@ data:
   {{ trimPrefix "ollama-pc/" $path | replace "/" "__" | quote }}: |
     {{- $.Files.Get $path | nindent 4 }}
   {{- end }}
+  {{- range $path, $_ := .Files.Glob "ollama-pc/knowledge-refs/*.json" }}
+  {{ trimPrefix "ollama-pc/" $path | replace "/" "__" | quote }}: |
+    {{- $.Files.Get $path | nindent 4 }}
+  {{- end }}
 {{- end }}

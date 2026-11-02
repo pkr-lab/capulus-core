@@ -116,6 +116,7 @@ ollamaPc:
     OLLAMA_PROMPTS_DIR: "/opt/ollama-pc/prompts"
     OLLAMA_KNOWLEDGE_DIR: "/opt/ollama-pc/knowledge"
     OLLAMA_KNOWLEDGE_WARN_RATIO: "0.4"
+    OLLAMA_KURSLINKS_FILE: "/opt/ollama-pc/knowledge-refs/kurslinks.json"
 
 xibosignage:
   enabled: true
