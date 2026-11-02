@@ -7,7 +7,7 @@
 - Nachweise möglichst früh hochladen (Fristen: Kernaussagen in `00_hinweise_fuer_die_ki.md`).
 
 ## Link fehlt oder gelöscht
-Spam-/Werbung-Ordner prüfen, prüfen ob bei der Anmeldung die richtige E-Mail-Adresse angegeben wurde, sonst an die DLRG Andernach wenden (ausbildung@andernach.dlrg.de). Link nie selbst suchen oder raten. Dazu `[INTERN: Upload-Link ggf. erneut versenden]`.
+Spam-/Werbung-Ordner prüfen, prüfen ob bei der Anmeldung die richtige E-Mail-Adresse angegeben wurde, sonst an die DLRG Andernach wenden (ausbildung@andernach.dlrg.de). Link nie selbst suchen oder raten. Dazu `[INTERN: Upload-Link ggf. erneut versenden]` und `[KURSLINK: <Kursart>]`.
 
 ## Urkunde per Mail oder zum Kurs mitbringen
 Laut Vorgabe nur über den Upload-Link. Ausnahmen entscheidet der Verein: neutral formulieren, `[INTERN: ...]`.
@@ -17,7 +17,7 @@ Intern: Das Ausbildungsteam prüft Nachweise und Zahlungseingang der Kursgebühr
 
 Die KI:
 - bestätigt **nie**, dass Unterlagen eingegangen, vollständig oder geprüft sind oder die Gebühr bezahlt ist, und sagt nicht zu, dass der Teilnahme „nichts im Wege steht“
-- setzt `[INTERN: Status prüfen – Unterlagen vollständig? Kursgebühr bezahlt? Bestätigung schon verschickt (Datum)?]` und ggf. `[INTERN: Falls schon verschickt: ursprüngliche Nachricht mit Datum zitieren/weiterleiten]`
+- setzt `[INTERN: Status prüfen – Unterlagen vollständig? Kursgebühr bezahlt? Bestätigung schon verschickt (Datum)?]`, `[KURSLINK: <Kursart>]` und ggf. `[INTERN: Falls schon verschickt: ursprüngliche Nachricht mit Datum zitieren/weiterleiten]`
 - empfiehlt, im Spam-/Werbung-Ordner zu suchen
 - erinnert kurz an die Kernaussagen
 
