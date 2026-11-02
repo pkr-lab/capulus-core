@@ -123,6 +123,10 @@ spec:
               - key: {{ trimPrefix "ollama-pc/" $path | replace "/" "__" | quote }}
                 path: {{ trimPrefix "ollama-pc/" $path | quote }}
               {{- end }}
+              {{- range $path, $_ := .Files.Glob "ollama-pc/knowledge-refs/*.json" }}
+              - key: {{ trimPrefix "ollama-pc/" $path | replace "/" "__" | quote }}
+                path: {{ trimPrefix "ollama-pc/" $path | quote }}
+              {{- end }}
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
