@@ -162,6 +162,47 @@
         4992,
         464
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const MAIL_AN = 'peter.kretzer@dlrg.org';\nconst MAIL_VON = 'workflow-n8n@edv-kretzer.de';\nconst ID_ZEILE = 'ID-IT-xi8klGKdh8';\nconst mitId = (text) => String(text).replace(/\\s+$/, '') + '\\n\\n' + ID_ZEILE;\nconst a = $input.item.json.article;\nreturn { json: { mailAn: MAIL_AN, mailVon: MAIL_VON, betreff: a.subject, text: mitId(a.body) } };\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "2c635aea-5589-4d3e-83e5-95d7d903264a",
+      "name": "Ausfall-Mail bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5216,
+        264
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $json.mailVon }}",
+        "toEmail": "={{ $json.mailAn }}",
+        "subject": "={{ $json.betreff }}",
+        "emailFormat": "text",
+        "text": "={{ $json.text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "91c80585-65e1-4875-9298-2d1c7d94cb49",
+      "name": "Ausfall-Mail senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        5440,
+        264
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "D3Jp3o6EaUr2DNy7",
+          "name": "SMTP Automations Netcup"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "pinData": {},
@@ -225,7 +266,23 @@
       "main": [
         [
           {
+            "node": "Ausfall-Mail bauen",
+            "type": "main",
+            "index": 0
+          },
+          {
             "node": "Create a ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ausfall-Mail bauen": {
+      "main": [
+        [
+          {
+            "node": "Ausfall-Mail senden",
             "type": "main",
             "index": 0
           }
