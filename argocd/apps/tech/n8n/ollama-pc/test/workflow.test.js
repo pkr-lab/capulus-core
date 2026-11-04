@@ -220,3 +220,37 @@ test('Formular: ohne gültige Nummer startet nichts, mit Nummer läuft der Sub-W
   assert.equal(formNodes['Formular KI neu'].parameters.authentication, 'basicAuth');
   assert.equal(formular.active, false);
 });
+
+test('Benachrichtigungsmail: Ticket, Link und Antwort ohne Signatur, letzte Zeile ist die ID', () => {
+  const basis = extrahieren();
+  const fertig = einfuegen(basis, [{ status: 'link', entry: { kursart: 'CrashKurs', code: '2027-CK03', url: 'https://upload.example/ck03' }, grund: 'Kurscode genannt' }]);
+  const mail = run('KI-Mail bauen', { refs: { 'Kurslinks in Entwurf einfügen': fertig } }).json;
+  assert.equal(mail.mailAn, 'peter.kretzer@dlrg.org');
+  assert.equal(mail.betreff, 'KI-Antwort zu Ticket #10042: Upload');
+  assert.match(mail.text, /Link: https:\/\/ticket\.emue365\.de\/#ticket\/zoom\/7\n/);
+  assert.match(mail.text, /Ablage: Mail-Entwurf zur Freigabe in Zammad/);
+  assert.ok(mail.text.includes('https://upload.example/ck03'));
+  assert.ok(!mail.text.includes('Mit freundlichen Grüßen'));
+  assert.ok(!mail.text.includes('Balthasar-Neumann'));
+  assert.match(mail.text, /Interne Hinweise:\n- Upload-Status prüfen/);
+  assert.equal(mail.text.split('\n').pop(), 'ID-IT-xi8klGKdh8');
+  assert.equal(mail.text.split('ID-IT-xi8klGKdh8').length, 2);
+});
+
+test('Benachrichtigungsmail: Tickets anderer Besitzer werden als interne Notiz gemeldet', () => {
+  const fertig = einfuegen(extrahieren(), []);
+  const mail = run('KI-Mail bauen', { refs: { 'Kurslinks in Entwurf einfügen': { ...fertig, modus: 'notiz' } } }).json;
+  assert.match(mail.text, /Ablage: Interne Notiz in Zammad/);
+});
+
+test('Benachrichtigungsmail: sitzt vor dem Push, fängt Fehler ab und lässt Abschluss unverändert', () => {
+  const ziele = (name) => workflow.connections[name].main.flatMap((gruppe) => gruppe.map((c) => c.node));
+  assert.deepEqual(ziele('Interne Hinweise vorhanden?'), ['Interne Hinweise als Notiz speichern', 'KI-Mail bauen']);
+  assert.ok(ziele('Interne Hinweise als Notiz speichern').includes('KI-Mail bauen'));
+  assert.deepEqual(ziele('KI-Mail bauen'), ['KI-Mail senden']);
+  assert.deepEqual(ziele('KI-Mail senden'), ['Freigabe-Push senden']);
+  assert.equal(nodes['KI-Mail senden'].onError, 'continueRegularOutput');
+  assert.equal(nodes['KI-Mail senden'].parameters.emailFormat, 'text');
+  const zuPush = Object.entries(workflow.connections).filter(([, c]) => c.main.some((g) => g.some((v) => v.node === 'Freigabe-Push senden'))).map(([name]) => name);
+  assert.deepEqual(zuPush, ['KI-Mail senden']);
+});

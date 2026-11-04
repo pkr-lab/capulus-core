@@ -89,6 +89,47 @@
           "name": "Zammad EDV-Kretzer"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "const MAIL_AN = 'peter.kretzer@dlrg.org';\nconst MAIL_VON = 'workflow-n8n@edv-kretzer.de';\nconst ID_ZEILE = 'ID-IT-xi8klGKdh8';\nconst mitId = (text) => String(text).replace(/\\s+$/, '') + '\\n\\n' + ID_ZEILE;\nconst e = $input.item.json;\nreturn { json: { mailAn: MAIL_AN, mailVon: MAIL_VON, betreff: e.title, text: mitId(e.body) } };\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "a0d35d18-3045-4069-83ec-190025dc64d0",
+      "name": "Alarm-Mail bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        232
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $json.mailVon }}",
+        "toEmail": "={{ $json.mailAn }}",
+        "subject": "={{ $json.betreff }}",
+        "emailFormat": "text",
+        "text": "={{ $json.text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "0c7c13f2-ac46-4ad3-9ef4-f4cd02847559",
+      "name": "Alarm-Mail senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1440,
+        232
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "D3Jp3o6EaUr2DNy7",
+          "name": "SMTP Automations Netcup"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "pinData": {},
@@ -119,7 +160,23 @@
       "main": [
         [
           {
+            "node": "Alarm-Mail bauen",
+            "type": "main",
+            "index": 0
+          },
+          {
             "node": "Zammad-Ticket erstellen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alarm-Mail bauen": {
+      "main": [
+        [
+          {
+            "node": "Alarm-Mail senden",
             "type": "main",
             "index": 0
           }

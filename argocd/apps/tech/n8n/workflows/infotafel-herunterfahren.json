@@ -120,6 +120,47 @@
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const MAIL_AN = 'peter.kretzer@dlrg.org';\nconst MAIL_VON = 'workflow-n8n@edv-kretzer.de';\nconst ID_ZEILE = 'ID-IT-xi8klGKdh8';\nconst mitId = (text) => String(text).replace(/\\s+$/, '') + '\\n\\n' + ID_ZEILE;\nconst e = $input.first().json;\nreturn [{ json: { mailAn: MAIL_AN, mailVon: MAIL_VON, betreff: e.title, text: mitId(e.message) } }];\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "5805b138-41a1-4af3-b0dd-3c80294241b8",
+      "name": "Protokoll-Mail bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        920,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $json.mailVon }}",
+        "toEmail": "={{ $json.mailAn }}",
+        "subject": "={{ $json.betreff }}",
+        "emailFormat": "text",
+        "text": "={{ $json.text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "deb72908-8204-4699-a376-6870da42af9b",
+      "name": "Protokoll-Mail senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1150,
+        140
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "D3Jp3o6EaUr2DNy7",
+          "name": "SMTP Automations Netcup"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "pinData": {},
@@ -161,7 +202,23 @@
       "main": [
         [
           {
+            "node": "Protokoll-Mail bauen",
+            "type": "main",
+            "index": 0
+          },
+          {
             "node": "Protokoll melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Protokoll-Mail bauen": {
+      "main": [
+        [
+          {
+            "node": "Protokoll-Mail senden",
             "type": "main",
             "index": 0
           }

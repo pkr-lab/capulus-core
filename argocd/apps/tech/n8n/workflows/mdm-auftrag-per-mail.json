@@ -1207,7 +1207,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        8740,
+        9200,
         300
       ]
     },
@@ -1224,13 +1224,13 @@
       "type": "n8n-nodes-base.form",
       "typeVersion": 2.5,
       "position": [
-        8970,
+        9430,
         300
       ]
     },
     {
       "parameters": {
-        "content": "## MDM: Auftrag per Mail oder Formular\n\nZwei Wege fuehren in denselben Ablauf und loesen Aenderungen auf einem, mehreren oder allen iPads aus:\n\n- **Mail** im IMAP-Ordner `Ausbildung-Ipads`. Der Workflow liest nur ungelesene Mails von den Absendern aus `sender` im Node **Konfiguration**.\n- **Formular** unter `https://n8n.prod.homeserver/form/mdm-auftrag` (Basic Auth, Credential `MDM Formulare`). Die Felder entsprechen dem JSON der Mail, das Hintergrundbild wird direkt hochgeladen, die App kommt aus einer Liste (andere Apps per App-Store-ID oder Link im Extrafeld). Die Antwortseite zeigt das Ergebnis, ntfy bekommt es zusaetzlich.\n\n**iPads in der Datenbank:** Der Node **iPads lesen** holt Gruppen und Seriennummern aus `automation.ipad_group` und `automation.ipad` (Datenbank `nanomdm`). Neue iPads dort eintragen, im Workflow muss nichts geaendert werden. Hat ein iPad einen Namen (Spalte `name`, zum Beispiel `Seepferdchen`), ist es auch einzeln waehlbar. Neue Gruppen und neue Namen brauchen zusaetzlich eine Checkbox-Option im Formular (Node **Formular Auftrag**).\n\n**Schritte nach dem Import**\n1. Der Node **E-Mail empfangen** nutzt das IMAP-Credential `Netcup Automation` (dasselbe wie Instagram-Post per Mail). Den Absender auch im Feld *Custom Email Config* des Nodes eintragen. Heisst der Ordner auf dem Server anders (zum Beispiel `INBOX.Ausbildung-Ipads`), den Node **E-Mail empfangen** anpassen.\n2. Die Credentials `MDM Formulare`, `MDM NanoMDM API`, `MDM Automation DB`, `Apple Apps Token` und `ntfy-publisher` pruefen, Workflow aktivieren.\n\n**Mail:** genau ein JSON-Anhang, dazu optional ein Bild (PNG oder JPG, bis 4 MB). Der Betreff ist egal.\n\n```\n{\n  \"ipads\": [\"kleines-becken\", \"vorstands-tisch\"],\n  \"push\": { \"titel\": \"Training\", \"nachricht\": \"Treffpunkt 18 Uhr\", \"dringlichkeit\": \"hoch\" },\n  \"sperrbildschirm\": { \"nachricht\": \"Training faellt aus\", \"telefon\": \"0123 456789\" },\n  \"app\": \"DLRG Trainer\"\n}\n```\n\n- `ipads` (Pflicht): Liste aus Gruppenschluesseln oder -namen aus `automation.ipad_group`, iPad-Namen aus `automation.ipad`, einer Seriennummer oder `\"alle\"`.\n- **Hintergrund:** wird gesetzt, sobald ein Bild an der Mail haengt. `\"hintergrund\": false` ignoriert das Bild.\n- `push`: Text oder Objekt mit `nachricht` (bis 500 Zeichen), `titel` (bis 80) und `dringlichkeit` (`normal`, `hoch`, `dringend`).\n- `sperrbildschirm`: sperrt das iPad sofort und zeigt die Nachricht auf dem Sperrbildschirm. Text (bis 300 Zeichen) oder Objekt mit `nachricht` und optional `telefon`. Entsperrt wird mit dem Code des iPads. Der dauerhafte Fusszeilen-Text ist hier bewusst nicht aenderbar.\n- `app`: Name aus dem Katalog, App-Store-ID oder App-Store-Link. Neue kostenlose Apps werden in den Katalog aufgenommen.\n- Alle Aktionen sind optional, mindestens eine ist noetig. Unbekannte Felder lehnt der Workflow ab.\n\n**Wirkung je Ziel:** Bei `\"alle\"` wird das Bild wie im Formular-Workflow als Standard gespeichert, damit neue iPads es bekommen. Bei einzelnen iPads geht der Befehl nur an diese, der gespeicherte Standard bleibt unveraendert. Sperren, Push und App-Installation speichern nichts. Die Erlaubt-Liste fuer Apps gilt immer fuer alle iPads.\n\n**Push:** ntfy kann einzelne iPads nicht ansprechen. Ohne `ntfy_topic` an der Gruppe geht die Meldung an `Home-Lab-iPad`, also an alle iPads, mit dem iPad-Namen im Titel. Mit eigenem Topic je Gruppe (in der ntfy-App dieser iPads abonnieren, Schreibrecht fuer `ipad` einrichten) erreicht sie nur diese iPads.\n\nDas Ergebnis meldet der Workflow auf dem ntfy-Topic `Home-Lab-MDM`, Fehler ebenfalls.\n",
+        "content": "## MDM: Auftrag per Mail oder Formular\n\nZwei Wege fuehren in denselben Ablauf und loesen Aenderungen auf einem, mehreren oder allen iPads aus:\n\n- **Mail** im IMAP-Ordner `Ausbildung-Ipads`. Der Workflow liest nur ungelesene Mails von den Absendern aus `sender` im Node **Konfiguration**.\n- **Formular** unter `https://n8n.prod.homeserver/form/mdm-auftrag` (Basic Auth, Credential `MDM Formulare`). Die Felder entsprechen dem JSON der Mail, das Hintergrundbild wird direkt hochgeladen, die App kommt aus einer Liste (andere Apps per App-Store-ID oder Link im Extrafeld). Die Antwortseite zeigt das Ergebnis, ntfy bekommt es zusaetzlich.\n\n**iPads in der Datenbank:** Der Node **iPads lesen** holt Gruppen und Seriennummern aus `automation.ipad_group` und `automation.ipad` (Datenbank `nanomdm`). Neue iPads dort eintragen, im Workflow muss nichts geaendert werden. Hat ein iPad einen Namen (Spalte `name`, zum Beispiel `Seepferdchen`), ist es auch einzeln waehlbar. Neue Gruppen und neue Namen brauchen zusaetzlich eine Checkbox-Option im Formular (Node **Formular Auftrag**).\n\n**Schritte nach dem Import**\n1. Der Node **E-Mail empfangen** nutzt das IMAP-Credential `Netcup Automation` (dasselbe wie Instagram-Post per Mail). Den Absender auch im Feld *Custom Email Config* des Nodes eintragen. Heisst der Ordner auf dem Server anders (zum Beispiel `INBOX.Ausbildung-Ipads`), den Node **E-Mail empfangen** anpassen.\n2. Die Credentials `MDM Formulare`, `MDM NanoMDM API`, `MDM Automation DB`, `Apple Apps Token`, `ntfy-publisher` und `SMTP` pruefen (SMTP gehoert den beiden Nodes **Zusammenfassung-Mail senden**), Workflow aktivieren.\n\n**Mail:** genau ein JSON-Anhang, dazu optional ein Bild (PNG oder JPG, bis 4 MB). Der Betreff ist egal.\n\n```\n{\n  \"ipads\": [\"kleines-becken\", \"vorstands-tisch\"],\n  \"push\": { \"titel\": \"Training\", \"nachricht\": \"Treffpunkt 18 Uhr\", \"dringlichkeit\": \"hoch\" },\n  \"sperrbildschirm\": { \"nachricht\": \"Training faellt aus\", \"telefon\": \"0123 456789\" },\n  \"app\": \"DLRG Trainer\"\n}\n```\n\n- `ipads` (Pflicht): Liste aus Gruppenschluesseln oder -namen aus `automation.ipad_group`, iPad-Namen aus `automation.ipad`, einer Seriennummer oder `\"alle\"`.\n- **Hintergrund:** wird gesetzt, sobald ein Bild an der Mail haengt. `\"hintergrund\": false` ignoriert das Bild.\n- `push`: Text oder Objekt mit `nachricht` (bis 500 Zeichen), `titel` (bis 80) und `dringlichkeit` (`normal`, `hoch`, `dringend`).\n- `sperrbildschirm`: sperrt das iPad sofort und zeigt die Nachricht auf dem Sperrbildschirm. Text (bis 300 Zeichen) oder Objekt mit `nachricht` und optional `telefon`. Entsperrt wird mit dem Code des iPads. Der dauerhafte Fusszeilen-Text ist hier bewusst nicht aenderbar.\n- `app`: Name aus dem Katalog, App-Store-ID oder App-Store-Link. Neue kostenlose Apps werden in den Katalog aufgenommen.\n- Alle Aktionen sind optional, mindestens eine ist noetig. Unbekannte Felder lehnt der Workflow ab.\n\n**Wirkung je Ziel:** Bei `\"alle\"` wird das Bild wie im Formular-Workflow als Standard gespeichert, damit neue iPads es bekommen. Bei einzelnen iPads geht der Befehl nur an diese, der gespeicherte Standard bleibt unveraendert. Sperren, Push und App-Installation speichern nichts. Die Erlaubt-Liste fuer Apps gilt immer fuer alle iPads.\n\n**Push:** ntfy kann einzelne iPads nicht ansprechen. Ohne `ntfy_topic` an der Gruppe geht die Meldung an `Home-Lab-iPad`, also an alle iPads, mit dem iPad-Namen im Titel. Mit eigenem Topic je Gruppe (in der ntfy-App dieser iPads abonnieren, Schreibrecht fuer `ipad` einrichten) erreicht sie nur diese iPads.\n\nDas Ergebnis meldet der Workflow auf dem ntfy-Topic `Home-Lab-MDM`, Fehler ebenfalls. Zusaetzlich geht die Zusammenfassung per Mail an peter.kretzer@dlrg.org.\n",
         "height": 700,
         "width": 760,
         "color": 4
@@ -1243,6 +1243,47 @@
         -300,
         -520
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const MAIL_AN = 'peter.kretzer@dlrg.org';\nconst MAIL_VON = 'workflow-n8n@edv-kretzer.de';\nconst ID_ZEILE = 'ID-IT-xi8klGKdh8';\nconst mitId = (text) => String(text).replace(/\\s+$/, '') + '\\n\\n' + ID_ZEILE;\nconst r = $input.first().json;\nconst quelle = $('Formular Auftrag').isExecuted ? 'Formular' : 'E-Mail';\nconst text = 'Zusammenfassung des iPad-Auftrags (' + quelle + '):\\n\\n' + r.message;\nreturn [{ json: { mailAn: MAIL_AN, mailVon: MAIL_VON, betreff: 'MDM: ' + r.title, text: mitId(text) } }];\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "1eede714-03e7-40b5-b87f-089fd772a22a",
+      "name": "Zusammenfassung-Mail bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8740,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $json.mailVon }}",
+        "toEmail": "={{ $json.mailAn }}",
+        "subject": "={{ $json.betreff }}",
+        "emailFormat": "text",
+        "text": "={{ $json.text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "bae7385a-9c19-4924-9d20-0a2ef7ed98d1",
+      "name": "Zusammenfassung-Mail senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        8970,
+        300
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "D3Jp3o6EaUr2DNy7",
+          "name": "SMTP Automations Netcup"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "pinData": {},
@@ -1743,7 +1784,7 @@
       "main": [
         [
           {
-            "node": "Aus Formular?",
+            "node": "Zusammenfassung-Mail bauen",
             "type": "main",
             "index": 0
           }
@@ -1755,6 +1796,28 @@
         [
           {
             "node": "Abschluss",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zusammenfassung-Mail bauen": {
+      "main": [
+        [
+          {
+            "node": "Zusammenfassung-Mail senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zusammenfassung-Mail senden": {
+      "main": [
+        [
+          {
+            "node": "Aus Formular?",
             "type": "main",
             "index": 0
           }
