@@ -4,7 +4,7 @@
 const { loadConfig } = require('./lib/config');
 const { isUp, ps, ensureReady } = require('./lib/ollama');
 const { generateReply } = require('./lib/run');
-const { resolve, loadEntries } = require('./lib/kurslinks');
+const { resolve, decide, loadEntries } = require('./lib/kurslinks');
 const { OllamaPcError } = require('./lib/errors');
 
 function log(message) {
@@ -53,17 +53,20 @@ async function main(argv) {
   }
   if (command === 'kurslink') {
     const raw = await readStdin();
-    let hints;
+    let input;
     try {
-      hints = JSON.parse(raw);
+      input = JSON.parse(raw);
     } catch (err) {
       throw new OllamaPcError('INVALID_INPUT', `stdin ist kein gültiges JSON: ${err.message}`);
     }
+    // Entweder ein Array von Hinweistexten oder { hints: [...], context: "Mailtext samt Verlauf" }.
+    const hints = Array.isArray(input) ? input : input && input.hints;
+    const context = Array.isArray(input) || !input ? '' : String(input.context || '');
     if (!Array.isArray(hints)) {
-      throw new OllamaPcError('INVALID_INPUT', 'stdin muss ein JSON-Array von Hinweistexten sein');
+      throw new OllamaPcError('INVALID_INPUT', 'stdin muss ein JSON-Array von Hinweistexten oder { hints, context } sein');
     }
     const entries = loadEntries(config.kurslinksFile);
-    print({ ok: true, results: hints.map((hint) => ({ hint, ...resolve(hint, entries) })) });
+    print({ ok: true, results: hints.map((hint) => ({ hint, ...resolve(hint, entries), ...decide(hint, entries, { context }) })) });
     return;
   }
   throw new OllamaPcError('USAGE', 'Aufruf: cli.js probe | ps | wake | chat | kurslink (JSON auf stdin)');
