@@ -701,6 +701,47 @@
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const MAIL_AN = 'peter.kretzer@dlrg.org';\nconst MAIL_VON = 'workflow-n8n@edv-kretzer.de';\nconst ID_ZEILE = 'ID-IT-xi8klGKdh8';\nconst mitId = (text) => String(text).replace(/\\s+$/, '') + '\\n\\n' + ID_ZEILE;\nconst e = $('Kurslinks in Entwurf einfügen').item.json;\nconst t = e.ticket;\nconst schnitt = e.entwurf.lastIndexOf('\\n\\nMit freundlichen Grüßen');\nconst antwort = (schnitt >= 0 ? e.entwurf.slice(0, schnitt) : e.entwurf).trim();\nconst art = e.modus === 'entwurf' ? 'Mail-Entwurf zur Freigabe in Zammad' : 'Interne Notiz in Zammad';\nconst zeilen = [\n  'Die KI hat Ticket #' + t.number + ' beantwortet.',\n  '',\n  'Ticket: #' + t.number + ' ' + t.title,\n  'Link: https://ticket.emue365.de/#ticket/zoom/' + t.id,\n  'Ablage: ' + art,\n  'Antwort an: ' + (e.replyTo || 'unbekannt'),\n  '',\n  'Antwort der KI:',\n  '',\n  antwort,\n];\nif (e.hinweise.length > 0) {\n  zeilen.push('', 'Interne Hinweise:', ...e.hinweise.map((h) => '- ' + h));\n}\nreturn { json: { mailAn: MAIL_AN, mailVon: MAIL_VON, betreff: 'KI-Antwort zu Ticket #' + t.number + ': ' + t.title, text: mitId(zeilen.join('\\n')) } };\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "04140387-e711-42a3-979a-2eb1dce30120",
+      "name": "KI-Mail bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        12576,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $json.mailVon }}",
+        "toEmail": "={{ $json.mailAn }}",
+        "subject": "={{ $json.betreff }}",
+        "emailFormat": "text",
+        "text": "={{ $json.text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "524bad43-a912-4d75-8246-363c78ddcc1f",
+      "name": "KI-Mail senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        12800,
+        1360
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "D3Jp3o6EaUr2DNy7",
+          "name": "SMTP Automations Netcup"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "pinData": {},
@@ -972,7 +1013,7 @@
         ],
         [
           {
-            "node": "Freigabe-Push senden",
+            "node": "KI-Mail bauen",
             "type": "main",
             "index": 0
           }
@@ -983,7 +1024,7 @@
       "main": [
         [
           {
-            "node": "Freigabe-Push senden",
+            "node": "KI-Mail bauen",
             "type": "main",
             "index": 0
           }
@@ -1060,6 +1101,28 @@
         [
           {
             "node": "Abschluss (immer genau 1 Item)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KI-Mail bauen": {
+      "main": [
+        [
+          {
+            "node": "KI-Mail senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KI-Mail senden": {
+      "main": [
+        [
+          {
+            "node": "Freigabe-Push senden",
             "type": "main",
             "index": 0
           }
