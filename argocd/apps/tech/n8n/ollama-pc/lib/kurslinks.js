@@ -69,6 +69,85 @@ function resolve(hint, entries, { now = new Date() } = {}) {
   return { kursart: kursart.label, matches };
 }
 
+// Automatisch eingefügt werden nur Links für Kurse ab diesem Jahr. Ältere Kurse (2026) werden bewusst ignoriert.
+const MIN_JAHR = 2027;
+const CODE_TOKEN = /\b(?:20)?\d{2}-[A-Za-z]{1,4}\d{1,3}\b/g;
+const KURS_BEZUG_ALT = /\b(20\d{2})-[A-Za-z0-9]{2,6}\b/g;
+
+function normalizeCode(code) {
+  const s = String(code || '').trim().toUpperCase();
+  const short = /^(\d{2})-(.+)$/.exec(s);
+  return short ? `20${short[1]}-${short[2]}` : s;
+}
+
+function entryYear(entry) {
+  const fromCode = /^(\d{4}|\d{2})-/.exec(String(entry.code || '').trim());
+  if (fromCode) return fromCode[1].length === 2 ? 2000 + Number(fromCode[1]) : Number(fromCode[1]);
+  const datum = parseMeldeschluss(entry.meldeschluss);
+  return datum ? datum.getFullYear() : null;
+}
+
+function codesIn(text, entries) {
+  const gefunden = new Set((String(text || '').match(CODE_TOKEN) || []).map(normalizeCode));
+  return entries.filter((entry) => gefunden.has(normalizeCode(entry.code)));
+}
+
+function altBezug(text) {
+  return [...String(text || '').matchAll(KURS_BEZUG_ALT)].filter((m) => Number(m[1]) < MIN_JAHR).map((m) => m[0]);
+}
+
+/**
+ * Entscheidet, ob für einen [KURSLINK: …]-Hinweis automatisch ein Link eingesetzt werden darf.
+ * status 'link'      : Kurs eindeutig, Link in entry.
+ * status 'ignoriert' : Kurs aus der Zeit vor MIN_JAHR, nichts einsetzen.
+ * status 'unklar'    : Kurs nicht eindeutig, nichts einsetzen (Mensch prüft).
+ * context ist der Mailtext samt Verlauf; Kurscodes darin helfen bei der Zuordnung.
+ */
+function decide(hint, entries, { context = '' } = {}) {
+  const eligible = entries.filter((entry) => (entryYear(entry) || 0) >= MIN_JAHR);
+  const kursart = detectKursart(hint);
+
+  const perHintCode = codesIn(hint, eligible);
+  if (perHintCode.length === 1) return { status: 'link', entry: perHintCode[0], kursart: perHintCode[0].kursart, grund: 'Kurscode im Hinweis' };
+
+  const perDatum = findByKursartUndDatum(hint, eligible, kursart);
+  if (perDatum) return { status: 'link', entry: perDatum, kursart: perDatum.kursart, grund: 'Kursart und Meldeschluss im Hinweis' };
+
+  let perMailCode = codesIn(context, eligible);
+  if (kursart) perMailCode = perMailCode.filter((entry) => entry.kursart.toLowerCase() === kursart.label.toLowerCase());
+  if (perMailCode.length === 1) return { status: 'link', entry: perMailCode[0], kursart: perMailCode[0].kursart, grund: 'Kurscode in der Mail' };
+  if (perMailCode.length > 1) {
+    return { status: 'unklar', kursart: kursart ? kursart.label : null, grund: `mehrere Kurscodes in der Mail (${perMailCode.map((e) => e.code).join(', ')})` };
+  }
+
+  const alt = altBezug(`${hint}\n${context}`);
+  if (alt.length) return { status: 'ignoriert', kursart: kursart ? kursart.label : null, grund: `Kurs vor ${MIN_JAHR} (${[...new Set(alt)].join(', ')})` };
+
+  if (!kursart) return { status: 'unklar', kursart: null, grund: 'Kursart nicht erkannt' };
+  const gleicheArt = eligible.filter((entry) => entry.kursart.toLowerCase() === kursart.label.toLowerCase());
+  if (gleicheArt.length === 1) return { status: 'link', entry: gleicheArt[0], kursart: kursart.label, grund: 'einziger Kurs dieser Art' };
+  return { status: 'unklar', kursart: kursart.label, grund: gleicheArt.length ? `${gleicheArt.length} Kurse dieser Art, Kurs nicht genannt` : 'kein Kurs dieser Art ab ' + MIN_JAHR };
+}
+
+// Zeilenformat der Pflegeliste knowledge-refs/14_links_kurse:
+// "<Kursart> Meldeschluss <TT.MM.JJ> <Kurscode>: <Link>"
+function parseLinkList(text) {
+  const entries = [];
+  const bad = [];
+  for (const line of String(text || '').split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const m = /^(.+?)\s+Meldeschluss\s+(\d{2}\.\d{2}\.(?:\d{2}|\d{4}))\s+(\S+):\s*(https:\/\/\S+)$/.exec(trimmed);
+    if (!m) {
+      bad.push(trimmed);
+      continue;
+    }
+    entries.push({ code: normalizeCode(m[3]), kursart: m[1].trim(), meldeschluss: m[2], url: m[4] });
+  }
+  if (bad.length) throw new OllamaPcError('KURSLINKS_INVALID', `Zeile(n) in der Kurslink-Liste nicht lesbar: ${bad.join(' | ')}`);
+  return entries;
+}
+
 function loadEntries(file) {
   let raw;
   try {
@@ -89,4 +168,4 @@ function loadEntries(file) {
   return data;
 }
 
-module.exports = { resolve, detectKursart, loadEntries, KURSARTEN };
+module.exports = { resolve, decide, detectKursart, loadEntries, parseLinkList, normalizeCode, MIN_JAHR, KURSARTEN };
