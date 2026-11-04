@@ -1,0 +1,58 @@
+{{- if .Values.backup.enabled -}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "nextcloud.postgresql.fullname" . }}-backup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "nextcloud.postgresql.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  timeZone: {{ .Values.backup.timezone | quote }}
+  suspend: {{ .Values.backup.suspend }}
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: {{ .Values.backup.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.backup.successfulJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: pg-dump
+              image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.secrets.name }}
+                      key: db-password
+              command:
+                - sh
+                - -c
+                - |
+                  set -eu
+                  DATE=$(date +%Y%m%d-%H%M%S)
+                  for i in $(seq 1 15); do
+                    pg_isready -h {{ include "nextcloud.postgresql.fullname" . }} -U {{ .Values.postgresql.username }} && break
+                    sleep 2
+                  done
+                  pg_dump -h {{ include "nextcloud.postgresql.fullname" . }} \
+                    -U {{ .Values.postgresql.username }} \
+                    -d {{ .Values.postgresql.database }} \
+                    -F c -f "/backup/nextcloud-${DATE}.dump.new"
+                  test -s "/backup/nextcloud-${DATE}.dump.new"
+                  mv "/backup/nextcloud-${DATE}.dump.new" "/backup/nextcloud-${DATE}.dump"
+                  cd /backup && ls -1t nextcloud-*.dump | tail -n +{{ add .Values.backup.keep 1 }} | xargs -r rm --
+                  echo "==> fertig: $(date -Iseconds)"
+              resources:
+                {{- toYaml .Values.backup.resources | nindent 16 }}
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+          volumes:
+            - name: backup
+              persistentVolumeClaim:
+                claimName: {{ include "nextcloud.postgresql.fullname" . }}-backup
+{{- end }}
