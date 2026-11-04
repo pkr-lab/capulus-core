@@ -62,6 +62,7 @@ env:
   DB_TYPE: sqlite
   NODES_EXCLUDE: "[]"
   NODE_FUNCTION_ALLOW_BUILTIN: "child_process,crypto,tls"
+  NODE_EXTRA_CA_CERTS: "/etc/ssl/homeserver-ca/homeserver-root-ca.pem"
   N8N_RESTRICT_FILE_ACCESS_TO: "/data/xibosignage-inbox;/data/xibosignage-display;/data/instagram-bilder"
   N8N_GRACEFUL_SHUTDOWN_TIMEOUT: "570"
 
