@@ -80,6 +80,23 @@ nextcloud:
   nodeSelector: {}
   tolerations: []
 
+backup:
+  enabled: true
+  schedule: "30 2 * * *"
+  timezone: "Europe/Berlin"
+  suspend: false
+  storageClassName: nas
+  size: 10Gi
+  keep: 7
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 3
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
 postgresql:
   replicaCount: 1
   image:
