@@ -24,3 +24,4 @@ Grußformel und Signatur werden automatisch angehängt. Schreibe selbst keine Gr
 
 - Gib ausschließlich den Antworttext aus: Anrede und Inhalt.
 - Keine Betreffzeile, keine Einleitung wie „Hier ist der Entwurf“, keine Erklärungen, keine Markdown-Formatierung.
+- Trenne Absätze mit einer Leerzeile: nach der Anrede, nach dem einleitenden Dank-Satz und zwischen inhaltlichen Abschnitten. Ein Link steht in einer eigenen Zeile direkt unter dem Satz, der ihn ankündigt.
