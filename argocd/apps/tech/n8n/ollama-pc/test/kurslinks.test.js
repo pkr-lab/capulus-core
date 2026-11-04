@@ -74,3 +74,84 @@ test('loadEntries liest die echte Kurslink-Datei des Projekts', () => {
 test('loadEntries meldet fehlende Datei als OllamaPcError', () => {
   assert.throws(() => loadEntries(path.join(__dirname, 'does-not-exist.json')), { code: 'KURSLINKS_MISSING' });
 });
+
+const { decide, parseLinkList, normalizeCode } = require('../lib/kurslinks');
+const fs = require('node:fs');
+
+const KURSE = [
+  { code: '2027-CK01', kursart: 'CrashKurs', meldeschluss: '31.12.26', url: 'https://example.org/ck01' },
+  { code: '2027-CK02', kursart: 'CrashKurs', meldeschluss: '31.01.27', url: 'https://example.org/ck02' },
+  { code: '2027-KK01', kursart: 'Kraulkurs', meldeschluss: '31.12.26', url: 'https://example.org/kk01' },
+  { code: '2027-PK01', kursart: 'Prüfungskurs', meldeschluss: '31.12.26', url: 'https://example.org/pk01' },
+  { code: '2027-PK02', kursart: 'Prüfungskurs', meldeschluss: '31.08.27', url: 'https://example.org/pk02' },
+  { code: '2026-CK09', kursart: 'CrashKurs', meldeschluss: '30.11.26', url: 'https://example.org/alt' },
+];
+
+test('decide: Kurscode im Hinweis ist eindeutig, auch in Kurzschreibweise', () => {
+  assert.equal(decide('2027-CK02', KURSE).entry.code, '2027-CK02');
+  assert.equal(decide('CrashKurs 27-ck02', KURSE).entry.code, '2027-CK02');
+});
+
+test('decide: Kursart und Meldeschluss im Hinweis sind eindeutig', () => {
+  assert.equal(decide('CrashKurs 31.01.27', KURSE).entry.code, '2027-CK02');
+});
+
+test('decide: Kurscode aus dem Mailtext hilft, wenn der Hinweis nur die Kursart nennt', () => {
+  const result = decide('CrashKurs', KURSE, { context: 'Betreff: Anmeldung 2027-CK01\nWo kann ich hochladen?' });
+  assert.equal(result.status, 'link');
+  assert.equal(result.entry.code, '2027-CK01');
+});
+
+test('decide: Code einer anderen Kursart im Mailtext wird nicht verwendet', () => {
+  const result = decide('Kraulkurs', KURSE, { context: 'Kurs 2027-CK01' });
+  assert.equal(result.entry.code, '2027-KK01');
+});
+
+test('decide: mehrere Kurscodes im Mailtext sind nicht eindeutig', () => {
+  const result = decide('CrashKurs', KURSE, { context: '2027-CK01 oder 2027-CK02?' });
+  assert.equal(result.status, 'unklar');
+  assert.match(result.grund, /mehrere Kurscodes/);
+});
+
+test('decide: mehrere Kurse der Art ohne Kursbezug sind unklar', () => {
+  assert.equal(decide('CrashKurs', KURSE).status, 'unklar');
+  assert.equal(decide('Prüfungskurs', KURSE).status, 'unklar');
+});
+
+test('decide: einziger Kurs der Art darf eingesetzt werden', () => {
+  assert.equal(decide('Kraulkurs', KURSE).entry.code, '2027-KK01');
+});
+
+test('decide: Kurs aus 2026 wird ignoriert, auch wenn die Kursart nur einen 2027er Kurs hat', () => {
+  const result = decide('Kraulkurs', KURSE, { context: 'Prüfungskurs DRSA Bronze/Silber 2 (2026-0022)' });
+  assert.equal(result.status, 'ignoriert');
+});
+
+test('decide: 2026er Eintrag der Liste wird nie eingesetzt', () => {
+  const result = decide('2026-CK09', KURSE);
+  assert.notEqual(result.status, 'link');
+});
+
+test('decide: Kursart nicht erkannt ist unklar', () => {
+  assert.equal(decide('irgendwas', KURSE).status, 'unklar');
+});
+
+test('parseLinkList liest die Pflegeliste und normalisiert Kurscodes', () => {
+  const entries = parseLinkList('#Titel\n\nCrashKurs Meldeschluss 31.01.27 27-CK02: https://example.org/x \nESK Meldeschluss 31.08.2027 2027-ESK02: https://example.org/y\n');
+  assert.deepEqual(entries, [
+    { code: '2027-CK02', kursart: 'CrashKurs', meldeschluss: '31.01.27', url: 'https://example.org/x' },
+    { code: '2027-ESK02', kursart: 'ESK', meldeschluss: '31.08.2027', url: 'https://example.org/y' },
+  ]);
+  assert.equal(normalizeCode('27-ck02'), '2027-CK02');
+});
+
+test('parseLinkList meldet unlesbare Zeilen statt sie still zu verwerfen', () => {
+  assert.throws(() => parseLinkList('CrashKurs 31.01.27 2027-CK02 https://example.org'), { code: 'KURSLINKS_INVALID' });
+});
+
+test('kurslinks.json entspricht der Pflegeliste 14_links_kurse', () => {
+  const refs = path.join(__dirname, '..', 'knowledge-refs');
+  const aus = parseLinkList(fs.readFileSync(path.join(refs, '14_links_kurse'), 'utf8'));
+  const json = JSON.parse(fs.readFileSync(path.join(refs, 'kurslinks.json'), 'utf8'));
+  assert.deepEqual(json, aus, 'node scripts/sync-kurslinks.js ausführen');
+});

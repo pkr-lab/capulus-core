@@ -22,9 +22,8 @@ Eine Absage aus wichtigem Grund (z. B. Krankheit) per E-Mail genügt, auch wenn 
 - Meldet jemand, die Abmeldeseite sei defekt: `[INTERN: Abmeldeseite laut Teilnehmer*in defekt – bitte prüfen]`.
 
 ## Übliche Umbuchung (Info für die prüfende Person)
-- Die bestehende Anmeldung wird in den Wunschkurs verschoben statt neu angemeldet. Das ursprüngliche Anmeldedatum bleibt erhalten, die Nachrück-Chance steigt.
-- Hochgeladene Nachweise und bezahlte Gebühr können in der Regel übernommen werden.
-- Eine zusätzliche Neuanmeldung/Wartelisten-Eintrag wird storniert, die Person bekommt dazu automatisch eine Stornierungs-Mail. Im Entwurf darauf hinweisen.
-- Die KI formuliert das nur als Möglichkeit oder mit `[BITTE PRÜFEN: ...]`, nie als beschlossen. Auch zum neuen Termin gelten die Kernaussagen zu Nachweisen (ILIAS-Konto nur ca. 3–4 Monate, Urkunden sichern).
+- Die bestehende Anmeldung wird in den Wunschkurs verschoben, das Anmeldedatum bleibt erhalten. Nachweise und bezahlte Gebühr können in der Regel übernommen werden.
+- Eine zusätzliche Neuanmeldung wird storniert, die Person bekommt dazu automatisch eine Stornierungs-Mail. Im Entwurf darauf hinweisen.
+- Nur als Möglichkeit oder mit `[BITTE PRÜFEN: ...]` formulieren, nie als beschlossen. Auch für den neuen Termin gelten die Kernaussagen zu Nachweisen (ILIAS-Konto nur ca. 3–4 Monate).
 
 [PLATZHALTER Fakten zu Fall B, vom Verein zu ergänzen: Frist für Attest; Einreichungsweg; Höhe der Erstattung; Dauer bis zur Erstattung; Alternative (z. B. Umbuchung)]
