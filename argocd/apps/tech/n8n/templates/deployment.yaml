@@ -67,6 +67,9 @@ spec:
           volumeMounts:
             - name: data
               mountPath: {{ .Values.persistence.mountPath }}
+            - name: homeserver-ca
+              mountPath: /etc/ssl/homeserver-ca
+              readOnly: true
             {{- if .Values.xibosignage.enabled }}
             - name: xibosignage-inbox
               mountPath: {{ .Values.xibosignage.inbox.mountPath }}
@@ -90,6 +93,9 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
+        - name: homeserver-ca
+          configMap:
+            name: {{ include "n8n.fullname" . }}-ca
         {{- if .Values.xibosignage.enabled }}
         - name: xibosignage-inbox
           persistentVolumeClaim:
