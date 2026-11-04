@@ -36,6 +36,13 @@ test('Verlauf bleibt chronologisch und die zu beantwortende Mail steht zuletzt',
   assert.ok(user.trim().endsWith('ohne Betreffzeile und ohne Erklärungen.'));
 });
 
+test('die Nutzer-Nachricht nennt das heutige Datum (Europe/Berlin)', () => {
+  const built = buildMessages(prompts, { mail: { text: 'Frage?' } }, { ...budget, now: new Date('2026-11-04T09:00:00Z') });
+  const user = built.messages[1].content;
+  assert.ok(user.startsWith('## Heutiges Datum\n\nMittwoch, 04.11.2026'));
+  assert.ok(user.indexOf('Heutiges Datum') < user.indexOf('Zu beantwortende E-Mail'));
+});
+
 test('zu langer Verlauf wird von den ältesten Mails her gekürzt und gemeldet', () => {
   const built = buildMessages(prompts, { history: history(20, 600), mail: { text: 'Frage?' } }, budget);
   const user = built.messages[1].content;
