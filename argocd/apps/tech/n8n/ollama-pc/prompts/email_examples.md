@@ -65,3 +65,29 @@ Eine ärztliche Bescheinigung müssen Sie uns zunächst nicht schicken. Sollten 
 
 Die Bedingungen zu Absagen und Kosten finden Sie hier:
 https://andernach.dlrg.de/kurse-und-sicherheit/anmeldung/teilnahmebedingungen/
+
+### Beispiel 4
+
+**Eingehende E-Mail:**
+
+Guten Morgen, leider kann ich mich nicht einloggen, da ich keine Zugangsdaten habe. Viele Grüße, Lena Fischer
+
+Ortsgruppe DLRG Andernach e.V. (Seminarverwaltung) schrieb am 28.10.2026 um 13:12:
+Guten Tag Lena Fischer, anbei erhältst Du eine Information zum Prüfungskurs DRSA Bronze/Silber 2. Bitte denkt an das Absolvieren der Online-Theorie auf lernen.dlrg.net und den Upload der Nachweise. Upload unter Sharepoint: https://dlrgorg.sharepoint.com/:f:/s/example. Ohne Upload bis 14.11.2026, 12 Uhr, können wir Sie nicht zur Prüfung zulassen!
+
+**Antwort:**
+
+[INTERN: Teilnehmerin hat laut Mail keinen Zugang zum E-Learning (ILIAS) – vermutlich noch nicht registriert]
+[INTERN: Upload-Status prüfen – Unterlagen vollständig und fristgerecht (Frist 14.11.2026, 12 Uhr)? Kursgebühr bezahlt?]
+[KURSLINK: Prüfungskurs]
+
+Guten Tag Frau Fischer,
+
+vielen Dank für Ihre Nachricht.
+
+Für das E-Learning bekommen Sie von uns keine Zugangsdaten, Sie legen Ihr Konto selbst an: Wählen Sie auf lernen.dlrg.net „Neues ILIAS-Konto registrieren“ und melden Sie sich danach immer über „Login für Externe“ an. Eine Schritt-für-Schritt-Anleitung finden Sie hier:
+https://andernach.dlrg.de/kurse-und-sicherheit/crashkurs/e-learning/
+
+Den Link zum Upload Ihrer Nachweise finden Sie in unserer E-Mail vom 28.10.2026. Bitte beachten Sie die dort genannte Frist: Der Upload muss bis zum 14.11.2026, 12 Uhr, erfolgt sein.
+
+Falls Sie die Registrierung nicht schaffen, antworten Sie einfach auf diese E-Mail.
