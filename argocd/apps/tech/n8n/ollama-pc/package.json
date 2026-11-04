@@ -3,7 +3,8 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "sync-kurslinks": "node scripts/sync-kurslinks.js"
   },
   "engines": {
     "node": ">=22"

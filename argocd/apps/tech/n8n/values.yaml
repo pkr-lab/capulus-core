@@ -109,7 +109,7 @@ ollamaPc:
     OLLAMA_URL: "http://192.168.178.66:11434"
     OLLAMA_MODEL: "gemma3:27b-it-q8_0"
     OLLAMA_NUM_CTX: "16384"
-    OLLAMA_TEMPERATURE: "0.6"
+    OLLAMA_TEMPERATURE: "0.3"
     OLLAMA_KEEP_ALIVE: "5m"
     OLLAMA_HEALTH_TIMEOUT_SECONDS: "3"
     OLLAMA_WAKE_MODE: "none"
@@ -118,7 +118,7 @@ ollamaPc:
     OLLAMA_REQUEST_TIMEOUT_SECONDS: "1200"
     OLLAMA_PROMPTS_DIR: "/opt/ollama-pc/prompts"
     OLLAMA_KNOWLEDGE_DIR: "/opt/ollama-pc/knowledge"
-    OLLAMA_KNOWLEDGE_WARN_RATIO: "0.4"
+    OLLAMA_KNOWLEDGE_WARN_RATIO: "0.5"
     OLLAMA_KURSLINKS_FILE: "/opt/ollama-pc/knowledge-refs/kurslinks.json"
 
 xibosignage:
