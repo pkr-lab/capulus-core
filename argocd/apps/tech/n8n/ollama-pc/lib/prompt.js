@@ -83,8 +83,18 @@ function validateInput(input) {
   }
 }
 
-function buildUserMessage({ context, entries, omitted, mail }) {
-  const sections = [];
+function formatToday(now) {
+  return new Intl.DateTimeFormat('de-DE', {
+    weekday: 'long',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'Europe/Berlin',
+  }).format(now);
+}
+
+function buildUserMessage({ context, entries, omitted, mail, today }) {
+  const sections = [`## Heutiges Datum\n\n${today}`];
   if (context && context.trim()) sections.push(`## Zusatzkontext\n\n${context.trim()}`);
   if (entries.length || omitted > 0) {
     const note = omitted > 0 ? `(Hinweis: ${omitted} ältere E-Mail(s) wurden aus Platzgründen weggelassen.)\n\n` : '';
@@ -95,12 +105,13 @@ function buildUserMessage({ context, entries, omitted, mail }) {
   return sections.join('\n\n---\n\n');
 }
 
-function buildMessages(prompts, input, { numCtx, responseReserveTokens, charsPerToken }) {
+function buildMessages(prompts, input, { numCtx, responseReserveTokens, charsPerToken, now = new Date() }) {
   validateInput(input);
+  const today = formatToday(now);
   const history = (input.history || []).filter((entry) => entry.text.trim());
   const cpt = charsPerToken;
 
-  const baseUser = buildUserMessage({ context: input.context, entries: [], omitted: 0, mail: input.mail });
+  const baseUser = buildUserMessage({ context: input.context, entries: [], omitted: 0, mail: input.mail, today });
   const fixedTokens =
     estimateTokens(prompts.system, cpt) + estimateTokens(baseUser, cpt) + CHAT_TEMPLATE_OVERHEAD_TOKENS + OMISSION_NOTE_TOKENS;
   const available = numCtx - responseReserveTokens - fixedTokens;
@@ -123,7 +134,7 @@ function buildMessages(prompts, input, { numCtx, responseReserveTokens, charsPer
   }
 
   const omitted = history.length - kept.length;
-  const user = buildUserMessage({ context: input.context, entries: kept, omitted, mail: input.mail });
+  const user = buildUserMessage({ context: input.context, entries: kept, omitted, mail: input.mail, today });
   const messages = [
     { role: 'system', content: prompts.system },
     { role: 'user', content: user },
