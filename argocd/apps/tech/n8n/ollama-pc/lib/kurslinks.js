@@ -24,8 +24,34 @@ function parseMeldeschluss(value) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function findByCode(hint, entries) {
+  const lower = String(hint || '').toLowerCase();
+  return entries.find((entry) => entry.code && lower.includes(String(entry.code).toLowerCase())) || null;
+}
+
+function findByKursartUndDatum(hint, entries, kursart) {
+  const dateMatch = /\d{2}\.\d{2}\.(?:\d{2}|\d{4})/.exec(String(hint || ''));
+  if (!kursart || !dateMatch) return null;
+  const gesucht = parseMeldeschluss(dateMatch[0]);
+  if (!gesucht) return null;
+  return (
+    entries.find((entry) => {
+      if (String(entry.kursart || '').toLowerCase() !== kursart.label.toLowerCase()) return false;
+      const datum = parseMeldeschluss(entry.meldeschluss);
+      return datum && datum.getTime() === gesucht.getTime();
+    }) || null
+  );
+}
+
 function resolve(hint, entries, { now = new Date() } = {}) {
+  const perCode = findByCode(hint, entries);
+  if (perCode) return { kursart: perCode.kursart, matches: [perCode] };
+
   const kursart = detectKursart(hint);
+
+  const perDatum = findByKursartUndDatum(hint, entries, kursart);
+  if (perDatum) return { kursart: kursart.label, matches: [perDatum] };
+
   if (!kursart) return { kursart: null, matches: [] };
 
   const matches = entries
