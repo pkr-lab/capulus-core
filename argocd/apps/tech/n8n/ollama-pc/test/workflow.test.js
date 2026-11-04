@@ -250,7 +250,22 @@ test('Benachrichtigungsmail: sitzt vor dem Push, fängt Fehler ab und lässt Abs
   assert.deepEqual(ziele('KI-Mail bauen'), ['KI-Mail senden']);
   assert.deepEqual(ziele('KI-Mail senden'), ['Freigabe-Push senden']);
   assert.equal(nodes['KI-Mail senden'].onError, 'continueRegularOutput');
-  assert.equal(nodes['KI-Mail senden'].parameters.emailFormat, 'text');
+  assert.equal(nodes['KI-Mail senden'].parameters.emailFormat, 'both');
+  assert.equal(nodes['KI-Mail senden'].parameters.html, '={{ $json.html }}');
   const zuPush = Object.entries(workflow.connections).filter(([, c]) => c.main.some((g) => g.some((v) => v.node === 'Freigabe-Push senden'))).map(([name]) => name);
   assert.deepEqual(zuPush, ['KI-Mail senden']);
+});
+
+test('Benachrichtigungsmail: HTML maskiert Eingaben, enthält Button und endet mit der ID', () => {
+  const basis = extrahieren('Guten Tag <b>Lena</b> & Co,\n\nhier https://upload.example/ck03?a=1&b=2 der Link.');
+  const fertig = einfuegen(basis, []);
+  const mail = run('KI-Mail bauen', { refs: { 'Kurslinks in Entwurf einfügen': fertig } }).json;
+  assert.ok(mail.html.startsWith('<!doctype html>'));
+  assert.ok(mail.html.includes('Guten Tag &lt;b&gt;Lena&lt;/b&gt; &amp; Co'));
+  assert.ok(!mail.html.includes('<b>Lena</b>'));
+  assert.ok(mail.html.includes('https://ticket.emue365.de/#ticket/zoom/7'));
+  assert.ok(mail.html.includes('Ticket in Zammad öffnen'));
+  assert.ok(mail.html.includes('Entwurf wartet auf Freigabe'));
+  assert.match(mail.html, /ID-IT-xi8klGKdh8<\/div><\/td><\/tr><\/table><\/td><\/tr><\/table><\/body><\/html>$/);
+  assert.equal(mail.text.split('\n').pop(), 'ID-IT-xi8klGKdh8');
 });
