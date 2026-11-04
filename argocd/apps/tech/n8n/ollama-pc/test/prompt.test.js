@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { loadPromptFiles, buildMessages, cleanReply, appendSignature } = require('../lib/prompt');
+const { loadPromptFiles, buildMessages, cleanReply, stripClosing } = require('../lib/prompt');
 const { loadConfig } = require('../lib/config');
 const { OllamaPcError } = require('../lib/errors');
 const { testConfig } = require('./helpers');
@@ -69,7 +69,6 @@ test('Prompt-Dateien: Beispiele fließen in den Systemprompt, Platzhalter nicht'
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'prompts-'));
   fs.writeFileSync(path.join(dir, 'email_system.md'), 'Du schreibst für [PLATZHALTER: Name].');
   fs.writeFileSync(path.join(dir, 'email_examples.md'), '### Beispiel 1\n\n[PLATZHALTER: Mail]');
-  fs.writeFileSync(path.join(dir, 'email_signatur.md'), 'Gruß');
   const placeholders = loadPromptFiles(loadConfig({ OLLAMA_URL: 'http://x:1', OLLAMA_PROMPTS_DIR: dir, OLLAMA_KNOWLEDGE_DIR: '/nonexistent' }));
   fs.rmSync(dir, { recursive: true });
   assert.ok(!placeholders.system.includes('## Beispiel-Antworten'));
@@ -145,16 +144,11 @@ test('fehlender Wissensordner ist kein Fehler', () => {
   assert.ok(!prompts.system.includes('firmenwissen'));
 });
 
-test('appendSignature hängt die Signatur an und ersetzt eine vom Modell geschriebene Grußformel', () => {
-  const signature = 'Mit freundlichen Grüßen\n\nVerein';
-  assert.equal(appendSignature('Hallo!\n\nText.', signature), `Hallo!\n\nText.\n\n${signature}`);
-  assert.equal(appendSignature('Hallo!\n\nText.\n\nViele Grüße\nMax', signature), `Hallo!\n\nText.\n\n${signature}`);
-  assert.equal(appendSignature('Hallo!\n\nMit freundlichen Grüßen,\n\nDLRG OG', signature), `Hallo!\n\n${signature}`);
-  assert.equal(appendSignature('Viele Grüße an alle Kinder sind schön.', signature), `Viele Grüße an alle Kinder sind schön.\n\n${signature}`);
-});
-
-test('fehlende Signatur-Datei ist ein Fehler', () => {
-  assert.throws(() => loadPromptFiles(testConfig({ signatureFile: '/nonexistent/signatur.md' })), { code: 'SIGNATURE_MISSING' });
+test('stripClosing entfernt eine vom Modell geschriebene Grußformel', () => {
+  assert.equal(stripClosing('Hallo!\n\nText.'), 'Hallo!\n\nText.');
+  assert.equal(stripClosing('Hallo!\n\nText.\n\nViele Grüße\nMax'), 'Hallo!\n\nText.');
+  assert.equal(stripClosing('Hallo!\n\nMit freundlichen Grüßen,\n\nDLRG OG'), 'Hallo!');
+  assert.equal(stripClosing('Viele Grüße an alle Kinder sind schön.'), 'Viele Grüße an alle Kinder sind schön.');
 });
 
 test('Wissensprofil: Gruppe "alle" plus gewähltes Profil, andere Profile bleiben draußen', () => {

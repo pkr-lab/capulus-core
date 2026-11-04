@@ -31,11 +31,6 @@ function loadPromptFiles(config, { profile } = {}) {
     warnings.push(`Systemprompt enthält noch ${PLACEHOLDER_MARKER}…]-Platzhalter (z. B. Signatur)`);
   }
 
-  const signature = readOptional(config.signatureFile);
-  if (!signature) {
-    throw new OllamaPcError('SIGNATURE_MISSING', `Signatur-Datei fehlt oder ist leer: ${config.signatureFile}`);
-  }
-
   let examples = readOptional(config.examplesFile);
   if (examples.includes(PLACEHOLDER_MARKER)) {
     warnings.push(`Beispiel-Antworten werden ignoriert, solange sie ${PLACEHOLDER_MARKER}…]-Platzhalter enthalten`);
@@ -60,7 +55,6 @@ function loadPromptFiles(config, { profile } = {}) {
   const parts = [system, examples && `## Beispiel-Antworten\n\n${examples}`, knowledgeBlock].filter(Boolean);
   return {
     system: parts.join('\n\n'),
-    signature,
     warnings,
     knowledge: { files: knowledgeFiles.map((f) => f.name), tokens: knowledgeTokens, ratio: knowledgeRatio },
   };
@@ -170,8 +164,4 @@ function stripClosing(reply) {
   return reply;
 }
 
-function appendSignature(reply, signature) {
-  return `${stripClosing(reply)}\n\n${signature}`;
-}
-
-module.exports = { loadPromptFiles, buildMessages, cleanReply, appendSignature, estimateTokens, PLACEHOLDER_MARKER };
+module.exports = { loadPromptFiles, buildMessages, cleanReply, stripClosing, estimateTokens, PLACEHOLDER_MARKER };
