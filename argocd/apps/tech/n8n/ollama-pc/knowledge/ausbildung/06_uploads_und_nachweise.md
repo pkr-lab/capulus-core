@@ -2,7 +2,7 @@
 
 ## Upload-Link
 - Alle Nachweise (E-Learning-Urkunden und Zertifikate, Erste-Hilfe-Nachweis, weitere Unterlagen) werden über **einen** persönlichen Upload-Link hochgeladen, der per E-Mail an die Teilnehmenden geht. Gleiches Verfahren bei Crashkursen, Prüfungskursen, Auffrischungen und weiteren Kursen.
-- Es gibt keinen öffentlichen Link auf der Website. Nie einen Upload-Link in den Entwurf schreiben oder erfinden.
+- Es gibt keinen öffentlichen Link auf der Website. Schreibe nie selbst eine URL in den Entwurf – dafür immer `[KURSLINK: <Kursart>]` setzen (siehe `00_hinweise_fuer_die_ki.md`), n8n setzt den echten Link ein.
 - Den Link gibt es erst mit regulärem Kursplatz. Wer auf der Warteliste steht, bekommt ihn nach dem Nachrücken (`13_warteliste_und_nachruecken.md`).
 - Nachweise möglichst früh hochladen (Fristen: Kernaussagen in `00_hinweise_fuer_die_ki.md`).
 
