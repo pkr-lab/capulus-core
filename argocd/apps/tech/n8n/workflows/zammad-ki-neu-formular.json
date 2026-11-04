@@ -1,0 +1,215 @@
+{
+  "name": "Zammad: KI-Entwurf neu erstellen (Formular)",
+  "nodes": [
+    {
+      "id": "02a20ac8-bec8-4dfc-80da-353acbd1c31e",
+      "name": "Formular KI neu",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        200
+      ],
+      "webhookId": "764c693b-b6d2-42b0-bfc3-cd9508a25978",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "rfawu3jHTASk44Vc",
+          "name": "MDM Formulare"
+        }
+      },
+      "parameters": {
+        "authentication": "basicAuth",
+        "formTitle": "KI-Entwurf für Zammad-Tickets neu erstellen",
+        "formDescription": "Erstellt den KI-Entwurf für die angegebenen Tickets noch einmal, auch wenn schon ein Entwurf vorliegt oder das Team geantwortet hat. Ein vorhandener Mail-Entwurf im Ticket wird ersetzt. Eine interne Notiz mit \"Kontext: ...\" im Ticket fließt in den neuen Entwurf ein.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Ticketnummern",
+              "fieldType": "textarea",
+              "requiredField": true,
+              "placeholder": "z. B. 10042, 10043"
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "path": "zammad-ki-neu"
+        }
+      }
+    },
+    {
+      "id": "5e21d576-d7c6-459f-bece-31df7a6cfc1f",
+      "name": "Ticketnummern prüfen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        200
+      ],
+      "parameters": {
+        "jsCode": "// Erlaubt Trennung mit Komma, Leerzeichen oder Zeilenumbruch und ein führendes #.\nconst roh = String($json['Ticketnummern'] || '');\nconst nummern = [...new Set(roh.split(/[^0-9]+/).filter((n) => n.length >= 3 && n.length <= 12))].slice(0, 20);\nreturn [{ json: { tickets: nummern.join(','), anzahl: nummern.length } }];"
+      }
+    },
+    {
+      "id": "e7b8b775-3a8d-4f40-abcd-e52635e066e9",
+      "name": "Tickets angegeben?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        200
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a6f2c3ce-8c51-4f8e-b07a-24dc0c283795",
+              "leftValue": "={{ $json.anzahl > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "LMcJQDnN9zK5n9mN",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/LMcJQDnN9zK5n9mN",
+          "cachedResultName": "Zammad Tickets verarbeiten"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "de713519-8070-4316-9614-dcb178bfeba1",
+      "name": "Zammad Tickets verarbeiten",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        120
+      ]
+    },
+    {
+      "id": "29256f48-6617-4a4a-82e1-6624c0058a43",
+      "name": "Abschluss",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        960,
+        120
+      ],
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "Neuer Entwurf wird erstellt",
+        "completionMessage": "={{ 'Tickets: ' + $('Ticketnummern prüfen').first().json.tickets.split(',').map((n) => '#' + n).join(', ') + '. Je Ticket dauert es etwa eine Minute. Der Entwurf erscheint im Ticket (Mail-Entwurf oder interne Notiz), Fehler kommen per Push. Nicht gefundene Tickets werden übersprungen.' }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "e4c97d5a-3aa6-45c8-8ade-e0bb9af017cf",
+      "name": "Abschluss Fehler",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        720,
+        300
+      ],
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "Nichts gestartet",
+        "completionMessage": "Es wurde keine gültige Ticketnummer erkannt. Bitte die Nummer wie in Zammad angeben, z. B. 10042 (mehrere mit Komma).",
+        "options": {}
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Formular KI neu": {
+      "main": [
+        [
+          {
+            "node": "Ticketnummern prüfen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ticketnummern prüfen": {
+      "main": [
+        [
+          {
+            "node": "Tickets angegeben?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tickets angegeben?": {
+      "main": [
+        [
+          {
+            "node": "Zammad Tickets verarbeiten",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Abschluss Fehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zammad Tickets verarbeiten": {
+      "main": [
+        [
+          {
+            "node": "Abschluss",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "timezone": "Europe/Berlin",
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Formular, um KI-Entwürfe für bestimmte Zammad-Tickets neu erstellen zu lassen. Ruft den Sub-Workflow \"Zammad Tickets verarbeiten\" mit den Ticketnummern auf, ohne auf das Ergebnis zu warten."
+  },
+  "tags": []
+}

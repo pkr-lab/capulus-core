@@ -13,10 +13,11 @@ const WORKFLOW = path.join(__dirname, '..', '..', 'workflows', 'zammad-tickets-v
 const workflow = JSON.parse(fs.readFileSync(WORKFLOW, 'utf8'));
 const nodes = Object.fromEntries(workflow.nodes.map((n) => [n.name, n]));
 
-function run(name, { json = {}, input = [], refs = {} } = {}) {
+function run(name, { json = {}, input = [], refs = {}, tickets = '' } = {}) {
+  const alle = { 'Von Haupt-Workflow aufgerufen': { tickets }, ...refs };
   const $ = (ref) => {
-    if (!(ref in refs)) throw new Error(`Node "${ref}" ist im Test nicht belegt`);
-    return { item: { json: refs[ref] } };
+    if (!(ref in alle)) throw new Error(`Node "${ref}" ist im Test nicht belegt`);
+    return { item: { json: alle[ref] }, first: () => ({ json: alle[ref] }) };
   };
   const $input = { all: () => input.map((j) => ({ json: j })) };
   const fn = new Function('$', '$json', '$input', 'Buffer', 'console', nodes[name].parameters.jsCode);
@@ -152,4 +153,70 @@ test('Workflow: alle Verbindungen zeigen auf vorhandene Nodes', () => {
     assert.ok(nodes[von], `Quelle ${von}`);
     for (const ausgang of ziel.main) for (const c of ausgang) assert.ok(nodes[c.node], `Ziel ${c.node}`);
   }
+});
+
+const formular = JSON.parse(fs.readFileSync(path.join(WORKFLOW, '..', 'zammad-ki-neu-formular.json'), 'utf8'));
+const formNodes = Object.fromEntries(formular.nodes.map((n) => [n.name, n]));
+
+function artikel(extra) {
+  return { sender: 'Customer', internal: false, content_type: 'text/plain', from: 'k@example.org', created_at: '2026-11-01T10:00:00Z', ...extra };
+}
+const ARTIKEL = [
+  artikel({ id: 1, body: 'Wo kann ich hochladen?', message_id: 'm1' }),
+  artikel({ id: 2, sender: 'Agent', body: 'Hier der Link', created_at: '2026-11-02T10:00:00Z' }),
+  artikel({ id: 3, sender: 'Agent', internal: true, body: 'Entwurf ... ID-IT-xi8klGKdh8', created_at: '2026-11-02T11:00:00Z' }),
+];
+
+test('Nur relevante Tickets: ohne Formular gilt der normale Filter', () => {
+  const input = [
+    { number: '1', owner_id: 5, state_id: 1, group_id: 9 },
+    { number: '2', owner_id: 9, state_id: 4, group_id: 9 },
+  ];
+  assert.deepEqual(run('Nur relevante Tickets', { input }).map((i) => i.json.number), ['1']);
+});
+
+test('Nur relevante Tickets: Formular holt genau die genannten Tickets, auch geschlossene', () => {
+  const input = [
+    { number: '1', owner_id: 5, state_id: 1, group_id: 9 },
+    { number: '2', owner_id: 9, state_id: 4, group_id: 9 },
+  ];
+  assert.deepEqual(run('Nur relevante Tickets', { input, tickets: '2,77' }).map((i) => i.json.number), ['2']);
+  assert.throws(() => run('Nur relevante Tickets', { input, tickets: '77' }), /Keines der angeforderten Tickets gefunden: 77/);
+});
+
+test('LLM-Eingabe: ohne Formular wird ein beantwortetes Ticket übersprungen, mit Formular neu bearbeitet', () => {
+  const input = [{ ...ticket, articles: ARTIKEL }];
+  assert.equal(run('LLM-Eingabe bauen', { input }).length, 0);
+  const neu = run('LLM-Eingabe bauen', { input, tickets: '10042' });
+  assert.equal(neu.length, 1);
+  assert.equal(neu[0].json.erzwungen, true);
+  const nutzlast = JSON.parse(Buffer.from(neu[0].json.payloadB64, 'base64').toString('utf8'));
+  assert.equal(nutzlast.mail.text, 'Wo kann ich hochladen?');
+});
+
+test('LLM-Eingabe: andere Tickets bleiben beim Formular-Lauf unberührt', () => {
+  const input = [{ ...ticket, articles: ARTIKEL }];
+  assert.equal(run('LLM-Eingabe bauen', { input, tickets: '99999' }).length, 0);
+});
+
+test('Shared Draft: ein vorhandener Entwurf stoppt nur normale, nicht erzwungene Läufe', () => {
+  const bedingung = nodes['Kein Shared Draft vorhanden?'].parameters.conditions.conditions[0].leftValue;
+  assert.match(bedingung, /erzwungen === true/);
+  assert.match(bedingung, /!\$json\.shared_draft_id/);
+});
+
+test('Formular: Ticketnummern werden bereinigt, Dubletten und Unsinn fallen weg', () => {
+  const pruefen = (text) => new Function('$json', formNodes['Ticketnummern prüfen'].parameters.jsCode)({ Ticketnummern: text })[0].json;
+  assert.deepEqual(pruefen('#10042, 10043\n10042 abc 7'), { tickets: '10042,10043', anzahl: 2 });
+  assert.deepEqual(pruefen('keine nummer'), { tickets: '', anzahl: 0 });
+});
+
+test('Formular: ohne gültige Nummer startet nichts, mit Nummer läuft der Sub-Workflow ohne Warten', () => {
+  const ziele = (name, ausgang) => formular.connections[name].main[ausgang].map((c) => c.node);
+  assert.deepEqual(ziele('Tickets angegeben?', 0), ['Zammad Tickets verarbeiten']);
+  assert.deepEqual(ziele('Tickets angegeben?', 1), ['Abschluss Fehler']);
+  assert.equal(formNodes['Zammad Tickets verarbeiten'].parameters.options.waitForSubWorkflow, false);
+  assert.equal(formNodes['Zammad Tickets verarbeiten'].parameters.workflowId.value, workflow.id);
+  assert.equal(formNodes['Formular KI neu'].parameters.authentication, 'basicAuth');
+  assert.equal(formular.active, false);
 });
