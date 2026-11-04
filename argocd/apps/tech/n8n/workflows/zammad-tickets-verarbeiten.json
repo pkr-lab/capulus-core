@@ -737,8 +737,8 @@
       ],
       "credentials": {
         "smtp": {
-          "id": "D3Jp3o6EaUr2DNy7",
-          "name": "SMTP Automations Netcup"
+          "id": "gQZtSwFzQoNoRn3S",
+          "name": "SMTP Netcup Automations"
         }
       },
       "onError": "continueRegularOutput"
