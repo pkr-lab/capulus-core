@@ -77,7 +77,6 @@ type PowerTarget string
 
 const (
 	PowerTargetHomeserver PowerTarget = "homeserver"
-	PowerTargetWorker0    PowerTarget = "worker-0"
 	PowerTargetWorker1    PowerTarget = "worker-1"
 )
 
