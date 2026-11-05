@@ -74,26 +74,3 @@ spec:
             description: >-
               Die etcd-Datenbank belegt {{`{{ $value | humanizePercentage }}`}} des Speicherkontingents.
               Bei Erreichen des Limits wird etcd schreibgeschützt.
-
-        - alert: EtcdSnapshotCopyFailed
-          expr: node_systemd_unit_state{name="k3s-etcd-snapshot-copy.service", state="failed"} == 1
-          for: 5m
-          labels:
-            severity: warning
-          annotations:
-            summary: "Kopie der etcd-Snapshots auf {{`{{ $labels.host }}`}} fehlgeschlagen"
-            description: >-
-              Der Dienst k3s-etcd-snapshot-copy ist auf {{`{{ $labels.host }}`}} im Zustand failed.
-              Die Snapshots erreichen die NAS nicht. Mit journalctl -u k3s-etcd-snapshot-copy prüfen,
-              häufigste Ursache ist ein nicht eingebundener NFS-Mount.
-
-        - alert: EtcdSnapshotCopyStale
-          expr: time() - node_systemd_timer_last_trigger_seconds{name="k3s-etcd-snapshot-copy.timer"} > {{ .Values.etcd.snapshotMaxAgeSeconds }}
-          for: 10m
-          labels:
-            severity: warning
-          annotations:
-            summary: "Letzte etcd-Snapshot-Kopie auf {{`{{ $labels.host }}`}} ist zu alt"
-            description: >-
-              Der Timer k3s-etcd-snapshot-copy auf {{`{{ $labels.host }}`}} hat seit
-              {{`{{ $value | humanizeDuration }}`}} nicht ausgelöst (Schwelle: {{ .Values.etcd.snapshotMaxAgeSeconds }} s).

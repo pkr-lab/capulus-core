@@ -322,7 +322,6 @@ victoria-metrics-k8s-stack:
 
 etcd:
   expectedMembers: 2
-  snapshotMaxAgeSeconds: 46800
   targets:
     - host: homeserver
       address: "192.168.178.94:2381"
