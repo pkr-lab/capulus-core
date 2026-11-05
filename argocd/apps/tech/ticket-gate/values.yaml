@@ -104,5 +104,17 @@ secrets:
   encryptedZammadToken: "AgC2sAcJLlVNyTMZukd25XK17uV+NyYvhF6v6Qjv3wLRTRwUZ+rB8DrEUaBcvJk6SPFJgFNbCNHw6q7V5bGFYCUVtmKGo+DdePs6BeFQ6/pX021ZPvLuLRfTw9frkdBI6Fe7GCAGfTiOWb7E48z1O7EatcPXXSLRD59J4ylgpORSlZ3uThXLQSI74ArKfB7I1oDHcPZjzfCrVc8Z+WRjcwrJlw+2tw+GmZd8kKOJF7TKf3YHp7Zd6lT9ZVruEPN7o97Lz+nED8k2LCtvrNn3LpcrlToSUSIRUVz3kuSX4v7A2Pv5F/Pswzmo3N8k4kgEawtiwQa8/xhZwBeEqughNpIXGEJ5M4EmICUvsV2xdLjyITc2iS/Fvsu/bqMDd6C0+gtSsJP9DKcfwEe0xW4sbv8Uokp63laohfJ6K5P/czjMy47XcHhZFWNpNTAexTzqFplXGGdku/kwqQO3VRUA/eWlpsAiggSBTePrQvHedkmPGyB+7Jlh2UsqnMrST38Pngfhuf0EDOEos3ur27Ql6KiKr4d0iq/AcPEct6wNu+l8iGgIHlV3IWFci1MxRg5r/4+25S7NeoswzpEKwdKEwG+Ff23DCqvCxoWEjy2NLvLPlbFM6eTdlZzXF5jomurvkRMqtUFTngtxTlbTVFO7V6H76pPx7w7IgeNLnV4RQv+PzFf8vRkQeW437BJylwBWDZhizHmfT37j9dO958rP1cyrOtCpfDS8RKnN6an/ZpCBOuREqW2BN5ZoO0p3sKANnVyo1yxivNg8YX4Jsz1YuZhU"
 
 nodeSelector: {}
-tolerations: []
-affinity: {}
+tolerations:
+  - key: capulus.homeserver/protected
+    operator: Exists
+    effect: PreferNoSchedule
+affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        preference:
+          matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - controlplane-1
