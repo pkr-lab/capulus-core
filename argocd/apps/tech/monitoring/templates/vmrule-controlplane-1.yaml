@@ -1,0 +1,42 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: controlplane-1-availability
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: controlplane-1.availability
+      interval: 30s
+      rules:
+        - alert: ControlPlane1Down
+          expr: |
+            up{job=~".*node-exporter.*", instance=~"192\\.168\\.178\\.95.*"} == 0
+              or
+            absent(kube_node_status_condition{node="controlplane-1", condition="Ready", status="true"} == 1)
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "controlplane-1 nicht erreichbar"
+            description: >-
+              controlplane-1 (192.168.178.95) antwortet seit mehr als 1 Minute nicht mehr oder ist nicht Ready.
+              Node-Exporter oder k8s-Node sind ausgefallen. Mit zwei etcd-Mitgliedern ist dann auch die
+              Kubernetes-API nicht mehr schreibbar.
+
+        - alert: ControlPlane1MemoryRequestsHigh
+          expr: |
+            sum(kube_pod_container_resource_requests{node="controlplane-1", resource="memory"})
+              /
+            sum(kube_node_status_allocatable{node="controlplane-1", resource="memory"})
+              > {{ .Values.controlPlane1.memoryRequestsRatio }}
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "controlplane-1 hat zu viele Memory-Requests"
+            description: >-
+              Die Memory-Requests auf controlplane-1 liegen seit 15 Minuten bei
+              {{`{{ $value | humanizePercentage }}`}} der zuweisbaren Menge (Schwelle:
+              {{ .Values.controlPlane1.memoryRequestsRatio }}). Der weiche Taint reicht dann nicht,
+              Pods ohne Toleration landen auf dem Node. Mit
+              kubectl get pods -A -o wide --field-selector spec.nodeName=controlplane-1 prüfen.
