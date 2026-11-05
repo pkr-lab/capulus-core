@@ -515,8 +515,8 @@
     overlap: true
   owner: peter
   live_check: tailscale-device
-  live_check_ref: worker-0
-  blast_radius: "Kann neue Geraete dem Tailnet hinzufuegen (Ansible-Rolle tailscale). Live ueberwacht stellvertretend am Knoten worker-0 (Anlass: stiller Ablauf 20030). Ziel: Ablösung durch einen getaggten OAuth-Client (siehe Rotation-Regel 1)."
+  live_check_ref: controlplane-1
+  blast_radius: "Kann neue Geraete dem Tailnet hinzufuegen (Ansible-Rolle tailscale). Live ueberwacht stellvertretend am Knoten controlplane-1 (Anlass: stiller Ablauf 20030). Ziel: Ablösung durch einen getaggten OAuth-Client (siehe Rotation-Regel 1)."
 
 - id: tailscale-ci-federated-identity
   service: tailscale
