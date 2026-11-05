@@ -29,3 +29,19 @@ spec:
         instance: worker-1
         host: worker-1
         kind: server
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMStaticScrape
+metadata:
+  name: controlplane-1-smartctl-exporter
+  namespace: {{ .Release.Namespace }}
+spec:
+  jobName: controlplane-1-smartctl-exporter
+  targetEndpoints:
+    - targets:
+        - "192.168.178.95:9633"
+      labels:
+        job: smartctl-exporter
+        instance: controlplane-1
+        host: controlplane-1
+        kind: server
