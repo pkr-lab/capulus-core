@@ -63,6 +63,12 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.secrets.secretName }}
                   key: root-password
+          startupProbe:
+            exec:
+              command: ["/app/lldap", "healthcheck", "--config-file", "/data/lldap_config.toml"]
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 60
           livenessProbe:
             exec:
               command: ["/app/lldap", "healthcheck", "--config-file", "/data/lldap_config.toml"]
