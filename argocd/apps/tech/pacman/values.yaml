@@ -65,3 +65,20 @@ config:
 
 trainingMode:
   enabled: true
+
+nodeSelector: {}
+
+tolerations:
+  - key: capulus.homeserver/protected
+    operator: Exists
+    effect: PreferNoSchedule
+affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        preference:
+          matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - controlplane-1
