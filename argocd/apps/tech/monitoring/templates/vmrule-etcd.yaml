@@ -1,0 +1,99 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: etcd
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: etcd
+      interval: 30s
+      rules:
+        - alert: EtcdNoLeader
+          expr: etcd_server_has_leader == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "etcd auf {{`{{ $labels.host }}`}} hat keinen Leader"
+            description: >-
+              Das etcd-Mitglied auf {{`{{ $labels.host }}`}} sieht seit mehr als 1 Minute keinen Leader.
+              Die Kubernetes-API ist nicht schreibbar, laufende Pods laufen weiter.
+
+        - alert: EtcdMemberMissing
+          expr: count(up{job="k3s-etcd"} == 1) < {{ .Values.etcd.expectedMembers }}
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "etcd hat weniger als {{ .Values.etcd.expectedMembers }} erreichbare Mitglieder"
+            description: >-
+              Nur {{`{{ $value }}`}} von {{ .Values.etcd.expectedMembers }} etcd-Mitgliedern liefern Metriken.
+              Bei zwei Mitgliedern fehlt das Quorum, sobald eines ausfällt.
+
+        - alert: EtcdPeerLost
+          expr: etcd_network_active_peers < {{ sub (int .Values.etcd.expectedMembers) 1 }}
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "etcd auf {{`{{ $labels.host }}`}} sieht nicht alle Peers"
+            description: >-
+              Das Mitglied auf {{`{{ $labels.host }}`}} hat seit 2 Minuten weniger aktive Peers als erwartet
+              ({{ sub (int .Values.etcd.expectedMembers) 1 }}). Netzwerk zwischen den Servern prüfen.
+
+        - alert: EtcdLeaderChangesFrequent
+          expr: increase(etcd_server_leader_changes_seen_total[1h]) > 3
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "etcd wechselt häufig den Leader ({{`{{ $labels.host }}`}})"
+            description: >-
+              In der letzten Stunde gab es {{`{{ $value }}`}} Leaderwechsel. Ursache sind meist ein
+              langsamer Datenträger oder Netzwerkprobleme zwischen den Servern.
+
+        - alert: EtcdWalFsyncSlow
+          expr: |
+            histogram_quantile(0.99, sum by (le, host) (rate(etcd_disk_wal_fsync_duration_seconds_bucket[5m]))) > 0.5
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "etcd auf {{`{{ $labels.host }}`}} schreibt langsam"
+            description: >-
+              Das 99. Perzentil der WAL-Schreibdauer liegt seit 10 Minuten bei
+              {{`{{ $value | humanizeDuration }}`}} (Schwelle: 500 ms). Datenträger prüfen.
+
+        - alert: EtcdDatabaseSizeHigh
+          expr: etcd_mvcc_db_total_size_in_bytes / etcd_server_quota_backend_bytes > 0.8
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "etcd-Datenbank auf {{`{{ $labels.host }}`}} wird groß"
+            description: >-
+              Die etcd-Datenbank belegt {{`{{ $value | humanizePercentage }}`}} des Speicherkontingents.
+              Bei Erreichen des Limits wird etcd schreibgeschützt.
+
+        - alert: EtcdSnapshotCopyFailed
+          expr: node_systemd_unit_state{name="k3s-etcd-snapshot-copy.service", state="failed"} == 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Kopie der etcd-Snapshots auf {{`{{ $labels.host }}`}} fehlgeschlagen"
+            description: >-
+              Der Dienst k3s-etcd-snapshot-copy ist auf {{`{{ $labels.host }}`}} im Zustand failed.
+              Die Snapshots erreichen die NAS nicht. Mit journalctl -u k3s-etcd-snapshot-copy prüfen,
+              häufigste Ursache ist ein nicht eingebundener NFS-Mount.
+
+        - alert: EtcdSnapshotCopyStale
+          expr: time() - node_systemd_timer_last_trigger_seconds{name="k3s-etcd-snapshot-copy.timer"} > {{ .Values.etcd.snapshotMaxAgeSeconds }}
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Letzte etcd-Snapshot-Kopie auf {{`{{ $labels.host }}`}} ist zu alt"
+            description: >-
+              Der Timer k3s-etcd-snapshot-copy auf {{`{{ $labels.host }}`}} hat seit
+              {{`{{ $value | humanizeDuration }}`}} nicht ausgelöst (Schwelle: {{ .Values.etcd.snapshotMaxAgeSeconds }} s).

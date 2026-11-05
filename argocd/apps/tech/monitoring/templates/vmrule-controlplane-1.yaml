@@ -1,41 +1,42 @@
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMRule
 metadata:
-  name: worker-0-availability
+  name: controlplane-1-availability
   namespace: {{ .Release.Namespace }}
 spec:
   groups:
-    - name: worker-0.availability
+    - name: controlplane-1.availability
       interval: 30s
       rules:
-        - alert: worker-0Down
+        - alert: ControlPlane1Down
           expr: |
-            (
-              (
-                up{job=~".*node-exporter.*", instance=~"192\\.168\\.178\\.95.*"} == 0
-              ) or (
-                kube_node_status_condition{
-                  node="worker-0",
-                  condition="Ready",
-                  status="true"
-                } == 0
-              )
-            )
-            # worker-0 wird vom cluster-power-manager NUR bei hoher
-            # Homeserver-Last per WoL geweckt und sonst bewusst
-            # heruntergefahren (cordon vor Shutdown, uncordon nach
-            # erfolgreichem Wake, siehe capulus-ansible/roles/cluster_power_manager).
-            # Ohne diesen Ausschluss würde dieser Alert die meiste Zeit
-            # (Standardzustand: Worker schläft) fälschlich als "critical"
-            # feuern. kube_node_spec_unschedulable==1 ist genau das Signal
-            # für "absichtlich außer Betrieb" (Cordon), egal ob durch den
-            # Power-Manager oder manuelle Wartung.
-            unless kube_node_spec_unschedulable{node="worker-0"} == 1
+            up{job=~".*node-exporter.*", instance=~"192\\.168\\.178\\.95.*"} == 0
+              or
+            absent(kube_node_status_condition{node="controlplane-1", condition="Ready", status="true"} == 1)
           for: 1m
           labels:
             severity: critical
           annotations:
-            summary: "worker-0 nicht erreichbar"
+            summary: "controlplane-1 nicht erreichbar"
             description: >-
-              worker-0 (192.168.178.95) antwortet seit mehr als 1 Minute nicht mehr.
-              Node-Exporter oder k8s-Node sind ausgefallen.
+              controlplane-1 (192.168.178.95) antwortet seit mehr als 1 Minute nicht mehr oder ist nicht Ready.
+              Node-Exporter oder k8s-Node sind ausgefallen. Mit zwei etcd-Mitgliedern ist dann auch die
+              Kubernetes-API nicht mehr schreibbar.
+
+        - alert: ControlPlane1MemoryRequestsHigh
+          expr: |
+            sum(kube_pod_container_resource_requests{node="controlplane-1", resource="memory"})
+              /
+            sum(kube_node_status_allocatable{node="controlplane-1", resource="memory"})
+              > {{ .Values.controlPlane1.memoryRequestsRatio }}
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "controlplane-1 hat zu viele Memory-Requests"
+            description: >-
+              Die Memory-Requests auf controlplane-1 liegen seit 15 Minuten bei
+              {{`{{ $value | humanizePercentage }}`}} der zuweisbaren Menge (Schwelle:
+              {{ .Values.controlPlane1.memoryRequestsRatio }}). Der weiche Taint reicht dann nicht,
+              Pods ohne Toleration landen auf dem Node. Mit
+              kubectl get pods -A -o wide --field-selector spec.nodeName=controlplane-1 prüfen.

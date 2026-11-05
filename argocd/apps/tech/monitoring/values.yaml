@@ -320,6 +320,18 @@ victoria-metrics-k8s-stack:
   kubeEtcd:
     enabled: false
 
+etcd:
+  expectedMembers: 2
+  snapshotMaxAgeSeconds: 46800
+  targets:
+    - host: homeserver
+      address: "192.168.178.94:2381"
+    - host: controlplane-1
+      address: "192.168.178.95:2381"
+
+controlPlane1:
+  memoryRequestsRatio: 0.5
+
 writeAuth:
   enabled: false
   secretName: vm-write-auth
