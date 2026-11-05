@@ -504,7 +504,7 @@
     - capulus-ansible:group_vars/all.yml
     - capulus-ansible:group_vars/banana_pis.yml
     - capulus-ansible:group_vars/xibo_displays.yml
-    - capulus-ansible:host_vars/worker-0/vars.yml
+    - capulus-ansible:host_vars/controlplane-1/vars.yml
     - capulus-ansible:host_vars/worker-1/vars.yml
   issued: null
   expires: null
