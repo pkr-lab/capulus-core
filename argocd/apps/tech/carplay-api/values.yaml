@@ -94,8 +94,8 @@ config:
     - id: homeserver
       name: "Homeserver"
       instance: "192.168.178.94:9100"
-    - id: worker-0
-      name: "Worker 0"
+    - id: controlplane-1
+      name: "ControlPlane-1"
       instance: "192.168.178.95:9100"
     - id: worker-1
       name: "Worker 1"
