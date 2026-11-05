@@ -9,7 +9,7 @@ spec:
       interval: 30s
       rules:
         - alert: NodeDownPaging
-          expr: up{job=~".*node-exporter", host=~"homeserver|prod-vm|ugreen-nas"} == 0
+          expr: up{job=~".*node-exporter", host=~"homeserver|controlplane-1|prod-vm|ugreen-nas"} == 0
           for: 5m
           labels:
             severity: critical
