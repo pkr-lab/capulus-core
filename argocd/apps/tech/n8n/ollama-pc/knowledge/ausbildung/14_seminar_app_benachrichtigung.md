@@ -8,3 +8,4 @@ Meldet jemand „Not Found“, eine tote Seite oder dass die Selbsterklärung ni
 - Bitten, sie ausgefüllt und unterschrieben wieder über den erhaltenen persönlichen Upload-Link hochzuladen. Steht der Link in einer Mail des Vereins im Verlauf, darauf verweisen, sonst `[KURSLINK: <Kursart oder Kurscode>]` in eine eigene Zeile (Regel in `00_hinweise_fuer_die_ki.md`).
 - Nicht schreiben, dass die Selbsterklärung per Mail zurückgeschickt werden kann.
 - Setze `[INTERN: Link zur Selbsterklärung in der Seminar-App ist defekt]` und `[INTERN: Upload-Status prüfen – Unterlagen vollständig und fristgerecht? Kursgebühr bezahlt?]`.
+- Setze `[INTERN: Empfänger prüfen – der Entwurf ist an no-reply@dlrg.de adressiert, bitte die Adresse der teilnehmenden Person eintragen]`.

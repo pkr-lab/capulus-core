@@ -59,9 +59,11 @@ test('Antwortentwurf: [ANHANG: …] wird entfernt und als anhaenge gemeldet', ()
   assert.deepEqual(extrahieren('Guten Tag,\nHallo.').anhaenge, []);
 });
 
-test('Antwortentwurf: Anhang im Notiz-Modus erzeugt einen internen Hinweis', () => {
-  const out = run('Antwortentwurf extrahieren', { json: ollama('Guten Tag,\n[ANHANG: Selbsterklärung]'), refs: { 'LLM-Eingabe bauen': { ...eingabe, modus: 'notiz' } } }).json;
-  assert.match(out.hinweiseHtml, /von Hand anhängen/);
+test('Mail-Entwurf: auch fremde Tickets bekommen einen Entwurf, wenn ein Anhang nötig ist', () => {
+  const links = (json) => new Function('$json', `return ${nodes['Als Mail-Entwurf ablegen?'].parameters.conditions.conditions[0].leftValue.slice(3, -2)}`)(json);
+  assert.equal(links({ modus: 'entwurf', anhaenge: [] }), true);
+  assert.equal(links({ modus: 'notiz', anhaenge: [] }), false);
+  assert.equal(links({ modus: 'notiz', anhaenge: ['Selbsterklärung'] }), true);
 });
 
 test('Workflow: Anhang wird vor dem Shared Draft geladen, hochgeladen und bei Fehlern gemeldet', () => {
