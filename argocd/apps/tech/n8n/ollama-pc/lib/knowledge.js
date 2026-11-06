@@ -41,7 +41,7 @@ function resolveProfiles(dir, profile) {
   return [SHARED_PROFILE, profile];
 }
 
-function loadProfileDir(dir, profile) {
+function loadProfileDir(dir, profile, exclude) {
   const profileDir = path.join(dir, profile);
   let names;
   try {
@@ -51,7 +51,7 @@ function loadProfileDir(dir, profile) {
     throw err;
   }
   return names
-    .filter((name) => name.toLowerCase().endsWith('.md'))
+    .filter((name) => name.toLowerCase().endsWith('.md') && !exclude.includes(name))
     .sort()
     .map((name) => {
       const lines = fs.readFileSync(path.join(profileDir, name), 'utf8').split('\n');
@@ -61,8 +61,9 @@ function loadProfileDir(dir, profile) {
     .filter((file) => file.text);
 }
 
-function loadKnowledge(dir, profile) {
-  return resolveProfiles(dir, profile).flatMap((name) => loadProfileDir(dir, name));
+// exclude: Dateinamen, die nicht geladen werden (z. B. E-Mail-Regeln, die für einen anderen Kanal nicht gelten).
+function loadKnowledge(dir, profile, { exclude = [] } = {}) {
+  return resolveProfiles(dir, profile).flatMap((name) => loadProfileDir(dir, name, exclude));
 }
 
 function formatKnowledge(files) {

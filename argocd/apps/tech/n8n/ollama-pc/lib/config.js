@@ -60,6 +60,7 @@ function loadConfig(env = process.env) {
     kurslinksFile: text(env, 'OLLAMA_KURSLINKS_FILE', path.join(__dirname, '..', 'knowledge-refs', 'kurslinks.json')),
     systemPromptFile: text(env, 'OLLAMA_SYSTEM_PROMPT_FILE', path.join(promptsDir, 'email_system.md')),
     examplesFile: text(env, 'OLLAMA_EXAMPLES_FILE', path.join(promptsDir, 'email_examples.md')),
+    instagramSystemPromptFile: text(env, 'OLLAMA_INSTAGRAM_SYSTEM_PROMPT_FILE', path.join(promptsDir, 'instagram_system.md')),
   };
 }
 

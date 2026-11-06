@@ -1,0 +1,26 @@
+{{- if and .Values.instagram.enabled .Values.instagram.dm.enabled -}}
+# Öffentlicher Webhook für Meta (Instagram-Direktnachrichten). Nur dieser eine Pfad ist von außen erreichbar.
+# Meta ruft ihn mit GET (Verifizierung) und POST (Ereignisse) auf. Der Workflow prüft die Signatur (X-Hub-Signature-256).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "n8n.fullname" . }}-instagram-dm
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.instagram.publicHost | quote }}
+      http:
+        paths:
+          - path: {{ .Values.instagram.dm.publicPath }}
+            pathType: Exact
+            backend:
+              service:
+                name: {{ include "n8n.fullname" . }}
+                port:
+                  name: http
+{{- end }}
