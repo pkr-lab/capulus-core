@@ -46,7 +46,7 @@
         1136
       ],
       "parameters": {
-        "jsCode": "const OWNER_ID = 5;\nconst AUSBILDUNG_GRUPPEN = [2];\n\n// Formular \"KI-Entwurf neu erstellen\": nur die angegebenen Ticketnummern, egal in welchem Status oder von wem zuletzt beantwortet.\nconst angefordert = String($('Von Haupt-Workflow aufgerufen').first().json.tickets || '').split(/[^0-9]+/).filter(Boolean);\nif (angefordert.length > 0) {\n  const gefunden = $input.all().filter(({ json: ticket }) => angefordert.includes(String(ticket.number)));\n  const fehlend = angefordert.filter((nr) => !gefunden.some(({ json }) => String(json.number) === nr));\n  if (fehlend.length > 0) console.log(`Angeforderte Tickets nicht gefunden: ${fehlend.join(', ')}`);\n  if (gefunden.length === 0) throw new Error(`Keines der angeforderten Tickets gefunden: ${angefordert.join(', ')}`);\n  return gefunden;\n}\n\nreturn $input.all().filter(({ json: ticket }) => {\n  const eigenes = ticket.owner_id === OWNER_ID && [1, 2, 3, 6].includes(ticket.state_id);\n  const ausbildung = [1, 2, 3, 6].includes(ticket.state_id) && AUSBILDUNG_GRUPPEN.includes(ticket.group_id);\n  return eigenes || ausbildung;\n});"
+        "jsCode": "const OWNER_ID = 5;\nconst AUSBILDUNG_GRUPPEN = [2];\n\n// Formular \"KI-Entwurf neu erstellen\": nur die angegebenen Ticketnummern, egal in welchem Status oder von wem zuletzt beantwortet.\nconst angefordert = String($('Von Haupt-Workflow aufgerufen').first().json.tickets || '').split(/[^0-9]+/).filter(Boolean);\nif (angefordert.length > 0) {\n  const gefunden = $input.all().filter(({ json: ticket }) => angefordert.includes(String(ticket.number)));\n  const fehlend = angefordert.filter((nr) => !gefunden.some(({ json }) => String(json.number) === nr));\n  if (fehlend.length > 0) console.log(`Angeforderte Tickets nicht gefunden: ${fehlend.join(', ')}`);\n  if (gefunden.length === 0) throw new Error(`Keines der angeforderten Tickets gefunden: ${angefordert.join(', ')}`);\n  return gefunden;\n}\n\nconst SPRACHNACHRICHT = /^\\s*(re:\\s*|aw:\\s*|fwd?:\\s*|wg:\\s*)*neue sprachnachricht von\\b/i;\n\nreturn $input.all().filter(({ json: ticket }) => {\n  if (SPRACHNACHRICHT.test(String(ticket.title || ''))) return false;\n  const eigenes = ticket.owner_id === OWNER_ID && [1, 2, 3, 6].includes(ticket.state_id);\n  const ausbildung = [1, 2, 3, 6].includes(ticket.state_id) && AUSBILDUNG_GRUPPEN.includes(ticket.group_id);\n  return eigenes || ausbildung;\n});"
       }
     },
     {
@@ -278,7 +278,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const eingabe = $('LLM-Eingabe bauen').item.json;\nconst ticket = eingabe.ticket;\n\nlet parsed = null;\ntry {\n  parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n} catch (err) {\n  parsed = null;\n}\n\nif (!parsed || !parsed.ok) {\n  const detail = parsed && parsed.error\n    ? `${parsed.error.code}: ${parsed.error.message}`\n    : String($json.stderr || $json.error || 'keine Ausgabe von ollama-pc/cli.js').trim();\n  // Kein throw: Der Fehler wird gemeldet (Push), die übrigen Tickets laufen weiter.\n  return { json: { fehler: `Ollama-Anfrage fehlgeschlagen (Ticket #${ticket.number}): ${detail}`, ticket } };\n}\n\nconst SIGNATUR = `Mit freundlichen Grüßen\n\nDLRG OG Andernach e.V.\n\n--\n\nDeutsche Lebens-Rettungs-Gesellschaft\nLandesverband Rheinland-Pfalz\nOrtsgruppe Andernach e.V.\n\nBalthasar-Neumann-Strasse 5 | 56648 Saffig\nTelefon: +49 2632 46162\n\nE-Mail: info@andernach.dlrg.de | URL: https://andernach.dlrg.de\nRechtsform: eingetragener Verein (e.V.) Amtsgericht Koblenz VR 11775\n\nVertretungsberechtigung gemäß § 26 BGB: 1. Vorsitzender Erik Mueller 2. Vorsitzender Peter Kretzer\n\nBild- und Filmrechte\nDie Einverständniserklärungen der auf Foto- und/oder Filmaufnahmen abgebildeten Personen über die zeitlich unbegrenzte Nutzung der Foto- und/oder Filmaufnahmen zum Zweck der Außendarstellung des Vereins in Print- und Onlinemedien, die im Rahmen der Vereinsveranstaltung gemacht wurden, liegen der DLRG Andernach vor.\n\nDer Inhalt dieser E-Mail ist ausschließlich für den bezeichneten Adressaten bestimmt. Wenn Sie nicht der vorgesehene Adressat dieser E-Mail oder dessen Vertreter sein sollten, so beachten Sie bitte, dass jede Form der Kenntnisnahme, Veröffentlichung, Vervielfältigung oder Weitergabe des Inhalts dieser E-Mail unzulässig ist. Wir bitten Sie, sich in diesem Fall mit dem Absender der E-Mail in Verbindung zu setzen. Die DLRG Andernach schließt jegliche Haftung für Verluste oder Schäden aus, die durch virenbefallene Software oder E-Mails verursacht werden.\n\nWhatsApp-Kanal dass du keine neuigkeiten mehr verpasst:\nhttps://whatsapp.com/channel/0029VbDbnqA8F2pCINGsId0N\n\nInstagram:\nhttps://www.instagram.com/dlrg_andernach/\n\nID-IT-xi8klGKdh8`;\nconst AUSBILDUNG_GRUPPEN = [2];\nconst AUSBILDUNG_ABSENDER = 'Daniela Saxer';\n// Ausbildung unterschreibt mit Namen, alle anderen Gruppen mit dem Vereinsnamen.\nconst signatur = AUSBILDUNG_GRUPPEN.includes(ticket.group_id)\n  ? SIGNATUR.replace('DLRG OG Andernach e.V.', AUSBILDUNG_ABSENDER)\n  : SIGNATUR;\nconst GRUSS_ZEILE = /^\\s*(mit freundlichen|freundliche|viele|beste|herzliche|liebe|sportliche|schöne|schone)\\s+gr(ü|ue|u)(ß|ss)(e|en)\\s*[,.!]?\\s*$/i;\n\n// Schneidet eine vom Modell geschriebene Grußformel samt bereits angehängter Signatur ab.\nfunction ohneGruss(reply) {\n  const zeilen = reply.split('\\n');\n  const stop = Math.max(zeilen.length - 40, 0);\n  for (let i = zeilen.length - 1; i >= stop; i -= 1) {\n    if (GRUSS_ZEILE.test(zeilen[i])) return zeilen.slice(0, i).join('\\n').trimEnd();\n  }\n  return reply;\n}\n\nconst hinweise = [];\nconst rohText = ohneGruss(String(parsed.reply || '').trim())\n  .replace(/[ \\t]*\\[INTERN:\\s*([^\\]]*)\\]/g, (_, hinweis) => {\n    hinweise.push(hinweis.trim());\n    return '';\n  })\n  .replace(/[ \\t]+$/gm, '')\n  .replace(/(https?:\\/\\/\\S+) ([.,;:!?])/g, '$1$2')\n  .replace(/([^.])\\.\\.(?!\\.)/g, '$1.')\n  .replace(/\\n{3,}/g, '\\n\\n')\n  .trim();\n\n// Sorgt für Leerzeilen an sinnvollen Stellen, auch wenn das Modell sie weglässt:\n// nach der Anrede und nach einem einleitenden Dank-Satz.\nconst ANREDE_ZEILE = /^\\s*(guten (tag|morgen|abend)|hallo|liebe[rn]?|sehr geehrte[rn]?|hi)\\b[^\\n]*[,!]\\s*$/i;\nconst DANK_ZEILE = /^\\s*(vielen dank|herzlichen dank|danke)\\b[^\\n]*[.!]\\s*$/i;\nfunction absaetzeSetzen(t) {\n  const zeilen = t.replace(/\\r\\n?/g, '\\n').split('\\n');\n  const aus = [];\n  let anredeGesehen = false;\n  let dankGesehen = false;\n  zeilen.forEach((zeile, i) => {\n    aus.push(zeile);\n    const naechste = zeilen[i + 1];\n    if (naechste === undefined || !naechste.trim() || !zeile.trim()) return;\n    if (!anredeGesehen && ANREDE_ZEILE.test(zeile)) {\n      anredeGesehen = true;\n      aus.push('');\n    } else if (!dankGesehen && DANK_ZEILE.test(zeile)) {\n      dankGesehen = true;\n      aus.push('');\n    }\n  });\n  return aus.join('\\n').replace(/\\n{3,}/g, '\\n\\n').trim();\n}\nconst text = absaetzeSetzen(rohText);\n\n// [KURSLINK: ...] bleibt im Text stehen und wird im Node \"Kurslinks in Entwurf einfügen\" durch den Link ersetzt.\nconst kurslinkHinweise = Array.from(text.matchAll(/\\[KURSLINK:\\s*([^\\]]*)\\]/g)).map((m) => m[1].trim());\n// Mailtext samt Verlauf, damit der Kurs über einen darin genannten Kurscode eindeutig bestimmt werden kann.\nlet kurslinkKontext = '';\nif (kurslinkHinweise.length > 0) {\n  try {\n    const nutzlast = JSON.parse(Buffer.from(eingabe.payloadB64, 'base64').toString('utf8'));\n    kurslinkKontext = [nutzlast.mail.subject, String(nutzlast.mail.text).slice(0, 6000), ...nutzlast.history.slice(-3).map((h) => String(h.text).slice(0, 3000))].join('\\n');\n  } catch (err) {\n    kurslinkKontext = '';\n  }\n}\nconst entwurf = text + '\\n\\n' + signatur;\n\nconst escapeHtml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst alsAbsaetze = (t) => t\n  .replace(/\\r\\n?/g, '\\n')\n  .split(/\\n{2,}/)\n  .map((absatz) => '<p>' + escapeHtml(absatz)\n    .replace(/(https?:\\/\\/[^\\s<]*[^\\s<.,;:!?])/g, '<a href=\"$1\">$1</a>')\n    .replace(/\\n/g, '<br>') + '</p>')\n  .join('');\n// Signatur: jede Zeile bleibt eine eigene Zeile (leere Zeile = Abstand), wie sie auch Zammads Editor erzeugt.\nconst alsZeilen = (t) => t\n  .replace(/\\r\\n?/g, '\\n')\n  .split('\\n')\n  .map((zeile) => (zeile.trim()\n    ? '<div>' + escapeHtml(zeile).replace(/(https?:\\/\\/[^\\s<]*[^\\s<.,;:!?])/g, '<a href=\"$1\">$1</a>') + '</div>'\n    : '<div><br></div>'))\n  .join('');\nconst abstand = '<p><br></p><p><br></p>';\nconst entwurfHtml = alsAbsaetze(text) + abstand + alsZeilen(signatur);\nconst notizHtml = entwurfHtml;\nconst hinweiseHtml = hinweise.length\n  ? '<p><b>Interne Hinweise zum KI-Entwurf</b></p><ul>' + hinweise.map((h) => '<li>' + escapeHtml(h) + '</li>').join('') + '</ul>'\n  : '';\n\nreturn { json: { ticket, modus: eingabe.modus, replyTo: eingabe.replyTo, messageId: eingabe.messageId, entwurf, entwurfHtml, notizHtml, hinweise, hinweiseHtml, kurslinkHinweise, kurslinkHinweiseB64: Buffer.from(JSON.stringify({ hints: kurslinkHinweise, context: kurslinkKontext })).toString('base64'), warnings: parsed.warnings, stats: parsed.stats } };"
+        "jsCode": "const eingabe = $('LLM-Eingabe bauen').item.json;\nconst ticket = eingabe.ticket;\n\nlet parsed = null;\ntry {\n  parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n} catch (err) {\n  parsed = null;\n}\n\nif (!parsed || !parsed.ok) {\n  const detail = parsed && parsed.error\n    ? `${parsed.error.code}: ${parsed.error.message}`\n    : String($json.stderr || $json.error || 'keine Ausgabe von ollama-pc/cli.js').trim();\n  // Kein throw: Der Fehler wird gemeldet (Push), die übrigen Tickets laufen weiter.\n  return { json: { fehler: `Ollama-Anfrage fehlgeschlagen (Ticket #${ticket.number}): ${detail}`, ticket } };\n}\n\nconst SIGNATUR = `Mit freundlichen Grüßen\n\nDLRG OG Andernach e.V.\n\n--\n\nDeutsche Lebens-Rettungs-Gesellschaft\nLandesverband Rheinland-Pfalz\nOrtsgruppe Andernach e.V.\n\nBalthasar-Neumann-Strasse 5 | 56648 Saffig\nTelefon: +49 2632 46162\n\nE-Mail: info@andernach.dlrg.de | URL: https://andernach.dlrg.de\nRechtsform: eingetragener Verein (e.V.) Amtsgericht Koblenz VR 11775\n\nVertretungsberechtigung gemäß § 26 BGB: 1. Vorsitzender Erik Mueller 2. Vorsitzender Peter Kretzer\n\nBild- und Filmrechte\nDie Einverständniserklärungen der auf Foto- und/oder Filmaufnahmen abgebildeten Personen über die zeitlich unbegrenzte Nutzung der Foto- und/oder Filmaufnahmen zum Zweck der Außendarstellung des Vereins in Print- und Onlinemedien, die im Rahmen der Vereinsveranstaltung gemacht wurden, liegen der DLRG Andernach vor.\n\nDer Inhalt dieser E-Mail ist ausschließlich für den bezeichneten Adressaten bestimmt. Wenn Sie nicht der vorgesehene Adressat dieser E-Mail oder dessen Vertreter sein sollten, so beachten Sie bitte, dass jede Form der Kenntnisnahme, Veröffentlichung, Vervielfältigung oder Weitergabe des Inhalts dieser E-Mail unzulässig ist. Wir bitten Sie, sich in diesem Fall mit dem Absender der E-Mail in Verbindung zu setzen. Die DLRG Andernach schließt jegliche Haftung für Verluste oder Schäden aus, die durch virenbefallene Software oder E-Mails verursacht werden.\n\nWhatsApp-Kanal dass du keine neuigkeiten mehr verpasst:\nhttps://whatsapp.com/channel/0029VbDbnqA8F2pCINGsId0N\n\nInstagram:\nhttps://www.instagram.com/dlrg_andernach/\n\nID-IT-xi8klGKdh8`;\nconst AUSBILDUNG_GRUPPEN = [2];\nconst AUSBILDUNG_ABSENDER = 'Daniela Saxer';\n// Ausbildung unterschreibt mit Namen, alle anderen Gruppen mit dem Vereinsnamen.\nconst signatur = AUSBILDUNG_GRUPPEN.includes(ticket.group_id)\n  ? SIGNATUR.replace('DLRG OG Andernach e.V.', AUSBILDUNG_ABSENDER)\n  : SIGNATUR;\nconst GRUSS_ZEILE = /^\\s*(mit freundlichen|freundliche|viele|beste|herzliche|liebe|sportliche|schöne|schone)\\s+gr(ü|ue|u)(ß|ss)(e|en)\\s*[,.!]?\\s*$/i;\n\n// Schneidet eine vom Modell geschriebene Grußformel samt bereits angehängter Signatur ab.\nfunction ohneGruss(reply) {\n  const zeilen = reply.split('\\n');\n  const stop = Math.max(zeilen.length - 40, 0);\n  for (let i = zeilen.length - 1; i >= stop; i -= 1) {\n    if (GRUSS_ZEILE.test(zeilen[i])) return zeilen.slice(0, i).join('\\n').trimEnd();\n  }\n  return reply;\n}\n\nconst hinweise = [];\nconst anhaenge = [];\nconst rohText = ohneGruss(String(parsed.reply || '').trim())\n  .replace(/[ \\t]*\\[INTERN:\\s*([^\\]]*)\\]/g, (_, hinweis) => {\n    hinweise.push(hinweis.trim());\n    return '';\n  })\n  .replace(/[ \\t]*\\[ANHANG:\\s*([^\\]]*)\\]/g, (_, name) => {\n    anhaenge.push(name.trim());\n    return '';\n  })\n  .replace(/[ \\t]+$/gm, '')\n  .replace(/(https?:\\/\\/\\S+) ([.,;:!?])/g, '$1$2')\n  .replace(/([^.])\\.\\.(?!\\.)/g, '$1.')\n  .replace(/\\n{3,}/g, '\\n\\n')\n  .trim();\n\nif (anhaenge.length > 0 && eingabe.modus !== 'entwurf') {\n  hinweise.push(`Anhang ${anhaenge.join(', ')} wurde nicht automatisch angehängt, bitte beim Versand von Hand anhängen`);\n}\n\n// Sorgt für Leerzeilen an sinnvollen Stellen, auch wenn das Modell sie weglässt:\n// nach der Anrede und nach einem einleitenden Dank-Satz.\nconst ANREDE_ZEILE = /^\\s*(guten (tag|morgen|abend)|hallo|liebe[rn]?|sehr geehrte[rn]?|hi)\\b[^\\n]*[,!]\\s*$/i;\nconst DANK_ZEILE = /^\\s*(vielen dank|herzlichen dank|danke)\\b[^\\n]*[.!]\\s*$/i;\nfunction absaetzeSetzen(t) {\n  const zeilen = t.replace(/\\r\\n?/g, '\\n').split('\\n');\n  const aus = [];\n  let anredeGesehen = false;\n  let dankGesehen = false;\n  zeilen.forEach((zeile, i) => {\n    aus.push(zeile);\n    const naechste = zeilen[i + 1];\n    if (naechste === undefined || !naechste.trim() || !zeile.trim()) return;\n    if (!anredeGesehen && ANREDE_ZEILE.test(zeile)) {\n      anredeGesehen = true;\n      aus.push('');\n    } else if (!dankGesehen && DANK_ZEILE.test(zeile)) {\n      dankGesehen = true;\n      aus.push('');\n    }\n  });\n  return aus.join('\\n').replace(/\\n{3,}/g, '\\n\\n').trim();\n}\nconst text = absaetzeSetzen(rohText);\n\n// [KURSLINK: ...] bleibt im Text stehen und wird im Node \"Kurslinks in Entwurf einfügen\" durch den Link ersetzt.\nconst kurslinkHinweise = Array.from(text.matchAll(/\\[KURSLINK:\\s*([^\\]]*)\\]/g)).map((m) => m[1].trim());\n// Mailtext samt Verlauf, damit der Kurs über einen darin genannten Kurscode eindeutig bestimmt werden kann.\nlet kurslinkKontext = '';\nif (kurslinkHinweise.length > 0) {\n  try {\n    const nutzlast = JSON.parse(Buffer.from(eingabe.payloadB64, 'base64').toString('utf8'));\n    kurslinkKontext = [nutzlast.mail.subject, String(nutzlast.mail.text).slice(0, 6000), ...nutzlast.history.slice(-3).map((h) => String(h.text).slice(0, 3000))].join('\\n');\n  } catch (err) {\n    kurslinkKontext = '';\n  }\n}\nconst entwurf = text + '\\n\\n' + signatur;\n\nconst escapeHtml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst alsAbsaetze = (t) => t\n  .replace(/\\r\\n?/g, '\\n')\n  .split(/\\n{2,}/)\n  .map((absatz) => '<p>' + escapeHtml(absatz)\n    .replace(/(https?:\\/\\/[^\\s<]*[^\\s<.,;:!?])/g, '<a href=\"$1\">$1</a>')\n    .replace(/\\n/g, '<br>') + '</p>')\n  .join('');\n// Signatur: jede Zeile bleibt eine eigene Zeile (leere Zeile = Abstand), wie sie auch Zammads Editor erzeugt.\nconst alsZeilen = (t) => t\n  .replace(/\\r\\n?/g, '\\n')\n  .split('\\n')\n  .map((zeile) => (zeile.trim()\n    ? '<div>' + escapeHtml(zeile).replace(/(https?:\\/\\/[^\\s<]*[^\\s<.,;:!?])/g, '<a href=\"$1\">$1</a>') + '</div>'\n    : '<div><br></div>'))\n  .join('');\nconst abstand = '<p><br></p><p><br></p>';\nconst entwurfHtml = alsAbsaetze(text) + abstand + alsZeilen(signatur);\nconst notizHtml = entwurfHtml;\nconst hinweiseHtml = hinweise.length\n  ? '<p><b>Interne Hinweise zum KI-Entwurf</b></p><ul>' + hinweise.map((h) => '<li>' + escapeHtml(h) + '</li>').join('') + '</ul>'\n  : '';\n\nreturn { json: { ticket, modus: eingabe.modus, replyTo: eingabe.replyTo, messageId: eingabe.messageId, entwurf, entwurfHtml, notizHtml, hinweise, hinweiseHtml, anhaenge, kurslinkHinweise, kurslinkHinweiseB64: Buffer.from(JSON.stringify({ hints: kurslinkHinweise, context: kurslinkKontext })).toString('base64'), warnings: parsed.warnings, stats: parsed.stats } };"
       }
     },
     {
@@ -554,7 +554,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ (() => { const e = $('Kurslinks in Entwurf einfügen').item.json; return JSON.stringify({ new_article: { type: 'email', internal: false, to: e.replyTo, subject: e.ticket.title, body: e.entwurfHtml, content_type: 'text/html', in_reply_to: e.messageId }, ticket_attributes: { group_id: e.ticket.group_id } }); })() }}",
+        "jsonBody": "={{ (() => { const e = $('Kurslinks in Entwurf einfügen').item.json; const formId = $json.success === true ? $('Anhang laden').item.json.formId : undefined; return JSON.stringify({ new_article: { type: 'email', internal: false, to: e.replyTo, subject: e.ticket.title, body: e.entwurfHtml, content_type: 'text/html', in_reply_to: e.messageId }, ticket_attributes: { group_id: e.ticket.group_id }, form_id: formId }); })() }}",
         "options": {}
       },
       "credentials": {
@@ -740,6 +740,135 @@
         "smtp": {
           "id": "gQZtSwFzQoNoRn3S",
           "name": "SMTP Netcup Automations"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "a1c0de00-0001-4000-8000-0000000000e1",
+      "name": "Anhang nötig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        11776,
+        800
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e5e5e5e5-0007-4000-8000-000000000d01",
+              "leftValue": "={{ $('Kurslinks in Entwurf einfügen').item.json.anhaenge.length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a1c0de00-0001-4000-8000-0000000000e2",
+      "name": "Anhang laden",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11888,
+        640
+      ],
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const e = $('Kurslinks in Entwurf einfügen').item.json;\nconst norm = (t) => String(t).toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z]/g, '');\nconst BEKANNT = [{ schluessel: 'selbsterklaerung', pfad: '/home/node/.n8n/anhaenge/Selbsterklaerung_zum_Gesundheitszustand.pdf', name: 'Selbsterklaerung_zum_Gesundheitszustand.pdf' }];\nconst treffer = BEKANNT.find((a) => e.anhaenge.some((h) => norm(h).includes(a.schluessel)));\nif (!treffer) throw new Error('Unbekannter Anhang: ' + e.anhaenge.join(', '));\nconst { execFileSync } = require('child_process');\nconst daten = execFileSync('cat', [treffer.pfad], { maxBuffer: 50 * 1024 * 1024 });\nconst binary = await this.helpers.prepareBinaryData(daten, treffer.name, 'application/pdf');\nreturn { json: { formId: 'n8n-' + require('crypto').randomUUID(), anhang: treffer.name }, binary: { File: binary } };"
+      }
+    },
+    {
+      "id": "a1c0de00-0001-4000-8000-0000000000e3",
+      "name": "Anhang hochladen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueErrorOutput",
+      "position": [
+        12000,
+        640
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://ticket.emue365.de/api/v1/upload_caches/' + $json.formId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "File",
+              "inputDataFieldName": "File"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DYSeqKzcJFVzUL04",
+          "name": "Zammad ticket.emue365 API-Token"
+        }
+      }
+    },
+    {
+      "id": "a1c0de00-0001-4000-8000-0000000000e4",
+      "name": "Anhang-Fehler-Push senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        12112,
+        640
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://ntfy.ntfy.svc.cluster.local/zammad",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "Anhang am KI-Entwurf fehlt"
+            },
+            {
+              "name": "Priority",
+              "value": "high"
+            },
+            {
+              "name": "Tags",
+              "value": "warning"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ (() => { let t = '?'; try { t = $('Antwortentwurf extrahieren').item.json.ticket.number; } catch (e) {} const f = $json.error ? ($json.error.message || JSON.stringify($json.error)) : 'unbekannter Fehler'; return 'Ticket #' + t + ': Anhang konnte nicht angehängt werden, bitte von Hand anhängen (' + String(f).slice(0, 300) + ')'; })() }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
         }
       },
       "onError": "continueRegularOutput"
@@ -953,7 +1082,7 @@
       "main": [
         [
           {
-            "node": "Shared Draft speichern",
+            "node": "Anhang nötig?",
             "type": "main",
             "index": 0
           }
@@ -1124,6 +1253,70 @@
         [
           {
             "node": "Freigabe-Push senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anhang nötig?": {
+      "main": [
+        [
+          {
+            "node": "Anhang laden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Shared Draft speichern",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anhang laden": {
+      "main": [
+        [
+          {
+            "node": "Anhang hochladen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Anhang-Fehler-Push senden",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Shared Draft speichern",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anhang hochladen": {
+      "main": [
+        [
+          {
+            "node": "Shared Draft speichern",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Anhang-Fehler-Push senden",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Shared Draft speichern",
             "type": "main",
             "index": 0
           }
