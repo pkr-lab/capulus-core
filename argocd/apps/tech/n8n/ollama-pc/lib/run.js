@@ -1,14 +1,15 @@
 'use strict';
 
 const { ensureReady, preload, chat, stats } = require('./ollama');
-const { loadPromptFiles, buildMessages, cleanReply, stripClosing } = require('./prompt');
+const { channelOf, loadPromptFiles, buildMessages, cleanReply, stripClosing } = require('./prompt');
 const { OllamaPcError } = require('./errors');
 
 const MAX_ATTEMPTS = 2;
 const SAFETY_FACTOR = 0.9;
 
 async function generateReply(config, input, { log = () => {}, ready } = {}) {
-  const prompts = loadPromptFiles(config, { profile: input && input.profile });
+  const channel = channelOf(input);
+  const prompts = loadPromptFiles(config, { profile: input && input.profile, channel });
   log(
     `Firmenwissen (Profil ${(input && input.profile) || 'alle'}): ${prompts.knowledge.files.length} Datei(en), ca. ${prompts.knowledge.tokens} Token (${Math.round(prompts.knowledge.ratio * 100)}% von num_ctx ${config.numCtx})`,
   );
@@ -50,7 +51,7 @@ async function generateReply(config, input, { log = () => {}, ready } = {}) {
   if (!reply) throw new OllamaPcError('EMPTY_REPLY', `Modell ${config.model} lieferte eine leere Antwort`);
 
   return {
-    reply: stripClosing(reply),
+    reply: channel === 'instagram' ? reply : stripClosing(reply),
     model: config.model,
     woke: readiness.woke,
     waited_ms: readiness.waitedMs,
