@@ -179,7 +179,7 @@ test('Antwort prüfen: [ÜBERGABE] → fester Text bzw. Text davor (Notruf), Gru
 });
 
 test('Antwort prüfen: Platzhalter, fremde Links/Adressen, leere Antwort und Ollama-Fehler gehen nie raus', async () => {
-  for (const reply of ['Hier der Link [KURSLINK: CrashKurs]', '[BITTE PRÜFEN: Preis] 20 Euro', 'Schau auf https://evil.example/anmelden', 'Schreib an max@gmail.com', 'Siehe www.fake-dlrg.de', '   ']) {
+  for (const reply of ['Hier der Link [KURSLINK: CrashKurs]', 'Siehe Teilnahmebedingungen (`08_kontakt_und_links.md`).', '[BITTE PRÜFEN: Preis] 20 Euro', 'Schau auf https://evil.example/anmelden', 'Schreib an max@gmail.com', 'Siehe www.fake-dlrg.de', '   ']) {
     const out = await pruefen(reply);
     assert.equal(out.modus, 'uebergabe', reply);
     assert.equal(out.antwort, out.cfg.uebergabeText, reply);
