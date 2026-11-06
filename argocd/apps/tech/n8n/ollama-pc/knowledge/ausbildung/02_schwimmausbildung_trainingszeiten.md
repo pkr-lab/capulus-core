@@ -9,3 +9,6 @@ Alles Schwimmtraining und alle Schwimmkurse finden im **Andernacher Hallenbad** 
 | Erwachsenenschwimmkurs (EsK, nur mit Anmeldung) | Sonntag | 8:30 – 10:30 |
 
 Leitung: Nils Müller, Ursula Kamp, Margarete Stein (mit ausgebildeten Assistenten). Details zum EsK: `11_erwachsenenschwimmkurs.md`.
+
+## Mitgliedschaft und Beiträge beim regulären Training
+Fürs reguläre Schwimmtraining (Dienstag, Donnerstag) ist die Mitgliedschaft im Verein nötig. Fragen zu Mitgliedschaft und Beiträgen: auf https://andernach.dlrg.de/ortsgruppe/mitglied-werden/ verweisen, keine Beträge nennen. **Nicht** die Teilnahmebedingungen verlinken, sie gelten nur für Kurse.
