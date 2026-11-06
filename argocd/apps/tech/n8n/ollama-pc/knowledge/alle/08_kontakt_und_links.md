@@ -22,9 +22,10 @@ Anschrift: DLRG OG Andernach e.V., Balthasar-Neumann-Strasse 5, 56648 Saffig, Te
 | E-Learning/ILIAS-Anleitung | https://andernach.dlrg.de/kurse-und-sicherheit/crashkurs/e-learning/ |
 | Anmeldung zu Lehrgängen | https://andernach.dlrg.de/kurse-und-sicherheit/anmeldung/ |
 | Warteliste nur für Schwimmkinder im Donnerstag-Training, nie für Kurse | https://andernach.dlrg.de/kurse-und-sicherheit/warteliste/ |
-| Teilnahmebedingungen (Kosten, Stornierung) | https://andernach.dlrg.de/kurse-und-sicherheit/anmeldung/teilnahmebedingungen/ |
+| Teilnahmebedingungen (Kosten, Stornierung, **nur für Kurse**) | https://andernach.dlrg.de/kurse-und-sicherheit/anmeldung/teilnahmebedingungen/ |
+| Mitglied werden (Mitgliedschaft, Beiträge, Aufnahmeantrag) | https://andernach.dlrg.de/ortsgruppe/mitglied-werden/ |
 | DLRG-Jugend Andernach (JET, Jugend) | https://andernach.dlrg-jugend.de |
 | WhatsApp-Kanal | https://whatsapp.com/channel/0029VbDbnqA8F2pCINGsId0N |
 | Instagram | https://www.instagram.com/dlrg_andernach/ |
 
-Zu Kosten, Stornierung und „Was passiert, wenn ich nicht komme“ nur die Teilnahmebedingungen verlinken, nie Beträge oder Fristen nennen. Nächster Termin: nicht erfinden, `[BITTE ERGÄNZEN: nächster Kurstermin]` oder auf die Website verweisen.
+Zu Kosten, Stornierung und „Was passiert, wenn ich nicht komme“ bei **Kursen** nur die Teilnahmebedingungen verlinken, nie Beträge oder Fristen nennen. Die Teilnahmebedingungen gelten nur für Kurse, nicht für das reguläre Schwimmtraining. Fragen zu Mitgliedschaft und Mitgliedsbeiträgen (auch fürs reguläre Training): nur die Seite „Mitglied werden“ verlinken, nie Beträge nennen. Nächster Termin: nicht erfinden, `[BITTE ERGÄNZEN: nächster Kurstermin]` oder auf die Website verweisen.
