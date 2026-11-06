@@ -1,0 +1,890 @@
+{
+  "name": "Instagram-DMs mit KI beantworten",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "instagram-dm",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a2ade199-0a56-5b4a-b73a-d5b3144a4923",
+      "name": "Verifizierung (GET)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        140
+      ],
+      "webhookId": "c0d24b28-6019-5d8d-9e46-cdf5485f4c30"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "instagram-dm",
+        "responseMode": "onReceived",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "651fcd2e-49b1-5b08-98ad-f90a5310fe1a",
+      "name": "Nachricht (POST)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        360
+      ],
+      "webhookId": "c11b27a6-3921-5081-9bed-ceab84369a11"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const item = $input.first();\nreturn [{\n  json: {\n    ...item.json,\n    cfg: {\n      // true: es wird nichts an Instagram gesendet, die Antwort kommt nur per ntfy zur Ansicht.\n      testModus: true,\n      // Nicht leer: Nur diese Instagram-Nutzer-IDs (IGSID) bekommen echte Antworten, alle anderen nur den Probelauf per ntfy.\n      erlaubteNutzer: [],\n      graphUrl: 'https://graph.facebook.com/v23.0',\n      igUserId: 'CHANGE-ME-IG-USER-ID',\n      appSecret: 'CHANGE-ME-APP-SECRET',\n      verifyToken: 'CHANGE-ME-VERIFY-TOKEN',\n      ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n      ntfyTopic: 'instagram',\n      wissensprofil: 'ausbildung',\n      wartezeitSekunden: 8,\n      verlaufNachrichten: 12,\n      uebernahmeStunden: 12,\n      maxAntwortenProStunde: 6,\n      maxBytesProNachricht: 900,\n      zustandsDatei: '/home/node/.n8n/instagram-dm-zustand.json',\n      erlaubteDomains: ['dlrg.de', 'dlrg.org', 'dlrg-jugend.de', 'instagram.com', 'whatsapp.com'],\n      kiHinweis: '🤖 Automatische Antwort der KI. Wenn du lieber mit einem Menschen schreiben möchtest, antworte einfach mit „Mensch“.',\n      uebergabeText: 'Danke für deine Nachricht! Das kann ich hier nicht abschließend beantworten. Jemand aus dem Team meldet sich persönlich bei dir.',\n      ohneTextAntwort: 'Danke für deine Nachricht! Bilder, Sprachnachrichten und Dateien kann ich leider nicht lesen. Schreib mir deine Frage bitte kurz als Text.'\n    }\n  },\n  binary: item.binary\n}];\n"
+      },
+      "id": "115e29bc-2183-5b22-b07b-c372455143af",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        250
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst fs = require('fs');\n\nconst item = $input.first();\nconst json = item.json;\nconst cfg = json.cfg;\nconst jetzt = Date.now();\n\n// Meta ruft denselben Pfad mit GET (Webhook-Verifizierung) und mit POST (Ereignisse) auf.\n// Nur POSTs tragen den Rohtext (rawBody) als Binärdatei.\nconst istPost = !!(item.binary && item.binary.data);\nconst platzhalter = (wert) => !wert || String(wert).startsWith('CHANGE-ME');\n\nif (!istPost) {\n  const q = json.query || {};\n  const hub = q.hub || {};\n  const modus = q['hub.mode'] ?? hub.mode;\n  const token = q['hub.verify_token'] ?? hub.verify_token;\n  const challenge = q['hub.challenge'] ?? hub.challenge;\n  const ok = modus === 'subscribe' && !platzhalter(cfg.verifyToken) && token === cfg.verifyToken && challenge !== undefined;\n  return [{ json: { art: 'verify', ok, challenge: String(challenge ?? '') } }];\n}\n\nif (platzhalter(cfg.appSecret) || platzhalter(cfg.igUserId)) {\n  console.log('Konfiguration unvollständig: appSecret oder igUserId fehlt, Ereignis verworfen');\n  return [];\n}\n\nconst roh = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst erwartet = Buffer.from('sha256=' + crypto.createHmac('sha256', cfg.appSecret).update(roh).digest('hex'));\nconst erhalten = Buffer.from(String((json.headers || {})['x-hub-signature-256'] || ''));\nif (erwartet.length !== erhalten.length || !crypto.timingSafeEqual(erwartet, erhalten)) {\n  console.log('Signatur ungültig, Ereignis verworfen');\n  return [];\n}\n\nlet daten;\ntry {\n  daten = JSON.parse(roh.toString('utf8'));\n} catch (err) {\n  return [];\n}\nif (daten.object !== 'instagram') return [];\n\n// Zustand liegt in einer Datei, nicht in den Workflow-Static-Data: Lange Läufe (KI) würden dort\n// die Änderungen paralleler Läufe überschreiben. Lesen und Schreiben sind synchron und damit atomar.\nfunction lesen() {\n  try {\n    return JSON.parse(fs.readFileSync(cfg.zustandsDatei, 'utf8'));\n  } catch (err) {\n    return {};\n  }\n}\nconst z = lesen();\nfor (const feld of ['letzte', 'mensch', 'senden', 'antworten']) z[feld] = z[feld] || {};\nz.mids = z.mids || [];\n\nconst IGNORIERT = ['like_heart', 'reaction', 'share', 'story_mention', 'ig_reel', 'ig_post'];\nconst MENSCH = /\\b(mensch|menschen|echte[rn]? (person|mitarbeiter\\w*)|mitarbeiter(in)?|ansprechpartner(in)?)\\b/i;\nconst ergebnis = [];\n\nfor (const eintrag of daten.entry || []) {\n  for (const m of eintrag.messaging || []) {\n    const msg = m.message;\n    if (!msg || !msg.mid) continue;\n\n    if (msg.is_echo) {\n      // Echo einer von uns gesendeten Nachricht. Eigene API-Antworten stehen im Sendefenster, alles andere schrieb ein Mensch in der Instagram-App.\n      const nutzer = m.recipient && m.recipient.id;\n      if (nutzer && !(z.senden[nutzer] > jetzt)) {\n        z.mensch[nutzer] = jetzt + cfg.uebernahmeStunden * 3600000;\n        console.log(`Mensch hat in der App geantwortet, KI pausiert für ${nutzer}`);\n      }\n      continue;\n    }\n\n    const sender = m.sender && m.sender.id;\n    if (!sender || sender === cfg.igUserId || msg.is_deleted) continue;\n    if (z.mids.includes(msg.mid)) continue;\n    z.mids.push(msg.mid);\n    z.letzte[sender] = msg.mid;\n\n    if (z.mensch[sender] > jetzt) {\n      console.log(`KI pausiert für ${sender} (Mensch hat übernommen)`);\n      continue;\n    }\n    const letzteStunde = (z.antworten[sender] || []).filter((t) => t > jetzt - 3600000);\n    if (letzteStunde.length >= cfg.maxAntwortenProStunde) {\n      console.log(`Antwort-Limit für ${sender} erreicht, Nachricht übergangen`);\n      continue;\n    }\n\n    const text = String(msg.text || '').trim().slice(0, 2000);\n    const anhaenge = (msg.attachments || []).map((a) => a.type);\n    const probe = cfg.testModus === true || (cfg.erlaubteNutzer.length > 0 && !cfg.erlaubteNutzer.includes(sender));\n    const basis = { art: 'nachricht', sender, mid: msg.mid, text, probe, notiz: '' };\n\n    if (!text) {\n      if (anhaenge.length === 0 || anhaenge.every((t) => IGNORIERT.includes(t))) continue;\n      ergebnis.push({ json: { ...basis, modus: 'fest', antwort: cfg.ohneTextAntwort, notiz: `Nachricht ohne Text (${anhaenge.join(', ')})` } });\n    } else if (text.length <= 60 && MENSCH.test(text)) {\n      ergebnis.push({ json: { ...basis, modus: 'uebergabe', antwort: cfg.uebergabeText, notiz: 'Person möchte mit einem Menschen schreiben' } });\n    } else {\n      ergebnis.push({ json: { ...basis, modus: 'ki', antwort: '' } });\n    }\n  }\n}\n\nz.mids = z.mids.slice(-500);\nconst alt = jetzt - 7 * 86400000;\nfor (const feld of ['mensch', 'senden']) {\n  for (const k of Object.keys(z[feld])) if (z[feld][k] < alt) delete z[feld][k];\n}\nconst tmp = `${cfg.zustandsDatei}.${process.pid}.tmp`;\nfs.writeFileSync(tmp, JSON.stringify(z));\nfs.renameSync(tmp, cfg.zustandsDatei);\n\nreturn ergebnis;\n"
+      },
+      "id": "af6dc13d-76d7-50ae-a99f-09708a8b303b",
+      "name": "Anfrage auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        250
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "902dc484-7092-54db-ba74-290119e2f0dc",
+              "leftValue": "={{ $json.art === 'verify' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "01a8b217-6698-5ff7-be77-3ea0b32b6a46",
+      "name": "Verifizierung?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        250
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3a4834fe-a858-5f15-bac7-a5952ed9a400",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8d88f494-20ac-543a-a100-e9229b45d34b",
+      "name": "Token richtig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.challenge }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/plain"
+              }
+            ]
+          }
+        }
+      },
+      "id": "dbc0f55d-ce1f-5eb3-b057-4fa14c7ce332",
+      "name": "Challenge antworten",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Forbidden",
+        "options": {
+          "responseCode": 403
+        }
+      },
+      "id": "d26e1264-542d-56d6-a901-51d6e01cce80",
+      "name": "Verifizierung ablehnen",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": "={{ $('Konfiguration').first().json.cfg.wartezeitSekunden }}",
+        "unit": "seconds"
+      },
+      "id": "e07b48a9-1fe4-599e-8897-73b4ef8a3657",
+      "name": "Auf weitere Nachrichten warten",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        400
+      ],
+      "webhookId": "299f29e7-6bab-5298-91a5-842527ed4ade"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Nach der Wartezeit nur die neueste Nachricht je Person beantworten. Der Verlauf aus der Graph API enthält die früheren Nachrichten.\nconst fs = require('fs');\nconst cfg = $('Konfiguration').first().json.cfg;\nlet z = {};\ntry {\n  z = JSON.parse(fs.readFileSync(cfg.zustandsDatei, 'utf8'));\n} catch (err) {\n  z = {};\n}\nconst letzte = z.letzte || {};\nreturn $input.all().filter(({ json }) => letzte[json.sender] === json.mid);\n"
+      },
+      "id": "7fd2766c-dfb6-5f8d-8aff-216363e6ac4e",
+      "name": "Noch die neueste Nachricht?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "25aab8a4-e3f6-5654-a5cb-c5604326571d",
+              "leftValue": "={{ $json.modus === 'ki' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e35c4e25-2811-5a12-9dd8-01261a30788b",
+      "name": "KI nötig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1440,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Konfiguration').first().json.cfg.graphUrl + '/me/conversations' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "platform",
+              "value": "instagram"
+            },
+            {
+              "name": "user_id",
+              "value": "={{ $json.sender }}"
+            },
+            {
+              "name": "fields",
+              "value": "={{ 'messages.limit(' + $('Konfiguration').first().json.cfg.verlaufNachrichten + '){id,message,from,created_time}' }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "6349c687-4a57-59e1-9178-2463957eba33",
+      "name": "Verlauf holen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "INSTAGRAM_GRAPH_CREDENTIAL_ID",
+          "name": "Instagram Graph API (Seiten-Token)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const nachricht = $('Noch die neueste Nachricht?').item.json;\nconst cfg = $('Konfiguration').first().json.cfg;\n\nconst berlin = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short' });\nconst liste = (($json.data && $json.data[0] && $json.data[0].messages && $json.data[0].messages.data) || []).slice().reverse();\nif ($json.error) console.log(`Verlauf nicht lesbar, Antwort ohne Verlauf: ${JSON.stringify($json.error).slice(0, 200)}`);\n\nconst history = liste\n  .filter((m) => m.id !== nachricht.mid)\n  .map((m) => ({\n    from: m.from && m.from.id === cfg.igUserId ? 'DLRG Andernach (Verein)' : 'Anfragende Person',\n    date: m.created_time ? berlin.format(new Date(m.created_time)) : '',\n    text: String(m.message || '').trim() || '[Bild, Sprachnachricht oder Anhang]',\n  }));\n// Die aktuelle Nachricht steht schon im Verlauf, wenn die API sie mit anderer ID liefert.\nconst letzter = history[history.length - 1];\nif (letzter && letzter.from === 'Anfragende Person' && letzter.text === nachricht.text) history.pop();\n\nconst payload = {\n  channel: 'instagram',\n  profile: cfg.wissensprofil,\n  history: history.slice(-cfg.verlaufNachrichten),\n  mail: { from: 'Anfragende Person', date: berlin.format(new Date()), text: nachricht.text },\n};\nreturn { json: { ...nachricht, payloadB64: Buffer.from(JSON.stringify(payload)).toString('base64') } };\n"
+      },
+      "id": "801ad2c7-1f90-5c20-93fa-d729f4ba3cdf",
+      "name": "LLM-Eingabe bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "node /opt/ollama-pc/cli.js probe"
+      },
+      "id": "2c518c84-8b73-525a-9066-e66c080d5b6a",
+      "name": "Ollama erreichbar?",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        2160,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "74b593c9-2b46-5882-9d6d-d6dee079cd22",
+              "leftValue": "={{ !String($json.stdout).includes('\"up\":true') }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ac4b1d3e-4a48-5f17-a826-03e41ae7cddc",
+      "name": "PC schläft?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://carplay-api.prod.homeserver/api/power/wake",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ target: 'ollama-pc' }) }}",
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "e29e9de4-a77f-5ee7-b918-d9a8177005d2",
+      "name": "Ollama-PC wecken",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        220
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "qw2XzzCvd5uEKb0e",
+          "name": "carplay-api API Token"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "command": "=printf %s '{{ $('LLM-Eingabe bauen').item.json.payloadB64 }}' | base64 -d | node /opt/ollama-pc/cli.js chat"
+      },
+      "id": "9807cd52-dea0-57ef-814c-50c0215b66e6",
+      "name": "Ollama-Antwort erzeugen",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        2880,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const nachricht = $('LLM-Eingabe bauen').item.json;\nconst cfg = $('Konfiguration').first().json.cfg;\nconst { payloadB64, ...basis } = nachricht;\n\nfunction uebergabe(notiz, text) {\n  return { json: { ...basis, modus: 'uebergabe', antwort: text || cfg.uebergabeText, notiz } };\n}\n\nlet parsed = null;\ntry {\n  parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n} catch (err) {\n  parsed = null;\n}\nif (!parsed || !parsed.ok) {\n  const detail = parsed && parsed.error\n    ? `${parsed.error.code}: ${parsed.error.message}`\n    : String($json.stderr || $json.error || 'keine Ausgabe von ollama-pc/cli.js').trim();\n  return uebergabe(`Ollama-Fehler, bitte selbst antworten: ${detail}`);\n}\n\n// Markdown hat im Chat keinen Nutzen.\nlet reply = String(parsed.reply || '')\n  .replace(/\\*\\*([^*]+)\\*\\*/g, '$1')\n  .replace(/^\\s{0,3}#{1,6}\\s+/gm, '')\n  .replace(/^\\s*\\*\\s+/gm, '- ')\n  .trim();\n\nconst marker = /\\[\\s*(?:ÜBERGABE|UEBERGABE)\\s*:?\\s*([^\\]]*)\\]/i.exec(reply);\nif (marker) {\n  const grund = marker[1].trim() || 'ohne Angabe';\n  const davor = reply.replace(marker[0], '').trim();\n  // Text vor der Markierung (z. B. Notruf-Hinweis) wird gesendet, sonst der feste Übergabetext.\n  return uebergabe(`KI übergibt: ${grund}`, davor);\n}\n\nconst platzhalter = reply.match(/\\[[A-ZÄÖÜ][A-ZÄÖÜ ]{2,}:[^\\]]*\\]/);\nif (platzhalter) return uebergabe(`Antwort enthielt Platzhalter ${platzhalter[0].slice(0, 80)}, nicht gesendet`);\nif (!reply) return uebergabe('Leere KI-Antwort');\n\n// Nur Links und Adressen des Vereins dürfen vorkommen, das Modell darf keine erfinden.\nconst erlaubt = (host) => cfg.erlaubteDomains.some((d) => host === d || host.endsWith(`.${d}`));\nconst hosts = [\n  ...(reply.match(/https?:\\/\\/[^\\s)>\\]]+/gi) || []).map((u) => u.replace(/^https?:\\/\\//i, '').split(/[/?#:]/)[0]),\n  ...(reply.match(/[\\w.+-]+@[\\w-]+(?:\\.[\\w-]+)+/g) || []).map((a) => a.split('@')[1]),\n  ...(reply.match(/\\bwww\\.[\\w-]+(?:\\.[\\w-]+)+/gi) || []).map((u) => u.replace(/^www\\./i, '')),\n].map((h) => h.toLowerCase().replace(/[.,;:!?]+$/, ''));\nconst fremd = hosts.filter((h) => !erlaubt(h));\nif (fremd.length) return uebergabe(`Antwort enthielt nicht erlaubte Adresse(n): ${[...new Set(fremd)].join(', ')}`);\n\nreturn { json: { ...basis, modus: 'ki', antwort: reply } };\n"
+      },
+      "id": "a7909155-fe33-5db1-ba78-2d1cbb20b257",
+      "name": "Antwort prüfen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const fs = require('fs');\nconst cfg = $('Konfiguration').first().json.cfg;\nconst jetzt = Date.now();\n\nfunction lesen() {\n  try {\n    return JSON.parse(fs.readFileSync(cfg.zustandsDatei, 'utf8'));\n  } catch (err) {\n    return {};\n  }\n}\n\n// Teilt an Absätzen, dann an Sätzen, zuletzt hart. Instagram erlaubt höchstens 1000 Byte je Textnachricht.\nfunction teile(text, maxBytes) {\n  const bytes = (s) => Buffer.byteLength(s, 'utf8');\n  const stuecke = [];\n  const zusammen = (teile, trenner) => {\n    const aus = [];\n    let aktuell = '';\n    for (const t of teile) {\n      const kandidat = aktuell ? aktuell + trenner + t : t;\n      if (bytes(kandidat) <= maxBytes) aktuell = kandidat;\n      else {\n        if (aktuell) aus.push(aktuell);\n        aktuell = t;\n      }\n    }\n    if (aktuell) aus.push(aktuell);\n    return aus;\n  };\n  for (const absatz of zusammen(text.split(/\\n{2,}/), '\\n\\n')) {\n    if (bytes(absatz) <= maxBytes) {\n      stuecke.push(absatz);\n      continue;\n    }\n    for (const satz of zusammen(absatz.split(/(?<=[.!?])\\s+/), ' ')) {\n      if (bytes(satz) <= maxBytes) stuecke.push(satz);\n      else {\n        let rest = Array.from(satz);\n        while (rest.length) {\n          let n = rest.length;\n          while (bytes(rest.slice(0, n).join('')) > maxBytes) n -= 1;\n          stuecke.push(rest.slice(0, n).join(''));\n          rest = rest.slice(n);\n        }\n      }\n    }\n  }\n  return zusammen(stuecke, '\\n\\n');\n}\n\nconst z = lesen();\nfor (const feld of ['mensch', 'senden', 'antworten']) z[feld] = z[feld] || {};\nconst ergebnis = [];\nlet geaendert = false;\n\nfor (const { json: n } of $input.all()) {\n  const text = [String(n.antwort || '').trim(), cfg.kiHinweis].filter(Boolean).join('\\n\\n');\n  if (!text) continue;\n\n  if (n.probe) {\n    ergebnis.push({ json: { ...n, nachrichtText: text } });\n    continue;\n  }\n\n  // Vor dem Senden eintragen: Das Echo unserer eigenen Nachricht darf keine \"Mensch hat übernommen\"-Sperre auslösen.\n  z.senden[n.sender] = jetzt + 90000;\n  z.antworten[n.sender] = [...(z.antworten[n.sender] || []).filter((t) => t > jetzt - 3600000), jetzt];\n  if (n.modus === 'uebergabe') z.mensch[n.sender] = jetzt + cfg.uebernahmeStunden * 3600000;\n  geaendert = true;\n\n  const stuecke = teile(text, cfg.maxBytesProNachricht);\n  stuecke.forEach((stueck, index) => ergebnis.push({ json: { ...n, nachrichtText: stueck, teil: index + 1, teile: stuecke.length } }));\n}\n\nif (geaendert) {\n  const tmp = `${cfg.zustandsDatei}.${process.pid}.tmp`;\n  fs.writeFileSync(tmp, JSON.stringify(z));\n  fs.renameSync(tmp, cfg.zustandsDatei);\n}\nreturn ergebnis;\n"
+      },
+      "id": "8ff07562-8d42-5cd8-bde3-6bae063e54e4",
+      "name": "Senden vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3360,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4537c649-0416-56e0-8a58-7a8a4fa1a2ce",
+              "leftValue": "={{ $json.probe }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "39a24faf-cc0a-56e9-ab41-6aced10c83a9",
+      "name": "Probelauf?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3600,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.cfg.ntfyUrl + '/' + $('Konfiguration').first().json.cfg.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "Instagram-DM Probelauf (nichts gesendet)"
+            },
+            {
+              "name": "Priority",
+              "value": "default"
+            },
+            {
+              "name": "Tags",
+              "value": "test_tube"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ 'Person ' + $json.sender + '\\nSchrieb: ' + ($json.text || '(kein Text)') + '\\n\\nAntwort (' + $json.modus + (($json.notiz) ? ', ' + $json.notiz : '') + '):\\n' + $json.nachrichtText }}",
+        "options": {}
+      },
+      "id": "6aa89dd5-61c6-517b-8d3f-db0c397cea5d",
+      "name": "ntfy Probelauf",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3840,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.cfg.graphUrl + '/me/messages' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ recipient: { id: $json.sender }, message: { text: $json.nachrichtText } }) }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "59fcac5b-bf89-5b94-9876-4525b7fab837",
+      "name": "Nachricht senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3840,
+        500
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "INSTAGRAM_GRAPH_CREDENTIAL_ID",
+          "name": "Instagram Graph API (Seiten-Token)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Eine ntfy-Meldung je Nachricht, bei der ein Mensch handeln muss: Übergabe, Anhang ohne Text oder Sendefehler.\nconst gesendet = $('Senden vorbereiten').all();\nconst antworten = $input.all();\nconst nachMid = new Map();\n\nantworten.forEach((antwort, index) => {\n  const n = (gesendet[index] && gesendet[index].json) || {};\n  const eintrag = nachMid.get(n.mid) || { n, fehler: [] };\n  if (!antwort.json.message_id) {\n    const err = antwort.json.error;\n    eintrag.fehler.push(err && err.message ? err.message : typeof err === 'string' ? err : 'keine message_id in der Antwort');\n  }\n  nachMid.set(n.mid, eintrag);\n});\n\nconst meldungen = [];\nfor (const { n, fehler } of nachMid.values()) {\n  if (!fehler.length && !n.notiz) continue;\n  const zeilen = [`Person ${n.sender}`, `Schrieb: ${n.text || '(kein Text)'}`];\n  if (n.notiz) zeilen.push(`Grund: ${n.notiz}`);\n  if (fehler.length) zeilen.push(`SENDEFEHLER: ${fehler.join(' | ')}`);\n  else zeilen.push(`Gesendet: ${n.antwort}`);\n  meldungen.push({\n    json: {\n      titel: fehler.length ? 'Instagram-DM: Senden fehlgeschlagen' : 'Instagram-DM: Uebergabe an Mensch',\n      prioritaet: fehler.length ? 'high' : 'default',\n      tags: fehler.length ? 'x' : 'speech_balloon',\n      text: zeilen.join('\\n'),\n    },\n  });\n}\nreturn meldungen;\n"
+      },
+      "id": "71944aff-009e-5d0d-be0c-01c2a60d9402",
+      "name": "Nach dem Senden",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4080,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.cfg.ntfyUrl + '/' + $('Konfiguration').first().json.cfg.ntfyTopic }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.titel }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.prioritaet }}"
+            },
+            {
+              "name": "Tags",
+              "value": "={{ $json.tags }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.text }}",
+        "options": {}
+      },
+      "id": "d74b9c47-9f41-504b-b72a-f7c2d1ae8e18",
+      "name": "ntfy Übergabe oder Fehler",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4320,
+        500
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Instagram-DMs mit KI beantworten: Schritte NACH DEM IMPORT\n\n**Ablauf:** Meta ruft den Webhook `/webhook/instagram-dm` auf. Der Workflow prüft die Signatur, wartet kurz auf weitere Nachrichten derselben Person, holt den Chatverlauf, fragt das Ollama des Vereins (Kanal `instagram`) und sendet die Antwort per Graph API. Kann die KI nicht sicher antworten, steht `[ÜBERGABE: …]` in ihrer Antwort: Dann geht ein fester Text raus, die KI schweigt für diese Person (`uebernahmeStunden`) und ntfy meldet es. Antwortet jemand aus dem Team in der Instagram-App, pausiert die KI für diese Person ebenfalls.\n\n**Einmalig:**\n1. **Meta-App** (developers.facebook.com, Typ *Business*): Produkt *Instagram* mit Facebook-Login, Berechtigungen `instagram_basic`, `instagram_manage_messages`, `pages_show_list`, `pages_manage_metadata`. Für fremde Nutzer ist ein **App Review** und die Business-Verifizierung nötig. Bis dahin antwortet die App nur Personen mit App-Rolle (Tester). Im Instagram-Konto: *Einstellungen → Nachrichten → Zugriff auf Nachrichten für verbundene Tools erlauben*.\n2. **Webhook in der Meta-App:** Callback-URL `https://instagram-bilder-prod.pke-lab.de/webhook/instagram-dm`, Verify-Token = `verifyToken` aus **Konfiguration**. Objekt *Instagram*, Feld `messages` abonnieren. Die Seite der Meta-App muss die Seite des Instagram-Kontos abonnieren (`POST /{page-id}/subscribed_apps?subscribed_fields=messages`).\n3. **Credential** *Instagram Graph API (Seiten-Token)* (Header Auth, `Authorization: Bearer <langlebiges Seiten-Token>`) ist dieselbe wie beim Instagram-Post-Workflow. Das Token braucht zusätzlich `instagram_manage_messages`. Zuweisen an **Verlauf holen** und **Nachricht senden**.\n4. **Konfiguration** öffnen: `igUserId` (Instagram-Konto-ID), `appSecret` (Meta-App → Einstellungen → Allgemein), `verifyToken` (frei gewählt). Diese Werte nur im n8n-Editor eintragen, nie ins Repo.\n5. ntfy-Topic `instagram` abonnieren. Workflow **aktivieren**: Die Test-URL von Meta geht nur mit der Produktions-URL.\n\n**Probelauf:** `testModus` bleibt `true`: Nichts wird gesendet, die KI-Antwort kommt als ntfy-Meldung „Instagram-DM Probelauf“. Mehrere Testnachrichten schreiben, Antworten prüfen, Wissen und `instagram_system.md` nachschärfen. Danach `erlaubteNutzer` mit der eigenen Nutzer-ID (steht in der ntfy-Meldung) füllen und `testModus` auf `false`: Dann antwortet die KI nur dieser Person. Erst zum Schluss `erlaubteNutzer` leeren.\n\n**Schutz:** Signaturprüfung (HMAC mit App-Secret), doppelte Webhooks werden ignoriert, höchstens `maxAntwortenProStunde` Antworten je Person, nur Links und Adressen der `erlaubteDomains`, keine Antwort mit Platzhaltern, jede Antwort trägt den KI-Hinweis. Zustand liegt in `zustandsDatei` auf dem n8n-Volume.\n\n**Fenster:** Meta erlaubt Antworten bis 24 Stunden nach der letzten Nachricht der Person. Ist Ollama aus, weckt der Workflow den PC (wie bei Zammad); dauert das zu lange, geht der Übergabetext raus und ntfy meldet es.",
+        "height": 700,
+        "width": 700,
+        "color": 4
+      },
+      "id": "89862b14-4be6-572a-930c-ebc5f1f1384e",
+      "name": "Hinweise",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -700
+      ]
+    }
+  ],
+  "connections": {
+    "Verifizierung (GET)": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nachricht (POST)": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Anfrage auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anfrage auswerten": {
+      "main": [
+        [
+          {
+            "node": "Verifizierung?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verifizierung?": {
+      "main": [
+        [
+          {
+            "node": "Token richtig?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Auf weitere Nachrichten warten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Token richtig?": {
+      "main": [
+        [
+          {
+            "node": "Challenge antworten",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Verifizierung ablehnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auf weitere Nachrichten warten": {
+      "main": [
+        [
+          {
+            "node": "Noch die neueste Nachricht?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Noch die neueste Nachricht?": {
+      "main": [
+        [
+          {
+            "node": "KI nötig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KI nötig?": {
+      "main": [
+        [
+          {
+            "node": "Verlauf holen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Senden vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verlauf holen": {
+      "main": [
+        [
+          {
+            "node": "LLM-Eingabe bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM-Eingabe bauen": {
+      "main": [
+        [
+          {
+            "node": "Ollama erreichbar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama erreichbar?": {
+      "main": [
+        [
+          {
+            "node": "PC schläft?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PC schläft?": {
+      "main": [
+        [
+          {
+            "node": "Ollama-PC wecken",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ollama-Antwort erzeugen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama-PC wecken": {
+      "main": [
+        [
+          {
+            "node": "Ollama-Antwort erzeugen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama-Antwort erzeugen": {
+      "main": [
+        [
+          {
+            "node": "Antwort prüfen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Antwort prüfen": {
+      "main": [
+        [
+          {
+            "node": "Senden vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Senden vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Probelauf?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Probelauf?": {
+      "main": [
+        [
+          {
+            "node": "ntfy Probelauf",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nachricht senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nachricht senden": {
+      "main": [
+        [
+          {
+            "node": "Nach dem Senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nach dem Senden": {
+      "main": [
+        [
+          {
+            "node": "ntfy Übergabe oder Fehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "saveManualExecutions": true
+  },
+  "versionId": "c22f8c3f-9a21-566c-b561-f537fead0386",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [],
+  "id": "instagramDmKi0001"
+}
