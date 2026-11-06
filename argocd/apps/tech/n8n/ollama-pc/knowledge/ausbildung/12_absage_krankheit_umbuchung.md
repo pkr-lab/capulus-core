@@ -1,6 +1,6 @@
 # Absage, Krankheit und Umbuchung
 
-Eine Absage aus wichtigem Grund (z. B. Krankheit) per E-Mail genügt, auch wenn die Abmeldeseite nicht funktioniert oder telefonisch niemand erreichbar war. Zuständig: ausbildung@andernach.dlrg.de. Kosten, Stornofristen, Erstattung: nur auf die Teilnahmebedingungen verlinken (`08_kontakt_und_links.md`), nichts erfinden.
+Eine Absage aus wichtigem Grund (z. B. Krankheit) per E-Mail genügt, auch wenn die Abmeldeseite nicht funktioniert oder telefonisch niemand erreichbar war. Zuständig: ausbildung@andernach.dlrg.de. Kosten, Stornofristen, Erstattung: nur auf die Teilnahmebedingungen verlinken (https://andernach.dlrg.de/kurse-und-sicherheit/anmeldung/teilnahmebedingungen/), nichts erfinden.
 
 ## Drei Fälle
 | Fall | Wunsch | Attest |
