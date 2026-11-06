@@ -5,7 +5,7 @@
 - **Gruppen:** Kleingruppen mit 2–4 Personen, eigenes Tempo, kein Leistungsdruck, qualifizierte Ausbilder*innen
 - **Mitgliedschaft:** nicht nötig
 - **Inhalte:** Wassergewöhnung bis selbstständiges, sicheres Schwimmen, Technik, Ausdauer
-- **Anmeldung ist Pflicht:** https://andernach.dlrg.de/kurse-und-sicherheit/anmeldung/ (Kurs voll, Kosten: Links in `08_kontakt_und_links.md`). Kontakt: ausbildung@andernach.dlrg.de
+- **Anmeldung ist Pflicht:** https://andernach.dlrg.de/kurse-und-sicherheit/anmeldung/ (Kurs voll, Kosten: Teilnahmebedingungen https://andernach.dlrg.de/kurse-und-sicherheit/anmeldung/teilnahmebedingungen/). Kontakt: ausbildung@andernach.dlrg.de
 
 Nicht bekannt: Kursdauer/Anzahl Termine, Kosten, Starttermine, Ferienregelung. Nicht erfinden, `[BITTE ERGÄNZEN: ...]` oder auf die Website verweisen.
 

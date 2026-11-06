@@ -51,6 +51,15 @@ function einfuegen(basis, results) {
   return run('Kurslinks in Entwurf einfügen', { json: { stdout }, refs: { 'Antwortentwurf extrahieren': basis } }).json;
 }
 
+test('Antwortentwurf: interne Dateinamen (z. B. 08_kontakt_und_links.md) landen nie in der Mail', () => {
+  const out = extrahieren('Guten Tag,\nbitte beachten Sie die Teilnahmebedingungen (`08_kontakt_und_links.md`) zur Erstattung.\nWeiteres siehe 12_absage_krankheit_umbuchung.md.');
+  assert.ok(!/\d{2}_[a-z_]+\.md/.test(out.entwurf), out.entwurf);
+  assert.ok(!/\d{2}_[a-z_]+\.md/.test(out.entwurfHtml));
+  assert.ok(out.entwurf.includes('Teilnahmebedingungen [BITTE PRÜFEN: Link statt Dateiname einfügen] zur Erstattung.'), out.entwurf);
+  assert.equal(out.hinweise.filter((h) => /Dateinamen/.test(h)).length, 1, 'Hinweis nur einmal');
+  assert.equal(extrahieren('Guten Tag,\nHallo.').hinweise.length, 0);
+});
+
 test('Antwortentwurf: [ANHANG: …] wird entfernt und als anhaenge gemeldet', () => {
   const out = extrahieren('Guten Tag,\nbitte nutzen Sie die Datei im Anhang.\n[ANHANG: Selbsterklärung]');
   assert.deepEqual(out.anhaenge, ['Selbsterklärung']);

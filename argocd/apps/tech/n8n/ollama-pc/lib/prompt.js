@@ -21,23 +21,37 @@ function readOptional(file) {
   }
 }
 
-function loadPromptFiles(config, { profile } = {}) {
+const CHANNELS = ['email', 'instagram'];
+// Die E-Mail-Verhaltensregeln (Entwurf, Signatur, Platzhalter) gelten nicht für Instagram-DMs, dort gilt instagram_system.md.
+const EMAIL_ONLY_KNOWLEDGE = ['00_hinweise_fuer_die_ki.md'];
+
+function channelOf(input) {
+  const channel = input && input.channel !== undefined && input.channel !== null && input.channel !== '' ? input.channel : 'email';
+  if (!CHANNELS.includes(channel)) {
+    throw new OllamaPcError('INVALID_INPUT', `channel muss einer von ${CHANNELS.join(', ')} sein, ist aber ${JSON.stringify(channel)}`);
+  }
+  return channel;
+}
+
+function loadPromptFiles(config, { profile, channel = 'email' } = {}) {
   const warnings = [];
-  const system = readOptional(config.systemPromptFile);
+  const instagram = channel === 'instagram';
+  const systemFile = instagram ? config.instagramSystemPromptFile : config.systemPromptFile;
+  const system = readOptional(systemFile);
   if (!system) {
-    throw new OllamaPcError('SYSTEM_PROMPT_MISSING', `Systemprompt-Datei fehlt oder ist leer: ${config.systemPromptFile}`);
+    throw new OllamaPcError('SYSTEM_PROMPT_MISSING', `Systemprompt-Datei fehlt oder ist leer: ${systemFile}`);
   }
   if (system.includes(PLACEHOLDER_MARKER)) {
     warnings.push(`Systemprompt enthält noch ${PLACEHOLDER_MARKER}…]-Platzhalter (z. B. Signatur)`);
   }
 
-  let examples = readOptional(config.examplesFile);
+  let examples = instagram ? '' : readOptional(config.examplesFile);
   if (examples.includes(PLACEHOLDER_MARKER)) {
     warnings.push(`Beispiel-Antworten werden ignoriert, solange sie ${PLACEHOLDER_MARKER}…]-Platzhalter enthalten`);
     examples = '';
   }
 
-  const knowledgeFiles = loadKnowledge(config.knowledgeDir, profile);
+  const knowledgeFiles = loadKnowledge(config.knowledgeDir, profile, { exclude: instagram ? EMAIL_ONLY_KNOWLEDGE : [] });
   for (const file of knowledgeFiles) {
     if (file.ignoredLines > 0) {
       warnings.push(`Firmenwissen ${file.name}: ${file.ignoredLines} Zeile(n) mit ${PLACEHOLDER_MARKER}…] ignoriert`);
@@ -93,7 +107,20 @@ function formatToday(now) {
   }).format(now);
 }
 
-function buildUserMessage({ context, entries, omitted, mail, today }) {
+function buildInstagramMessage({ context, entries, omitted, mail, today }) {
+  const sections = [`## Heutiges Datum\n\n${today}`];
+  if (context && context.trim()) sections.push(`## Zusatzkontext\n\n${context.trim()}`);
+  if (entries.length || omitted > 0) {
+    const note = omitted > 0 ? `(Hinweis: ${omitted} ältere Nachricht(en) wurden aus Platzgründen weggelassen.)\n\n` : '';
+    sections.push(`## Bisheriger Chat (chronologisch, älteste zuerst)\n\n${note}${entries.join('\n\n---\n\n')}`);
+  }
+  sections.push(`## Zu beantwortende Instagram-Nachricht\n\n${mail.text}`);
+  sections.push('Schreibe jetzt die Antwort auf die letzte Nachricht. Gib ausschließlich den Antworttext aus, ohne Erklärungen.');
+  return sections.join('\n\n---\n\n');
+}
+
+function buildUserMessage({ context, entries, omitted, mail, today, channel = 'email' }) {
+  if (channel === 'instagram') return buildInstagramMessage({ context, entries, omitted, mail, today });
   const sections = [`## Heutiges Datum\n\n${today}`];
   if (context && context.trim()) sections.push(`## Zusatzkontext\n\n${context.trim()}`);
   if (entries.length || omitted > 0) {
@@ -107,11 +134,12 @@ function buildUserMessage({ context, entries, omitted, mail, today }) {
 
 function buildMessages(prompts, input, { numCtx, responseReserveTokens, charsPerToken, now = new Date() }) {
   validateInput(input);
+  const channel = channelOf(input);
   const today = formatToday(now);
   const history = (input.history || []).filter((entry) => entry.text.trim());
   const cpt = charsPerToken;
 
-  const baseUser = buildUserMessage({ context: input.context, entries: [], omitted: 0, mail: input.mail, today });
+  const baseUser = buildUserMessage({ context: input.context, entries: [], omitted: 0, mail: input.mail, today, channel });
   const fixedTokens =
     estimateTokens(prompts.system, cpt) + estimateTokens(baseUser, cpt) + CHAT_TEMPLATE_OVERHEAD_TOKENS + OMISSION_NOTE_TOKENS;
   const available = numCtx - responseReserveTokens - fixedTokens;
@@ -134,7 +162,7 @@ function buildMessages(prompts, input, { numCtx, responseReserveTokens, charsPer
   }
 
   const omitted = history.length - kept.length;
-  const user = buildUserMessage({ context: input.context, entries: kept, omitted, mail: input.mail, today });
+  const user = buildUserMessage({ context: input.context, entries: kept, omitted, mail: input.mail, today, channel });
   const messages = [
     { role: 'system', content: prompts.system },
     { role: 'user', content: user },
@@ -175,4 +203,4 @@ function stripClosing(reply) {
   return reply;
 }
 
-module.exports = { loadPromptFiles, buildMessages, cleanReply, stripClosing, estimateTokens, PLACEHOLDER_MARKER };
+module.exports = { channelOf, loadPromptFiles, buildMessages, cleanReply, stripClosing, estimateTokens, PLACEHOLDER_MARKER };

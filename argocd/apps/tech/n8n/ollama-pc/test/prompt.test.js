@@ -198,3 +198,15 @@ test('Wissensprofil: Größenwarnung zählt nur das gewählte Profil', () => {
   assert.ok(loadPromptFiles(config, { profile: 'ausbildung' }).knowledge.ratio > 0.4);
   assert.ok(loadPromptFiles(config, { profile: 'psg' }).knowledge.ratio < 0.4);
 });
+
+test('Wissen: Stellen, an denen ein Link ausgegeben werden muss, nennen die URL statt eines Dateinamens', () => {
+  const root = path.join(__dirname, '..');
+  const lesen = (datei) => fs.readFileSync(path.join(root, datei), 'utf8');
+  const bedingungen = 'https://andernach.dlrg.de/kurse-und-sicherheit/anmeldung/teilnahmebedingungen/';
+  assert.ok(lesen('knowledge/ausbildung/12_absage_krankheit_umbuchung.md').includes(`verlinken (${bedingungen})`));
+  assert.ok(lesen('knowledge/ausbildung/11_erwachsenenschwimmkurs.md').includes(bedingungen));
+  assert.ok(!/verlinken \(`\d{2}_/.test(lesen('knowledge/alle/00_hinweise_fuer_die_ki.md')));
+  for (const prompt of ['prompts/email_system.md', 'prompts/instagram_system.md']) {
+    assert.match(lesen(prompt), /## Keine Dateinamen/);
+  }
+});
