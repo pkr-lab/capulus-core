@@ -11,8 +11,6 @@ Guten Tag, ich habe vor ein paar Tagen meine Erste-Hilfe-Bescheinigung und mein 
 
 Guten Tag,
 
-vielen Dank für Ihre Nachricht.
-
 Wir prüfen den Stand Ihrer Unterlagen und melden uns kurz bei Ihnen. Falls Sie schon eine Bestätigung von uns bekommen haben, schauen Sie bitte auch in Ihrem Spam-Ordner nach.
 
 Zur Erinnerung: Das digitale Zertifikat der Rettungsschwimmtheorie muss zu Beginn der Präsenzveranstaltung vorliegen, und Ihr Erste-Hilfe-Nachweis darf zu Kursbeginn nicht älter als 2 Jahre sein. Für die Theorieprüfung vor Ort bringen Sie bitte ein eigenes Endgerät mit.
@@ -33,8 +31,6 @@ Hallo, ich habe für den Crashkurs im November noch keinen festen Platz. Soll ic
 [INTERN: Frist Ende des Jahres für Nachweis im Studium – bei Platzvergabe berücksichtigen]
 
 Hallo Max,
-
-vielen Dank für deine Nachricht.
 
 Du musst uns noch keine Unterlagen schicken. Wenn du auf einen regulären Platz nachrückst, bekommst du von uns per E-Mail einen persönlichen Link, über den du alle Nachweise hochlädst.
 
@@ -58,8 +54,6 @@ Bitte denkt an die Online-Theorie auf lernen.dlrg.net und den Upload der Nachwei
 
 Guten Tag Lena Fischer,
 
-vielen Dank für Ihre Nachricht.
-
 Für das E-Learning bekommen Sie von uns keine Zugangsdaten, Sie legen Ihr Konto selbst an: Wählen Sie auf lernen.dlrg.net „Neues ILIAS-Konto registrieren“ und melden Sie sich danach immer über „Login für Externe“ an. Eine Anleitung finden Sie hier:
 https://andernach.dlrg.de/kurse-und-sicherheit/crashkurs/e-learning/
 
@@ -76,8 +70,6 @@ Hallo, wo kann ich meine Unterlagen für den Crashkurs 2027-CK02 hochladen? Den 
 [INTERN: Upload-Link ggf. erneut versenden und Adresse bei der Anmeldung prüfen]
 
 Hallo Tim,
-
-vielen Dank für deine Nachricht.
 
 Hier kannst du alle Nachweise hochladen:
 [KURSLINK: 2027-CK02]

@@ -61,7 +61,7 @@ env:
   TZ: Europe/Berlin
   DB_TYPE: sqlite
   NODES_EXCLUDE: "[]"
-  NODE_FUNCTION_ALLOW_BUILTIN: "child_process,crypto,tls"
+  NODE_FUNCTION_ALLOW_BUILTIN: "child_process,crypto,fs,tls"
   NODE_EXTRA_CA_CERTS: "/etc/ssl/homeserver-ca/homeserver-root-ca.pem"
   N8N_RESTRICT_FILE_ACCESS_TO: "/data/xibosignage-inbox;/data/xibosignage-display;/data/instagram-bilder"
   N8N_GRACEFUL_SHUTDOWN_TIMEOUT: "570"
@@ -141,3 +141,7 @@ instagram:
   bilder:
     mountPath: /data/instagram-bilder
     sizeLimit: 512Mi
+  # Webhook für Instagram-Direktnachrichten (Workflow instagram-dm-antworten). Gleicher Host wie die Bild-URL.
+  dm:
+    enabled: true
+    publicPath: /webhook/instagram-dm
