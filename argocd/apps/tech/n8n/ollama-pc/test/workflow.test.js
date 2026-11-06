@@ -51,6 +51,33 @@ function einfuegen(basis, results) {
   return run('Kurslinks in Entwurf einfügen', { json: { stdout }, refs: { 'Antwortentwurf extrahieren': basis } }).json;
 }
 
+test('Antwortentwurf: [ANHANG: …] wird entfernt und als anhaenge gemeldet', () => {
+  const out = extrahieren('Guten Tag,\nbitte nutzen Sie die Datei im Anhang.\n[ANHANG: Selbsterklärung]');
+  assert.deepEqual(out.anhaenge, ['Selbsterklärung']);
+  assert.ok(!out.entwurf.includes('ANHANG'));
+  assert.ok(!out.entwurfHtml.includes('ANHANG'));
+  assert.deepEqual(extrahieren('Guten Tag,\nHallo.').anhaenge, []);
+});
+
+test('Antwortentwurf: Anhang im Notiz-Modus erzeugt einen internen Hinweis', () => {
+  const out = run('Antwortentwurf extrahieren', { json: ollama('Guten Tag,\n[ANHANG: Selbsterklärung]'), refs: { 'LLM-Eingabe bauen': { ...eingabe, modus: 'notiz' } } }).json;
+  assert.match(out.hinweiseHtml, /von Hand anhängen/);
+});
+
+test('Workflow: Anhang wird vor dem Shared Draft geladen, hochgeladen und bei Fehlern gemeldet', () => {
+  const ziele = (name, ausgang) => (workflow.connections[name].main[ausgang] || []).map((c) => c.node);
+  assert.deepEqual(ziele('Als Mail-Entwurf ablegen?', 0), ['Anhang nötig?']);
+  assert.deepEqual(ziele('Anhang nötig?', 0), ['Anhang laden']);
+  assert.deepEqual(ziele('Anhang nötig?', 1), ['Shared Draft speichern']);
+  assert.deepEqual(ziele('Anhang laden', 0), ['Anhang hochladen']);
+  assert.deepEqual(ziele('Anhang hochladen', 0), ['Shared Draft speichern']);
+  for (const name of ['Anhang laden', 'Anhang hochladen']) {
+    assert.equal(nodes[name].onError, 'continueErrorOutput');
+    assert.deepEqual(ziele(name, 1), ['Anhang-Fehler-Push senden', 'Shared Draft speichern']);
+  }
+  assert.match(nodes['Shared Draft speichern'].parameters.jsonBody, /form_id: formId/);
+});
+
 test('LLM-Eingabe: Ausbildung lädt nur das Profil "ausbildung", andere Gruppen kein Profil', () => {
   const art = [{ id: 1, sender: 'Customer', internal: false, body: 'Hallo', content_type: 'text/plain', from: 'a@b.de', created_at: '2026-11-03T10:00:00Z', message_id: 'm', reply_to: 'a@b.de' }];
   const lesen = (group) => {
@@ -173,6 +200,15 @@ test('Nur relevante Tickets: ohne Formular gilt der normale Filter', () => {
     { number: '2', owner_id: 9, state_id: 4, group_id: 9 },
   ];
   assert.deepEqual(run('Nur relevante Tickets', { input }).map((i) => i.json.number), ['1']);
+});
+
+test('Nur relevante Tickets: Sprachnachrichten-Tickets werden übersprungen', () => {
+  const input = [
+    { number: '1', owner_id: 5, state_id: 1, group_id: 9, title: 'Neue Sprachnachricht von: +49 170 1234567' },
+    { number: '2', owner_id: 5, state_id: 1, group_id: 9, title: 'AW: Neue Sprachnachricht von: Max' },
+    { number: '3', owner_id: 5, state_id: 1, group_id: 9, title: 'Frage zum Crashkurs' },
+  ];
+  assert.deepEqual(run('Nur relevante Tickets', { input }).map((i) => i.json.number), ['3']);
 });
 
 test('Nur relevante Tickets: Formular holt genau die genannten Tickets, auch geschlossene', () => {
