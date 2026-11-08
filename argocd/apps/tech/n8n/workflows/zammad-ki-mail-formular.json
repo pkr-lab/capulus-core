@@ -1,0 +1,182 @@
+{
+  "name": "Zammad: KI-Antwort-Mail per Formular senden",
+  "nodes": [
+    {
+      "id": "151a9cb1-79f9-414f-9536-1e01e331f435",
+      "name": "Formular KI-Mail",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        200
+      ],
+      "webhookId": "c97ae48d-061e-4329-8647-aabb6b1339f4",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "rfawu3jHTASk44Vc",
+          "name": "MDM Formulare"
+        }
+      },
+      "parameters": {
+        "authentication": "basicAuth",
+        "formTitle": "KI-Antwort-Mail senden",
+        "formDescription": "Verschickt dieselbe Benachrichtigungsmail wie der Zammad-KI-Lauf an peter.kretzer@dlrg.org, ohne dass ein Ticket verarbeitet wird. Es wird nichts in Zammad geschrieben.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Ticketnummer",
+              "fieldType": "text",
+              "requiredField": true,
+              "placeholder": "z. B. 10042"
+            },
+            {
+              "fieldLabel": "Ticket-Titel",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Ablage",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Mail-Entwurf zur Freigabe in Zammad"
+                  },
+                  {
+                    "option": "Interne Notiz in Zammad"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Antwort an",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "Mailadresse des Empfängers, optional"
+            },
+            {
+              "fieldLabel": "Antwort der KI",
+              "fieldType": "textarea",
+              "requiredField": true,
+              "placeholder": "Text der Antwort, Absätze mit Leerzeile"
+            },
+            {
+              "fieldLabel": "Interne Hinweise",
+              "fieldType": "textarea",
+              "requiredField": false,
+              "placeholder": "optional, ein Hinweis pro Zeile"
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "path": "zammad-ki-mail"
+        }
+      }
+    },
+    {
+      "id": "44dc7764-3b30-47cb-925c-f19aa8c8641e",
+      "name": "KI-Mail bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        200
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const MAIL_AN = 'peter.kretzer@dlrg.org';\nconst MAIL_VON = 'workflow-n8n@edv-kretzer.de';\nconst ID_ZEILE = 'ID-IT-xi8klGKdh8';\nconst SCHRIFT = \"-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif\";\nconst FARBEN = { rot: '#c8102e', amber: '#b45309', gruen: '#15803d', blau: '#1d4ed8', grau: '#475569', indigo: '#4338ca' };\nconst mitId = (text) => String(text).replace(/\\s+$/, '') + '\\n\\n' + ID_ZEILE;\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');\nconst verlinken = (s) => esc(s).replace(/(https?:\\/\\/[^\\s<]*[^\\s<.,;:!?)])/g, '<a href=\"$1\" style=\"color:#1d4ed8;text-decoration:underline\">$1</a>');\nconst absaetze = (text) => String(text).replace(/\\r\\n?/g, '\\n').split(/\\n{2,}/).filter((b) => b.trim()).map((b) => '<p style=\"margin:0 0 14px 0;line-height:1.6\">' + verlinken(b.trim()).replace(/\\n/g, '<br>') + '</p>').join('');\nconst felder = (zeilen) => '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;margin:0 0 18px 0;border:1px solid #e5e7eb\">' + zeilen.map(([k, v], i) => '<tr style=\"background:' + (i % 2 ? '#ffffff' : '#f9fafb') + '\"><td valign=\"top\" style=\"padding:9px 12px;width:34%;font-size:13px;color:#6b7280;border-bottom:1px solid #eef0f3\">' + esc(k) + '</td><td valign=\"top\" style=\"padding:9px 12px;font-size:14px;color:#111827;border-bottom:1px solid #eef0f3\">' + verlinken(v) + '</td></tr>').join('') + '</table>';\nconst box = (inhalt, farbe, titel) => '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 18px 0\"><tr><td style=\"border-left:4px solid ' + farbe + ';background:#f9fafb;padding:14px 16px\">' + (titel ? '<div style=\"font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:' + farbe + ';margin-bottom:8px\">' + esc(titel) + '</div>' : '') + inhalt + '</td></tr></table>';\nconst liste = (eintraege) => '<ul style=\"margin:0;padding:0 0 0 18px;line-height:1.6\">' + eintraege.map((e) => '<li style=\"margin:0 0 4px 0\">' + verlinken(e) + '</li>').join('') + '</ul>';\nconst knopf = (text, url, farbe) => '<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:4px 0 18px 0\"><tr><td style=\"background:' + farbe + ';border-radius:6px\"><a href=\"' + esc(url) + '\" style=\"display:inline-block;padding:11px 20px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none\">' + esc(text) + '</a></td></tr></table>';\nconst klein = (text) => '<p style=\"margin:6px 0 14px 0;font-size:13px;line-height:1.5;color:#6b7280\">' + verlinken(text).replace(/\\n/g, '<br>') + '</p>';\nconst datum = (iso, kurz) => {\n  const d = new Date(iso);\n  return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: kurz ? 'short' : 'medium' }) + ' Uhr';\n};\nconst layout = ({ label, farbe, titel, badge, vorschau, abschnitte }) => {\n  const zeit = new Date().toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: 'short' });\n  const plakette = badge ? '<div style=\"margin-top:12px\"><span style=\"display:inline-block;background:#ffffff;color:' + farbe + ';font-size:12px;font-weight:700;padding:4px 10px;border-radius:12px\">' + esc(badge) + '</span></div>' : '';\n  return '<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"color-scheme\" content=\"light\"><title>' + esc(titel) + '</title></head>'\n    + '<body style=\"margin:0;padding:0;background:#f3f4f6;font-family:' + SCHRIFT + '\">'\n    + '<div style=\"display:none;max-height:0;overflow:hidden;opacity:0;color:#f3f4f6\">' + esc(vorschau || titel) + '</div>'\n    + '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f3f4f6\"><tr><td align=\"center\" style=\"padding:24px 12px\">'\n    + '<table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"width:100%;max-width:600px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden\">'\n    + '<tr><td style=\"background:' + farbe + ';padding:22px 26px\"><div style=\"font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#ffffff;opacity:.9\">' + esc(label) + '</div>'\n    + '<div style=\"margin-top:6px;font-size:22px;line-height:1.3;font-weight:700;color:#ffffff\">' + esc(titel) + '</div>' + plakette + '</td></tr>'\n    + '<tr><td style=\"padding:24px 26px 12px 26px;font-size:15px;line-height:1.6;color:#1f2937\">' + abschnitte.join('') + '</td></tr>'\n    + '<tr><td style=\"padding:14px 26px;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:12px;line-height:1.6;color:#6b7280\">Automatisch gesendet von n8n am ' + esc(zeit) + ' Uhr<div style=\"color:#9ca3af\">' + ID_ZEILE + '</div></td></tr>'\n    + '</table></td></tr></table></body></html>';\n};\nconst f = $input.item.json;\nconst nummer = String(f['Ticketnummer'] || '').replace(/\\D+/g, '');\nif (!nummer) throw new Error('Keine gültige Ticketnummer angegeben.');\nconst titel = String(f['Ticket-Titel'] || '').trim();\nconst antwortRoh = String(f['Antwort der KI'] || '').replace(/\\r\\n?/g, '\\n').trim();\nif (!titel || !antwortRoh) throw new Error('Ticket-Titel und Antwort der KI sind Pflicht.');\nconst schnitt = antwortRoh.lastIndexOf('\\n\\nMit freundlichen Grüßen');\nconst antwort = (schnitt >= 0 ? antwortRoh.slice(0, schnitt) : antwortRoh).trim();\nconst entwurf = String(f['Ablage'] || '').startsWith('Mail-Entwurf');\nconst art = entwurf ? 'Mail-Entwurf zur Freigabe in Zammad' : 'Interne Notiz in Zammad';\nconst antwortAn = String(f['Antwort an'] || '').trim() || 'unbekannt';\nconst hinweise = String(f['Interne Hinweise'] || '').split('\\n').map((h) => h.replace(/^\\s*[-*•]\\s*/, '').trim()).filter(Boolean);\nconst link = 'https://ticket.emue365.de/#ticket/zoom/number/' + nummer;\nconst zeilen = [\n  'Die KI hat Ticket #' + nummer + ' beantwortet.',\n  '',\n  'Ticket: #' + nummer + ' ' + titel,\n  'Link: ' + link,\n  'Ablage: ' + art,\n  'Antwort an: ' + antwortAn,\n  '',\n  'Antwort der KI:',\n  '',\n  antwort,\n];\nif (hinweise.length > 0) {\n  zeilen.push('', 'Interne Hinweise:', ...hinweise.map((h) => '- ' + h));\n}\nconst abschnitte = [\n  felder([['Ticket', '#' + nummer], ['Antwort an', antwortAn], ['Ablage', art]]),\n  knopf('Ticket in Zammad öffnen', link, FARBEN.indigo),\n  box(absaetze(antwort), FARBEN.indigo, 'Antwort der KI'),\n];\nif (hinweise.length > 0) abschnitte.push(box(liste(hinweise), FARBEN.amber, 'Interne Hinweise'));\nconst html = layout({\n  label: 'Zammad · KI-Antwort',\n  farbe: FARBEN.indigo,\n  titel: 'Ticket #' + nummer + ': ' + titel,\n  badge: entwurf ? 'Entwurf wartet auf Freigabe' : 'Interne Notiz',\n  vorschau: antwort.split('\\n')[0],\n  abschnitte,\n});\nreturn { json: { mailAn: MAIL_AN, mailVon: MAIL_VON, betreff: 'KI-Antwort zu Ticket #' + nummer + ': ' + titel, text: mitId(zeilen.join('\\n')), html, nummer } };\n"
+      }
+    },
+    {
+      "id": "f43d7b28-7bfc-4b70-94ff-cea658e202cd",
+      "name": "KI-Mail senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        480,
+        200
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "gQZtSwFzQoNoRn3S",
+          "name": "SMTP Netcup Automations"
+        }
+      },
+      "parameters": {
+        "fromEmail": "={{ $json.mailVon }}",
+        "toEmail": "={{ $json.mailAn }}",
+        "subject": "={{ $json.betreff }}",
+        "emailFormat": "both",
+        "text": "={{ $json.text }}",
+        "html": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      }
+    },
+    {
+      "id": "8172e154-12bd-4953-a9c7-511e1639da9c",
+      "name": "Abschluss",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        720,
+        200
+      ],
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "Mail gesendet",
+        "completionMessage": "={{ 'Die KI-Antwort-Mail zu Ticket #' + $('KI-Mail bauen').first().json.nummer + ' ist an ' + $('KI-Mail bauen').first().json.mailAn + ' unterwegs.' }}",
+        "options": {}
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Formular KI-Mail": {
+      "main": [
+        [
+          {
+            "node": "KI-Mail bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KI-Mail bauen": {
+      "main": [
+        [
+          {
+            "node": "KI-Mail senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KI-Mail senden": {
+      "main": [
+        [
+          {
+            "node": "Abschluss",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "timezone": "Europe/Berlin",
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Formular, das dieselbe HTML-Benachrichtigungsmail an peter.kretzer@dlrg.org verschickt wie der Zammad-KI-Lauf (zammad-tickets-verarbeiten, Nodes KI-Mail bauen und KI-Mail senden). Layout, Absender, Empfänger und Kennung sind identisch. Es wird nichts in Zammad geschrieben."
+  },
+  "tags": []
+}
