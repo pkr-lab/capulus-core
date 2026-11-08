@@ -127,7 +127,7 @@
         "operation": "completion",
         "respondWith": "text",
         "completionTitle": "Neuer Entwurf wird erstellt",
-        "completionMessage": "={{ 'Tickets: ' + $('Ticketnummern prüfen').first().json.tickets.split(',').map((n) => '#' + n).join(', ') + '. Je Ticket dauert es etwa eine Minute. Der Entwurf erscheint im Ticket (Mail-Entwurf oder interne Notiz), Fehler kommen per Push. Nicht gefundene Tickets werden übersprungen.' }}",
+        "completionMessage": "={{ 'Tickets: ' + $('Ticketnummern prüfen').first().json.tickets.split(',').map((n) => '#' + n).join(', ') + '. Je Ticket dauert es etwa eine Minute. Der Entwurf erscheint im Ticket als Mail-Entwurf, Fehler kommen per Push. Nicht gefundene Tickets werden übersprungen.' }}",
         "options": {}
       }
     },

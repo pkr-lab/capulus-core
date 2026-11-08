@@ -17,7 +17,7 @@ function run(name, { json = {}, input = [], refs = {}, tickets = '' } = {}) {
   const alle = { 'Von Haupt-Workflow aufgerufen': { tickets }, ...refs };
   const $ = (ref) => {
     if (!(ref in alle)) throw new Error(`Node "${ref}" ist im Test nicht belegt`);
-    return { item: { json: alle[ref] }, first: () => ({ json: alle[ref] }) };
+    return { item: { json: alle[ref] }, first: () => ({ json: alle[ref] }), isExecuted: true };
   };
   const $input = { all: () => input.map((j) => ({ json: j })) };
   const fn = new Function('$', '$json', '$input', 'Buffer', 'console', nodes[name].parameters.jsCode);
@@ -68,16 +68,20 @@ test('Antwortentwurf: [ANHANG: …] wird entfernt und als anhaenge gemeldet', ()
   assert.deepEqual(extrahieren('Guten Tag,\nHallo.').anhaenge, []);
 });
 
-test('Mail-Entwurf: auch fremde Tickets bekommen einen Entwurf, wenn ein Anhang nötig ist', () => {
-  const links = (json) => new Function('$json', `return ${nodes['Als Mail-Entwurf ablegen?'].parameters.conditions.conditions[0].leftValue.slice(3, -2)}`)(json);
-  assert.equal(links({ modus: 'entwurf', anhaenge: [] }), true);
-  assert.equal(links({ modus: 'notiz', anhaenge: [] }), false);
-  assert.equal(links({ modus: 'notiz', anhaenge: ['Selbsterklärung'] }), true);
+test('Mail-Entwurf: jedes Ticket bekommt einen Mail-Entwurf, nicht nur eigene oder mit Anhang', () => {
+  const ziele = (name, ausgang) => (workflow.connections[name].main[ausgang] || []).map((c) => c.node);
+  assert.equal(nodes['Eigenes Ticket?'], undefined);
+  assert.equal(nodes['Als Mail-Entwurf ablegen?'], undefined);
+  assert.deepEqual(ziele('LLM-Eingabe bauen', 0), ['Shared Draft prüfen']);
+  assert.deepEqual(ziele('Kurslinks in Entwurf einfügen', 0), ['Anhang nötig?']);
+  const fremd = { ...ticket, owner_id: 17 };
+  const art = [{ id: 1, sender: 'Customer', internal: false, body: 'Hallo', content_type: 'text/plain', from: 'a@b.de', created_at: '2026-11-03T10:00:00Z', message_id: 'm', reply_to: 'a@b.de' }];
+  assert.equal(run('LLM-Eingabe bauen', { input: [{ ...fremd, articles: art }] })[0].json.modus, 'entwurf');
+  assert.equal(run('LLM-Eingabe bauen', { input: [{ ...ticket, articles: art }] })[0].json.modus, 'entwurf');
 });
 
 test('Workflow: Anhang wird vor dem Shared Draft geladen, hochgeladen und bei Fehlern gemeldet', () => {
   const ziele = (name, ausgang) => (workflow.connections[name].main[ausgang] || []).map((c) => c.node);
-  assert.deepEqual(ziele('Als Mail-Entwurf ablegen?', 0), ['Anhang nötig?']);
   assert.deepEqual(ziele('Anhang nötig?', 0), ['Anhang laden']);
   assert.deepEqual(ziele('Anhang nötig?', 1), ['Shared Draft speichern']);
   assert.deepEqual(ziele('Anhang laden', 0), ['Anhang hochladen']);
@@ -110,13 +114,50 @@ test('Entwurf: [KURSLINK] bleibt im Text, Hinweis und Mailkontext gehen an die N
   assert.match(stdin.context, /2027-CK03/);
 });
 
-test('Entwurf: Leerzeile nach Anrede und Dank, Signatur zeilenweise mit Namen der Ausbildung', () => {
+function mitSignatur(reply = ANTWORT, g = ticket) {
+  const knoten = nodes['Antwortentwurf extrahieren'].parameters;
+  const original = knoten.jsCode;
+  assert.ok(original.includes('const SIGNATUR_ANHAENGEN = false;'));
+  knoten.jsCode = original.replace('const SIGNATUR_ANHAENGEN = false;', 'const SIGNATUR_ANHAENGEN = true;');
+  try {
+    return extrahieren(reply, g);
+  } finally {
+    knoten.jsCode = original;
+  }
+}
+
+test('Entwurf: Leerzeile nach Anrede und Dank, ohne Grußformel und Signatur, die setzt Zammad', () => {
   const e = extrahieren();
   assert.match(e.entwurf, /^Guten Tag Lena Fischer,\n\nvielen Dank für Ihre Nachricht\.\n\nDen Upload-Link/);
+  for (const feld of [e.entwurf, e.entwurfHtml, e.notizHtml]) {
+    assert.ok(!feld.includes('Mit freundlichen Grüßen'));
+    assert.ok(!feld.includes('Balthasar-Neumann'));
+    assert.ok(!feld.includes('ID-IT-xi8klGKdh8'));
+  }
+  assert.ok(e.entwurfHtml.endsWith('</p>'));
+});
+
+test('Entwurf: ist die Signatur eingeschaltet, steht sie zeilenweise mit dem Namen der Ausbildung darunter', () => {
+  const e = mitSignatur();
   assert.ok(e.entwurfHtml.includes('<div>Mit freundlichen Grüßen</div><div><br></div><div>Daniela Saxer</div>'));
   assert.ok(!e.entwurfHtml.includes('DLRG OG Andernach e.V.</div><div><br></div><div>--'));
-  const andere = extrahieren(ANTWORT, { ...ticket, group_id: 5 });
+  const andere = mitSignatur(ANTWORT, { ...ticket, group_id: 5 });
   assert.ok(andere.entwurf.includes('DLRG OG Andernach e.V.'));
+});
+
+test('Shared Draft: An enthält nur die reine Mailadresse des Absenders', () => {
+  const ausdruck = nodes['Shared Draft speichern'].parameters.jsonBody.slice(3, -2);
+  const an = (replyTo) => {
+    const refs = { 'Kurslinks in Entwurf einfügen': { replyTo, ticket: { title: 'T', group_id: 2 }, entwurfHtml: '<p>x</p>', messageId: 'm' } };
+    const $ = (ref) => ({ item: { json: refs[ref] } });
+    return JSON.parse(new Function('$', '$json', `return ${ausdruck}`)($, {})).new_article.to;
+  };
+  assert.equal(an('Raphael Mueller <raphael.mueller@dlrg.org>'), 'raphael.mueller@dlrg.org');
+  assert.equal(an('"Diana Weiß" <weiss.diana82@gmail.com>'), 'weiss.diana82@gmail.com');
+  assert.equal(an('collinkolmer@gmx.de'), 'collinkolmer@gmx.de');
+  assert.equal(an('- - <info@andreasfull.de>'), 'info@andreasfull.de');
+  assert.equal(an('a@b.de, C <c@d.de>'), 'a@b.de, c@d.de');
+  assert.equal(an(''), '');
 });
 
 test('Entwurf: Ollama-Fehler wirft nicht, sondern liefert ein Fehler-Item', () => {
@@ -131,7 +172,7 @@ test('Entwurf: Ollama-Fehler wirft nicht, sondern liefert ein Fehler-Item', () =
 test('Kurslink: eindeutiger Kurs wird in Text und HTML eingesetzt', () => {
   const entry = { code: '2027-CK03', kursart: 'CrashKurs', url: 'https://example.org/ck03?a=1&b=2' };
   const out = einfuegen(extrahieren(), [{ status: 'link', entry, grund: 'Kurscode in der Mail' }]);
-  assert.ok(out.entwurf.includes('\nhttps://example.org/ck03?a=1&b=2\n'));
+  assert.ok(out.entwurf.endsWith('\nhttps://example.org/ck03?a=1&b=2'));
   assert.ok(out.entwurfHtml.includes('<a href="https://example.org/ck03?a=1&amp;b=2">'));
   assert.ok(!out.entwurf.includes('KURSLINK'));
   assert.ok(!out.entwurfHtml.includes('KURSLINK'));
@@ -282,6 +323,27 @@ test('Shared Draft: ein vorhandener Entwurf stoppt nur normale, nicht erzwungene
   assert.match(bedingung, /!\$json\.shared_draft_id/);
 });
 
+test('Shared Draft: schlägt die Prüfung mit einem Fehler außer 404 fehl, wird kein vorhandener Entwurf überschrieben', () => {
+  const bedingung = nodes['Kein Shared Draft vorhanden?'].parameters.conditions.conditions[0].leftValue.slice(3, -2);
+  const pruefen = (json, erzwungen = false) => new Function('$json', '$', `return ${bedingung}`)(json, () => ({ item: { json: { erzwungen } } }));
+  assert.equal(pruefen({}), true);
+  assert.equal(pruefen({ shared_draft_id: null }), true);
+  assert.equal(pruefen({ shared_draft_id: 4 }), false);
+  assert.equal(pruefen({ error: '404 - Not Found' }), true);
+  assert.equal(pruefen({ error: 'getaddrinfo EAI_AGAIN ticket.emue365.de' }), false);
+  assert.equal(pruefen({ error: 'getaddrinfo EAI_AGAIN ticket.emue365.de' }, true), true);
+  assert.equal(pruefen({ shared_draft_id: 4 }, true), true);
+});
+
+test('Shared Draft: gespeicherte Entwürfe zählen in Time Saved, die Notiz ist nur noch Rückfall bei Fehlern', () => {
+  const ziele = (name, ausgang) => (workflow.connections[name].main[ausgang] || []).map((c) => c.node);
+  assert.deepEqual(ziele('Shared Draft speichern', 0), ['Time Saved']);
+  assert.deepEqual(ziele('Shared Draft speichern', 1), ['Entwurf als interne Notiz speichern']);
+  assert.deepEqual(ziele('Time Saved', 0), ['Wartete auf Erinnerung oder Schließen?']);
+  const zuNotiz = Object.entries(workflow.connections).filter(([, c]) => c.main.some((g) => g.some((v) => v.node === 'Entwurf als interne Notiz speichern'))).map(([name]) => name);
+  assert.deepEqual(zuNotiz, ['Shared Draft speichern']);
+});
+
 test('Formular: Ticketnummern werden bereinigt, Dubletten und Unsinn fallen weg', () => {
   const pruefen = (text) => new Function('$json', formNodes['Ticketnummern prüfen'].parameters.jsCode)({ Ticketnummern: text })[0].json;
   assert.deepEqual(pruefen('#10042, 10043\n10042 abc 7'), { tickets: '10042,10043', anzahl: 2 });
@@ -314,10 +376,12 @@ test('Benachrichtigungsmail: Ticket, Link und Antwort ohne Signatur, letzte Zeil
   assert.equal(mail.text.split('ID-IT-xi8klGKdh8').length, 2);
 });
 
-test('Benachrichtigungsmail: Tickets anderer Besitzer werden als interne Notiz gemeldet', () => {
+test('Benachrichtigungsmail: meldet Mail-Entwurf, und nur beim Notiz-Rückfall eine interne Notiz', () => {
   const fertig = einfuegen(extrahieren(), []);
-  const mail = run('KI-Mail bauen', { refs: { 'Kurslinks in Entwurf einfügen': { ...fertig, modus: 'notiz' } } }).json;
-  assert.match(mail.text, /Ablage: Interne Notiz in Zammad/);
+  const entwurf = run('KI-Mail bauen', { refs: { 'Kurslinks in Entwurf einfügen': fertig } }).json;
+  assert.match(entwurf.text, /Ablage: Mail-Entwurf zur Freigabe in Zammad/);
+  const notiz = run('KI-Mail bauen', { refs: { 'Kurslinks in Entwurf einfügen': fertig, 'Entwurf als interne Notiz speichern': {} } }).json;
+  assert.match(notiz.text, /Ablage: Interne Notiz in Zammad/);
 });
 
 test('Benachrichtigungsmail: sitzt vor dem Push, fängt Fehler ab und lässt Abschluss unverändert', () => {
