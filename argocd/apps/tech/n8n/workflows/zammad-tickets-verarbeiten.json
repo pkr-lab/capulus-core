@@ -7,8 +7,8 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        8400,
-        1136
+        7712,
+        1232
       ],
       "parameters": {
         "inputSource": "passthrough"
@@ -20,8 +20,8 @@
       "type": "n8n-nodes-base.zammad",
       "typeVersion": 1,
       "position": [
-        8576,
-        1136
+        7888,
+        1232
       ],
       "parameters": {
         "authentication": "basicAuth",
@@ -34,7 +34,10 @@
           "id": "0M2CPfsvNq5Xdzfc",
           "name": "Zammad ticket.emue365"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
     },
     {
       "id": "f8d8d3f8-7227-48b0-b638-913648981d9e",
@@ -42,8 +45,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        8800,
-        1136
+        8112,
+        1232
       ],
       "parameters": {
         "jsCode": "const OWNER_ID = 5;\nconst AUSBILDUNG_GRUPPEN = [2];\n\n// Formular \"KI-Entwurf neu erstellen\": nur die angegebenen Ticketnummern, egal in welchem Status oder von wem zuletzt beantwortet.\nconst angefordert = String($('Von Haupt-Workflow aufgerufen').first().json.tickets || '').split(/[^0-9]+/).filter(Boolean);\nif (angefordert.length > 0) {\n  const gefunden = $input.all().filter(({ json: ticket }) => angefordert.includes(String(ticket.number)));\n  const fehlend = angefordert.filter((nr) => !gefunden.some(({ json }) => String(json.number) === nr));\n  if (fehlend.length > 0) console.log(`Angeforderte Tickets nicht gefunden: ${fehlend.join(', ')}`);\n  if (gefunden.length === 0) throw new Error(`Keines der angeforderten Tickets gefunden: ${angefordert.join(', ')}`);\n  return gefunden;\n}\n\nconst SPRACHNACHRICHT = /^\\s*(re:\\s*|aw:\\s*|fwd?:\\s*|wg:\\s*)*neue sprachnachricht von\\b/i;\n\nreturn $input.all().filter(({ json: ticket }) => {\n  if (SPRACHNACHRICHT.test(String(ticket.title || ''))) return false;\n  const eigenes = ticket.owner_id === OWNER_ID && [1, 2, 3, 6].includes(ticket.state_id);\n  const ausbildung = [1, 2, 3, 6].includes(ticket.state_id) && AUSBILDUNG_GRUPPEN.includes(ticket.group_id);\n  return eigenes || ausbildung;\n});"
@@ -55,8 +58,8 @@
       "type": "n8n-nodes-base.zammad",
       "typeVersion": 1,
       "position": [
-        9200,
-        1136
+        8416,
+        1104
       ],
       "parameters": {
         "authentication": "basicAuth",
@@ -78,8 +81,8 @@
       "typeVersion": 1,
       "onError": "continueErrorOutput",
       "position": [
-        11888,
-        1312
+        12832,
+        1488
       ],
       "parameters": {
         "authentication": "basicAuth",
@@ -103,8 +106,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        13248,
-        1312
+        15312,
+        2064
       ],
       "parameters": {
         "jsCode": "return [{ json: { status: 'done', verarbeiteteTickets: Math.max($input.all().length - 1, 0) } }];"
@@ -116,8 +119,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        13024,
-        1136
+        14656,
+        1056
       ],
       "parameters": {
         "method": "POST",
@@ -160,8 +163,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        9424,
-        1136
+        8672,
+        1104
       ],
       "parameters": {
         "jsCode": "const OWNER_ID = 5;\nconst AUSBILDUNG_GRUPPEN = [2];\n// Vom Formular angeforderte Tickets werden auch dann neu bearbeitet, wenn schon ein KI-Entwurf oder eine Team-Antwort vorliegt.\nconst angefordert = String($('Von Haupt-Workflow aufgerufen').first().json.tickets || '').split(/[^0-9]+/).filter(Boolean);\nconst MAX_PAYLOAD_BYTES = 90000;\nconst MAX_MAIL_CHARS = 40000;\nconst MAX_CONTEXT_CHARS = 4000;\n// Erkennt KI-Notizen an der ID in der Signatur. Die älteren Merkmale bleiben für bereits vorhandene Notizen erkannt.\nconst KI_MARKIERUNG = /ID-IT-xi8klGKdh8|Deutsche Lebens-Rettungs-Gesellschaft\\s+Landesverband Rheinland-Pfalz|KI-Entwurf \\(automatisch erstellt\\)|Interne Hinweise zum KI-Entwurf/;\n\nfunction stripHtml(html) {\n  return String(html || '')\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<\\/(p|div|li|tr)>/gi, '\\n')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .replace(/&#39;/g, \"'\")\n    .replace(/&amp;/g, '&')\n    .replace(/[ \\t]+/g, ' ')\n    .replace(/ ?\\n ?/g, '\\n')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim();\n}\n\nfunction textOf(article) {\n  return /html/i.test(article.content_type || '') ? stripHtml(article.body) : String(article.body || '').trim();\n}\n\nfunction dateOf(article) {\n  return String(article.created_at || '').replace('T', ' ').slice(0, 16);\n}\n\nconst ergebnis = [];\n\n$input.all().forEach((item, index) => {\n  const { articles, ...ticket } = item.json;\n  const erzwungen = angefordert.includes(String(ticket.number));\n  const all = (articles || [])\n    .filter((a) => a.sender !== 'System')\n    .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)) || a.id - b.id);\n\n  const oeffentlich = all.filter((a) => !a.internal);\n  const letzte = oeffentlich[oeffentlich.length - 1];\n  if (!erzwungen && letzte && letzte.sender === 'Agent') {\n    console.log(`Ticket #${ticket.number}: Team hat bereits geantwortet, übersprungen`);\n    return;\n  }\n\n  if (!erzwungen && [3, 6].includes(ticket.state_id) && !oeffentlich.some((a) => a.sender === 'Agent')) {\n    console.log(`Ticket #${ticket.number}: wartet auf Erinnerung oder Schließen, Kunde hat nicht geantwortet, übersprungen`);\n    return;\n  }\n\n  const context = all\n    .filter((a) => a.internal && /^\\s*Kontext:/i.test(textOf(a)))\n    .map((a) => textOf(a).replace(/^\\s*Kontext:\\s*/i, ''))\n    .join('\\n\\n')\n    .slice(0, MAX_CONTEXT_CHARS);\n\n  const mails = all.filter((a) => !a.internal && textOf(a));\n  const lastCustomer = [...mails].reverse().find((a) => a.sender === 'Customer');\n  const target = lastCustomer || mails[mails.length - 1];\n  if (!target) {\n    console.log(`Ticket #${ticket.number}: keine E-Mail zum Beantworten gefunden, übersprungen`);\n    return;\n  }\n\n  // Nur eine KI-Notiz, die neuer ist als die letzte Kunden-Mail, zählt: Antwortet der Kunde danach, wird das Ticket neu bearbeitet.\n  if (!erzwungen && all.some((a) => a.internal && a.id > target.id && KI_MARKIERUNG.test(textOf(a)))) {\n    console.log(`Ticket #${ticket.number}: KI-Entwurf liegt bereits vor, übersprungen`);\n    return;\n  }\n\n  const history = mails\n    .filter((a) => a.id !== target.id)\n    .map((a) => ({ from: a.from || 'unbekannt', date: dateOf(a), text: textOf(a) }));\n\n  const payload = {\n    // Ausbildung lädt nur das Firmenwissen \"alle\" und \"ausbildung\" (kein PsG, nichts anderes).\n    profile: AUSBILDUNG_GRUPPEN.includes(ticket.group_id) ? 'ausbildung' : undefined,\n    context,\n    history,\n    mail: {\n      from: target.from || 'unbekannt',\n      date: dateOf(target),\n      subject: target.subject || ticket.title,\n      text: textOf(target).slice(0, MAX_MAIL_CHARS),\n    },\n  };\n\n  let preTrimmed = 0;\n  while (Buffer.byteLength(JSON.stringify(payload), 'utf8') > MAX_PAYLOAD_BYTES && payload.history.length > 0) {\n    payload.history.shift();\n    preTrimmed += 1;\n  }\n  if (preTrimmed > 0) {\n    console.log(`Ticket #${ticket.number}: ${preTrimmed} ältere Mail(s) vor dem Aufruf gekürzt (Payload-Limit ${MAX_PAYLOAD_BYTES} Byte)`);\n  }\n\n  ergebnis.push({\n    json: {\n      ticket,\n      modus: ticket.owner_id === OWNER_ID ? 'entwurf' : 'notiz',\n      erzwungen,\n      replyTo: target.reply_to || target.from || '',\n      messageId: target.message_id || '',\n      payloadB64: Buffer.from(JSON.stringify(payload), 'utf8').toString('base64'),\n      historyCount: payload.history.length,\n      preTrimmed,\n    },\n    pairedItem: { item: index },\n  });\n});\n\nreturn ergebnis;"
@@ -174,8 +177,8 @@
       "typeVersion": 1,
       "onError": "continueRegularOutput",
       "position": [
-        10544,
-        1136
+        9744,
+        1120
       ],
       "parameters": {
         "command": "node /opt/ollama-pc/cli.js probe"
@@ -187,8 +190,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        10768,
-        1136
+        10032,
+        1120
       ],
       "parameters": {
         "conditions": {
@@ -222,8 +225,8 @@
       "typeVersion": 4.2,
       "onError": "continueRegularOutput",
       "position": [
-        10992,
-        992
+        10304,
+        944
       ],
       "parameters": {
         "method": "POST",
@@ -260,7 +263,7 @@
       "typeVersion": 1,
       "onError": "continueRegularOutput",
       "position": [
-        11216,
+        10560,
         1136
       ],
       "parameters": {
@@ -273,7 +276,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        11440,
+        10864,
         1136
       ],
       "parameters": {
@@ -287,8 +290,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        11472,
-        1312
+        11392,
+        1248
       ],
       "parameters": {
         "conditions": {
@@ -322,8 +325,8 @@
       "typeVersion": 1,
       "onError": "continueRegularOutput",
       "position": [
-        11472,
-        1456
+        11648,
+        1168
       ],
       "parameters": {
         "command": "=printf %s '{{ $('Antwortentwurf extrahieren').item.json.kurslinkHinweiseB64 }}' | base64 -d | node /opt/ollama-pc/cli.js kurslink"
@@ -335,8 +338,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        11664,
-        1456
+        11872,
+        1360
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
@@ -349,8 +352,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        12576,
-        1136
+        13920,
+        1120
       ],
       "parameters": {
         "conditions": {
@@ -382,9 +385,10 @@
       "name": "Interne Hinweise als Notiz speichern",
       "type": "n8n-nodes-base.zammad",
       "typeVersion": 1,
+      "onError": "continueErrorOutput",
       "position": [
-        12800,
-        1024
+        14144,
+        1008
       ],
       "parameters": {
         "authentication": "basicAuth",
@@ -400,8 +404,7 @@
           "id": "0M2CPfsvNq5Xdzfc",
           "name": "Zammad ticket.emue365"
         }
-      },
-      "onError": "continueErrorOutput"
+      }
     },
     {
       "id": "504f611d-b513-42cf-9258-7a01770018f5",
@@ -409,8 +412,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        9872,
-        1136
+        8880,
+        1104
       ],
       "parameters": {
         "conditions": {
@@ -444,7 +447,7 @@
       "typeVersion": 4.2,
       "onError": "continueRegularOutput",
       "position": [
-        10096,
+        9168,
         960
       ],
       "parameters": {
@@ -466,7 +469,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        10320,
+        9424,
         960
       ],
       "parameters": {
@@ -500,8 +503,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        11664,
-        1136
+        12096,
+        1168
       ],
       "parameters": {
         "conditions": {
@@ -535,8 +538,8 @@
       "typeVersion": 4.2,
       "onError": "continueErrorOutput",
       "position": [
-        11888,
-        960
+        12560,
+        1184
       ],
       "parameters": {
         "method": "PUT",
@@ -570,8 +573,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        12112,
-        1136
+        13312,
+        1104
       ],
       "parameters": {
         "conditions": {
@@ -604,8 +607,8 @@
       "type": "n8n-nodes-base.zammad",
       "typeVersion": 1,
       "position": [
-        12336,
-        1024
+        13600,
+        1008
       ],
       "parameters": {
         "authentication": "basicAuth",
@@ -629,7 +632,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        11664,
+        11136,
         1136
       ],
       "parameters": {
@@ -662,9 +665,10 @@
       "name": "Fehler-Push senden",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
       "position": [
-        12160,
-        784
+        13504,
+        768
       ],
       "parameters": {
         "method": "POST",
@@ -699,50 +703,50 @@
           "id": "2YY5v6HVGvCihqij",
           "name": "ntfy-publisher"
         }
-      },
-      "onError": "continueRegularOutput"
+      }
     },
     {
-      "parameters": {
-        "jsCode": "const MAIL_AN = 'peter.kretzer@dlrg.org';\nconst MAIL_VON = 'workflow-n8n@edv-kretzer.de';\nconst ID_ZEILE = 'ID-IT-xi8klGKdh8';\nconst SCHRIFT = \"-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif\";\nconst FARBEN = { rot: '#c8102e', amber: '#b45309', gruen: '#15803d', blau: '#1d4ed8', grau: '#475569', indigo: '#4338ca' };\nconst mitId = (text) => String(text).replace(/\\s+$/, '') + '\\n\\n' + ID_ZEILE;\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');\nconst verlinken = (s) => esc(s).replace(/(https?:\\/\\/[^\\s<]*[^\\s<.,;:!?)])/g, '<a href=\"$1\" style=\"color:#1d4ed8;text-decoration:underline\">$1</a>');\nconst absaetze = (text) => String(text).replace(/\\r\\n?/g, '\\n').split(/\\n{2,}/).filter((b) => b.trim()).map((b) => '<p style=\"margin:0 0 14px 0;line-height:1.6\">' + verlinken(b.trim()).replace(/\\n/g, '<br>') + '</p>').join('');\nconst felder = (zeilen) => '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;margin:0 0 18px 0;border:1px solid #e5e7eb\">' + zeilen.map(([k, v], i) => '<tr style=\"background:' + (i % 2 ? '#ffffff' : '#f9fafb') + '\"><td valign=\"top\" style=\"padding:9px 12px;width:34%;font-size:13px;color:#6b7280;border-bottom:1px solid #eef0f3\">' + esc(k) + '</td><td valign=\"top\" style=\"padding:9px 12px;font-size:14px;color:#111827;border-bottom:1px solid #eef0f3\">' + verlinken(v) + '</td></tr>').join('') + '</table>';\nconst box = (inhalt, farbe, titel) => '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 18px 0\"><tr><td style=\"border-left:4px solid ' + farbe + ';background:#f9fafb;padding:14px 16px\">' + (titel ? '<div style=\"font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:' + farbe + ';margin-bottom:8px\">' + esc(titel) + '</div>' : '') + inhalt + '</td></tr></table>';\nconst liste = (eintraege) => '<ul style=\"margin:0;padding:0 0 0 18px;line-height:1.6\">' + eintraege.map((e) => '<li style=\"margin:0 0 4px 0\">' + verlinken(e) + '</li>').join('') + '</ul>';\nconst knopf = (text, url, farbe) => '<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:4px 0 18px 0\"><tr><td style=\"background:' + farbe + ';border-radius:6px\"><a href=\"' + esc(url) + '\" style=\"display:inline-block;padding:11px 20px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none\">' + esc(text) + '</a></td></tr></table>';\nconst klein = (text) => '<p style=\"margin:6px 0 14px 0;font-size:13px;line-height:1.5;color:#6b7280\">' + verlinken(text).replace(/\\n/g, '<br>') + '</p>';\nconst datum = (iso, kurz) => {\n  const d = new Date(iso);\n  return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: kurz ? 'short' : 'medium' }) + ' Uhr';\n};\nconst layout = ({ label, farbe, titel, badge, vorschau, abschnitte }) => {\n  const zeit = new Date().toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: 'short' });\n  const plakette = badge ? '<div style=\"margin-top:12px\"><span style=\"display:inline-block;background:#ffffff;color:' + farbe + ';font-size:12px;font-weight:700;padding:4px 10px;border-radius:12px\">' + esc(badge) + '</span></div>' : '';\n  return '<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"color-scheme\" content=\"light\"><title>' + esc(titel) + '</title></head>'\n    + '<body style=\"margin:0;padding:0;background:#f3f4f6;font-family:' + SCHRIFT + '\">'\n    + '<div style=\"display:none;max-height:0;overflow:hidden;opacity:0;color:#f3f4f6\">' + esc(vorschau || titel) + '</div>'\n    + '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f3f4f6\"><tr><td align=\"center\" style=\"padding:24px 12px\">'\n    + '<table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"width:100%;max-width:600px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden\">'\n    + '<tr><td style=\"background:' + farbe + ';padding:22px 26px\"><div style=\"font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#ffffff;opacity:.9\">' + esc(label) + '</div>'\n    + '<div style=\"margin-top:6px;font-size:22px;line-height:1.3;font-weight:700;color:#ffffff\">' + esc(titel) + '</div>' + plakette + '</td></tr>'\n    + '<tr><td style=\"padding:24px 26px 12px 26px;font-size:15px;line-height:1.6;color:#1f2937\">' + abschnitte.join('') + '</td></tr>'\n    + '<tr><td style=\"padding:14px 26px;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:12px;line-height:1.6;color:#6b7280\">Automatisch gesendet von n8n am ' + esc(zeit) + ' Uhr<div style=\"color:#9ca3af\">' + ID_ZEILE + '</div></td></tr>'\n    + '</table></td></tr></table></body></html>';\n};\nconst e = $('Kurslinks in Entwurf einfügen').item.json;\nconst t = e.ticket;\nconst schnitt = e.entwurf.lastIndexOf('\\n\\nMit freundlichen Grüßen');\nconst antwort = (schnitt >= 0 ? e.entwurf.slice(0, schnitt) : e.entwurf).trim();\nconst entwurf = e.modus === 'entwurf';\nconst art = entwurf ? 'Mail-Entwurf zur Freigabe in Zammad' : 'Interne Notiz in Zammad';\nconst link = 'https://ticket.emue365.de/#ticket/zoom/' + t.id;\nconst zeilen = [\n  'Die KI hat Ticket #' + t.number + ' beantwortet.',\n  '',\n  'Ticket: #' + t.number + ' ' + t.title,\n  'Link: ' + link,\n  'Ablage: ' + art,\n  'Antwort an: ' + (e.replyTo || 'unbekannt'),\n  '',\n  'Antwort der KI:',\n  '',\n  antwort,\n];\nif (e.hinweise.length > 0) {\n  zeilen.push('', 'Interne Hinweise:', ...e.hinweise.map((h) => '- ' + h));\n}\nconst abschnitte = [\n  felder([['Ticket', '#' + t.number], ['Antwort an', e.replyTo || 'unbekannt'], ['Ablage', art]]),\n  knopf('Ticket in Zammad öffnen', link, FARBEN.indigo),\n  box(absaetze(antwort), FARBEN.indigo, 'Antwort der KI'),\n];\nif (e.hinweise.length > 0) abschnitte.push(box(liste(e.hinweise), FARBEN.amber, 'Interne Hinweise'));\nconst html = layout({\n  label: 'Zammad · KI-Antwort',\n  farbe: FARBEN.indigo,\n  titel: 'Ticket #' + t.number + ': ' + t.title,\n  badge: entwurf ? 'Entwurf wartet auf Freigabe' : 'Interne Notiz',\n  vorschau: antwort.split('\\n')[0],\n  abschnitte,\n});\nreturn { json: { mailAn: MAIL_AN, mailVon: MAIL_VON, betreff: 'KI-Antwort zu Ticket #' + t.number + ': ' + t.title, text: mitId(zeilen.join('\\n')), html } };\n",
-        "mode": "runOnceForEachItem"
-      },
-      "id": "04140387-e711-42a3-979a-2eb1dce30120",
+      "id": "d5a9643a-841c-43c9-96a2-9c1d15af77ed",
       "name": "KI-Mail bauen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        12576,
-        1360
-      ]
+        14176,
+        1408
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const MAIL_AN = 'peter.kretzer@dlrg.org';\nconst MAIL_VON = 'workflow-n8n@edv-kretzer.de';\nconst ID_ZEILE = 'ID-IT-xi8klGKdh8';\nconst SCHRIFT = \"-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif\";\nconst FARBEN = { rot: '#c8102e', amber: '#b45309', gruen: '#15803d', blau: '#1d4ed8', grau: '#475569', indigo: '#4338ca' };\nconst mitId = (text) => String(text).replace(/\\s+$/, '') + '\\n\\n' + ID_ZEILE;\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');\nconst verlinken = (s) => esc(s).replace(/(https?:\\/\\/[^\\s<]*[^\\s<.,;:!?)])/g, '<a href=\"$1\" style=\"color:#1d4ed8;text-decoration:underline\">$1</a>');\nconst absaetze = (text) => String(text).replace(/\\r\\n?/g, '\\n').split(/\\n{2,}/).filter((b) => b.trim()).map((b) => '<p style=\"margin:0 0 14px 0;line-height:1.6\">' + verlinken(b.trim()).replace(/\\n/g, '<br>') + '</p>').join('');\nconst felder = (zeilen) => '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;margin:0 0 18px 0;border:1px solid #e5e7eb\">' + zeilen.map(([k, v], i) => '<tr style=\"background:' + (i % 2 ? '#ffffff' : '#f9fafb') + '\"><td valign=\"top\" style=\"padding:9px 12px;width:34%;font-size:13px;color:#6b7280;border-bottom:1px solid #eef0f3\">' + esc(k) + '</td><td valign=\"top\" style=\"padding:9px 12px;font-size:14px;color:#111827;border-bottom:1px solid #eef0f3\">' + verlinken(v) + '</td></tr>').join('') + '</table>';\nconst box = (inhalt, farbe, titel) => '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 18px 0\"><tr><td style=\"border-left:4px solid ' + farbe + ';background:#f9fafb;padding:14px 16px\">' + (titel ? '<div style=\"font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:' + farbe + ';margin-bottom:8px\">' + esc(titel) + '</div>' : '') + inhalt + '</td></tr></table>';\nconst liste = (eintraege) => '<ul style=\"margin:0;padding:0 0 0 18px;line-height:1.6\">' + eintraege.map((e) => '<li style=\"margin:0 0 4px 0\">' + verlinken(e) + '</li>').join('') + '</ul>';\nconst knopf = (text, url, farbe) => '<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:4px 0 18px 0\"><tr><td style=\"background:' + farbe + ';border-radius:6px\"><a href=\"' + esc(url) + '\" style=\"display:inline-block;padding:11px 20px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none\">' + esc(text) + '</a></td></tr></table>';\nconst klein = (text) => '<p style=\"margin:6px 0 14px 0;font-size:13px;line-height:1.5;color:#6b7280\">' + verlinken(text).replace(/\\n/g, '<br>') + '</p>';\nconst datum = (iso, kurz) => {\n  const d = new Date(iso);\n  return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: kurz ? 'short' : 'medium' }) + ' Uhr';\n};\nconst layout = ({ label, farbe, titel, badge, vorschau, abschnitte }) => {\n  const zeit = new Date().toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: 'short' });\n  const plakette = badge ? '<div style=\"margin-top:12px\"><span style=\"display:inline-block;background:#ffffff;color:' + farbe + ';font-size:12px;font-weight:700;padding:4px 10px;border-radius:12px\">' + esc(badge) + '</span></div>' : '';\n  return '<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"color-scheme\" content=\"light\"><title>' + esc(titel) + '</title></head>'\n    + '<body style=\"margin:0;padding:0;background:#f3f4f6;font-family:' + SCHRIFT + '\">'\n    + '<div style=\"display:none;max-height:0;overflow:hidden;opacity:0;color:#f3f4f6\">' + esc(vorschau || titel) + '</div>'\n    + '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f3f4f6\"><tr><td align=\"center\" style=\"padding:24px 12px\">'\n    + '<table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"width:100%;max-width:600px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden\">'\n    + '<tr><td style=\"background:' + farbe + ';padding:22px 26px\"><div style=\"font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#ffffff;opacity:.9\">' + esc(label) + '</div>'\n    + '<div style=\"margin-top:6px;font-size:22px;line-height:1.3;font-weight:700;color:#ffffff\">' + esc(titel) + '</div>' + plakette + '</td></tr>'\n    + '<tr><td style=\"padding:24px 26px 12px 26px;font-size:15px;line-height:1.6;color:#1f2937\">' + abschnitte.join('') + '</td></tr>'\n    + '<tr><td style=\"padding:14px 26px;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:12px;line-height:1.6;color:#6b7280\">Automatisch gesendet von n8n am ' + esc(zeit) + ' Uhr<div style=\"color:#9ca3af\">' + ID_ZEILE + '</div></td></tr>'\n    + '</table></td></tr></table></body></html>';\n};\nconst e = $('Kurslinks in Entwurf einfügen').item.json;\nconst t = e.ticket;\nconst schnitt = e.entwurf.lastIndexOf('\\n\\nMit freundlichen Grüßen');\nconst antwort = (schnitt >= 0 ? e.entwurf.slice(0, schnitt) : e.entwurf).trim();\nconst entwurf = e.modus === 'entwurf';\nconst art = entwurf ? 'Mail-Entwurf zur Freigabe in Zammad' : 'Interne Notiz in Zammad';\nconst link = 'https://ticket.emue365.de/#ticket/zoom/' + t.id;\nconst zeilen = [\n  'Die KI hat Ticket #' + t.number + ' beantwortet.',\n  '',\n  'Ticket: #' + t.number + ' ' + t.title,\n  'Link: ' + link,\n  'Ablage: ' + art,\n  'Antwort an: ' + (e.replyTo || 'unbekannt'),\n  '',\n  'Antwort der KI:',\n  '',\n  antwort,\n];\nif (e.hinweise.length > 0) {\n  zeilen.push('', 'Interne Hinweise:', ...e.hinweise.map((h) => '- ' + h));\n}\nconst abschnitte = [\n  felder([['Ticket', '#' + t.number], ['Antwort an', e.replyTo || 'unbekannt'], ['Ablage', art]]),\n  knopf('Ticket in Zammad öffnen', link, FARBEN.indigo),\n  box(absaetze(antwort), FARBEN.indigo, 'Antwort der KI'),\n];\nif (e.hinweise.length > 0) abschnitte.push(box(liste(e.hinweise), FARBEN.amber, 'Interne Hinweise'));\nconst html = layout({\n  label: 'Zammad · KI-Antwort',\n  farbe: FARBEN.indigo,\n  titel: 'Ticket #' + t.number + ': ' + t.title,\n  badge: entwurf ? 'Entwurf wartet auf Freigabe' : 'Interne Notiz',\n  vorschau: antwort.split('\\n')[0],\n  abschnitte,\n});\nreturn { json: { mailAn: MAIL_AN, mailVon: MAIL_VON, betreff: 'KI-Antwort zu Ticket #' + t.number + ': ' + t.title, text: mitId(zeilen.join('\\n')), html } };\n"
+      }
     },
     {
+      "id": "451b681c-4239-4e4f-8bcc-00feff37f373",
+      "name": "KI-Mail senden",
+      "webhookId": "3cfffa62-e07d-49db-b2e8-890a78d9a417",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "onError": "continueRegularOutput",
+      "position": [
+        14368,
+        1568
+      ],
       "parameters": {
         "fromEmail": "={{ $json.mailVon }}",
         "toEmail": "={{ $json.mailAn }}",
         "subject": "={{ $json.betreff }}",
         "emailFormat": "both",
         "text": "={{ $json.text }}",
+        "html": "={{ $json.html }}",
         "options": {
           "appendAttribution": false
-        },
-        "html": "={{ $json.html }}"
+        }
       },
-      "id": "524bad43-a912-4d75-8246-363c78ddcc1f",
-      "name": "KI-Mail senden",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
-      "position": [
-        12800,
-        1360
-      ],
       "credentials": {
         "smtp": {
           "id": "gQZtSwFzQoNoRn3S",
           "name": "SMTP Netcup Automations"
         }
-      },
-      "onError": "continueRegularOutput"
+      }
     },
     {
       "id": "a1c0de00-0001-4000-8000-0000000000e1",
@@ -750,8 +754,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        11776,
-        800
+        13120,
+        784
       ],
       "parameters": {
         "conditions": {
@@ -783,11 +787,11 @@
       "name": "Anhang laden",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        11888,
-        640
-      ],
       "onError": "continueErrorOutput",
+      "position": [
+        12864,
+        320
+      ],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const e = $('Kurslinks in Entwurf einfügen').item.json;\nconst norm = (t) => String(t).toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z]/g, '');\nconst BEKANNT = [{ schluessel: 'selbsterklaerung', pfad: '/home/node/.n8n/anhaenge/Selbsterklaerung_zum_Gesundheitszustand.pdf', name: 'Selbsterklaerung_zum_Gesundheitszustand.pdf' }];\nconst treffer = BEKANNT.find((a) => e.anhaenge.some((h) => norm(h).includes(a.schluessel)));\nif (!treffer) throw new Error('Unbekannter Anhang: ' + e.anhaenge.join(', '));\nconst { execFileSync } = require('child_process');\nconst daten = execFileSync('cat', [treffer.pfad], { maxBuffer: 50 * 1024 * 1024 });\nconst binary = await this.helpers.prepareBinaryData(daten, treffer.name, 'application/pdf');\nreturn { json: { formId: 'n8n-' + require('crypto').randomUUID(), anhang: treffer.name }, binary: { File: binary } };"
@@ -800,8 +804,8 @@
       "typeVersion": 4.2,
       "onError": "continueErrorOutput",
       "position": [
-        12000,
-        640
+        13376,
+        32
       ],
       "parameters": {
         "method": "POST",
@@ -833,9 +837,10 @@
       "name": "Anhang-Fehler-Push senden",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
       "position": [
-        12112,
-        640
+        13632,
+        336
       ],
       "parameters": {
         "method": "POST",
@@ -870,8 +875,93 @@
           "id": "2YY5v6HVGvCihqij",
           "name": "ntfy-publisher"
         }
+      }
+    },
+    {
+      "id": "1b806ed8-a7c3-4953-9880-fc58e9fb341e",
+      "name": "Time Saved",
+      "type": "n8n-nodes-base.timeSaved",
+      "typeVersion": 1,
+      "position": [
+        13040,
+        1216
+      ],
+      "parameters": {
+        "mode": "perItem",
+        "minutesSaved": 2
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ticket.emue365.de/api/v1/ticket_articles",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ ticket_id: $('Antwortentwurf extrahieren').item.json.ticket.id, type: 'note', sender: 'Agent', internal: true, content_type: 'text/html', body: $('Kurslinks in Entwurf einfügen').item.json.notizHtml.replace(/[„“”]/g, '\"').replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]/g, '') }) }}",
+        "options": {}
       },
-      "onError": "continueRegularOutput"
+      "id": "6fcb202d-78b4-4150-b5d2-48795db7b91e",
+      "name": "Entwurf als Artikel speichern (Rückfall)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        13040,
+        1632
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DYSeqKzcJFVzUL04",
+          "name": "Zammad ticket.emue365 API-Token"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ticket.emue365.de/api/v1/ticket_articles",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ ticket_id: $('Antwortentwurf extrahieren').item.json.ticket.id, type: 'note', sender: 'Agent', internal: true, content_type: 'text/html', body: $('Kurslinks in Entwurf einfügen').item.json.hinweiseHtml.replace(/[„“”]/g, '\"').replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]/g, '') }) }}",
+        "options": {}
+      },
+      "id": "36c66e1b-3380-450e-94d5-bd836c354675",
+      "name": "Interne Hinweise als Artikel speichern (Rückfall)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        14352,
+        1152
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DYSeqKzcJFVzUL04",
+          "name": "Zammad ticket.emue365 API-Token"
+        }
+      },
+      "onError": "continueErrorOutput"
     }
   ],
   "pinData": {},
@@ -1118,14 +1208,14 @@
       "main": [
         [
           {
-            "node": "Wartete auf Erinnerung oder Schließen?",
+            "node": "Time Saved",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Fehler-Push senden",
+            "node": "Entwurf als Artikel speichern (Rückfall)",
             "type": "main",
             "index": 0
           }
@@ -1161,7 +1251,7 @@
         ],
         [
           {
-            "node": "Fehler-Push senden",
+            "node": "Interne Hinweise als Artikel speichern (Rückfall)",
             "type": "main",
             "index": 0
           }
@@ -1322,6 +1412,53 @@
           }
         ]
       ]
+    },
+    "Time Saved": {
+      "main": [
+        [
+          {
+            "node": "Wartete auf Erinnerung oder Schließen?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entwurf als Artikel speichern (Rückfall)": {
+      "main": [
+        [
+          {
+            "node": "Time Saved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fehler-Push senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Interne Hinweise als Artikel speichern (Rückfall)": {
+      "main": [
+        [
+          {
+            "node": "KI-Mail bauen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fehler-Push senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -1329,11 +1466,12 @@
     "executionOrder": "v1",
     "binaryMode": "separate",
     "availableInMCP": false,
-    "timeSavedMode": "fixed",
+    "timeSavedMode": "dynamic",
     "timezone": "Europe/Berlin",
-    "callerPolicy": "workflowsFromSameOwner"
+    "callerPolicy": "workflowsFromSameOwner",
+    "timeSavedPerExecution": 4
   },
-  "versionId": "902f56b8-27f0-4133-a3de-2baa960bef2f",
+  "versionId": "b5f104d6-1a00-4790-9437-501db385c7e4",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "d3f71021076be8bdc8614296f3c7749ae0813e877410d7e61391b83252e612f7"
