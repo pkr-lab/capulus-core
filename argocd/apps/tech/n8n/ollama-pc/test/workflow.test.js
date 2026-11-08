@@ -181,9 +181,39 @@ test('Fehlerhandling: Ollama- und Zammad-Fehler laufen in den Fehler-Push', () =
   assert.deepEqual(ziele('Ollama-Fehler?', 1), ['Kurslink-Hinweise vorhanden?']);
   for (const name of ['Entwurf als interne Notiz speichern', 'Interne Hinweise als Notiz speichern']) {
     assert.equal(nodes[name].onError, 'continueErrorOutput', name);
-    assert.deepEqual(ziele(name, 1), ['Fehler-Push senden'], name);
   }
+  assert.deepEqual(ziele('Entwurf als Artikel speichern (Rückfall)', 1), ['Fehler-Push senden']);
+  assert.deepEqual(ziele('Interne Hinweise als Artikel speichern (Rückfall)', 1), ['Fehler-Push senden']);
   assert.deepEqual(ziele('Fehler-Push senden', 0), ['Abschluss (immer genau 1 Item)']);
+});
+
+test('Notiz speichern: scheitert das Ticket-Update, legt ein Rückfall-Node die Notiz direkt als Artikel an', () => {
+  const ziele = (name, ausgang) => (workflow.connections[name].main[ausgang] || []).map((c) => c.node);
+  assert.deepEqual(ziele('Entwurf als interne Notiz speichern', 1), ['Entwurf als Artikel speichern (Rückfall)']);
+  assert.deepEqual(ziele('Entwurf als Artikel speichern (Rückfall)', 0), ziele('Entwurf als interne Notiz speichern', 0));
+  assert.deepEqual(ziele('Interne Hinweise als Notiz speichern', 1), ['Interne Hinweise als Artikel speichern (Rückfall)']);
+  assert.deepEqual(ziele('Interne Hinweise als Artikel speichern (Rückfall)', 0), ziele('Interne Hinweise als Notiz speichern', 0));
+  const auswerten = (name, feld) => {
+    const node = nodes[name];
+    assert.equal(node.parameters.method, 'POST');
+    assert.equal(node.parameters.url, 'https://ticket.emue365.de/api/v1/ticket_articles');
+    assert.equal(node.onError, 'continueErrorOutput');
+    const refs = {
+      'Antwortentwurf extrahieren': { ticket: { id: 3484 } },
+      'Kurslinks in Entwurf einfügen': { [feld]: '<p>Link „Test“ \u0001ok</p>' },
+    };
+    const $ = (ref) => ({ item: { json: refs[ref] } });
+    const ausdruck = node.parameters.jsonBody.slice(3, -2);
+    return JSON.parse(new Function('$', `return ${ausdruck}`)($));
+  };
+  const erwartet = { ticket_id: 3484, type: 'note', sender: 'Agent', internal: true, content_type: 'text/html', body: '<p>Link "Test" ok</p>' };
+  assert.deepEqual(auswerten('Entwurf als Artikel speichern (Rückfall)', 'notizHtml'), erwartet);
+  assert.deepEqual(auswerten('Interne Hinweise als Artikel speichern (Rückfall)', 'hinweiseHtml'), erwartet);
+});
+
+test('Ticket-Suche: Zammad-Aussetzer werden wiederholt', () => {
+  assert.equal(nodes['Offene Tickets suchen'].retryOnFail, true);
+  assert.equal(nodes['Offene Tickets suchen'].maxTries, 3);
 });
 
 test('Workflow: alle Verbindungen zeigen auf vorhandene Nodes', () => {
