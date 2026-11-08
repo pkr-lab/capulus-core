@@ -114,13 +114,50 @@ test('Entwurf: [KURSLINK] bleibt im Text, Hinweis und Mailkontext gehen an die N
   assert.match(stdin.context, /2027-CK03/);
 });
 
-test('Entwurf: Leerzeile nach Anrede und Dank, Signatur zeilenweise mit Namen der Ausbildung', () => {
+function mitSignatur(reply = ANTWORT, g = ticket) {
+  const knoten = nodes['Antwortentwurf extrahieren'].parameters;
+  const original = knoten.jsCode;
+  assert.ok(original.includes('const SIGNATUR_ANHAENGEN = false;'));
+  knoten.jsCode = original.replace('const SIGNATUR_ANHAENGEN = false;', 'const SIGNATUR_ANHAENGEN = true;');
+  try {
+    return extrahieren(reply, g);
+  } finally {
+    knoten.jsCode = original;
+  }
+}
+
+test('Entwurf: Leerzeile nach Anrede und Dank, ohne Grußformel und Signatur, die setzt Zammad', () => {
   const e = extrahieren();
   assert.match(e.entwurf, /^Guten Tag Lena Fischer,\n\nvielen Dank für Ihre Nachricht\.\n\nDen Upload-Link/);
+  for (const feld of [e.entwurf, e.entwurfHtml, e.notizHtml]) {
+    assert.ok(!feld.includes('Mit freundlichen Grüßen'));
+    assert.ok(!feld.includes('Balthasar-Neumann'));
+    assert.ok(!feld.includes('ID-IT-xi8klGKdh8'));
+  }
+  assert.ok(e.entwurfHtml.endsWith('</p>'));
+});
+
+test('Entwurf: ist die Signatur eingeschaltet, steht sie zeilenweise mit dem Namen der Ausbildung darunter', () => {
+  const e = mitSignatur();
   assert.ok(e.entwurfHtml.includes('<div>Mit freundlichen Grüßen</div><div><br></div><div>Daniela Saxer</div>'));
   assert.ok(!e.entwurfHtml.includes('DLRG OG Andernach e.V.</div><div><br></div><div>--'));
-  const andere = extrahieren(ANTWORT, { ...ticket, group_id: 5 });
+  const andere = mitSignatur(ANTWORT, { ...ticket, group_id: 5 });
   assert.ok(andere.entwurf.includes('DLRG OG Andernach e.V.'));
+});
+
+test('Shared Draft: An enthält nur die reine Mailadresse des Absenders', () => {
+  const ausdruck = nodes['Shared Draft speichern'].parameters.jsonBody.slice(3, -2);
+  const an = (replyTo) => {
+    const refs = { 'Kurslinks in Entwurf einfügen': { replyTo, ticket: { title: 'T', group_id: 2 }, entwurfHtml: '<p>x</p>', messageId: 'm' } };
+    const $ = (ref) => ({ item: { json: refs[ref] } });
+    return JSON.parse(new Function('$', '$json', `return ${ausdruck}`)($, {})).new_article.to;
+  };
+  assert.equal(an('Raphael Mueller <raphael.mueller@dlrg.org>'), 'raphael.mueller@dlrg.org');
+  assert.equal(an('"Diana Weiß" <weiss.diana82@gmail.com>'), 'weiss.diana82@gmail.com');
+  assert.equal(an('collinkolmer@gmx.de'), 'collinkolmer@gmx.de');
+  assert.equal(an('- - <info@andreasfull.de>'), 'info@andreasfull.de');
+  assert.equal(an('a@b.de, C <c@d.de>'), 'a@b.de, c@d.de');
+  assert.equal(an(''), '');
 });
 
 test('Entwurf: Ollama-Fehler wirft nicht, sondern liefert ein Fehler-Item', () => {
@@ -135,7 +172,7 @@ test('Entwurf: Ollama-Fehler wirft nicht, sondern liefert ein Fehler-Item', () =
 test('Kurslink: eindeutiger Kurs wird in Text und HTML eingesetzt', () => {
   const entry = { code: '2027-CK03', kursart: 'CrashKurs', url: 'https://example.org/ck03?a=1&b=2' };
   const out = einfuegen(extrahieren(), [{ status: 'link', entry, grund: 'Kurscode in der Mail' }]);
-  assert.ok(out.entwurf.includes('\nhttps://example.org/ck03?a=1&b=2\n'));
+  assert.ok(out.entwurf.endsWith('\nhttps://example.org/ck03?a=1&b=2'));
   assert.ok(out.entwurfHtml.includes('<a href="https://example.org/ck03?a=1&amp;b=2">'));
   assert.ok(!out.entwurf.includes('KURSLINK'));
   assert.ok(!out.entwurfHtml.includes('KURSLINK'));
