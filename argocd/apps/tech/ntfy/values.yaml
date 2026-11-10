@@ -43,7 +43,7 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-    - host: ntfy-tech.pke-lab.de
+    - host: ntfy-tech.pkr-lab.de
       paths:
         - path: /
           pathType: Prefix
@@ -57,7 +57,7 @@ persistence:
   mountPath: /var/lib/ntfy
 
 config:
-  base-url: "https://ntfy-tech.pke-lab.de"
+  base-url: "https://ntfy-tech.pkr-lab.de"
   upstream-base-url: "https://ntfy.sh"
   behind-proxy: true
   cache-file: /var/lib/ntfy/cache.db

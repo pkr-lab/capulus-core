@@ -24,7 +24,7 @@ ingress:
   annotations: {}
   hosts:
     - ticket-gate.tech.homeserver
-    - ticket-gate-tech.pke-lab.de
+    - ticket-gate-tech.pkr-lab.de
 
 serviceAccount:
   create: true

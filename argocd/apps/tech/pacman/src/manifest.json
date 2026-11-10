@@ -15,9 +15,9 @@
   "offline_enabled": true,
 
   "app": {
-    "urls": ["https://pacman-prod.pke-lab.de/"],
+    "urls": ["https://pacman-prod.pkr-lab.de/"],
     "launch": {
-      "web_url": "https://pacman-prod.pke-lab.de"
+      "web_url": "https://pacman-prod.pkr-lab.de"
     }
   }
 }

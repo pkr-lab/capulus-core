@@ -37,7 +37,7 @@ server:
         paths:
           - path: /
             pathType: Prefix
-      - host: immich-prod.pke-lab.de
+      - host: immich-prod.pkr-lab.de
         paths:
           - path: /
             pathType: Prefix
