@@ -38,7 +38,7 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-    - host: vault-tech.pke-lab.de
+    - host: vault-tech.pkr-lab.de
       paths:
         - path: /
           pathType: Prefix
@@ -47,7 +47,7 @@ ingress:
 adminRestriction:
   enabled: true
   hosts:
-    - vault-tech.pke-lab.de
+    - vault-tech.pkr-lab.de
   sourceRange:
     - 192.168.178.0/24
     - 100.64.0.0/10
@@ -60,7 +60,7 @@ persistence:
   mountPath: /data
 
 env:
-  DOMAIN: "https://vault-tech.pke-lab.de"
+  DOMAIN: "https://vault-tech.pkr-lab.de"
   WEBSOCKET_ENABLED: "true"
   SIGNUPS_ALLOWED: "false"
   INVITATIONS_ALLOWED: "true"

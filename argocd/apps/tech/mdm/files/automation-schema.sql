@@ -107,7 +107,7 @@ VALUES ('1625396347', 'ntfy', 'io.heckel.ntfy', '{}'::jsonb),
        ('983156458', 'Microsoft Authenticator', 'com.microsoft.azureauthenticator', '{}'::jsonb),
        ('1659881569', 'DLRG Trainer', 'app.dlrg.trainer', '{}'::jsonb),
        ('1113153706', 'Microsoft Teams', 'com.microsoft.skype.teams', '{}'::jsonb),
-       ('1137397744', 'Bitwarden Passwortmanager', 'com.8bit.bitwarden', jsonb_build_object('baseEnvironmentUrl', 'https://vault-tech.pke-lab.de'));
+       ('1137397744', 'Bitwarden Passwortmanager', 'com.8bit.bitwarden', jsonb_build_object('baseEnvironmentUrl', 'https://vault-tech.pkr-lab.de'));
 
 INSERT INTO automation.profile_state (name, template, params)
 SELECT 'app-allowlist',
