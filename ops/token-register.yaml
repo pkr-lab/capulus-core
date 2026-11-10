@@ -269,7 +269,7 @@
     runbook: pkr-lab-docs:capulus-core/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md#credentials-rotieren
     overlap: true
   owner: peter
-  blast_radius: "Kontrolle ueber den Cloudflare-Tunnel homeserver (TECH), damit alle unter *.pke-lab.de erreichbaren TECH-Dienste."
+  blast_radius: "Kontrolle ueber den Cloudflare-Tunnel homeserver (TECH), damit alle unter *.pkr-lab.de erreichbaren TECH-Dienste."
 
 - id: cloudflared-tunnel-prod
   service: cloudflare

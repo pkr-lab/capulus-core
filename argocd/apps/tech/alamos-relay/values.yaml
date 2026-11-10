@@ -31,7 +31,7 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-    - host: alamos-relay-prod.pke-lab.de
+    - host: alamos-relay-prod.pkr-lab.de
       paths:
         - path: /
           pathType: Prefix

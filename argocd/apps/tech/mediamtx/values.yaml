@@ -63,7 +63,7 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-    - host: stream-prod.pke-lab.de
+    - host: stream-prod.pkr-lab.de
       paths:
         - path: /
           pathType: Prefix

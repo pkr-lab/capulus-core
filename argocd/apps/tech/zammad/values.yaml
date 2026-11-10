@@ -34,7 +34,7 @@ resticBackup:
 formSperre:
   enabled: true
   hosts:
-    - support-tech.pke-lab.de
+    - support-tech.pkr-lab.de
   paths:
     - /api/v1/form_submit
     - /api/v1/form_config
@@ -53,7 +53,7 @@ zammad:
         paths:
           - path: /
             pathType: Prefix
-      - host: support-tech.pke-lab.de
+      - host: support-tech.pkr-lab.de
         paths:
           - path: /
             pathType: Prefix
