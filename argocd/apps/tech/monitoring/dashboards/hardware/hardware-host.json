@@ -3593,7 +3593,7 @@
      "type": "prometheus",
      "uid": "${datasource}"
     },
-    "definition": "label_values(up{job=~\".*node-exporter.*\", host!=\"\"}, host)",
+    "definition": "label_values(up{job=~\".*node-exporter.*\", host!~\"homeserver|worker-0\"}, host)",
     "hide": 0,
     "includeAll": false,
     "label": "Maschine",
@@ -3601,7 +3601,7 @@
     "name": "host",
     "options": [],
     "query": {
-     "query": "label_values(up{job=~\".*node-exporter.*\", host!=\"\"}, host)",
+     "query": "label_values(up{job=~\".*node-exporter.*\", host!~\"homeserver|worker-0\"}, host)",
      "refId": "StandardVariableQuery"
     },
     "refresh": 2,
