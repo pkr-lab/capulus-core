@@ -1,5 +1,5 @@
 {
-  "name": "Zammad Administration Mail-Entwuerfe",
+  "name": "PKR-Service Zammad",
   "nodes": [
     {
       "id": "e80ba0c3-42f5-4760-9820-176385722709",
@@ -26,25 +26,6 @@
       "parameters": {}
     },
     {
-      "id": "c8a85741-4eeb-46e8-8361-08780147dfa8",
-      "name": "Administration-Gruppen laden",
-      "type": "n8n-nodes-base.zammad",
-      "typeVersion": 1,
-      "position": [480, 400],
-      "parameters": {
-        "authentication": "basicAuth",
-        "resource": "group",
-        "operation": "getAll",
-        "returnAll": true
-      },
-      "credentials": {
-        "zammadBasicAuthApi": {
-          "id": "phUAvB04RmbLalky",
-          "name": "Zammad EDV-Kretzer"
-        }
-      }
-    },
-    {
       "id": "3da9f1ce-7d42-4020-b626-beb20e2e6dbf",
       "name": "Offene Tickets suchen",
       "type": "n8n-nodes-base.zammad",
@@ -65,12 +46,12 @@
     },
     {
       "id": "f4d144be-93d4-42c2-8c05-2e0a029f7c0c",
-      "name": "Nur Administration-Tickets",
+      "name": "Nur offene Tickets",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [920, 80],
       "parameters": {
-        "jsCode": "const GRUPPEN_PRAEFIX = 'Administration';\nconst OFFENE_STATES = [1, 2, 3, 6];\n\nconst gruppen = $('Administration-Gruppen laden').all().map(({ json }) => json);\nconst erlaubteGruppenIds = new Set(\n  gruppen\n    .filter((g) => g.name === GRUPPEN_PRAEFIX || String(g.name || '').startsWith(`${GRUPPEN_PRAEFIX}::`))\n    .map((g) => g.id),\n);\n\nif (erlaubteGruppenIds.size === 0) {\n  throw new Error(`Keine Zammad-Gruppe \"${GRUPPEN_PRAEFIX}\" gefunden (oder das API-Token sieht sie nicht) – Gruppenliste und Token-Rechte pruefen`);\n}\n\nreturn $input.all().filter(({ json: ticket }) => erlaubteGruppenIds.has(ticket.group_id) && OFFENE_STATES.includes(ticket.state_id));"
+        "jsCode": "const OFFENE_STATES = [1, 2, 3, 6];\n\nreturn $input.all().filter(({ json: ticket }) => OFFENE_STATES.includes(ticket.state_id));"
       }
     },
     {
@@ -99,7 +80,7 @@
       "typeVersion": 2,
       "position": [1360, 80],
       "parameters": {
-        "jsCode": "const MAX_PAYLOAD_BYTES = 90000;\nconst MAX_MAIL_CHARS = 40000;\nconst MAX_CONTEXT_CHARS = 4000;\nconst KI_MARKIERUNG = /KI-Entwurf \\(automatisch erstellt\\)|Interne Hinweise zum KI-Entwurf/;\n\nfunction stripHtml(html) {\n  return String(html || '')\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<\\/(p|div|li|tr)>/gi, '\\n')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .replace(/&#39;/g, \"'\")\n    .replace(/&amp;/g, '&')\n    .replace(/[ \\t]+/g, ' ')\n    .replace(/ ?\\n ?/g, '\\n')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim();\n}\n\nfunction textOf(article) {\n  return /html/i.test(article.content_type || '') ? stripHtml(article.body) : String(article.body || '').trim();\n}\n\nfunction dateOf(article) {\n  return String(article.created_at || '').replace('T', ' ').slice(0, 16);\n}\n\nconst ergebnis = [];\n\n$input.all().forEach((item, index) => {\n  const { articles, ...ticket } = item.json;\n  const all = (articles || [])\n    .filter((a) => a.sender !== 'System')\n    .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)) || a.id - b.id);\n\n  const oeffentlich = all.filter((a) => !a.internal);\n  const letzte = oeffentlich[oeffentlich.length - 1];\n  if (letzte && letzte.sender === 'Agent') {\n    console.log(`Ticket #${ticket.number}: Team hat bereits geantwortet, übersprungen`);\n    return;\n  }\n\n  if ([3, 6].includes(ticket.state_id) && !oeffentlich.some((a) => a.sender === 'Agent')) {\n    console.log(`Ticket #${ticket.number}: wartet auf Erinnerung oder Schließen, Kunde hat nicht geantwortet, übersprungen`);\n    return;\n  }\n\n  const context = all\n    .filter((a) => a.internal && /^\\s*Kontext:/i.test(textOf(a)))\n    .map((a) => textOf(a).replace(/^\\s*Kontext:\\s*/i, ''))\n    .join('\\n\\n')\n    .slice(0, MAX_CONTEXT_CHARS);\n\n  const mails = all.filter((a) => !a.internal && textOf(a));\n  const lastCustomer = [...mails].reverse().find((a) => a.sender === 'Customer');\n  const target = lastCustomer || mails[mails.length - 1];\n  if (!target) {\n    console.log(`Ticket #${ticket.number}: keine E-Mail zum Beantworten gefunden, übersprungen`);\n    return;\n  }\n\n  if (all.some((a) => a.internal && a.id > target.id && KI_MARKIERUNG.test(textOf(a)))) {\n    console.log(`Ticket #${ticket.number}: KI-Entwurf liegt bereits vor, übersprungen`);\n    return;\n  }\n\n  const history = mails\n    .filter((a) => a.id !== target.id)\n    .map((a) => ({ from: a.from || 'unbekannt', date: dateOf(a), text: textOf(a) }));\n\n  const payload = {\n    context,\n    history,\n    mail: {\n      from: target.from || 'unbekannt',\n      date: dateOf(target),\n      subject: target.subject || ticket.title,\n      text: textOf(target).slice(0, MAX_MAIL_CHARS),\n    },\n  };\n\n  let preTrimmed = 0;\n  while (Buffer.byteLength(JSON.stringify(payload), 'utf8') > MAX_PAYLOAD_BYTES && payload.history.length > 0) {\n    payload.history.shift();\n    preTrimmed += 1;\n  }\n  if (preTrimmed > 0) {\n    console.log(`Ticket #${ticket.number}: ${preTrimmed} ältere Mail(s) vor dem Aufruf gekürzt (Payload-Limit ${MAX_PAYLOAD_BYTES} Byte)`);\n  }\n\n  ergebnis.push({\n    json: {\n      ticket,\n      modus: 'entwurf',\n      replyTo: target.reply_to || target.from || '',\n      messageId: target.message_id || '',\n      payloadB64: Buffer.from(JSON.stringify(payload), 'utf8').toString('base64'),\n      historyCount: payload.history.length,\n      preTrimmed,\n    },\n    pairedItem: { item: index },\n  });\n});\n\nreturn ergebnis;"
+        "jsCode": "const MAX_PAYLOAD_BYTES = 90000;\nconst MAX_MAIL_CHARS = 40000;\nconst MAX_CONTEXT_CHARS = 4000;\nconst KI_MARKIERUNG = /KI-Entwurf \\(automatisch erstellt\\)|Interne Hinweise zum KI-Entwurf/;\nconst SELBST_ADRESSEN = ['info@edv-kretzer.de', 'noreply@support-tech.pkr-lab.de'];\n\nfunction vonMirSelbst(adresse) {\n  return SELBST_ADRESSEN.some((a) => String(adresse || '').toLowerCase().includes(a));\n}\n\nfunction stripHtml(html) {\n  return String(html || '')\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<\\/(p|div|li|tr)>/gi, '\\n')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .replace(/&#39;/g, \"'\")\n    .replace(/&amp;/g, '&')\n    .replace(/[ \\t]+/g, ' ')\n    .replace(/ ?\\n ?/g, '\\n')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim();\n}\n\nfunction textOf(article) {\n  return /html/i.test(article.content_type || '') ? stripHtml(article.body) : String(article.body || '').trim();\n}\n\nfunction dateOf(article) {\n  return String(article.created_at || '').replace('T', ' ').slice(0, 16);\n}\n\nconst ergebnis = [];\n\n$input.all().forEach((item, index) => {\n  const { articles, ...ticket } = item.json;\n  const all = (articles || [])\n    .filter((a) => a.sender !== 'System')\n    .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)) || a.id - b.id);\n\n  const oeffentlich = all.filter((a) => !a.internal);\n\n  const erste = oeffentlich[0];\n  if (erste && vonMirSelbst(erste.from)) {\n    console.log(`Ticket #${ticket.number}: von mir selbst erstellt (${erste.from}), übersprungen`);\n    return;\n  }\n\n  const letzte = oeffentlich[oeffentlich.length - 1];\n  if (letzte && letzte.sender === 'Agent') {\n    console.log(`Ticket #${ticket.number}: Team hat bereits geantwortet, übersprungen`);\n    return;\n  }\n\n  if ([3, 6].includes(ticket.state_id) && !oeffentlich.some((a) => a.sender === 'Agent')) {\n    console.log(`Ticket #${ticket.number}: wartet auf Erinnerung oder Schließen, Kunde hat nicht geantwortet, übersprungen`);\n    return;\n  }\n\n  const context = all\n    .filter((a) => a.internal && /^\\s*Kontext:/i.test(textOf(a)))\n    .map((a) => textOf(a).replace(/^\\s*Kontext:\\s*/i, ''))\n    .join('\\n\\n')\n    .slice(0, MAX_CONTEXT_CHARS);\n\n  const mails = all.filter((a) => !a.internal && textOf(a));\n  const lastCustomer = [...mails].reverse().find((a) => a.sender === 'Customer');\n  const target = lastCustomer || mails[mails.length - 1];\n  if (!target) {\n    console.log(`Ticket #${ticket.number}: keine E-Mail zum Beantworten gefunden, übersprungen`);\n    return;\n  }\n\n  if (all.some((a) => a.internal && a.id > target.id && KI_MARKIERUNG.test(textOf(a)))) {\n    console.log(`Ticket #${ticket.number}: KI-Entwurf liegt bereits vor, übersprungen`);\n    return;\n  }\n\n  const history = mails\n    .filter((a) => a.id !== target.id)\n    .map((a) => ({ from: a.from || 'unbekannt', date: dateOf(a), text: textOf(a) }));\n\n  const payload = {\n    context,\n    history,\n    mail: {\n      from: target.from || 'unbekannt',\n      date: dateOf(target),\n      subject: target.subject || ticket.title,\n      text: textOf(target).slice(0, MAX_MAIL_CHARS),\n    },\n  };\n\n  let preTrimmed = 0;\n  while (Buffer.byteLength(JSON.stringify(payload), 'utf8') > MAX_PAYLOAD_BYTES && payload.history.length > 0) {\n    payload.history.shift();\n    preTrimmed += 1;\n  }\n  if (preTrimmed > 0) {\n    console.log(`Ticket #${ticket.number}: ${preTrimmed} ältere Mail(s) vor dem Aufruf gekürzt (Payload-Limit ${MAX_PAYLOAD_BYTES} Byte)`);\n  }\n\n  ergebnis.push({\n    json: {\n      ticket,\n      modus: 'entwurf',\n      replyTo: target.reply_to || target.from || '',\n      messageId: target.message_id || '',\n      payloadB64: Buffer.from(JSON.stringify(payload), 'utf8').toString('base64'),\n      historyCount: payload.history.length,\n      preTrimmed,\n    },\n    pairedItem: { item: index },\n  });\n});\n\nreturn ergebnis;"
       }
     },
     {
@@ -523,7 +504,7 @@
     "Um 7, 12 und 17 Uhr": {
       "main": [
         [
-          { "node": "Administration-Gruppen laden", "type": "main", "index": 0 },
+          { "node": "Offene Tickets suchen", "type": "main", "index": 0 },
           { "node": "Abschluss (immer genau 1 Item)", "type": "main", "index": 0 }
         ]
       ]
@@ -531,22 +512,17 @@
     "Manuell ausführen": {
       "main": [
         [
-          { "node": "Administration-Gruppen laden", "type": "main", "index": 0 },
+          { "node": "Offene Tickets suchen", "type": "main", "index": 0 },
           { "node": "Abschluss (immer genau 1 Item)", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Administration-Gruppen laden": {
-      "main": [
-        [{ "node": "Offene Tickets suchen", "type": "main", "index": 0 }]
-      ]
-    },
     "Offene Tickets suchen": {
       "main": [
-        [{ "node": "Nur Administration-Tickets", "type": "main", "index": 0 }]
+        [{ "node": "Nur offene Tickets", "type": "main", "index": 0 }]
       ]
     },
-    "Nur Administration-Tickets": {
+    "Nur offene Tickets": {
       "main": [
         [{ "node": "Ticket-Artikel laden", "type": "main", "index": 0 }]
       ]
@@ -662,7 +638,7 @@
   "versionId": "8eda2f66-7fd9-4e1d-aa17-532c05b56710",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "description": "Sucht offene Tickets in der Zammad-Gruppe 'Administration' und allen Untergruppen 'Administration::*' (u. a. Homepage, DLRG-Andernach, THW-Andernach), erstellt per Ollama (ollama-pc) einen Mail-Entwurf und legt ihn als Shared Draft ab. Laeuft 3x taeglich (07:00, 12:00, 17:00 Uhr), unabhaengig vom Workflow 'Zammad Tickets verarbeiten'.",
+    "description": "Sucht offene Tickets in allen Zammad-Gruppen des EDV-Kretzer-Accounts (PKR-Service), ueberspringt von Peter selbst erstellte Tickets (info@edv-kretzer.de, noreply@support-tech.pkr-lab.de) und bereits vom Team beantwortete Tickets, erstellt per Ollama (ollama-pc, Mandant pkr-service) einen Mail-Entwurf und legt ihn als Shared Draft ab. Laeuft 3x taeglich (07:00, 12:00, 17:00 Uhr), unabhaengig vom Workflow 'Zammad Tickets verarbeiten'.",
     "instanceId": "d3f71021076be8bdc8614296f3c7749ae0813e877410d7e61391b83252e612f7"
   },
   "nodeGroups": [],
