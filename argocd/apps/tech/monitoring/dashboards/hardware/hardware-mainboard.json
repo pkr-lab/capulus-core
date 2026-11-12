@@ -1,0 +1,1001 @@
+{
+ "annotations": {
+  "list": []
+ },
+ "description": "Mainboard: oben Online/Offline aller Server, NAS, VMs und Raspberry Pis, darunter je Maschine CPU, RAM, Festplatte, Netzwerk, Temperatur und Uptime. Klick auf eine Kachel öffnet das Server-Detail.",
+ "editable": true,
+ "graphTooltip": 1,
+ "links": [
+  {
+   "asDropdown": false,
+   "icon": "dashboard",
+   "includeVars": false,
+   "keepTime": true,
+   "tags": [
+    "hardware"
+   ],
+   "targetBlank": false,
+   "title": "Hardware-Dashboards",
+   "tooltip": "",
+   "type": "dashboards",
+   "url": ""
+  }
+ ],
+ "panels": [
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 0
+   },
+   "id": 1,
+   "panels": [],
+   "title": "Alle Maschinen: Online / Offline",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${datasource}"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "color": "red",
+         "index": 0,
+         "text": "Offline"
+        },
+        "1": {
+         "color": "green",
+         "index": 1,
+         "text": "Online"
+        },
+        "2": {
+         "color": "blue",
+         "index": 2,
+         "text": "Schläft"
+        },
+        "3": {
+         "color": "green",
+         "index": 3,
+         "text": "Online (gesperrt)"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       },
+       {
+        "color": "blue",
+        "value": 2
+       },
+       {
+        "color": "green",
+        "value": 3
+       }
+      ]
+     },
+     "unit": "none",
+     "noValue": "keine Maschine",
+     "links": [
+      {
+       "title": "Server-Detail öffnen",
+       "url": "/d/hardware-host?var-host=${__field.labels.host}&${__url_time_range}"
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 9,
+    "x": 0,
+    "y": 1
+   },
+   "id": 10,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "value_and_name"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${datasource}"
+     },
+     "expr": "((max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", kind=\"server\"}) + on(host) group_left() (max by (host) (label_replace(kube_node_spec_unschedulable == 1, \"host\", \"$1\", \"node\", \"(.*)\")) * 0 + 2)) or max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", kind=\"server\"}) or (max by (host,kind) (last_over_time(up{job=~\".*node-exporter.*\", host!=\"\", kind=\"server\"}[7d])) * 0))",
+     "legendFormat": "{{host}}",
+     "refId": "A",
+     "instant": true
+    }
+   ],
+   "title": "Server",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${datasource}"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "color": "red",
+         "index": 0,
+         "text": "Offline"
+        },
+        "1": {
+         "color": "green",
+         "index": 1,
+         "text": "Online"
+        },
+        "2": {
+         "color": "blue",
+         "index": 2,
+         "text": "Schläft"
+        },
+        "3": {
+         "color": "green",
+         "index": 3,
+         "text": "Online (gesperrt)"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       },
+       {
+        "color": "blue",
+        "value": 2
+       },
+       {
+        "color": "green",
+        "value": 3
+       }
+      ]
+     },
+     "unit": "none",
+     "noValue": "keine Maschine",
+     "links": [
+      {
+       "title": "Server-Detail öffnen",
+       "url": "/d/hardware-host?var-host=${__field.labels.host}&${__url_time_range}"
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 3,
+    "x": 9,
+    "y": 1
+   },
+   "id": 11,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "value_and_name"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${datasource}"
+     },
+     "expr": "((max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", kind=\"nas\"}) + on(host) group_left() (max by (host) (label_replace(kube_node_spec_unschedulable == 1, \"host\", \"$1\", \"node\", \"(.*)\")) * 0 + 2)) or max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", kind=\"nas\"}) or (max by (host,kind) (last_over_time(up{job=~\".*node-exporter.*\", host!=\"\", kind=\"nas\"}[7d])) * 0))",
+     "legendFormat": "{{host}}",
+     "refId": "A",
+     "instant": true
+    }
+   ],
+   "title": "NAS",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${datasource}"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "color": "red",
+         "index": 0,
+         "text": "Offline"
+        },
+        "1": {
+         "color": "green",
+         "index": 1,
+         "text": "Online"
+        },
+        "2": {
+         "color": "blue",
+         "index": 2,
+         "text": "Schläft"
+        },
+        "3": {
+         "color": "green",
+         "index": 3,
+         "text": "Online (gesperrt)"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       },
+       {
+        "color": "blue",
+        "value": 2
+       },
+       {
+        "color": "green",
+        "value": 3
+       }
+      ]
+     },
+     "unit": "none",
+     "noValue": "keine Maschine",
+     "links": [
+      {
+       "title": "Server-Detail öffnen",
+       "url": "/d/hardware-host?var-host=${__field.labels.host}&${__url_time_range}"
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 12,
+    "y": 1
+   },
+   "id": 12,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "value_and_name"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${datasource}"
+     },
+     "expr": "((max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", kind=\"vm\"}) + on(host) group_left() (max by (host) (label_replace(kube_node_spec_unschedulable == 1, \"host\", \"$1\", \"node\", \"(.*)\")) * 0 + 2)) or max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", kind=\"vm\"}) or (max by (host,kind) (last_over_time(up{job=~\".*node-exporter.*\", host!=\"\", kind=\"vm\"}[7d])) * 0))",
+     "legendFormat": "{{host}}",
+     "refId": "A",
+     "instant": true
+    }
+   ],
+   "title": "Virtuelle Maschinen",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${datasource}"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "color": "red",
+         "index": 0,
+         "text": "Offline"
+        },
+        "1": {
+         "color": "green",
+         "index": 1,
+         "text": "Online"
+        },
+        "2": {
+         "color": "blue",
+         "index": 2,
+         "text": "Schläft"
+        },
+        "3": {
+         "color": "green",
+         "index": 3,
+         "text": "Online (gesperrt)"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       },
+       {
+        "color": "blue",
+        "value": 2
+       },
+       {
+        "color": "green",
+        "value": 3
+       }
+      ]
+     },
+     "unit": "none",
+     "noValue": "keine Maschine",
+     "links": [
+      {
+       "title": "Server-Detail öffnen",
+       "url": "/d/hardware-host?var-host=${__field.labels.host}&${__url_time_range}"
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 18,
+    "y": 1
+   },
+   "id": 13,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "value_and_name"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${datasource}"
+     },
+     "expr": "((max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", kind=\"pi\"}) + on(host) group_left() (max by (host) (label_replace(kube_node_spec_unschedulable == 1, \"host\", \"$1\", \"node\", \"(.*)\")) * 0 + 2)) or max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", kind=\"pi\"}) or (max by (host,kind) (last_over_time(up{job=~\".*node-exporter.*\", host!=\"\", kind=\"pi\"}[7d])) * 0))",
+     "legendFormat": "{{host}}",
+     "refId": "A",
+     "instant": true
+    }
+   ],
+   "title": "Raspberry Pis",
+   "type": "stat"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 6
+   },
+   "id": 20,
+   "panels": [],
+   "title": "$host",
+   "type": "row",
+   "repeat": "host"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${datasource}"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "#464c54",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 0
+       },
+       {
+        "color": "yellow",
+        "value": 70
+       },
+       {
+        "color": "red",
+        "value": 90
+       }
+      ]
+     },
+     "unit": "percent",
+     "min": 0,
+     "max": 100,
+     "decimals": 0,
+     "noValue": "–",
+     "links": [
+      {
+       "title": "Server-Detail öffnen",
+       "url": "/d/hardware-host?var-host=${host}&${__url_time_range}"
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 0,
+    "y": 7
+   },
+   "id": 21,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "area",
+    "justifyMode": "auto",
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${datasource}"
+     },
+     "expr": "100 - avg(rate(node_cpu_seconds_total{mode=\"idle\",host=\"$host\"}[5m])) * 100",
+     "legendFormat": "",
+     "refId": "A"
+    }
+   ],
+   "title": "CPU",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${datasource}"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "#464c54",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 0
+       },
+       {
+        "color": "yellow",
+        "value": 75
+       },
+       {
+        "color": "red",
+        "value": 90
+       }
+      ]
+     },
+     "unit": "percent",
+     "min": 0,
+     "max": 100,
+     "decimals": 0,
+     "noValue": "–",
+     "links": [
+      {
+       "title": "Server-Detail öffnen",
+       "url": "/d/hardware-host?var-host=${host}&${__url_time_range}"
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 4,
+    "y": 7
+   },
+   "id": 22,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "area",
+    "justifyMode": "auto",
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${datasource}"
+     },
+     "expr": "100 * (1 - sum(node_memory_MemAvailable_bytes{host=\"$host\"}) / sum(node_memory_MemTotal_bytes{host=\"$host\"}))",
+     "legendFormat": "",
+     "refId": "A"
+    }
+   ],
+   "title": "RAM",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${datasource}"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "#464c54",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 0
+       },
+       {
+        "color": "yellow",
+        "value": 75
+       },
+       {
+        "color": "red",
+        "value": 90
+       }
+      ]
+     },
+     "unit": "percent",
+     "min": 0,
+     "max": 100,
+     "decimals": 0,
+     "noValue": "–",
+     "links": [
+      {
+       "title": "Server-Detail öffnen",
+       "url": "/d/hardware-host?var-host=${host}&${__url_time_range}"
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 8,
+    "y": 7
+   },
+   "id": 23,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "auto",
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${datasource}"
+     },
+     "expr": "max((1 - node_filesystem_avail_bytes{fstype=~\"ext[234]|xfs|btrfs|zfs|f2fs\", mountpoint!~\"/boot|/boot/efi|/rootfs|/ugreen|/mnt/factory|/var/log.*\", host=\"$host\"} / node_filesystem_size_bytes{fstype=~\"ext[234]|xfs|btrfs|zfs|f2fs\", mountpoint!~\"/boot|/boot/efi|/rootfs|/ugreen|/mnt/factory|/var/log.*\", host=\"$host\"}) * 100)",
+     "legendFormat": "",
+     "refId": "A"
+    }
+   ],
+   "title": "Festplatte (vollste Partition)",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${datasource}"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     },
+     "unit": "Bps",
+     "noValue": "–",
+     "links": [
+      {
+       "title": "Server-Detail öffnen",
+       "url": "/d/hardware-host?var-host=${host}&${__url_time_range}"
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 12,
+    "y": 7
+   },
+   "id": 24,
+   "options": {
+    "colorMode": "value",
+    "graphMode": "area",
+    "justifyMode": "auto",
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "value_and_name"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${datasource}"
+     },
+     "expr": "sum(rate(node_network_receive_bytes_total{device=~\"(en|eth|wl)[a-z0-9]+\",host=\"$host\"}[5m]))",
+     "legendFormat": "↓",
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${datasource}"
+     },
+     "expr": "sum(rate(node_network_transmit_bytes_total{device=~\"(en|eth|wl)[a-z0-9]+\",host=\"$host\"}[5m]))",
+     "legendFormat": "↑",
+     "refId": "B"
+    }
+   ],
+   "title": "Netzwerk",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${datasource}"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "#464c54",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": -50
+       },
+       {
+        "color": "yellow",
+        "value": 70
+       },
+       {
+        "color": "red",
+        "value": 85
+       }
+      ]
+     },
+     "unit": "celsius",
+     "decimals": 0,
+     "noValue": "–",
+     "links": [
+      {
+       "title": "Server-Detail öffnen",
+       "url": "/d/hardware-host?var-host=${host}&${__url_time_range}"
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 16,
+    "y": 7
+   },
+   "id": 25,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "area",
+    "justifyMode": "auto",
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${datasource}"
+     },
+     "expr": "max(node_hwmon_temp_celsius{host=\"$host\"}) or max(node_thermal_zone_temp{host=\"$host\"})",
+     "legendFormat": "",
+     "refId": "A"
+    }
+   ],
+   "title": "Temperatur",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${datasource}"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "#464c54",
+        "value": null
+       },
+       {
+        "color": "blue",
+        "value": 0
+       }
+      ]
+     },
+     "unit": "dtdurations",
+     "noValue": "–",
+     "links": [
+      {
+       "title": "Server-Detail öffnen",
+       "url": "/d/hardware-host?var-host=${host}&${__url_time_range}"
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 20,
+    "y": 7
+   },
+   "id": 26,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "auto",
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${datasource}"
+     },
+     "expr": "time() - max(node_boot_time_seconds{host=\"$host\"})",
+     "legendFormat": "",
+     "refId": "A"
+    }
+   ],
+   "title": "Uptime",
+   "type": "stat"
+  }
+ ],
+ "refresh": "30s",
+ "schemaVersion": 38,
+ "tags": [
+  "homelab",
+  "hardware"
+ ],
+ "templating": {
+  "list": [
+   {
+    "current": {},
+    "hide": 0,
+    "includeAll": false,
+    "label": "Datasource",
+    "multi": false,
+    "name": "datasource",
+    "options": [],
+    "query": "prometheus",
+    "refresh": 1,
+    "type": "datasource"
+   },
+   {
+    "current": {
+     "selected": true,
+     "text": [
+      "All"
+     ],
+     "value": [
+      "$__all"
+     ]
+    },
+    "datasource": {
+     "type": "prometheus",
+     "uid": "${datasource}"
+    },
+    "definition": "label_values(up{job=~\".*node-exporter.*\", host!=\"\"}, host)",
+    "hide": 0,
+    "includeAll": true,
+    "label": "Maschinen",
+    "multi": true,
+    "name": "host",
+    "options": [],
+    "query": {
+     "query": "label_values(up{job=~\".*node-exporter.*\", host!=\"\"}, host)",
+     "refId": "StandardVariableQuery"
+    },
+    "refresh": 2,
+    "regex": "",
+    "sort": 1,
+    "type": "query"
+   }
+  ]
+ },
+ "time": {
+  "from": "now-6h",
+  "to": "now"
+ },
+ "timepicker": {},
+ "timezone": "browser",
+ "title": "Mainboard",
+ "uid": "hardware-mainboard",
+ "version": 1
+}
