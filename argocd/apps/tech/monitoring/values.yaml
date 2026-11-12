@@ -237,7 +237,7 @@ victoria-metrics-k8s-stack:
         labelValue: "1"
         folder: /var/lib/grafana/dashboards
         folderAnnotation: grafana_folder
-        searchNamespace: monitoring,pacman
+        searchNamespace: monitoring
         provider:
           name: default
           orgid: 1
@@ -345,28 +345,3 @@ n8nWebhookToken:
   enabled: true
   secretName: n8n-webhook-token
   encryptedData: "AgCqhMnfj/Ns95qK2nyFsSF4OVMxmgCRKL10KO2+xaNbRdtTpV37deEVImsmJgXRavhEPswDeVPe5LWjxqNP2OoYjqWPipl068kesh7Xxk342oszEHefpxwsA2SjocwCS/CxAgmQShMQKb49iWNXw/ynnU2Jt7J8ffEDJeY11Y9VBGIS/Xl9SfvLvRuF1AXurgJmvfCghCoJHG7eIhi5MFadE9biqLzf7GbJosv6obhqsdyPXZDHMf+BLwZH36EPBGNVDLGpNcrK2qyVeKFwcvXtmrNXOz7sdux3k/+gy2bDMGpal+JBYxXiR4mB8huCgq59UBPlnFCEl2kTh4gHAwGrUxjjMCeMkyjLREgheqpu3oBLavTYqNYukvwZ8S1fXMBS593RAUb6TRIdiVI6Kri8Lsn3mH37cWqG0m1FoURptq0nmjY0fgdg//WQxQhafOK5xiqO1FpiHAfpXqg6SgUT9NatBUXqzfQDh3tttfp4XAg63iMTT3LAoZzy9pCM0H/lYJZMGESPk+gRTFXm9n5sI9cmRRwkSBVPa/TWLDiBOrAVTFxDszSSSEI3NVsIa+JbHXwBpX5v+0ADYw/7dS1plc7WCfFyvOsdVWBTBGeaXiaPa9/aOXtG2CXotr/IH//B3HvOzwtAz7JhQwpBIODIr9/qv/TTpbWLqO6uguhh2t5bltKkrW5b0TS3ROUsTgUJ3BhrXsZ/3eCfWYZcAa7ObgXtv+RXtBWSrwqXV5SlpPufy1hUX3bJwH6gcZAgDCM="
-
-dashboardApps:
-  - { name: alamos-apager, namespace: alamos-apager, folder: "Anwendungen (TECH)", hasIngress: true }
-  - { name: carplay-api, namespace: carplay-api, folder: "Anwendungen (TECH)", hasIngress: true }
-  - { name: mediamtx, namespace: mediamtx, folder: "Anwendungen (TECH)", hasIngress: true }
-  - { name: n8n, namespace: n8n, folder: "Anwendungen (TECH)", hasIngress: true }
-  - { name: pacman, namespace: pacman, folder: "Anwendungen (TECH)", hasIngress: true }
-  - { name: uptime-kuma, namespace: uptime-kuma, folder: "Anwendungen (TECH)", hasIngress: true }
-  - { name: vaultwarden, namespace: vaultwarden, folder: "Anwendungen (TECH)", hasIngress: true }
-  - { name: alert-caller, namespace: alert-caller, folder: "Plattform (TECH)", hasIngress: false }
-  - { name: argo-workflows, namespace: argo-workflows, folder: "Plattform (TECH)", hasIngress: false }
-  - { name: cert-manager, namespace: cert-manager, folder: "Plattform (TECH)", hasIngress: false }
-  - { name: cloudflared, namespace: cloudflared, folder: "Plattform (TECH)", hasIngress: false }
-  - { name: headlamp, namespace: headlamp, folder: "Plattform (TECH)", hasIngress: false }
-  - { name: immich-storage, namespace: immich-storage, folder: "Plattform (TECH)", hasIngress: false }
-  - { name: kubeseal-webgui, namespace: kubeseal-webgui, folder: "Plattform (TECH)", hasIngress: false }
-  - { name: lldap, namespace: lldap, folder: "Plattform (TECH)", hasIngress: true }
-  - { name: logging, namespace: logging, folder: "Plattform (TECH)", hasIngress: false }
-  - { name: minio, namespace: minio, folder: "Plattform (TECH)", hasIngress: false }
-  - { name: nas-storage, namespace: nas-storage, folder: "Plattform (TECH)", hasIngress: false }
-  - { name: ntfy, namespace: ntfy, folder: "Plattform (TECH)", hasIngress: true }
-  - { name: ntfy-bridge, namespace: ntfy-bridge, folder: "Plattform (TECH)", hasIngress: false }
-  - { name: pihole, namespace: pihole, folder: "Plattform (TECH)", hasIngress: true }
-  - { name: sealed-secrets, namespace: sealed-secrets, folder: "Plattform (TECH)", hasIngress: false }
-  - { name: semaphore, namespace: semaphore, folder: "Plattform (TECH)", hasIngress: true }

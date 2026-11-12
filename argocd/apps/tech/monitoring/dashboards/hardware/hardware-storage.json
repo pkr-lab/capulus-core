@@ -2,7 +2,7 @@
  "annotations": {
   "list": []
  },
- "description": "Füllstand aller Dateisysteme (inkl. NAS-Volumes), Prognose 'Tage bis voll', RAID-Zustand und S.M.A.R.T.-Gesundheit aller SSDs/HDDs/NVMe.",
+ "description": "Füllstand aller Dateisysteme (inkl. NAS-Volumes), Prognose 'Tage bis voll', RAID-Zustand und S.M.A.R.T.-Gesundheit aller SSDs/HDDs/NVMe. Enthält auch die Raspberry Pis (SD-Karten) und die Lebensdauer-Prognose aus der geschriebenen Datenmenge.",
  "editable": true,
  "graphTooltip": 1,
  "links": [
@@ -213,6 +213,482 @@
     "x": 0,
     "y": 11
    },
+   "id": 100,
+   "panels": [],
+   "title": "Lebensdauer-Prognose aller Speichermedien (SSD, HDD, SD-Karte; inkl. Raspberry Pis)",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${datasource}"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "decimals": 2,
+     "mappings": [],
+     "max": 100,
+     "min": 0,
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "yellow",
+        "value": 50
+       },
+       {
+        "color": "red",
+        "value": 80
+       }
+      ]
+     },
+     "unit": "percent"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 24,
+    "x": 0,
+    "y": 12
+   },
+   "id": 101,
+   "options": {
+    "displayMode": "gradient",
+    "minVizHeight": 16,
+    "minVizWidth": 8,
+    "namePlacement": "auto",
+    "orientation": "horizontal",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "showUnfilled": true,
+    "sizing": "auto",
+    "valueMode": "color"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${datasource}"
+     },
+     "expr": "clamp_max(100 * max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"nvme[0-9]+n[0-9]+|mmcblk[0-9]+|sd[a-z]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) / on(host,device) (((max by (host,device) (smartctl_device_capacity_bytes{host!=\"\"}) or sum by (host,device) (max by (host,device,mountpoint) (label_replace(label_replace(node_filesystem_size_bytes{fstype=~\"ext[234]|vfat|f2fs|btrfs|xfs\", device=~\"/dev/.+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"/dev/(mmcblk[0-9]+|sd[a-z]+)p?[0-9]+\"), \"device\", \"$1\", \"device\", \"/dev/(nvme[0-9]+)n[0-9]+p[0-9]+\")))) * on(host,device) (max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"mmcblk[0-9]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) * 0 + $zyklen_sd)) or ((max by (host,device) (smartctl_device_capacity_bytes{host!=\"\"}) or sum by (host,device) (max by (host,device,mountpoint) (label_replace(label_replace(node_filesystem_size_bytes{fstype=~\"ext[234]|vfat|f2fs|btrfs|xfs\", device=~\"/dev/.+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"/dev/(mmcblk[0-9]+|sd[a-z]+)p?[0-9]+\"), \"device\", \"$1\", \"device\", \"/dev/(nvme[0-9]+)n[0-9]+p[0-9]+\")))) * on(host,device) (max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"nvme[0-9]+n[0-9]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) * 0 + $zyklen_ssd)) or ((max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"sd[a-z]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) and on(host,device) (max by (host,device) (smartctl_device_attribute{attribute_name=\"Spin_Up_Time\", attribute_value_type=\"raw\", host!=\"\"}) or max by (host,device) (smartctl_device_rotation_rate{host!=\"\"} > 0) or max by (host,device) (node_disk_written_bytes_total{kind=\"nas\", device=~\"sd[a-z]+\", host!=\"\"}))) * 0 + $tbw_hdd * 1e12) or ((max by (host,device) (smartctl_device_capacity_bytes{host!=\"\"}) or sum by (host,device) (max by (host,device,mountpoint) (label_replace(label_replace(node_filesystem_size_bytes{fstype=~\"ext[234]|vfat|f2fs|btrfs|xfs\", device=~\"/dev/.+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"/dev/(mmcblk[0-9]+|sd[a-z]+)p?[0-9]+\"), \"device\", \"$1\", \"device\", \"/dev/(nvme[0-9]+)n[0-9]+p[0-9]+\")))) * on(host,device) ((max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"sd[a-z]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) unless on(host,device) (max by (host,device) (smartctl_device_attribute{attribute_name=\"Spin_Up_Time\", attribute_value_type=\"raw\", host!=\"\"}) or max by (host,device) (smartctl_device_rotation_rate{host!=\"\"} > 0) or max by (host,device) (node_disk_written_bytes_total{kind=\"nas\", device=~\"sd[a-z]+\", host!=\"\"}))) * 0 + $zyklen_ssd))), 100)",
+     "legendFormat": "{{host}} · {{device}}",
+     "refId": "A",
+     "instant": true
+    }
+   ],
+   "title": "Verbrauchte Schreib-Lebensdauer",
+   "type": "bargauge"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${datasource}"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "align": "auto",
+      "cellOptions": {
+       "type": "auto"
+      },
+      "inspect": false
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Typ"
+      },
+      "properties": [
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "value",
+          "options": {
+           "1": {
+            "index": 0,
+            "text": "SSD"
+           },
+           "2": {
+            "index": 1,
+            "text": "SD-Karte"
+           },
+           "3": {
+            "index": 2,
+            "text": "HDD"
+           },
+           "4": {
+            "index": 3,
+            "text": "SSD (NVMe)"
+           }
+          }
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Größe"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "bytes"
+       },
+       {
+        "id": "decimals",
+        "value": 0
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Geschrieben"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "bytes"
+       },
+       {
+        "id": "decimals",
+        "value": 1
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Ø pro Tag"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "bytes"
+       },
+       {
+        "id": "decimals",
+        "value": 1
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Erwartet"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "bytes"
+       },
+       {
+        "id": "decimals",
+        "value": 1
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Verbraucht"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "percent"
+       },
+       {
+        "id": "min",
+        "value": 0
+       },
+       {
+        "id": "max",
+        "value": 100
+       },
+       {
+        "id": "decimals",
+        "value": 2
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          },
+          {
+           "color": "yellow",
+           "value": 50
+          },
+          {
+           "color": "red",
+           "value": 80
+          }
+         ]
+        }
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "thresholds"
+        }
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "gauge",
+         "mode": "basic"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Restlebensdauer"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "dtdurations"
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "#464c54",
+           "value": null
+          },
+          {
+           "color": "red",
+           "value": 0
+          },
+          {
+           "color": "yellow",
+           "value": 31536000
+          },
+          {
+           "color": "green",
+           "value": 94608000
+          }
+         ]
+        }
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "thresholds"
+        }
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background",
+         "mode": "basic"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "gridPos": {
+    "h": 9,
+    "w": 24,
+    "x": 0,
+    "y": 20
+   },
+   "id": 102,
+   "options": {
+    "cellHeight": "sm",
+    "footer": {
+     "show": false,
+     "reducer": [
+      "sum"
+     ],
+     "fields": ""
+    },
+    "showHeader": true,
+    "sortBy": [
+     {
+      "displayName": "Restlebensdauer",
+      "desc": false
+     }
+    ]
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${datasource}"
+     },
+     "expr": "((max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"mmcblk[0-9]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) * 0 + 2) or (max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"nvme[0-9]+n[0-9]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) * 0 + 4) or ((max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"sd[a-z]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) and on(host,device) (max by (host,device) (smartctl_device_attribute{attribute_name=\"Spin_Up_Time\", attribute_value_type=\"raw\", host!=\"\"}) or max by (host,device) (smartctl_device_rotation_rate{host!=\"\"} > 0) or max by (host,device) (node_disk_written_bytes_total{kind=\"nas\", device=~\"sd[a-z]+\", host!=\"\"}))) * 0 + 3) or (max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"sd[a-z]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) * 0 + 1))",
+     "legendFormat": "",
+     "refId": "A",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${datasource}"
+     },
+     "expr": "((max by (host,device) (smartctl_device_capacity_bytes{host!=\"\"}) or sum by (host,device) (max by (host,device,mountpoint) (label_replace(label_replace(node_filesystem_size_bytes{fstype=~\"ext[234]|vfat|f2fs|btrfs|xfs\", device=~\"/dev/.+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"/dev/(mmcblk[0-9]+|sd[a-z]+)p?[0-9]+\"), \"device\", \"$1\", \"device\", \"/dev/(nvme[0-9]+)n[0-9]+p[0-9]+\")))) and on(host,device) max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"nvme[0-9]+n[0-9]+|mmcblk[0-9]+|sd[a-z]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")))",
+     "legendFormat": "",
+     "refId": "B",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${datasource}"
+     },
+     "expr": "max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"nvme[0-9]+n[0-9]+|mmcblk[0-9]+|sd[a-z]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\"))",
+     "legendFormat": "",
+     "refId": "C",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${datasource}"
+     },
+     "expr": "((max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"nvme[0-9]+n[0-9]+|mmcblk[0-9]+|sd[a-z]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) / on(host) group_left() (time() - max by (host) (node_boot_time_seconds{host!=\"\"}))) * 86400)",
+     "legendFormat": "",
+     "refId": "D",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${datasource}"
+     },
+     "expr": "(((max by (host,device) (smartctl_device_capacity_bytes{host!=\"\"}) or sum by (host,device) (max by (host,device,mountpoint) (label_replace(label_replace(node_filesystem_size_bytes{fstype=~\"ext[234]|vfat|f2fs|btrfs|xfs\", device=~\"/dev/.+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"/dev/(mmcblk[0-9]+|sd[a-z]+)p?[0-9]+\"), \"device\", \"$1\", \"device\", \"/dev/(nvme[0-9]+)n[0-9]+p[0-9]+\")))) * on(host,device) (max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"mmcblk[0-9]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) * 0 + $zyklen_sd)) or ((max by (host,device) (smartctl_device_capacity_bytes{host!=\"\"}) or sum by (host,device) (max by (host,device,mountpoint) (label_replace(label_replace(node_filesystem_size_bytes{fstype=~\"ext[234]|vfat|f2fs|btrfs|xfs\", device=~\"/dev/.+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"/dev/(mmcblk[0-9]+|sd[a-z]+)p?[0-9]+\"), \"device\", \"$1\", \"device\", \"/dev/(nvme[0-9]+)n[0-9]+p[0-9]+\")))) * on(host,device) (max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"nvme[0-9]+n[0-9]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) * 0 + $zyklen_ssd)) or ((max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"sd[a-z]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) and on(host,device) (max by (host,device) (smartctl_device_attribute{attribute_name=\"Spin_Up_Time\", attribute_value_type=\"raw\", host!=\"\"}) or max by (host,device) (smartctl_device_rotation_rate{host!=\"\"} > 0) or max by (host,device) (node_disk_written_bytes_total{kind=\"nas\", device=~\"sd[a-z]+\", host!=\"\"}))) * 0 + $tbw_hdd * 1e12) or ((max by (host,device) (smartctl_device_capacity_bytes{host!=\"\"}) or sum by (host,device) (max by (host,device,mountpoint) (label_replace(label_replace(node_filesystem_size_bytes{fstype=~\"ext[234]|vfat|f2fs|btrfs|xfs\", device=~\"/dev/.+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"/dev/(mmcblk[0-9]+|sd[a-z]+)p?[0-9]+\"), \"device\", \"$1\", \"device\", \"/dev/(nvme[0-9]+)n[0-9]+p[0-9]+\")))) * on(host,device) ((max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"sd[a-z]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) unless on(host,device) (max by (host,device) (smartctl_device_attribute{attribute_name=\"Spin_Up_Time\", attribute_value_type=\"raw\", host!=\"\"}) or max by (host,device) (smartctl_device_rotation_rate{host!=\"\"} > 0) or max by (host,device) (node_disk_written_bytes_total{kind=\"nas\", device=~\"sd[a-z]+\", host!=\"\"}))) * 0 + $zyklen_ssd)))",
+     "legendFormat": "",
+     "refId": "E",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${datasource}"
+     },
+     "expr": "clamp_max(100 * max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"nvme[0-9]+n[0-9]+|mmcblk[0-9]+|sd[a-z]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) / on(host,device) (((max by (host,device) (smartctl_device_capacity_bytes{host!=\"\"}) or sum by (host,device) (max by (host,device,mountpoint) (label_replace(label_replace(node_filesystem_size_bytes{fstype=~\"ext[234]|vfat|f2fs|btrfs|xfs\", device=~\"/dev/.+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"/dev/(mmcblk[0-9]+|sd[a-z]+)p?[0-9]+\"), \"device\", \"$1\", \"device\", \"/dev/(nvme[0-9]+)n[0-9]+p[0-9]+\")))) * on(host,device) (max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"mmcblk[0-9]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) * 0 + $zyklen_sd)) or ((max by (host,device) (smartctl_device_capacity_bytes{host!=\"\"}) or sum by (host,device) (max by (host,device,mountpoint) (label_replace(label_replace(node_filesystem_size_bytes{fstype=~\"ext[234]|vfat|f2fs|btrfs|xfs\", device=~\"/dev/.+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"/dev/(mmcblk[0-9]+|sd[a-z]+)p?[0-9]+\"), \"device\", \"$1\", \"device\", \"/dev/(nvme[0-9]+)n[0-9]+p[0-9]+\")))) * on(host,device) (max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"nvme[0-9]+n[0-9]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) * 0 + $zyklen_ssd)) or ((max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"sd[a-z]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) and on(host,device) (max by (host,device) (smartctl_device_attribute{attribute_name=\"Spin_Up_Time\", attribute_value_type=\"raw\", host!=\"\"}) or max by (host,device) (smartctl_device_rotation_rate{host!=\"\"} > 0) or max by (host,device) (node_disk_written_bytes_total{kind=\"nas\", device=~\"sd[a-z]+\", host!=\"\"}))) * 0 + $tbw_hdd * 1e12) or ((max by (host,device) (smartctl_device_capacity_bytes{host!=\"\"}) or sum by (host,device) (max by (host,device,mountpoint) (label_replace(label_replace(node_filesystem_size_bytes{fstype=~\"ext[234]|vfat|f2fs|btrfs|xfs\", device=~\"/dev/.+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"/dev/(mmcblk[0-9]+|sd[a-z]+)p?[0-9]+\"), \"device\", \"$1\", \"device\", \"/dev/(nvme[0-9]+)n[0-9]+p[0-9]+\")))) * on(host,device) ((max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"sd[a-z]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) unless on(host,device) (max by (host,device) (smartctl_device_attribute{attribute_name=\"Spin_Up_Time\", attribute_value_type=\"raw\", host!=\"\"}) or max by (host,device) (smartctl_device_rotation_rate{host!=\"\"} > 0) or max by (host,device) (node_disk_written_bytes_total{kind=\"nas\", device=~\"sd[a-z]+\", host!=\"\"}))) * 0 + $zyklen_ssd))), 100)",
+     "legendFormat": "",
+     "refId": "F",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${datasource}"
+     },
+     "expr": "clamp_max(clamp_min((((max by (host,device) (smartctl_device_capacity_bytes{host!=\"\"}) or sum by (host,device) (max by (host,device,mountpoint) (label_replace(label_replace(node_filesystem_size_bytes{fstype=~\"ext[234]|vfat|f2fs|btrfs|xfs\", device=~\"/dev/.+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"/dev/(mmcblk[0-9]+|sd[a-z]+)p?[0-9]+\"), \"device\", \"$1\", \"device\", \"/dev/(nvme[0-9]+)n[0-9]+p[0-9]+\")))) * on(host,device) (max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"mmcblk[0-9]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) * 0 + $zyklen_sd)) or ((max by (host,device) (smartctl_device_capacity_bytes{host!=\"\"}) or sum by (host,device) (max by (host,device,mountpoint) (label_replace(label_replace(node_filesystem_size_bytes{fstype=~\"ext[234]|vfat|f2fs|btrfs|xfs\", device=~\"/dev/.+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"/dev/(mmcblk[0-9]+|sd[a-z]+)p?[0-9]+\"), \"device\", \"$1\", \"device\", \"/dev/(nvme[0-9]+)n[0-9]+p[0-9]+\")))) * on(host,device) (max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"nvme[0-9]+n[0-9]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) * 0 + $zyklen_ssd)) or ((max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"sd[a-z]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) and on(host,device) (max by (host,device) (smartctl_device_attribute{attribute_name=\"Spin_Up_Time\", attribute_value_type=\"raw\", host!=\"\"}) or max by (host,device) (smartctl_device_rotation_rate{host!=\"\"} > 0) or max by (host,device) (node_disk_written_bytes_total{kind=\"nas\", device=~\"sd[a-z]+\", host!=\"\"}))) * 0 + $tbw_hdd * 1e12) or ((max by (host,device) (smartctl_device_capacity_bytes{host!=\"\"}) or sum by (host,device) (max by (host,device,mountpoint) (label_replace(label_replace(node_filesystem_size_bytes{fstype=~\"ext[234]|vfat|f2fs|btrfs|xfs\", device=~\"/dev/.+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"/dev/(mmcblk[0-9]+|sd[a-z]+)p?[0-9]+\"), \"device\", \"$1\", \"device\", \"/dev/(nvme[0-9]+)n[0-9]+p[0-9]+\")))) * on(host,device) ((max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"sd[a-z]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) unless on(host,device) (max by (host,device) (smartctl_device_attribute{attribute_name=\"Spin_Up_Time\", attribute_value_type=\"raw\", host!=\"\"}) or max by (host,device) (smartctl_device_rotation_rate{host!=\"\"} > 0) or max by (host,device) (node_disk_written_bytes_total{kind=\"nas\", device=~\"sd[a-z]+\", host!=\"\"}))) * 0 + $zyklen_ssd))) - on(host,device) max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"nvme[0-9]+n[0-9]+|mmcblk[0-9]+|sd[a-z]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")), 0) / on(host,device) (max by (host,device) (label_replace(node_disk_written_bytes_total{device=~\"nvme[0-9]+n[0-9]+|mmcblk[0-9]+|sd[a-z]+\", kind!=\"vm\", host!=\"\"}, \"device\", \"$1\", \"device\", \"(nvme[0-9]+)n[0-9]+\")) / on(host) group_left() (time() - max by (host) (node_boot_time_seconds{host!=\"\"}))), 3153600000)",
+     "legendFormat": "",
+     "refId": "G",
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "title": "Lebensdauer je Speichermedium (SSD, HDD, SD-Karte)",
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "indexByName": {
+       "host": 0,
+       "device": 1,
+       "Value #A": 2,
+       "Value #B": 3,
+       "Value #C": 4,
+       "Value #D": 5,
+       "Value #E": 6,
+       "Value #F": 7,
+       "Value #G": 8
+      },
+      "renameByName": {
+       "Value #A": "Typ",
+       "Value #B": "Größe",
+       "Value #C": "Geschrieben",
+       "Value #D": "Ø pro Tag",
+       "Value #E": "Erwartet",
+       "Value #F": "Verbraucht",
+       "Value #G": "Restlebensdauer",
+       "host": "Server",
+       "device": "Gerät"
+      }
+     }
+    }
+   ],
+   "type": "table"
+  },
+  {
+   "gridPos": {
+    "h": 7,
+    "w": 24,
+    "x": 0,
+    "y": 29
+   },
+   "id": 103,
+   "options": {
+    "content": "**Rechenweg:** Ø Schreibrate = bisher geschriebene Datenmenge ÷ Laufzeit (seit dem letzten Boot, `node_disk_written_bytes_total` ÷ Uptime). Restlebensdauer = (erwartete Schreibmenge − bisher geschrieben) ÷ Ø Schreibrate.\n\n**Erwartete Schreibmenge je Medium** (oben im Dashboard als Variablen änderbar): SSD/NVMe = Größe × `P/E-Zyklen SSD` (Standard 600, entspricht ca. 300 TBW bei 500 GB), SD-Karte = Größe × `P/E-Zyklen SD-Karte` (Standard 300, Verbraucher-Karten), HDD = pauschal `TBW HDD` Terabyte (Standard 900 = 180 TB/Jahr × 5 Jahre; die Platten des NAS gelten immer als HDD).\n\n**Grenzen:** Ohne S.M.A.R.T. (Raspberry Pis, SD-Karten) zählt nur die Datenmenge seit dem letzten Boot, die Schätzung ist dann optimistisch. Die Größe stammt aus S.M.A.R.T. bzw. aus den eingehängten Partitionen. VMs werden nicht bewertet (virtuelle Platten).",
+    "mode": "markdown"
+   },
+   "title": "So wird gerechnet",
+   "type": "text"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 36
+   },
    "id": 4,
    "panels": [],
    "title": "Dateisysteme aller Server",
@@ -405,7 +881,7 @@
     "h": 9,
     "w": 24,
     "x": 0,
-    "y": 12
+    "y": 37
    },
    "id": 5,
    "options": {
@@ -541,7 +1017,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 21
+    "y": 46
    },
    "id": 6,
    "panels": [],
@@ -906,7 +1382,7 @@
     "h": 9,
     "w": 24,
     "x": 0,
-    "y": 22
+    "y": 47
    },
    "id": 7,
    "options": {
@@ -1105,7 +1581,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 31
+    "y": 56
    },
    "id": 8,
    "panels": [],
@@ -1197,7 +1673,7 @@
     "h": 6,
     "w": 12,
     "x": 0,
-    "y": 32
+    "y": 57
    },
    "id": 9,
    "options": {
@@ -1318,7 +1794,7 @@
     "h": 6,
     "w": 12,
     "x": 12,
-    "y": 32
+    "y": 57
    },
    "id": 10,
    "options": {
@@ -1399,7 +1875,7 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 38
+    "y": 63
    },
    "id": 11,
    "options": {
@@ -1477,7 +1953,7 @@
     "h": 8,
     "w": 12,
     "x": 12,
-    "y": 38
+    "y": 63
    },
    "id": 12,
    "options": {
@@ -1529,6 +2005,66 @@
     "query": "prometheus",
     "refresh": 1,
     "type": "datasource"
+   },
+   {
+    "current": {
+     "selected": false,
+     "text": "600",
+     "value": "600"
+    },
+    "hide": 0,
+    "label": "P/E-Zyklen SSD",
+    "name": "zyklen_ssd",
+    "options": [
+     {
+      "selected": true,
+      "text": "600",
+      "value": "600"
+     }
+    ],
+    "query": "600",
+    "skipUrlSync": false,
+    "type": "textbox"
+   },
+   {
+    "current": {
+     "selected": false,
+     "text": "300",
+     "value": "300"
+    },
+    "hide": 0,
+    "label": "P/E-Zyklen SD-Karte",
+    "name": "zyklen_sd",
+    "options": [
+     {
+      "selected": true,
+      "text": "300",
+      "value": "300"
+     }
+    ],
+    "query": "300",
+    "skipUrlSync": false,
+    "type": "textbox"
+   },
+   {
+    "current": {
+     "selected": false,
+     "text": "900",
+     "value": "900"
+    },
+    "hide": 0,
+    "label": "TBW HDD (TB)",
+    "name": "tbw_hdd",
+    "options": [
+     {
+      "selected": true,
+      "text": "900",
+      "value": "900"
+     }
+    ],
+    "query": "900",
+    "skipUrlSync": false,
+    "type": "textbox"
    }
   ]
  },

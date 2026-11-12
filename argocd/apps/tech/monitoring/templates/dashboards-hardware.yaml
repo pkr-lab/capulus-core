@@ -1,7 +1,8 @@
 # Hardware-Dashboards (Ordner "Hardware"): eine ConfigMap je JSON-Datei unter
-# dashboards/hardware/ — hardware-overview (Waben-Uebersicht + Server-Tabelle),
+# dashboards/hardware/ — hardware-mainboard (Online/Offline und Kennzahlen je
+# Maschine), hardware-overview (Waben-Uebersicht + Server-Tabelle),
 # hardware-host (Server-Detail mit $host-Variable) und hardware-storage
-# (Fuellstand, S.M.A.R.T., RAID). Die Dateien werden per .Files.Get roh
+# (Fuellstand, S.M.A.R.T., RAID, Lebensdauer). Die Dateien werden per .Files.Get roh
 # eingelesen (nicht als Template gerendert), damit die Grafana-Legenden
 # `{{ "{{host}}" }}` nicht escaped werden muessen und sich die JSONs 1:1 aus
 # Grafana exportieren/zurueckspielen lassen. Filter aller Panels ist das Label
@@ -9,7 +10,7 @@
 # VMStaticScrapes vmstaticscrape-*.yaml). Doku:
 # docs/2-betrieb-hardware/20060-hardware-monitoring.md.
 #
-# Der `grafana_folder`-Annotation-Mechanismus entspricht dashboards-apps.yaml
+# Der Ordner kommt ueber die `grafana_folder`-Annotation
 # (sidecar.dashboards.folderAnnotation in values.yaml).
 {{- range $path, $_ := .Files.Glob "dashboards/hardware/*.json" }}
 ---
