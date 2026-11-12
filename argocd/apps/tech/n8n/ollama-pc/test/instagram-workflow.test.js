@@ -145,7 +145,7 @@ test('LLM-Eingabe: Verlauf chronologisch, aktuelle Nachricht nicht doppelt, Payl
   assert.deepEqual(payload.history.map((h) => [h.from, h.text]), [['Anfragende Person', 'Wann ist Training?'], ['DLRG Andernach (Verein)', 'Donnerstags 18 Uhr.']]);
   assert.equal(payload.mail.text, 'Und samstags?');
 
-  const ollama = loadConfig({ OLLAMA_URL: 'http://x:1', OLLAMA_PROMPTS_DIR: path.join(__dirname, '..', 'prompts'), OLLAMA_KNOWLEDGE_DIR: path.join(__dirname, '..', 'knowledge') });
+  const ollama = loadConfig({ OLLAMA_URL: 'http://x:1', OLLAMA_PROMPTS_DIR: path.join(__dirname, '..', 'prompts'), OLLAMA_KNOWLEDGE_DIR: path.join(__dirname, '..', 'knowledge', 'dlrg') });
   const prompts = loadPromptFiles(ollama, { profile: payload.profile, channel: payload.channel });
   const built = buildMessages(prompts, payload, ollama);
   assert.ok(built.messages[1].content.includes('Donnerstags 18 Uhr.'));
