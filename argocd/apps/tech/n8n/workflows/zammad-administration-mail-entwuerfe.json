@@ -1,0 +1,671 @@
+{
+  "name": "Zammad Administration Mail-Entwuerfe",
+  "nodes": [
+    {
+      "id": "e80ba0c3-42f5-4760-9820-176385722709",
+      "name": "Um 7, 12 und 17 Uhr",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [480, 80],
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "triggerAtHour": 7, "triggerAtMinute": 5 },
+            { "triggerAtHour": 12, "triggerAtMinute": 5 },
+            { "triggerAtHour": 17, "triggerAtMinute": 5 }
+          ]
+        }
+      }
+    },
+    {
+      "id": "14fac7cc-2ee8-48fd-8de5-4dc8254294fd",
+      "name": "Manuell ausführen",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [480, 240],
+      "parameters": {}
+    },
+    {
+      "id": "c8a85741-4eeb-46e8-8361-08780147dfa8",
+      "name": "Administration-Gruppen laden",
+      "type": "n8n-nodes-base.zammad",
+      "typeVersion": 1,
+      "position": [480, 400],
+      "parameters": {
+        "authentication": "basicAuth",
+        "resource": "group",
+        "operation": "getAll",
+        "returnAll": true
+      },
+      "credentials": {
+        "zammadBasicAuthApi": {
+          "id": "phUAvB04RmbLalky",
+          "name": "Zammad EDV-Kretzer"
+        }
+      }
+    },
+    {
+      "id": "3da9f1ce-7d42-4020-b626-beb20e2e6dbf",
+      "name": "Offene Tickets suchen",
+      "type": "n8n-nodes-base.zammad",
+      "typeVersion": 1,
+      "position": [700, 80],
+      "parameters": {
+        "authentication": "basicAuth",
+        "resource": "ticket",
+        "operation": "getAll",
+        "returnAll": true
+      },
+      "credentials": {
+        "zammadBasicAuthApi": {
+          "id": "phUAvB04RmbLalky",
+          "name": "Zammad EDV-Kretzer"
+        }
+      }
+    },
+    {
+      "id": "f4d144be-93d4-42c2-8c05-2e0a029f7c0c",
+      "name": "Nur Administration-Tickets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 80],
+      "parameters": {
+        "jsCode": "const GRUPPEN_PRAEFIX = 'Administration';\nconst OFFENE_STATES = [1, 2, 3, 6];\n\nconst gruppen = $('Administration-Gruppen laden').all().map(({ json }) => json);\nconst erlaubteGruppenIds = new Set(\n  gruppen\n    .filter((g) => g.name === GRUPPEN_PRAEFIX || String(g.name || '').startsWith(`${GRUPPEN_PRAEFIX}::`))\n    .map((g) => g.id),\n);\n\nif (erlaubteGruppenIds.size === 0) {\n  throw new Error(`Keine Zammad-Gruppe \"${GRUPPEN_PRAEFIX}\" gefunden (oder das API-Token sieht sie nicht) – Gruppenliste und Token-Rechte pruefen`);\n}\n\nreturn $input.all().filter(({ json: ticket }) => erlaubteGruppenIds.has(ticket.group_id) && OFFENE_STATES.includes(ticket.state_id));"
+      }
+    },
+    {
+      "id": "318be2aa-7ff8-476f-adc8-0e36f6f60d58",
+      "name": "Ticket-Artikel laden",
+      "type": "n8n-nodes-base.zammad",
+      "typeVersion": 1,
+      "position": [1140, 80],
+      "parameters": {
+        "authentication": "basicAuth",
+        "resource": "ticket",
+        "operation": "get",
+        "id": "={{ $json.id }}"
+      },
+      "credentials": {
+        "zammadBasicAuthApi": {
+          "id": "phUAvB04RmbLalky",
+          "name": "Zammad EDV-Kretzer"
+        }
+      }
+    },
+    {
+      "id": "e8c97044-ecb7-4278-8773-39174a66541b",
+      "name": "LLM-Eingabe bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1360, 80],
+      "parameters": {
+        "jsCode": "const MAX_PAYLOAD_BYTES = 90000;\nconst MAX_MAIL_CHARS = 40000;\nconst MAX_CONTEXT_CHARS = 4000;\nconst KI_MARKIERUNG = /KI-Entwurf \\(automatisch erstellt\\)|Interne Hinweise zum KI-Entwurf/;\n\nfunction stripHtml(html) {\n  return String(html || '')\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<\\/(p|div|li|tr)>/gi, '\\n')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .replace(/&#39;/g, \"'\")\n    .replace(/&amp;/g, '&')\n    .replace(/[ \\t]+/g, ' ')\n    .replace(/ ?\\n ?/g, '\\n')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim();\n}\n\nfunction textOf(article) {\n  return /html/i.test(article.content_type || '') ? stripHtml(article.body) : String(article.body || '').trim();\n}\n\nfunction dateOf(article) {\n  return String(article.created_at || '').replace('T', ' ').slice(0, 16);\n}\n\nconst ergebnis = [];\n\n$input.all().forEach((item, index) => {\n  const { articles, ...ticket } = item.json;\n  const all = (articles || [])\n    .filter((a) => a.sender !== 'System')\n    .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)) || a.id - b.id);\n\n  const oeffentlich = all.filter((a) => !a.internal);\n  const letzte = oeffentlich[oeffentlich.length - 1];\n  if (letzte && letzte.sender === 'Agent') {\n    console.log(`Ticket #${ticket.number}: Team hat bereits geantwortet, übersprungen`);\n    return;\n  }\n\n  if ([3, 6].includes(ticket.state_id) && !oeffentlich.some((a) => a.sender === 'Agent')) {\n    console.log(`Ticket #${ticket.number}: wartet auf Erinnerung oder Schließen, Kunde hat nicht geantwortet, übersprungen`);\n    return;\n  }\n\n  const context = all\n    .filter((a) => a.internal && /^\\s*Kontext:/i.test(textOf(a)))\n    .map((a) => textOf(a).replace(/^\\s*Kontext:\\s*/i, ''))\n    .join('\\n\\n')\n    .slice(0, MAX_CONTEXT_CHARS);\n\n  const mails = all.filter((a) => !a.internal && textOf(a));\n  const lastCustomer = [...mails].reverse().find((a) => a.sender === 'Customer');\n  const target = lastCustomer || mails[mails.length - 1];\n  if (!target) {\n    console.log(`Ticket #${ticket.number}: keine E-Mail zum Beantworten gefunden, übersprungen`);\n    return;\n  }\n\n  if (all.some((a) => a.internal && a.id > target.id && KI_MARKIERUNG.test(textOf(a)))) {\n    console.log(`Ticket #${ticket.number}: KI-Entwurf liegt bereits vor, übersprungen`);\n    return;\n  }\n\n  const history = mails\n    .filter((a) => a.id !== target.id)\n    .map((a) => ({ from: a.from || 'unbekannt', date: dateOf(a), text: textOf(a) }));\n\n  const payload = {\n    context,\n    history,\n    mail: {\n      from: target.from || 'unbekannt',\n      date: dateOf(target),\n      subject: target.subject || ticket.title,\n      text: textOf(target).slice(0, MAX_MAIL_CHARS),\n    },\n  };\n\n  let preTrimmed = 0;\n  while (Buffer.byteLength(JSON.stringify(payload), 'utf8') > MAX_PAYLOAD_BYTES && payload.history.length > 0) {\n    payload.history.shift();\n    preTrimmed += 1;\n  }\n  if (preTrimmed > 0) {\n    console.log(`Ticket #${ticket.number}: ${preTrimmed} ältere Mail(s) vor dem Aufruf gekürzt (Payload-Limit ${MAX_PAYLOAD_BYTES} Byte)`);\n  }\n\n  ergebnis.push({\n    json: {\n      ticket,\n      modus: 'entwurf',\n      replyTo: target.reply_to || target.from || '',\n      messageId: target.message_id || '',\n      payloadB64: Buffer.from(JSON.stringify(payload), 'utf8').toString('base64'),\n      historyCount: payload.history.length,\n      preTrimmed,\n    },\n    pairedItem: { item: index },\n  });\n});\n\nreturn ergebnis;"
+      }
+    },
+    {
+      "id": "1cdf6641-ba4c-479a-b4c2-103f286239f4",
+      "name": "Shared Draft prüfen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "position": [1580, 80],
+      "parameters": {
+        "url": "={{ 'https://ticket.emue365.de/api/v1/tickets/' + $json.ticket.id + '/shared_draft' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DYSeqKzcJFVzUL04",
+          "name": "Zammad ticket.emue365 API-Token"
+        }
+      }
+    },
+    {
+      "id": "04951930-023d-4451-a3e7-f02f87133b7e",
+      "name": "Kein Shared Draft vorhanden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1800, 80],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e5e5e5e5-0005-4000-8000-000000000b02",
+              "leftValue": "={{ !$json.shared_draft_id }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ccd1ada2-6408-44dd-b649-5a4b81feba6d",
+      "name": "Ollama erreichbar?",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "onError": "continueRegularOutput",
+      "position": [2020, 80],
+      "parameters": {
+        "command": "node /opt/ollama-pc/cli.js probe"
+      }
+    },
+    {
+      "id": "c896a138-52fe-49b0-ad96-e6e51d3cec65",
+      "name": "PC schläft?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2240, 80],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c828926e-1d10-4e02-96df-44b24b85f183",
+              "leftValue": "={{ !String($json.stdout).includes('\"up\":true') }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "44f1a5a2-36f0-4ad0-8915-dc74a0df71cc",
+      "name": "Ollama-PC wecken",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "position": [2460, -80],
+      "parameters": {
+        "method": "POST",
+        "url": "https://carplay-api.prod.homeserver/api/power/wake",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ target: 'ollama-pc' }) }}",
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "qw2XzzCvd5uEKb0e",
+          "name": "carplay-api API Token"
+        }
+      }
+    },
+    {
+      "id": "200b2ad3-4250-47e4-8ebb-386160004724",
+      "name": "Ollama-Antwort erzeugen",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "onError": "continueRegularOutput",
+      "position": [2460, 80],
+      "parameters": {
+        "command": "=printf %s '{{ $('LLM-Eingabe bauen').item.json.payloadB64 }}' | base64 -d | OLLAMA_MANDANT=pkr-service node /opt/ollama-pc/cli.js chat"
+      }
+    },
+    {
+      "id": "a9bf25d8-c9ad-491c-a12e-58b3fa0a8993",
+      "name": "Antwortentwurf extrahieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2680, 80],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const eingabe = $('LLM-Eingabe bauen').item.json;\nconst ticket = eingabe.ticket;\n\nlet parsed = null;\ntry {\n  parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n} catch (err) {\n  parsed = null;\n}\n\nif (!parsed || !parsed.ok) {\n  const detail = parsed && parsed.error\n    ? `${parsed.error.code}: ${parsed.error.message}`\n    : String($json.stderr || $json.error || 'keine Ausgabe von ollama-pc/cli.js').trim();\n  throw new Error(`Ollama-Anfrage fehlgeschlagen (Ticket #${ticket.number}): ${detail}`);\n}\n\nconst hinweise = [];\nconst entwurf = String(parsed.reply || '')\n  .replace(/[ \\t]*\\[INTERN:\\s*([^\\]]*)\\]/g, (_, hinweis) => {\n    hinweise.push(hinweis.trim());\n    return '';\n  })\n  .replace(/[ \\t]+$/gm, '')\n  .replace(/(https?:\\/\\/\\S+) ([.,;:!?])/g, '$1$2')\n  .replace(/([^.])\\.\\.(?!\\.)/g, '$1.')\n  .replace(/\\n{3,}/g, '\\n\\n')\n  .trim();\n\nconst kurslinkHinweise = Array.from(entwurf.matchAll(/\\[KURSLINK:\\s*([^\\]]*)\\]/g)).map((m) => m[1].trim());\n\nconst escapeHtml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst entwurfHtml = entwurf\n  .replace(/\\r\\n?/g, '\\n')\n  .split(/\\n{2,}/)\n  .map((absatz) => '<p>' + escapeHtml(absatz)\n    .replace(/(https?:\\/\\/[^\\s<]*[^\\s<.,;:!?])/g, '<a href=\"$1\">$1</a>')\n    .replace(/\\n/g, '<br>') + '</p>')\n  .join('');\nconst abstand = '<p><br></p><p><br></p>';\nconst notizHtml = entwurfHtml + abstand + '<p><i>KI-Entwurf (automatisch erstellt)</i></p>';\nconst hinweiseHtml = hinweise.length\n  ? '<p><b>Interne Hinweise zum KI-Entwurf</b></p><ul>' + hinweise.map((h) => '<li>' + escapeHtml(h) + '</li>').join('') + '</ul>'\n  : '';\n\nreturn { json: { ticket, modus: eingabe.modus, replyTo: eingabe.replyTo, messageId: eingabe.messageId, entwurf, entwurfHtml: entwurfHtml + abstand, notizHtml, hinweise, hinweiseHtml, kurslinkHinweise, kurslinkHinweiseB64: Buffer.from(JSON.stringify(kurslinkHinweise)).toString('base64'), warnings: parsed.warnings, stats: parsed.stats } };"
+      }
+    },
+    {
+      "id": "21932059-aa18-4287-8436-e5231bd4f4b6",
+      "name": "Kurslink-Hinweise vorhanden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2900, 80],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e5e5e5e5-0004-4000-8000-000000000a03",
+              "leftValue": "={{ $('Antwortentwurf extrahieren').item.json.kurslinkHinweise.length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d172db75-902b-4bcf-9f92-7bd5aa23fbde",
+      "name": "Kurslinks nachschlagen",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "onError": "continueRegularOutput",
+      "position": [2900, 240],
+      "parameters": {
+        "command": "=printf %s '{{ $('Antwortentwurf extrahieren').item.json.kurslinkHinweiseB64 }}' | base64 -d | node /opt/ollama-pc/cli.js kurslink"
+      }
+    },
+    {
+      "id": "5a24fdb8-8b8f-4f5d-9480-63c3be820529",
+      "name": "Kurslinks in Entwurf einfügen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3120, 80],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const basis = $('Antwortentwurf extrahieren').item.json;\nconst escapeHtml = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst KURSLINK_TAG = /\\[KURSLINK:\\s*([^\\]]*)\\]/g;\n\nlet parsed = null;\nif (basis.kurslinkHinweise.length > 0) {\n  try {\n    parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n  } catch (err) {\n    parsed = null;\n  }\n}\n\nfunction istAnstehend(meldeschluss, now) {\n  const m = /^(\\d{2})\\.(\\d{2})\\.(\\d{2}|\\d{4})$/.exec(String(meldeschluss || '').trim());\n  if (!m) return false;\n  const jahr = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);\n  return new Date(jahr, Number(m[2]) - 1, Number(m[1])) >= now;\n}\n\nconst now = new Date();\nconst auditZeilen = [];\nconst decisions = basis.kurslinkHinweise.map((hint, idx) => {\n  const result = parsed && parsed.ok ? parsed.results[idx] : null;\n  if (!result) {\n    auditZeilen.push(`Kurslink-Nachschlag fehlgeschlagen für „${escapeHtml(hint)}“`);\n    const fallback = `[BITTE PRÜFEN: Upload-Link für ${escapeHtml(hint)}]`;\n    return { html: fallback, plain: fallback };\n  }\n  const anstehend = result.matches.filter((m) => istAnstehend(m.meldeschluss, now));\n  if (anstehend.length !== 1) {\n    auditZeilen.push(`Kurslink nicht eindeutig: ${escapeHtml(result.kursart || hint)} (${result.matches.length} Treffer gesamt, ${anstehend.length} anstehend) – bitte im Entwurf prüfen`);\n    const fallback = `[BITTE PRÜFEN: Upload-Link für ${escapeHtml(result.kursart || hint)}]`;\n    return { html: fallback, plain: fallback };\n  }\n  const treffer = anstehend[0];\n  auditZeilen.push(`Kurslink automatisch eingefügt: ${escapeHtml(treffer.kursart)} ${escapeHtml(treffer.code)} (Meldeschluss ${escapeHtml(treffer.meldeschluss)})`);\n  const link = escapeHtml(treffer.url);\n  return { html: `<a href=\"${link}\">${link}</a>`, plain: treffer.url };\n});\n\nfunction einfuegen(text, isHtml) {\n  if (!decisions.length) return text;\n  let i = 0;\n  return text.replace(KURSLINK_TAG, () => {\n    const d = decisions[i];\n    i += 1;\n    return isHtml ? d.html : d.plain;\n  });\n}\n\nconst entwurf = einfuegen(basis.entwurf, false);\nconst entwurfHtml = einfuegen(basis.entwurfHtml, true);\nconst notizHtml = einfuegen(basis.notizHtml, true);\nconst hinweiseHtml = basis.hinweiseHtml + (auditZeilen.length\n  ? '<p><b>Kurslink-Automatik</b></p><ul>' + auditZeilen.map((z) => '<li>' + z + '</li>').join('') + '</ul>'\n  : '');\n\nreturn { json: { ...basis, entwurf, entwurfHtml, notizHtml, hinweiseHtml } };"
+      }
+    },
+    {
+      "id": "c8720e9b-9cea-4bda-890c-5179a35a1555",
+      "name": "Shared Draft speichern",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueErrorOutput",
+      "position": [3340, 80],
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ 'https://ticket.emue365.de/api/v1/tickets/' + $('Antwortentwurf extrahieren').item.json.ticket.id + '/shared_draft' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => { const e = $('Kurslinks in Entwurf einfügen').item.json; return JSON.stringify({ new_article: { type: 'email', internal: false, to: e.replyTo, subject: e.ticket.title, body: e.entwurfHtml, content_type: 'text/html', in_reply_to: e.messageId }, ticket_attributes: { group_id: e.ticket.group_id } }); })() }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DYSeqKzcJFVzUL04",
+          "name": "Zammad ticket.emue365 API-Token"
+        }
+      }
+    },
+    {
+      "id": "73646b9d-bc67-48e6-8f74-90507548c8b8",
+      "name": "Entwurf als interne Notiz speichern",
+      "type": "n8n-nodes-base.zammad",
+      "typeVersion": 1,
+      "position": [3340, 240],
+      "parameters": {
+        "authentication": "basicAuth",
+        "resource": "ticket",
+        "operation": "update",
+        "id": "={{ $('Antwortentwurf extrahieren').item.json.ticket.id }}",
+        "updateFields": {
+          "note": "={{ $('Kurslinks in Entwurf einfügen').item.json.notizHtml }}"
+        }
+      },
+      "credentials": {
+        "zammadBasicAuthApi": {
+          "id": "phUAvB04RmbLalky",
+          "name": "Zammad EDV-Kretzer"
+        }
+      }
+    },
+    {
+      "id": "8b33f5f2-5567-45aa-97bc-ad7b7d6df6e9",
+      "name": "Wartete auf Erinnerung oder Schließen?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [3560, 80],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e5e5e5e5-0006-4000-8000-000000000c01",
+              "leftValue": "={{ $('Antwortentwurf extrahieren').item.json.ticket.state_id === 3 || $('Antwortentwurf extrahieren').item.json.ticket.state_id === 6 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "41501dbf-87df-4af9-be5b-9bc136afdb2c",
+      "name": "Status wieder auf offen setzen",
+      "type": "n8n-nodes-base.zammad",
+      "typeVersion": 1,
+      "position": [3780, -80],
+      "parameters": {
+        "authentication": "basicAuth",
+        "resource": "ticket",
+        "operation": "update",
+        "id": "={{ $('Antwortentwurf extrahieren').item.json.ticket.id }}",
+        "updateFields": {
+          "state_id": 2
+        }
+      },
+      "credentials": {
+        "zammadBasicAuthApi": {
+          "id": "phUAvB04RmbLalky",
+          "name": "Zammad EDV-Kretzer"
+        }
+      }
+    },
+    {
+      "id": "d163c18d-8ae7-4f92-97f6-917cfb0b003b",
+      "name": "Interne Hinweise vorhanden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [3780, 80],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e5e5e5e5-0004-4000-8000-000000000a01",
+              "leftValue": "={{ $('Kurslinks in Entwurf einfügen').item.json.hinweiseHtml.length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "dc3eabb0-34af-478b-9287-5b6fc1336163",
+      "name": "Interne Hinweise als Notiz speichern",
+      "type": "n8n-nodes-base.zammad",
+      "typeVersion": 1,
+      "position": [4000, -80],
+      "parameters": {
+        "authentication": "basicAuth",
+        "resource": "ticket",
+        "operation": "update",
+        "id": "={{ $('Antwortentwurf extrahieren').item.json.ticket.id }}",
+        "updateFields": {
+          "note": "={{ $('Kurslinks in Entwurf einfügen').item.json.hinweiseHtml }}"
+        }
+      },
+      "credentials": {
+        "zammadBasicAuthApi": {
+          "id": "phUAvB04RmbLalky",
+          "name": "Zammad EDV-Kretzer"
+        }
+      }
+    },
+    {
+      "id": "801f5341-0f5d-4b57-aceb-dea62f5b3dcb",
+      "name": "Freigabe-Push senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4000, 80],
+      "parameters": {
+        "method": "POST",
+        "url": "http://ntfy.ntfy.svc.cluster.local/zammad",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "KI-Entwurf wartet auf Freigabe"
+            },
+            {
+              "name": "Priority",
+              "value": "default"
+            },
+            {
+              "name": "Tags",
+              "value": "robot"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ 'Ticket #' + $('Antwortentwurf extrahieren').item.json.ticket.number + ': ' + $('Antwortentwurf extrahieren').item.json.ticket.title }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      }
+    },
+    {
+      "id": "83eeac62-3d8f-4082-81b0-9906fb550aef",
+      "name": "Abschluss (immer genau 1 Item)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4220, 80],
+      "parameters": {
+        "jsCode": "return [{ json: { status: 'done', verarbeiteteTickets: Math.max($input.all().length - 1, 0) } }];"
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Um 7, 12 und 17 Uhr": {
+      "main": [
+        [
+          { "node": "Administration-Gruppen laden", "type": "main", "index": 0 },
+          { "node": "Abschluss (immer genau 1 Item)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Manuell ausführen": {
+      "main": [
+        [
+          { "node": "Administration-Gruppen laden", "type": "main", "index": 0 },
+          { "node": "Abschluss (immer genau 1 Item)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Administration-Gruppen laden": {
+      "main": [
+        [{ "node": "Offene Tickets suchen", "type": "main", "index": 0 }]
+      ]
+    },
+    "Offene Tickets suchen": {
+      "main": [
+        [{ "node": "Nur Administration-Tickets", "type": "main", "index": 0 }]
+      ]
+    },
+    "Nur Administration-Tickets": {
+      "main": [
+        [{ "node": "Ticket-Artikel laden", "type": "main", "index": 0 }]
+      ]
+    },
+    "Ticket-Artikel laden": {
+      "main": [
+        [{ "node": "LLM-Eingabe bauen", "type": "main", "index": 0 }]
+      ]
+    },
+    "LLM-Eingabe bauen": {
+      "main": [
+        [{ "node": "Shared Draft prüfen", "type": "main", "index": 0 }]
+      ]
+    },
+    "Shared Draft prüfen": {
+      "main": [
+        [{ "node": "Kein Shared Draft vorhanden?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Kein Shared Draft vorhanden?": {
+      "main": [
+        [{ "node": "Ollama erreichbar?", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Ollama erreichbar?": {
+      "main": [
+        [{ "node": "PC schläft?", "type": "main", "index": 0 }]
+      ]
+    },
+    "PC schläft?": {
+      "main": [
+        [{ "node": "Ollama-PC wecken", "type": "main", "index": 0 }],
+        [{ "node": "Ollama-Antwort erzeugen", "type": "main", "index": 0 }]
+      ]
+    },
+    "Ollama-PC wecken": {
+      "main": [
+        [{ "node": "Ollama-Antwort erzeugen", "type": "main", "index": 0 }]
+      ]
+    },
+    "Ollama-Antwort erzeugen": {
+      "main": [
+        [{ "node": "Antwortentwurf extrahieren", "type": "main", "index": 0 }]
+      ]
+    },
+    "Antwortentwurf extrahieren": {
+      "main": [
+        [{ "node": "Kurslink-Hinweise vorhanden?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Kurslink-Hinweise vorhanden?": {
+      "main": [
+        [{ "node": "Kurslinks nachschlagen", "type": "main", "index": 0 }],
+        [{ "node": "Kurslinks in Entwurf einfügen", "type": "main", "index": 0 }]
+      ]
+    },
+    "Kurslinks nachschlagen": {
+      "main": [
+        [{ "node": "Kurslinks in Entwurf einfügen", "type": "main", "index": 0 }]
+      ]
+    },
+    "Kurslinks in Entwurf einfügen": {
+      "main": [
+        [{ "node": "Shared Draft speichern", "type": "main", "index": 0 }]
+      ]
+    },
+    "Shared Draft speichern": {
+      "main": [
+        [{ "node": "Wartete auf Erinnerung oder Schließen?", "type": "main", "index": 0 }],
+        [{ "node": "Entwurf als interne Notiz speichern", "type": "main", "index": 0 }]
+      ]
+    },
+    "Entwurf als interne Notiz speichern": {
+      "main": [
+        [{ "node": "Wartete auf Erinnerung oder Schließen?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Wartete auf Erinnerung oder Schließen?": {
+      "main": [
+        [{ "node": "Status wieder auf offen setzen", "type": "main", "index": 0 }],
+        [{ "node": "Interne Hinweise vorhanden?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Status wieder auf offen setzen": {
+      "main": [
+        [{ "node": "Interne Hinweise vorhanden?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Interne Hinweise vorhanden?": {
+      "main": [
+        [{ "node": "Interne Hinweise als Notiz speichern", "type": "main", "index": 0 }],
+        [{ "node": "Freigabe-Push senden", "type": "main", "index": 0 }]
+      ]
+    },
+    "Interne Hinweise als Notiz speichern": {
+      "main": [
+        [{ "node": "Freigabe-Push senden", "type": "main", "index": 0 }]
+      ]
+    },
+    "Freigabe-Push senden": {
+      "main": [
+        [{ "node": "Abschluss (immer genau 1 Item)", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "8eda2f66-7fd9-4e1d-aa17-532c05b56710",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "description": "Sucht offene Tickets in der Zammad-Gruppe 'Administration' und allen Untergruppen 'Administration::*' (u. a. Homepage, DLRG-Andernach, THW-Andernach), erstellt per Ollama (ollama-pc) einen Mail-Entwurf und legt ihn als Shared Draft ab. Laeuft 3x taeglich (07:00, 12:00, 17:00 Uhr), unabhaengig vom Workflow 'Zammad Tickets verarbeiten'.",
+    "instanceId": "d3f71021076be8bdc8614296f3c7749ae0813e877410d7e61391b83252e612f7"
+  },
+  "nodeGroups": [],
+  "id": "SWJrKcfgn7Tt0aCE",
+  "tags": []
+}
