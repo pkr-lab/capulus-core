@@ -131,7 +131,7 @@
       "type": "prometheus",
       "uid": "${datasource}"
      },
-     "expr": "((max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", kind=\"server\"}) + on(host) group_left() (max by (host) (label_replace(kube_node_spec_unschedulable == 1, \"host\", \"$1\", \"node\", \"(.*)\")) * 0 + 2)) or max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", kind=\"server\"}) or (max by (host,kind) (last_over_time(up{job=~\".*node-exporter.*\", host!=\"\", kind=\"server\"}[7d])) * 0))",
+     "expr": "((max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", host!~\"homeserver|worker-0\", kind=\"server\"}) + on(host) group_left() (max by (host) (label_replace(kube_node_spec_unschedulable == 1, \"host\", \"$1\", \"node\", \"(.*)\")) * 0 + 2)) or max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", host!~\"homeserver|worker-0\", kind=\"server\"}) or (max by (host,kind) (last_over_time(up{job=~\".*node-exporter.*\", host!=\"\", host!~\"homeserver|worker-0\", kind=\"server\"}[7d])) * 0))",
      "legendFormat": "{{host}}",
      "refId": "A",
      "instant": true
@@ -236,7 +236,7 @@
       "type": "prometheus",
       "uid": "${datasource}"
      },
-     "expr": "((max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", kind=\"nas\"}) + on(host) group_left() (max by (host) (label_replace(kube_node_spec_unschedulable == 1, \"host\", \"$1\", \"node\", \"(.*)\")) * 0 + 2)) or max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", kind=\"nas\"}) or (max by (host,kind) (last_over_time(up{job=~\".*node-exporter.*\", host!=\"\", kind=\"nas\"}[7d])) * 0))",
+     "expr": "((max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", host!~\"homeserver|worker-0\", kind=\"nas\"}) + on(host) group_left() (max by (host) (label_replace(kube_node_spec_unschedulable == 1, \"host\", \"$1\", \"node\", \"(.*)\")) * 0 + 2)) or max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", host!~\"homeserver|worker-0\", kind=\"nas\"}) or (max by (host,kind) (last_over_time(up{job=~\".*node-exporter.*\", host!=\"\", host!~\"homeserver|worker-0\", kind=\"nas\"}[7d])) * 0))",
      "legendFormat": "{{host}}",
      "refId": "A",
      "instant": true
@@ -341,7 +341,7 @@
       "type": "prometheus",
       "uid": "${datasource}"
      },
-     "expr": "((max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", kind=\"vm\"}) + on(host) group_left() (max by (host) (label_replace(kube_node_spec_unschedulable == 1, \"host\", \"$1\", \"node\", \"(.*)\")) * 0 + 2)) or max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", kind=\"vm\"}) or (max by (host,kind) (last_over_time(up{job=~\".*node-exporter.*\", host!=\"\", kind=\"vm\"}[7d])) * 0))",
+     "expr": "((max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", host!~\"homeserver|worker-0\", kind=\"vm\"}) + on(host) group_left() (max by (host) (label_replace(kube_node_spec_unschedulable == 1, \"host\", \"$1\", \"node\", \"(.*)\")) * 0 + 2)) or max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", host!~\"homeserver|worker-0\", kind=\"vm\"}) or (max by (host,kind) (last_over_time(up{job=~\".*node-exporter.*\", host!=\"\", host!~\"homeserver|worker-0\", kind=\"vm\"}[7d])) * 0))",
      "legendFormat": "{{host}}",
      "refId": "A",
      "instant": true
@@ -446,7 +446,7 @@
       "type": "prometheus",
       "uid": "${datasource}"
      },
-     "expr": "((max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", kind=\"pi\"}) + on(host) group_left() (max by (host) (label_replace(kube_node_spec_unschedulable == 1, \"host\", \"$1\", \"node\", \"(.*)\")) * 0 + 2)) or max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", kind=\"pi\"}) or (max by (host,kind) (last_over_time(up{job=~\".*node-exporter.*\", host!=\"\", kind=\"pi\"}[7d])) * 0))",
+     "expr": "((max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", host!~\"homeserver|worker-0\", kind=\"pi\"}) + on(host) group_left() (max by (host) (label_replace(kube_node_spec_unschedulable == 1, \"host\", \"$1\", \"node\", \"(.*)\")) * 0 + 2)) or max by (host,kind) (up{job=~\".*node-exporter.*\", host!=\"\", host!~\"homeserver|worker-0\", kind=\"pi\"}) or (max by (host,kind) (last_over_time(up{job=~\".*node-exporter.*\", host!=\"\", host!~\"homeserver|worker-0\", kind=\"pi\"}[7d])) * 0))",
      "legendFormat": "{{host}}",
      "refId": "A",
      "instant": true
@@ -971,7 +971,7 @@
      "type": "prometheus",
      "uid": "${datasource}"
     },
-    "definition": "label_values(up{job=~\".*node-exporter.*\", host!=\"\"}, host)",
+    "definition": "label_values(up{job=~\".*node-exporter.*\", host!~\"homeserver|worker-0\"}, host)",
     "hide": 0,
     "includeAll": true,
     "label": "Maschinen",
@@ -979,7 +979,7 @@
     "name": "host",
     "options": [],
     "query": {
-     "query": "label_values(up{job=~\".*node-exporter.*\", host!=\"\"}, host)",
+     "query": "label_values(up{job=~\".*node-exporter.*\", host!~\"homeserver|worker-0\"}, host)",
      "refId": "StandardVariableQuery"
     },
     "refresh": 2,
