@@ -210,8 +210,8 @@
       ],
       "credentials": {
         "smtp": {
-          "id": "SMTP_CREDENTIAL_ID",
-          "name": "SMTP"
+          "id": "gQZtSwFzQoNoRn3S",
+          "name": "SMTP Netcup Automations"
         }
       }
     }

@@ -43,7 +43,7 @@
         "resource": "ticket",
         "title": "={{ $json.title }}",
         "group": "CronJobs",
-        "customer": "noreply@zammad.homeserver",
+        "customer": "noreply@support-tech.pkr-lab.de",
         "article": {
           "articleDetails": {
             "subject": "={{ $json.title }}",

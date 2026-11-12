@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Vor dem Aktivieren: 3 Platzhalter\n\n1. **Trigger** -> Credential (IMAP) zuweisen und in *Custom Email Rules* die Absender-Adresse eintragen\n2. **Nachricht bauen** -> `SENDER` (muss zum Trigger-Filter passen)\n3. **An WhatsApp senden** -> `TARGET_ID` (nur Kanaele: `<Ziffern>@newsletter`)\n\nKopplung und Ziel-ID: `scripts/whatsapp-pair.js`, Anleitung in docs/3-apps-workloads/30070-n8n.md\n\nProbelauf ohne Senden: `TEST = true` im Node **Nachricht bauen**",
+        "content": "## Vor dem Aktivieren: 3 Platzhalter\n\n1. **Trigger** -> liest nur den IMAP-Ordner `WhatsApp-Kanal` (Credential `Netcup Automation`, Ordner im Postfach anlegen und per Serverregel fuellen, nicht die INBOX). In *Custom Email Rules* die Absender-Adresse eintragen\n2. **Nachricht bauen** -> `SENDER` (muss zum Trigger-Filter passen)\n3. **An WhatsApp senden** -> `TARGET_ID` (nur Kanaele: `<Ziffern>@newsletter`)\n\nKopplung und Ziel-ID: `scripts/whatsapp-pair.js`, Anleitung in docs/3-apps-workloads/30070-n8n.md\n\nProbelauf ohne Senden: `TEST = true` im Node **Nachricht bauen**",
         "height": 300,
         "width": 480
       },
@@ -18,6 +18,7 @@
     },
     {
       "parameters": {
+        "mailbox": "WhatsApp-Kanal",
         "postProcessAction": "read",
         "format": "simple",
         "downloadAttachments": true,
@@ -38,8 +39,8 @@
       ],
       "credentials": {
         "imap": {
-          "id": "REPLACE_ME_NACH_IMPORT",
-          "name": "IMAP (Absender-Postfach)"
+          "id": "pWlRjzswA4IeR0IW",
+          "name": "Netcup Automation"
         }
       }
     },
@@ -192,7 +193,7 @@
     "executionOrder": "v1"
   },
   "meta": {
-    "description": "Neue Mail von einer bestimmten Absender-Adresse -> Nachricht in einen WhatsApp-KANAL (ausschliesslich Kanaele: TARGET_ID muss Ziffern@newsletter sein, Chats und Gruppen werden abgelehnt). Trigger: nativer 'Email Trigger (IMAP)' mit serverseitigem FROM-Filter (IDLE, kein Polling), Anhaenge werden geladen, Mails werden nach dem Abruf als gelesen markiert. 'Nachricht bauen' prueft den Absender ein zweites Mal, dekodiert den Betreff, repariert falsch dekodierte Umlaute und baut den Text (Betreff + Auszug, MAX_BODY_CHARS=0 = nur Betreff); Anhaenge werden durchgereicht (SEND_ATTACHMENTS=false ignoriert sie, dann im Trigger 'Download Attachments' ausschalten). 'An WhatsApp senden' startet pro Ausfuehrung einen eigenen Node-Prozess mit whatsapp-web.js und Chromium (Session auf dem n8n-PVC) -- der Task-Runner friert Prototypen ein, darin laeuft Puppeteer nicht -- und sendet Text plus Anhaenge (Kanal: nur Bilder und MP4-Videos; Anhaenge: JPG und MP4 gehen unveraendert raus, PDFs (erste 5 Seiten, je eine JPG), PNG, GIF, WebP, BMP, SVG, AVIF und Textdateien werden vor dem Senden in JPG umgewandelt (Chromium, PDFs mit pdf.js aus dem Image), alles andere wird im Text erwaehnt.  scheitert ein Anhang, ist der Text schon raus und der Fehler wird gemeldet). Enthaelt Laufzeit-Patches fuer whatsapp-web.js 1.34.7 beim Medien-Versand (__x_id: Issues wwebjs/whatsapp-web.js#201921/#201922; entferntes msg.avParams(): Issue #201823, PR #201824), die von selbst entfallen, sobald die Bibliothek das behebt. Trockenlauf: TEST = true im Node 'Nachricht bauen' fuehrt alles aus ausser dem eigentlichen Senden (Ausgabe: Items mit dryRun: true). Inoffizieller Weg ueber WhatsApp Web, Sperrrisiko des Kontos ist akzeptiert. Schlaegt ein Schritt fehl, kommt der geplante Text per ntfy (Topic whatsapp-relay) als Rueckfall. NACH DEM IMPORT: (1) values.yaml (NODE_FUNCTION_ALLOW_BUILTIN=child_process) und Image mit whatsapp-web.js muessen ausgerollt sein, (2) scripts/whatsapp-pair.js einmalig ausfuehren (QR scannen, Kanal-ID ermitteln), (3) im Trigger IMAP-Credential zuweisen und Absender im FROM-Filter setzen, (4) SENDER im Node 'Nachricht bauen' und TARGET_ID im Node 'An WhatsApp senden' setzen, (5) Topic whatsapp-relay in der ntfy-App abonnieren, (6) Workflow AKTIVIEREN (Import allein reicht nicht). Volle Anleitung: docs/3-apps-workloads/30070-n8n.md, Abschnitt 'E-Mail -> WhatsApp-Kanal'."
+    "description": "Neue Mail von einer bestimmten Absender-Adresse -> Nachricht in einen WhatsApp-KANAL (ausschliesslich Kanaele: TARGET_ID muss Ziffern@newsletter sein, Chats und Gruppen werden abgelehnt). Trigger: nativer 'Email Trigger (IMAP)' mit serverseitigem FROM-Filter (IDLE, kein Polling), Anhaenge werden geladen, Mails werden nach dem Abruf als gelesen markiert. 'Nachricht bauen' prueft den Absender ein zweites Mal, dekodiert den Betreff, repariert falsch dekodierte Umlaute und baut den Text (Betreff + Auszug, MAX_BODY_CHARS=0 = nur Betreff); Anhaenge werden durchgereicht (SEND_ATTACHMENTS=false ignoriert sie, dann im Trigger 'Download Attachments' ausschalten). 'An WhatsApp senden' startet pro Ausfuehrung einen eigenen Node-Prozess mit whatsapp-web.js und Chromium (Session auf dem n8n-PVC) -- der Task-Runner friert Prototypen ein, darin laeuft Puppeteer nicht -- und sendet Text plus Anhaenge (Kanal: nur Bilder und MP4-Videos; Anhaenge: JPG und MP4 gehen unveraendert raus, PDFs (erste 5 Seiten, je eine JPG), PNG, GIF, WebP, BMP, SVG, AVIF und Textdateien werden vor dem Senden in JPG umgewandelt (Chromium, PDFs mit pdf.js aus dem Image), alles andere wird im Text erwaehnt.  scheitert ein Anhang, ist der Text schon raus und der Fehler wird gemeldet). Enthaelt Laufzeit-Patches fuer whatsapp-web.js 1.34.7 beim Medien-Versand (__x_id: Issues wwebjs/whatsapp-web.js#201921/#201922; entferntes msg.avParams(): Issue #201823, PR #201824), die von selbst entfallen, sobald die Bibliothek das behebt. Trockenlauf: TEST = true im Node 'Nachricht bauen' fuehrt alles aus ausser dem eigentlichen Senden (Ausgabe: Items mit dryRun: true). Inoffizieller Weg ueber WhatsApp Web, Sperrrisiko des Kontos ist akzeptiert. Schlaegt ein Schritt fehl, kommt der geplante Text per ntfy (Topic whatsapp-relay) als Rueckfall. NACH DEM IMPORT: (1) values.yaml (NODE_FUNCTION_ALLOW_BUILTIN=child_process) und Image mit whatsapp-web.js muessen ausgerollt sein, (2) scripts/whatsapp-pair.js einmalig ausfuehren (QR scannen, Kanal-ID ermitteln), (3) im Trigger (IMAP-Credential `Netcup Automation`) den Ordner pruefen und Absender im FROM-Filter setzen, (4) SENDER im Node 'Nachricht bauen' und TARGET_ID im Node 'An WhatsApp senden' setzen, (5) Topic whatsapp-relay in der ntfy-App abonnieren, (6) Workflow AKTIVIEREN (Import allein reicht nicht). Volle Anleitung: docs/3-apps-workloads/30070-n8n.md, Abschnitt 'E-Mail -> WhatsApp-Kanal'."
   },
   "tags": []
 }
