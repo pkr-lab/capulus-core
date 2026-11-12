@@ -263,7 +263,7 @@
         336
       ],
       "parameters": {
-        "command": "=printf %s '{{ $('LLM-Eingabe bauen').item.json.payloadB64 }}' | base64 -d | node /opt/ollama-pc/cli.js chat"
+        "command": "=printf %s '{{ $('LLM-Eingabe bauen').item.json.payloadB64 }}' | base64 -d | OLLAMA_MANDANT=dlrg node /opt/ollama-pc/cli.js chat"
       }
     },
     {

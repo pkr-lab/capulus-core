@@ -67,9 +67,10 @@ test('Prompt-Dateien: Beispiele fließen in den Systemprompt, Platzhalter nicht'
   assert.deepEqual(ok.warnings, []);
 
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'prompts-'));
-  fs.writeFileSync(path.join(dir, 'email_system.md'), 'Du schreibst für [PLATZHALTER: Name].');
-  fs.writeFileSync(path.join(dir, 'email_examples.md'), '### Beispiel 1\n\n[PLATZHALTER: Mail]');
-  fs.writeFileSync(path.join(dir, 'email_signatur.md'), 'Gruß');
+  fs.mkdirSync(path.join(dir, 'dlrg'));
+  fs.writeFileSync(path.join(dir, 'dlrg', 'email_system.md'), 'Du schreibst für [PLATZHALTER: Name].');
+  fs.writeFileSync(path.join(dir, 'dlrg', 'email_examples.md'), '### Beispiel 1\n\n[PLATZHALTER: Mail]');
+  fs.writeFileSync(path.join(dir, 'dlrg', 'email_signatur.md'), 'Gruß');
   const placeholders = loadPromptFiles(loadConfig({ OLLAMA_URL: 'http://x:1', OLLAMA_PROMPTS_DIR: dir, OLLAMA_KNOWLEDGE_DIR: '/nonexistent' }));
   fs.rmSync(dir, { recursive: true });
   assert.ok(!placeholders.system.includes('## Beispiel-Antworten'));

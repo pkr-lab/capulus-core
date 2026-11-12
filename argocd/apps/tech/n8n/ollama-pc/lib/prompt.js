@@ -35,6 +35,9 @@ function loadPromptFiles(config, { profile } = {}) {
   if (!signature) {
     throw new OllamaPcError('SIGNATURE_MISSING', `Signatur-Datei fehlt oder ist leer: ${config.signatureFile}`);
   }
+  if (signature.includes(PLACEHOLDER_MARKER)) {
+    warnings.push(`Signatur enthält noch ${PLACEHOLDER_MARKER}…]-Platzhalter`);
+  }
 
   let examples = readOptional(config.examplesFile);
   if (examples.includes(PLACEHOLDER_MARKER)) {

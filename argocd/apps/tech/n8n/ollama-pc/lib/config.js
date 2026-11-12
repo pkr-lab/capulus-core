@@ -3,6 +3,7 @@
 const path = require('path');
 
 const WAKE_MODES = ['none', 'udp', 'http', 'command'];
+const MANDANT_PATTERN = /^[a-z0-9_-]+$/;
 
 function text(env, name, fallback) {
   const value = env[name];
@@ -26,6 +27,11 @@ function loadConfig(env = process.env) {
   const wakeMode = text(env, 'OLLAMA_WAKE_MODE', 'udp');
   if (!WAKE_MODES.includes(wakeMode)) {
     throw new Error(`OLLAMA_WAKE_MODE muss einer von ${WAKE_MODES.join(', ')} sein, ist aber "${wakeMode}"`);
+  }
+
+  const mandant = text(env, 'OLLAMA_MANDANT', 'dlrg');
+  if (!MANDANT_PATTERN.test(mandant)) {
+    throw new Error(`OLLAMA_MANDANT muss aus a-z, 0-9, _ und - bestehen, ist aber "${mandant}"`);
   }
 
   const promptsDir = text(env, 'OLLAMA_PROMPTS_DIR', path.join(__dirname, '..', 'prompts'));
@@ -55,12 +61,13 @@ function loadConfig(env = process.env) {
       command: text(env, 'OLLAMA_WAKE_COMMAND', ''),
       timeoutMs: number(env, 'OLLAMA_WAKE_REQUEST_TIMEOUT_SECONDS', 10) * 1000,
     },
-    knowledgeDir: text(env, 'OLLAMA_KNOWLEDGE_DIR', path.join(__dirname, '..', 'knowledge')),
+    mandant,
+    knowledgeDir: text(env, 'OLLAMA_KNOWLEDGE_DIR', path.join(__dirname, '..', 'knowledge', mandant)),
     knowledgeWarnRatio: number(env, 'OLLAMA_KNOWLEDGE_WARN_RATIO', 0.4),
     kurslinksFile: text(env, 'OLLAMA_KURSLINKS_FILE', path.join(__dirname, '..', 'knowledge-refs', 'kurslinks.json')),
-    systemPromptFile: text(env, 'OLLAMA_SYSTEM_PROMPT_FILE', path.join(promptsDir, 'email_system.md')),
-    examplesFile: text(env, 'OLLAMA_EXAMPLES_FILE', path.join(promptsDir, 'email_examples.md')),
-    signatureFile: text(env, 'OLLAMA_SIGNATURE_FILE', path.join(promptsDir, 'email_signatur.md')),
+    systemPromptFile: text(env, 'OLLAMA_SYSTEM_PROMPT_FILE', path.join(promptsDir, mandant, 'email_system.md')),
+    examplesFile: text(env, 'OLLAMA_EXAMPLES_FILE', path.join(promptsDir, mandant, 'email_examples.md')),
+    signatureFile: text(env, 'OLLAMA_SIGNATURE_FILE', path.join(promptsDir, mandant, 'email_signatur.md')),
   };
 }
 
