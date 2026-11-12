@@ -1,5 +1,5 @@
 {
-  "name": "Zammad Tickets verarbeiten",
+  "name": "DLRG Zammad - Ticket",
   "nodes": [
     {
       "id": "0e3c2550-5027-4e0d-8af6-ed57ecd6ab90",
@@ -267,7 +267,7 @@
         1136
       ],
       "parameters": {
-        "command": "=printf %s '{{ $('LLM-Eingabe bauen').item.json.payloadB64 }}' | base64 -d | node /opt/ollama-pc/cli.js chat"
+        "command": "=printf %s '{{ $('LLM-Eingabe bauen').item.json.payloadB64 }}' | base64 -d | OLLAMA_MANDANT=dlrg node /opt/ollama-pc/cli.js chat"
       }
     },
     {

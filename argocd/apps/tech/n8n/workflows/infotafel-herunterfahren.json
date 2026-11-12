@@ -50,7 +50,7 @@
       ],
       "credentials": {
         "sshPrivateKey": {
-          "id": "REPLACE_ME_NACH_IMPORT",
+          "id": "ZcZBRtNI81KZruou",
           "name": "SSH Infotafel (Herunterfahren)"
         }
       },
@@ -236,5 +236,6 @@
   "versionId": "71b7f71b-0d12-5dd8-b4a2-3e299c5d2b56",
   "meta": {
     "description": "Jeden Donnerstag um 19:15 Uhr (Europe/Berlin) faehrt der Workflow die Infotafel (Raspberry Pi, Tailscale 100.105.105.92) per SSH herunter. Der Key im Credential SSH Infotafel (Herunterfahren) ist auf dem Pi per forced command auf sudo /usr/bin/systemctl poweroff beschraenkt (Ansible-Rolle infotafel_poweroff). Ein heruntergefahrener Pi muss per Stromtrennung oder Zeitschaltuhr wieder gestartet werden. Ergebnis und Fehler gehen per ntfy an Home-Lab-System. Credentials: SSH Infotafel (Herunterfahren), ntfy-publisher."
-  }
+  },
+  "id": "uuKIlMvZdvICzj5F"
 }
