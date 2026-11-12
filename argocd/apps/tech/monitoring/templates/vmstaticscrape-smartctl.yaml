@@ -10,8 +10,8 @@ spec:
         - "192.168.178.94:9633"
       labels:
         job: smartctl-exporter
-        instance: homeserver
-        host: homeserver
+        instance: control-plane-0
+        host: control-plane-0
         kind: server
 ---
 apiVersion: operator.victoriametrics.com/v1beta1
