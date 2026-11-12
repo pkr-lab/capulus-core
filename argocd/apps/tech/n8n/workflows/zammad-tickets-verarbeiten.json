@@ -2,26 +2,26 @@
   "name": "Zammad Tickets verarbeiten",
   "nodes": [
     {
-      "id": "af31e336-9e01-4ee8-8c44-cb1a9f93a05c",
+      "id": "0e3c2550-5027-4e0d-8af6-ed57ecd6ab90",
       "name": "Von Haupt-Workflow aufgerufen",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        6368,
-        336
+        7712,
+        1232
       ],
       "parameters": {
         "inputSource": "passthrough"
       }
     },
     {
-      "id": "0bcffb49-31d0-4637-880c-cb1c526b7999",
+      "id": "6e0648c8-5981-4e4a-aac2-c116f44d0e5c",
       "name": "Offene Tickets suchen",
       "type": "n8n-nodes-base.zammad",
       "typeVersion": 1,
       "position": [
-        6544,
-        336
+        7888,
+        1232
       ],
       "parameters": {
         "authentication": "basicAuth",
@@ -34,29 +34,32 @@
           "id": "0M2CPfsvNq5Xdzfc",
           "name": "Zammad ticket.emue365"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
     },
     {
-      "id": "f3c1736a-4c18-4885-aa1f-ddcada8e2875",
+      "id": "f8d8d3f8-7227-48b0-b638-913648981d9e",
       "name": "Nur relevante Tickets",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6768,
-        336
+        8112,
+        1232
       ],
       "parameters": {
-        "jsCode": "const OWNER_ID = 5;\nconst AUSBILDUNG_GRUPPEN = [2];\n\nreturn $input.all().filter(({ json: ticket }) => {\n  const eigenes = ticket.owner_id === OWNER_ID && [1, 2, 3, 6].includes(ticket.state_id);\n  const ausbildung = [1, 2, 3, 6].includes(ticket.state_id) && AUSBILDUNG_GRUPPEN.includes(ticket.group_id);\n  return eigenes || ausbildung;\n});"
+        "jsCode": "const OWNER_ID = 5;\nconst AUSBILDUNG_GRUPPEN = [2];\n\n// Formular \"KI-Entwurf neu erstellen\": nur die angegebenen Ticketnummern, egal in welchem Status oder von wem zuletzt beantwortet.\nconst angefordert = String($('Von Haupt-Workflow aufgerufen').first().json.tickets || '').split(/[^0-9]+/).filter(Boolean);\nif (angefordert.length > 0) {\n  const gefunden = $input.all().filter(({ json: ticket }) => angefordert.includes(String(ticket.number)));\n  const fehlend = angefordert.filter((nr) => !gefunden.some(({ json }) => String(json.number) === nr));\n  if (fehlend.length > 0) console.log(`Angeforderte Tickets nicht gefunden: ${fehlend.join(', ')}`);\n  if (gefunden.length === 0) throw new Error(`Keines der angeforderten Tickets gefunden: ${angefordert.join(', ')}`);\n  return gefunden;\n}\n\nconst SPRACHNACHRICHT = /^\\s*(re:\\s*|aw:\\s*|fwd?:\\s*|wg:\\s*)*neue sprachnachricht von\\b/i;\n\nreturn $input.all().filter(({ json: ticket }) => {\n  if (SPRACHNACHRICHT.test(String(ticket.title || ''))) return false;\n  const eigenes = ticket.owner_id === OWNER_ID && [1, 2, 3, 6].includes(ticket.state_id);\n  const ausbildung = [1, 2, 3, 6].includes(ticket.state_id) && AUSBILDUNG_GRUPPEN.includes(ticket.group_id);\n  return eigenes || ausbildung;\n});"
       }
     },
     {
-      "id": "c5e4eb31-3605-4f4b-8bd4-a7bccd236ba8",
+      "id": "acd15fec-5815-4b52-b90d-9e5e032539d6",
       "name": "Ticket-Artikel laden",
       "type": "n8n-nodes-base.zammad",
       "typeVersion": 1,
       "position": [
-        7168,
-        336
+        8416,
+        1104
       ],
       "parameters": {
         "authentication": "basicAuth",
@@ -72,13 +75,14 @@
       }
     },
     {
-      "id": "220debca-afc9-409b-b576-9b6aa91c3f39",
+      "id": "4c9e7c3f-4ca3-4f34-89e5-5e75cdb28319",
       "name": "Entwurf als interne Notiz speichern",
       "type": "n8n-nodes-base.zammad",
       "typeVersion": 1,
+      "onError": "continueErrorOutput",
       "position": [
-        9856,
-        512
+        12832,
+        1488
       ],
       "parameters": {
         "authentication": "basicAuth",
@@ -86,7 +90,7 @@
         "operation": "update",
         "id": "={{ $('Antwortentwurf extrahieren').item.json.ticket.id }}",
         "updateFields": {
-          "note": "={{ $('Kurslinks in Entwurf einfügen').item.json.notizHtml }}"
+          "note": "={{ $('Kurslinks in Entwurf einfügen').item.json.notizHtml.replace(/[„“”]/g, '\"').replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]/g, '') }}"
         }
       },
       "credentials": {
@@ -97,26 +101,26 @@
       }
     },
     {
-      "id": "5ffdf2c9-b4c1-48e5-8041-6194fd8035ac",
+      "id": "7494f644-8df9-4edf-8150-289633079726",
       "name": "Abschluss (immer genau 1 Item)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        11202,
-        512
+        15312,
+        2064
       ],
       "parameters": {
         "jsCode": "return [{ json: { status: 'done', verarbeiteteTickets: Math.max($input.all().length - 1, 0) } }];"
       }
     },
     {
-      "id": "2d59c4a2-ffd1-46e9-a87d-070396740560",
+      "id": "70ba84b0-ce89-4bfa-a56d-4db70201832f",
       "name": "Freigabe-Push senden",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        10978,
-        336
+        14656,
+        1056
       ],
       "parameters": {
         "method": "POST",
@@ -154,40 +158,40 @@
       }
     },
     {
-      "id": "7265c52d-a753-44ff-869c-f9b9654ba765",
+      "id": "1af7a96f-ae55-49de-b707-02a09be21cad",
       "name": "LLM-Eingabe bauen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        7392,
-        336
+        8672,
+        1104
       ],
       "parameters": {
-        "jsCode": "const OWNER_ID = 5;\nconst MAX_PAYLOAD_BYTES = 90000;\nconst MAX_MAIL_CHARS = 40000;\nconst MAX_CONTEXT_CHARS = 4000;\nconst KI_MARKIERUNG = /KI-Entwurf \\(automatisch erstellt\\)|Interne Hinweise zum KI-Entwurf/;\n\nfunction stripHtml(html) {\n  return String(html || '')\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<\\/(p|div|li|tr)>/gi, '\\n')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .replace(/&#39;/g, \"'\")\n    .replace(/&amp;/g, '&')\n    .replace(/[ \\t]+/g, ' ')\n    .replace(/ ?\\n ?/g, '\\n')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim();\n}\n\nfunction textOf(article) {\n  return /html/i.test(article.content_type || '') ? stripHtml(article.body) : String(article.body || '').trim();\n}\n\nfunction dateOf(article) {\n  return String(article.created_at || '').replace('T', ' ').slice(0, 16);\n}\n\nconst ergebnis = [];\n\n$input.all().forEach((item, index) => {\n  const { articles, ...ticket } = item.json;\n  const all = (articles || [])\n    .filter((a) => a.sender !== 'System')\n    .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)) || a.id - b.id);\n\n  const oeffentlich = all.filter((a) => !a.internal);\n  const letzte = oeffentlich[oeffentlich.length - 1];\n  if (letzte && letzte.sender === 'Agent') {\n    console.log(`Ticket #${ticket.number}: Team hat bereits geantwortet, übersprungen`);\n    return;\n  }\n\n  if ([3, 6].includes(ticket.state_id) && !oeffentlich.some((a) => a.sender === 'Agent')) {\n    console.log(`Ticket #${ticket.number}: wartet auf Erinnerung oder Schließen, Kunde hat nicht geantwortet, übersprungen`);\n    return;\n  }\n\n  const context = all\n    .filter((a) => a.internal && /^\\s*Kontext:/i.test(textOf(a)))\n    .map((a) => textOf(a).replace(/^\\s*Kontext:\\s*/i, ''))\n    .join('\\n\\n')\n    .slice(0, MAX_CONTEXT_CHARS);\n\n  const mails = all.filter((a) => !a.internal && textOf(a));\n  const lastCustomer = [...mails].reverse().find((a) => a.sender === 'Customer');\n  const target = lastCustomer || mails[mails.length - 1];\n  if (!target) {\n    console.log(`Ticket #${ticket.number}: keine E-Mail zum Beantworten gefunden, übersprungen`);\n    return;\n  }\n\n  if (all.some((a) => a.internal && a.id > target.id && KI_MARKIERUNG.test(textOf(a)))) {\n    console.log(`Ticket #${ticket.number}: KI-Entwurf liegt bereits vor, übersprungen`);\n    return;\n  }\n\n  const history = mails\n    .filter((a) => a.id !== target.id)\n    .map((a) => ({ from: a.from || 'unbekannt', date: dateOf(a), text: textOf(a) }));\n\n  const payload = {\n    context,\n    history,\n    mail: {\n      from: target.from || 'unbekannt',\n      date: dateOf(target),\n      subject: target.subject || ticket.title,\n      text: textOf(target).slice(0, MAX_MAIL_CHARS),\n    },\n  };\n\n  let preTrimmed = 0;\n  while (Buffer.byteLength(JSON.stringify(payload), 'utf8') > MAX_PAYLOAD_BYTES && payload.history.length > 0) {\n    payload.history.shift();\n    preTrimmed += 1;\n  }\n  if (preTrimmed > 0) {\n    console.log(`Ticket #${ticket.number}: ${preTrimmed} ältere Mail(s) vor dem Aufruf gekürzt (Payload-Limit ${MAX_PAYLOAD_BYTES} Byte)`);\n  }\n\n  ergebnis.push({\n    json: {\n      ticket,\n      modus: ticket.owner_id === OWNER_ID ? 'entwurf' : 'notiz',\n      replyTo: target.reply_to || target.from || '',\n      messageId: target.message_id || '',\n      payloadB64: Buffer.from(JSON.stringify(payload), 'utf8').toString('base64'),\n      historyCount: payload.history.length,\n      preTrimmed,\n    },\n    pairedItem: { item: index },\n  });\n});\n\nreturn ergebnis;"
+        "jsCode": "const AUSBILDUNG_GRUPPEN = [2];\n// Vom Formular angeforderte Tickets werden auch dann neu bearbeitet, wenn schon ein KI-Entwurf oder eine Team-Antwort vorliegt.\nconst angefordert = String($('Von Haupt-Workflow aufgerufen').first().json.tickets || '').split(/[^0-9]+/).filter(Boolean);\nconst MAX_PAYLOAD_BYTES = 90000;\nconst MAX_MAIL_CHARS = 40000;\nconst MAX_CONTEXT_CHARS = 4000;\n// Erkennt KI-Notizen an der ID in der Signatur. Die älteren Merkmale bleiben für bereits vorhandene Notizen erkannt.\nconst KI_MARKIERUNG = /ID-IT-xi8klGKdh8|Deutsche Lebens-Rettungs-Gesellschaft\\s+Landesverband Rheinland-Pfalz|KI-Entwurf \\(automatisch erstellt\\)|Interne Hinweise zum KI-Entwurf/;\n\nfunction stripHtml(html) {\n  return String(html || '')\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<\\/(p|div|li|tr)>/gi, '\\n')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .replace(/&#39;/g, \"'\")\n    .replace(/&amp;/g, '&')\n    .replace(/[ \\t]+/g, ' ')\n    .replace(/ ?\\n ?/g, '\\n')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim();\n}\n\nfunction textOf(article) {\n  return /html/i.test(article.content_type || '') ? stripHtml(article.body) : String(article.body || '').trim();\n}\n\nfunction dateOf(article) {\n  return String(article.created_at || '').replace('T', ' ').slice(0, 16);\n}\n\nconst ergebnis = [];\n\n$input.all().forEach((item, index) => {\n  const { articles, ...ticket } = item.json;\n  const erzwungen = angefordert.includes(String(ticket.number));\n  const all = (articles || [])\n    .filter((a) => a.sender !== 'System')\n    .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)) || a.id - b.id);\n\n  const oeffentlich = all.filter((a) => !a.internal);\n  const letzte = oeffentlich[oeffentlich.length - 1];\n  if (!erzwungen && letzte && letzte.sender === 'Agent') {\n    console.log(`Ticket #${ticket.number}: Team hat bereits geantwortet, übersprungen`);\n    return;\n  }\n\n  if (!erzwungen && [3, 6].includes(ticket.state_id) && !oeffentlich.some((a) => a.sender === 'Agent')) {\n    console.log(`Ticket #${ticket.number}: wartet auf Erinnerung oder Schließen, Kunde hat nicht geantwortet, übersprungen`);\n    return;\n  }\n\n  const context = all\n    .filter((a) => a.internal && /^\\s*Kontext:/i.test(textOf(a)))\n    .map((a) => textOf(a).replace(/^\\s*Kontext:\\s*/i, ''))\n    .join('\\n\\n')\n    .slice(0, MAX_CONTEXT_CHARS);\n\n  const mails = all.filter((a) => !a.internal && textOf(a));\n  const lastCustomer = [...mails].reverse().find((a) => a.sender === 'Customer');\n  const target = lastCustomer || mails[mails.length - 1];\n  if (!target) {\n    console.log(`Ticket #${ticket.number}: keine E-Mail zum Beantworten gefunden, übersprungen`);\n    return;\n  }\n\n  // Nur eine KI-Notiz, die neuer ist als die letzte Kunden-Mail, zählt: Antwortet der Kunde danach, wird das Ticket neu bearbeitet.\n  if (!erzwungen && all.some((a) => a.internal && a.id > target.id && KI_MARKIERUNG.test(textOf(a)))) {\n    console.log(`Ticket #${ticket.number}: KI-Entwurf liegt bereits vor, übersprungen`);\n    return;\n  }\n\n  const history = mails\n    .filter((a) => a.id !== target.id)\n    .map((a) => ({ from: a.from || 'unbekannt', date: dateOf(a), text: textOf(a) }));\n\n  const payload = {\n    // Ausbildung lädt nur das Firmenwissen \"alle\" und \"ausbildung\" (kein PsG, nichts anderes).\n    profile: AUSBILDUNG_GRUPPEN.includes(ticket.group_id) ? 'ausbildung' : undefined,\n    context,\n    history,\n    mail: {\n      from: target.from || 'unbekannt',\n      date: dateOf(target),\n      subject: target.subject || ticket.title,\n      text: textOf(target).slice(0, MAX_MAIL_CHARS),\n    },\n  };\n\n  let preTrimmed = 0;\n  while (Buffer.byteLength(JSON.stringify(payload), 'utf8') > MAX_PAYLOAD_BYTES && payload.history.length > 0) {\n    payload.history.shift();\n    preTrimmed += 1;\n  }\n  if (preTrimmed > 0) {\n    console.log(`Ticket #${ticket.number}: ${preTrimmed} ältere Mail(s) vor dem Aufruf gekürzt (Payload-Limit ${MAX_PAYLOAD_BYTES} Byte)`);\n  }\n\n  ergebnis.push({\n    json: {\n      ticket,\n      modus: 'entwurf',\n      erzwungen,\n      replyTo: target.reply_to || target.from || '',\n      messageId: target.message_id || '',\n      payloadB64: Buffer.from(JSON.stringify(payload), 'utf8').toString('base64'),\n      historyCount: payload.history.length,\n      preTrimmed,\n    },\n    pairedItem: { item: index },\n  });\n});\n\nreturn ergebnis;"
       }
     },
     {
-      "id": "e68049c5-116f-4681-9a50-0dd154e8f479",
+      "id": "29d509af-be83-4d16-89df-946d3697b0ea",
       "name": "Ollama erreichbar?",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "onError": "continueRegularOutput",
       "position": [
-        8512,
-        336
+        9744,
+        1120
       ],
       "parameters": {
         "command": "node /opt/ollama-pc/cli.js probe"
       }
     },
     {
-      "id": "38cc6d23-69b7-4548-9a27-7276d2e70fdf",
+      "id": "fcf99994-5a0f-4f9f-ab74-042e9182ea2a",
       "name": "PC schläft?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        8736,
-        336
+        10032,
+        1120
       ],
       "parameters": {
         "conditions": {
@@ -215,18 +219,18 @@
       }
     },
     {
-      "id": "41f1b9b7-f59c-43cf-b1a2-ce9b96fd61fd",
+      "id": "ea48b2bb-30af-4457-9422-44874fdb1d2e",
       "name": "Ollama-PC wecken",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "onError": "continueRegularOutput",
       "position": [
-        8960,
-        192
+        10304,
+        944
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://carplay-api.prod.homeserver/api/power/wake",
+        "url": "https://carplay-api-tech.pkr-lab.de/api/power/wake",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
@@ -253,41 +257,41 @@
       }
     },
     {
-      "id": "a5a46407-5ed3-4ea4-9643-6309842484de",
+      "id": "d6297212-a169-4007-89d7-0c2a6dc11462",
       "name": "Ollama-Antwort erzeugen",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "onError": "continueRegularOutput",
       "position": [
-        9184,
-        336
+        10560,
+        1136
       ],
       "parameters": {
         "command": "=printf %s '{{ $('LLM-Eingabe bauen').item.json.payloadB64 }}' | base64 -d | OLLAMA_MANDANT=dlrg node /opt/ollama-pc/cli.js chat"
       }
     },
     {
-      "id": "ccbba3ff-f52f-4ccd-b560-8a0a447a7621",
+      "id": "81441be8-efbe-4d86-9a9c-3219334e9735",
       "name": "Antwortentwurf extrahieren",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        9408,
-        336
+        10864,
+        1136
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const eingabe = $('LLM-Eingabe bauen').item.json;\nconst ticket = eingabe.ticket;\n\nlet parsed = null;\ntry {\n  parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n} catch (err) {\n  parsed = null;\n}\n\nif (!parsed || !parsed.ok) {\n  const detail = parsed && parsed.error\n    ? `${parsed.error.code}: ${parsed.error.message}`\n    : String($json.stderr || $json.error || 'keine Ausgabe von ollama-pc/cli.js').trim();\n  throw new Error(`Ollama-Anfrage fehlgeschlagen (Ticket #${ticket.number}): ${detail}`);\n}\n\nconst hinweise = [];\nconst entwurf = String(parsed.reply || '')\n  .replace(/[ \\t]*\\[INTERN:\\s*([^\\]]*)\\]/g, (_, hinweis) => {\n    hinweise.push(hinweis.trim());\n    return '';\n  })\n  .replace(/[ \\t]+$/gm, '')\n  .replace(/(https?:\\/\\/\\S+) ([.,;:!?])/g, '$1$2')\n  .replace(/([^.])\\.\\.(?!\\.)/g, '$1.')\n  .replace(/\\n{3,}/g, '\\n\\n')\n  .trim();\n\nconst kurslinkHinweise = Array.from(entwurf.matchAll(/\\[KURSLINK:\\s*([^\\]]*)\\]/g)).map((m) => m[1].trim());\n\nconst escapeHtml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst entwurfHtml = entwurf\n  .replace(/\\r\\n?/g, '\\n')\n  .split(/\\n{2,}/)\n  .map((absatz) => '<p>' + escapeHtml(absatz)\n    .replace(/(https?:\\/\\/[^\\s<]*[^\\s<.,;:!?])/g, '<a href=\"$1\">$1</a>')\n    .replace(/\\n/g, '<br>') + '</p>')\n  .join('');\nconst abstand = '<p><br></p><p><br></p>';\nconst notizHtml = entwurfHtml + abstand + '<p><i>KI-Entwurf (automatisch erstellt)</i></p>';\nconst hinweiseHtml = hinweise.length\n  ? '<p><b>Interne Hinweise zum KI-Entwurf</b></p><ul>' + hinweise.map((h) => '<li>' + escapeHtml(h) + '</li>').join('') + '</ul>'\n  : '';\n\nreturn { json: { ticket, modus: eingabe.modus, replyTo: eingabe.replyTo, messageId: eingabe.messageId, entwurf, entwurfHtml: entwurfHtml + abstand, notizHtml, hinweise, hinweiseHtml, kurslinkHinweise, kurslinkHinweiseB64: Buffer.from(JSON.stringify(kurslinkHinweise)).toString('base64'), warnings: parsed.warnings, stats: parsed.stats } };"
+        "jsCode": "const eingabe = $('LLM-Eingabe bauen').item.json;\nconst ticket = eingabe.ticket;\n\nlet parsed = null;\ntry {\n  parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n} catch (err) {\n  parsed = null;\n}\n\nif (!parsed || !parsed.ok) {\n  const detail = parsed && parsed.error\n    ? `${parsed.error.code}: ${parsed.error.message}`\n    : String($json.stderr || $json.error || 'keine Ausgabe von ollama-pc/cli.js').trim();\n  // Kein throw: Der Fehler wird gemeldet (Push), die übrigen Tickets laufen weiter.\n  return { json: { fehler: `Ollama-Anfrage fehlgeschlagen (Ticket #${ticket.number}): ${detail}`, ticket } };\n}\n\nconst SIGNATUR = `Mit freundlichen Grüßen\n\nDLRG OG Andernach e.V.\n\n--\n\nDeutsche Lebens-Rettungs-Gesellschaft\nLandesverband Rheinland-Pfalz\nOrtsgruppe Andernach e.V.\n\nBalthasar-Neumann-Strasse 5 | 56648 Saffig\nTelefon: +49 2632 46162\n\nE-Mail: info@andernach.dlrg.de | URL: https://andernach.dlrg.de\nRechtsform: eingetragener Verein (e.V.) Amtsgericht Koblenz VR 11775\n\nVertretungsberechtigung gemäß § 26 BGB: 1. Vorsitzender Erik Mueller 2. Vorsitzender Peter Kretzer\n\nBild- und Filmrechte\nDie Einverständniserklärungen der auf Foto- und/oder Filmaufnahmen abgebildeten Personen über die zeitlich unbegrenzte Nutzung der Foto- und/oder Filmaufnahmen zum Zweck der Außendarstellung des Vereins in Print- und Onlinemedien, die im Rahmen der Vereinsveranstaltung gemacht wurden, liegen der DLRG Andernach vor.\n\nDer Inhalt dieser E-Mail ist ausschließlich für den bezeichneten Adressaten bestimmt. Wenn Sie nicht der vorgesehene Adressat dieser E-Mail oder dessen Vertreter sein sollten, so beachten Sie bitte, dass jede Form der Kenntnisnahme, Veröffentlichung, Vervielfältigung oder Weitergabe des Inhalts dieser E-Mail unzulässig ist. Wir bitten Sie, sich in diesem Fall mit dem Absender der E-Mail in Verbindung zu setzen. Die DLRG Andernach schließt jegliche Haftung für Verluste oder Schäden aus, die durch virenbefallene Software oder E-Mails verursacht werden.\n\nWhatsApp-Kanal dass du keine neuigkeiten mehr verpasst:\nhttps://whatsapp.com/channel/0029VbDbnqA8F2pCINGsId0N\n\nInstagram:\nhttps://www.instagram.com/dlrg_andernach/\n\nID-IT-xi8klGKdh8`;\nconst SIGNATUR_ANHAENGEN = false;\nconst AUSBILDUNG_GRUPPEN = [2];\nconst AUSBILDUNG_ABSENDER = 'Daniela Saxer';\n// Ausbildung unterschreibt mit Namen, alle anderen Gruppen mit dem Vereinsnamen.\nconst signatur = AUSBILDUNG_GRUPPEN.includes(ticket.group_id)\n  ? SIGNATUR.replace('DLRG OG Andernach e.V.', AUSBILDUNG_ABSENDER)\n  : SIGNATUR;\nconst GRUSS_ZEILE = /^\\s*(mit freundlichen|freundliche|viele|beste|herzliche|liebe|sportliche|schöne|schone)\\s+gr(ü|ue|u)(ß|ss)(e|en)\\s*[,.!]?\\s*$/i;\n\n// Schneidet eine vom Modell geschriebene Grußformel samt bereits angehängter Signatur ab.\nfunction ohneGruss(reply) {\n  const zeilen = reply.split('\\n');\n  const stop = Math.max(zeilen.length - 40, 0);\n  for (let i = zeilen.length - 1; i >= stop; i -= 1) {\n    if (GRUSS_ZEILE.test(zeilen[i])) return zeilen.slice(0, i).join('\\n').trimEnd();\n  }\n  return reply;\n}\n\nconst hinweise = [];\nconst DATEIVERWEIS_HINWEIS = 'KI hat einen internen Dateinamen genannt statt eines Links: Stelle mit [BITTE PRÜFEN: Link …] ersetzen';\nconst anhaenge = [];\nconst rohText = ohneGruss(String(parsed.reply || '').trim())\n  .replace(/[ \\t]*\\[INTERN:\\s*([^\\]]*)\\]/g, (_, hinweis) => {\n    hinweise.push(hinweis.trim());\n    return '';\n  })\n  .replace(/[ \\t]*\\[ANHANG:\\s*([^\\]]*)\\]/g, (_, name) => {\n    anhaenge.push(name.trim());\n    return '';\n  })\n  // Interne Wissensdateien (z. B. `08_kontakt_und_links.md`) sind keine Quelle für den Leser: Verweis ersetzen und der prüfenden Person melden.\n  .replace(/[ \\t]*\\(?\\s*`?\\b\\d{2}_[a-z0-9_]+\\.md`?\\s*\\)?/gi, () => {\n    if (!hinweise.includes(DATEIVERWEIS_HINWEIS)) hinweise.push(DATEIVERWEIS_HINWEIS);\n    return ' [BITTE PRÜFEN: Link statt Dateiname einfügen]';\n  })\n  .replace(/[ \\t]+$/gm, '')\n  .replace(/(https?:\\/\\/\\S+) ([.,;:!?])/g, '$1$2')\n  .replace(/([^.])\\.\\.(?!\\.)/g, '$1.')\n  .replace(/\\n{3,}/g, '\\n\\n')\n  .trim();\n\n// Sorgt für Leerzeilen an sinnvollen Stellen, auch wenn das Modell sie weglässt:\n// nach der Anrede und nach einem einleitenden Dank-Satz.\nconst ANREDE_ZEILE = /^\\s*(guten (tag|morgen|abend)|hallo|liebe[rn]?|sehr geehrte[rn]?|hi)\\b[^\\n]*[,!]\\s*$/i;\nconst DANK_ZEILE = /^\\s*(vielen dank|herzlichen dank|danke)\\b[^\\n]*[.!]\\s*$/i;\nfunction absaetzeSetzen(t) {\n  const zeilen = t.replace(/\\r\\n?/g, '\\n').split('\\n');\n  const aus = [];\n  let anredeGesehen = false;\n  let dankGesehen = false;\n  zeilen.forEach((zeile, i) => {\n    aus.push(zeile);\n    const naechste = zeilen[i + 1];\n    if (naechste === undefined || !naechste.trim() || !zeile.trim()) return;\n    if (!anredeGesehen && ANREDE_ZEILE.test(zeile)) {\n      anredeGesehen = true;\n      aus.push('');\n    } else if (!dankGesehen && DANK_ZEILE.test(zeile)) {\n      dankGesehen = true;\n      aus.push('');\n    }\n  });\n  return aus.join('\\n').replace(/\\n{3,}/g, '\\n\\n').trim();\n}\nconst text = absaetzeSetzen(rohText);\n\n// [KURSLINK: ...] bleibt im Text stehen und wird im Node \"Kurslinks in Entwurf einfügen\" durch den Link ersetzt.\nconst kurslinkHinweise = Array.from(text.matchAll(/\\[KURSLINK:\\s*([^\\]]*)\\]/g)).map((m) => m[1].trim());\n// Mailtext samt Verlauf, damit der Kurs über einen darin genannten Kurscode eindeutig bestimmt werden kann.\nlet kurslinkKontext = '';\nif (kurslinkHinweise.length > 0) {\n  try {\n    const nutzlast = JSON.parse(Buffer.from(eingabe.payloadB64, 'base64').toString('utf8'));\n    kurslinkKontext = [nutzlast.mail.subject, String(nutzlast.mail.text).slice(0, 6000), ...nutzlast.history.slice(-3).map((h) => String(h.text).slice(0, 3000))].join('\\n');\n  } catch (err) {\n    kurslinkKontext = '';\n  }\n}\nconst entwurf = SIGNATUR_ANHAENGEN ? text + '\\n\\n' + signatur : text;\n\nconst escapeHtml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst alsAbsaetze = (t) => t\n  .replace(/\\r\\n?/g, '\\n')\n  .split(/\\n{2,}/)\n  .map((absatz) => '<p>' + escapeHtml(absatz)\n    .replace(/(https?:\\/\\/[^\\s<]*[^\\s<.,;:!?])/g, '<a href=\"$1\">$1</a>')\n    .replace(/\\n/g, '<br>') + '</p>')\n  .join('');\n// Signatur: jede Zeile bleibt eine eigene Zeile (leere Zeile = Abstand), wie sie auch Zammads Editor erzeugt.\nconst alsZeilen = (t) => t\n  .replace(/\\r\\n?/g, '\\n')\n  .split('\\n')\n  .map((zeile) => (zeile.trim()\n    ? '<div>' + escapeHtml(zeile).replace(/(https?:\\/\\/[^\\s<]*[^\\s<.,;:!?])/g, '<a href=\"$1\">$1</a>') + '</div>'\n    : '<div><br></div>'))\n  .join('');\nconst abstand = '<p><br></p><p><br></p>';\nconst entwurfHtml = SIGNATUR_ANHAENGEN ? alsAbsaetze(text) + abstand + alsZeilen(signatur) : alsAbsaetze(text);\nconst notizHtml = entwurfHtml;\nconst hinweiseHtml = hinweise.length\n  ? '<p><b>Interne Hinweise zum KI-Entwurf</b></p><ul>' + hinweise.map((h) => '<li>' + escapeHtml(h) + '</li>').join('') + '</ul>'\n  : '';\n\nreturn { json: { ticket, modus: eingabe.modus, replyTo: eingabe.replyTo, messageId: eingabe.messageId, entwurf, entwurfHtml, notizHtml, hinweise, hinweiseHtml, anhaenge, kurslinkHinweise, kurslinkHinweiseB64: Buffer.from(JSON.stringify({ hints: kurslinkHinweise, context: kurslinkKontext })).toString('base64'), warnings: parsed.warnings, stats: parsed.stats } };"
       }
     },
     {
-      "id": "7b0f6c1e-3a52-4d6b-9a41-5c1d2e8f0a03",
+      "id": "129c6d66-1057-47f4-8885-c651501b3452",
       "name": "Kurslink-Hinweise vorhanden?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        9430,
-        500
+        11392,
+        1248
       ],
       "parameters": {
         "conditions": {
@@ -315,41 +319,41 @@
       }
     },
     {
-      "id": "7b0f6c1e-3a52-4d6b-9a41-5c1d2e8f0a04",
+      "id": "7d049bb1-0bb0-40c1-b249-2058c64bbed7",
       "name": "Kurslinks nachschlagen",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "onError": "continueRegularOutput",
       "position": [
-        9430,
-        650
+        11648,
+        1168
       ],
       "parameters": {
         "command": "=printf %s '{{ $('Antwortentwurf extrahieren').item.json.kurslinkHinweiseB64 }}' | base64 -d | node /opt/ollama-pc/cli.js kurslink"
       }
     },
     {
-      "id": "7b0f6c1e-3a52-4d6b-9a41-5c1d2e8f0a05",
+      "id": "90e02bd2-b2d1-4c68-beda-7ee313c61669",
       "name": "Kurslinks in Entwurf einfügen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        9630,
-        650
+        11872,
+        1360
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const basis = $('Antwortentwurf extrahieren').item.json;\nconst escapeHtml = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst KURSLINK_TAG = /\\[KURSLINK:\\s*([^\\]]*)\\]/g;\n\nlet parsed = null;\nif (basis.kurslinkHinweise.length > 0) {\n  try {\n    parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n  } catch (err) {\n    parsed = null;\n  }\n}\n\nfunction istAnstehend(meldeschluss, now) {\n  const m = /^(\\d{2})\\.(\\d{2})\\.(\\d{2}|\\d{4})$/.exec(String(meldeschluss || '').trim());\n  if (!m) return false;\n  const jahr = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);\n  return new Date(jahr, Number(m[2]) - 1, Number(m[1])) >= now;\n}\n\nconst now = new Date();\nconst auditZeilen = [];\nconst decisions = basis.kurslinkHinweise.map((hint, idx) => {\n  const result = parsed && parsed.ok ? parsed.results[idx] : null;\n  if (!result) {\n    auditZeilen.push(`Kurslink-Nachschlag fehlgeschlagen für „${escapeHtml(hint)}“`);\n    const fallback = `[BITTE PRÜFEN: Upload-Link für ${escapeHtml(hint)}]`;\n    return { html: fallback, plain: fallback };\n  }\n  const anstehend = result.matches.filter((m) => istAnstehend(m.meldeschluss, now));\n  if (anstehend.length !== 1) {\n    auditZeilen.push(`Kurslink nicht eindeutig: ${escapeHtml(result.kursart || hint)} (${result.matches.length} Treffer gesamt, ${anstehend.length} anstehend) – bitte im Entwurf prüfen`);\n    const fallback = `[BITTE PRÜFEN: Upload-Link für ${escapeHtml(result.kursart || hint)}]`;\n    return { html: fallback, plain: fallback };\n  }\n  const treffer = anstehend[0];\n  auditZeilen.push(`Kurslink automatisch eingefügt: ${escapeHtml(treffer.kursart)} ${escapeHtml(treffer.code)} (Meldeschluss ${escapeHtml(treffer.meldeschluss)})`);\n  const link = escapeHtml(treffer.url);\n  return { html: `<a href=\"${link}\">${link}</a>`, plain: treffer.url };\n});\n\nfunction einfuegen(text, isHtml) {\n  if (!decisions.length) return text;\n  let i = 0;\n  return text.replace(KURSLINK_TAG, () => {\n    const d = decisions[i];\n    i += 1;\n    return isHtml ? d.html : d.plain;\n  });\n}\n\nconst entwurf = einfuegen(basis.entwurf, false);\nconst entwurfHtml = einfuegen(basis.entwurfHtml, true);\nconst notizHtml = einfuegen(basis.notizHtml, true);\nconst hinweiseHtml = basis.hinweiseHtml + (auditZeilen.length\n  ? '<p><b>Kurslink-Automatik</b></p><ul>' + auditZeilen.map((z) => '<li>' + z + '</li>').join('') + '</ul>'\n  : '');\n\nreturn { json: { ...basis, entwurf, entwurfHtml, notizHtml, hinweiseHtml } };"
+        "jsCode": "const basis = $('Antwortentwurf extrahieren').item.json;\nconst escapeHtml = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst KURSLINK_TAG = /\\[KURSLINK:\\s*([^\\]]*)\\]/g;\n\nlet parsed = null;\nif (basis.kurslinkHinweise.length > 0) {\n  try {\n    parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n  } catch (err) {\n    parsed = null;\n  }\n}\n\nconst auditZeilen = [];\nconst platzhalter = (text) => {\n  const t = `[BITTE PRÜFEN: ${text}]`;\n  return { html: escapeHtml(t), plain: t };\n};\n// Entscheidung trifft cli.js kurslink (status link | ignoriert | unklar). Ohne gültige Antwort wird nie ein Link geraten.\nconst decisions = basis.kurslinkHinweise.map((hint, idx) => {\n  const result = parsed && parsed.ok ? parsed.results[idx] : null;\n  if (!result || !result.status) {\n    auditZeilen.push(`Kurslink-Nachschlag fehlgeschlagen für „${escapeHtml(hint)}“`);\n    return platzhalter(`Upload-Link für ${hint}`);\n  }\n  if (result.status === 'link') {\n    auditZeilen.push(`Kurslink automatisch eingefügt: ${escapeHtml(result.entry.kursart)} ${escapeHtml(result.entry.code)} (${escapeHtml(result.grund)})`);\n    const link = escapeHtml(result.entry.url);\n    return { html: `<a href=\"${link}\">${link}</a>`, plain: result.entry.url };\n  }\n  if (result.status === 'ignoriert') {\n    auditZeilen.push(`Kurslink nicht eingefügt: ${escapeHtml(result.grund)} – Links gibt es automatisch erst ab 2027`);\n    return platzhalter(`Upload-Link für ${result.kursart || hint} von Hand einfügen (${result.grund})`);\n  }\n  auditZeilen.push(`Kurslink nicht eindeutig: ${escapeHtml(result.kursart || hint)} – ${escapeHtml(result.grund)}`);\n  return platzhalter(`Upload-Link für ${result.kursart || hint}: Kurs nicht eindeutig`);\n});\n\nfunction einfuegen(text, isHtml) {\n  if (!decisions.length) return text;\n  let i = 0;\n  return text.replace(KURSLINK_TAG, () => {\n    const d = decisions[i];\n    i += 1;\n    return isHtml ? d.html : d.plain;\n  });\n}\n\nconst entwurf = einfuegen(basis.entwurf, false);\nconst entwurfHtml = einfuegen(basis.entwurfHtml, true);\nconst notizHtml = einfuegen(basis.notizHtml, true);\nconst hinweiseHtml = basis.hinweiseHtml + (auditZeilen.length\n  ? '<p><b>Kurslink-Automatik</b></p><ul>' + auditZeilen.map((z) => '<li>' + z + '</li>').join('') + '</ul>'\n  : '');\n\nreturn { json: { ...basis, entwurf, entwurfHtml, notizHtml, hinweiseHtml } };"
       }
     },
     {
-      "id": "7b0f6c1e-3a52-4d6b-9a41-5c1d2e8f0a01",
+      "id": "b337e7e0-0123-47e6-9a44-647b48eaf27f",
       "name": "Interne Hinweise vorhanden?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        10530,
-        336
+        13920,
+        1120
       ],
       "parameters": {
         "conditions": {
@@ -377,13 +381,14 @@
       }
     },
     {
-      "id": "7b0f6c1e-3a52-4d6b-9a41-5c1d2e8f0a02",
+      "id": "6cd889a5-5a91-451e-aa4c-52c93c09fb75",
       "name": "Interne Hinweise als Notiz speichern",
       "type": "n8n-nodes-base.zammad",
       "typeVersion": 1,
+      "onError": "continueErrorOutput",
       "position": [
-        10754,
-        224
+        14144,
+        1008
       ],
       "parameters": {
         "authentication": "basicAuth",
@@ -402,48 +407,14 @@
       }
     },
     {
-      "id": "810cce88-55a1-4772-9ba0-ff8eeb522101",
-      "name": "Eigenes Ticket?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        7840,
-        336
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "e5e5e5e5-0005-4000-8000-000000000b01",
-              "leftValue": "={{ $json.modus === 'entwurf' }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "51dd576e-105b-46d9-91d8-cc5108096979",
+      "id": "8a7f0b94-55a4-4e03-a49d-9ff5a2a0e478",
       "name": "Shared Draft prüfen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "onError": "continueRegularOutput",
       "position": [
-        8064,
-        160
+        9168,
+        960
       ],
       "parameters": {
         "url": "={{ 'https://ticket.emue365.de/api/v1/tickets/' + $json.ticket.id + '/shared_draft' }}",
@@ -459,13 +430,13 @@
       }
     },
     {
-      "id": "50cbf373-3541-492f-ae13-92190c3f4c78",
+      "id": "220c1556-d113-4e29-bdaf-d07711271333",
       "name": "Kein Shared Draft vorhanden?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        8288,
-        160
+        9424,
+        960
       ],
       "parameters": {
         "conditions": {
@@ -478,7 +449,7 @@
           "conditions": [
             {
               "id": "e5e5e5e5-0005-4000-8000-000000000b02",
-              "leftValue": "={{ !$json.shared_draft_id }}",
+              "leftValue": "={{ (!$json.shared_draft_id && (!$json.error || /\\b404\\b/.test(JSON.stringify($json.error)))) || $('LLM-Eingabe bauen').item.json.erzwungen === true }}",
               "rightValue": true,
               "operator": {
                 "type": "boolean",
@@ -493,48 +464,14 @@
       }
     },
     {
-      "id": "5d14d75f-9ae1-40a5-ad78-7d273692cc33",
-      "name": "Als Mail-Entwurf ablegen?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        9632,
-        336
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "e5e5e5e5-0005-4000-8000-000000000b03",
-              "leftValue": "={{ $json.modus === 'entwurf' }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "3cb6ffd9-3c85-4c0d-83a7-29aeefce98e0",
+      "id": "be72f9bb-80fc-465e-8eb5-451d03301f3e",
       "name": "Shared Draft speichern",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "onError": "continueErrorOutput",
       "position": [
-        9856,
-        160
+        12560,
+        1184
       ],
       "parameters": {
         "method": "PUT",
@@ -552,7 +489,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ (() => { const e = $('Kurslinks in Entwurf einfügen').item.json; return JSON.stringify({ new_article: { type: 'email', internal: false, to: e.replyTo, subject: e.ticket.title, body: e.entwurfHtml, content_type: 'text/html', in_reply_to: e.messageId }, ticket_attributes: { group_id: e.ticket.group_id } }); })() }}",
+        "jsonBody": "={{ (() => { const e = $('Kurslinks in Entwurf einfügen').item.json; const formId = $json.success === true ? $('Anhang laden').item.json.formId : undefined; return JSON.stringify({ new_article: { type: 'email', internal: false, to: (String(e.replyTo || '').match(/[^\\s<>\",;]+@[^\\s<>\",;]+/g) || [e.replyTo]).join(', '), subject: e.ticket.title, body: e.entwurfHtml, content_type: 'text/html', in_reply_to: e.messageId }, ticket_attributes: { group_id: e.ticket.group_id }, form_id: formId }); })() }}",
         "options": {}
       },
       "credentials": {
@@ -563,13 +500,13 @@
       }
     },
     {
-      "id": "6fd716e3-3048-4e32-849c-6276c0992bb9",
+      "id": "f27dedd4-c46d-4207-9aee-23b17e9e3018",
       "name": "Wartete auf Erinnerung oder Schließen?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        10080,
-        336
+        13312,
+        1104
       ],
       "parameters": {
         "conditions": {
@@ -597,13 +534,13 @@
       }
     },
     {
-      "id": "a4f3c12e-059b-453d-b4b4-0b68fa55e1a1",
+      "id": "740be9f4-2d31-4916-905d-e1e9e223094c",
       "name": "Status wieder auf offen setzen",
       "type": "n8n-nodes-base.zammad",
       "typeVersion": 1,
       "position": [
-        10304,
-        224
+        13600,
+        1008
       ],
       "parameters": {
         "authentication": "basicAuth",
@@ -620,6 +557,343 @@
           "name": "Zammad ticket.emue365"
         }
       }
+    },
+    {
+      "id": "44343767-a5f4-4e8c-a0b8-b235df5ee214",
+      "name": "Ollama-Fehler?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        11136,
+        1136
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a80c3847-f4d8-4f14-a284-9e8b15c00aca",
+              "leftValue": "={{ !!$json.fehler }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "9c1cc812-1a24-407d-a041-654b18b10128",
+      "name": "Fehler-Push senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "position": [
+        13504,
+        768
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://ntfy.ntfy.svc.cluster.local/zammad",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "KI-Entwurf fehlgeschlagen"
+            },
+            {
+              "name": "Priority",
+              "value": "high"
+            },
+            {
+              "name": "Tags",
+              "value": "warning"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ (() => { if ($json.fehler) return String($json.fehler).slice(0, 400); let t = '?'; try { t = $('Antwortentwurf extrahieren').item.json.ticket.number; } catch (e) {} const f = $json.error ? ($json.error.message || JSON.stringify($json.error)) : 'unbekannter Fehler'; return 'Ticket #' + t + ': Speichern in Zammad fehlgeschlagen (' + String(f).slice(0, 300) + ')'; })() }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      }
+    },
+    {
+      "id": "d5a9643a-841c-43c9-96a2-9c1d15af77ed",
+      "name": "KI-Mail bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        14176,
+        1408
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const MAIL_AN = 'peter.kretzer@dlrg.org';\nconst MAIL_VON = 'workflow-n8n@edv-kretzer.de';\nconst ID_ZEILE = 'ID-IT-xi8klGKdh8';\nconst SCHRIFT = \"-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif\";\nconst FARBEN = { rot: '#c8102e', amber: '#b45309', gruen: '#15803d', blau: '#1d4ed8', grau: '#475569', indigo: '#4338ca' };\nconst mitId = (text) => String(text).replace(/\\s+$/, '') + '\\n\\n' + ID_ZEILE;\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');\nconst verlinken = (s) => esc(s).replace(/(https?:\\/\\/[^\\s<]*[^\\s<.,;:!?)])/g, '<a href=\"$1\" style=\"color:#1d4ed8;text-decoration:underline\">$1</a>');\nconst absaetze = (text) => String(text).replace(/\\r\\n?/g, '\\n').split(/\\n{2,}/).filter((b) => b.trim()).map((b) => '<p style=\"margin:0 0 14px 0;line-height:1.6\">' + verlinken(b.trim()).replace(/\\n/g, '<br>') + '</p>').join('');\nconst felder = (zeilen) => '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;margin:0 0 18px 0;border:1px solid #e5e7eb\">' + zeilen.map(([k, v], i) => '<tr style=\"background:' + (i % 2 ? '#ffffff' : '#f9fafb') + '\"><td valign=\"top\" style=\"padding:9px 12px;width:34%;font-size:13px;color:#6b7280;border-bottom:1px solid #eef0f3\">' + esc(k) + '</td><td valign=\"top\" style=\"padding:9px 12px;font-size:14px;color:#111827;border-bottom:1px solid #eef0f3\">' + verlinken(v) + '</td></tr>').join('') + '</table>';\nconst box = (inhalt, farbe, titel) => '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 18px 0\"><tr><td style=\"border-left:4px solid ' + farbe + ';background:#f9fafb;padding:14px 16px\">' + (titel ? '<div style=\"font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:' + farbe + ';margin-bottom:8px\">' + esc(titel) + '</div>' : '') + inhalt + '</td></tr></table>';\nconst liste = (eintraege) => '<ul style=\"margin:0;padding:0 0 0 18px;line-height:1.6\">' + eintraege.map((e) => '<li style=\"margin:0 0 4px 0\">' + verlinken(e) + '</li>').join('') + '</ul>';\nconst knopf = (text, url, farbe) => '<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:4px 0 18px 0\"><tr><td style=\"background:' + farbe + ';border-radius:6px\"><a href=\"' + esc(url) + '\" style=\"display:inline-block;padding:11px 20px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none\">' + esc(text) + '</a></td></tr></table>';\nconst klein = (text) => '<p style=\"margin:6px 0 14px 0;font-size:13px;line-height:1.5;color:#6b7280\">' + verlinken(text).replace(/\\n/g, '<br>') + '</p>';\nconst datum = (iso, kurz) => {\n  const d = new Date(iso);\n  return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: kurz ? 'short' : 'medium' }) + ' Uhr';\n};\nconst layout = ({ label, farbe, titel, badge, vorschau, abschnitte }) => {\n  const zeit = new Date().toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: 'short' });\n  const plakette = badge ? '<div style=\"margin-top:12px\"><span style=\"display:inline-block;background:#ffffff;color:' + farbe + ';font-size:12px;font-weight:700;padding:4px 10px;border-radius:12px\">' + esc(badge) + '</span></div>' : '';\n  return '<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"color-scheme\" content=\"light\"><title>' + esc(titel) + '</title></head>'\n    + '<body style=\"margin:0;padding:0;background:#f3f4f6;font-family:' + SCHRIFT + '\">'\n    + '<div style=\"display:none;max-height:0;overflow:hidden;opacity:0;color:#f3f4f6\">' + esc(vorschau || titel) + '</div>'\n    + '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f3f4f6\"><tr><td align=\"center\" style=\"padding:24px 12px\">'\n    + '<table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"width:100%;max-width:600px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden\">'\n    + '<tr><td style=\"background:' + farbe + ';padding:22px 26px\"><div style=\"font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#ffffff;opacity:.9\">' + esc(label) + '</div>'\n    + '<div style=\"margin-top:6px;font-size:22px;line-height:1.3;font-weight:700;color:#ffffff\">' + esc(titel) + '</div>' + plakette + '</td></tr>'\n    + '<tr><td style=\"padding:24px 26px 12px 26px;font-size:15px;line-height:1.6;color:#1f2937\">' + abschnitte.join('') + '</td></tr>'\n    + '<tr><td style=\"padding:14px 26px;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:12px;line-height:1.6;color:#6b7280\">Automatisch gesendet von n8n am ' + esc(zeit) + ' Uhr<div style=\"color:#9ca3af\">' + ID_ZEILE + '</div></td></tr>'\n    + '</table></td></tr></table></body></html>';\n};\nconst e = $('Kurslinks in Entwurf einfügen').item.json;\nconst t = e.ticket;\nconst schnitt = e.entwurf.lastIndexOf('\\n\\nMit freundlichen Grüßen');\nconst antwort = (schnitt >= 0 ? e.entwurf.slice(0, schnitt) : e.entwurf).trim();\nlet alsNotiz = false;\ntry {\n  alsNotiz = $('Entwurf als interne Notiz speichern').isExecuted === true;\n} catch (fehler) {\n  alsNotiz = false;\n}\nconst entwurf = e.modus === 'entwurf' && !alsNotiz;\nconst art = entwurf ? 'Mail-Entwurf zur Freigabe in Zammad' : 'Interne Notiz in Zammad';\nconst link = 'https://ticket.emue365.de/#ticket/zoom/' + t.id;\nconst zeilen = [\n  'Die KI hat Ticket #' + t.number + ' beantwortet.',\n  '',\n  'Ticket: #' + t.number + ' ' + t.title,\n  'Link: ' + link,\n  'Ablage: ' + art,\n  'Antwort an: ' + (e.replyTo || 'unbekannt'),\n  '',\n  'Antwort der KI:',\n  '',\n  antwort,\n];\nif (e.hinweise.length > 0) {\n  zeilen.push('', 'Interne Hinweise:', ...e.hinweise.map((h) => '- ' + h));\n}\nconst abschnitte = [\n  felder([['Ticket', '#' + t.number], ['Antwort an', e.replyTo || 'unbekannt'], ['Ablage', art]]),\n  knopf('Ticket in Zammad öffnen', link, FARBEN.indigo),\n  box(absaetze(antwort), FARBEN.indigo, 'Antwort der KI'),\n];\nif (e.hinweise.length > 0) abschnitte.push(box(liste(e.hinweise), FARBEN.amber, 'Interne Hinweise'));\nconst html = layout({\n  label: 'Zammad · KI-Antwort',\n  farbe: FARBEN.indigo,\n  titel: 'Ticket #' + t.number + ': ' + t.title,\n  badge: entwurf ? 'Entwurf wartet auf Freigabe' : 'Interne Notiz',\n  vorschau: antwort.split('\\n')[0],\n  abschnitte,\n});\nreturn { json: { mailAn: MAIL_AN, mailVon: MAIL_VON, betreff: 'KI-Antwort zu Ticket #' + t.number + ': ' + t.title, text: mitId(zeilen.join('\\n')), html } };\n"
+      }
+    },
+    {
+      "id": "451b681c-4239-4e4f-8bcc-00feff37f373",
+      "name": "KI-Mail senden",
+      "webhookId": "3cfffa62-e07d-49db-b2e8-890a78d9a417",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "onError": "continueRegularOutput",
+      "position": [
+        14368,
+        1568
+      ],
+      "parameters": {
+        "fromEmail": "={{ $json.mailVon }}",
+        "toEmail": "={{ $json.mailAn }}",
+        "subject": "={{ $json.betreff }}",
+        "emailFormat": "both",
+        "text": "={{ $json.text }}",
+        "html": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "smtp": {
+          "id": "gQZtSwFzQoNoRn3S",
+          "name": "SMTP Netcup Automations"
+        }
+      }
+    },
+    {
+      "id": "a1c0de00-0001-4000-8000-0000000000e1",
+      "name": "Anhang nötig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        13120,
+        784
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e5e5e5e5-0007-4000-8000-000000000d01",
+              "leftValue": "={{ $('Kurslinks in Entwurf einfügen').item.json.anhaenge.length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a1c0de00-0001-4000-8000-0000000000e2",
+      "name": "Anhang laden",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "onError": "continueErrorOutput",
+      "position": [
+        12864,
+        320
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const e = $('Kurslinks in Entwurf einfügen').item.json;\nconst norm = (t) => String(t).toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z]/g, '');\nconst BEKANNT = [{ schluessel: 'selbsterklaerung', pfad: '/home/node/.n8n/anhaenge/Selbsterklaerung_zum_Gesundheitszustand.pdf', name: 'Selbsterklaerung_zum_Gesundheitszustand.pdf' }];\nconst treffer = BEKANNT.find((a) => e.anhaenge.some((h) => norm(h).includes(a.schluessel)));\nif (!treffer) throw new Error('Unbekannter Anhang: ' + e.anhaenge.join(', '));\nconst { execFileSync } = require('child_process');\nconst daten = execFileSync('cat', [treffer.pfad], { maxBuffer: 50 * 1024 * 1024 });\nconst binary = await this.helpers.prepareBinaryData(daten, treffer.name, 'application/pdf');\nreturn { json: { formId: 'n8n-' + require('crypto').randomUUID(), anhang: treffer.name }, binary: { File: binary } };"
+      }
+    },
+    {
+      "id": "a1c0de00-0001-4000-8000-0000000000e3",
+      "name": "Anhang hochladen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueErrorOutput",
+      "position": [
+        13376,
+        32
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://ticket.emue365.de/api/v1/upload_caches/' + $json.formId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "File",
+              "inputDataFieldName": "File"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DYSeqKzcJFVzUL04",
+          "name": "Zammad ticket.emue365 API-Token"
+        }
+      }
+    },
+    {
+      "id": "a1c0de00-0001-4000-8000-0000000000e4",
+      "name": "Anhang-Fehler-Push senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "position": [
+        13632,
+        336
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://ntfy.ntfy.svc.cluster.local/zammad",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "Anhang am KI-Entwurf fehlt"
+            },
+            {
+              "name": "Priority",
+              "value": "high"
+            },
+            {
+              "name": "Tags",
+              "value": "warning"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ (() => { let t = '?'; try { t = $('Antwortentwurf extrahieren').item.json.ticket.number; } catch (e) {} const f = $json.error ? ($json.error.message || JSON.stringify($json.error)) : 'unbekannter Fehler'; return 'Ticket #' + t + ': Anhang konnte nicht angehängt werden, bitte von Hand anhängen (' + String(f).slice(0, 300) + ')'; })() }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      }
+    },
+    {
+      "id": "1b806ed8-a7c3-4953-9880-fc58e9fb341e",
+      "name": "Time Saved",
+      "type": "n8n-nodes-base.timeSaved",
+      "typeVersion": 1,
+      "position": [
+        13040,
+        1216
+      ],
+      "parameters": {
+        "mode": "perItem",
+        "minutesSaved": 2
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ticket.emue365.de/api/v1/ticket_articles",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ ticket_id: $('Antwortentwurf extrahieren').item.json.ticket.id, type: 'note', sender: 'Agent', internal: true, content_type: 'text/html', body: $('Kurslinks in Entwurf einfügen').item.json.notizHtml.replace(/[„“”]/g, '\"').replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]/g, '') }) }}",
+        "options": {}
+      },
+      "id": "6fcb202d-78b4-4150-b5d2-48795db7b91e",
+      "name": "Entwurf als Artikel speichern (Rückfall)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        13040,
+        1632
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DYSeqKzcJFVzUL04",
+          "name": "Zammad ticket.emue365 API-Token"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ticket.emue365.de/api/v1/ticket_articles",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ ticket_id: $('Antwortentwurf extrahieren').item.json.ticket.id, type: 'note', sender: 'Agent', internal: true, content_type: 'text/html', body: $('Kurslinks in Entwurf einfügen').item.json.hinweiseHtml.replace(/[„“”]/g, '\"').replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]/g, '') }) }}",
+        "options": {}
+      },
+      "id": "36c66e1b-3380-450e-94d5-bd836c354675",
+      "name": "Interne Hinweise als Artikel speichern (Rückfall)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        14352,
+        1152
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DYSeqKzcJFVzUL04",
+          "name": "Zammad ticket.emue365 API-Token"
+        }
+      },
+      "onError": "continueErrorOutput"
     }
   ],
   "pinData": {},
@@ -677,25 +951,7 @@
       "main": [
         [
           {
-            "node": "Eigenes Ticket?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Eigenes Ticket?": {
-      "main": [
-        [
-          {
             "node": "Shared Draft prüfen",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Ollama erreichbar?",
             "type": "main",
             "index": 0
           }
@@ -721,8 +977,7 @@
             "type": "main",
             "index": 0
           }
-        ],
-        []
+        ]
       ]
     },
     "Ollama erreichbar?": {
@@ -780,7 +1035,7 @@
       "main": [
         [
           {
-            "node": "Kurslink-Hinweise vorhanden?",
+            "node": "Ollama-Fehler?",
             "type": "main",
             "index": 0
           }
@@ -820,25 +1075,7 @@
       "main": [
         [
           {
-            "node": "Als Mail-Entwurf ablegen?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Als Mail-Entwurf ablegen?": {
-      "main": [
-        [
-          {
-            "node": "Shared Draft speichern",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Entwurf als interne Notiz speichern",
+            "node": "Anhang nötig?",
             "type": "main",
             "index": 0
           }
@@ -849,7 +1086,7 @@
       "main": [
         [
           {
-            "node": "Wartete auf Erinnerung oder Schließen?",
+            "node": "Time Saved",
             "type": "main",
             "index": 0
           }
@@ -867,7 +1104,14 @@
       "main": [
         [
           {
-            "node": "Wartete auf Erinnerung oder Schließen?",
+            "node": "Time Saved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Entwurf als Artikel speichern (Rückfall)",
             "type": "main",
             "index": 0
           }
@@ -885,7 +1129,7 @@
         ],
         [
           {
-            "node": "Freigabe-Push senden",
+            "node": "KI-Mail bauen",
             "type": "main",
             "index": 0
           }
@@ -896,7 +1140,14 @@
       "main": [
         [
           {
-            "node": "Freigabe-Push senden",
+            "node": "KI-Mail bauen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Interne Hinweise als Artikel speichern (Rückfall)",
             "type": "main",
             "index": 0
           }
@@ -942,15 +1193,181 @@
           }
         ]
       ]
+    },
+    "Ollama-Fehler?": {
+      "main": [
+        [
+          {
+            "node": "Fehler-Push senden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kurslink-Hinweise vorhanden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fehler-Push senden": {
+      "main": [
+        [
+          {
+            "node": "Abschluss (immer genau 1 Item)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KI-Mail bauen": {
+      "main": [
+        [
+          {
+            "node": "KI-Mail senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KI-Mail senden": {
+      "main": [
+        [
+          {
+            "node": "Freigabe-Push senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anhang nötig?": {
+      "main": [
+        [
+          {
+            "node": "Anhang laden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Shared Draft speichern",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anhang laden": {
+      "main": [
+        [
+          {
+            "node": "Anhang hochladen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Anhang-Fehler-Push senden",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Shared Draft speichern",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anhang hochladen": {
+      "main": [
+        [
+          {
+            "node": "Shared Draft speichern",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Anhang-Fehler-Push senden",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Shared Draft speichern",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Time Saved": {
+      "main": [
+        [
+          {
+            "node": "Wartete auf Erinnerung oder Schließen?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entwurf als Artikel speichern (Rückfall)": {
+      "main": [
+        [
+          {
+            "node": "Time Saved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fehler-Push senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Interne Hinweise als Artikel speichern (Rückfall)": {
+      "main": [
+        [
+          {
+            "node": "KI-Mail bauen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fehler-Push senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "availableInMCP": false
+    "availableInMCP": false,
+    "timeSavedMode": "dynamic",
+    "timezone": "Europe/Berlin",
+    "callerPolicy": "workflowsFromSameOwner",
+    "timeSavedPerExecution": 4
   },
-  "versionId": "1451005b-6568-47ba-be2e-7ff2cdb4733a",
+  "versionId": "b5f104d6-1a00-4790-9437-501db385c7e4",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "d3f71021076be8bdc8614296f3c7749ae0813e877410d7e61391b83252e612f7"

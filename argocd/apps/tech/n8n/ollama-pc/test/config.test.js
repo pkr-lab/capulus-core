@@ -27,7 +27,7 @@ test('OLLAMA_MANDANT wechselt Wissens- und Prompt-Verzeichnis', () => {
   assert.equal(c.mandant, 'pkr-service');
   assert.equal(path.basename(c.knowledgeDir), 'pkr-service');
   assert.equal(path.basename(path.dirname(c.systemPromptFile)), 'pkr-service');
-  assert.equal(path.basename(path.dirname(c.signatureFile)), 'pkr-service');
+  assert.equal(path.basename(path.dirname(c.instagramSystemPromptFile)), 'pkr-service');
 });
 
 test('OLLAMA_KNOWLEDGE_DIR überschreibt das Mandanten-Verzeichnis', () => {

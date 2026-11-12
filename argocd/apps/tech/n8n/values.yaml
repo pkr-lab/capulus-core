@@ -42,6 +42,10 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
+    - host: n8n-tech.pkr-lab.de
+      paths:
+        - path: /
+          pathType: Prefix
   tls: []
 
 persistence:
@@ -52,17 +56,21 @@ persistence:
   mountPath: /home/node/.n8n
 
 env:
-  N8N_HOST: "n8n.prod.homeserver"
+  N8N_HOST: "n8n-tech.pkr-lab.de"
   N8N_PORT: "5678"
   N8N_PROTOCOL: "http"
-  N8N_EDITOR_BASE_URL: "https://n8n.prod.homeserver"
-  WEBHOOK_URL: "https://n8n.prod.homeserver/"
+  N8N_EDITOR_BASE_URL: "https://n8n-tech.pkr-lab.de"
+  WEBHOOK_URL: "https://n8n-tech.pkr-lab.de/"
   N8N_SECURE_COOKIE: "true"
   TZ: Europe/Berlin
   DB_TYPE: sqlite
   NODES_EXCLUDE: "[]"
-  NODE_FUNCTION_ALLOW_BUILTIN: "child_process,crypto,tls"
+  NODE_FUNCTION_ALLOW_BUILTIN: "child_process,crypto,fs,tls"
+  NODE_EXTRA_CA_CERTS: "/etc/ssl/homeserver-ca/homeserver-root-ca.pem"
   N8N_RESTRICT_FILE_ACCESS_TO: "/data/xibosignage-inbox;/data/xibosignage-display;/data/instagram-bilder"
+  N8N_GRACEFUL_SHUTDOWN_TIMEOUT: "570"
+
+terminationGracePeriodSeconds: 600
 
 resources:
   requests:
@@ -106,7 +114,7 @@ ollamaPc:
     OLLAMA_URL: "http://192.168.178.66:11434"
     OLLAMA_MODEL: "gemma3:27b-it-q8_0"
     OLLAMA_NUM_CTX: "16384"
-    OLLAMA_TEMPERATURE: "0.6"
+    OLLAMA_TEMPERATURE: "0.3"
     OLLAMA_KEEP_ALIVE: "5m"
     OLLAMA_HEALTH_TIMEOUT_SECONDS: "3"
     OLLAMA_WAKE_MODE: "none"
@@ -115,7 +123,7 @@ ollamaPc:
     OLLAMA_REQUEST_TIMEOUT_SECONDS: "1200"
     OLLAMA_PROMPTS_DIR: "/opt/ollama-pc/prompts"
     OLLAMA_KNOWLEDGE_DIR: "/opt/ollama-pc/knowledge"
-    OLLAMA_KNOWLEDGE_WARN_RATIO: "0.4"
+    OLLAMA_KNOWLEDGE_WARN_RATIO: "0.5"
     OLLAMA_KURSLINKS_FILE: "/opt/ollama-pc/knowledge-refs/kurslinks.json"
 
 xibosignage:
@@ -132,8 +140,12 @@ xibosignage:
 
 instagram:
   enabled: true
-  publicHost: instagram-bilder-prod.pke-lab.de
+  publicHost: instagram-bilder-prod.pkr-lab.de
   publicPath: /webhook/instagram-bild
   bilder:
     mountPath: /data/instagram-bilder
     sizeLimit: 512Mi
+  # Webhook für Instagram-Direktnachrichten (Workflow instagram-dm-antworten). Gleicher Host wie die Bild-URL.
+  dm:
+    enabled: true
+    publicPath: /webhook/instagram-dm

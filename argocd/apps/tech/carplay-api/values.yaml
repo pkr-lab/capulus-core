@@ -4,7 +4,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/pkr-lab/carplay-api
-  tag: "sha-c756f56"
+  tag: "sha-fd5a3d9"
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
@@ -29,6 +29,8 @@ ingress:
   className: traefik
   annotations: {}
   host: carplay-api.prod.homeserver
+  additionalHosts:
+    - carplay-api-tech.pkr-lab.de
 
 serviceAccount:
   create: true
@@ -94,8 +96,8 @@ config:
     - id: homeserver
       name: "Homeserver"
       instance: "192.168.178.94:9100"
-    - id: worker-0
-      name: "Worker 0"
+    - id: controlplane-1
+      name: "ControlPlane-1"
       instance: "192.168.178.95:9100"
     - id: worker-1
       name: "Worker 1"
