@@ -269,7 +269,7 @@
     runbook: pkr-lab-docs:capulus-core/e-externe-erreichbarkeit/e0010-cloudflare-deploy.md#credentials-rotieren
     overlap: true
   owner: peter
-  blast_radius: "Kontrolle ueber den Cloudflare-Tunnel homeserver (TECH), damit alle unter *.pke-lab.de erreichbaren TECH-Dienste."
+  blast_radius: "Kontrolle ueber den Cloudflare-Tunnel homeserver (TECH), damit alle unter *.pkr-lab.de erreichbaren TECH-Dienste."
 
 - id: cloudflared-tunnel-prod
   service: cloudflare
@@ -504,7 +504,7 @@
     - capulus-ansible:group_vars/all.yml
     - capulus-ansible:group_vars/banana_pis.yml
     - capulus-ansible:group_vars/xibo_displays.yml
-    - capulus-ansible:host_vars/worker-0/vars.yml
+    - capulus-ansible:host_vars/controlplane-1/vars.yml
     - capulus-ansible:host_vars/worker-1/vars.yml
   issued: null
   expires: null
@@ -515,8 +515,8 @@
     overlap: true
   owner: peter
   live_check: tailscale-device
-  live_check_ref: worker-0
-  blast_radius: "Kann neue Geraete dem Tailnet hinzufuegen (Ansible-Rolle tailscale). Live ueberwacht stellvertretend am Knoten worker-0 (Anlass: stiller Ablauf 20030). Ziel: Ablösung durch einen getaggten OAuth-Client (siehe Rotation-Regel 1)."
+  live_check_ref: controlplane-1
+  blast_radius: "Kann neue Geraete dem Tailnet hinzufuegen (Ansible-Rolle tailscale). Live ueberwacht stellvertretend am Knoten controlplane-1 (Anlass: stiller Ablauf 20030). Ziel: Ablösung durch einen getaggten OAuth-Client (siehe Rotation-Regel 1)."
 
 - id: tailscale-ci-federated-identity
   service: tailscale
@@ -735,6 +735,36 @@
   owner: peter
   blast_radius: "Repository-Passwort der verschluesselten n8n-Sicherung (restic auf dem NAS-Volume). Wer es und das Volume hat, liest Datenbank, Credentials-Schluessel (config) und WhatsApp-Session. Nicht routinemaessig wechseln: ein Wechsel macht alle bisherigen Snapshots unlesbar, ausser sie werden per restic key passwd umgeschluesselt. Zusaetzlich im Passwortmanager ablegen."
 
+- id: uptime-kuma-restic-password
+  service: uptime-kuma
+  kind: password
+  stored_in:
+    - argocd/apps/tech/uptime-kuma/templates/restic-sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: 3650
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/2-betrieb-hardware/20010-nas-backup.md#restic-für-uptime-kuma-im-cluster
+    overlap: false
+  owner: peter
+  blast_radius: "Repository-Passwort der verschluesselten Uptime-Kuma-Sicherung (restic auf dem NAS-Volume). Nicht routinemaessig wechseln: ein Wechsel macht alle bisherigen Snapshots unlesbar, ausser sie werden per restic key passwd umgeschluesselt. Zusaetzlich im Passwortmanager ablegen."
+
+- id: zammad-restic-password
+  service: zammad
+  kind: password
+  stored_in:
+    - argocd/apps/tech/zammad/templates/restic-sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: 3650
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/2-betrieb-hardware/20010-nas-backup.md#restic-für-zammad-im-cluster
+    overlap: false
+  owner: peter
+  blast_radius: "Repository-Passwort der verschluesselten Zammad-Sicherung (restic auf dem NAS-Volume). Nicht routinemaessig wechseln: ein Wechsel macht alle bisherigen Snapshots unlesbar, ausser sie werden per restic key passwd umgeschluesselt. Zusaetzlich im Passwortmanager ablegen."
+
 - id: n8n-github-status-schalter
   service: n8n
   kind: api-token
@@ -756,6 +786,45 @@
   stored_in:
     - argocd/apps/tech/ticket-gate/templates/sealedsecret.yaml
   issued: "2026-10-30"
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: scripted
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300r0-ticket-gate.md#rotation
+    overlap: false
+  owner: peter
+  blast_radius: "Schluessel fuer Codes, Sessions und Verifikations-Token. Bei Rotation werden offene Sessions und Codes ungueltig."
+
+- id: ticket-gate-smtp-password
+  service: ticket-gate
+  kind: password
+  stored_in:
+    - argocd/apps/tech/ticket-gate/templates/sealedsecret.yaml
+  issued: "2026-10-30"
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300r0-ticket-gate.md#rotation
+    overlap: false
+  owner: peter
+  blast_radius: "Mailkonto info@edv-kretzer.de bei netcup (Versand der Bestaetigungscodes)."
+
+- id: ticket-gate-zammad-token
+  service: ticket-gate
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/ticket-gate/templates/sealedsecret.yaml
+  issued: "2026-10-30"
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300r0-ticket-gate.md#rotation
+    overlap: true
+  owner: peter
+  blast_radius: "Zammad-API mit Agent-Rechten: kann Tickets anlegen und lesen."
+
 - id: mdm-postgres-passwords
   service: mdm
   kind: password
@@ -783,17 +852,6 @@
   max_age_days: 365
   rotation:
     mode: scripted
-    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300r0-ticket-gate.md#rotation
-    overlap: false
-  owner: peter
-  blast_radius: "Schluessel fuer Codes, Sessions und Verifikations-Token. Bei Rotation werden offene Sessions und Codes ungueltig."
-
-- id: ticket-gate-smtp-password
-  service: ticket-gate
-  kind: password
-  stored_in:
-    - argocd/apps/tech/ticket-gate/templates/sealedsecret.yaml
-  issued: "2026-10-30"
     runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300v0-mdm-betrieb.md#api-schlüssel-rotieren
     overlap: false
   owner: peter
@@ -810,25 +868,6 @@
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300r0-ticket-gate.md#rotation
-    overlap: false
-  owner: peter
-  blast_radius: "Mailkonto info@edv-kretzer.de bei netcup (Versand der Bestaetigungscodes)."
-
-- id: ticket-gate-zammad-token
-  service: ticket-gate
-  kind: api-token
-  stored_in:
-    - argocd/apps/tech/ticket-gate/templates/sealedsecret.yaml
-  issued: "2026-10-30"
-  expires: null
-  max_age_days: 365
-  rotation:
-    mode: manual
-    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300r0-ticket-gate.md#rotation
-    overlap: true
-  owner: peter
-  blast_radius: "Zammad-API mit Agent-Rechten: kann Tickets anlegen und lesen."
     runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300v0-mdm-betrieb.md#scep-challenge-rotieren
     overlap: false
   owner: peter

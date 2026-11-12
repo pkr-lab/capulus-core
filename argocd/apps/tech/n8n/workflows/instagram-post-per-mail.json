@@ -25,15 +25,15 @@
       ],
       "credentials": {
         "imap": {
-          "id": "INSTAGRAM_IMAP_CREDENTIAL_ID",
-          "name": "Instagram Postfach (IMAP)"
+          "id": "pWlRjzswA4IeR0IW",
+          "name": "Netcup Automation"
         }
       }
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const item = $input.first();\nreturn [{\n  json: {\n    ...item.json,\n    cfg: {\n      testModus: true,\n      ntfyFreigabe: false,\n      ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n      ntfyTopic: 'instagram',\n      graphUrl: 'https://graph.facebook.com/v23.0',\n      igUserId: 'CHANGE-ME-IG-USER-ID',\n      bildBasisUrl: 'https://instagram-bilder-prod.pke-lab.de/webhook/instagram-bild',\n      bildVerzeichnis: '/data/instagram-bilder',\n      sender: 'peter.kretzer@dlrg.org',\n      betreff: 'INSTAGRAM',\n      maxBilder: 10,\n      minVerhaeltnis: 0.8,\n      maxVerhaeltnis: 1.91,\n      maxCaptionZeichen: 2200,\n      maxHashtags: 30,\n      maxErwaehnungen: 20\n    }\n  },\n  binary: item.binary\n}];\n"
+        "jsCode": "const item = $input.first();\nreturn [{\n  json: {\n    ...item.json,\n    cfg: {\n      testModus: true,\n      ntfyFreigabe: false,\n      ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n      ntfyTopic: 'instagram',\n      graphUrl: 'https://graph.facebook.com/v23.0',\n      igUserId: 'CHANGE-ME-IG-USER-ID',\n      bildBasisUrl: 'https://instagram-bilder-prod.pkr-lab.de/webhook/instagram-bild',\n      bildVerzeichnis: '/data/instagram-bilder',\n      sender: 'peter.kretzer@dlrg.org',\n      betreff: 'INSTAGRAM',\n      maxBilder: 10,\n      minVerhaeltnis: 0.8,\n      maxVerhaeltnis: 1.91,\n      maxCaptionZeichen: 2200,\n      maxHashtags: 30,\n      maxErwaehnungen: 20\n    }\n  },\n  binary: item.binary\n}];\n"
       },
       "id": "53ff2547-519b-5b78-bbdb-076f84c0914c",
       "name": "Konfiguration",
@@ -1184,7 +1184,7 @@
     },
     {
       "parameters": {
-        "content": "## Instagram-Post per Mail: Schritte NACH DEM IMPORT\n\n0. **Postfach:** Ordner `Instagram` anlegen. Regel: Betreff enthält `INSTAGRAM` → Ordner `Instagram`. Der Betreff darf `1002011` nicht enthalten, sonst greift die ISC-News-Regel. **IMAP-Credential** dem Node **E-Mail empfangen** zuweisen. Der Node liest nur den Ordner `Instagram`, nur ungelesene Mails mit Betreff `INSTAGRAM` von `peter.kretzer@dlrg.org`.\n1. **Credential anlegen:** Typ *Header Auth*, Name `Instagram Graph API (Seiten-Token)`, Header `Authorization`, Wert `Bearer <Seiten-Zugriffstoken>` (nie ins Repo). Zuweisen an: **Bild-Container anlegen**, **Karussell-Container anlegen**, **Status abfragen**, **Veroeffentlichen**, **Permalink holen**.\n2. **Konfiguration** öffnen: `igUserId` (ID des Instagram-Kontos), `sender`, `betreff`. `testModus` bleibt `true`, bis der Probelauf gelungen ist. `ntfyFreigabe` = `true`: jeder Post wartet vorher auf einen Klick in ntfy.\n3. ntfy-Topic `instagram` in der App abonnieren.\n4. Workflow **aktivieren**. Ohne aktiven Workflow liefert der Bild-Zweig (unten) nichts aus, Meta kann die Bilder dann nicht abrufen.\n5. **Probelauf:** Testmail senden. Die ntfy-Meldung „Instagram Probelauf“ zeigt die Caption und bestätigt, dass die Bild-URL von außen erreichbar ist. Erst danach `testModus` auf `false`.\n\n**Mail:** Betreff `INSTAGRAM`. Anhang 1 ist eine JSON-Datei (Klartext oder Base64) mit `title`/`titel`, `subtitle`/`untertitel`, `text` (oder `html`), optional `caption` (ersetzt die Zusammensetzung aus Titel, Untertitel und Text) und `hashtags` (Liste oder Text). Weitere Felder (`categories`, `startDate`, `mode`) werden ignoriert. Alle Bilder (jpg, png, webp) sind weitere Anhänge, höchstens 10, Reihenfolge wie in der Mail. Ein Bild wird ein Einzelpost, mehrere ein Karussell. Alles wird als JPEG ausgeliefert, auf höchstens 1440 px verkleinert und bei Bedarf auf das erlaubte Seitenverhältnis (4:5 bis 1,91:1) zugeschnitten.\n",
+        "content": "## Instagram-Post per Mail: Schritte NACH DEM IMPORT\n\n0. **Postfach:** Ordner `Instagram` anlegen. Regel: Betreff enthält `INSTAGRAM` → Ordner `Instagram`. Der Betreff darf `1002011` nicht enthalten, sonst greift die ISC-News-Regel. Der Node **E-Mail empfangen** nutzt das IMAP-Credential `Netcup Automation`. Der Node liest nur den Ordner `Instagram`, nur ungelesene Mails mit Betreff `INSTAGRAM` von `peter.kretzer@dlrg.org`.\n1. **Credential anlegen:** Typ *Header Auth*, Name `Instagram Graph API (Seiten-Token)`, Header `Authorization`, Wert `Bearer <Seiten-Zugriffstoken>` (nie ins Repo). Zuweisen an: **Bild-Container anlegen**, **Karussell-Container anlegen**, **Status abfragen**, **Veroeffentlichen**, **Permalink holen**.\n2. **Konfiguration** öffnen: `igUserId` (ID des Instagram-Kontos), `sender`, `betreff`. `testModus` bleibt `true`, bis der Probelauf gelungen ist. `ntfyFreigabe` = `true`: jeder Post wartet vorher auf einen Klick in ntfy.\n3. ntfy-Topic `instagram` in der App abonnieren.\n4. Workflow **aktivieren**. Ohne aktiven Workflow liefert der Bild-Zweig (unten) nichts aus, Meta kann die Bilder dann nicht abrufen.\n5. **Probelauf:** Testmail senden. Die ntfy-Meldung „Instagram Probelauf“ zeigt die Caption und bestätigt, dass die Bild-URL von außen erreichbar ist. Erst danach `testModus` auf `false`.\n\n**Mail:** Betreff `INSTAGRAM`. Anhang 1 ist eine JSON-Datei (Klartext oder Base64) mit `title`/`titel`, `subtitle`/`untertitel`, `text` (oder `html`), optional `caption` (ersetzt die Zusammensetzung aus Titel, Untertitel und Text) und `hashtags` (Liste oder Text). Weitere Felder (`categories`, `startDate`, `mode`) werden ignoriert. Alle Bilder (jpg, png, webp) sind weitere Anhänge, höchstens 10, Reihenfolge wie in der Mail. Ein Bild wird ein Einzelpost, mehrere ein Karussell. Alles wird als JPEG ausgeliefert, auf höchstens 1440 px verkleinert und bei Bedarf auf das erlaubte Seitenverhältnis (4:5 bis 1,91:1) zugeschnitten.\n",
         "height": 540,
         "width": 620,
         "color": 4
@@ -1200,7 +1200,7 @@
     },
     {
       "parameters": {
-        "content": "## Bild-Auslieferung\n\nDieser Zweig liefert die vorbereiteten JPEGs an Meta aus, denn Instagram holt jedes Bild per URL ab. Er ist die einzige öffentlich erreichbare Stelle von n8n: Host `instagram-bilder-prod.pke-lab.de`, nur der Pfad `/webhook/instagram-bild`. Die Dateien heißen `<Token>-<Nr>.jpg` mit einem 128-Bit-Zufallstoken und liegen nur kurz im Ordner `/data/instagram-bilder`. Aufräumen macht der Node **Bilder loeschen** am Ende jedes Laufs.",
+        "content": "## Bild-Auslieferung\n\nDieser Zweig liefert die vorbereiteten JPEGs an Meta aus, denn Instagram holt jedes Bild per URL ab. Er ist die einzige öffentlich erreichbare Stelle von n8n: Host `instagram-bilder-prod.pkr-lab.de`, nur der Pfad `/webhook/instagram-bild`. Die Dateien heißen `<Token>-<Nr>.jpg` mit einem 128-Bit-Zufallstoken und liegen nur kurz im Ordner `/data/instagram-bilder`. Aufräumen macht der Node **Bilder loeschen** am Ende jedes Laufs.",
         "height": 200,
         "width": 620,
         "color": 5

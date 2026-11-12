@@ -90,7 +90,27 @@ tunnel:
 
   ingress:
     rules:
-      - hostname: "*.pke-lab.de"
+      - hostname: "nextcloud-prod.pkr-lab.de"
+        service: https://192.168.178.99:443
+        originRequest:
+          caPool: /etc/cloudflared/origin-ca.pem
+          originServerName: nextcloud.prod.homeserver
+      - hostname: "immich-prod.pkr-lab.de"
+        service: https://192.168.178.99:443
+        originRequest:
+          caPool: /etc/cloudflared/origin-ca.pem
+          originServerName: nextcloud.prod.homeserver
+      - hostname: "wiki-prod.pkr-lab.de"
+        service: https://192.168.178.99:443
+        originRequest:
+          caPool: /etc/cloudflared/origin-ca.pem
+          originServerName: nextcloud.prod.homeserver
+      - hostname: "xibo-prod.pkr-lab.de"
+        service: https://192.168.178.99:443
+        originRequest:
+          caPool: /etc/cloudflared/origin-ca.pem
+          originServerName: nextcloud.prod.homeserver
+      - hostname: "*.pkr-lab.de"
         service: https://traefik.kube-system.svc.cluster.local:443
         originRequest:
           caPool: /etc/cloudflared/origin-ca.pem
@@ -99,6 +119,18 @@ tunnel:
 
 nodeSelector: {}
 
-tolerations: []
+tolerations:
+  - key: capulus.homeserver/protected
+    operator: Exists
+    effect: PreferNoSchedule
 
-affinity: {}
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: cloudflared
+              app.kubernetes.io/instance: cloudflared

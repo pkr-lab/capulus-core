@@ -31,7 +31,7 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-    - host: alamos-relay-prod.pke-lab.de
+    - host: alamos-relay-prod.pkr-lab.de
       paths:
         - path: /
           pathType: Prefix
@@ -69,5 +69,17 @@ resources:
     memory: 64Mi
 
 nodeSelector: {}
-tolerations: []
-affinity: {}
+tolerations:
+  - key: capulus.homeserver/protected
+    operator: Exists
+    effect: PreferNoSchedule
+affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        preference:
+          matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - controlplane-1
