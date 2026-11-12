@@ -29,6 +29,8 @@ ingress:
   className: traefik
   annotations: {}
   host: carplay-api.prod.homeserver
+  additionalHosts:
+    - carplay-api-tech.pkr-lab.de
 
 serviceAccount:
   create: true

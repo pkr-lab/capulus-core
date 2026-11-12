@@ -352,7 +352,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://carplay-api.prod.homeserver/api/power/wake",
+        "url": "https://carplay-api-tech.pkr-lab.de/api/power/wake",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
