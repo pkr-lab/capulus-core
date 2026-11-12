@@ -4,7 +4,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/pkr-lab/ticket-gate
-  tag: "sha-3818eac"
+  tag: "sha-852d58c3"
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
