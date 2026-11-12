@@ -280,6 +280,10 @@ victoria-metrics-k8s-stack:
             relabelConfigs:
               - source_labels: [__meta_kubernetes_pod_node_name]
                 target_label: host
+              - source_labels: [host]
+                regex: homeserver
+                target_label: host
+                replacement: control-plane-0
               - target_label: kind
                 replacement: server
             metricRelabelConfigs:
@@ -323,7 +327,7 @@ victoria-metrics-k8s-stack:
 etcd:
   expectedMembers: 2
   targets:
-    - host: homeserver
+    - host: control-plane-0
       address: "192.168.178.94:2381"
     - host: controlplane-1
       address: "192.168.178.95:2381"
