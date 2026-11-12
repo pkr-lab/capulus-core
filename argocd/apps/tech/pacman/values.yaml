@@ -10,7 +10,7 @@ autoscaling:
 
 image:
   repository: ghcr.io/pkr-lab/pacman
-  tag: "sha-3f644c6"
+  tag: "sha-852d58c3"
   pullPolicy: IfNotPresent
 
 service:
