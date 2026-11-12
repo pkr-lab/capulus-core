@@ -46,7 +46,7 @@
         336
       ],
       "parameters": {
-        "jsCode": "const OWNER_ID = 5;\nconst AUSBILDUNG_GRUPPEN = [2];\n\nreturn $input.all().filter(({ json: ticket }) => {\n  const eigenes = ticket.owner_id === OWNER_ID && [1, 2, 3, 6].includes(ticket.state_id);\n  const ausbildung = [2, 3, 6].includes(ticket.state_id) && AUSBILDUNG_GRUPPEN.includes(ticket.group_id);\n  return eigenes || ausbildung;\n});"
+        "jsCode": "const OWNER_ID = 5;\nconst AUSBILDUNG_GRUPPEN = [2];\n\nreturn $input.all().filter(({ json: ticket }) => {\n  const eigenes = ticket.owner_id === OWNER_ID && [1, 2, 3, 6].includes(ticket.state_id);\n  const ausbildung = [1, 2, 3, 6].includes(ticket.state_id) && AUSBILDUNG_GRUPPEN.includes(ticket.group_id);\n  return eigenes || ausbildung;\n});"
       }
     },
     {
