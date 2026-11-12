@@ -28,15 +28,17 @@ seal() {
 }
 
 hmac_secret="${TICKET_GATE_HMAC_SECRET:-$(openssl rand -hex 32)}"
+smtp_user="$(read_value smtp_user)"
 smtp_password="$(read_value smtp_password)"
 zammad_token="$(read_value zammad_token)"
 
 hmac_sealed="$(seal "$hmac_secret")"
 smtp_sealed="$(seal "$smtp_password")"
+smtp_user_sealed="$(seal "$smtp_user")"
 zammad_sealed="$(seal "$zammad_token")"
 
 sed -i -E \
-  -e "/^secrets:\$/,/^[a-z]/{s|^(  enabled: ).*|\1true|;s|^(  encryptedHmacSecret: ).*|\1\"${hmac_sealed}\"|;s|^(  encryptedSmtpPassword: ).*|\1\"${smtp_sealed}\"|;s|^(  encryptedZammadToken: ).*|\1\"${zammad_sealed}\"|}" \
+  -e "/^secrets:\$/,/^[a-z]/{s|^(  enabled: ).*|\1true|;s|^(  encryptedHmacSecret: ).*|\1\"${hmac_sealed}\"|;s|^(  encryptedSmtpPassword: ).*|\1\"${smtp_sealed}\"|;s|^(  encryptedSmtpUsername: ).*|\1\"${smtp_user_sealed}\"|;s|^(  encryptedSmtpFrom: ).*|\1\"${smtp_user_sealed}\"|;s|^(  encryptedZammadToken: ).*|\1\"${zammad_sealed}\"|}" \
   "$values"
 
 echo "versiegelt: ${values#"$repo_root"/}"
