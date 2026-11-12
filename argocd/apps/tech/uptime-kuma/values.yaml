@@ -91,5 +91,8 @@ resources:
 affinity: {}
 
 nodeSelector:
-  kubernetes.io/hostname: homeserver
-tolerations: []
+  kubernetes.io/hostname: controlplane-1
+tolerations:
+  - key: capulus.homeserver/protected
+    operator: Exists
+    effect: PreferNoSchedule
