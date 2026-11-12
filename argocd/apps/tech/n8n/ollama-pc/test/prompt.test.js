@@ -74,8 +74,9 @@ test('Prompt-Dateien: Beispiele fließen in den Systemprompt, Platzhalter nicht'
   assert.deepEqual(ok.warnings, []);
 
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'prompts-'));
-  fs.writeFileSync(path.join(dir, 'email_system.md'), 'Du schreibst für [PLATZHALTER: Name].');
-  fs.writeFileSync(path.join(dir, 'email_examples.md'), '### Beispiel 1\n\n[PLATZHALTER: Mail]');
+  fs.mkdirSync(path.join(dir, 'dlrg'));
+  fs.writeFileSync(path.join(dir, 'dlrg', 'email_system.md'), 'Du schreibst für [PLATZHALTER: Name].');
+  fs.writeFileSync(path.join(dir, 'dlrg', 'email_examples.md'), '### Beispiel 1\n\n[PLATZHALTER: Mail]');
   const placeholders = loadPromptFiles(loadConfig({ OLLAMA_URL: 'http://x:1', OLLAMA_PROMPTS_DIR: dir, OLLAMA_KNOWLEDGE_DIR: '/nonexistent' }));
   fs.rmSync(dir, { recursive: true });
   assert.ok(!placeholders.system.includes('## Beispiel-Antworten'));
@@ -203,10 +204,10 @@ test('Wissen: Stellen, an denen ein Link ausgegeben werden muss, nennen die URL 
   const root = path.join(__dirname, '..');
   const lesen = (datei) => fs.readFileSync(path.join(root, datei), 'utf8');
   const bedingungen = 'https://andernach.dlrg.de/kurse-und-sicherheit/anmeldung/teilnahmebedingungen/';
-  assert.ok(lesen('knowledge/ausbildung/12_absage_krankheit_umbuchung.md').includes(`verlinken (${bedingungen})`));
-  assert.ok(lesen('knowledge/ausbildung/11_erwachsenenschwimmkurs.md').includes(bedingungen));
-  assert.ok(!/verlinken \(`\d{2}_/.test(lesen('knowledge/alle/00_hinweise_fuer_die_ki.md')));
-  for (const prompt of ['prompts/email_system.md', 'prompts/instagram_system.md']) {
+  assert.ok(lesen('knowledge/dlrg/ausbildung/12_absage_krankheit_umbuchung.md').includes(`verlinken (${bedingungen})`));
+  assert.ok(lesen('knowledge/dlrg/ausbildung/11_erwachsenenschwimmkurs.md').includes(bedingungen));
+  assert.ok(!/verlinken \(`\d{2}_/.test(lesen('knowledge/dlrg/alle/00_hinweise_fuer_die_ki.md')));
+  for (const prompt of ['prompts/dlrg/email_system.md', 'prompts/dlrg/instagram_system.md']) {
     assert.match(lesen(prompt), /## Keine Dateinamen/);
   }
 });

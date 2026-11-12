@@ -164,5 +164,6 @@
   "meta": {
     "description": "Formular, das eine Benachrichtigungsmail im Layout des Zammad-Laufs (zammad-tickets-verarbeiten, Nodes KI-Mail bauen und KI-Mail senden) an peter.kretzer@dlrg.org verschickt. Titel und Nachricht schreibt der Nutzer selbst, es gibt keinen KI-Aufruf und keinen Zammad-Zugriff. Empfänger, Absender und Kennung sind identisch."
   },
+  "id": "knjM5N1Gp5ZmFfLX",
   "tags": []
 }
