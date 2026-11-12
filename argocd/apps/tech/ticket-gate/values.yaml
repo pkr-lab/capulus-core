@@ -4,7 +4,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/pkr-lab/ticket-gate
-  tag: "sha-852d58c3"
+  tag: "sha-765051c0"
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
@@ -72,7 +72,7 @@ readinessProbe:
 config:
   PORT: "8080"
   LOG_LEVEL: info
-  ALLOWED_ORIGINS: "https://www.edv-kretzer.de,https://edv-kretzer.de,https://www.pkr-service.de,https://pkr-service.de"
+  ALLOWED_ORIGINS: "https://www.pkr-docs.de,https://pkr-docs.de"
   CLIENT_IP_HEADER: CF-Connecting-IP
   CODE_TTL_SECONDS: "600"
   TOKEN_TTL_SECONDS: "1800"

@@ -11,7 +11,7 @@ async function generateReply(config, input, { log = () => {}, ready } = {}) {
   const channel = channelOf(input);
   const prompts = loadPromptFiles(config, { profile: input && input.profile, channel });
   log(
-    `Firmenwissen (Profil ${(input && input.profile) || 'alle'}): ${prompts.knowledge.files.length} Datei(en), ca. ${prompts.knowledge.tokens} Token (${Math.round(prompts.knowledge.ratio * 100)}% von num_ctx ${config.numCtx})`,
+    `Firmenwissen (Mandant ${config.mandant}, Profil ${(input && input.profile) || 'alle'}): ${prompts.knowledge.files.length} Datei(en), ca. ${prompts.knowledge.tokens} Token (${Math.round(prompts.knowledge.ratio * 100)}% von num_ctx ${config.numCtx})`,
   );
   prompts.warnings.forEach((warning) => log(`Warnung: ${warning}`));
   buildMessages(prompts, input, config);
