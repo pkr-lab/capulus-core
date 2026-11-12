@@ -58,8 +58,8 @@
       },
       "credentials": {
         "zammadBasicAuthApi": {
-          "id": "0M2CPfsvNq5Xdzfc",
-          "name": "Zammad ticket.emue365"
+          "id": "phUAvB04RmbLalky",
+          "name": "Zammad EDV-Kretzer"
         }
       }
     },
@@ -87,8 +87,8 @@
       },
       "credentials": {
         "zammadBasicAuthApi": {
-          "id": "0M2CPfsvNq5Xdzfc",
-          "name": "Zammad ticket.emue365"
+          "id": "phUAvB04RmbLalky",
+          "name": "Zammad EDV-Kretzer"
         }
       }
     },
@@ -238,7 +238,7 @@
       "onError": "continueRegularOutput",
       "position": [2460, 80],
       "parameters": {
-        "command": "=printf %s '{{ $('LLM-Eingabe bauen').item.json.payloadB64 }}' | base64 -d | OLLAMA_MANDANT=dlrg node /opt/ollama-pc/cli.js chat"
+        "command": "=printf %s '{{ $('LLM-Eingabe bauen').item.json.payloadB64 }}' | base64 -d | OLLAMA_MANDANT=pkr-service node /opt/ollama-pc/cli.js chat"
       }
     },
     {
@@ -355,8 +355,8 @@
       },
       "credentials": {
         "zammadBasicAuthApi": {
-          "id": "0M2CPfsvNq5Xdzfc",
-          "name": "Zammad ticket.emue365"
+          "id": "phUAvB04RmbLalky",
+          "name": "Zammad EDV-Kretzer"
         }
       }
     },
@@ -408,8 +408,8 @@
       },
       "credentials": {
         "zammadBasicAuthApi": {
-          "id": "0M2CPfsvNq5Xdzfc",
-          "name": "Zammad ticket.emue365"
+          "id": "phUAvB04RmbLalky",
+          "name": "Zammad EDV-Kretzer"
         }
       }
     },
@@ -461,8 +461,8 @@
       },
       "credentials": {
         "zammadBasicAuthApi": {
-          "id": "0M2CPfsvNq5Xdzfc",
-          "name": "Zammad ticket.emue365"
+          "id": "phUAvB04RmbLalky",
+          "name": "Zammad EDV-Kretzer"
         }
       }
     },
