@@ -12,7 +12,7 @@ const { OllamaPcError } = require('../lib/errors');
 
 const budget = { numCtx: 8192, responseReserveTokens: 512, charsPerToken: 3 };
 const REAL_PROMPTS = path.join(__dirname, '..', 'prompts');
-const REAL_KNOWLEDGE = path.join(__dirname, '..', 'knowledge');
+const REAL_KNOWLEDGE = path.join(__dirname, '..', 'knowledge', 'dlrg');
 
 function realConfig() {
   return loadConfig({ OLLAMA_URL: 'http://x:1', OLLAMA_PROMPTS_DIR: REAL_PROMPTS, OLLAMA_KNOWLEDGE_DIR: REAL_KNOWLEDGE });
