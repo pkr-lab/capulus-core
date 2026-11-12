@@ -5,7 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 app="${1:-vaultwarden}"
 values="$repo_root/argocd/apps/tech/$app/values.yaml"
 
-[[ -f "$values" ]] || { echo "Fehler: $values nicht gefunden (Aufruf: $0 [vaultwarden|n8n])" >&2; exit 1; }
+[[ -f "$values" ]] || { echo "Fehler: $values nicht gefunden (Aufruf: $0 [vaultwarden|n8n|uptime-kuma|zammad])" >&2; exit 1; }
 
 command -v kubeseal >/dev/null || { echo "Fehler: kubeseal nicht gefunden" >&2; exit 1; }
 command -v openssl >/dev/null || { echo "Fehler: openssl nicht gefunden" >&2; exit 1; }

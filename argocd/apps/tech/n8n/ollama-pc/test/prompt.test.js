@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { loadPromptFiles, buildMessages, cleanReply, appendSignature } = require('../lib/prompt');
+const { loadPromptFiles, buildMessages, cleanReply, stripClosing } = require('../lib/prompt');
 const { loadConfig } = require('../lib/config');
 const { OllamaPcError } = require('../lib/errors');
 const { testConfig } = require('./helpers');
@@ -34,6 +34,13 @@ test('Verlauf bleibt chronologisch und die zu beantwortende Mail steht zuletzt',
   assert.ok(user.indexOf('E-Mail-Verlauf') < user.indexOf('Zu beantwortende E-Mail'));
   assert.ok(user.indexOf('Mail 0') < user.indexOf('Mail 2'));
   assert.ok(user.trim().endsWith('ohne Betreffzeile und ohne Erklärungen.'));
+});
+
+test('die Nutzer-Nachricht nennt das heutige Datum (Europe/Berlin)', () => {
+  const built = buildMessages(prompts, { mail: { text: 'Frage?' } }, { ...budget, now: new Date('2026-11-04T09:00:00Z') });
+  const user = built.messages[1].content;
+  assert.ok(user.startsWith('## Heutiges Datum\n\nMittwoch, 04.11.2026'));
+  assert.ok(user.indexOf('Heutiges Datum') < user.indexOf('Zu beantwortende E-Mail'));
 });
 
 test('zu langer Verlauf wird von den ältesten Mails her gekürzt und gemeldet', () => {
@@ -70,7 +77,6 @@ test('Prompt-Dateien: Beispiele fließen in den Systemprompt, Platzhalter nicht'
   fs.mkdirSync(path.join(dir, 'dlrg'));
   fs.writeFileSync(path.join(dir, 'dlrg', 'email_system.md'), 'Du schreibst für [PLATZHALTER: Name].');
   fs.writeFileSync(path.join(dir, 'dlrg', 'email_examples.md'), '### Beispiel 1\n\n[PLATZHALTER: Mail]');
-  fs.writeFileSync(path.join(dir, 'dlrg', 'email_signatur.md'), 'Gruß');
   const placeholders = loadPromptFiles(loadConfig({ OLLAMA_URL: 'http://x:1', OLLAMA_PROMPTS_DIR: dir, OLLAMA_KNOWLEDGE_DIR: '/nonexistent' }));
   fs.rmSync(dir, { recursive: true });
   assert.ok(!placeholders.system.includes('## Beispiel-Antworten'));
@@ -146,16 +152,11 @@ test('fehlender Wissensordner ist kein Fehler', () => {
   assert.ok(!prompts.system.includes('firmenwissen'));
 });
 
-test('appendSignature hängt die Signatur an und ersetzt eine vom Modell geschriebene Grußformel', () => {
-  const signature = 'Mit freundlichen Grüßen\n\nVerein';
-  assert.equal(appendSignature('Hallo!\n\nText.', signature), `Hallo!\n\nText.\n\n${signature}`);
-  assert.equal(appendSignature('Hallo!\n\nText.\n\nViele Grüße\nMax', signature), `Hallo!\n\nText.\n\n${signature}`);
-  assert.equal(appendSignature('Hallo!\n\nMit freundlichen Grüßen,\n\nDLRG OG', signature), `Hallo!\n\n${signature}`);
-  assert.equal(appendSignature('Viele Grüße an alle Kinder sind schön.', signature), `Viele Grüße an alle Kinder sind schön.\n\n${signature}`);
-});
-
-test('fehlende Signatur-Datei ist ein Fehler', () => {
-  assert.throws(() => loadPromptFiles(testConfig({ signatureFile: '/nonexistent/signatur.md' })), { code: 'SIGNATURE_MISSING' });
+test('stripClosing entfernt eine vom Modell geschriebene Grußformel', () => {
+  assert.equal(stripClosing('Hallo!\n\nText.'), 'Hallo!\n\nText.');
+  assert.equal(stripClosing('Hallo!\n\nText.\n\nViele Grüße\nMax'), 'Hallo!\n\nText.');
+  assert.equal(stripClosing('Hallo!\n\nMit freundlichen Grüßen,\n\nDLRG OG'), 'Hallo!');
+  assert.equal(stripClosing('Viele Grüße an alle Kinder sind schön.'), 'Viele Grüße an alle Kinder sind schön.');
 });
 
 test('Wissensprofil: Gruppe "alle" plus gewähltes Profil, andere Profile bleiben draußen', () => {
@@ -197,4 +198,16 @@ test('Wissensprofil: Größenwarnung zählt nur das gewählte Profil', () => {
   const config = testConfig({ knowledgeDir: dir });
   assert.ok(loadPromptFiles(config, { profile: 'ausbildung' }).knowledge.ratio > 0.4);
   assert.ok(loadPromptFiles(config, { profile: 'psg' }).knowledge.ratio < 0.4);
+});
+
+test('Wissen: Stellen, an denen ein Link ausgegeben werden muss, nennen die URL statt eines Dateinamens', () => {
+  const root = path.join(__dirname, '..');
+  const lesen = (datei) => fs.readFileSync(path.join(root, datei), 'utf8');
+  const bedingungen = 'https://andernach.dlrg.de/kurse-und-sicherheit/anmeldung/teilnahmebedingungen/';
+  assert.ok(lesen('knowledge/dlrg/ausbildung/12_absage_krankheit_umbuchung.md').includes(`verlinken (${bedingungen})`));
+  assert.ok(lesen('knowledge/dlrg/ausbildung/11_erwachsenenschwimmkurs.md').includes(bedingungen));
+  assert.ok(!/verlinken \(`\d{2}_/.test(lesen('knowledge/dlrg/alle/00_hinweise_fuer_die_ki.md')));
+  for (const prompt of ['prompts/dlrg/email_system.md', 'prompts/dlrg/instagram_system.md']) {
+    assert.match(lesen(prompt), /## Keine Dateinamen/);
+  }
 });

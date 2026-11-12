@@ -1,0 +1,31 @@
+{{- if and .Values.resticBackup.enabled .Values.resticBackup.encryptedPassword -}}
+apiVersion: capulus.homeserver/v1alpha1
+kind: Backup
+metadata:
+  name: {{ include "uptime-kuma.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "uptime-kuma.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.resticBackup.schedule | quote }}
+  timeZone: {{ .Values.resticBackup.timezone | quote }}
+  repository:
+    pvcName: {{ include "uptime-kuma.fullname" . }}-restic
+    passwordSecretRef:
+      name: {{ .Values.resticBackup.secretName }}
+      key: password
+  sources:
+    - name: data
+      type: SQLite
+      pvcName: {{ include "uptime-kuma.fullname" . }}-data
+      sqlite:
+        file: kuma.db
+  retention:
+    keepDaily: {{ .Values.resticBackup.keepDaily }}
+    keepWeekly: {{ .Values.resticBackup.keepWeekly }}
+    keepMonthly: {{ .Values.resticBackup.keepMonthly }}
+  failedJobsHistoryLimit: {{ .Values.resticBackup.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.resticBackup.successfulJobsHistoryLimit }}
+  resources:
+    {{- toYaml .Values.resticBackup.resources | nindent 4 }}
+{{- end }}

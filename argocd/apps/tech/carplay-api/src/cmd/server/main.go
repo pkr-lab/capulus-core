@@ -228,7 +228,7 @@ func loadConfig() config {
 		vmURL: getEnv("VM_URL", "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428"),
 		hosts: parseHosts(getEnv("HOSTS",
 			"homeserver|Homeserver|192.168.178.94:9100,"+
-				"worker-0|Worker 0|192.168.178.95:9100,"+
+				"controlplane-1|ControlPlane-1|192.168.178.95:9100,"+
 				"worker-1|Worker 1|192.168.178.96:9100,"+
 				"nas|NAS|192.168.178.97:9100",
 		)),

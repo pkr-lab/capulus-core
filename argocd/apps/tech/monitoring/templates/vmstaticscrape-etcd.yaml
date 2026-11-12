@@ -1,0 +1,18 @@
+{{- range .Values.etcd.targets }}
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMStaticScrape
+metadata:
+  name: etcd-{{ .host }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  jobName: k3s-etcd
+  targetEndpoints:
+    - targets:
+        - "{{ .address }}"
+      labels:
+        job: k3s-etcd
+        instance: {{ .host }}
+        host: {{ .host }}
+        kind: server
+{{- end }}

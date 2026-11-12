@@ -96,7 +96,7 @@ test('generateReply: lädt das Modell vor dem Chat und nutzt stream=false, num_c
   assert.equal(chatCalls[1].body.model, 'gemma3:27b-it-q8_0');
   assert.deepEqual(chatCalls[1].body.options, { num_ctx: 16384, temperature: 0.6 });
   assert.equal(chatCalls[1].body.messages[0].role, 'system');
-  assert.equal(result.reply, 'Hallo!\n\nMit freundlichen Grüßen\n\nTest-Verein');
+  assert.equal(result.reply, 'Hallo!');
   assert.equal(result.stats.tokens_per_second, 20);
   assert.equal(result.stats.prompt_eval_duration_ms, 1000);
 });
