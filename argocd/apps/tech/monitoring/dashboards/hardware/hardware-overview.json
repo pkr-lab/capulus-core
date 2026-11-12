@@ -948,7 +948,7 @@
       "type": "prometheus",
       "uid": "${datasource}"
      },
-     "expr": "max by (host,kind) (node_hwmon_temp_celsius{host!=\"\"})",
+     "expr": "max by (host,kind) (node_hwmon_temp_celsius{host!=\"\"}) or max by (host,kind) (node_thermal_zone_temp{host!=\"\"})",
      "legendFormat": "",
      "refId": "H",
      "instant": true,
@@ -1267,7 +1267,7 @@
       "type": "prometheus",
       "uid": "${datasource}"
      },
-     "expr": "max by (host) (node_hwmon_temp_celsius{host!=\"\"})",
+     "expr": "max by (host) (node_hwmon_temp_celsius{host!=\"\"}) or max by (host) (node_thermal_zone_temp{host!=\"\"})",
      "legendFormat": "{{host}}",
      "refId": "A"
     }
