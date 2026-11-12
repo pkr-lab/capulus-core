@@ -27,7 +27,7 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-    - host: pacman-prod.pke-lab.de
+    - host: pacman-prod.pkr-lab.de
       paths:
         - path: /
           pathType: Prefix
