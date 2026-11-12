@@ -288,7 +288,7 @@
         "resource": "ticket",
         "title": "={{ $('Meldungen bestimmen').all()[$itemIndex].json.title }}",
         "group": "Support / Administration",
-        "customer": "=info@edv-kretzer.de",
+        "customer": "=info@pkr-service.de",
         "article": {
           "articleDetails": {
             "subject": "={{ $('Meldungen bestimmen').all()[$itemIndex].json.title }}",

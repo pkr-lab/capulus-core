@@ -390,7 +390,7 @@
     runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300a0-vaultwarden.md
     overlap: true
   owner: peter
-  blast_radius: "SMTP-Zugang, den Vaultwarden fuer Einladungs- und Benachrichtigungsmails nutzt."
+  blast_radius: "SMTP-Zugang (Mailkonto info@pkr-service.de bei netcup), den Vaultwarden fuer Einladungs- und Benachrichtigungsmails nutzt. Benutzername und Absender liegen im selben SealedSecret."
 
 - id: zammad-internal-passwords
   service: zammad
@@ -808,7 +808,7 @@
     runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300r0-ticket-gate.md#rotation
     overlap: false
   owner: peter
-  blast_radius: "Mailkonto info@edv-kretzer.de bei netcup (Versand der Bestaetigungscodes)."
+  blast_radius: "Mailkonto info@pkr-service.de bei netcup (Versand der Bestaetigungscodes). Benutzername und Absender liegen im selben SealedSecret."
 
 - id: ticket-gate-zammad-token
   service: ticket-gate
