@@ -136,7 +136,7 @@ xibosignage:
 
 instagram:
   enabled: true
-  publicHost: instagram-bilder-prod.pke-lab.de
+  publicHost: instagram-bilder-prod.pkr-lab.de
   publicPath: /webhook/instagram-bild
   bilder:
     mountPath: /data/instagram-bilder

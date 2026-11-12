@@ -90,7 +90,7 @@ tunnel:
 
   ingress:
     rules:
-      - hostname: "*.pke-lab.de"
+      - hostname: "*.pkr-lab.de"
         service: https://traefik.kube-system.svc.cluster.local:443
         originRequest:
           caPool: /etc/cloudflared/origin-ca.pem

@@ -1,5 +1,5 @@
 ---
-publicHost: mdm-prod.pke-lab.de
+publicHost: mdm-prod.pkr-lab.de
 internalHost: mdm.prod.homeserver
 timezone: Europe/Berlin
 

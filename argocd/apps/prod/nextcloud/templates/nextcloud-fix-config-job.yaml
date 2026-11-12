@@ -22,7 +22,7 @@
 #
 # Zweck 2: overwritehost/overwriteprotocol/overwrite.cli.url erzwingen,
 # dass Nextcloud alle generierten URLs (insbesondere Freigabe-/Share-Links)
-# mit dem öffentlich erreichbaren `nextcloud-prod.pke-lab.de` statt dem
+# mit dem öffentlich erreichbaren `nextcloud-prod.pkr-lab.de` statt dem
 # jeweils aktuellen Request-Host bildet. Ohne diese drei Keys übernimmt der
 # URL-Generator den Host, über den gerade zugegriffen wurde — meldet man
 # sich also intern über `nextcloud.prod.homeserver` an und erzeugt dort

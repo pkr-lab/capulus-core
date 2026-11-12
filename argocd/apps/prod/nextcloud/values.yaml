@@ -45,17 +45,17 @@ nextcloud:
         paths:
           - path: /
             pathType: Prefix
-      - host: nextcloud-prod.pke-lab.de
+      - host: nextcloud-prod.pkr-lab.de
         paths:
           - path: /
             pathType: Prefix
     tls: []
 
-  trustedDomains: "nextcloud.prod.homeserver nextcloud-prod.pke-lab.de"
+  trustedDomains: "nextcloud.prod.homeserver nextcloud-prod.pkr-lab.de"
 
   overwriteProtocol: "https"
-  overwriteHost: "nextcloud-prod.pke-lab.de"
-  overwriteCliUrl: "https://nextcloud-prod.pke-lab.de"
+  overwriteHost: "nextcloud-prod.pkr-lab.de"
+  overwriteCliUrl: "https://nextcloud-prod.pkr-lab.de"
 
   persistence:
     html:
