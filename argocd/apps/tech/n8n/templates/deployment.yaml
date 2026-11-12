@@ -115,11 +115,11 @@ spec:
               - key: {{ trimPrefix "ollama-pc/" $path | replace "/" "__" | quote }}
                 path: {{ trimPrefix "ollama-pc/" $path | quote }}
               {{- end }}
-              {{- range $path, $_ := .Files.Glob "ollama-pc/prompts/*.md" }}
+              {{- range $path, $_ := .Files.Glob "ollama-pc/prompts/**/*.md" }}
               - key: {{ trimPrefix "ollama-pc/" $path | replace "/" "__" | quote }}
                 path: {{ trimPrefix "ollama-pc/" $path | quote }}
               {{- end }}
-              {{- range $path, $_ := .Files.Glob "ollama-pc/knowledge/*/*.md" }}
+              {{- range $path, $_ := .Files.Glob "ollama-pc/knowledge/**/*.md" }}
               - key: {{ trimPrefix "ollama-pc/" $path | replace "/" "__" | quote }}
                 path: {{ trimPrefix "ollama-pc/" $path | quote }}
               {{- end }}
