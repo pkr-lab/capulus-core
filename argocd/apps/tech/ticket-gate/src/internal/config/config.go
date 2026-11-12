@@ -137,7 +137,7 @@ func Load(get func(string) string) (Config, error) {
 		Username: r.required("SMTP_USERNAME"),
 		Password: r.required("SMTP_PASSWORD"),
 		From:     r.required("SMTP_FROM"),
-		FromName: r.str("SMTP_FROM_NAME", "EDV-Kretzer"),
+		FromName: r.str("SMTP_FROM_NAME", "PKR-Service"),
 	}
 	if cfg.SMTP.Security != "tls" && cfg.SMTP.Security != "starttls" {
 		r.errs = append(r.errs, errors.New("SMTP_SECURITY muss tls oder starttls sein"))

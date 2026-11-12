@@ -52,6 +52,16 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.smtpSecret.secretName }}
                   key: smtp-password
+            - name: SMTP_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.smtpSecret.secretName }}
+                  key: smtp-username
+            - name: SMTP_FROM
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.smtpSecret.secretName }}
+                  key: smtp-username
             {{- end }}
           livenessProbe:
             httpGet:
