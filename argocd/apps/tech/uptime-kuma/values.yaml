@@ -46,8 +46,8 @@ ingressPublic:
   enabled: true
   host: status-prod.pkr-lab.de
   corsOrigins:
-    - https://www.pkr-service.de
-    - https://pkr-service.de
+    - https://www.pkr-docs.de
+    - https://pkr-docs.de
 
 ingressNative:
   enabled: true

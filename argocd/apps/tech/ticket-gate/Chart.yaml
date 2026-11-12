@@ -3,7 +3,7 @@ apiVersion: v2
 name: ticket-gate
 description: >
   Vorschaltdienst (Go, nur Standardbibliothek) für das Ticketformular von
-  www.pkr-service.de: bestätigt die E-Mail-Adresse per 6-stelligem Code und legt
+  www.pkr-docs.de: bestätigt die E-Mail-Adresse per 6-stelligem Code und legt
   das Ticket erst danach in Zammad an.
 type: application
 version: 0.1.0
