@@ -35,7 +35,7 @@ wikijs:
         paths:
           - path: /
             pathType: Prefix
-      - host: wiki-prod.pke-lab.de
+      - host: wiki-prod.pkr-lab.de
         paths:
           - path: /
             pathType: Prefix

@@ -99,7 +99,7 @@ cms:
         paths:
           - path: /
             pathType: Prefix
-      - host: xibo-prod.pke-lab.de
+      - host: xibo-prod.pkr-lab.de
         paths:
           - path: /
             pathType: Prefix

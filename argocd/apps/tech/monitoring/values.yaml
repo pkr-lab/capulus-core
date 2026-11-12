@@ -252,7 +252,7 @@ victoria-metrics-k8s-stack:
       pathType: Prefix
       hosts:
         - grafana.tech.homeserver
-        - grafana-tech.pke-lab.de
+        - grafana-tech.pkr-lab.de
       tls: []
 
     vmScrape:
@@ -260,8 +260,8 @@ victoria-metrics-k8s-stack:
 
     grafana.ini:
       server:
-        domain: grafana-tech.pke-lab.de
-        root_url: "https://grafana-tech.pke-lab.de"
+        domain: grafana-tech.pkr-lab.de
+        root_url: "https://grafana-tech.pkr-lab.de"
 
   prometheus-node-exporter:
     enabled: true

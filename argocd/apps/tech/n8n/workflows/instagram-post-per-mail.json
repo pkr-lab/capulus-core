@@ -33,7 +33,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const item = $input.first();\nreturn [{\n  json: {\n    ...item.json,\n    cfg: {\n      testModus: true,\n      ntfyFreigabe: false,\n      ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n      ntfyTopic: 'instagram',\n      graphUrl: 'https://graph.facebook.com/v23.0',\n      igUserId: 'CHANGE-ME-IG-USER-ID',\n      bildBasisUrl: 'https://instagram-bilder-prod.pke-lab.de/webhook/instagram-bild',\n      bildVerzeichnis: '/data/instagram-bilder',\n      sender: 'peter.kretzer@dlrg.org',\n      betreff: 'INSTAGRAM',\n      maxBilder: 10,\n      minVerhaeltnis: 0.8,\n      maxVerhaeltnis: 1.91,\n      maxCaptionZeichen: 2200,\n      maxHashtags: 30,\n      maxErwaehnungen: 20\n    }\n  },\n  binary: item.binary\n}];\n"
+        "jsCode": "const item = $input.first();\nreturn [{\n  json: {\n    ...item.json,\n    cfg: {\n      testModus: true,\n      ntfyFreigabe: false,\n      ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n      ntfyTopic: 'instagram',\n      graphUrl: 'https://graph.facebook.com/v23.0',\n      igUserId: 'CHANGE-ME-IG-USER-ID',\n      bildBasisUrl: 'https://instagram-bilder-prod.pkr-lab.de/webhook/instagram-bild',\n      bildVerzeichnis: '/data/instagram-bilder',\n      sender: 'peter.kretzer@dlrg.org',\n      betreff: 'INSTAGRAM',\n      maxBilder: 10,\n      minVerhaeltnis: 0.8,\n      maxVerhaeltnis: 1.91,\n      maxCaptionZeichen: 2200,\n      maxHashtags: 30,\n      maxErwaehnungen: 20\n    }\n  },\n  binary: item.binary\n}];\n"
       },
       "id": "53ff2547-519b-5b78-bbdb-076f84c0914c",
       "name": "Konfiguration",
@@ -1200,7 +1200,7 @@
     },
     {
       "parameters": {
-        "content": "## Bild-Auslieferung\n\nDieser Zweig liefert die vorbereiteten JPEGs an Meta aus, denn Instagram holt jedes Bild per URL ab. Er ist die einzige öffentlich erreichbare Stelle von n8n: Host `instagram-bilder-prod.pke-lab.de`, nur der Pfad `/webhook/instagram-bild`. Die Dateien heißen `<Token>-<Nr>.jpg` mit einem 128-Bit-Zufallstoken und liegen nur kurz im Ordner `/data/instagram-bilder`. Aufräumen macht der Node **Bilder loeschen** am Ende jedes Laufs.",
+        "content": "## Bild-Auslieferung\n\nDieser Zweig liefert die vorbereiteten JPEGs an Meta aus, denn Instagram holt jedes Bild per URL ab. Er ist die einzige öffentlich erreichbare Stelle von n8n: Host `instagram-bilder-prod.pkr-lab.de`, nur der Pfad `/webhook/instagram-bild`. Die Dateien heißen `<Token>-<Nr>.jpg` mit einem 128-Bit-Zufallstoken und liegen nur kurz im Ordner `/data/instagram-bilder`. Aufräumen macht der Node **Bilder loeschen** am Ende jedes Laufs.",
         "height": 200,
         "width": 620,
         "color": 5
