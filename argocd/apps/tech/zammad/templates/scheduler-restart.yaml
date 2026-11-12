@@ -1,0 +1,77 @@
+{{- if .Values.schedulerRestart.enabled -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Release.Name }}-scheduler-restart
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zammad-wrapper.labels" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Release.Name }}-scheduler-restart
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zammad-wrapper.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    resourceNames: ["{{ .Release.Name }}-scheduler"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Release.Name }}-scheduler-restart
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zammad-wrapper.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Release.Name }}-scheduler-restart
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}-scheduler-restart
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-scheduler-restart
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zammad-wrapper.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.schedulerRestart.schedule | quote }}
+  timeZone: {{ .Values.schedulerRestart.timezone | quote }}
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: {{ .Values.schedulerRestart.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.schedulerRestart.successfulJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      ttlSecondsAfterFinished: 86400
+      template:
+        spec:
+          serviceAccountName: {{ .Release.Name }}-scheduler-restart
+          restartPolicy: Never
+          containers:
+            - name: restart
+              image: {{ .Values.schedulerRestart.image | quote }}
+              command:
+                - kubectl
+                - rollout
+                - restart
+                - deployment/{{ .Release.Name }}-scheduler
+                - --namespace={{ .Release.Namespace }}
+              securityContext:
+                allowPrivilegeEscalation: false
+                runAsNonRoot: true
+                runAsUser: 1000
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                {{- toYaml .Values.schedulerRestart.resources | nindent 16 }}
+{{- end }}

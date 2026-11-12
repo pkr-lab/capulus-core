@@ -31,6 +31,20 @@ resticBackup:
     limits:
       memory: 512Mi
 
+schedulerRestart:
+  enabled: true
+  schedule: "30 4 * * 0"
+  timezone: "Europe/Berlin"
+  image: alpine/k8s:1.30.14
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 3
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
 formSperre:
   enabled: true
   hosts:
@@ -117,7 +131,7 @@ zammad:
           cpu: 50m
           memory: 256Mi
         limits:
-          memory: 1.5Gi
+          memory: 2.5Gi
 
     websocket:
       resources:
