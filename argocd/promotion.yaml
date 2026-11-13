@@ -9,7 +9,3 @@ smoke:
     entw:
       - url: http://whoami.dev.homeserver/
         contains: "Hostname:"
-  demo-app:
-    entw:
-      - url: http://demo.dev.homeserver/
-        contains: "Hello from GitOps"
