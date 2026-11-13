@@ -981,3 +981,18 @@
     overlap: false
   owner: peter
   blast_radius: "Repository-Passwort der verschluesselten Mattermost-Sicherung (restic auf dem NAS-Volume). Nicht routinemaessig wechseln: ein Wechsel macht alle bisherigen Snapshots unlesbar, ausser sie werden per restic key passwd umgeschluesselt. Zusaetzlich im Passwortmanager ablegen."
+
+- id: n8n-mattermost-news-webhook
+  service: n8n
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/n8n/templates/mattermost-sealedsecret.yaml
+  issued: "2026-11-13"
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/30070-n8n.md#mattermost-news-webhook
+    overlap: false
+  owner: peter
+  blast_radius: "Mattermost-Incoming-Webhook-URL (Team Capulus-Core, Channel News). Wer sie hat, kann als die Automationen in diesem Channel posten. Kein Lesezugriff auf Mattermost, nur Schreiben in diesen einen Channel."
