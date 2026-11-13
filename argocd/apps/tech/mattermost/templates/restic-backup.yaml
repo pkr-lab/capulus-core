@@ -1,0 +1,35 @@
+{{- if and .Values.resticBackup.enabled .Values.resticBackup.encryptedPassword -}}
+apiVersion: capulus.homeserver/v1alpha1
+kind: Backup
+metadata:
+  name: mattermost
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mattermost.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.resticBackup.schedule | quote }}
+  timeZone: {{ .Values.resticBackup.timezone | quote }}
+  repository:
+    pvcName: mattermost-restic
+    passwordSecretRef:
+      name: {{ .Values.resticBackup.secretName }}
+      key: password
+  sources:
+    - name: postgres
+      type: Postgres
+      postgres:
+        host: {{ .Values.resticBackup.postgres.host | quote }}
+        user: {{ .Values.resticBackup.postgres.user | quote }}
+        database: {{ .Values.resticBackup.postgres.database | quote }}
+        passwordSecretRef:
+          name: {{ .Values.secrets.name }}
+          key: postgresql-password
+  retention:
+    keepDaily: {{ .Values.resticBackup.keepDaily }}
+    keepWeekly: {{ .Values.resticBackup.keepWeekly }}
+    keepMonthly: {{ .Values.resticBackup.keepMonthly }}
+  failedJobsHistoryLimit: {{ .Values.resticBackup.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.resticBackup.successfulJobsHistoryLimit }}
+  resources:
+    {{- toYaml .Values.resticBackup.resources | nindent 4 }}
+{{- end }}
