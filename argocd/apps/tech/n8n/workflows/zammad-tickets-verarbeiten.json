@@ -695,7 +695,7 @@
         "url": "={{ $env.MATTERMOST_NEWS_WEBHOOK_URL }}",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ text: '#### ' + $json.betreff + '\n\n' + $json.text }) }}",
+        "jsonBody": "={{ JSON.stringify({ text: '#### ' + $json.betreff + '\\n\\n' + $json.text }) }}",
         "options": {}
       }
     },
