@@ -21,7 +21,6 @@ spec:
     - argo-workflows.tech.homeserver
     - argocd.tech.homeserver
     - carplay-api.prod.homeserver
-    - demo.prod.homeserver
     - grafana.tech.homeserver
     - headlamp.tech.homeserver
     - immich.prod.homeserver
