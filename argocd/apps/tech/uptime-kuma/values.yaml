@@ -34,7 +34,8 @@ service:
 ingress:
   enabled: true
   className: traefik
-  annotations: {}
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: "kube-system-redirect-https@kubernetescrd"
   hosts:
     - host: uptime-kuma.prod.homeserver
       paths:

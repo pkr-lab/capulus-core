@@ -27,7 +27,8 @@ service:
 ingress:
   enabled: true
   className: traefik
-  annotations: {}
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: "kube-system-redirect-https@kubernetescrd"
   host: carplay-api.prod.homeserver
   additionalHosts:
     - carplay-api-tech.pkr-lab.de

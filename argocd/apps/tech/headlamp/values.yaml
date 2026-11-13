@@ -5,7 +5,8 @@ headlamp:
   ingress:
     enabled: true
     ingressClassName: traefik
-    annotations: {}
+    annotations:
+      traefik.ingress.kubernetes.io/router.middlewares: "kube-system-redirect-https@kubernetescrd"
     hosts:
       - host: headlamp.tech.homeserver
         paths:
