@@ -950,3 +950,19 @@
     overlap: false
   owner: peter
   blast_radius: "DEP-Token und Schluesselpaar fuer Apple Business. Wer sie hat, kann Geraete des Kontos abfragen und Enrollment-Profile zuweisen. Laeuft nach einem Jahr ab; Verlaengerung ueber das n8n-Formular MDM Verlaengerung."
+
+- id: mattermost-db-password
+  service: mattermost
+  kind: password
+  stored_in:
+    - argocd/apps/tech/mattermost/templates/sealedsecret.yaml
+    - capulus-ansible:group_vars/all.yml
+  issued: "2026-11-13"
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/30080-mattermost.md#db-passwort-rotation
+    overlap: false
+  owner: peter
+  blast_radius: "Passwort des Postgres-Nutzers mattermost (eigene DB im mattermost-Namespace). Wer es hat, kann auf alle Mattermost-Nachrichten und -Dateien zugreifen. Gleicher Wert verschluesselt in capulus-ansible und als SealedSecret in diesem Repo."

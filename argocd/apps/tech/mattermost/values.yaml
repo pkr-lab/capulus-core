@@ -1,0 +1,112 @@
+---
+replicaCount: 1
+
+image:
+  repository: mattermost/mattermost-team-edition
+  pullPolicy: IfNotPresent
+  tag: "12.0.2@sha256:0e435f3397390c36797d0c09b6fcfd73841ebf89bb292d6c6e109082a21ad7b6"
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 2000
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 2000
+  runAsGroup: 2000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 8065
+  targetPort: 8065
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations: {}
+  hosts:
+    - host: mattermost.tech.homeserver
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: matter-tech.pkr-lab.de
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+persistence:
+  data:
+    enabled: true
+    storageClassName: local-path
+    size: 10Gi
+    accessMode: ReadWriteOnce
+  plugins:
+    enabled: true
+    storageClassName: local-path
+    size: 1Gi
+    accessMode: ReadWriteOnce
+
+secrets:
+  enabled: true
+  name: mattermost-secrets
+  encryptedDatasource: "AgBRQwYIMIP1vERIzuhnk8O/OyS8Aajyjeq1BQf3v7JjFuBVjuOv7qs2CD9a5aj8lwOSKZ1CprLMZmfD253iJXBYn49U5L80GdnLo2lfZjz/kJIkFDjm7lr8hQCNuy0G2HhTkwfhH3bEgaAIv7lrN+pi+cmGENb+aryH/YYh0OryxgGawA1swl6KdrgArsz8irE0ewxjuIhqpz725IXMSdsNF2plvAhcTlveUHY905cA3aXjKlZbxSzIlXBf1l1CzwR6fAFw3uDJyNLrZynIA6pRhbwAkAQZyMpj7AAcM8tpsD0Puugv7QAG2Thyx7m6c1fUEM2U9ZnJg90/dCiWSjtr1zKLCOBtmnAX6aqMzlSehbWABUhQjucdvoN5xvXl7Skzzp8H1anVL3D3DbeN8LyP6+xhWm9go/UHwf96+/3tDiJcdG0SvfaaEjYNeyFEDYiRlBg/kDgQ82Lr634RMWRjQ1NsDrZi3mko3Wy3rN8aEH8o3Sz1ghZIic5QCL3zjEfTiUeCxYZU04ZHroVzLCsElPk1PzthhjvbnQ4tbb2nOn9JshKAnk74lwE/RabwDJqXxTg32WLx3KuRSxV7vqoaap/IjCDjv/SddU86cVnXGnccTHF79qFQOtTbee/WxmedkynIQDvN58OL7vml71dGLE8gXELbUCn7qbBgNsEHXs7L48cS6Hlw07lM43dcBB4eAXKvlTt31a4hmLB9HQJZRnV/ZUK5ojMZrzMUTz9yhxhLETuuwO8+8wChb9V93Z91/9kxUVv4Co6tIf8vBPKWTla/otSBvGj+D56PX/s5OuU21gGXtoKFlw9KHoRSm8P6HOMnG8VZBuMc2Ju6mTOFXhs9/FfFw2qB0GmMgmRF"
+  encryptedPostgresPassword: "AgAL3b455X9Y4D9K9MughA2P2iXqxE/7b+/sXnct7EBOxYMnp4rjjrBqH+ZwOptAgHhtaVpWfJJMjR74mZdMi9YhEAWjINQCvrnimLZt8ilDL1TmGPfu7SN7YceJS8uXl7bAv6LYZsMRgWXwmsNgHEO+L4QGH5B0cYZWLy2+JIMV9pScvxm+Fcm3/23EEV9eBed+dhDyuWC4BrPRaptroblmJ5JmBMsJ6a7sSa7iRB2wlfod67Nwdt994YZ54SmZhgIg4+mkK6pz5Z4tcdNcLtsm2rPQ5o2qPwgpLTuSgKvV3XDsxvnug5i3y6vN9VFiPp+FzSR2LtopfNuGh6zzVaouZ1ASmHRAaT0ikJmhHr2qNh7rZzJlmgNgTQFwJBi7hh97QRtgKAMkdO4KWUaYLkTwnGFcXkocHbpPOXY2XIv945ok2OK4p/2BFEcR4BbEgZuoupf2XqOZLJGtBPKa8dzKLo560AMMPQFxRQFs9++o+cZeTBzNidDpHyjDgQYxQeCnC7OjP4XCIBJKKb1ibRTm8TG2QG4oE7a8pzwYg6oafBAxoQwKK2cJi65POUb1v3th+K5FZhx4zmpfoGyJ69NCVXfuTdJzOAZ7IfJ9ZJhCM5+NfDQjxLu1pP6OQ1wve4RjBsjd0IuoqJxeaQYr9qpSiK064r2xKDM3cogUVwfBusbFLPjYhrfj+djKIsQOhd30As/g31mMuns3BsHM7wvPQkY9EFoyjmBvTvmdNDmAig=="
+
+config:
+  MM_SERVICESETTINGS_SITEURL: "https://matter-tech.pkr-lab.de"
+  MM_SQLSETTINGS_DRIVERNAME: "postgres"
+  MM_LOGSETTINGS_ENABLECONSOLE: "true"
+  MM_LOGSETTINGS_CONSOLEJSON: "true"
+  MM_LOGSETTINGS_ENABLEFILE: "false"
+  MM_TEAMSETTINGS_ENABLEOPENSERVER: "false"
+  MM_TEAMSETTINGS_ENABLEUSERCREATION: "true"
+  MM_TEAMSETTINGS_MAXUSERSPERTEAM: "20"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+postgresql:
+  enabled: true
+  fullnameOverride: mattermost-postgresql
+  auth:
+    enablePostgresUser: false
+    username: mattermost
+    database: mattermost
+    existingSecret: mattermost-secrets
+    secretKeys:
+      userPasswordKey: postgresql-password
+  primary:
+    persistence:
+      enabled: true
+      storageClass: local-path
+      size: 10Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
