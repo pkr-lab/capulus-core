@@ -6,10 +6,8 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "uptime-kuma.labels" . | nindent 4 }}
-  {{- if .Values.ingressPublic.corsOrigins }}
   annotations:
-    traefik.ingress.kubernetes.io/router.middlewares: {{ .Release.Namespace }}-{{ include "uptime-kuma.fullname" . }}-cors@kubernetescrd
-  {{- end }}
+    traefik.ingress.kubernetes.io/router.middlewares: {{ if .Values.ingressPublic.corsOrigins }}{{ .Release.Namespace }}-{{ include "uptime-kuma.fullname" . }}-cors@kubernetescrd,{{ end }}kube-system-redirect-https@kubernetescrd
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   rules:
