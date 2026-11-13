@@ -18,10 +18,3 @@ spec:
         expose:
           default: false
         protocol: TCP
-      web:
-        http:
-          redirections:
-            entryPoint:
-              to: websecure
-              scheme: https
-              permanent: true

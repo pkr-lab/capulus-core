@@ -8,6 +8,8 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "semaphore.labels" . | nindent 4 }}
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: kube-system-redirect-https@kubernetescrd
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   rules:
