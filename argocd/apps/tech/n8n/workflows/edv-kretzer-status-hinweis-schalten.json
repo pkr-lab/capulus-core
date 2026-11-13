@@ -1,0 +1,315 @@
+{
+  "name": "EDV-Kretzer – Status-Hinweis schalten",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Status-Hinweis auf edv-kretzer.de",
+        "formDescription": "Schaltet den Banner auf der Website ein oder aus. Sichtbar nach ca. einer Minute.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Aktion",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Wartung einschalten"
+                  },
+                  {
+                    "option": "Störung einschalten"
+                  },
+                  {
+                    "option": "Hinweis einschalten"
+                  },
+                  {
+                    "option": "Ausschalten"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Bereiche",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Gesamter Cluster"
+                  },
+                  {
+                    "option": "Website"
+                  },
+                  {
+                    "option": "Nextcloud"
+                  },
+                  {
+                    "option": "Immich"
+                  },
+                  {
+                    "option": "Paperless-ngx"
+                  },
+                  {
+                    "option": "Wiki.js"
+                  },
+                  {
+                    "option": "Infotafel (Xibo)"
+                  },
+                  {
+                    "option": "Alarmmonitor"
+                  },
+                  {
+                    "option": "Telefon-Alarm"
+                  },
+                  {
+                    "option": "Vaultwarden"
+                  },
+                  {
+                    "option": "Zammad (Tickets)"
+                  },
+                  {
+                    "option": "n8n (Automatisierungen)"
+                  },
+                  {
+                    "option": "Monitoring"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Weitere Bereiche",
+              "placeholder": "z. B. Pi-hole, Grafana (mehrere mit Komma trennen)"
+            },
+            {
+              "fieldLabel": "Text",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "Dauer",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Offen"
+                  },
+                  {
+                    "option": "1 Stunde"
+                  },
+                  {
+                    "option": "4 Stunden"
+                  },
+                  {
+                    "option": "1 Tag"
+                  },
+                  {
+                    "option": "3 Tage"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c1b0a1d2-5e1f-4a57-9c10-0d6f2a7e5b01",
+      "name": "Formular",
+      "webhookId": "6f0d2c34-3b8a-4c8e-9b1f-7a5d9e2c4b10",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const f = $input.first().json;\nconst arten = { \"Wartung einschalten\": \"maintenance\", \"Störung einschalten\": \"incident\", \"Hinweis einschalten\": \"info\" };\nconst dauern = { \"1 Stunde\": 1, \"4 Stunden\": 4, \"1 Tag\": 24, \"3 Tage\": 72 };\nconst aktiv = f[\"Aktion\"] in arten;\nconst roh = f[\"Bereiche\"];\nconst gewaehlt = Array.isArray(roh) ? roh : String(roh || \"\").split(\",\");\nconst frei = String(f[\"Weitere Bereiche\"] || \"\").split(/[,;\\n]/);\nconst bereiche = [...new Set([...gewaehlt, ...frei].map((s) => s.trim().slice(0, 40)).filter(Boolean))].slice(0, 12).join(\", \");\nconst stunden = dauern[f[\"Dauer\"]];\nconst bis = aktiv && stunden ? new Date(Date.now() + stunden * 3600000).toISOString() : \"\";\nconst text = (f[\"Text\"] || \"\").trim() || \"Ich arbeite gerade am Server und an der Website, es kann zu Ausfällen kommen.\";\nreturn [{ json: { ref: \"main\", inputs: { aktiv: String(aktiv), art: arten[f[\"Aktion\"]] || \"maintenance\", titel: \"\", text, bis, bereiche } } }];"
+      },
+      "id": "c1b0a1d2-5e1f-4a57-9c10-0d6f2a7e5b02",
+      "name": "Eingaben aufbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.github.com/repos/pkr-lab/EDV-Kretzer/actions/workflows/status.yml/dispatches",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "c1b0a1d2-5e1f-4a57-9c10-0d6f2a7e5b03",
+      "name": "GitHub: Workflow starten",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        528,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "QZ8UkKhhVOr7IXax",
+          "name": "GitHub PAT (Status-Schalter)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Status-Hinweis schalten\nStartet den GitHub-Workflow Status-Hinweis im Repo EDV-Kretzer. Der Workflow schreibt data/status.json und deployt.\n\nBenötigt die Zugangsdaten GitHub PAT (Status-Schalter) mit der Berechtigung Actions: Read and write für das Repo pkr-lab/EDV-Kretzer.\n\nDie Bereiche stehen im Formular-Knoten und lassen sich dort ändern.\n\nZusätzlich geht eine Mail an peter.kretzer@dlrg.org (Credential SMTP an Status-Mail senden).",
+        "height": 220,
+        "width": 380
+      },
+      "id": "c1b0a1d2-5e1f-4a57-9c10-0d6f2a7e5b04",
+      "name": "Hinweise",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        16,
+        -288
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const MAIL_AN = 'peter.kretzer@dlrg.org';\nconst MAIL_VON = 'n8n@pkr-service.de';\nconst ID_ZEILE = 'ID-IT-xi8klGKdh8';\nconst SCHRIFT = \"-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif\";\nconst FARBEN = { rot: '#c8102e', amber: '#b45309', gruen: '#15803d', blau: '#1d4ed8', grau: '#475569', indigo: '#4338ca' };\nconst mitId = (text) => String(text).replace(/\\s+$/, '') + '\\n\\n' + ID_ZEILE;\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');\nconst verlinken = (s) => esc(s).replace(/(https?:\\/\\/[^\\s<]*[^\\s<.,;:!?)])/g, '<a href=\"$1\" style=\"color:#1d4ed8;text-decoration:underline\">$1</a>');\nconst absaetze = (text) => String(text).replace(/\\r\\n?/g, '\\n').split(/\\n{2,}/).filter((b) => b.trim()).map((b) => '<p style=\"margin:0 0 14px 0;line-height:1.6\">' + verlinken(b.trim()).replace(/\\n/g, '<br>') + '</p>').join('');\nconst felder = (zeilen) => '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;margin:0 0 18px 0;border:1px solid #e5e7eb\">' + zeilen.map(([k, v], i) => '<tr style=\"background:' + (i % 2 ? '#ffffff' : '#f9fafb') + '\"><td valign=\"top\" style=\"padding:9px 12px;width:34%;font-size:13px;color:#6b7280;border-bottom:1px solid #eef0f3\">' + esc(k) + '</td><td valign=\"top\" style=\"padding:9px 12px;font-size:14px;color:#111827;border-bottom:1px solid #eef0f3\">' + verlinken(v) + '</td></tr>').join('') + '</table>';\nconst box = (inhalt, farbe, titel) => '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 18px 0\"><tr><td style=\"border-left:4px solid ' + farbe + ';background:#f9fafb;padding:14px 16px\">' + (titel ? '<div style=\"font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:' + farbe + ';margin-bottom:8px\">' + esc(titel) + '</div>' : '') + inhalt + '</td></tr></table>';\nconst liste = (eintraege) => '<ul style=\"margin:0;padding:0 0 0 18px;line-height:1.6\">' + eintraege.map((e) => '<li style=\"margin:0 0 4px 0\">' + verlinken(e) + '</li>').join('') + '</ul>';\nconst knopf = (text, url, farbe) => '<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:4px 0 18px 0\"><tr><td style=\"background:' + farbe + ';border-radius:6px\"><a href=\"' + esc(url) + '\" style=\"display:inline-block;padding:11px 20px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none\">' + esc(text) + '</a></td></tr></table>';\nconst klein = (text) => '<p style=\"margin:6px 0 14px 0;font-size:13px;line-height:1.5;color:#6b7280\">' + verlinken(text).replace(/\\n/g, '<br>') + '</p>';\nconst datum = (iso, kurz) => {\n  const d = new Date(iso);\n  return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: kurz ? 'short' : 'medium' }) + ' Uhr';\n};\nconst layout = ({ label, farbe, titel, badge, vorschau, abschnitte }) => {\n  const zeit = new Date().toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: 'short' });\n  const plakette = badge ? '<div style=\"margin-top:12px\"><span style=\"display:inline-block;background:#ffffff;color:' + farbe + ';font-size:12px;font-weight:700;padding:4px 10px;border-radius:12px\">' + esc(badge) + '</span></div>' : '';\n  return '<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"color-scheme\" content=\"light\"><title>' + esc(titel) + '</title></head>'\n    + '<body style=\"margin:0;padding:0;background:#f3f4f6;font-family:' + SCHRIFT + '\">'\n    + '<div style=\"display:none;max-height:0;overflow:hidden;opacity:0;color:#f3f4f6\">' + esc(vorschau || titel) + '</div>'\n    + '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f3f4f6\"><tr><td align=\"center\" style=\"padding:24px 12px\">'\n    + '<table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"width:100%;max-width:600px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden\">'\n    + '<tr><td style=\"background:' + farbe + ';padding:22px 26px\"><div style=\"font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#ffffff;opacity:.9\">' + esc(label) + '</div>'\n    + '<div style=\"margin-top:6px;font-size:22px;line-height:1.3;font-weight:700;color:#ffffff\">' + esc(titel) + '</div>' + plakette + '</td></tr>'\n    + '<tr><td style=\"padding:24px 26px 12px 26px;font-size:15px;line-height:1.6;color:#1f2937\">' + abschnitte.join('') + '</td></tr>'\n    + '<tr><td style=\"padding:14px 26px;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:12px;line-height:1.6;color:#6b7280\">Automatisch gesendet von n8n am ' + esc(zeit) + ' Uhr<div style=\"color:#9ca3af\">' + ID_ZEILE + '</div></td></tr>'\n    + '</table></td></tr></table></body></html>';\n};\nconst f = $('Formular').first().json;\nconst i = $input.first().json.inputs;\nconst an = i.aktiv === 'true';\nconst bis = i.bis ? datum(i.bis, true) : 'offen';\nconst zeilen = an\n  ? [\n    'Der Status-Hinweis auf edv-kretzer.de wurde eingeschaltet.',\n    '',\n    'Aktion: ' + f['Aktion'],\n    'Bereiche: ' + (i.bereiche || '-'),\n    'Text: ' + i.text,\n    'Gültig bis: ' + bis,\n    '',\n    'Sichtbar nach ca. einer Minute.',\n  ]\n  : [\n    'Der Status-Hinweis auf edv-kretzer.de wurde ausgeschaltet.',\n    '',\n    'Sichtbar nach ca. einer Minute.',\n  ];\nconst farbe = !an ? FARBEN.gruen : i.art === 'incident' ? FARBEN.rot : i.art === 'info' ? FARBEN.blau : FARBEN.amber;\nconst abschnitte = an\n  ? [\n    felder([['Bereiche', i.bereiche || '-'], ['Gültig bis', bis]]),\n    box(absaetze(i.text), farbe, 'Text auf der Website'),\n    knopf('Website öffnen', 'https://edv-kretzer.de', farbe),\n    klein('Der Hinweis ist nach ca. einer Minute sichtbar.'),\n  ]\n  : [\n    absaetze('Der Status-Hinweis auf edv-kretzer.de wurde ausgeschaltet.'),\n    knopf('Website öffnen', 'https://edv-kretzer.de', farbe),\n    klein('Die Änderung ist nach ca. einer Minute sichtbar.'),\n  ];\nconst html = layout({\n  label: 'edv-kretzer.de · Status-Hinweis',\n  farbe,\n  titel: f['Aktion'],\n  badge: an ? 'Eingeschaltet' : 'Ausgeschaltet',\n  vorschau: an ? i.text : 'Status-Hinweis ausgeschaltet',\n  abschnitte,\n});\nreturn [{ json: { mailAn: MAIL_AN, mailVon: MAIL_VON, betreff: 'Status-Hinweis: ' + f['Aktion'] + (an && i.bereiche ? ' (' + i.bereiche + ')' : ''), text: mitId(zeilen.join('\\n')), html } }];\n"
+      },
+      "id": "dbf6034e-3697-4651-8fa7-cef0a169a7cd",
+      "name": "Status-Mail bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $json.mailVon }}",
+        "toEmail": "={{ $json.mailAn }}",
+        "subject": "={{ $json.betreff }}",
+        "emailFormat": "both",
+        "text": "={{ $json.text }}",
+        "html": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "0d27c91a-69f5-42a5-8248-ec34a5b9427e",
+      "name": "Status-Mail senden",
+      "webhookId": "a4d1e8e6-1042-4b15-be24-8e2e11d10565",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        784,
+        -160
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "gQZtSwFzQoNoRn3S",
+          "name": "SMTP Netcup Automations"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "7c9d3c1e-1f4b-4a2d-9b6a-5e7c0f3a8d2b",
+      "name": "Mattermost-News senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueErrorOutput",
+      "position": [
+        784,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MATTERMOST_NEWS_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: '#### ' + $json.betreff + '\n\n' + $json.text }) }}",
+        "options": {}
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Formular": {
+      "main": [
+        [
+          {
+            "node": "Eingaben aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingaben aufbereiten": {
+      "main": [
+        [
+          {
+            "node": "Status-Mail bauen",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GitHub: Workflow starten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status-Mail bauen": {
+      "main": [
+        [
+          {
+            "node": "Status-Mail senden",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Mattermost-News senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "Europe/Berlin",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "timeSavedPerExecution": 4
+  },
+  "versionId": "1b6c02a8-84f0-4a82-b15d-40ced0b5db4a",
+  "meta": {
+    "instanceId": "d3f71021076be8bdc8614296f3c7749ae0813e877410d7e61391b83252e612f7"
+  },
+  "nodeGroups": [],
+  "id": "bUws3jzKMQLMkgla",
+  "tags": []
+}
