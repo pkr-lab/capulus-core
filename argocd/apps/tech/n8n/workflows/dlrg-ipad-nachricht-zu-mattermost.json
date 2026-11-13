@@ -1,0 +1,211 @@
+{
+  "name": "DLRG: iPad-Gruppennachricht -> Mattermost",
+  "nodes": [
+    {
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Hinweise",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -280
+      ],
+      "parameters": {
+        "content": "## Vor dem Aktivieren\n\n1. **Mail aus Ordner matter** -> IMAP-Ordner `matter` im Postfach `Netcup Automation` existiert bereits, FROM-Filter steht auf `peter.kretzer@dlrg.org`.\n2. Die Daten stecken in einem JSON-**Anhang** der Mail, nicht im Body (der Body ist nur ein Platzhalter). `downloadAttachments` ist deshalb an.\n3. Channel-Mapping (Node **Nachricht aufbereiten**): Vorstandstisch, Kleines Becken, Großesbecken -> jeweils eigener Channel im Team DLRG-Andernach, Alle iPads -> Channel Allgemein (town-square).\n4. Mattermost-Bot (`n8n-bot`, Credential `Mattermost Bot (News)`) muss Mitglied aller drei Ziel-Channels sein (aktuell erfuellt).\n5. Workflow aktivieren (Import allein reicht nicht).",
+        "height": 260,
+        "width": 460
+      }
+    },
+    {
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Mail aus Ordner matter",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "mailbox": "matter",
+        "postProcessAction": "read",
+        "format": "simple",
+        "downloadAttachments": true,
+        "dataPropertyAttachmentsPrefixName": "attachment_",
+        "options": {
+          "customEmailConfig": "[\"UNSEEN\", [\"FROM\", \"peter.kretzer@dlrg.org\"]]",
+          "forceReconnect": 60,
+          "trackLastMessageId": true
+        }
+      },
+      "credentials": {
+        "imap": {
+          "id": "pWlRjzswA4IeR0IW",
+          "name": "Netcup Automation"
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "name": "Nachricht aufbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        0
+      ],
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Mail im IMAP-Ordner 'matter' (Postfach Netcup Automation). Der Body ist nur ein Platzhalter\n// ('no body neeeded'); die eigentlichen Daten stecken in einem JSON-Anhang, den ein externes\n// DLRG-Formular ('Gruppennachricht auf iPads') per Mail schickt:\n// { formular, antwortId, eingereichtAm, absender, ipadAuswahl, nachricht }\n// ipadAuswahl waehlt die iPad-Gruppe/den Ort -> wird hier auf den Mattermost-Channel im Team\n// DLRG-Andernach gemappt. 'Allgemein' bedeutet alle Gruppen und geht an alle drei Channels.\nconst CHANNEL_IDS = {\n  'vorstandstisch': 'oeh5bbsydjrq5dmcjpoqq1ws6c',\n  'kleines-becken': '1483rsfj5pn8ugg4r5quubr4zh',\n  'grosses-becken': '3nq3unnih3gftn3cqsd36inpco',\n  'town-square': 'ckbitwbfgfgu9yamydikr9jneh',\n};\nconst ZIEL_CHANNELS = {\n  'Vorstandstisch': ['vorstandstisch'],\n  'Kleines Becken': ['kleines-becken'],\n  'Großesbecken': ['grosses-becken'],\n  'Alle iPads': ['town-square'],\n};\n\nconst items = $input.all();\nconst out = [];\nfor (let i = 0; i < items.length; i++) {\n  const item = items[i];\n  const binary = item.binary || {};\n  const keys = Object.keys(binary);\n  const isJson = (key) => binary[key].mimeType === 'application/json' || /\\.json$/i.test(binary[key].fileName || '');\n  const jsonKey = keys.find(isJson);\n  if (!jsonKey) {\n    throw new Error('Kein JSON-Anhang in der Mail \"' + (item.json.subject || '(ohne Betreff)') + '\" gefunden.');\n  }\n\n  const jsonText = (await this.helpers.getBinaryDataBuffer(i, jsonKey)).toString('utf8').replace(/^\\uFEFF/, '').trim();\n  let daten;\n  try {\n    daten = JSON.parse(jsonText);\n  } catch (e) {\n    throw new Error('JSON-Anhang ist nicht lesbar: ' + e.message);\n  }\n\n  const { ipadAuswahl, nachricht, absender, eingereichtAm } = daten;\n  if (!ipadAuswahl || !nachricht) {\n    throw new Error('Pflichtfelder fehlen (ipadAuswahl/nachricht): ' + JSON.stringify(daten));\n  }\n\n  const ziele = ZIEL_CHANNELS[ipadAuswahl];\n  if (!ziele) {\n    throw new Error('Unbekannte ipadAuswahl \"' + ipadAuswahl + '\". Bekannt: ' + Object.keys(ZIEL_CHANNELS).join(', '));\n  }\n\n  const zeit = eingereichtAm\n    ? new Date(eingereichtAm).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: 'short' })\n    : '';\n  const text = '#### \\u{1F4F1} Nachricht an iPads \\u2013 ' + ipadAuswahl + '\\n\\n' + nachricht\n    + '\\n\\n_Absender: ' + (absender || 'unbekannt') + (zeit ? ' \\u00b7 eingereicht am ' + zeit + ' Uhr' : '') + '_';\n\n  for (const slug of ziele) {\n    out.push({ json: { channelId: CHANNEL_IDS[slug], channelSlug: slug, message: text, ipadAuswahl } });\n  }\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0004-4000-8000-000000000004",
+      "name": "An Mattermost senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        0
+      ],
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "http://mattermost.mattermost.svc.cluster.local:8065/api/v4/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel_id: $json.channelId, message: $json.message }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fu9GDp3BYYVp4L5i",
+          "name": "Mattermost Bot (News)"
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0005-4000-8000-000000000005",
+      "name": "Fehler-Text bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        220
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Wird ueber den Fehler-Ausgang von 'Nachricht aufbereiten' bzw. 'An Mattermost senden' erreicht.\n// Die Mail ist zu diesem Zeitpunkt im Postfach schon als gelesen markiert.\nconst first = $input.first().json;\nconst err = first && first.error;\nconst reason = (typeof err === 'string' ? err : err && (err.message || err.description)) || JSON.stringify(first);\nreturn [{ json: { body: 'Fehler beim Weiterleiten einer iPad-Gruppennachricht nach Mattermost: ' + reason\n  + '\\n\\nDie Mail ist im Postfach (Ordner matter) bereits als gelesen markiert.' } }];"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0006-4000-8000-000000000006",
+      "name": "Fehler-Push (ntfy)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        840,
+        220
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://ntfy.ntfy.svc.cluster.local/Home-Lab-MDM",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "iPad-Gruppennachricht -> Mattermost fehlgeschlagen"
+            },
+            {
+              "name": "Priority",
+              "value": "high"
+            },
+            {
+              "name": "Tags",
+              "value": "warning"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.body }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Mail aus Ordner matter": {
+      "main": [
+        [
+          {
+            "node": "Nachricht aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nachricht aufbereiten": {
+      "main": [
+        [
+          {
+            "node": "An Mattermost senden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fehler-Text bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "An Mattermost senden": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Fehler-Text bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fehler-Text bauen": {
+      "main": [
+        [
+          {
+            "node": "Fehler-Push (ntfy)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Neue Mail im IMAP-Ordner 'matter' (Postfach Netcup Automation, Credential 'Netcup Automation') -> Body ist nur ein Platzhalter ('no body neeeded'), die Daten stecken in einem JSON-Anhang eines DLRG-Formulars 'Gruppennachricht auf iPads' ({formular, antwortId, eingereichtAm, absender, ipadAuswahl, nachricht}). 'Nachricht aufbereiten' liest den JSON-Anhang (binary, erkannt per mimeType application/json oder Dateiendung .json) und mappt ipadAuswahl auf den Mattermost-Channel im Team DLRG-Andernach (Vorstandstisch/Kleines Becken/Großesbecken je eigener Channel, Alle iPads = Channel Allgemein/town-square) und baut den Text. 'An Mattermost senden' postet je Ziel-Channel ueber den Bot n8n-bot (Credential 'Mattermost Bot (News)', POST /api/v4/posts im Cluster). Schlaegt ein Schritt fehl, geht die Fehlermeldung per ntfy (Topic Home-Lab-MDM) raus; die Mail ist dann im Postfach bereits als gelesen markiert. NACH DEM IMPORT: (1) Bot-Mitgliedschaft in allen drei Ziel-Channels pruefen, (2) Workflow aktivieren."
+  },
+  "tags": []
+}
