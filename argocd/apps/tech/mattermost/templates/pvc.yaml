@@ -1,0 +1,37 @@
+{{- if .Values.persistence.data.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: Delete=false
+  name: {{ include "mattermost.fullname" . }}-data
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mattermost.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.data.accessMode }}
+  storageClassName: {{ .Values.persistence.data.storageClassName }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.data.size }}
+{{- end }}
+---
+{{- if .Values.persistence.plugins.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: Delete=false
+  name: {{ include "mattermost.fullname" . }}-plugins
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mattermost.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.plugins.accessMode }}
+  storageClassName: {{ .Values.persistence.plugins.storageClassName }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.plugins.size }}
+{{- end }}
