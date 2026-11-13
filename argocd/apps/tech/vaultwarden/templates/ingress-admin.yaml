@@ -7,7 +7,7 @@ metadata:
   labels:
     {{- include "vaultwarden.labels" . | nindent 4 }}
   annotations:
-    traefik.ingress.kubernetes.io/router.middlewares: {{ .Release.Namespace }}-{{ include "vaultwarden.fullname" . }}-admin-nur-intern@kubernetescrd,kube-system-redirect-https@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: {{ .Release.Namespace }}-{{ include "vaultwarden.fullname" . }}-admin-nur-intern@kubernetescrd
 spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}

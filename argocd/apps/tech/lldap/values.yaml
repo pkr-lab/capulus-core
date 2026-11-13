@@ -38,8 +38,7 @@ service:
 ingress:
   enabled: true
   className: traefik
-  annotations:
-    traefik.ingress.kubernetes.io/router.middlewares: "kube-system-redirect-https@kubernetescrd"
+  annotations: {}
   hosts:
     - host: lldap.tech.homeserver
       paths:

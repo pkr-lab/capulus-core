@@ -41,8 +41,7 @@ dnsService:
 ingress:
   enabled: true
   className: traefik
-  annotations:
-    traefik.ingress.kubernetes.io/router.middlewares: "kube-system-redirect-https@kubernetescrd"
+  annotations: {}
   hosts:
     - host: pihole.tech.homeserver
       paths:
