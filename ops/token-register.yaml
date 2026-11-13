@@ -966,3 +966,18 @@
     overlap: false
   owner: peter
   blast_radius: "Passwort des Postgres-Nutzers mattermost (eigene DB im mattermost-Namespace). Wer es hat, kann auf alle Mattermost-Nachrichten und -Dateien zugreifen. Gleicher Wert verschluesselt in capulus-ansible und als SealedSecret in diesem Repo."
+
+- id: mattermost-restic-password
+  service: mattermost
+  kind: password
+  stored_in:
+    - argocd/apps/tech/mattermost/templates/restic-sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: 3650
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/2-betrieb-hardware/20010-nas-backup.md#restic-für-mattermost-im-cluster
+    overlap: false
+  owner: peter
+  blast_radius: "Repository-Passwort der verschluesselten Mattermost-Sicherung (restic auf dem NAS-Volume). Nicht routinemaessig wechseln: ein Wechsel macht alle bisherigen Snapshots unlesbar, ausser sie werden per restic key passwd umgeschluesselt. Zusaetzlich im Passwortmanager ablegen."

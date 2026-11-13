@@ -105,3 +105,27 @@ postgres:
       memory: 128Mi
     limits:
       memory: 512Mi
+
+resticBackup:
+  enabled: true
+  secretName: mattermost-restic
+  encryptedPassword: "PLACEHOLDER-BITTE-MIT-SCRIPTS/SEAL-RESTIC-PASSWORD.SH-ERSETZEN"
+  schedule: "15 3 * * *"
+  timezone: "Europe/Berlin"
+  storageClassName: nas
+  size: 10Gi
+  postgres:
+    host: mattermost-postgresql
+    user: mattermost
+    database: mattermost
+  keepDaily: 7
+  keepWeekly: 4
+  keepMonthly: 6
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 3
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
