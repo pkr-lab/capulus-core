@@ -18,8 +18,6 @@ spec:
     - name: prod
       namespace: immich-storage
     - name: prod
-      namespace: demo-app
-    - name: prod
       namespace: cloudflared
     - name: prod
       namespace: paperless-ngx
