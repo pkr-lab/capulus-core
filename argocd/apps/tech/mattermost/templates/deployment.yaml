@@ -27,6 +27,36 @@ spec:
       serviceAccountName: {{ include "mattermost.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.boardsPlugin.enabled }}
+      initContainers:
+        - name: boards-plugin
+          image: "{{ .Values.boardsPlugin.image.repository }}:{{ .Values.boardsPlugin.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PLUGIN_VERSION
+              value: {{ .Values.boardsPlugin.version | quote }}
+            - name: PLUGIN_URL
+              value: {{ .Values.boardsPlugin.url | quote }}
+            - name: PLUGIN_SHA256
+              value: {{ .Values.boardsPlugin.sha256 | quote }}
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              VERSION_FILE=/plugins/boards/.installed-version
+              if [ -f "$VERSION_FILE" ] && [ "$(cat "$VERSION_FILE")" = "$PLUGIN_VERSION" ]; then
+                exit 0
+              fi
+              rm -rf /plugins/boards
+              wget -qO /tmp/boards.tar.gz "$PLUGIN_URL"
+              echo "$PLUGIN_SHA256  /tmp/boards.tar.gz" | sha256sum -c -
+              tar xzf /tmp/boards.tar.gz -C /plugins
+              echo "$PLUGIN_VERSION" > "$VERSION_FILE"
+          volumeMounts:
+            - name: plugins
+              mountPath: /plugins
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
