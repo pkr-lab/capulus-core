@@ -71,16 +71,6 @@ env:
   N8N_GRACEFUL_SHUTDOWN_TIMEOUT: "570"
   N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
 
-secrets:
-  enabled: true
-  name: n8n-mattermost
-  encryptedWebhookUrl: "AgC3Pxo+El6M9xEf5CkplY8/9LCa3X3TpGl+Ke5hSPwcO6vtpqCtHjDcDgmyDDbUOGrJBkoaLanpJ05AVyv7d0AZkcyicY1gVF1e7aJZklJtz4rQobma9VXEXd0ovhzHhRnyhFCo0A8t77qD+92cO7Wlk1aRSYlDYmmg0Yvqpv7b1+NLnM4nV9reFRjtyxlFsMWFGRKKD0d/TAdSCVRB0syzR4uVA46O2fpfZvaPjloZCQnx3vL/UnF0Z2+/EKLqJwSfJ3CVWMLjTsuxfrslrtp/LwqnGdxZ5MURk4Z8E184s+q77OzzOdtLQBxt7JcgZuT+ey5f2b4SzgkSGtRCVYg++Q6DWsHtCAP7cSMmelEsX9cW6IntcihGjB9m1bU5otbZA1OZoI6FmnDYek/2s1xJrCZxG9ZeiyMUoAQnolPCQCkuLGya1oB9jgQhPxuSLU3mDqxpRvnacOE2pb1o72BPhef6ddLhR933wdh435b32itODE2yzzugpe3rN3ydZJhhnbDg6vHHBGRL7tbm65ta48RdWjA4m9OtD+iJTrRSDK7OmmNWL6Zx99dCS0ZgD9OSVpEikFyWRbM+a0lLHSWeDTqJa5TAbEaB1mes1zdKP+QkHef4v2Y43AZJ/MPjF6tVcjC0lRUZERGz8llb+0qdU0MUUeXJI0e6gUDuwb37KcT8KETaTHUaEBgABXrBSr+EvboxJ+/yLNcV4Bpstp3qqcXhq3ssiL/YclqXCA+DpPyI/v+jbdCEWAlRliopO0oLcw0PagncFkKO1vn2vPI="
-
-secretEnv:
-  MATTERMOST_NEWS_WEBHOOK_URL:
-    secretName: n8n-mattermost
-    secretKey: webhook-url
-
 terminationGracePeriodSeconds: 600
 
 resources:
