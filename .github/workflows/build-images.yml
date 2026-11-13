@@ -4,10 +4,6 @@ on:
   push:
     branches: [main]
     paths:
-      - "argocd/apps/tech/pacman/Dockerfile"
-      - "argocd/apps/tech/pacman/server/**"
-      - "argocd/apps/tech/pacman/src/**"
-      - "argocd/apps/tech/pacman/.dockerignore"
       - "argocd/apps/tech/carplay-api/Dockerfile"
       - "argocd/apps/tech/carplay-api/src/**"
       - "argocd/apps/tech/carplay-api/.dockerignore"
@@ -31,10 +27,6 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "argocd/apps/tech/pacman/Dockerfile"
-      - "argocd/apps/tech/pacman/server/**"
-      - "argocd/apps/tech/pacman/src/**"
-      - "argocd/apps/tech/pacman/.dockerignore"
       - "argocd/apps/tech/carplay-api/Dockerfile"
       - "argocd/apps/tech/carplay-api/src/**"
       - "argocd/apps/tech/carplay-api/.dockerignore"
@@ -60,7 +52,7 @@ on:
       app:
         description: "App neu bauen (all = alle drei, z.B. nach einem reinen Base-Image-Update ohne Dateiänderung)"
         type: choice
-        options: [all, pacman, carplay-api, ticket-gate, n8n, isc-news-bot, alert-caller]
+        options: [all, carplay-api, ticket-gate, n8n, isc-news-bot, alert-caller]
         default: all
 
 permissions:
@@ -78,11 +70,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - app: pacman
-            path: argocd/apps/tech/pacman
-            values: argocd/apps/tech/pacman/values.yaml
-            dockerfile: argocd/apps/tech/pacman/Dockerfile
-            image: ghcr.io/pkr-lab/pacman
           - app: carplay-api
             path: argocd/apps/tech/carplay-api
             values: argocd/apps/tech/carplay-api/values.yaml
