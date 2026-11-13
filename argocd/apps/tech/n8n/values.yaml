@@ -122,7 +122,6 @@ ollamaPc:
     OLLAMA_PRELOAD_TIMEOUT_SECONDS: "900"
     OLLAMA_REQUEST_TIMEOUT_SECONDS: "1200"
     OLLAMA_PROMPTS_DIR: "/opt/ollama-pc/prompts"
-    OLLAMA_KNOWLEDGE_DIR: "/opt/ollama-pc/knowledge"
     OLLAMA_KNOWLEDGE_WARN_RATIO: "0.5"
     OLLAMA_KURSLINKS_FILE: "/opt/ollama-pc/knowledge-refs/kurslinks.json"
 
