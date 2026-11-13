@@ -8,7 +8,7 @@ metadata:
     {{- include "zammad-wrapper.labels" . | nindent 4 }}
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
-    traefik.ingress.kubernetes.io/router.middlewares: {{ .Release.Namespace }}-zammad-form-sperre@kubernetescrd,kube-system-redirect-https@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: {{ .Release.Namespace }}-zammad-form-sperre@kubernetescrd
 spec:
   ingressClassName: traefik
   rules:
