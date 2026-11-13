@@ -657,7 +657,7 @@
       "webhookId": "3cfffa62-e07d-49db-b2e8-890a78d9a417",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
-      "onError": "continueRegularOutput",
+      "onError": "continueErrorOutput",
       "position": [
         14368,
         1568
@@ -677,6 +677,51 @@
         "smtp": {
           "id": "gQZtSwFzQoNoRn3S",
           "name": "SMTP Netcup Automations"
+        }
+      }
+    },
+    {
+      "id": "f3a9c7d2-5e81-4b63-9a2f-7d1c8e4b6a90",
+      "name": "SMTP-Fehler-Push senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "position": [
+        14656,
+        1744
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://ntfy.ntfy.svc.cluster.local/zammad",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "KI-Mail-Versand fehlgeschlagen"
+            },
+            {
+              "name": "Priority",
+              "value": "high"
+            },
+            {
+              "name": "Tags",
+              "value": "warning"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ (() => { let t = '?'; try { t = $('Antwortentwurf extrahieren').item.json.ticket.number; } catch (e) {} const f = $json.error ? ($json.error.message || JSON.stringify($json.error)) : 'unbekannter Fehler'; return 'Ticket #' + t + ': Abschluss-Mail (KI-Antwort) konnte nicht gesendet werden (' + String(f).slice(0, 300) + '). Zammad-Entwurf/Notiz wurde trotzdem gespeichert.'; })() }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2YY5v6HVGvCihqij",
+          "name": "ntfy-publisher"
         }
       }
     },
@@ -1239,6 +1284,24 @@
         [
           {
             "node": "Freigabe-Push senden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SMTP-Fehler-Push senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SMTP-Fehler-Push senden": {
+      "main": [
+        [
+          {
+            "node": "Abschluss (immer genau 1 Item)",
             "type": "main",
             "index": 0
           }
