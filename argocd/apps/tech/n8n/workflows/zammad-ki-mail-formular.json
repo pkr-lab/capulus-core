@@ -103,6 +103,25 @@
       }
     },
     {
+      "id": "7800e307-1fd2-4bc4-abd1-88e62550f6a5",
+      "name": "Mattermost-News senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueErrorOutput",
+      "position": [
+        480,
+        360
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MATTERMOST_NEWS_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: '#### ' + $json.betreff + '\n\n' + $json.text }) }}",
+        "options": {}
+      }
+    },
+    {
       "id": "8172e154-12bd-4953-a9c7-511e1639da9c",
       "name": "Abschluss",
       "type": "n8n-nodes-base.form",
@@ -138,6 +157,11 @@
         [
           {
             "node": "Mail senden",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Mattermost-News senden",
             "type": "main",
             "index": 0
           }
