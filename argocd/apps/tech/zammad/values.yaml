@@ -62,7 +62,6 @@ zammad:
     replicas: 1
     annotations:
       traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
-      traefik.ingress.kubernetes.io/router.middlewares: kube-system-redirect-https@kubernetescrd
     hosts:
       - host: zammad.tech.homeserver
         paths:

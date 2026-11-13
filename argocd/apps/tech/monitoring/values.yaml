@@ -246,8 +246,7 @@ victoria-metrics-k8s-stack:
     ingress:
       enabled: true
       ingressClassName: traefik
-      annotations:
-        traefik.ingress.kubernetes.io/router.middlewares: "kube-system-redirect-https@kubernetescrd"
+      annotations: {}
       labels: {}
       path: /
       pathType: Prefix
