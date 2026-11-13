@@ -109,7 +109,7 @@ postgres:
 resticBackup:
   enabled: true
   secretName: mattermost-restic
-  encryptedPassword: "PLACEHOLDER-BITTE-MIT-SCRIPTS/SEAL-RESTIC-PASSWORD.SH-ERSETZEN"
+  encryptedPassword: "AgCx+YIedphqKcyAvCA1lpd8/xCGwCpACVQXp8Y5/H6k9G2een5Puio4j07vgnPS7pAD63XaXv4i7cwkt8bQNAxOPmldLwIbkpen6rQLMOUVLyEZPCBPJG/j2j490Hqo8XXcoIw8LaLRm3wjhB+K0Jc9K8PyVVY4uP2o3MGXxkrGEHZ3EEQxWmtZP+Qa5d73cREG8tRbkffoF8++d6v6jgWQSyWuUX//3THRgXnpcZNLZbuuOVQkQYS/DEmH+YR2HYoJFjh3QG0OGEBC9UORHNJeAhns8KDT4z1zN4zw/Dh2UVX0zGCudzEYlka84n5lB8M0h9JacOIzAk/716zCurP6jM5dByC5wxRQ25x3X+D5gKnObzGBTv1I4u4vMDOM1gJd3YLEihZqNDiPmdyd2UWuwNir0GYix9c42U4+3H6hNrByuFjbKeum9nB+CysYxat4/hkWwiGMe9/vqgtB7AdRn0n6rAvcmEvcNS25UM4Oykfit1KAZ8zhSvgFw2W1hybFDb5KZDLeZjmE5MtvIwq5ek2uHqfl+IZsrS+nFdS1peo0/4ZBP7XMqk5fZ/1hiGzPm3bks7+PG0Z4q8SqsAYwpdQ9mJRiMUpmSfrP+Q4+pUQBHAPWSKry9XzvKEUTuOhxP0ozg1KyTQtegtZoVmlKAB1Y4ZkY/l6irRZtcalUa4LQXCmN9sVClCtwrmh5QA+sPkhJuUFDIpUx9At1k3esfCo/to2ipvDl74Q27I3r7ZHi7Qd9EWABZu1tKlBjKAxTBeqi/KN+Q/+MHDUp6jLs"
   schedule: "15 3 * * *"
   timezone: "Europe/Berlin"
   storageClassName: nas
