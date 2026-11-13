@@ -22,7 +22,6 @@ spec:
     - immich.prod.homeserver
     - n8n.prod.homeserver
     - nextcloud.prod.homeserver
-    - pacman.prod.homeserver
     - paperless.prod.homeserver
     - stream.prod.homeserver
     - uptime-kuma-native.prod.homeserver

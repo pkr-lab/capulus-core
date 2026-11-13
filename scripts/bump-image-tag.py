@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Setzt `image.tag` in einer values.yaml auf einen neuen Wert (Kommentare/Format bleiben).
 
-Aufruf:  scripts/bump-image-tag.py argocd/apps/tech/pacman/values.yaml sha-1a2b3c4
+Aufruf:  scripts/bump-image-tag.py argocd/apps/tech/carplay-api/values.yaml sha-1a2b3c4
 
 Ausgabe: `<alt> -> <neu>` bzw. `unveraendert`. Exit-Code 0, wenn eine Aenderung geschrieben wurde,
 3, wenn der Tag schon stimmt, 1 bei Fehlern (z. B. kein/mehrere `image.tag`).
