@@ -18,7 +18,6 @@ spec:
     - alamos-apager.prod.homeserver
     - alamos-relay.prod.homeserver
     - carplay-api.prod.homeserver
-    - demo.prod.homeserver
     - immich.prod.homeserver
     - n8n.prod.homeserver
     - nextcloud.prod.homeserver
