@@ -16,8 +16,7 @@ kubeseal-webgui:
   ingress:
     enabled: true
     ingressClassName: traefik
-    annotations:
-      traefik.ingress.kubernetes.io/router.middlewares: "kube-system-redirect-https@kubernetescrd"
+    annotations: {}
     hostname: "kubeseal-webgui.tech.homeserver"
     tls:
       enabled: false
