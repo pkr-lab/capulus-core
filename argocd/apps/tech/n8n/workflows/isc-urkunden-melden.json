@@ -227,11 +227,19 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.MATTERMOST_NEWS_WEBHOOK_URL }}",
+        "url": "http://mattermost.mattermost.svc.cluster.local:8065/api/v4/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ text: '#### ' + $json.betreff + '\\n\\n' + $json.text }) }}",
+        "jsonBody": "={{ JSON.stringify({ channel_id: 'gh5k785kzjff3kzzjmeducw8mr', message: '#### ' + $json.betreff + '\\n\\n' + $json.text }) }}",
         "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fu9GDp3BYYVp4L5i",
+          "name": "Mattermost Bot (News)"
+        }
       }
     }
   ],
