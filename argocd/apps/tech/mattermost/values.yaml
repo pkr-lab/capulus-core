@@ -78,6 +78,16 @@ config:
   MM_TEAMSETTINGS_MAXUSERSPERTEAM: "20"
   MM_EMAILSETTINGS_SENDPUSHNOTIFICATIONS: "true"
   MM_EMAILSETTINGS_PUSHNOTIFICATIONSERVER: "https://push-test.mattermost.com"
+  MM_PLUGINSETTINGS_PLUGINSTATES: '{"focalboard":{"Enable":true}}'
+
+boardsPlugin:
+  enabled: true
+  version: "10.1.0"
+  url: "https://github.com/mattermost/mattermost-plugin-boards/releases/download/v10.1.0/mattermost-plugin-boards-v10.1.0.tar.gz"
+  sha256: "a9eeb367fe94640e3327228e493688d45ede182a250c0ece98dc912a171aa75f"
+  image:
+    repository: alpine
+    tag: "3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a"
 
 resources:
   requests:

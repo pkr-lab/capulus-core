@@ -69,6 +69,7 @@ env:
   NODE_EXTRA_CA_CERTS: "/etc/ssl/homeserver-ca/homeserver-root-ca.pem"
   N8N_RESTRICT_FILE_ACCESS_TO: "/data/xibosignage-inbox;/data/xibosignage-display;/data/instagram-bilder"
   N8N_GRACEFUL_SHUTDOWN_TIMEOUT: "570"
+  N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
 
 secrets:
   enabled: true
