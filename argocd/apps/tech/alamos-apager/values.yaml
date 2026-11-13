@@ -31,8 +31,7 @@ service:
 ingress:
   enabled: true
   className: traefik
-  annotations:
-    traefik.ingress.kubernetes.io/router.middlewares: "kube-system-redirect-https@kubernetescrd"
+  annotations: {}
   host: alamos-apager.prod.homeserver
 
 serviceAccount:
