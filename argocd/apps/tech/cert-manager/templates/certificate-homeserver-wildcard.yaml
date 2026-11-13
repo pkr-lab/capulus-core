@@ -32,7 +32,6 @@ spec:
     - n8n.prod.homeserver
     - nextcloud.prod.homeserver
     - ntfy.tech.homeserver
-    - pacman.prod.homeserver
     - paperless.prod.homeserver
     - pihole.tech.homeserver
     - semaphore-api.tech.homeserver

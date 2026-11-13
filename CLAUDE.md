@@ -42,7 +42,7 @@ provisioniert [capulus-ansible](https://github.com/pkr-lab/capulus-ansible), die
 | `scripts/` | Promotion, Doc-Link-Check, Token-Register-Check, Versiegel-Helfer (`reseal-for-prod.sh`, `seal-*.sh`), `bump-image-tag.py` |
 | `.github/workflows/` | `ci.yml` (Pflicht-Gate), `build-images.yml`, Promotion-/Sync-Workflows, Renovate, Release |
 
-Eigener Code mit Tests: `argocd/apps/tech/carplay-api/src` und `argocd/apps/tech/pacman/server` (Go),
+Eigener Code mit Tests: `argocd/apps/tech/carplay-api/src` (Go),
 `argocd/apps/tech/isc-news-bot` (TypeScript/Node, Playwright).
 
 ---
@@ -70,7 +70,6 @@ Die CI (`.github/workflows/ci.yml`) hat fünf Pflicht-Jobs. Lokal verfügbar sin
 
 ```bash
 pip install -q pyyaml && python3 scripts/check-token-register.py    # ops/token-register.yaml
-(cd argocd/apps/tech/pacman/server && go build ./... && go vet ./... && go test ./... && go mod tidy -diff)
 (cd argocd/apps/tech/carplay-api/src && go build ./... && go vet ./... && go test ./... && go mod tidy -diff)
 (cd argocd/apps/tech/isc-news-bot && npm ci && npm test)
 ```
