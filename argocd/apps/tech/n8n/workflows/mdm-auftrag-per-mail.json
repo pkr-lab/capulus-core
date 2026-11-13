@@ -1285,6 +1285,25 @@
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "id": "529065fc-7c79-4ab2-97bf-9356e9b9e1c6",
+      "name": "Mattermost-News senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueErrorOutput",
+      "position": [
+        8970,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MATTERMOST_NEWS_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: '#### ' + $json.betreff + '\n\n' + $json.text }) }}",
+        "options": {}
+      }
     }
   ],
   "pinData": {},
@@ -1808,6 +1827,11 @@
         [
           {
             "node": "Zusammenfassung-Mail senden",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Mattermost-News senden",
             "type": "main",
             "index": 0
           }
