@@ -483,6 +483,22 @@
       }
     },
     {
+      "id": "bb217826-55b3-43fb-842a-59e069d42e59",
+      "name": "Mattermost-News senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueErrorOutput",
+      "position": [4440, 160],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MATTERMOST_NEWS_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: '#### ' + $json.betreff + '\n\n' + $json.text }) }}",
+        "options": {}
+      }
+    },
+    {
       "id": "801f5341-0f5d-4b57-aceb-dea62f5b3dcb",
       "name": "Freigabe-Push senden",
       "type": "n8n-nodes-base.httpRequest",
@@ -660,7 +676,10 @@
     },
     "KI-Mail bauen": {
       "main": [
-        [{ "node": "KI-Mail senden", "type": "main", "index": 0 }]
+        [
+          { "node": "KI-Mail senden", "type": "main", "index": 0 },
+          { "node": "Mattermost-News senden", "type": "main", "index": 0 }
+        ]
       ]
     },
     "KI-Mail senden": {

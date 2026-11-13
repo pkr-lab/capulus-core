@@ -70,6 +70,16 @@ env:
   N8N_RESTRICT_FILE_ACCESS_TO: "/data/xibosignage-inbox;/data/xibosignage-display;/data/instagram-bilder"
   N8N_GRACEFUL_SHUTDOWN_TIMEOUT: "570"
 
+secrets:
+  enabled: true
+  name: n8n-mattermost
+  encryptedWebhookUrl: "PLACEHOLDER-BITTE-MIT-SCRIPTS/SEAL-N8N-MATTERMOST-WEBHOOK.SH-ERSETZEN"
+
+secretEnv:
+  MATTERMOST_NEWS_WEBHOOK_URL:
+    secretName: n8n-mattermost
+    secretKey: webhook-url
+
 terminationGracePeriodSeconds: 600
 
 resources:

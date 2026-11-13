@@ -681,6 +681,25 @@
       }
     },
     {
+      "id": "5fd00c17-768d-4e40-8b6e-cd6c3b485459",
+      "name": "Mattermost-News senden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueErrorOutput",
+      "position": [
+        14368,
+        1728
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MATTERMOST_NEWS_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: '#### ' + $json.betreff + '\n\n' + $json.text }) }}",
+        "options": {}
+      }
+    },
+    {
       "id": "f3a9c7d2-5e81-4b63-9a2f-7d1c8e4b6a90",
       "name": "SMTP-Fehler-Push senden",
       "type": "n8n-nodes-base.httpRequest",
@@ -1273,6 +1292,11 @@
         [
           {
             "node": "KI-Mail senden",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Mattermost-News senden",
             "type": "main",
             "index": 0
           }
