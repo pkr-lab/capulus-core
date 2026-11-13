@@ -1,7 +1,7 @@
 ---
 apiVersion: v2
 name: mattermost
-description: Mattermost Team Edition fuer ein kleines Team (bis zu 20 Nutzer), eigenes Chart mit vendorter PostgreSQL-Abhaengigkeit.
+description: Mattermost Team Edition fuer ein kleines Team (bis zu 20 Nutzer), eigenes Chart inkl. eigenem PostgreSQL-Deployment.
 type: application
 version: 0.1.0
 appVersion: "12.0.2"
@@ -14,8 +14,3 @@ sources:
   - https://github.com/mattermost/mattermost-server
 maintainers:
   - name: home-server-admin
-dependencies:
-  - name: postgresql
-    repository: https://charts.bitnami.com/bitnami
-    version: "16.7.21"
-    condition: postgresql.enabled
