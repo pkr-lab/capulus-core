@@ -25,7 +25,8 @@ service:
 ingress:
   enabled: true
   className: traefik
-  annotations: {}
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: "kube-system-redirect-https@kubernetescrd"
   hosts:
     - host: alamos-relay.prod.homeserver
       paths:
