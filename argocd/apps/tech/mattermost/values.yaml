@@ -89,39 +89,19 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
-postgresql:
-  enabled: true
-  fullnameOverride: mattermost-postgresql
-  global:
-    security:
-      allowInsecureImages: true
+postgres:
   image:
-    registry: docker.io
-    repository: bitnamilegacy/postgresql
-    tag: 17.5.0-debian-12-r20
-    digest: "sha256:42a8200d35971f931b869ef5252d996e137c6beb4b8f1b6d2181dc7d1b6f62e0"
-  auth:
-    enablePostgresUser: false
-    username: mattermost
-    database: mattermost
-    existingSecret: mattermost-secrets
-    secretKeys:
-      userPasswordKey: postgresql-password
-  volumePermissions:
-    enabled: true
-    image:
-      registry: docker.io
-      repository: bitnamilegacy/os-shell
-      tag: 12-debian-12-r49
-      digest: "sha256:ba2840a1433e65023a1d90d0618b7ec7b3222173d312c8d4a6e0dd9ac629408f"
-  primary:
-    persistence:
-      enabled: true
-      storageClass: local-path
-      size: 10Gi
-    resources:
-      requests:
-        cpu: 50m
-        memory: 128Mi
-      limits:
-        memory: 512Mi
+    repository: postgres
+    tag: "18-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5"
+  username: mattermost
+  database: mattermost
+  persistence:
+    storageClassName: local-path
+    size: 10Gi
+    accessMode: ReadWriteOnce
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
