@@ -99,6 +99,8 @@ postgresql:
     existingSecret: mattermost-secrets
     secretKeys:
       userPasswordKey: postgresql-password
+  volumePermissions:
+    enabled: true
   primary:
     persistence:
       enabled: true
