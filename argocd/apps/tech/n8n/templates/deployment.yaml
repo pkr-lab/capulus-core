@@ -40,6 +40,13 @@ spec:
             - name: {{ $key }}
               value: {{ $val | quote }}
             {{- end }}
+            {{- range $key, $ref := .Values.secretEnv }}
+            - name: {{ $key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $ref.secretName }}
+                  key: {{ $ref.secretKey }}
+            {{- end }}
             {{- if .Values.ollamaPc.enabled }}
             {{- range $key, $val := .Values.ollamaPc.env }}
             - name: {{ $key }}
