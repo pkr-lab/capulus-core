@@ -114,50 +114,6 @@
       }
     },
     {
-      "id": "70ba84b0-ce89-4bfa-a56d-4db70201832f",
-      "name": "Freigabe-Push senden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        14656,
-        1056
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "http://ntfy.ntfy.svc.cluster.local/zammad",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "KI-Entwurf wartet auf Freigabe"
-            },
-            {
-              "name": "Priority",
-              "value": "default"
-            },
-            {
-              "name": "Tags",
-              "value": "robot"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ 'Ticket #' + $('Antwortentwurf extrahieren').item.json.ticket.number + ': ' + $('Antwortentwurf extrahieren').item.json.ticket.title }}",
-        "options": {}
-      },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      }
-    },
-    {
       "id": "1af7a96f-ae55-49de-b707-02a09be21cad",
       "name": "LLM-Eingabe bauen",
       "type": "n8n-nodes-base.code",
@@ -593,51 +549,6 @@
       }
     },
     {
-      "id": "9c1cc812-1a24-407d-a041-654b18b10128",
-      "name": "Fehler-Push senden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "onError": "continueRegularOutput",
-      "position": [
-        13504,
-        768
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "http://ntfy.ntfy.svc.cluster.local/zammad",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "KI-Entwurf fehlgeschlagen"
-            },
-            {
-              "name": "Priority",
-              "value": "high"
-            },
-            {
-              "name": "Tags",
-              "value": "warning"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ (() => { if ($json.fehler) return String($json.fehler).slice(0, 400); let t = '?'; try { t = $('Antwortentwurf extrahieren').item.json.ticket.number; } catch (e) {} const f = $json.error ? ($json.error.message || JSON.stringify($json.error)) : 'unbekannter Fehler'; return 'Ticket #' + t + ': Speichern in Zammad fehlgeschlagen (' + String(f).slice(0, 300) + ')'; })() }}",
-        "options": {}
-      },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      }
-    },
-    {
       "id": "d5a9643a-841c-43c9-96a2-9c1d15af77ed",
       "name": "KI-Mail bauen",
       "type": "n8n-nodes-base.code",
@@ -677,78 +588,6 @@
         "smtp": {
           "id": "gQZtSwFzQoNoRn3S",
           "name": "SMTP Netcup Automations"
-        }
-      }
-    },
-    {
-      "id": "5fd00c17-768d-4e40-8b6e-cd6c3b485459",
-      "name": "Mattermost-News senden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "onError": "continueErrorOutput",
-      "position": [
-        14368,
-        1728
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "http://mattermost.mattermost.svc.cluster.local:8065/api/v4/posts",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel_id: 'gh5k785kzjff3kzzjmeducw8mr', message: '#### ' + $json.betreff + '\\n\\n' + $json.text }) }}",
-        "options": {}
-      },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "fu9GDp3BYYVp4L5i",
-          "name": "Mattermost Bot (News)"
-        }
-      }
-    },
-    {
-      "id": "f3a9c7d2-5e81-4b63-9a2f-7d1c8e4b6a90",
-      "name": "SMTP-Fehler-Push senden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "onError": "continueRegularOutput",
-      "position": [
-        14656,
-        1744
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "http://ntfy.ntfy.svc.cluster.local/zammad",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "KI-Mail-Versand fehlgeschlagen"
-            },
-            {
-              "name": "Priority",
-              "value": "high"
-            },
-            {
-              "name": "Tags",
-              "value": "warning"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ (() => { let t = '?'; try { t = $('Antwortentwurf extrahieren').item.json.ticket.number; } catch (e) {} const f = $json.error ? ($json.error.message || JSON.stringify($json.error)) : 'unbekannter Fehler'; return 'Ticket #' + t + ': Abschluss-Mail (KI-Antwort) konnte nicht gesendet werden (' + String(f).slice(0, 300) + '). Zammad-Entwurf/Notiz wurde trotzdem gespeichert.'; })() }}",
-        "options": {}
-      },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
         }
       }
     },
@@ -837,51 +676,6 @@
       }
     },
     {
-      "id": "a1c0de00-0001-4000-8000-0000000000e4",
-      "name": "Anhang-Fehler-Push senden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "onError": "continueRegularOutput",
-      "position": [
-        13632,
-        336
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "http://ntfy.ntfy.svc.cluster.local/zammad",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "Anhang am KI-Entwurf fehlt"
-            },
-            {
-              "name": "Priority",
-              "value": "high"
-            },
-            {
-              "name": "Tags",
-              "value": "warning"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ (() => { let t = '?'; try { t = $('Antwortentwurf extrahieren').item.json.ticket.number; } catch (e) {} const f = $json.error ? ($json.error.message || JSON.stringify($json.error)) : 'unbekannter Fehler'; return 'Ticket #' + t + ': Anhang konnte nicht angehängt werden, bitte von Hand anhängen (' + String(f).slice(0, 300) + ')'; })() }}",
-        "options": {}
-      },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      }
-    },
-    {
       "id": "1b806ed8-a7c3-4953-9880-fc58e9fb341e",
       "name": "Time Saved",
       "type": "n8n-nodes-base.timeSaved",
@@ -966,6 +760,435 @@
         }
       },
       "onError": "continueErrorOutput"
+    },
+    {
+      "id": "ce82d345-2c77-54ae-93fc-898e8c799782",
+      "name": "Freigabe-Push senden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        14556,
+        1056
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9dbd8090-3d22-5b45-83d9-60778d62d050",
+              "name": "quelle",
+              "value": "DLRG Zammad - Ticket",
+              "type": "string"
+            },
+            {
+              "id": "a4b22dc2-d1b4-5943-96bf-e12e82a5be41",
+              "name": "thema",
+              "value": "zammad",
+              "type": "string"
+            },
+            {
+              "id": "15fbaa76-3cb2-5d29-9eb2-d501bb12a307",
+              "name": "titel",
+              "value": "KI-Entwurf wartet auf Freigabe",
+              "type": "string"
+            },
+            {
+              "id": "041bf3b8-f866-5797-a0fa-495927f49734",
+              "name": "prioritaet",
+              "value": "default",
+              "type": "string"
+            },
+            {
+              "id": "e12bb64e-266c-58b2-b666-6740907b8a64",
+              "name": "tags",
+              "value": "robot",
+              "type": "string"
+            },
+            {
+              "id": "c3b2c3df-6164-583f-bddc-c07cf30a76be",
+              "name": "text",
+              "value": "={{ 'Ticket #' + $('Antwortentwurf extrahieren').item.json.ticket.number + ': ' + $('Antwortentwurf extrahieren').item.json.ticket.title }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "2b954f3c-07c8-53f8-8c45-df803f954d35",
+      "name": "Freigabe-Push senden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        14756,
+        1056
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "b71d2bc3-3b55-59d1-9434-a1f8f286f8e9",
+      "name": "Fehler-Push senden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        13404,
+        768
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4eaf6681-a86d-584f-86a2-ed67b3b2ea90",
+              "name": "quelle",
+              "value": "DLRG Zammad - Ticket",
+              "type": "string"
+            },
+            {
+              "id": "bfc1afa4-0e11-528e-a8fe-16577bf6b908",
+              "name": "thema",
+              "value": "zammad",
+              "type": "string"
+            },
+            {
+              "id": "e7416b96-358f-51e4-96ef-ebfadb0f6e4b",
+              "name": "titel",
+              "value": "KI-Entwurf fehlgeschlagen",
+              "type": "string"
+            },
+            {
+              "id": "4eeecf34-610d-5592-97e7-b19db13af624",
+              "name": "prioritaet",
+              "value": "high",
+              "type": "string"
+            },
+            {
+              "id": "a35a9ee2-f9c1-58ef-9657-0a4d99050340",
+              "name": "tags",
+              "value": "warning",
+              "type": "string"
+            },
+            {
+              "id": "26db2e8c-9f5b-51e2-b2f7-91cc2d419afb",
+              "name": "text",
+              "value": "={{ (() => { if ($json.fehler) return String($json.fehler).slice(0, 400); let t = '?'; try { t = $('Antwortentwurf extrahieren').item.json.ticket.number; } catch (e) {} const f = $json.error ? ($json.error.message || JSON.stringify($json.error)) : 'unbekannter Fehler'; return 'Ticket #' + t + ': Speichern in Zammad fehlgeschlagen (' + String(f).slice(0, 300) + ')'; })() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "cf6d711e-8497-5faf-a294-956baba2fb6b",
+      "name": "Fehler-Push senden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        13604,
+        768
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "cd8fa96b-8cba-5236-9e0f-a2b9fd313bd9",
+      "name": "Mattermost-News senden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        14268,
+        1728
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fb2a11f6-9d0e-58ef-be7c-a628823b729f",
+              "name": "quelle",
+              "value": "DLRG Zammad - Ticket",
+              "type": "string"
+            },
+            {
+              "id": "0993c191-944c-583a-bc92-d54f2c1fdae9",
+              "name": "mattermostText",
+              "value": "={{ '#### ' + $json.betreff + '\\n\\n' + $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "dfb6b87a-e8a2-548b-b465-13ac4fbb403b",
+              "name": "ntfy",
+              "value": "false",
+              "type": "string"
+            },
+            {
+              "id": "94dbf1df-3d7e-5716-af12-b7ea9c1a629e",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
+            },
+            {
+              "id": "ce4333c1-7c47-5050-b152-9d6084a1957d",
+              "name": "kanal",
+              "value": "Berichte",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "833e887e-ad8f-56e7-804c-5088bfd4b235",
+      "name": "Mattermost-News senden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        14468,
+        1728
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "0f5ba480-c6da-5ad9-a49b-c59df1446305",
+      "name": "SMTP-Fehler-Push senden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        14556,
+        1744
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6ccf5206-2c30-546e-a1fe-1f16ed9c911a",
+              "name": "quelle",
+              "value": "DLRG Zammad - Ticket",
+              "type": "string"
+            },
+            {
+              "id": "cfa17fda-a8de-5b84-909b-eac7018b279b",
+              "name": "thema",
+              "value": "zammad",
+              "type": "string"
+            },
+            {
+              "id": "c96b655f-a7aa-52a1-9f99-434da0cd9953",
+              "name": "titel",
+              "value": "KI-Mail-Versand fehlgeschlagen",
+              "type": "string"
+            },
+            {
+              "id": "61ae0785-cfb6-59cf-84b4-b91d44cf4e82",
+              "name": "prioritaet",
+              "value": "high",
+              "type": "string"
+            },
+            {
+              "id": "1c708d92-71ff-5907-a2b3-887401bb2504",
+              "name": "tags",
+              "value": "warning",
+              "type": "string"
+            },
+            {
+              "id": "617a2b1c-e84f-56cb-83b3-54d36c7b548f",
+              "name": "text",
+              "value": "={{ (() => { let t = '?'; try { t = $('Antwortentwurf extrahieren').item.json.ticket.number; } catch (e) {} const f = $json.error ? ($json.error.message || JSON.stringify($json.error)) : 'unbekannter Fehler'; return 'Ticket #' + t + ': Abschluss-Mail (KI-Antwort) konnte nicht gesendet werden (' + String(f).slice(0, 300) + '). Zammad-Entwurf/Notiz wurde trotzdem gespeichert.'; })() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "b8adf360-2e1f-5d94-a6ae-dcd83e5135ba",
+      "name": "SMTP-Fehler-Push senden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        14756,
+        1744
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "d8c45415-14c3-52f6-8103-f8a8e5f5527a",
+      "name": "Anhang-Fehler-Push senden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        13532,
+        336
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3c02738f-d196-5047-ba5d-d975cb753f56",
+              "name": "quelle",
+              "value": "DLRG Zammad - Ticket",
+              "type": "string"
+            },
+            {
+              "id": "283c8e81-8676-5146-90a6-ab657bef0577",
+              "name": "thema",
+              "value": "zammad",
+              "type": "string"
+            },
+            {
+              "id": "4a21449c-b405-58ea-af04-1588dc8c2b10",
+              "name": "titel",
+              "value": "Anhang am KI-Entwurf fehlt",
+              "type": "string"
+            },
+            {
+              "id": "b6e9081a-8572-5c39-9f47-c825037f09d5",
+              "name": "prioritaet",
+              "value": "high",
+              "type": "string"
+            },
+            {
+              "id": "7d47b935-32d0-53af-ab01-c713aca2943d",
+              "name": "tags",
+              "value": "warning",
+              "type": "string"
+            },
+            {
+              "id": "55a73534-b67c-530e-93e9-abb5cd7a6146",
+              "name": "text",
+              "value": "={{ (() => { let t = '?'; try { t = $('Antwortentwurf extrahieren').item.json.ticket.number; } catch (e) {} const f = $json.error ? ($json.error.message || JSON.stringify($json.error)) : 'unbekannter Fehler'; return 'Ticket #' + t + ': Anhang konnte nicht angehängt werden, bitte von Hand anhängen (' + String(f).slice(0, 300) + ')'; })() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "64789f2d-8221-512d-afe3-e4c44cda6c1f",
+      "name": "Anhang-Fehler-Push senden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        13732,
+        336
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
     }
   ],
   "pinData": {},
@@ -1270,7 +1493,7 @@
       "main": [
         [
           {
-            "node": "Fehler-Push senden",
+            "node": "Fehler-Push senden vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -1304,7 +1527,7 @@
             "index": 0
           },
           {
-            "node": "Mattermost-News senden",
+            "node": "Mattermost-News senden vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -1315,14 +1538,14 @@
       "main": [
         [
           {
-            "node": "Freigabe-Push senden",
+            "node": "Freigabe-Push senden vorbereiten",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "SMTP-Fehler-Push senden",
+            "node": "SMTP-Fehler-Push senden vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -1369,7 +1592,7 @@
         ],
         [
           {
-            "node": "Anhang-Fehler-Push senden",
+            "node": "Anhang-Fehler-Push senden vorbereiten",
             "type": "main",
             "index": 0
           },
@@ -1392,7 +1615,7 @@
         ],
         [
           {
-            "node": "Anhang-Fehler-Push senden",
+            "node": "Anhang-Fehler-Push senden vorbereiten",
             "type": "main",
             "index": 0
           },
@@ -1426,7 +1649,7 @@
         ],
         [
           {
-            "node": "Fehler-Push senden",
+            "node": "Fehler-Push senden vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -1444,7 +1667,62 @@
         ],
         [
           {
+            "node": "Fehler-Push senden vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Freigabe-Push senden vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Freigabe-Push senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fehler-Push senden vorbereiten": {
+      "main": [
+        [
+          {
             "node": "Fehler-Push senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mattermost-News senden vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Mattermost-News senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SMTP-Fehler-Push senden vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "SMTP-Fehler-Push senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anhang-Fehler-Push senden vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Anhang-Fehler-Push senden",
             "type": "main",
             "index": 0
           }
@@ -1460,7 +1738,8 @@
     "timeSavedMode": "dynamic",
     "timezone": "Europe/Berlin",
     "callerPolicy": "workflowsFromSameOwner",
-    "timeSavedPerExecution": 4
+    "timeSavedPerExecution": 4,
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "b5f104d6-1a00-4790-9437-501db385c7e4",
   "meta": {

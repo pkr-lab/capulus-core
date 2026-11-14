@@ -6,7 +6,7 @@
         "authentication": "basicAuth",
         "resource": "ticket",
         "title": "={{ $json.article.subject }}",
-        "group": "Support / Administration",
+        "group": "Administration::n8n",
         "customer": "=",
         "article": {
           "articleDetails": {
@@ -152,7 +152,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// CHANGE-ME: Zammad-Gruppe + Requester ggf. anpassen (siehe docs/25-github-release-watcher.md fuer die Regeln dazu -- ZAMMAD_REQUESTER_EMAIL muss ein bereits existierender Zammad-User sein). Gruppe 'Support / Administration' angenommen als Unterguppe 'Administration' von 'Support' -> Zammad-API erwartet dafuer '::' als Trenner (siehe docs/25); falls es stattdessen eine einzelne Gruppe mit genau diesem Namen ist, hier auf 'Support / Administration' aendern.\nconst ZAMMAD_GROUP = 'Support::Administration';\nconst ZAMMAD_REQUESTER_EMAIL = 'info@pkr-service.de';\nconst GRAFANA_DASHBOARD_URL = 'https://grafana-tech.pkr-lab.de/d/vereinsheim-alarmmonitor/vereinsheim-alarmmonitor';\n\nconst cpuRes = $('CPU abfragen').item.json;\nconst ramRes = $('RAM abfragen').item.json;\nconst tempRes = $('Temperatur abfragen').item.json;\nconst lastStartRes = $('Letzte AMweb-Anfrage abfragen').item.json;\nconst webhookBody = $('Alertmanager Webhook').item.json.body || {};\n\nfunction firstValue(res) {\n  const result = res && res.data && res.data.result;\n  if (!result || result.length === 0) return null;\n  return parseFloat(result[0].value[1]);\n}\n\nconst cpu = firstValue(cpuRes);\nconst ram = firstValue(ramRes);\nconst temp = firstValue(tempRes);\nconst lastStartEpoch = firstValue(lastStartRes);\nconst lastStartText = (lastStartEpoch === null || Number.isNaN(lastStartEpoch))\n  ? 'nie / unbekannt (alamos-apager hat noch keine /start-Anfrage fuer diese Station verzeichnet)'\n  : new Date(lastStartEpoch * 1000).toISOString();\n\nfunction fmt(v, unit) {\n  return (v === null || Number.isNaN(v)) ? 'unbekannt' : `${v.toFixed(1)} ${unit}`;\n}\n\nconst alert = (webhookBody.alerts && webhookBody.alerts[0]) || {};\nconst description = (alert.annotations && alert.annotations.description)\n  || 'Vereinsheim-Alarmmonitor antwortet nicht mehr.';\nconst startsAt = alert.startsAt || new Date().toISOString();\n\nconst bodyText = [\n  description,\n  '',\n  `Letzte erfolgreiche Anfrage der Alarmmonitor-Adresse (Kiosk hat zuletzt die echte AMweb-URL ueber alamos-apager angefragt): ${lastStartText}`,\n  '',\n  'Letzte bekannte Metriken vor dem Ausfall (nicht live -- der Pi ist ja gerade nicht erreichbar):',\n  `- CPU: ${fmt(cpu, '%')}`,\n  `- RAM: ${fmt(ram, '%')}`,\n  `- Temperatur: ${fmt(temp, '°C')}`,\n  '',\n  `Alarm seit: ${startsAt}`,\n  '',\n  `Grafana-Dashboard (Vereinsheim-Alarmmonitor): ${GRAFANA_DASHBOARD_URL}`,\n  '',\n  'Das Problem wird so schnell es geht behoben, dies gilt lediglich als Information fuer dich.',\n  '',\n  '--',\n  'Mit freundlichen Gruessen',\n  'Peter Kretzer',\n  '',\n  'E-Mail: info@pkr-service.de',\n  'Website: https://edv-kretzer.de/',\n].join('\\n');\n\nreturn [{\n  json: {\n    title: 'Vereinsheim-Alarmmonitor nicht erreichbar',\n    group: ZAMMAD_GROUP,\n    customer: ZAMMAD_REQUESTER_EMAIL,\n    article: {\n      subject: 'Vereinsheim-Alarmmonitor nicht erreichbar',\n      body: bodyText,\n      content_type: 'text/plain',\n      type: 'note',\n      internal: false,\n    },\n  },\n}];"
+        "jsCode": "// CHANGE-ME: Zammad-Gruppe + Requester ggf. anpassen (siehe docs/25-github-release-watcher.md fuer die Regeln dazu -- ZAMMAD_REQUESTER_EMAIL muss ein bereits existierender Zammad-User sein). Gruppe 'Support / Administration' angenommen als Unterguppe 'Administration' von 'Support' -> Zammad-API erwartet dafuer '::' als Trenner (siehe docs/25); falls es stattdessen eine einzelne Gruppe mit genau diesem Namen ist, hier auf 'Support / Administration' aendern.\nconst ZAMMAD_GROUP = 'Administration::n8n';\nconst ZAMMAD_REQUESTER_EMAIL = 'info@pkr-service.de';\nconst GRAFANA_DASHBOARD_URL = 'https://grafana-tech.pkr-lab.de/d/vereinsheim-alarmmonitor/vereinsheim-alarmmonitor';\n\nconst cpuRes = $('CPU abfragen').item.json;\nconst ramRes = $('RAM abfragen').item.json;\nconst tempRes = $('Temperatur abfragen').item.json;\nconst lastStartRes = $('Letzte AMweb-Anfrage abfragen').item.json;\nconst webhookBody = $('Alertmanager Webhook').item.json.body || {};\n\nfunction firstValue(res) {\n  const result = res && res.data && res.data.result;\n  if (!result || result.length === 0) return null;\n  return parseFloat(result[0].value[1]);\n}\n\nconst cpu = firstValue(cpuRes);\nconst ram = firstValue(ramRes);\nconst temp = firstValue(tempRes);\nconst lastStartEpoch = firstValue(lastStartRes);\nconst lastStartText = (lastStartEpoch === null || Number.isNaN(lastStartEpoch))\n  ? 'nie / unbekannt (alamos-apager hat noch keine /start-Anfrage fuer diese Station verzeichnet)'\n  : new Date(lastStartEpoch * 1000).toISOString();\n\nfunction fmt(v, unit) {\n  return (v === null || Number.isNaN(v)) ? 'unbekannt' : `${v.toFixed(1)} ${unit}`;\n}\n\nconst alert = (webhookBody.alerts && webhookBody.alerts[0]) || {};\nconst description = (alert.annotations && alert.annotations.description)\n  || 'Vereinsheim-Alarmmonitor antwortet nicht mehr.';\nconst startsAt = alert.startsAt || new Date().toISOString();\n\nconst bodyText = [\n  description,\n  '',\n  `Letzte erfolgreiche Anfrage der Alarmmonitor-Adresse (Kiosk hat zuletzt die echte AMweb-URL ueber alamos-apager angefragt): ${lastStartText}`,\n  '',\n  'Letzte bekannte Metriken vor dem Ausfall (nicht live -- der Pi ist ja gerade nicht erreichbar):',\n  `- CPU: ${fmt(cpu, '%')}`,\n  `- RAM: ${fmt(ram, '%')}`,\n  `- Temperatur: ${fmt(temp, '°C')}`,\n  '',\n  `Alarm seit: ${startsAt}`,\n  '',\n  `Grafana-Dashboard (Vereinsheim-Alarmmonitor): ${GRAFANA_DASHBOARD_URL}`,\n  '',\n  'Das Problem wird so schnell es geht behoben, dies gilt lediglich als Information fuer dich.',\n  '',\n  '--',\n  'Mit freundlichen Gruessen',\n  'Peter Kretzer',\n  '',\n  'E-Mail: info@pkr-service.de',\n  'Website: https://edv-kretzer.de/',\n].join('\\n');\n\nreturn [{\n  json: {\n    title: 'Vereinsheim-Alarmmonitor nicht erreichbar',\n    group: ZAMMAD_GROUP,\n    customer: ZAMMAD_REQUESTER_EMAIL,\n    article: {\n      subject: 'Vereinsheim-Alarmmonitor nicht erreichbar',\n      body: bodyText,\n      content_type: 'text/plain',\n      type: 'note',\n      internal: false,\n    },\n  },\n}];"
       },
       "id": "2bec59c2-3315-4288-a32c-adb8bdd276d2",
       "name": "Ticket-Payload bauen",
@@ -206,29 +206,83 @@
       "onError": "continueRegularOutput"
     },
     {
-      "id": "671b51ed-9ecf-495e-8ee9-200eb7477ef4",
-      "name": "Mattermost-News senden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "onError": "continueErrorOutput",
+      "id": "ec262c36-74e5-59d3-aec9-c73113057e21",
+      "name": "Mattermost-News senden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
-        5440,
+        5340,
         424
       ],
+      "onError": "continueRegularOutput",
       "parameters": {
-        "method": "POST",
-        "url": "http://mattermost.mattermost.svc.cluster.local:8065/api/v4/posts",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel_id: 'gh5k785kzjff3kzzjmeducw8mr', message: '#### ' + $json.betreff + '\\n\\n' + $json.text }) }}",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "53f4d7f4-fa07-5c0a-8519-b15e9a8d1e43",
+              "name": "quelle",
+              "value": "Banana-Pi-Down -> Zammad-Ticket",
+              "type": "string"
+            },
+            {
+              "id": "45fda399-396a-59fe-a9f4-93d72272ce50",
+              "name": "mattermostText",
+              "value": "={{ '#### ' + $json.betreff + '\\n\\n' + $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "b40fdc31-71e0-555a-8858-e74cb304dd92",
+              "name": "ntfy",
+              "value": "false",
+              "type": "string"
+            },
+            {
+              "id": "56addbc8-9104-5d4f-9051-243d172bc2d4",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
+            },
+            {
+              "id": "ba23979f-81dd-55dc-8eea-4aac6b14b7da",
+              "name": "kanal",
+              "value": "Berichte",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
         "options": {}
-      },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "fu9GDp3BYYVp4L5i",
-          "name": "Mattermost Bot (News)"
+      }
+    },
+    {
+      "id": "fda76fa1-4918-5a89-869d-26f897f0bfcf",
+      "name": "Mattermost-News senden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        5540,
+        424
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
         }
       }
     }
@@ -315,6 +369,17 @@
             "index": 0
           },
           {
+            "node": "Mattermost-News senden vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mattermost-News senden vorbereiten": {
+      "main": [
+        [
+          {
             "node": "Mattermost-News senden",
             "type": "main",
             "index": 0
@@ -327,7 +392,8 @@
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "availableInMCP": false
+    "availableInMCP": false,
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "7d629c6f-c290-4aff-87e6-a83654dfefed",
   "meta": {

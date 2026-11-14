@@ -329,57 +329,6 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "={{ $json.title }}"
-            },
-            {
-              "name": "Priority",
-              "value": "={{ $json.priority || 'default' }}"
-            },
-            {
-              "name": "Tags",
-              "value": "alarm_clock"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $json.message }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "52d83abf-d734-5c26-a9b9-0d57b8f3f264",
-      "name": "Protokoll melden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2760,
-        120
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
         "mode": "runOnceForAllItems",
         "jsCode": "return [{ json: $('Meldung bauen').first().json }];\n"
       },
@@ -471,6 +420,105 @@
         3680,
         220
       ]
+    },
+    {
+      "id": "08d65765-ef36-57af-8137-dc34dc06e838",
+      "name": "Protokoll melden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2660,
+        120
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "67bfed51-6a0b-59d9-8045-fac197a9e0ff",
+              "name": "quelle",
+              "value": "MDM: Zeitzone setzen",
+              "type": "string"
+            },
+            {
+              "id": "9c00fb1c-28b9-5823-8805-7dca9d7d54e7",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "fee4e1c3-d4fb-537f-a7cb-4e925ad4882d",
+              "name": "titel",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "f80e71e0-6ac0-50d6-bf2f-5fe835169f0b",
+              "name": "prioritaet",
+              "value": "={{ $json.priority || 'default' }}",
+              "type": "string"
+            },
+            {
+              "id": "6753d988-ba1d-5656-ae29-de599eabbaa4",
+              "name": "tags",
+              "value": "alarm_clock",
+              "type": "string"
+            },
+            {
+              "id": "85865716-66fa-536c-a6e6-dcd237ba2422",
+              "name": "text",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "e2b96f8d-5d94-5119-b197-836ff74b8dd6",
+              "name": "kanal",
+              "value": "MDM-Verwaltung",
+              "type": "string"
+            },
+            {
+              "id": "4425d39f-78e3-5c00-8d04-a918c395c738",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "ddfd55b0-973c-5d0a-ad8e-8dd3ef270a82",
+      "name": "Protokoll melden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2860,
+        120
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
     }
   ],
   "pinData": {},
@@ -636,7 +684,7 @@
       "main": [
         [
           {
-            "node": "Protokoll melden",
+            "node": "Protokoll melden vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -704,13 +752,25 @@
           }
         ]
       ]
+    },
+    "Protokoll melden vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Protokoll melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "timezone": "Europe/Berlin"
+    "timezone": "Europe/Berlin",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "f72e7fe7-7173-5510-a28b-673c050f7eb9",
   "meta": {

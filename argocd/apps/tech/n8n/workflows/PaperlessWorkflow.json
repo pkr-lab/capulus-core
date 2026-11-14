@@ -420,7 +420,8 @@
     "availableInMCP": false,
     "timeSavedMode": "fixed",
     "timezone": "Europe/Berlin",
-    "callerPolicy": "workflowsFromSameOwner"
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "169dc0d9-cdbe-49e0-8a6d-0e7f5bedb27e",
   "meta": {

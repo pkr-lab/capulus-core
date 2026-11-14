@@ -206,7 +206,8 @@
   "active": false,
   "settings": {
     "timezone": "Europe/Berlin",
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "meta": {
     "description": "Formular, um KI-Entwürfe für bestimmte Zammad-Tickets neu erstellen zu lassen. Ruft den Sub-Workflow \"Zammad Tickets verarbeiten\" mit den Ticketnummern auf, ohne auf das Ergebnis zu warten."

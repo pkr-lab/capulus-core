@@ -148,137 +148,103 @@
       ]
     },
     {
+      "id": "26668d4e-c5f5-50fc-ab5a-7bd31083697c",
+      "name": "Alarm senden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1340,
+        300
+      ],
+      "onError": "continueRegularOutput",
       "parameters": {
-        "method": "POST",
-        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "assignments": {
+          "assignments": [
             {
-              "name": "Title",
-              "value": "={{ $json.title }}"
+              "id": "4e823e4e-0644-52e4-a9a4-0b23a6636655",
+              "name": "quelle",
+              "value": "MDM: Backup-Check",
+              "type": "string"
             },
             {
-              "name": "Priority",
-              "value": "high"
+              "id": "32abafbd-7a7d-5c4c-a760-b12a25b5c691",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.ntfyTopic }}",
+              "type": "string"
             },
             {
-              "name": "Tags",
-              "value": "rotating_light"
+              "id": "edd769a8-5033-5e60-b85d-b9d38d0900f1",
+              "name": "titel",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "64ca8591-73b6-5c6e-8f9d-203cf6647b92",
+              "name": "prioritaet",
+              "value": "high",
+              "type": "string"
+            },
+            {
+              "id": "a144e9c9-9605-5c48-b60d-17372a160e6f",
+              "name": "tags",
+              "value": "rotating_light",
+              "type": "string"
+            },
+            {
+              "id": "bcc5f89a-4414-52a8-b204-89d5be89e00f",
+              "name": "text",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "9dcb9853-c39d-556d-8424-989058fb4f39",
+              "name": "kanal",
+              "value": "MDM-Verwaltung",
+              "type": "string"
+            },
+            {
+              "id": "bf62e5c7-d68a-54b9-81bf-fde26a85f885",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
             }
           ]
         },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $json.message }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "522e6a7c-8c48-5d3d-8ac2-3e14e35c7a0d",
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "77937516-65e4-53d3-a5d7-1b0df44924a1",
       "name": "Alarm senden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [
-        1440,
+        1540,
         300
       ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
         }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "41151080-c8ea-5696-8c97-447f049b9498",
-      "name": "Mattermost-Text bauen",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1440,
-        520
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "return $input.all().map((item) => ({ json: { channel: 'betrieb', message: '#### \\u{1F6A8} ' + item.json.title + '\\n\\n' + item.json.message } }));"
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "ca8d7ef8-26e2-577b-876f-9ae6847cf38c",
-      "name": "Kanaele laden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1720,
-        520
-      ],
-      "parameters": {
-        "method": "GET",
-        "url": "http://mattermost.mattermost.svc.cluster.local:8065/api/v4/users/me/channels",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "options": {}
-      },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "fu9GDp3BYYVp4L5i",
-          "name": "Mattermost Bot (News)"
-        }
-      },
-      "executeOnce": true,
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "d74390c1-826e-5130-898c-342b38a453e8",
-      "name": "Kanal waehlen",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2000,
-        520
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "const quellen = $('Mattermost-Text bauen').all().map((item) => item.json);\nconst kanaele = $input.all().map((item) => item.json).filter((kanal) => kanal && kanal.name);\nreturn quellen.map((quelle) => {\n  const ziel = kanaele.find((kanal) => kanal.name === quelle.channel);\n  if (!ziel) {\n    throw new Error('Kanal \"' + quelle.channel + '\" nicht gefunden oder n8n-bot ist dort kein Mitglied. Bekannt: ' + kanaele.map((kanal) => kanal.name).join(', '));\n  }\n  return { json: { ...quelle, channel_id: ziel.id } };\n});"
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "d91a2243-2025-5bd1-9f2f-0dd16258bbb8",
-      "name": "In Mattermost posten",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2280,
-        520
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "http://mattermost.mattermost.svc.cluster.local:8065/api/v4/posts",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel_id: $json.channel_id, message: $json.message, props: $json.props }) }}",
-        "options": {}
-      },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "fu9GDp3BYYVp4L5i",
-          "name": "Mattermost Bot (News)"
-        }
-      },
-      "onError": "continueRegularOutput"
+      }
     }
   ],
   "pinData": {},
@@ -342,45 +308,18 @@
       "main": [
         [
           {
+            "node": "Alarm senden vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alarm senden vorbereiten": {
+      "main": [
+        [
+          {
             "node": "Alarm senden",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Mattermost-Text bauen",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Mattermost-Text bauen": {
-      "main": [
-        [
-          {
-            "node": "Kanaele laden",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Kanaele laden": {
-      "main": [
-        [
-          {
-            "node": "Kanal waehlen",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Kanal waehlen": {
-      "main": [
-        [
-          {
-            "node": "In Mattermost posten",
             "type": "main",
             "index": 0
           }
@@ -392,7 +331,8 @@
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "timezone": "Europe/Berlin"
+    "timezone": "Europe/Berlin",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "f7abe040-aa1f-5dc8-b03a-3e817eaf10be",
   "meta": {

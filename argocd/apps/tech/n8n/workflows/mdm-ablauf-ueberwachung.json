@@ -198,57 +198,6 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "={{ $('Meldungen bestimmen').all()[$itemIndex].json.title }}"
-            },
-            {
-              "name": "Priority",
-              "value": "={{ $('Meldungen bestimmen').all()[$itemIndex].json.priority }}"
-            },
-            {
-              "name": "Tags",
-              "value": "={{ $('Meldungen bestimmen').all()[$itemIndex].json.tags }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $('Meldungen bestimmen').all()[$itemIndex].json.message }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "9aa02b29-e885-5de2-89ea-1baaf0cf83a1",
-      "name": "Erinnerung senden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2020,
-        300
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
         "conditions": {
           "options": {
             "caseSensitive": true,
@@ -287,7 +236,7 @@
         "authentication": "basicAuth",
         "resource": "ticket",
         "title": "={{ $('Meldungen bestimmen').all()[$itemIndex].json.title }}",
-        "group": "Support / Administration",
+        "group": "Administration::n8n",
         "customer": "=info@pkr-service.de",
         "article": {
           "articleDetails": {
@@ -313,6 +262,105 @@
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "id": "75eb3acb-f33c-5522-9118-8d9cf472dd46",
+      "name": "Erinnerung senden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1920,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c29750d1-4ad5-5bc4-a442-89f059719482",
+              "name": "quelle",
+              "value": "MDM: Ablauf-Ueberwachung",
+              "type": "string"
+            },
+            {
+              "id": "fd1ac2f1-5b19-5e3c-84dc-1767182d4f1c",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "deca20e6-dcde-54a3-9c30-79616281d428",
+              "name": "titel",
+              "value": "={{ $('Meldungen bestimmen').all()[$itemIndex].json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "f9ff1c4c-e9a0-5dce-be7f-cc6732f2f6ef",
+              "name": "prioritaet",
+              "value": "={{ $('Meldungen bestimmen').all()[$itemIndex].json.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "433a3aa2-e632-5a2e-b9d4-5bd848293290",
+              "name": "tags",
+              "value": "={{ $('Meldungen bestimmen').all()[$itemIndex].json.tags }}",
+              "type": "string"
+            },
+            {
+              "id": "71d4a569-327d-5f7c-a97c-8b64b13fcea7",
+              "name": "text",
+              "value": "={{ $('Meldungen bestimmen').all()[$itemIndex].json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "de38cce5-5af4-50ba-a5e5-810bbfa87ee8",
+              "name": "kanal",
+              "value": "MDM-Verwaltung",
+              "type": "string"
+            },
+            {
+              "id": "69b5bccf-a073-5247-b6c4-ef99abdadf1c",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "a84bbc59-aedd-576b-8605-8bbde1b97261",
+      "name": "Erinnerung senden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2120,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
     }
   ],
   "pinData": {},
@@ -409,7 +457,7 @@
       "main": [
         [
           {
-            "node": "Erinnerung senden",
+            "node": "Erinnerung senden vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -437,13 +485,25 @@
           }
         ]
       ]
+    },
+    "Erinnerung senden vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Erinnerung senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "timezone": "Europe/Berlin"
+    "timezone": "Europe/Berlin",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "8dc77dbd-a5ea-5732-995f-5c3ac8da968c",
   "meta": {
