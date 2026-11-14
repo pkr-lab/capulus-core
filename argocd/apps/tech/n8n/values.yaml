@@ -4,7 +4,7 @@ replicaCount: 1
 image:
   repository: ghcr.io/pkr-lab/n8n-custom
   pullPolicy: IfNotPresent
-  tag: "sha-55581ad"
+  tag: "sha-c5d4cc1b"
 
 nameOverride: ""
 fullnameOverride: ""
