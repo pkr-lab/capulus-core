@@ -1,0 +1,41 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: certificates
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: certificates
+      interval: 1m
+      rules:
+
+        - alert: CertificateExpiringSoon
+          expr: (certmanager_certificate_expiration_timestamp_seconds - time()) < 14 * 86400
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Zertifikat {{`{{ $labels.namespace }}`}}/{{`{{ $labels.name }}`}} läuft in weniger als 14 Tagen ab"
+            description: >-
+              cert-manager erneuert das Zertifikat normalerweise selbst vor Ablauf. Läuft es trotzdem bald ab, hängt die Erneuerung.
+              Status mit `kubectl -n {{`{{ $labels.namespace }}`}} describe certificate {{`{{ $labels.name }}`}}` prüfen.
+
+        - alert: CertificateNotReady
+          expr: certmanager_certificate_ready_status{condition="False"} == 1
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Zertifikat {{`{{ $labels.namespace }}`}}/{{`{{ $labels.name }}`}} ist nicht bereit"
+            description: >-
+              Das Zertifikat ist seit mehr als 30 Minuten nicht Ready. Ausstellung oder Erneuerung ist fehlgeschlagen.
+
+        - alert: CertManagerMetricsMissing
+          expr: absent(certmanager_controller_sync_call_count)
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "cert-manager liefert keine Metriken"
+            description: >-
+              Die Metriken des cert-manager-Controllers fehlen seit mehr als 15 Minuten. Zertifikatsalarme und der Morgenbericht haben keine Daten.
