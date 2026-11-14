@@ -1,5 +1,6 @@
 import type { Locator, Page } from "playwright";
 import { IscBotError } from "../errors.js";
+import { SEL } from "./selectors.js";
 
 export function isPlaywrightTimeout(error: unknown): boolean {
   return error instanceof Error && error.name === "TimeoutError";
@@ -56,7 +57,7 @@ export async function selectOptionValue(page: Page, selector: string, value: str
 export async function logoutQuietly(page: Page | undefined): Promise<void> {
   if (!page || page.isClosed()) return;
   try {
-    const logout = page.locator("#LogoutButton");
+    const logout = page.locator(SEL.logout);
     if ((await logout.count()) > 0) {
       await logout.first().click({ timeout: 5000 });
     }
