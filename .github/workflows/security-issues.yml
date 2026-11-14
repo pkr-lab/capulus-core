@@ -41,4 +41,6 @@ jobs:
         with:
           channel: sicherheit
           token: ${{ secrets.MATTERMOST_BOT_TOKEN }}
-          message: "#### \u274C Security-Alert-Abgleich fehlgeschlagen\nCode-Scanning- oder Dependabot-Alerts konnten nicht abgerufen werden.\n[Lauf ansehen](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          title: "\u274C Security-Alert-Abgleich fehlgeschlagen"
+          status: failure
+          message: "Code-Scanning- oder Dependabot-Alerts konnten nicht abgerufen werden."
