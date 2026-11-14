@@ -9,6 +9,7 @@ import (
 	"net/netip"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const maxBody = 32 << 10
@@ -123,7 +124,7 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 func writeErr(w http.ResponseWriter, e *Error) {
 	body := map[string]any{"error": e.Code}
 	if e.RetryAfter > 0 {
-		secs := int((e.RetryAfter + 999999999) / 1000000000)
+		secs := int((e.RetryAfter + time.Second - 1) / time.Second)
 		w.Header().Set("Retry-After", strconv.Itoa(secs))
 		body["retry_after"] = secs
 	}
