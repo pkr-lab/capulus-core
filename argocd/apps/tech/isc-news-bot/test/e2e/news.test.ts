@@ -1,25 +1,20 @@
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
-import { chromium } from "playwright";
 import { IscNewsRunner, launchChromium } from "../../src/runner.js";
 import { RunLock } from "../../src/mutex.js";
 import { Logger } from "../../src/logger.js";
 import { validateNewsRequest } from "../../src/validation.js";
 import { startMockIsc, OTHER_EDV, type MockIsc, type MockOptions } from "../fixtures/mock-isc.js";
 import { testConfig } from "../fixtures/config.js";
+import { browserAvailable } from "../fixtures/browser.js";
 import { JPEG_BASE64, PNG_BASE64, WEBP_BASE64 } from "../fixtures/images.js";
 
 const silent = new Logger(true);
 const RUN_TIMEOUT = 180_000;
 
-let browserAvailable = true;
+let chromiumReady = true;
 before(async () => {
-  try {
-    const browser = await chromium.launch();
-    await browser.close();
-  } catch {
-    browserAvailable = false;
-  }
+  chromiumReady = await browserAvailable();
 });
 
 async function withMock(options: MockOptions, configOverrides: Parameters<typeof testConfig>[1], run: (mock: MockIsc, runner: IscNewsRunner, cfg: ReturnType<typeof testConfig>) => Promise<void>) {
@@ -48,7 +43,7 @@ function body(overrides: Record<string, unknown> = {}): Record<string, unknown> 
 }
 
 test("Entwurf mit zwei Bildern: angelegt, gesperrt, Reihenfolge und Keywords stimmen", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!browserAvailable) return t.skip("Chromium nicht verfügbar");
+  if (!chromiumReady) return t.skip("Chromium nicht verfügbar");
   await withMock({}, {}, async (mock, runner, cfg) => {
     const news = validateNewsRequest(body(), cfg);
     const result = await runner.createNews(news);
@@ -84,7 +79,7 @@ test("Entwurf mit zwei Bildern: angelegt, gesperrt, Reihenfolge und Keywords sti
 });
 
 test("Schlagworte pro Bild werden gesetzt und nicht vermischt", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!browserAvailable) return t.skip("Chromium nicht verfügbar");
+  if (!chromiumReady) return t.skip("Chromium nicht verfügbar");
   await withMock({}, {}, async (mock, runner, cfg) => {
     const news = validateNewsRequest(
       body({
@@ -104,7 +99,7 @@ test("Schlagworte pro Bild werden gesetzt und nicht vermischt", { timeout: RUN_T
 });
 
 test("Veröffentlichen: Status wechselt, Social-Text kommt zurück", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!browserAvailable) return t.skip("Chromium nicht verfügbar");
+  if (!chromiumReady) return t.skip("Chromium nicht verfügbar");
   await withMock({ socialText: "Neu auf der Website: Sommerfest" }, {}, async (mock, runner, cfg) => {
     const result = await runner.createNews(validateNewsRequest(body({ mode: "publish" }), cfg));
     assert.equal(result.ok, true, JSON.stringify(result));
@@ -115,7 +110,7 @@ test("Veröffentlichen: Status wechselt, Social-Text kommt zurück", { timeout: 
 });
 
 test("Dry-Run: Formular geprüft, Screenshot da, nichts gespeichert", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!browserAvailable) return t.skip("Chromium nicht verfügbar");
+  if (!chromiumReady) return t.skip("Chromium nicht verfügbar");
   await withMock({}, {}, async (mock, runner, cfg) => {
     const result = await runner.createNews(validateNewsRequest(body({ dryRun: true, mode: "publish" }), cfg));
     assert.equal(result.ok, true, JSON.stringify(result));
@@ -131,7 +126,7 @@ test("Dry-Run: Formular geprüft, Screenshot da, nichts gespeichert", { timeout:
 });
 
 test("Duplikat: gleicher Titel wird nicht erneut angelegt", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!browserAvailable) return t.skip("Chromium nicht verfügbar");
+  if (!chromiumReady) return t.skip("Chromium nicht verfügbar");
   await withMock({}, {}, async (mock, runner, cfg) => {
     const first = await runner.createNews(validateNewsRequest(body({ images: [] }), cfg));
     assert.equal(first.ok, true, JSON.stringify(first));
@@ -144,7 +139,7 @@ test("Duplikat: gleicher Titel wird nicht erneut angelegt", { timeout: RUN_TIMEO
 });
 
 test("Duplikat mit force=true wird trotzdem angelegt", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!browserAvailable) return t.skip("Chromium nicht verfügbar");
+  if (!chromiumReady) return t.skip("Chromium nicht verfügbar");
   await withMock({}, {}, async (mock, runner, cfg) => {
     await runner.createNews(validateNewsRequest(body({ images: [] }), cfg));
     const forced = await runner.createNews(validateNewsRequest(body({ images: [], force: true }), cfg));
@@ -155,7 +150,7 @@ test("Duplikat mit force=true wird trotzdem angelegt", { timeout: RUN_TIMEOUT },
 });
 
 test("Login abgelehnt: LOGIN_FAILED, nichts angelegt", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!browserAvailable) return t.skip("Chromium nicht verfügbar");
+  if (!chromiumReady) return t.skip("Chromium nicht verfügbar");
   await withMock({ failLogin: true }, {}, async (mock, runner, cfg) => {
     const result = await runner.createNews(validateNewsRequest(body({ images: [] }), cfg));
     assert.equal(result.ok, false);
@@ -168,7 +163,7 @@ test("Login abgelehnt: LOGIN_FAILED, nichts angelegt", { timeout: RUN_TIMEOUT },
 });
 
 test("Gliederungswechsel klappt: News landet in der Zielgliederung", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!browserAvailable) return t.skip("Chromium nicht verfügbar");
+  if (!chromiumReady) return t.skip("Chromium nicht verfügbar");
   await withMock({}, { gliederungEdv: OTHER_EDV }, async (mock, runner, cfg) => {
     const result = await runner.createNews(validateNewsRequest(body({ images: [] }), cfg));
     assert.equal(result.ok, true, JSON.stringify(result));
@@ -177,7 +172,7 @@ test("Gliederungswechsel klappt: News landet in der Zielgliederung", { timeout: 
 });
 
 test("Gliederungswechsel scheitert: WRONG_GLIEDERUNG, nie in falscher Gliederung speichern", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!browserAvailable) return t.skip("Chromium nicht verfügbar");
+  if (!chromiumReady) return t.skip("Chromium nicht verfügbar");
   await withMock({ failSwitch: true }, { gliederungEdv: OTHER_EDV }, async (mock, runner, cfg) => {
     const result = await runner.createNews(validateNewsRequest(body({ images: [] }), cfg));
     assert.equal(result.ok, false);
@@ -188,7 +183,7 @@ test("Gliederungswechsel scheitert: WRONG_GLIEDERUNG, nie in falscher Gliederung
 });
 
 test("Unbekannte Kategorie: VALIDATION_FAILED, nichts angelegt", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!browserAvailable) return t.skip("Chromium nicht verfügbar");
+  if (!chromiumReady) return t.skip("Chromium nicht verfügbar");
   await withMock({}, {}, async (mock, runner, cfg) => {
     const result = await runner.createNews(validateNewsRequest(body({ categories: ["Gibt es nicht"], images: [] }), cfg));
     assert.equal(result.ok, false);
@@ -198,7 +193,7 @@ test("Unbekannte Kategorie: VALIDATION_FAILED, nichts angelegt", { timeout: RUN_
 });
 
 test("Parsley-Fehler im ISC: VALIDATION_FAILED mit den Texten des Formulars", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!browserAvailable) return t.skip("Chromium nicht verfügbar");
+  if (!chromiumReady) return t.skip("Chromium nicht verfügbar");
   await withMock({}, {}, async (mock, runner, cfg) => {
     const result = await runner.createNews(validateNewsRequest(body({ images: [], author: "FORMFEHLER Test" }), cfg));
     assert.equal(result.ok, false);
@@ -209,7 +204,7 @@ test("Parsley-Fehler im ISC: VALIDATION_FAILED mit den Texten des Formulars", { 
 });
 
 test("Formular ohne erkennbaren Editor: FORM_CHANGED", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!browserAvailable) return t.skip("Chromium nicht verfügbar");
+  if (!chromiumReady) return t.skip("Chromium nicht verfügbar");
   await withMock({ noEditor: true }, {}, async (mock, runner, cfg) => {
     const result = await runner.createNews(validateNewsRequest(body({ images: [] }), cfg));
     assert.equal(result.ok, false);
@@ -220,7 +215,7 @@ test("Formular ohne erkennbaren Editor: FORM_CHANGED", { timeout: RUN_TIMEOUT },
 });
 
 test("Speichern nicht bestätigt: SAVE_UNCONFIRMED mit newsId", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!browserAvailable) return t.skip("Chromium nicht verfügbar");
+  if (!chromiumReady) return t.skip("Chromium nicht verfügbar");
   await withMock({ saveUnconfirmedFor: "SPEICHERFEHLER" }, {}, async (mock, runner, cfg) => {
     const result = await runner.createNews(validateNewsRequest(body({ title: "SPEICHERFEHLER Test", images: [] }), cfg));
     assert.equal(result.ok, false);
@@ -231,7 +226,7 @@ test("Speichern nicht bestätigt: SAVE_UNCONFIRMED mit newsId", { timeout: RUN_T
 });
 
 test("Upload-Fehler: UPLOAD_FAILED, News bleibt als Entwurf mit newsId", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!browserAvailable) return t.skip("Chromium nicht verfügbar");
+  if (!chromiumReady) return t.skip("Chromium nicht verfügbar");
   await withMock({ failUploadFor: "kaputt" }, {}, async (mock, runner, cfg) => {
     const result = await runner.createNews(
       validateNewsRequest(
@@ -249,7 +244,7 @@ test("Upload-Fehler: UPLOAD_FAILED, News bleibt als Entwurf mit newsId", { timeo
 });
 
 test("ISC nicht erreichbar: LOGIN_UNEXPECTED, Browser wird trotzdem beendet", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!browserAvailable) return t.skip("Chromium nicht verfügbar");
+  if (!chromiumReady) return t.skip("Chromium nicht verfügbar");
   await withMock({}, { stepTimeoutMs: 1000 }, async (_mock, _runner, cfg) => {
     const slow = new IscNewsRunner(
       { ...cfg, iscBaseUrl: "http://127.0.0.1:9" },
@@ -265,7 +260,7 @@ test("ISC nicht erreichbar: LOGIN_UNEXPECTED, Browser wird trotzdem beendet", { 
 });
 
 test("Kategorien lesen liefert die Optionen der Gliederung", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!browserAvailable) return t.skip("Chromium nicht verfügbar");
+  if (!chromiumReady) return t.skip("Chromium nicht verfügbar");
   await withMock({}, {}, async (_mock, runner) => {
     const result = await runner.listCategories();
     assert.equal(result.ok, true, JSON.stringify(result));
