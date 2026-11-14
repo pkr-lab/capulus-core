@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"fmt"
+	"net/http"
 	"sort"
 	"strings"
 	"sync"
@@ -72,7 +73,7 @@ func (r *Registry) Middleware() gin.HandlerFunc {
 
 func (r *Registry) Handler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.String(200, r.render())
+		c.String(http.StatusOK, r.render())
 	}
 }
 
@@ -81,6 +82,7 @@ func (r *Registry) render() string {
 	defer r.mu.Unlock()
 
 	var b strings.Builder
+	keys := sortedKeys(r.requestsTotal)
 
 	b.WriteString("# HELP carplay_api_uptime_seconds Time since process start.\n")
 	b.WriteString("# TYPE carplay_api_uptime_seconds gauge\n")
@@ -88,14 +90,14 @@ func (r *Registry) render() string {
 
 	b.WriteString("# HELP carplay_api_http_requests_total Total HTTP requests.\n")
 	b.WriteString("# TYPE carplay_api_http_requests_total counter\n")
-	for _, key := range sortedKeys(r.requestsTotal) {
+	for _, key := range keys {
 		fmt.Fprintf(&b, "carplay_api_http_requests_total{method=%q,path=%q,status=\"%d\"} %d\n",
 			key.method, key.path, key.status, r.requestsTotal[key])
 	}
 
 	b.WriteString("# HELP carplay_api_http_request_duration_seconds_sum Cumulative request duration.\n")
 	b.WriteString("# TYPE carplay_api_http_request_duration_seconds_sum counter\n")
-	for _, key := range sortedKeys(r.requestsTotal) {
+	for _, key := range keys {
 		fmt.Fprintf(&b, "carplay_api_http_request_duration_seconds_sum{method=%q,path=%q,status=\"%d\"} %f\n",
 			key.method, key.path, key.status, r.durationSeconds[key])
 	}
