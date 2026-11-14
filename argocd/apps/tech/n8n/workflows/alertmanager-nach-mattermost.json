@@ -1,0 +1,177 @@
+{
+  "name": "Alertmanager -> Mattermost",
+  "nodes": [
+    {
+      "id": "ecc5d5ca-d035-59db-9d33-e9f7f6bf704d",
+      "name": "Hinweise",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -300
+      ],
+      "parameters": {
+        "content": "## Vor dem Aktivieren\n\n1. Alertmanager ruft diesen Webhook ueber den Receiver `n8n-mattermost` auf (siehe `argocd/apps/tech/monitoring/values.yaml`). Das Bearer-Token ist dasselbe wie bei `banana-pi-down`, deshalb nutzt der Webhook das vorhandene Credential `Webhook banana-pi-down`.\n2. Channel `alerts` in Mattermost anlegen und den Bot `n8n-bot` hinzufuegen.\n3. Der Button **Ticket anlegen** ruft den Workflow `Mattermost: Aktionen` auf. Beide Workflows aktivieren.\n4. Kritische Alerts gehen weiterhin zusaetzlich per ntfy und Telefon raus.",
+        "height": 260,
+        "width": 620
+      }
+    },
+    {
+      "id": "84da04ae-ca4d-5378-9c5f-660147474ef6",
+      "name": "Alertmanager Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "5aa092a5-635a-50a8-9484-47e8e543a79c",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "alertmanager-mattermost",
+        "responseMode": "lastNode",
+        "options": {},
+        "authentication": "headerAuth"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "QnbMhuZMfMzCreP7",
+          "name": "Webhook banana-pi-down"
+        }
+      }
+    },
+    {
+      "id": "9eca5bdc-d098-513b-a83e-84fa09541aa8",
+      "name": "Nachricht bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const body = $input.first().json.body || {};\nconst alerts = Array.isArray(body.alerts) ? body.alerts : [];\nif (alerts.length === 0) {\n  throw new Error('Keine Alerts im Alertmanager-Payload');\n}\nconst ICON = { critical: '\\u{1F6A8}', warning: '\\u26A0\\uFE0F' };\nconst entschaerfen = (text) => String(text || '').replace(/@(channel|all|here)\\b/gi, '@\\u200b$1');\nconst zeile = (alert) => {\n  const labels = alert.labels || {};\n  const notes = alert.annotations || {};\n  const ort = [labels.namespace, labels.pod || labels.instance || labels.job].filter(Boolean).join('/');\n  const text = notes.summary || notes.description || notes.message || '';\n  const icon = alert.status === 'resolved' ? '\\u2705' : (ICON[labels.severity] || '\\u2753');\n  return '- ' + icon + ' **' + (labels.alertname || 'Alert') + '**' + (ort ? ' (' + ort + ')' : '') + (text ? ' \\u2013 ' + text : '');\n};\nconst feuernd = alerts.filter((alert) => alert.status !== 'resolved');\nconst behoben = alerts.filter((alert) => alert.status === 'resolved');\nconst abschnitt = (titel, liste) => [titel, ...liste.slice(0, 15).map(zeile)].concat(liste.length > 15 ? ['- ... und ' + (liste.length - 15) + ' weitere'] : []).join('\\n');\nconst teile = [];\nif (feuernd.length > 0) teile.push(abschnitt('#### \\u{1F525} ' + feuernd.length + ' Alert(s) aktiv', feuernd));\nif (behoben.length > 0) teile.push(abschnitt('#### \\u2705 ' + behoben.length + ' Alert(s) behoben', behoben));\nconst message = entschaerfen(teile.join('\\n\\n'));\nconst ausgabe = { channel: 'alerts', message };\nif (feuernd.length > 0) {\n  const namen = [...new Set(feuernd.map((alert) => (alert.labels || {}).alertname || 'Alert'))];\n  const nonce = require('crypto').randomBytes(16).toString('hex');\n  ausgabe.props = {\n    aktion_nonce: nonce,\n    aktion_titel: ('Alert: ' + namen.join(', ')).slice(0, 150),\n    aktion_text: entschaerfen(feuernd.map((alert) => zeile(alert)).join('\\n')),\n    attachments: [\n      {\n        fallback: 'Aktionen',\n        actions: [\n          {\n            id: 'ticket',\n            name: 'Ticket anlegen',\n            type: 'button',\n            style: 'primary',\n            integration: { url: 'http://n8n.n8n.svc.cluster.local/webhook/mattermost-aktion', context: { aktion: 'ticket', nonce } },\n          },\n        ],\n      },\n    ],\n  };\n}\nreturn [{ json: ausgabe }];"
+      }
+    },
+    {
+      "id": "ab0b2178-29d3-5b3c-ae99-4ec404b45551",
+      "name": "Kanaele laden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://mattermost.mattermost.svc.cluster.local:8065/api/v4/users/me/channels",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fu9GDp3BYYVp4L5i",
+          "name": "Mattermost Bot (News)"
+        }
+      }
+    },
+    {
+      "id": "0791e2b8-c409-5b7c-a7c2-2294336858e7",
+      "name": "Kanal waehlen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const quellen = $('Nachricht bauen').all().map((item) => item.json);\nconst kanaele = $input.all().map((item) => item.json).filter((kanal) => kanal && kanal.name);\nreturn quellen.map((quelle) => {\n  const ziel = kanaele.find((kanal) => kanal.name === quelle.channel);\n  if (!ziel) {\n    throw new Error('Kanal \"' + quelle.channel + '\" nicht gefunden oder n8n-bot ist dort kein Mitglied. Bekannt: ' + kanaele.map((kanal) => kanal.name).join(', '));\n  }\n  return { json: { ...quelle, channel_id: ziel.id } };\n});"
+      }
+    },
+    {
+      "id": "3d5b42a8-b33f-550d-96f8-b25169d7e07a",
+      "name": "In Mattermost posten",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://mattermost.mattermost.svc.cluster.local:8065/api/v4/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel_id: $json.channel_id, message: $json.message, props: $json.props }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fu9GDp3BYYVp4L5i",
+          "name": "Mattermost Bot (News)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Alertmanager Webhook": {
+      "main": [
+        [
+          {
+            "node": "Nachricht bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nachricht bauen": {
+      "main": [
+        [
+          {
+            "node": "Kanaele laden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kanaele laden": {
+      "main": [
+        [
+          {
+            "node": "Kanal waehlen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kanal waehlen": {
+      "main": [
+        [
+          {
+            "node": "In Mattermost posten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Alertmanager (VictoriaMetrics-Stack) -> Mattermost-Channel 'alerts'. Der Receiver n8n-mattermost sendet alle Alerts mit severity warning oder critical, auch Resolved-Meldungen (send_resolved: true). 'Nachricht bauen' fasst die Alerts einer Gruppe zu einer Nachricht zusammen (max. 15 Zeilen je Abschnitt) und haengt bei aktiven Alerts den Button 'Ticket anlegen' an. Der Button traegt ein Einmal-Token (aktion_nonce), das der Workflow 'Mattermost: Aktionen' gegen den gespeicherten Post prueft. Gepostet wird ueber den Bot n8n-bot (Channel-Name wird ueber die Channels des Bots in die ID aufgeloest) (Credential 'Mattermost Bot (News)')."
+  },
+  "tags": [],
+  "id": "c52ACCS8FpKtZbjT"
+}

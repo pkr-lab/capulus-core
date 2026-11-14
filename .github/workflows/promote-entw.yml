@@ -61,6 +61,13 @@ jobs:
           PROMOTE_HEAD: ${{ needs.detect.outputs.head }}
         run: bash scripts/promote-entw.sh report-ci-failure
 
+      - name: Mattermost
+        uses: ./.github/actions/mattermost-notify
+        with:
+          channel: deployments
+          token: ${{ secrets.MATTERMOST_BOT_TOKEN }}
+          message: "#### \u274C CI auf entw ist rot\nCommit `${{ needs.detect.outputs.head }}`\n[Lauf ansehen](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+
   promote:
     name: PR nach main
     needs: [detect, ci]
@@ -81,3 +88,10 @@ jobs:
           GH_TOKEN: ${{ secrets.PROMOTE_TOKEN || secrets.RENOVATE_TOKEN }}
           PROMOTE_HEAD: ${{ needs.detect.outputs.head }}
         run: bash scripts/promote-entw.sh promote
+
+      - name: Mattermost
+        uses: ./.github/actions/mattermost-notify
+        with:
+          channel: deployments
+          token: ${{ secrets.MATTERMOST_BOT_TOKEN }}
+          message: "#### \U0001F500 ENTW \u2192 main\nCI gruen, Promotion fuer `${{ needs.detect.outputs.head }}` ausgefuehrt.\n[Lauf ansehen](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"

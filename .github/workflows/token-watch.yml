@@ -36,3 +36,11 @@ jobs:
           PROMOTE_TOKEN: ${{ secrets.PROMOTE_TOKEN }}
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
         run: python3 scripts/token-watch.py
+
+      - name: Mattermost bei Fehler
+        if: failure()
+        uses: ./.github/actions/mattermost-notify
+        with:
+          channel: sicherheit
+          token: ${{ secrets.MATTERMOST_BOT_TOKEN }}
+          message: "#### \U0001F511 Token-Ablauf in 7 Tagen oder weniger\nDer Token-Watch ist rot, Details stehen in den offenen Token-Issues.\n[Lauf ansehen](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"

@@ -72,6 +72,12 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.secrets.name }}
                   key: datasource
+            - name: MM_EMAILSETTINGS_SMTPPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: smtp-password
+                  optional: true
           ports:
             - name: http
               containerPort: {{ .Values.service.targetPort }}
