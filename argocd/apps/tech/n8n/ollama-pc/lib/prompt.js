@@ -203,4 +203,4 @@ function stripClosing(reply) {
   return reply;
 }
 
-module.exports = { channelOf, loadPromptFiles, buildMessages, cleanReply, stripClosing, estimateTokens, PLACEHOLDER_MARKER };
+module.exports = { channelOf, loadPromptFiles, buildMessages, cleanReply, stripClosing };

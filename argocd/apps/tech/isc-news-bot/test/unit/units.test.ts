@@ -8,7 +8,7 @@ import { RunLock } from "../../src/mutex.js";
 import { isAuthorized } from "../../src/auth.js";
 import { Logger } from "../../src/logger.js";
 import { normalizeHtml } from "../../src/isc/news-form.js";
-import { normalizeTitle } from "../../src/isc/duplicates.js";
+import { normalizeForComparison } from "../../src/text.js";
 import { parseEdv } from "../../src/isc/session.js";
 import { MOCK_CATEGORIES } from "../fixtures/mock-isc.js";
 
@@ -47,8 +47,8 @@ test("Kategorien: unbekannte Werte werden abgelehnt, nichts wird geraten", () =>
 });
 
 test("Titel-Abgleich für Duplikate: getrimmt und ohne Groß-/Kleinschreibung", () => {
-  assert.equal(normalizeTitle("  Sommer  Fest "), normalizeTitle("sommer fest"));
-  assert.notEqual(normalizeTitle("Sommerfest"), normalizeTitle("Sommer fest 2"));
+  assert.equal(normalizeForComparison("  Sommer  Fest "), normalizeForComparison("sommer fest"));
+  assert.notEqual(normalizeForComparison("Sommerfest"), normalizeForComparison("Sommer fest 2"));
 });
 
 test("HTML-Vergleich ignoriert Leerraum und geschützte Leerzeichen", () => {

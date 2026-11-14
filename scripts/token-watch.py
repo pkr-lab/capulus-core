@@ -22,6 +22,8 @@ THRESHOLDS = (60, 30, 14, 7, 1)
 LABEL = "token-expiry"
 MARKER = re.compile(r"<!-- token-watch:threshold=(\d+) -->")
 TITLE_PREFIX = "Token laeuft ab: "
+DOCS_PREFIX = "pkr-lab-docs:"
+DOCS_URL = "https://github.com/pkr-lab/pkr-lab-docs/blob/main/"
 
 
 def gh(*args, check=True):
@@ -114,10 +116,6 @@ def find_issue(title: str):
     out = gh("issue", "list", "--search", f'label:"{LABEL}" "{title}" in:title is:open', "--json", "number,body", check=False)
     issues = json.loads(out or "[]")
     return issues[0] if issues else None
-
-
-DOCS_PREFIX = "pkr-lab-docs:"
-DOCS_URL = "https://github.com/pkr-lab/pkr-lab-docs/blob/main/"
 
 
 def runbook_link(runbook: str) -> str:

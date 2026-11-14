@@ -71,4 +71,4 @@ async function wake(wakeConfig) {
   }
 }
 
-module.exports = { wake, buildMagicPacket, sendMagicPacket, parseMac };
+module.exports = { wake, buildMagicPacket, parseMac };

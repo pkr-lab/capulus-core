@@ -23,6 +23,14 @@ import (
 	"carplay-api/pkg/metrics"
 )
 
+const (
+	readHeaderTimeout     = 5 * time.Second
+	shutdownTimeout       = 10 * time.Second
+	metricsQueryTimeout   = 3 * time.Second
+	upstreamClientTimeout = 2 * time.Second
+	healthProbeTimeout    = 2 * time.Second
+)
+
 func main() {
 	cfg := loadConfig()
 
@@ -48,7 +56,7 @@ func run(cfg config, logger *slog.Logger) error {
 	srv := &http.Server{
 		Addr:              ":" + cfg.port,
 		Handler:           router,
-		ReadHeaderTimeout: 5 * time.Second,
+		ReadHeaderTimeout: readHeaderTimeout,
 	}
 
 	serverErr := make(chan error, 1)
@@ -69,7 +77,7 @@ func run(cfg config, logger *slog.Logger) error {
 		logger.Info("shutting down")
 	}
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 	return srv.Shutdown(shutdownCtx)
 }
@@ -81,9 +89,9 @@ func newRouter(cfg config, logger *slog.Logger) (*gin.Engine, error) {
 		return nil, errMissingToken
 	}
 
-	vm := clients.NewVictoriaMetricsClient(cfg.vmURL, 3*time.Second, logger)
-	ntfy := clients.NewNtfyClient(cfg.ntfyURL, cfg.ntfyTopic, cfg.ntfyToken, 2*time.Second, logger)
-	kuma := clients.NewUptimeKumaClient(cfg.kumaURL, cfg.kumaSlug, 2*time.Second, logger)
+	vm := clients.NewVictoriaMetricsClient(cfg.vmURL, metricsQueryTimeout, logger)
+	ntfy := clients.NewNtfyClient(cfg.ntfyURL, cfg.ntfyTopic, cfg.ntfyToken, upstreamClientTimeout, logger)
+	kuma := clients.NewUptimeKumaClient(cfg.kumaURL, cfg.kumaSlug, upstreamClientTimeout, logger)
 	powerAgent := clients.NewPowerAgentClient(cfg.powerAgentURL, cfg.powerAgentToken, cfg.powerAgentTimeout)
 
 	stats := metrics.NewRegistry()
@@ -93,7 +101,7 @@ func newRouter(cfg config, logger *slog.Logger) (*gin.Engine, error) {
 		cfg.ntfyLimit, cfg.ntfySince,
 		stats, logger,
 	)
-	healthHandler := handlers.NewHealthHandler(cfg.vmURL, cfg.ntfyURL, cfg.kumaURL, 2*time.Second)
+	healthHandler := handlers.NewHealthHandler(cfg.vmURL, cfg.ntfyURL, cfg.kumaURL, healthProbeTimeout)
 	powerHandler := handlers.NewPowerHandler(powerAgent, cfg.shutdownConfirmationCode, logger)
 
 	k8sConfigMaps, err := clients.NewK8sConfigMapClient()
