@@ -26,22 +26,22 @@ github:
     - id: immich
       name: "Immich"
       repo: "immich-app/immich"
-      currentVersion: "v3.1.0"
+      currentVersion: "v3.4.1"
       notifyZammad: false
     - id: vaultwarden
       name: "Vaultwarden"
       repo: "dani-garcia/vaultwarden"
-      currentVersion: "1.37.1"
+      currentVersion: "1.37.5"
       notifyZammad: false
     - id: paperless-ngx
       name: "Paperless-ngx"
       repo: "paperless-ngx/paperless-ngx"
-      currentVersion: "v3.0.5"
+      currentVersion: "v3.4.2"
       notifyZammad: false
     - id: n8n
       name: "n8n"
       repo: "n8n-io/n8n"
-      currentVersion: "n8n@2.33.7"
+      currentVersion: "n8n@2.47.7"
       notifyZammad: false
     - id: wikijs
       name: "Wiki.js"
