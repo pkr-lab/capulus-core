@@ -17,6 +17,8 @@ import (
 	"ticket-gate/internal/config"
 )
 
+const base64LineLength = 76
+
 type Mailer interface {
 	SendCode(ctx context.Context, to, code string, ttl time.Duration) error
 }
@@ -50,10 +52,10 @@ func BuildMessage(from, fromName, to, code string, ttl time.Duration, now time.T
 
 	encodedBody := base64.StdEncoding.EncodeToString([]byte(body))
 	var wrapped strings.Builder
-	for len(encodedBody) > 76 {
-		wrapped.WriteString(encodedBody[:76])
+	for len(encodedBody) > base64LineLength {
+		wrapped.WriteString(encodedBody[:base64LineLength])
 		wrapped.WriteString("\r\n")
-		encodedBody = encodedBody[76:]
+		encodedBody = encodedBody[base64LineLength:]
 	}
 	wrapped.WriteString(encodedBody)
 	wrapped.WriteString("\r\n")

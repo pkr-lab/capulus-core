@@ -26,6 +26,11 @@ import (
 
 var codePattern = regexp.MustCompile(`^[0-9]{6}$`)
 
+const (
+	maxLimiterKeys = 200000
+	backendTimeout = 20 * time.Second
+)
+
 type Service struct {
 	cfg     config.Config
 	store   *store.Store
@@ -64,7 +69,7 @@ func NewService(d Deps) *Service {
 	return &Service{
 		cfg:     d.Config,
 		store:   store.New(d.Now, d.Config.MaxSessions),
-		limits:  limiter.New(d.Now, 200000),
+		limits:  limiter.New(d.Now, maxLimiterKeys),
 		mailer:  d.Mailer,
 		tickets: d.Tickets,
 		now:     d.Now,
@@ -183,7 +188,7 @@ func (s *Service) RequestCode(sessionToken, ip, rawEmail string) (time.Duration,
 
 	ttl := s.cfg.CodeTTL
 	s.spawn(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), backendTimeout)
 		defer cancel()
 		if err := s.mailer.SendCode(ctx, email, code, ttl); err != nil {
 			s.logger.Error("code mail failed", "error", err.Error())
@@ -305,7 +310,7 @@ func (s *Service) CreateTicket(sessionToken, ip string, in TicketInput) (string,
 		return "", newErr(http.StatusForbidden, "verification_required")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), backendTimeout)
 	defer cancel()
 	number, err := s.tickets.Create(ctx, zammad.Ticket{Email: rec.Email, Name: name, Subject: subject, Message: message})
 	if err != nil {
