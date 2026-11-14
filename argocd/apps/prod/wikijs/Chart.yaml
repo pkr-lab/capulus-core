@@ -12,11 +12,11 @@ description: |
     https://wiki.prod.homeserver
 
   Komponenten:
-    - Wiki.js 2.x (ghcr.io/requarks/wiki)
+    - Wiki.js 3.x (ghcr.io/requarks/wiki)
     - PostgreSQL 16 (offizielles postgres-Image, eigenes Deployment)
 type: application
 version: 0.1.0
-appVersion: "2.5.314"
+appVersion: "3.3.1"
 keywords:
   - wikijs
   - wiki

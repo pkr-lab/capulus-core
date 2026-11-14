@@ -46,7 +46,7 @@ github:
     - id: wikijs
       name: "Wiki.js"
       repo: "requarks/wiki"
-      currentVersion: "v2.5.314"
+      currentVersion: "3.3.1"
       notifyZammad: false
     - id: zammad
       name: "Zammad"
