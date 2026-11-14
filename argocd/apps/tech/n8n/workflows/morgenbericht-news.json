@@ -11,7 +11,7 @@
         -360
       ],
       "parameters": {
-        "content": "## Morgenbericht 6:45\n\nPostet taeglich um 6:45 Uhr in den privaten Channel News: 1 Termine heute (drei ICS-Kalender), 2 Sicherheitsluecken und Hacks (BSI CERT-Bund, CISA KEV, heise Security, The Hacker News), 3 Health aus VictoriaMetrics, 4 News der Woche.\n\n**Kalender-Links** stehen in den Nodes Kalender DLRG und Kalender Outlook und Kalender HiOrg. Es sind geheime Freigabe-Links, im Repo steht nur ein Platzhalter. Nach dem Import die echten ICS-Links eintragen (Outlook: https statt webcal).\n\nDie KI-Zusammenfassung laeuft ueber den Ollama-PC (wird bei Bedarf geweckt). Ist er nicht erreichbar, kommt eine Liste der Ueberschriften mit Link.",
+        "content": "## Morgenbericht 6:45\n\nPostet taeglich um 6:45 Uhr in den privaten Channel News und schickt denselben Bericht als HTML-Mail an peter.kretzer@dlrg.org (ueber Publish: Benachrichtigung): 1 Termine heute (zwei ICS-Kalender), 2 Sicherheitsluecken und Hacks (BSI CERT-Bund, CISA KEV, heise Security, The Hacker News), 3 Health aus VictoriaMetrics, 4 News der Woche.\n\n**Kalender-Links** stehen in den Nodes Kalender DLRG und Kalender Outlook. Es sind geheime Freigabe-Links, im Repo steht nur ein Platzhalter. Nach dem Import die echten ICS-Links eintragen (Outlook: https statt webcal).\n\nDie KI-Zusammenfassung laeuft ueber den Ollama-PC (wird bei Bedarf geweckt). Ist er nicht erreichbar, kommt eine Liste der Ueberschriften mit Link.",
         "height": 260,
         "width": 700
       }
@@ -925,7 +925,7 @@
       ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const termine = $('Termine auswerten').first().json;\nconst daten = $('Daten aufbereiten').first().json;\nconst bereinigen = (wert) => String(wert || '').replace(/```[a-z]*\\n?/gi, '').replace(/@(channel|all|here)\\b/gi, '@​$1').trim().slice(0, 3000);\nconst ki = (knoten) => {\n  try {\n    const j = $(knoten).first().json;\n    const inhalt = j && j.message && j.message.content ? bereinigen(j.message.content) : '';\n    return /^\\s*[-*]\\s/m.test(inhalt) ? inhalt : '';\n  } catch (e) {\n    return '';\n  }\n};\nconst liste = (eintraege, max) => eintraege.slice(0, max).map((e) => `- [${e.titel}](${e.link}) _(${e.quelle})_`).join('\\n');\nconst sicherheitKi = daten.anzahlSicherheit > 0 ? ki('KI Sicherheit') : '';\nconst wocheKi = daten.anzahlWoche > 0 ? ki('KI Wochennews') : '';\nconst sicherheit = daten.anzahlSicherheit === 0 ? '- Keine neuen Meldungen in den letzten 48 Stunden.' : sicherheitKi || `${liste(daten.sicherheit, 5)}\\n_Ohne KI-Zusammenfassung (Ollama-PC nicht erreichbar)._`;\nconst woche = daten.anzahlWoche === 0 ? '- Keine weiteren Meldungen.' : wocheKi || `${liste(daten.woche, 5)}\\n_Ohne KI-Zusammenfassung (Ollama-PC nicht erreichbar)._`;\nconst WMO = (code) => {\n  if (code === 0) return '\\u2600\\uFE0F klar';\n  if (code === 1) return '\\u{1F324}\\uFE0F \\u00FCberwiegend klar';\n  if (code === 2) return '\\u26C5 teils bew\\u00F6lkt';\n  if (code === 3) return '\\u2601\\uFE0F bedeckt';\n  if (code === 45 || code === 48) return '\\u{1F32B}\\uFE0F Nebel';\n  if (code >= 51 && code <= 57) return '\\u{1F326}\\uFE0F Nieselregen';\n  if (code >= 61 && code <= 67) return '\\u{1F327}\\uFE0F Regen';\n  if (code >= 71 && code <= 77) return '\\u{1F328}\\uFE0F Schnee';\n  if (code >= 80 && code <= 82) return '\\u{1F326}\\uFE0F Schauer';\n  if (code === 85 || code === 86) return '\\u{1F328}\\uFE0F Schneeschauer';\n  if (code >= 95) return '\\u26C8\\uFE0F Gewitter';\n  return '\\u2753 unbekannt';\n};\nlet wetter = '- Wetterdaten nicht abrufbar.';\ntry {\n  const h = $('Wetter').first().json.hourly;\n  const reihen = [6, 9, 12, 15, 18, 21].map((stunde) => {\n    const regen = h.precipitation_probability[stunde];\n    return `| ${String(stunde).padStart(2, '0')}:00 | ${WMO(h.weathercode[stunde])}${regen >= 30 ? ` (${regen} % Regen)` : ''} | ${Math.round(h.temperature_2m[stunde])} \\u00B0C |`;\n  });\n  wetter = ['| Uhrzeit | Wetter | Temperatur |', '|---|---|---|', ...reihen].join('\\n');\n} catch (e) {\n  wetter = '- Wetterdaten nicht abrufbar.';\n}\nconst uhrzeit = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' }).format(new Date());\nconst nachricht = [\n  `#### \\u2600\\uFE0F Guten Morgen Peter \\u2013 ${termine.datum}, ${uhrzeit} Uhr`,\n  '##### 1. Termine heute',\n  `${termine.termine}\\n\\n**HiOrg Kalender**\\n${termine.hiorg}`,\n  `**Wetter heute in Andernach**\\n\\n${wetter}`,\n  `**Wochenschau (n\\u00E4chste 7 Tage)**\\n\\n${termine.woche}`,\n  '---',\n  '##### 2. Sicherheitsl\\u00FCcken und aktuelle Hacks',\n  sicherheit,\n  '---',\n  '##### 3. Capulus-Core Health',\n  daten.health,\n  '---',\n  '##### 4. News der Woche',\n  woche,\n].join('\\n\\n');\nreturn [{ json: { nachricht: nachricht.slice(0, 11500) } }];"
+        "jsCode": "const termine = $('Termine auswerten').first().json;\nconst daten = $('Daten aufbereiten').first().json;\nconst bereinigen = (wert) => String(wert || '').replace(/```[a-z]*\\n?/gi, '').replace(/@(channel|all|here)\\b/gi, '@​$1').trim().slice(0, 3000);\nconst ki = (knoten) => {\n  try {\n    const j = $(knoten).first().json;\n    const inhalt = j && j.message && j.message.content ? bereinigen(j.message.content) : '';\n    return /^\\s*[-*]\\s/m.test(inhalt) ? inhalt : '';\n  } catch (e) {\n    return '';\n  }\n};\nconst liste = (eintraege, max) => eintraege.slice(0, max).map((e) => `- [${e.titel}](${e.link}) _(${e.quelle})_`).join('\\n');\nconst sicherheitKi = daten.anzahlSicherheit > 0 ? ki('KI Sicherheit') : '';\nconst wocheKi = daten.anzahlWoche > 0 ? ki('KI Wochennews') : '';\nconst sicherheit = daten.anzahlSicherheit === 0 ? '- Keine neuen Meldungen in den letzten 48 Stunden.' : sicherheitKi || `${liste(daten.sicherheit, 5)}\\n_Ohne KI-Zusammenfassung (Ollama-PC nicht erreichbar)._`;\nconst woche = daten.anzahlWoche === 0 ? '- Keine weiteren Meldungen.' : wocheKi || `${liste(daten.woche, 5)}\\n_Ohne KI-Zusammenfassung (Ollama-PC nicht erreichbar)._`;\nconst nachricht = [\n  `#### ☀️ Guten Morgen – ${termine.datum}`,\n  '##### 1. Termine heute',\n  termine.termine,\n  '##### 2. Sicherheitslücken und aktuelle Hacks',\n  sicherheit,\n  '##### 3. Capulus-Core Health',\n  daten.health,\n  '##### 4. News der Woche',\n  woche,\n].join('\\n\\n');\nconst mhEsc = (wert) => String(wert).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');\nconst mhInline = (zeile) => mhEsc(zeile)\n  .replace(/\\[([^\\]]+)\\]\\((https?:\\/\\/[^\\s)]+)\\)/g, '<a href=\"$2\" style=\"color:#1565c0\">$1</a>')\n  .replace(/\\*\\*([^*]+)\\*\\*/g, '<b>$1</b>')\n  .replace(/(^|[\\s(])_([^_]+)_(?=[\\s).,]|$)/g, '$1<i>$2</i>');\nconst mhZellen = (zeile) => zeile.replace(/^\\||\\|$/g, '').split('|').map((zelle) => zelle.trim());\nconst mhBloecke = [];\nlet mhListe = false;\nlet mhTabelle = [];\nconst mhTabelleZu = () => {\n  if (mhTabelle.length === 0) return;\n  const reihen = mhTabelle.filter((reihe) => !reihe.every((zelle) => /^:?-{3,}:?$/.test(zelle)));\n  const kopf = reihen.shift() || [];\n  mhBloecke.push('<table style=\"border-collapse:collapse;font-size:13px;margin:6px 0 12px\"><tr>' + kopf.map((zelle) => '<th style=\"text-align:left;padding:4px 12px;background:#f1f3f5;border:1px solid #dddddd\">' + mhInline(zelle) + '</th>').join('') + '</tr>'\n    + reihen.map((reihe) => '<tr>' + reihe.map((zelle) => '<td style=\"padding:4px 12px;border:1px solid #dddddd\">' + mhInline(zelle) + '</td>').join('') + '</tr>').join('') + '</table>');\n  mhTabelle = [];\n};\nconst mhListeZu = () => {\n  if (mhListe) mhBloecke.push('</ul>');\n  mhListe = false;\n};\nnachricht.slice(0, 11500).split('\\n').forEach((zeile) => {\n  const t = zeile.trimEnd();\n  if (/^\\|/.test(t)) {\n    mhListeZu();\n    mhTabelle.push(mhZellen(t));\n    return;\n  }\n  mhTabelleZu();\n  const punkt = /^-\\s+(.*)$/.exec(t);\n  if (punkt) {\n    if (!mhListe) { mhBloecke.push('<ul style=\"margin:4px 0 12px;padding-left:20px\">'); mhListe = true; }\n    mhBloecke.push('<li style=\"margin:3px 0\">' + mhInline(punkt[1]) + '</li>');\n    return;\n  }\n  mhListeZu();\n  if (!t) return;\n  const h4 = /^#####\\s+(.*)$/.exec(t);\n  const h3 = /^####\\s+(.*)$/.exec(t);\n  if (/^-{3,}$/.test(t)) mhBloecke.push('<hr style=\"border:none;border-top:1px solid #e0e0e0;margin:16px 0\">');\n  else if (h4) mhBloecke.push('<div style=\"font-size:15px;font-weight:bold;color:#1565c0;margin:16px 0 6px;border-bottom:1px solid #e0e0e0;padding-bottom:4px\">' + mhInline(h4[1]) + '</div>');\n  else if (h3) mhBloecke.push('<div style=\"font-size:18px;font-weight:bold;margin:0 0 12px\">' + mhInline(h3[1]) + '</div>');\n  else mhBloecke.push('<p style=\"margin:4px 0\">' + mhInline(t) + '</p>');\n});\nmhListeZu();\nmhTabelleZu();\nreturn [{ json: { nachricht: nachricht.slice(0, 11500), mailHtml: mhBloecke.join('') } }];"
       }
     },
     {
@@ -968,7 +968,31 @@
             {
               "id": "6ac7bb75-dc69-5739-98b0-1b59d8cd3ada",
               "name": "mail",
-              "value": "false",
+              "value": "true",
+              "type": "string"
+            },
+            {
+              "id": "5e0f7a1c-3b6d-5c42-9a18-7d2e4b6c8f10",
+              "name": "titel",
+              "value": "={{ 'Morgenbericht ' + new Date().toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' }) }}",
+              "type": "string"
+            },
+            {
+              "id": "9c3d1e52-7a84-5f06-b2d9-1e8a4c6f0b37",
+              "name": "status",
+              "value": "info",
+              "type": "string"
+            },
+            {
+              "id": "d4a7b608-2f15-5e93-8c61-3b9e0a7d5f24",
+              "name": "text",
+              "value": "={{ $json.nachricht }}",
+              "type": "string"
+            },
+            {
+              "id": "17e2c9f4-6b38-5a70-9d45-8f1b3e6a2c09",
+              "name": "mailHtml",
+              "value": "={{ $json.mailHtml }}",
               "type": "string"
             }
           ]
