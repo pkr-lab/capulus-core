@@ -34,3 +34,11 @@ jobs:
           GH_REPO: ${{ github.repository }}
           MIN_SEVERITY: medium
         run: python3 scripts/security-issues.py
+
+      - name: Mattermost bei Fehler
+        if: failure()
+        uses: ./.github/actions/mattermost-notify
+        with:
+          channel: sicherheit
+          token: ${{ secrets.MATTERMOST_BOT_TOKEN }}
+          message: "#### \u274C Security-Alert-Abgleich fehlgeschlagen\nCode-Scanning- oder Dependabot-Alerts konnten nicht abgerufen werden.\n[Lauf ansehen](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"

@@ -65,6 +65,18 @@ spec:
                     secretKeyRef:
                       name: {{ .Values.zammad.tokenSecretName }}
                       key: {{ .Values.zammad.tokenSecretKey }}
+                {{- if .Values.mattermost.enabled }}
+                - name: MATTERMOST_URL
+                  value: {{ .Values.mattermost.url | quote }}
+                - name: MATTERMOST_CHANNEL
+                  value: {{ .Values.mattermost.channel | quote }}
+                - name: MATTERMOST_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.mattermost.tokenSecretName }}
+                      key: {{ .Values.mattermost.tokenSecretKey }}
+                      optional: true
+                {{- end }}
               resources:
                 {{- toYaml .Values.resources | nindent 16 }}
               securityContext:
