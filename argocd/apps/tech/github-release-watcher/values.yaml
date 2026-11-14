@@ -65,6 +65,14 @@ zammad:
   tokenSecretName: github-release-watcher-zammad-token
   tokenSecretKey: token
 
+mattermost:
+  enabled: true
+  url: "http://mattermost.mattermost.svc.cluster.local:8065"
+  channel: "releases"
+  tokenSecretName: github-release-watcher-mattermost-token
+  tokenSecretKey: token
+  encryptedToken: "AgCGkcrzEtS71oUc5NqONQwsAuui0vHxMJkLjfQuZ64XxfY16aeSonsn8My21eGsNkDgVmlzl9mlRnbHd0KKiYGK8qsjqcRXPw2aEpRdr6+kZkc9nPA3OpzI98krllHtZ+U2u14cgK54hWcl6v34CdUFIYk3nhqlgmWYVp1uH0dwTusbD7ElVtS63fzpHBlVExGWk+HcaVd4X9UYw1LdD03sHlFYfKthkzHaexdwpOCxtWp33uGXTm5sfrV0dyp2P/YVM32IAXbh81NzLvZxxnoFMVh3M08hLC3BVO0aA5XLanPeNvqw2qz40AXB+OIYrMTcA6wCkccGsC95vIS8jBye87ebp6NwG3PL2E7Thu4mJBaPgJ6yky2UCJRQOI8eRiN/ZQWJQCjeadsavbI2slvfNKYtE+YNDw5BEWaWwc0BfXdIr9UOlf4eW0ACpm4hMZIy9HpNdXiFfGeM8UgUpBiIbZiOMuOPAMdsQoJaYJAlUx4nWlC+/x9hHAgUaH93C0M7FEv4rinyQR0qIJ0WyEuxlG8vAvdfnFU8tPEyBCyFTLTwGxrZ1KiKsXDwXmEoOncOO8EihKxfn1QVt3kx9KAxA9O60jDWtjtQxeQ2WNXrWYN08DVlCfYhycdIjhYHdfDzJNuPS3peIs9VYtBG31PTVJv2BbUxfEoEvEMr+UmPvD+a2kuwVyszHehC2qlXxmY0fr7p2rM3N6tSP+7US6320td0IcDpygrF6A=="
+
 secrets:
   enabled: true
   name: github-release-watcher-zammad-token

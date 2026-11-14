@@ -1,0 +1,43 @@
+name: Mattermost-Benachrichtigung
+description: Postet eine Nachricht als Bot n8n-bot in einen Mattermost-Channel. Ohne Token passiert nichts.
+
+inputs:
+  channel:
+    description: Channel-Name (URL-Name), der Bot muss Mitglied sein
+    required: true
+  message:
+    description: Markdown-Text
+    required: true
+  token:
+    description: Access-Token des Mattermost-Bots n8n-bot
+    required: false
+    default: ""
+  url:
+    description: Basis-URL von Mattermost
+    required: false
+    default: https://matter-tech.pkr-lab.de
+
+runs:
+  using: composite
+  steps:
+    - name: Nachricht senden
+      shell: bash
+      env:
+        MM_CHANNEL: ${{ inputs.channel }}
+        MM_MESSAGE: ${{ inputs.message }}
+        MM_TOKEN: ${{ inputs.token }}
+        MM_URL: ${{ inputs.url }}
+      run: |
+        if [ -z "$MM_TOKEN" ]; then
+          echo "Kein Bot-Token gesetzt, Mattermost-Benachrichtigung uebersprungen."
+          exit 0
+        fi
+        post() {
+          channel_id="$(curl -sS --fail-with-body --max-time 20 -H "Authorization: Bearer $MM_TOKEN" "$MM_URL/api/v4/users/me/channels" \
+            | jq -r --arg name "$MM_CHANNEL" 'map(select(.name == $name)) | .[0].id // empty')"
+          [ -n "$channel_id" ] || { echo "Channel $MM_CHANNEL nicht gefunden oder Bot kein Mitglied" >&2; return 1; }
+          jq -n --arg channel_id "$channel_id" --arg message "$MM_MESSAGE" '{channel_id: $channel_id, message: $message}' \
+            | curl -sS --fail-with-body --max-time 20 -X POST "$MM_URL/api/v4/posts" \
+                -H "Authorization: Bearer $MM_TOKEN" -H "Content-Type: application/json" --data @- >/dev/null
+        }
+        post || echo "::warning title=Mattermost::Benachrichtigung konnte nicht gesendet werden"

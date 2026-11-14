@@ -197,6 +197,88 @@
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "id": "41151080-c8ea-5696-8c97-447f049b9498",
+      "name": "Mattermost-Text bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        520
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return $input.all().map((item) => ({ json: { channel: 'betrieb', message: '#### \\u{1F6A8} ' + item.json.title + '\\n\\n' + item.json.message } }));"
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "ca8d7ef8-26e2-577b-876f-9ae6847cf38c",
+      "name": "Kanaele laden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1720,
+        520
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://mattermost.mattermost.svc.cluster.local:8065/api/v4/users/me/channels",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fu9GDp3BYYVp4L5i",
+          "name": "Mattermost Bot (News)"
+        }
+      },
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "d74390c1-826e-5130-898c-342b38a453e8",
+      "name": "Kanal waehlen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        520
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const quellen = $('Mattermost-Text bauen').all().map((item) => item.json);\nconst kanaele = $input.all().map((item) => item.json).filter((kanal) => kanal && kanal.name);\nreturn quellen.map((quelle) => {\n  const ziel = kanaele.find((kanal) => kanal.name === quelle.channel);\n  if (!ziel) {\n    throw new Error('Kanal \"' + quelle.channel + '\" nicht gefunden oder n8n-bot ist dort kein Mitglied. Bekannt: ' + kanaele.map((kanal) => kanal.name).join(', '));\n  }\n  return { json: { ...quelle, channel_id: ziel.id } };\n});"
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "d91a2243-2025-5bd1-9f2f-0dd16258bbb8",
+      "name": "In Mattermost posten",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2280,
+        520
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://mattermost.mattermost.svc.cluster.local:8065/api/v4/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel_id: $json.channel_id, message: $json.message, props: $json.props }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fu9GDp3BYYVp4L5i",
+          "name": "Mattermost Bot (News)"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "pinData": {},
@@ -261,6 +343,44 @@
         [
           {
             "node": "Alarm senden",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Mattermost-Text bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mattermost-Text bauen": {
+      "main": [
+        [
+          {
+            "node": "Kanaele laden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kanaele laden": {
+      "main": [
+        [
+          {
+            "node": "Kanal waehlen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kanal waehlen": {
+      "main": [
+        [
+          {
+            "node": "In Mattermost posten",
             "type": "main",
             "index": 0
           }
