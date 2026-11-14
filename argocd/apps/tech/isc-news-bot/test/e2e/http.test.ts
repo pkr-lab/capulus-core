@@ -2,13 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type http from "node:http";
 import type { AddressInfo } from "node:net";
-import { chromium } from "playwright";
 import { createServer } from "../../src/server.js";
 import { IscNewsRunner, launchChromium } from "../../src/runner.js";
 import { RunLock } from "../../src/mutex.js";
 import { Logger } from "../../src/logger.js";
 import { startMockIsc, type MockIsc } from "../fixtures/mock-isc.js";
 import { testConfig } from "../fixtures/config.js";
+import { browserAvailable } from "../fixtures/browser.js";
 import { PNG_BASE64 } from "../fixtures/images.js";
 
 const silent = new Logger(true);
@@ -28,16 +28,6 @@ async function startApi(mock: MockIsc, overrides: Parameters<typeof testConfig>[
 }
 
 const AUTH = { Authorization: "Bearer api-token-platzhalter", "Content-Type": "application/json" };
-
-async function browserOk(): Promise<boolean> {
-  try {
-    const browser = await chromium.launch();
-    await browser.close();
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 test("Health und Readiness ohne Token", async () => {
   const mock = await startMockIsc();
@@ -124,7 +114,7 @@ test("Unbekannte Route: 404", async () => {
 });
 
 test("GET /categories liefert die Optionen über die API", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!(await browserOk())) return t.skip("Chromium nicht verfügbar");
+  if (!(await browserAvailable())) return t.skip("Chromium nicht verfügbar");
   const mock = await startMockIsc();
   const api = await startApi(mock);
   try {
@@ -140,7 +130,7 @@ test("GET /categories liefert die Optionen über die API", { timeout: RUN_TIMEOU
 });
 
 test("Zweiter gleichzeitiger Lauf bekommt 429 mit Retry-After", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!(await browserOk())) return t.skip("Chromium nicht verfügbar");
+  if (!(await browserAvailable())) return t.skip("Chromium nicht verfügbar");
   const mock = await startMockIsc();
   const api = await startApi(mock, { lockWaitMs: 50, uploadSettleMs: 1500 });
   try {

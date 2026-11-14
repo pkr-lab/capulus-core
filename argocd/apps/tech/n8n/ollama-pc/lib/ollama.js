@@ -10,7 +10,7 @@ async function isUp(config) {
   try {
     await request(`${config.url}/api/tags`, { timeoutMs: config.healthTimeoutMs });
     return true;
-  } catch (err) {
+  } catch {
     return false;
   }
 }
@@ -101,7 +101,7 @@ async function unload(config, model) {
       body: { model, keep_alive: 0 },
       timeoutMs: config.healthTimeoutMs * 10,
     });
-  } catch (err) {
+  } catch {
     return false;
   }
   return true;

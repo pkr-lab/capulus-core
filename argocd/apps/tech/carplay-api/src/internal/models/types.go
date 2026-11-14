@@ -7,7 +7,6 @@ type Alert struct {
 	Message string `json:"message"`
 	Time    int64  `json:"time"`
 	Level   string `json:"level"`
-	PollID  string `json:"poll_id,omitempty"`
 }
 
 type HostMetrics struct {
@@ -77,7 +76,6 @@ type PowerTarget string
 
 const (
 	PowerTargetHomeserver PowerTarget = "homeserver"
-	PowerTargetWorker1    PowerTarget = "worker-1"
 )
 
 type WakeRequest struct {
