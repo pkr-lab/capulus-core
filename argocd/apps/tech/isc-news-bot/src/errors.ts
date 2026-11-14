@@ -1,4 +1,4 @@
-export const ERROR_CODES = [
+const ERROR_CODES = [
   "VALIDATION_FAILED",
   "LOGIN_FAILED",
   "LOGIN_UNEXPECTED",
