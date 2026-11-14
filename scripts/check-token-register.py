@@ -105,7 +105,8 @@ def main() -> int:
         seen_ids.add(id_)
         referenced.update(e.get("stored_in") or [])
 
-    for f in sealed_secret_files():
+    sealed_files = sealed_secret_files()
+    for f in sealed_files:
         if f not in referenced:
             problems.append(f"SealedSecret ohne Register-Eintrag: {f}")
 
@@ -115,7 +116,7 @@ def main() -> int:
 
     for p in problems:
         print(p)
-    print(f"{len(entries)} Eintraege, {len(sealed_secret_files())} SealedSecrets im Repo, {len(problems)} Probleme", file=sys.stderr)
+    print(f"{len(entries)} Eintraege, {len(sealed_files)} SealedSecrets im Repo, {len(problems)} Probleme", file=sys.stderr)
     return 1 if problems else 0
 
 
