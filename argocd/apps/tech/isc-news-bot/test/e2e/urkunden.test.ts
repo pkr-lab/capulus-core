@@ -2,7 +2,6 @@ import { test, before } from "node:test";
 import assert from "node:assert/strict";
 import type http from "node:http";
 import type { AddressInfo } from "node:net";
-import { chromium } from "playwright";
 import { IscNewsRunner, launchChromium } from "../../src/runner.js";
 import { RunLock } from "../../src/mutex.js";
 import { Logger } from "../../src/logger.js";
@@ -10,20 +9,16 @@ import { createServer } from "../../src/server.js";
 import { STANDARD_PO_NUMMERN } from "../../src/urkunden.js";
 import { startMockIsc, OTHER_EDV, type MockIsc, type MockOptions } from "../fixtures/mock-isc.js";
 import { testConfig } from "../fixtures/config.js";
+import { browserAvailable } from "../fixtures/browser.js";
 import { MOCK_URKUNDEN } from "../fixtures/urkunden.js";
 
 const silent = new Logger(true);
 const RUN_TIMEOUT = 180_000;
 const AUTH = { Authorization: "Bearer test-token-platzhalter" };
 
-let browserAvailable = true;
+let chromiumReady = true;
 before(async () => {
-  try {
-    const browser = await chromium.launch();
-    await browser.close();
-  } catch {
-    browserAvailable = false;
-  }
+  chromiumReady = await browserAvailable();
 });
 
 async function withMock(options: MockOptions, run: (mock: MockIsc, runner: IscNewsRunner) => Promise<void>): Promise<void> {
@@ -37,7 +32,7 @@ async function withMock(options: MockOptions, run: (mock: MockIsc, runner: IscNe
 }
 
 test("Urkunden lesen: Login, Gliederung, ladeUrkundenListe und Filter", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!browserAvailable) return t.skip("Chromium nicht verfügbar");
+  if (!chromiumReady) return t.skip("Chromium nicht verfügbar");
   await withMock({ urkunden: MOCK_URKUNDEN, initialEdv: OTHER_EDV }, async (mock, runner) => {
     const result = await runner.listUrkunden({ jahr: "2026", poNummern: [...STANDARD_PO_NUMMERN] });
     assert.equal(result.ok, true, JSON.stringify(result));
@@ -54,7 +49,7 @@ test("Urkunden lesen: Login, Gliederung, ladeUrkundenListe und Filter", { timeou
 });
 
 test("Urkunden lesen: fehlt dlrg_DoPost, kommt FORM_CHANGED", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!browserAvailable) return t.skip("Chromium nicht verfügbar");
+  if (!chromiumReady) return t.skip("Chromium nicht verfügbar");
   await withMock({ urkundenOhneService: true }, async (_mock, runner) => {
     const result = await runner.listUrkunden({ jahr: "2026", poNummern: ["111"] });
     assert.equal(result.ok, false);
@@ -65,7 +60,7 @@ test("Urkunden lesen: fehlt dlrg_DoPost, kommt FORM_CHANGED", { timeout: RUN_TIM
 });
 
 test("GET /urkunden: Token, Query-Prüfung und Antwort", { timeout: RUN_TIMEOUT }, async (t) => {
-  if (!browserAvailable) return t.skip("Chromium nicht verfügbar");
+  if (!chromiumReady) return t.skip("Chromium nicht verfügbar");
   const mock = await startMockIsc({ urkunden: MOCK_URKUNDEN });
   const cfg = testConfig(mock.baseUrl);
   const runner = new IscNewsRunner(cfg, launchChromium, new RunLock(cfg.lockWaitMs), silent);

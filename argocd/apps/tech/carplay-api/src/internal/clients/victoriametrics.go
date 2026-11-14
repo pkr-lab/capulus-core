@@ -39,8 +39,7 @@ type HostConfig struct {
 type vmQueryResponse struct {
 	Status string `json:"status"`
 	Data   struct {
-		ResultType string `json:"resultType"`
-		Result     []struct {
+		Result []struct {
 			Metric map[string]string `json:"metric"`
 			Value  [2]any            `json:"value"`
 		} `json:"result"`
@@ -93,10 +92,6 @@ func (c *VictoriaMetricsClient) queryGroupedBy(ctx context.Context, promql, labe
 	return out, nil
 }
 
-func (c *VictoriaMetricsClient) queryByInstance(ctx context.Context, promql string) (map[string]float64, error) {
-	return c.queryGroupedBy(ctx, promql, "instance")
-}
-
 func (c *VictoriaMetricsClient) GetHostMetrics(ctx context.Context, hosts []HostConfig) []models.HostMetrics {
 	if len(hosts) == 0 {
 		return nil
@@ -129,7 +124,7 @@ func (c *VictoriaMetricsClient) GetHostMetrics(ctx context.Context, hosts []Host
 
 	for _, def := range defs {
 		go func(d queryDef) {
-			values, err := c.queryByInstance(ctx, d.promql)
+			values, err := c.queryGroupedBy(ctx, d.promql, "instance")
 			if err != nil {
 				c.logger.Warn("victoriametrics host query failed", "metric", d.metric, "error", err)
 			}

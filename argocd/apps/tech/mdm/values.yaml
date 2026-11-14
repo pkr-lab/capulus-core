@@ -1,7 +1,6 @@
 ---
 publicHost: mdm-prod.pkr-lab.de
 internalHost: mdm.prod.homeserver
-timezone: Europe/Berlin
 
 image:
   repository: ghcr.io/pkr-lab/mdm-scep

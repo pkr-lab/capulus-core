@@ -32,14 +32,13 @@ func NewNtfyClient(baseURL, topic, token string, timeout time.Duration, logger *
 }
 
 type ntfyMessage struct {
-	ID       string   `json:"id"`
-	Time     int64    `json:"time"`
-	Event    string   `json:"event"`
-	Topic    string   `json:"topic"`
-	Title    string   `json:"title"`
-	Message  string   `json:"message"`
-	Priority int      `json:"priority"`
-	Tags     []string `json:"tags"`
+	ID       string `json:"id"`
+	Time     int64  `json:"time"`
+	Event    string `json:"event"`
+	Topic    string `json:"topic"`
+	Title    string `json:"title"`
+	Message  string `json:"message"`
+	Priority int    `json:"priority"`
 }
 
 func (c *NtfyClient) GetAlerts(ctx context.Context, since string, limit int) ([]models.Alert, error) {
