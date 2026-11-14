@@ -25,13 +25,13 @@ async function generateReply(config, input, { log = () => {}, ready } = {}) {
   let charsPerToken = config.charsPerToken;
   let built;
   let body;
+  const limit = config.numCtx - config.responseReserveTokens;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     built = buildMessages(prompts, input, { ...config, charsPerToken });
     if (built.omitted > 0) log(built.warnings[built.warnings.length - 1]);
     log(`Anfrage an ${config.model}: ca. ${built.estimatedTokens} Token geschätzt, Verlauf ${built.keptHistory}/${built.keptHistory + built.omitted}`);
     body = await chat(config, built.messages);
 
-    const limit = config.numCtx - config.responseReserveTokens;
     const tooLarge = body.prompt_eval_count > limit;
     if (!tooLarge || attempt === MAX_ATTEMPTS || built.keptHistory === 0) break;
 
@@ -43,7 +43,7 @@ async function generateReply(config, input, { log = () => {}, ready } = {}) {
   if (body.done_reason === 'length') {
     warnings.push(`Antwort wurde durch das Kontextlimit abgeschnitten (num_ctx ${config.numCtx})`);
   }
-  if (body.prompt_eval_count > config.numCtx - config.responseReserveTokens) {
+  if (body.prompt_eval_count > limit) {
     warnings.push(`Prompt belegt ${body.prompt_eval_count} Token und lässt weniger als ${config.responseReserveTokens} Token für die Antwort`);
   }
 
