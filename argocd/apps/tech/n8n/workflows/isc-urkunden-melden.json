@@ -132,50 +132,6 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $('Konfiguration').first().json.ntfyUrl + '/' + $('Konfiguration').first().json.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "ISC-Urkunden: Abruf fehlgeschlagen"
-            },
-            {
-              "name": "Tags",
-              "value": "x"
-            },
-            {
-              "name": "Priority",
-              "value": "high"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $json.text }}",
-        "options": {}
-      },
-      "id": "e5e5e5e5-0007-4000-8000-000000000007",
-      "name": "ntfy Fehler",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1440,
-        180
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      }
-    },
-    {
-      "parameters": {
         "mode": "runOnceForAllItems",
         "jsCode": "const cfg = $('Konfiguration').first().json;\nconst urkunden = $input.first().json.urkunden;\nconst de = (iso) => (/^\\d{4}-\\d{2}-\\d{2}$/.test(iso || '') ? `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}` : '-');\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst name = (u) => u.name || [u.vorname, u.nachname].filter(Boolean).join(' ') || '-';\nconst zeilen = (u) => [\n  ['Name', name(u)],\n  ['Geburtsdatum', de(u.geburtsdatum)],\n  ['Abzeichen', u.abzeichen || '-'],\n  ['Prüfer', `${u.prueferName || '-'} (${u.prueferNummer || '-'})`],\n  ['Registriernummer', u.registriernummer || '-']\n];\nconst text = urkunden.map((u) => zeilen(u).map(([k, v]) => `${k}: ${v}`).join('\\n')).join('\\n\\n');\nconst html = urkunden\n  .map((u) => '<table style=\"border-collapse:collapse;margin-bottom:16px\">' + zeilen(u).map(([k, v]) => `<tr><td style=\"padding:2px 12px 2px 0\"><b>${esc(k)}</b></td><td>${esc(v)}</td></tr>`).join('') + '</table>')\n  .join('');\nconst betreff = (cfg.testModus ? '[TEST] ' : '') + (urkunden.length === 1\n  ? `Neue Urkunde: ${urkunden[0].abzeichen || '-'} – ${name(urkunden[0])}`\n  : `${urkunden.length} neue Urkunden im ISC`);\nreturn [{ json: { mailAn: cfg.mailAn, mailVon: cfg.mailVon, betreff, text, html } }];\n"
       },
@@ -216,29 +172,170 @@
       }
     },
     {
-      "id": "9b14d00d-b580-4648-ad19-20772b98e539",
-      "name": "Mattermost-News senden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "onError": "continueErrorOutput",
+      "id": "cd22f2c7-ccfb-5a08-b59e-66c4f7b5db1d",
+      "name": "ntfy Fehler vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
-        1680,
+        1340,
+        180
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "148605a6-ad95-50ae-9c54-ce4c8c30ff5e",
+              "name": "quelle",
+              "value": "ISC-Urkunden melden",
+              "type": "string"
+            },
+            {
+              "id": "d9a4b668-0ca2-55a9-b592-2962de68d3db",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "824e3de1-5a58-5991-abc6-999777569c20",
+              "name": "titel",
+              "value": "ISC-Urkunden: Abruf fehlgeschlagen",
+              "type": "string"
+            },
+            {
+              "id": "547b1663-6c4f-516c-83c4-2cbe06fb7f3c",
+              "name": "prioritaet",
+              "value": "high",
+              "type": "string"
+            },
+            {
+              "id": "97f5f256-ed43-5d99-8cb7-be1f54530ad4",
+              "name": "tags",
+              "value": "x",
+              "type": "string"
+            },
+            {
+              "id": "f949b668-1bcb-5541-9871-e5d0b1a1b479",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "180bfe99-48a6-5fb4-96bd-eebd642e7b85",
+      "name": "ntfy Fehler",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1540,
+        180
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "42c06235-7ea2-5a67-b3e9-93b8c5a328ef",
+      "name": "Mattermost-News senden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1580,
         580
       ],
+      "onError": "continueRegularOutput",
       "parameters": {
-        "method": "POST",
-        "url": "http://mattermost.mattermost.svc.cluster.local:8065/api/v4/posts",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel_id: 'gh5k785kzjff3kzzjmeducw8mr', message: '#### ' + $json.betreff + '\\n\\n' + $json.text }) }}",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d8c44668-86b6-5500-8659-a4935aa5c478",
+              "name": "quelle",
+              "value": "ISC-Urkunden melden",
+              "type": "string"
+            },
+            {
+              "id": "908eed59-1c28-5d17-87c5-4401c1dd5690",
+              "name": "mattermostText",
+              "value": "={{ '#### ' + $json.betreff + '\\n\\n' + $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "54b05d4b-ea86-5f18-bb04-f57d17c6e1ce",
+              "name": "ntfy",
+              "value": "false",
+              "type": "string"
+            },
+            {
+              "id": "55802458-7e1e-547b-9bb5-6e86c2e06a99",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
+            },
+            {
+              "id": "ea3f44a7-85d3-58ef-b8c2-8fb5df6e0559",
+              "name": "kanal",
+              "value": "Berichte",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
         "options": {}
-      },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "fu9GDp3BYYVp4L5i",
-          "name": "Mattermost Bot (News)"
+      }
+    },
+    {
+      "id": "87f51320-166f-5682-8e8a-3962575a6420",
+      "name": "Mattermost-News senden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1780,
+        580
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
         }
       }
     }
@@ -304,7 +401,7 @@
       "main": [
         [
           {
-            "node": "ntfy Fehler",
+            "node": "ntfy Fehler vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -327,6 +424,28 @@
             "index": 0
           },
           {
+            "node": "Mattermost-News senden vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ntfy Fehler vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "ntfy Fehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mattermost-News senden vorbereiten": {
+      "main": [
+        [
+          {
             "node": "Mattermost-News senden",
             "type": "main",
             "index": 0
@@ -339,7 +458,8 @@
   "settings": {
     "executionOrder": "v1",
     "timezone": "Europe/Berlin",
-    "saveManualExecutions": true
+    "saveManualExecutions": true,
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "7a1c5e2d-3b4f-4c6a-9d8e-1f2a3b4c5d6e",
   "meta": {

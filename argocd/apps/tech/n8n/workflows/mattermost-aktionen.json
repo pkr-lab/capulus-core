@@ -11,7 +11,7 @@
         -320
       ],
       "parameters": {
-        "content": "## Vor dem Aktivieren\n\n1. Mattermost ruft diesen Webhook ohne Authentifizierung auf, wenn jemand einen Button klickt (Integration-URL `http://n8n.n8n.svc.cluster.local/webhook/mattermost-aktion`). Mattermost braucht dafuer `MM_SERVICESETTINGS_ALLOWEDUNTRUSTEDINTERNALCONNECTIONS` (im Chart gesetzt).\n2. Schutz: Der Workflow laedt den Post ueber die Mattermost-API, prueft dass er vom Bot stammt und dass das Einmal-Token im Post mit dem Token der Anfrage uebereinstimmt. Danach wird das Token geloescht, ein zweiter Klick schlaegt fehl.\n3. Ticket-Gruppe und Kunde stehen im Node **Ticket anlegen** (Support::Administration, info@pkr-service.de).\n4. Workflow aktivieren.",
+        "content": "## Vor dem Aktivieren\n\n1. Mattermost ruft diesen Webhook ohne Authentifizierung auf, wenn jemand einen Button klickt (Integration-URL `http://n8n.n8n.svc.cluster.local/webhook/mattermost-aktion`). Mattermost braucht dafuer `MM_SERVICESETTINGS_ALLOWEDUNTRUSTEDINTERNALCONNECTIONS` (im Chart gesetzt).\n2. Schutz: Der Workflow laedt den Post ueber die Mattermost-API, prueft dass er vom Bot stammt und dass das Einmal-Token im Post mit dem Token der Anfrage uebereinstimmt. Danach wird das Token geloescht, ein zweiter Klick schlaegt fehl.\n3. Ticket-Gruppe und Kunde stehen im Node **Ticket anlegen** (Administration::n8n, info@pkr-service.de).\n4. Workflow aktivieren.",
         "height": 280,
         "width": 620
       }
@@ -44,7 +44,7 @@
       ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const body = $input.first().json.body || {};\nconst kontext = body.context || {};\nconst postId = String(body.post_id || '');\nif (!/^[a-z0-9]{26}$/.test(postId)) {\n  throw new Error('Ungueltige post_id');\n}\nif (kontext.aktion !== 'ticket' || !/^[a-f0-9]{32}$/.test(String(kontext.nonce || ''))) {\n  throw new Error('Unbekannte Aktion');\n}\nreturn [{ json: { post_id: postId, nonce: kontext.nonce, user_name: String(body.user_name || 'unbekannt') } }];"
+        "jsCode": "const body = $input.first().json.body || {};\nconst kontext = body.context || {};\nconst postId = String(body.post_id || '');\nif (!/^[a-z0-9]{26}$/.test(postId)) {\n  throw new Error('Ungueltige post_id');\n}\nif (!['ticket', 'task'].includes(kontext.aktion) || !/^[a-f0-9]{32}$/.test(String(kontext.nonce || ''))) {\n  throw new Error('Unbekannte Aktion');\n}\nreturn [{ json: { post_id: postId, aktion: kontext.aktion, nonce: kontext.nonce, user_name: String(body.user_name || 'unbekannt') } }];"
       }
     },
     {
@@ -104,7 +104,7 @@
       ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const eingabe = $('Eingabe pruefen').first().json;\nconst post = $('Post laden').first().json;\nconst ich = $input.first().json;\nconst props = post.props || {};\nif (!ich.id || post.user_id !== ich.id) {\n  throw new Error('Post stammt nicht vom Bot');\n}\nif (!props.aktion_nonce || props.aktion_nonce !== eingabe.nonce) {\n  throw new Error('Aktion nicht mehr gueltig');\n}\nreturn [{ json: { titel: props.aktion_titel || 'Alert aus Mattermost', text: props.aktion_text || '', message: post.message, user: eingabe.user_name } }];"
+        "jsCode": "const eingabe = $('Eingabe pruefen').first().json;\nconst post = $('Post laden').first().json;\nconst ich = $input.first().json;\nconst props = post.props || {};\nif (!ich.id || post.user_id !== ich.id) {\n  throw new Error('Post stammt nicht vom Bot');\n}\nif (!props.aktion_nonce || props.aktion_nonce !== eingabe.nonce) {\n  throw new Error('Aktion nicht mehr gueltig');\n}\nreturn [{ json: { aktion: eingabe.aktion, prio: props.aktion_prio || 'medium', titel: props.aktion_titel || 'Alert aus Mattermost', text: props.aktion_text || '', message: post.message, user: eingabe.user_name } }];"
       }
     },
     {
@@ -120,7 +120,7 @@
         "authentication": "basicAuth",
         "resource": "ticket",
         "title": "={{ $json.titel }}",
-        "group": "Support::Administration",
+        "group": "Administration::n8n",
         "customer": "=info@pkr-service.de",
         "article": {
           "articleDetails": {
@@ -152,6 +152,128 @@
       "parameters": {
         "mode": "runOnceForAllItems",
         "jsCode": "const daten = $('Nonce pruefen').first().json;\nconst ticket = $input.first().json;\nconst url = 'https://support-tech.pkr-lab.de/#ticket/zoom/' + ticket.id;\nreturn [{\n  json: {\n    update: {\n      message: daten.message,\n      props: {\n        aktion_nonce: '',\n        attachments: [{ fallback: 'Ticket angelegt', color: '#2e7d32', text: '\\u{1F3AB} Ticket #' + ticket.number + ' von @' + daten.user + ' angelegt: ' + url }],\n      },\n    },\n    ephemeral_text: 'Ticket #' + ticket.number + ' angelegt.',\n  },\n}];"
+      }
+    },
+    {
+      "id": "eb13c5ac-476b-52fe-a5d3-d2883e81e1bd",
+      "name": "Ist Task?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1400,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ba638145-d344-5d18-bdbc-95ee10f25b64",
+              "leftValue": "={{ $json.aktion === 'task' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c6c73aa5-a8d3-5717-ab56-f45f52426817",
+      "name": "Klicker laden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        220
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'http://mattermost.mattermost.svc.cluster.local:8065/api/v4/users/username/' + encodeURIComponent($json.user) }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fu9GDp3BYYVp4L5i",
+          "name": "Mattermost Bot (News)"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "cd5a7a8f-7c16-5f8f-9265-9d37278be23d",
+      "name": "Task-Karte bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1960,
+        220
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const daten = $('Nonce pruefen').first().json;\nconst nutzer = $input.first().json || {};\nconst BOARD_ID = 'by66ipbhnj3nx3ew3p31tuqhhha';\nconst PROP = { status: 'a972dc7a-5f4c-45d2-8044-8c28c69717f1', priority: 'd3d682bf-e074-49d9-8df5-7320921c2d23', label: 'ame474iofuqcm5pjwscajr7dxsw', repo: 'ady97jwwt4p1u3sxpqjjpf89gco', assignee: 'axkhqa4jxr3jcqe4k87g8bhmary' };\nconst PRIORITAET = { high: 'd3bfb50f-f569-4bad-8a3a-dd15c3f60101', medium: '87f59784-b859-4c24-8ebe-17c766e081dd', low: '98a57627-0f76-471d-850d-91f3ed9fd213' };\nconst properties = {\n  [PROP.status]: 'ayz81h9f3dwp7rzzbdebesc7ute',\n  [PROP.priority]: PRIORITAET[daten.prio] || PRIORITAET.medium,\n  [PROP.label]: 'az978coch7kffx5ctuk9k86yx4y',\n  [PROP.repo]: ['a3x185h633tahzo6t46pgr6ox7e'],\n};\nif (nutzer.id) properties[PROP.assignee] = nutzer.id;\nconst jetzt = Date.now();\nconst kartenId = 'block-0';\nconst textId = 'block-1';\nconst metaId = 'block-2';\nconst block = (id, parentId, typ, titel, felder) => ({ id, boardId: BOARD_ID, parentId, schema: 1, type: typ, title: titel, createAt: jetzt, updateAt: jetzt, deleteAt: 0, fields: felder });\nconst blocks = [\n  block(kartenId, BOARD_ID, 'card', daten.titel, { icon: '\\u{1F6A8}', isTemplate: false, contentOrder: [textId, metaId], properties }),\n  block(textId, kartenId, 'text', daten.text || daten.titel, {}),\n  block(metaId, kartenId, 'text', 'Automatisch aus einer Alertmanager-Meldung in Mattermost angelegt von @' + daten.user + '.', {}),\n];\nreturn [{ json: { blocks, titel: daten.titel } }];"
+      }
+    },
+    {
+      "id": "85223d2e-76c7-58d2-af4e-8102b624efd9",
+      "name": "Task-Karte anlegen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2240,
+        220
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://mattermost.mattermost.svc.cluster.local:8065/plugins/focalboard/api/v2/boards/by66ipbhnj3nx3ew3p31tuqhhha/blocks",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.blocks) }}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Requested-With",
+              "value": "XMLHttpRequest"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fu9GDp3BYYVp4L5i",
+          "name": "Mattermost Bot (News)"
+        }
+      }
+    },
+    {
+      "id": "a3435b36-7d98-5300-b59f-cd3f9c55e07c",
+      "name": "Antwort Task",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2520,
+        220
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const daten = $('Nonce pruefen').first().json;\nconst url = 'https://matter-tech.pkr-lab.de/boards/team/41cworo6tjd6znaubwiac7m8ah/by66ipbhnj3nx3ew3p31tuqhhha';\nreturn [{\n  json: {\n    update: {\n      message: daten.message,\n      props: {\n        aktion_nonce: '',\n        attachments: [{ fallback: 'Board-Task angelegt', color: '#2e7d32', text: '\\u{1F4CB} Board-Task \"' + daten.titel + '\" von @' + daten.user + ' angelegt: ' + url }],\n      },\n    },\n    ephemeral_text: 'Board-Task angelegt.',\n  },\n}];"
       }
     }
   ],
@@ -204,7 +326,7 @@
       "main": [
         [
           {
-            "node": "Ticket anlegen",
+            "node": "Ist Task?",
             "type": "main",
             "index": 0
           }
@@ -221,12 +343,64 @@
           }
         ]
       ]
+    },
+    "Ist Task?": {
+      "main": [
+        [
+          {
+            "node": "Klicker laden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ticket anlegen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Klicker laden": {
+      "main": [
+        [
+          {
+            "node": "Task-Karte bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Task-Karte bauen": {
+      "main": [
+        [
+          {
+            "node": "Task-Karte anlegen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Task-Karte anlegen": {
+      "main": [
+        [
+          {
+            "node": "Antwort Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "pinData": {},
   "active": false,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "meta": {
     "description": "Verarbeitet Klicks auf Buttons in Mattermost-Posts des Bots (Interactive Message Actions). Aktuell: 'Ticket anlegen' unter Alertmanager-Meldungen. Der Webhook ist nicht per Header geschuetzt, weil Mattermost keine eigenen Header sendet. Stattdessen prueft 'Nonce pruefen', dass der Post vom Bot stammt und das Einmal-Token im Post (props.aktion_nonce) zur Anfrage passt. Die Antwort aktualisiert den Post (Button verschwindet, Ticket-Link erscheint). NACH DEM IMPORT: Credential 'Zammad EDV-Kretzer' pruefen und Workflow aktivieren."

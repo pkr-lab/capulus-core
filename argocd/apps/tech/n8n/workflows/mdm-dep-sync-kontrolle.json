@@ -272,55 +272,103 @@
       ]
     },
     {
+      "id": "cb9c63cb-a647-5089-bff9-086eda4ddb3a",
+      "name": "Unzugewiesene melden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1840,
+        300
+      ],
+      "onError": "continueRegularOutput",
       "parameters": {
-        "method": "POST",
-        "url": "={{ $json.ntfyUrl }}/{{ $json.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "assignments": {
+          "assignments": [
             {
-              "name": "Title",
-              "value": "={{ $json.title }}"
+              "id": "44d572d4-2be9-5100-bb0b-dc4f2032c7e7",
+              "name": "quelle",
+              "value": "MDM: DEP-Sync-Kontrolle",
+              "type": "string"
             },
             {
-              "name": "Priority",
-              "value": "high"
+              "id": "8831b70d-4c3e-57d8-94cc-3727c99a4655",
+              "name": "thema",
+              "value": "={{ $json.ntfyTopic }}",
+              "type": "string"
             },
             {
-              "name": "Tags",
-              "value": "warning"
+              "id": "59a66a4d-6fbc-5017-9d65-6bba8073526c",
+              "name": "titel",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "27113559-a94e-5fcd-8e47-e25a4abc820a",
+              "name": "prioritaet",
+              "value": "high",
+              "type": "string"
+            },
+            {
+              "id": "e95c1395-fb45-5be6-8be3-431815740100",
+              "name": "tags",
+              "value": "warning",
+              "type": "string"
+            },
+            {
+              "id": "640e5bc2-b20b-588b-b4e0-5c894f1acce5",
+              "name": "text",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "e762e3f4-82c5-5d27-954f-8df92c8417cd",
+              "name": "kanal",
+              "value": "MDM-Verwaltung",
+              "type": "string"
+            },
+            {
+              "id": "86653383-5580-5140-9220-feb2c25630c4",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
             }
           ]
         },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $json.message }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "50105bd5-be3a-5c05-a4ba-fb7eff4fd453",
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "62b29a15-6f63-5523-9ffa-eb5a070c0afe",
       "name": "Unzugewiesene melden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [
-        1940,
+        2040,
         300
       ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
         }
-      },
-      "onError": "continueRegularOutput"
+      }
     }
   ],
   "pinData": {},
@@ -461,6 +509,17 @@
       "main": [
         [
           {
+            "node": "Unzugewiesene melden vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unzugewiesene melden vorbereiten": {
+      "main": [
+        [
+          {
             "node": "Unzugewiesene melden",
             "type": "main",
             "index": 0
@@ -473,7 +532,8 @@
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "timezone": "Europe/Berlin"
+    "timezone": "Europe/Berlin",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "77c3093e-9a31-5a21-b81d-2f274524843e",
   "meta": {

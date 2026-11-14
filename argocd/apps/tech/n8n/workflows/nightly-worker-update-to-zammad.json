@@ -42,7 +42,7 @@
         "authentication": "basicAuth",
         "resource": "ticket",
         "title": "={{ $json.title }}",
-        "group": "CronJobs",
+        "group": "Administration::CronJobs",
         "customer": "noreply@support-tech.pkr-lab.de",
         "article": {
           "articleDetails": {
@@ -79,7 +79,7 @@
         "operation": "update",
         "id": "={{ $json.id }}",
         "updateFields": {
-          "group": "CronJobs",
+          "group": "Administration::CronJobs",
           "state_id": 4,
           "owner_id": 31
         }
@@ -140,7 +140,8 @@
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "availableInMCP": false
+    "availableInMCP": false,
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "7edb2e90-26d5-479f-9232-22d195b4cd27",
   "meta": {
