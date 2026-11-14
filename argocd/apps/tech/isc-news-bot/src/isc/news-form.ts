@@ -36,7 +36,7 @@ async function setType(page: Page, news: ParsedNews, cfg: Config, step: string):
   await requireVisible(page.locator(block), cfg.stepTimeoutMs, block, step);
 }
 
-export async function setCategories(page: Page, values: string[], step: string): Promise<void> {
+async function setCategories(page: Page, values: string[], step: string): Promise<void> {
   if (values.length === 0) return;
   const result = await page.evaluate(
     ([selector, wanted]: [string, string[]]) => {
@@ -61,7 +61,7 @@ export async function setCategories(page: Page, values: string[], step: string):
   }
 }
 
-export async function setEditorText(page: Page, html: string, step: string): Promise<void> {
+async function setEditorText(page: Page, html: string, step: string): Promise<void> {
   const result = await page.evaluate(
     ([text, ck4Name, ck5Selector, textareaSelector]: [string, string, string, string]) => {
       const w = window as unknown as { CKEDITOR?: { instances?: Record<string, any> } };
@@ -94,7 +94,7 @@ export async function setEditorText(page: Page, html: string, step: string): Pro
   }
 }
 
-export async function validateWithParsley(page: Page): Promise<void> {
+async function validateWithParsley(page: Page): Promise<void> {
   const result = await page.evaluate((formSelector: string) => {
     const jq = (window as unknown as { jQuery?: any }).jQuery;
     let valid = true;

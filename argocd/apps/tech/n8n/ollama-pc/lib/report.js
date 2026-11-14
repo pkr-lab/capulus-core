@@ -44,4 +44,4 @@ function comparison(models, mails, rows) {
   return sections.join('\n\n---\n\n');
 }
 
-module.exports = { resultsTable, psTable, comparison, cell };
+module.exports = { resultsTable, psTable, comparison };

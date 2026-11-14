@@ -168,4 +168,4 @@ function loadEntries(file) {
   return data;
 }
 
-module.exports = { resolve, decide, detectKursart, loadEntries, parseLinkList, normalizeCode, MIN_JAHR, KURSARTEN };
+module.exports = { resolve, decide, detectKursart, loadEntries, parseLinkList, normalizeCode };

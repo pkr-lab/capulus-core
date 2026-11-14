@@ -1,8 +1,8 @@
 import { ValidationError } from "./errors.js";
 
-export type Abzeichen = { poNr: string; ausbildungId: string; name: string };
+type Abzeichen = { poNr: string; ausbildungId: string; name: string };
 
-export const ABZEICHEN: readonly Abzeichen[] = [
+const ABZEICHEN: readonly Abzeichen[] = [
   { poNr: "111", ausbildungId: "153", name: "Frühschwimmer (Seepferdchen)" },
   { poNr: "121", ausbildungId: "11", name: "Deutsches Schwimmabzeichen Bronze (Freischwimmer)" },
   { poNr: "122", ausbildungId: "12", name: "Deutsches Schwimmabzeichen Silber" },

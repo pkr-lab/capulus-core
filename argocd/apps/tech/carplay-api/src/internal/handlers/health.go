@@ -11,6 +11,8 @@ import (
 	"carplay-api/internal/models"
 )
 
+const healthCheckTimeout = 3 * time.Second
+
 type HealthHandler struct {
 	vmBaseURL   string
 	ntfyBaseURL string
@@ -28,7 +30,7 @@ func NewHealthHandler(vmBaseURL, ntfyBaseURL, kumaBaseURL string, checkTimeout t
 }
 
 func (h *HealthHandler) Handle(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), healthCheckTimeout)
 	defer cancel()
 
 	services := map[string]string{

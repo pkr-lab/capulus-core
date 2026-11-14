@@ -4,7 +4,7 @@ import { IscBotError } from "../errors.js";
 import { SEL } from "./selectors.js";
 import { requireVisible } from "./helpers.js";
 
-export async function isLocked(page: Page): Promise<boolean> {
+async function isLocked(page: Page): Promise<boolean> {
   const icons = await page.locator(SEL.news.lockIcon).count();
   const text = await page.locator("body").innerText({ timeout: 5000 }).catch(() => "");
   return icons > 0 || text.includes(SEL.news.lockedText);
