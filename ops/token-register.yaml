@@ -981,3 +981,33 @@
     overlap: false
   owner: peter
   blast_radius: "Repository-Passwort der verschluesselten Mattermost-Sicherung (restic auf dem NAS-Volume). Nicht routinemaessig wechseln: ein Wechsel macht alle bisherigen Snapshots unlesbar, ausser sie werden per restic key passwd umgeschluesselt. Zusaetzlich im Passwortmanager ablegen."
+
+- id: mattermost-smtp-password
+  service: mattermost
+  kind: password
+  stored_in:
+    - argocd/apps/tech/mattermost/templates/sealedsecret.yaml
+  issued: "2026-11-14"
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/30080-mattermost.md#smtp-passwort-rotation
+    overlap: false
+  owner: peter
+  blast_radius: "Passwort des Postfachs info@pkr-service.de bei Netcup (SMTP fuer Mattermost-Benachrichtigungen). Wer es hat, kann ueber dieses Postfach Mails senden und empfangen. Rotation: Passwort bei Netcup aendern, danach scripts/seal-mattermost-smtp.sh ausfuehren."
+
+- id: mattermost-bot-token-release-watcher
+  service: mattermost
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/github-release-watcher/templates/mattermost-sealedsecret.yaml
+  issued: null
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/30080-mattermost.md#bot-token-rotation
+    overlap: false
+  owner: peter
+  blast_radius: "Access-Token des Mattermost-Bots n8n-bot (gleicher Wert wie im n8n-Credential Mattermost Bot (News) und im GitHub-Repo-Secret MATTERMOST_BOT_TOKEN). Kann in allen Channels posten, in denen der Bot Mitglied ist, und lesen. Rotation: neues Token in Mattermost erzeugen, dann scripts/seal-release-watcher-mattermost-token.sh, das GitHub-Secret und das n8n-Credential aktualisieren."

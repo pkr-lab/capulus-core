@@ -105,3 +105,11 @@ jobs:
           [ "$PLAN_ONLY" = "true" ] && flags="--plan-only"
           # shellcheck disable=SC2086
           python3 scripts/promote-chain.py --stage "$STAGE" --argocd "entw=$ENTW_URL" --argocd "hub=$HUB_URL" $flags
+
+      - name: Mattermost bei Fehler
+        if: failure()
+        uses: ./.github/actions/mattermost-notify
+        with:
+          channel: deployments
+          token: ${{ secrets.MATTERMOST_BOT_TOKEN }}
+          message: "#### \u274C Promotion-Kette fehlgeschlagen\n[Lauf ansehen](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
