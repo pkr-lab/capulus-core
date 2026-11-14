@@ -105,17 +105,93 @@
       "alwaysOutputData": true
     },
     {
-      "id": "7eb06f49-1fe0-5a99-8039-a7331b787f43",
-      "name": "Termine auswerten",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "id": "2f887572-8318-501e-ac01-e287275c4195",
+      "name": "Kalender HiOrg",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         780,
         0
       ],
       "parameters": {
+        "method": "GET",
+        "url": "https://REPLACE_ME_HIORG_ICS_LINK",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "neverError": true
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "07d11e49-2803-5200-9dd0-3a7c91bb383a",
+      "name": "Wetter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.open-meteo.com/v1/forecast",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "latitude",
+              "value": "50.44"
+            },
+            {
+              "name": "longitude",
+              "value": "7.40"
+            },
+            {
+              "name": "hourly",
+              "value": "temperature_2m,precipitation_probability,weathercode"
+            },
+            {
+              "name": "timezone",
+              "value": "Europe/Berlin"
+            },
+            {
+              "name": "forecast_days",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "7eb06f49-1fe0-5a99-8039-a7331b787f43",
+      "name": "Termine auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        0
+      ],
+      "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const jetzt = typeof TEST_NOW !== 'undefined' ? new Date(TEST_NOW) : new Date();\nconst teile = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(jetzt).split('-').map(Number);\nconst heute = { y: teile[0], m: teile[1], d: teile[2] };\nconst tagesNr = (t) => Math.floor(Date.UTC(t.y, t.m - 1, t.d) / 86400000);\nconst heuteNr = tagesNr(heute);\nconst wochentag = (t) => new Date(Date.UTC(t.y, t.m - 1, t.d)).getUTCDay();\nconst TAGE = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];\n\nconst quellen = [\n  { name: 'DLRG', knoten: 'Kalender DLRG' },\n  { name: 'Outlook', knoten: 'Kalender Outlook' },\n];\n\nconst entfalten = (text) => String(text || '').replace(/\\r?\\n[ \\t]/g, '');\nconst wert = (text) => String(text || '').replace(/\\\\n/gi, ' ').replace(/\\\\,/g, ',').replace(/\\\\;/g, ';').replace(/\\\\\\\\/g, '\\\\').trim();\n\nconst parseZeit = (feld) => {\n  const m = /^(\\d{4})(\\d{2})(\\d{2})(?:T(\\d{2})(\\d{2})(\\d{2})?)?(Z)?$/.exec(String(feld || '').trim());\n  if (!m) return null;\n  let t = { y: +m[1], m: +m[2], d: +m[3], h: m[4] === undefined ? null : +m[4], min: m[5] === undefined ? 0 : +m[5] };\n  if (m[7] && t.h !== null) {\n    const lokal = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })\n      .formatToParts(new Date(Date.UTC(t.y, t.m - 1, t.d, t.h, t.min)));\n    const teil = (name) => +lokal.find((p) => p.type === name).value;\n    t = { y: teil('year'), m: teil('month'), d: teil('day'), h: teil('hour'), min: teil('minute') };\n  }\n  return t;\n};\n\nconst parseRegel = (text) => {\n  const regel = {};\n  String(text || '').split(';').forEach((paar) => {\n    const [k, v] = paar.split('=');\n    if (k) regel[k.toUpperCase()] = v;\n  });\n  return regel;\n};\n\nconst nteTag = (t) => {\n  const tag = wochentag(t);\n  const tageImMonat = new Date(Date.UTC(t.y, t.m, 0)).getUTCDate();\n  return { nr: Math.ceil(t.d / 7), rueckwaerts: -Math.ceil((tageImMonat - t.d + 1) / 7), tag: TAGE[tag] };\n};\n\nconst trifftByday = (byday, t) => {\n  const info = nteTag(t);\n  return byday.split(',').some((eintrag) => {\n    const m = /^([+-]?\\d+)?([A-Z]{2})$/.exec(eintrag.trim());\n    if (!m || m[2] !== info.tag) return false;\n    if (!m[1]) return true;\n    const n = +m[1];\n    return n > 0 ? n === info.nr : n === info.rueckwaerts;\n  });\n};\n\nconst faelltAuf = (ev, t) => {\n  const s = ev.start;\n  const diff = tagesNr(t) - tagesNr(s);\n  if (diff < 0) return false;\n  if (ev.ausnahmen.has(`${t.y}${String(t.m).padStart(2, '0')}${String(t.d).padStart(2, '0')}`)) return false;\n  if (!ev.regel) return diff === 0 || (ev.endeTag !== null && tagesNr(t) <= ev.endeTag && diff >= 0);\n  const r = ev.regel;\n  if (r.UNTIL) {\n    const u = parseZeit(r.UNTIL);\n    if (u && tagesNr(t) > tagesNr(u)) return false;\n  }\n  const intervall = +(r.INTERVAL || 1);\n  const freq = r.FREQ;\n  if (freq === 'DAILY') return diff % intervall === 0;\n  if (freq === 'WEEKLY') {\n    const tage = (r.BYDAY || TAGE[wochentag(s)]).split(',').map((x) => x.replace(/[+-]?\\d/g, ''));\n    const wochenStart = (x) => tagesNr(x) - ((wochentag(x) + 6) % 7);\n    return tage.includes(TAGE[wochentag(t)]) && Math.round((wochenStart(t) - wochenStart(s)) / 7) % intervall === 0;\n  }\n  const monate = (t.y - s.y) * 12 + (t.m - s.m);\n  if (freq === 'MONTHLY') {\n    if (monate < 0 || monate % intervall !== 0) return false;\n    if (r.BYDAY) {\n      if (r.BYSETPOS) {\n        const pos = +r.BYSETPOS;\n        const info = nteTag(t);\n        const passt = r.BYDAY.split(',').includes(info.tag);\n        return passt && (pos > 0 ? info.nr === pos : info.rueckwaerts === pos);\n      }\n      return trifftByday(r.BYDAY, t);\n    }\n    return r.BYMONTHDAY ? r.BYMONTHDAY.split(',').map(Number).includes(t.d) : t.d === s.d;\n  }\n  if (freq === 'YEARLY') {\n    if ((t.y - s.y) % intervall !== 0) return false;\n    if (t.m !== +(r.BYMONTH || s.m)) return false;\n    if (r.BYDAY) return trifftByday(r.BYDAY, t);\n    return t.d === +(r.BYMONTHDAY || s.d);\n  }\n  return false;\n};\n\nconst parseKalender = (roh, kalender) => {\n  const text = entfalten(roh);\n  const ergebnis = [];\n  const bloecke = text.split('BEGIN:VEVENT').slice(1).map((b) => b.split('END:VEVENT')[0]);\n  bloecke.forEach((block) => {\n    const felder = {};\n    const ausnahmen = new Set();\n    block.split(/\\r?\\n/).forEach((zeile) => {\n      const i = zeile.indexOf(':');\n      if (i < 0) return;\n      const kopf = zeile.slice(0, i);\n      const name = kopf.split(';')[0].toUpperCase();\n      const inhalt = zeile.slice(i + 1);\n      if (name === 'EXDATE') inhalt.split(',').forEach((x) => { const z = parseZeit(x); if (z) ausnahmen.add(`${z.y}${String(z.m).padStart(2, '0')}${String(z.d).padStart(2, '0')}`); });\n      else if (!(name in felder)) felder[name] = { kopf, inhalt };\n    });\n    if (!felder.DTSTART || (felder.STATUS && /CANCELLED/i.test(felder.STATUS.inhalt))) return;\n    const start = parseZeit(felder.DTSTART.inhalt);\n    if (!start) return;\n    const ende = felder.DTEND ? parseZeit(felder.DTEND.inhalt) : null;\n    const ganztags = start.h === null;\n    let endeTag = null;\n    if (ende) endeTag = ganztags ? tagesNr(ende) - 1 : tagesNr(ende);\n    ergebnis.push({\n      kalender,\n      start,\n      ende,\n      endeTag,\n      ganztags,\n      ausnahmen,\n      regel: felder.RRULE ? parseRegel(felder.RRULE.inhalt) : null,\n      titel: wert(felder.SUMMARY && felder.SUMMARY.inhalt) || '(ohne Titel)',\n      ort: wert(felder.LOCATION && felder.LOCATION.inhalt),\n      frei: /TRANSPARENT/i.test((felder.TRANSP && felder.TRANSP.inhalt) || '') || /FREE/i.test((felder['X-MICROSOFT-CDO-BUSYSTATUS'] && felder['X-MICROSOFT-CDO-BUSYSTATUS'].inhalt) || ''),\n    });\n  });\n  return ergebnis;\n};\n\nconst hhmm = (z) => `${String(z.h).padStart(2, '0')}:${String(z.min).padStart(2, '0')}`;\nconst treffer = [];\nconst fehler = [];\nquellen.forEach((q) => {\n  let roh = '';\n  try {\n    const eintrag = $(q.knoten).first().json;\n    roh = typeof eintrag.data === 'string' ? eintrag.data : '';\n  } catch (e) {\n    roh = '';\n  }\n  if (!roh.includes('BEGIN:VCALENDAR')) {\n    fehler.push(q.name);\n    return;\n  }\n  parseKalender(roh, q.name).forEach((ev) => {\n    if (faelltAuf(ev, heute)) treffer.push(ev);\n  });\n});\n\ntreffer.sort((a, b) => (a.ganztags === b.ganztags ? (a.start.h || 0) * 60 + a.start.min - ((b.start.h || 0) * 60 + b.start.min) : a.ganztags ? -1 : 1));\nconst zeilen = treffer.map((ev) => {\n  const zeit = ev.ganztags ? 'ganztägig' : ev.ende && ev.ende.h !== null ? `${hhmm(ev.start)}–${hhmm(ev.ende)}` : hhmm(ev.start);\n  return `- **${zeit}** ${ev.titel}${ev.ort ? ' (' + ev.ort + ')' : ''} _[${ev.kalender}${ev.frei ? ', frei' : ''}]_`;\n});\nconst datum = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).format(jetzt);\nlet text = zeilen.length ? zeilen.join('\\n') : '- Keine Termine heute.';\nif (fehler.length) text += `\\n- ⚠️ Kalender nicht lesbar: ${fehler.join(', ')}`;\nreturn [{ json: { datum, termine: text, anzahl: treffer.length } }];"
+        "jsCode": "const jetzt = typeof TEST_NOW !== 'undefined' ? new Date(TEST_NOW) : new Date();\nconst teile = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(jetzt).split('-').map(Number);\nconst heute = { y: teile[0], m: teile[1], d: teile[2] };\nconst tagesNr = (t) => Math.floor(Date.UTC(t.y, t.m - 1, t.d) / 86400000);\nconst heuteNr = tagesNr(heute);\nconst wochentag = (t) => new Date(Date.UTC(t.y, t.m - 1, t.d)).getUTCDay();\nconst TAGE = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];\n\nconst quellen = [\n  { name: 'DLRG', knoten: 'Kalender DLRG', gruppe: 'haupt' },\n  { name: 'Outlook', knoten: 'Kalender Outlook', gruppe: 'haupt' },\n  { name: 'HiOrg', knoten: 'Kalender HiOrg', gruppe: 'hiorg' },\n];\n\nconst entfalten = (text) => String(text || '').replace(/\\r?\\n[ \\t]/g, '');\nconst wert = (text) => String(text || '').replace(/\\\\n/gi, ' ').replace(/\\\\,/g, ',').replace(/\\\\;/g, ';').replace(/\\\\\\\\/g, '\\\\').trim();\n\nconst parseZeit = (feld) => {\n  const m = /^(\\d{4})(\\d{2})(\\d{2})(?:T(\\d{2})(\\d{2})(\\d{2})?)?(Z)?$/.exec(String(feld || '').trim());\n  if (!m) return null;\n  let t = { y: +m[1], m: +m[2], d: +m[3], h: m[4] === undefined ? null : +m[4], min: m[5] === undefined ? 0 : +m[5] };\n  if (m[7] && t.h !== null) {\n    const lokal = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })\n      .formatToParts(new Date(Date.UTC(t.y, t.m - 1, t.d, t.h, t.min)));\n    const teil = (name) => +lokal.find((p) => p.type === name).value;\n    t = { y: teil('year'), m: teil('month'), d: teil('day'), h: teil('hour'), min: teil('minute') };\n  }\n  return t;\n};\n\nconst parseRegel = (text) => {\n  const regel = {};\n  String(text || '').split(';').forEach((paar) => {\n    const [k, v] = paar.split('=');\n    if (k) regel[k.toUpperCase()] = v;\n  });\n  return regel;\n};\n\nconst nteTag = (t) => {\n  const tag = wochentag(t);\n  const tageImMonat = new Date(Date.UTC(t.y, t.m, 0)).getUTCDate();\n  return { nr: Math.ceil(t.d / 7), rueckwaerts: -Math.ceil((tageImMonat - t.d + 1) / 7), tag: TAGE[tag] };\n};\n\nconst trifftByday = (byday, t) => {\n  const info = nteTag(t);\n  return byday.split(',').some((eintrag) => {\n    const m = /^([+-]?\\d+)?([A-Z]{2})$/.exec(eintrag.trim());\n    if (!m || m[2] !== info.tag) return false;\n    if (!m[1]) return true;\n    const n = +m[1];\n    return n > 0 ? n === info.nr : n === info.rueckwaerts;\n  });\n};\n\nconst faelltAuf = (ev, t) => {\n  const s = ev.start;\n  const diff = tagesNr(t) - tagesNr(s);\n  if (diff < 0) return false;\n  if (ev.ausnahmen.has(`${t.y}${String(t.m).padStart(2, '0')}${String(t.d).padStart(2, '0')}`)) return false;\n  if (!ev.regel) return diff === 0 || (ev.endeTag !== null && tagesNr(t) <= ev.endeTag && diff >= 0);\n  const r = ev.regel;\n  if (r.UNTIL) {\n    const u = parseZeit(r.UNTIL);\n    if (u && tagesNr(t) > tagesNr(u)) return false;\n  }\n  const intervall = +(r.INTERVAL || 1);\n  const freq = r.FREQ;\n  if (freq === 'DAILY') return diff % intervall === 0;\n  if (freq === 'WEEKLY') {\n    const tage = (r.BYDAY || TAGE[wochentag(s)]).split(',').map((x) => x.replace(/[+-]?\\d/g, ''));\n    const wochenStart = (x) => tagesNr(x) - ((wochentag(x) + 6) % 7);\n    return tage.includes(TAGE[wochentag(t)]) && Math.round((wochenStart(t) - wochenStart(s)) / 7) % intervall === 0;\n  }\n  const monate = (t.y - s.y) * 12 + (t.m - s.m);\n  if (freq === 'MONTHLY') {\n    if (monate < 0 || monate % intervall !== 0) return false;\n    if (r.BYDAY) {\n      if (r.BYSETPOS) {\n        const pos = +r.BYSETPOS;\n        const info = nteTag(t);\n        const passt = r.BYDAY.split(',').includes(info.tag);\n        return passt && (pos > 0 ? info.nr === pos : info.rueckwaerts === pos);\n      }\n      return trifftByday(r.BYDAY, t);\n    }\n    return r.BYMONTHDAY ? r.BYMONTHDAY.split(',').map(Number).includes(t.d) : t.d === s.d;\n  }\n  if (freq === 'YEARLY') {\n    if ((t.y - s.y) % intervall !== 0) return false;\n    if (t.m !== +(r.BYMONTH || s.m)) return false;\n    if (r.BYDAY) return trifftByday(r.BYDAY, t);\n    return t.d === +(r.BYMONTHDAY || s.d);\n  }\n  return false;\n};\n\nconst parseKalender = (roh, kalender) => {\n  const text = entfalten(roh);\n  const ergebnis = [];\n  const bloecke = text.split('BEGIN:VEVENT').slice(1).map((b) => b.split('END:VEVENT')[0]);\n  bloecke.forEach((block) => {\n    const felder = {};\n    const ausnahmen = new Set();\n    block.split(/\\r?\\n/).forEach((zeile) => {\n      const i = zeile.indexOf(':');\n      if (i < 0) return;\n      const kopf = zeile.slice(0, i);\n      const name = kopf.split(';')[0].toUpperCase();\n      const inhalt = zeile.slice(i + 1);\n      if (name === 'EXDATE') inhalt.split(',').forEach((x) => { const z = parseZeit(x); if (z) ausnahmen.add(`${z.y}${String(z.m).padStart(2, '0')}${String(z.d).padStart(2, '0')}`); });\n      else if (!(name in felder)) felder[name] = { kopf, inhalt };\n    });\n    if (!felder.DTSTART || (felder.STATUS && /CANCELLED/i.test(felder.STATUS.inhalt))) return;\n    const start = parseZeit(felder.DTSTART.inhalt);\n    if (!start) return;\n    const ende = felder.DTEND ? parseZeit(felder.DTEND.inhalt) : null;\n    const ganztags = start.h === null;\n    let endeTag = null;\n    if (ende) endeTag = ganztags ? tagesNr(ende) - 1 : tagesNr(ende);\n    ergebnis.push({\n      kalender,\n      start,\n      ende,\n      endeTag,\n      ganztags,\n      ausnahmen,\n      regel: felder.RRULE ? parseRegel(felder.RRULE.inhalt) : null,\n      titel: wert(felder.SUMMARY && felder.SUMMARY.inhalt) || '(ohne Titel)',\n      ort: wert(felder.LOCATION && felder.LOCATION.inhalt),\n      frei: /TRANSPARENT/i.test((felder.TRANSP && felder.TRANSP.inhalt) || '') || /FREE/i.test((felder['X-MICROSOFT-CDO-BUSYSTATUS'] && felder['X-MICROSOFT-CDO-BUSYSTATUS'].inhalt) || ''),\n    });\n  });\n  return ergebnis;\n};\n\nconst hhmm = (z) => `${String(z.h).padStart(2, '0')}:${String(z.min).padStart(2, '0')}`;\nconst treffer = [];\nconst fehler = [];\nconst alleEreignisse = [];\nquellen.forEach((q) => {\n  let roh = '';\n  try {\n    const eintrag = $(q.knoten).first().json;\n    roh = typeof eintrag.data === 'string' ? eintrag.data : '';\n  } catch (e) {\n    roh = '';\n  }\n  if (!roh.includes('BEGIN:VCALENDAR')) {\n    fehler.push(q);\n    return;\n  }\n  parseKalender(roh, q.name).forEach((ev) => {\n    alleEreignisse.push({ ...ev, gruppe: q.gruppe });\n    if (faelltAuf(ev, heute)) treffer.push({ ...ev, gruppe: q.gruppe });\n  });\n});\n\nconst minutenVon = (ev) => (ev.start.h || 0) * 60 + ev.start.min;\nconst sortieren = (liste) => liste.sort((a, b) => (a.ganztags === b.ganztags ? minutenVon(a) - minutenVon(b) : a.ganztags ? -1 : 1));\nconst zeile = (ev, mitQuelle) => {\n  const zeit = ev.ganztags ? 'ganzt\\u00E4gig' : ev.ende && ev.ende.h !== null ? `${hhmm(ev.start)}\\u2013${hhmm(ev.ende)}` : hhmm(ev.start);\n  return `- **${zeit}** ${ev.titel}${ev.ort ? ' (' + ev.ort + ')' : ''}${mitQuelle ? ` _[${ev.kalender}${ev.frei ? ', frei' : ''}]_` : ''}`;\n};\nconst haupt = sortieren(treffer.filter((ev) => ev.gruppe === 'haupt'));\nconst hiorg = sortieren(treffer.filter((ev) => ev.gruppe === 'hiorg'));\nconst datum = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).format(jetzt);\nlet text = haupt.length ? haupt.map((ev) => zeile(ev, false)).join('\\n') : '- Keine Termine heute.';\nconst fehlerHaupt = fehler.filter((q) => q.gruppe === 'haupt').map((q) => q.name);\nif (fehlerHaupt.length) text += `\\n- \\u26A0\\uFE0F Kalender nicht lesbar: ${fehlerHaupt.join(', ')}`;\nlet hiorgText = hiorg.length ? hiorg.map((ev) => zeile(ev, false)).join('\\n') : '- Keine Termine heute.';\nif (fehler.some((q) => q.gruppe === 'hiorg')) hiorgText = '- \\u26A0\\uFE0F HiOrg Kalender nicht lesbar';\nconst addTage = (t, n) => {\n  const x = new Date(Date.UTC(t.y, t.m - 1, t.d + n));\n  return { y: x.getUTCFullYear(), m: x.getUTCMonth() + 1, d: x.getUTCDate() };\n};\nconst WT = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];\nconst zelle = (wert) => String(wert).replace(/\\|/g, '/');\nconst reihen = [];\nfor (let n = 1; n <= 7; n++) {\n  const tag = addTage(heute, n);\n  const beschriftung = `${WT[wochentag(tag)]} ${String(tag.d).padStart(2, '0')}.${String(tag.m).padStart(2, '0')}.`;\n  sortieren(alleEreignisse.filter((ev) => faelltAuf(ev, tag))).forEach((ev) => {\n    const zeit = ev.ganztags ? 'ganzt\\u00E4gig' : ev.ende && ev.ende.h !== null ? `${hhmm(ev.start)}\\u2013${hhmm(ev.ende)}` : hhmm(ev.start);\n    reihen.push(`| ${beschriftung} | ${zeit} | ${zelle(ev.titel)}${ev.ort ? ' (' + zelle(ev.ort) + ')' : ''}${ev.gruppe === 'hiorg' ? ' _[HiOrg]_' : ''} |`);\n  });\n}\nconst woche = reihen.length ? ['| Tag | Zeit | Termin |', '|---|---|---|', ...reihen.slice(0, 30)].join('\\n') + (reihen.length > 30 ? `\\n_... und ${reihen.length - 30} weitere_` : '') : '- Keine Termine in den n\\u00E4chsten 7 Tagen.';\nreturn [{ json: { datum, termine: text, hiorg: hiorgText, woche, anzahl: treffer.length } }];"
       }
     },
     {
@@ -124,7 +200,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1040,
+        1560,
         0
       ],
       "parameters": {
@@ -150,7 +226,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1300,
+        1820,
         0
       ],
       "parameters": {
@@ -176,7 +252,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1560,
+        2080,
         0
       ],
       "parameters": {
@@ -202,7 +278,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1820,
+        2340,
         0
       ],
       "parameters": {
@@ -228,7 +304,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2080,
+        2600,
         0
       ],
       "parameters": {
@@ -254,7 +330,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2340,
+        2860,
         0
       ],
       "parameters": {
@@ -280,7 +356,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2600,
+        3120,
         0
       ],
       "parameters": {
@@ -306,7 +382,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2860,
+        3380,
         0
       ],
       "parameters": {
@@ -332,7 +408,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3120,
+        3640,
         0
       ],
       "parameters": {
@@ -358,7 +434,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3380,
+        3900,
         0
       ],
       "parameters": {
@@ -379,12 +455,90 @@
       "alwaysOutputData": true
     },
     {
+      "id": "236897ae-9d25-56c8-95f9-3fce81cc7c94",
+      "name": "VM Backups",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4160,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428/api/v1/query",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "time() - capulus_backup_last_success_timestamp_seconds"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "f961c549-657c-5a1d-aa9b-30a8e8fdba44",
+      "name": "VM Backups fehlgeschlagen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4420,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428/api/v1/query",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "capulus_backup_failed == 1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "970f6151-2cc8-593a-936b-21f29c50a3c9",
+      "name": "VM Zertifikate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4680,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428/api/v1/query",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "certmanager_certificate_expiration_timestamp_seconds - time()"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
       "id": "7403e5af-57bb-557f-b0da-0717ad160634",
       "name": "VM Nodes",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3640,
+        4940,
         0
       ],
       "parameters": {
@@ -410,7 +564,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3900,
+        5200,
         0
       ],
       "parameters": {
@@ -444,7 +598,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4160,
+        5460,
         0
       ],
       "parameters": {
@@ -478,7 +632,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4420,
+        5720,
         0
       ],
       "parameters": {
@@ -507,12 +661,90 @@
       "alwaysOutputData": true
     },
     {
+      "id": "622a3a03-51eb-5754-ad8d-c385e98a0b13",
+      "name": "Token-Register",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5980,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.github.com/repos/pkr-lab/capulus-core/contents/ops/token-register.yaml",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.raw+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "QZ8UkKhhVOr7IXax",
+          "name": "GitHub PAT (Status-Schalter)"
+        }
+      }
+    },
+    {
+      "id": "9e9a1042-13a0-5bac-ab25-e5971061cb3f",
+      "name": "Updates",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6240,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://carplay-api.prod.homeserver/api/updates",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "qw2XzzCvd5uEKb0e",
+          "name": "carplay-api API Token"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
       "id": "ff587287-feb4-5558-a80f-b01e1b19449e",
       "name": "KEV laden",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        4680,
+        6500,
         0
       ],
       "parameters": {
@@ -527,12 +759,12 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4940,
+        6760,
         0
       ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const jetzt = typeof TEST_NOW !== 'undefined' ? new Date(TEST_NOW) : new Date();\nconst STUNDE = 3600000;\nconst text = (wert) => String(wert === undefined || wert === null ? '' : wert);\nconst bereinigen = (wert) => text(wert)\n  .replace(/<!\\[CDATA\\[|\\]\\]>/g, '')\n  .replace(/<[^>]+>/g, ' ')\n  .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '\"').replace(/&#39;/g, \"'\").replace(/&amp;/g, '&')\n  .replace(/\\s+/g, ' ')\n  .trim();\nconst etikett = (xml, name) => {\n  const m = new RegExp(`<${name}(?:\\\\s[^>]*)?>([\\\\s\\\\S]*?)</${name}>`, 'i').exec(xml);\n  return m ? m[1] : '';\n};\nconst holen = (knoten) => {\n  try {\n    const j = $(knoten).first().json;\n    return typeof j.data === 'string' ? j.data : '';\n  } catch (e) {\n    return '';\n  }\n};\n\nconst feed = (knoten, quelle) => {\n  const roh = holen(knoten);\n  const bloecke = roh.includes('<entry') ? roh.split(/<entry[\\s>]/).slice(1) : roh.split(/<item[\\s>]/).slice(1);\n  return bloecke.map((b) => {\n    const linkAtom = /<link[^>]*href=\"([^\"]+)\"/i.exec(b);\n    const zeit = Date.parse(bereinigen(etikett(b, 'pubDate') || etikett(b, 'updated') || etikett(b, 'published')));\n    return {\n      quelle,\n      titel: bereinigen(etikett(b, 'title')),\n      link: linkAtom ? linkAtom[1] : bereinigen(etikett(b, 'link')),\n      text: bereinigen(etikett(b, 'description') || etikett(b, 'summary')).slice(0, 320),\n      stufe: bereinigen(etikett(b, 'category')).toLowerCase(),\n      zeit: Number.isFinite(zeit) ? zeit : 0,\n    };\n  }).filter((e) => e.titel && e.link);\n};\n\nconst bsi = feed('Feed BSI', 'BSI CERT-Bund');\nconst heise = feed('Feed heise', 'heise Security');\nconst thn = feed('Feed THN', 'The Hacker News');\n\nlet kev = [];\ntry {\n  kev = JSON.parse($('KEV laden').first().json.stdout || '[]');\n} catch (e) {\n  kev = [];\n}\n\nconst sicherheit = [];\nkev.forEach((k) => sicherheit.push({\n  quelle: 'CISA KEV',\n  titel: `${k.cve}: ${k.hersteller} ${k.produkt} (aktiv ausgenutzt)`,\n  link: `https://nvd.nist.gov/vuln/detail/${k.cve}`,\n  text: `${k.name}. ${k.text}`.slice(0, 320),\n  punkte: 100 + (k.ransomware === 'Known' ? 20 : 0),\n  zeit: Date.parse(k.datum) || 0,\n}));\nconst frisch = (e, stunden) => e.zeit >= jetzt.getTime() - stunden * STUNDE;\nbsi.filter((e) => frisch(e, 48)).forEach((e) => sicherheit.push({ ...e, punkte: (/kritisch/.test(e.stufe + e.titel) ? 80 : /hoch/.test(e.stufe + e.titel) ? 50 : 10) - (/\\[UPDATE\\]/.test(e.titel) ? 10 : 0) }));\n[...heise, ...thn].filter((e) => frisch(e, 48)).forEach((e) => sicherheit.push({ ...e, punkte: 30 }));\nsicherheit.sort((a, b) => b.punkte - a.punkte || b.zeit - a.zeit);\nconst sicherheitKandidaten = sicherheit.slice(0, 14);\n\nconst genutzt = new Set(sicherheitKandidaten.map((e) => e.link));\nconst woche = [...heise, ...thn].filter((e) => frisch(e, 7 * 24) && !genutzt.has(e.link)).sort((a, b) => b.zeit - a.zeit).slice(0, 14);\n\nconst abfrage = (knoten) => {\n  try {\n    const j = $(knoten).first().json;\n    if (j.error || !j.data) return null;\n    return j.data.result || [];\n  } catch (e) {\n    return null;\n  }\n};\nconst minuten = (min) => {\n  const m = Math.round(min);\n  return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min` : `${m} min`;\n};\nconst name = (metrik) => `${metrik.namespace || '?'}/${metrik.deployment || metrik.statefulset || metrik.pod || metrik.alertname || '?'}`;\nconst ausfaelle = (knoten) => (abfrage(knoten) || []).map((r) => ({ name: name(r.metric), min: +r.value[1] })).filter((r) => r.min >= 3);\nconst zusammen = (liste) => {\n  const karte = new Map();\n  liste.forEach((r) => karte.set(r.name, (karte.get(r.name) || 0) + r.min));\n  return [...karte.entries()].map(([n, min]) => ({ name: n, min })).sort((a, b) => b.min - a.min);\n};\nconst aus24 = zusammen([...ausfaelle('VM Ausfall 24h'), ...ausfaelle('VM Ausfall StatefulSet 24h')]);\nconst aus7 = zusammen([...ausfaelle('VM Ausfall 7 Tage'), ...ausfaelle('VM Ausfall StatefulSet 7 Tage')]);\nconst alerts = abfrage('VM Alerts');\nconst argoBad = abfrage('VM ArgoCD');\nconst restarts = abfrage('VM Neustarts');\nconst cpu = abfrage('VM CPU');\nconst mem = abfrage('VM RAM');\nconst disk = abfrage('VM Disk');\nconst nodes = abfrage('VM Nodes');\n\nconst health = [];\nif (alerts === null) health.push('- ⚠️ Alerts nicht abrufbar');\nelse health.push(alerts.length ? `- \\u{1F6A8} **${alerts.length} aktive Alerts:** ${alerts.slice(0, 6).map((r) => `${r.metric.alertname} (${r.metric.severity || '-'})`).join(', ')}` : '- ✅ Keine aktiven Alerts');\nif (argoBad === null) health.push('- ⚠️ ArgoCD nicht abrufbar');\nelse health.push(argoBad.length ? `- ⚠️ **ArgoCD:** ${argoBad.slice(0, 6).map((r) => `${r.metric.name || r.metric.app || '?'} (${r.metric.health_status}/${r.metric.sync_status})`).join(', ')}` : '- ✅ ArgoCD: alle Apps gesund');\nif (nodes && nodes.length) health.push(`- Nodes bereit: ${nodes[0].value[1]}`);\nif (aus24.length) health.push(`- \\u{1F551} **Ausfälle 24 h:** ${aus24.slice(0, 4).map((r) => `${r.name} ${minuten(r.min)}`).join(', ')}`);\nelse if (abfrage('VM Ausfall 24h') === null) health.push('- ⚠️ Ausfalldaten nicht abrufbar');\nelse health.push('- ✅ Keine Ausfälle in den letzten 24 h');\nif (aus7.length) health.push(`- \\u{1F4C5} **Längste Ausfälle 7 Tage:** ${aus7.slice(0, 4).map((r) => `${r.name} ${minuten(r.min)}`).join(', ')}`);\nif (restarts && restarts.length) health.push(`- \\u{1F501} Neustarts 24 h: ${restarts.slice(0, 4).map((r) => `${name(r.metric)} (${Math.round(+r.value[1])}×)`).join(', ')}`);\nconst maximal = (liste) => (liste && liste.length ? liste.reduce((a, b) => (+b.value[1] > +a.value[1] ? b : a)) : null);\nconst teile = [['CPU', maximal(cpu)], ['RAM', maximal(mem)], ['Disk', maximal(disk)]].filter(([, r]) => r).map(([n, r]) => `${n} max ${Math.round(+r.value[1])} % (${String(r.metric.instance || '').split(':')[0]})`);\nif (teile.length) health.push(`- Ressourcen: ${teile.join(', ')}`);\n\nconst auflisten = (liste) => liste.map((e, i) => `${i + 1}. [${e.quelle}] ${e.titel}\\n   ${e.text}\\n   ${e.link}`).join('\\n');\nconst system = 'Du bist ein nuechterner Redakteur fuer das taegliche Lagebild eines kleinen IT-Betriebs (Linux, Kubernetes, Nextcloud, Zammad, Microsoft 365, Apple-Geraeteverwaltung). Antworte ausschliesslich auf Deutsch, ohne Einleitung und ohne Schlusssatz. Erfinde keine Angaben, nutze nur den gelieferten Text.';\nconst nachricht = (aufgabe, liste) => [{ role: 'system', content: system }, { role: 'user', content: `${aufgabe}\\nFormat je Punkt genau eine Zeile: - **Kurztitel** – ein Satz. [Quelle](Link)\\n\\nMeldungen:\\n${auflisten(liste)}` }];\n\nreturn [{\n  json: {\n    health: health.join('\\n'),\n    sicherheit: sicherheitKandidaten,\n    woche,\n    anzahlSicherheit: sicherheitKandidaten.length,\n    anzahlWoche: woche.length,\n    nachrichtenSicherheit: nachricht('Wähle höchstens 5 der folgenden Meldungen, die für diese Umgebung am gefährlichsten oder relevantesten sind (aktiv ausgenutzte zuerst) und fasse jede in einem Satz zusammen.', sicherheitKandidaten),\n    nachrichtenWoche: nachricht('Wähle höchstens 5 der folgenden Meldungen der letzten Woche, die man als IT-Verantwortlicher unbedingt wissen sollte, und fasse jede in einem Satz zusammen.', woche),\n  },\n}];"
+        "jsCode": "const jetzt = typeof TEST_NOW !== 'undefined' ? new Date(TEST_NOW) : new Date();\nconst STUNDE = 3600000;\nconst text = (wert) => String(wert === undefined || wert === null ? '' : wert);\nconst bereinigen = (wert) => text(wert)\n  .replace(/<!\\[CDATA\\[|\\]\\]>/g, '')\n  .replace(/<[^>]+>/g, ' ')\n  .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '\"').replace(/&#39;/g, \"'\").replace(/&amp;/g, '&')\n  .replace(/\\s+/g, ' ')\n  .trim();\nconst etikett = (xml, name) => {\n  const m = new RegExp(`<${name}(?:\\\\s[^>]*)?>([\\\\s\\\\S]*?)</${name}>`, 'i').exec(xml);\n  return m ? m[1] : '';\n};\nconst holen = (knoten) => {\n  try {\n    const j = $(knoten).first().json;\n    return typeof j.data === 'string' ? j.data : '';\n  } catch (e) {\n    return '';\n  }\n};\n\nconst feed = (knoten, quelle) => {\n  const roh = holen(knoten);\n  const bloecke = roh.includes('<entry') ? roh.split(/<entry[\\s>]/).slice(1) : roh.split(/<item[\\s>]/).slice(1);\n  return bloecke.map((b) => {\n    const linkAtom = /<link[^>]*href=\"([^\"]+)\"/i.exec(b);\n    const zeit = Date.parse(bereinigen(etikett(b, 'pubDate') || etikett(b, 'updated') || etikett(b, 'published')));\n    return {\n      quelle,\n      titel: bereinigen(etikett(b, 'title')),\n      link: linkAtom ? linkAtom[1] : bereinigen(etikett(b, 'link')),\n      text: bereinigen(etikett(b, 'description') || etikett(b, 'summary')).slice(0, 320),\n      stufe: bereinigen(etikett(b, 'category')).toLowerCase(),\n      zeit: Number.isFinite(zeit) ? zeit : 0,\n    };\n  }).filter((e) => e.titel && e.link);\n};\n\nconst bsi = feed('Feed BSI', 'BSI CERT-Bund');\nconst heise = feed('Feed heise', 'heise Security');\nconst thn = feed('Feed THN', 'The Hacker News');\n\nlet kev = [];\ntry {\n  kev = JSON.parse($('KEV laden').first().json.stdout || '[]');\n} catch (e) {\n  kev = [];\n}\n\nconst sicherheit = [];\nkev.forEach((k) => sicherheit.push({\n  quelle: 'CISA KEV',\n  titel: `${k.cve}: ${k.hersteller} ${k.produkt} (aktiv ausgenutzt)`,\n  link: `https://nvd.nist.gov/vuln/detail/${k.cve}`,\n  text: `${k.name}. ${k.text}`.slice(0, 320),\n  punkte: 100 + (k.ransomware === 'Known' ? 20 : 0),\n  zeit: Date.parse(k.datum) || 0,\n}));\nconst frisch = (e, stunden) => e.zeit >= jetzt.getTime() - stunden * STUNDE;\nbsi.filter((e) => frisch(e, 48)).forEach((e) => sicherheit.push({ ...e, punkte: (/kritisch/.test(e.stufe + e.titel) ? 80 : /hoch/.test(e.stufe + e.titel) ? 50 : 10) - (/\\[UPDATE\\]/.test(e.titel) ? 10 : 0) }));\n[...heise, ...thn].filter((e) => frisch(e, 48)).forEach((e) => sicherheit.push({ ...e, punkte: 30 }));\nsicherheit.sort((a, b) => b.punkte - a.punkte || b.zeit - a.zeit);\nconst sicherheitKandidaten = sicherheit.slice(0, 14);\n\nconst genutzt = new Set(sicherheitKandidaten.map((e) => e.link));\nconst woche = [...heise, ...thn].filter((e) => frisch(e, 7 * 24) && !genutzt.has(e.link)).sort((a, b) => b.zeit - a.zeit).slice(0, 14);\n\nconst abfrage = (knoten) => {\n  try {\n    const j = $(knoten).first().json;\n    if (j.error || !j.data) return null;\n    return j.data.result || [];\n  } catch (e) {\n    return null;\n  }\n};\nconst minuten = (min) => {\n  const m = Math.round(min);\n  return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min` : `${m} min`;\n};\nconst name = (metrik) => `${metrik.namespace || '?'}/${metrik.deployment || metrik.statefulset || metrik.pod || metrik.alertname || '?'}`;\nconst ausfaelle = (knoten) => (abfrage(knoten) || []).map((r) => ({ name: name(r.metric), min: +r.value[1] })).filter((r) => r.min >= 3);\nconst zusammen = (liste) => {\n  const karte = new Map();\n  liste.forEach((r) => karte.set(r.name, (karte.get(r.name) || 0) + r.min));\n  return [...karte.entries()].map(([n, min]) => ({ name: n, min })).sort((a, b) => b.min - a.min);\n};\nconst aus24 = zusammen([...ausfaelle('VM Ausfall 24h'), ...ausfaelle('VM Ausfall StatefulSet 24h')]);\nconst aus7 = zusammen([...ausfaelle('VM Ausfall 7 Tage'), ...ausfaelle('VM Ausfall StatefulSet 7 Tage')]);\nconst alerts = abfrage('VM Alerts');\nconst argoBad = abfrage('VM ArgoCD');\nconst restarts = abfrage('VM Neustarts');\nconst cpu = abfrage('VM CPU');\nconst mem = abfrage('VM RAM');\nconst disk = abfrage('VM Disk');\nconst nodes = abfrage('VM Nodes');\n\nconst health = [];\nif (alerts === null) health.push('- ⚠️ Alerts nicht abrufbar');\nelse health.push(alerts.length ? `- \\u{1F6A8} **${alerts.length} aktive Alerts:** ${alerts.slice(0, 6).map((r) => `${r.metric.alertname} (${r.metric.severity || '-'})`).join(', ')}` : '- ✅ Keine aktiven Alerts');\nif (argoBad === null) health.push('- ⚠️ ArgoCD nicht abrufbar');\nelse health.push(argoBad.length ? `- ⚠️ **ArgoCD:** ${argoBad.slice(0, 6).map((r) => `${r.metric.name || r.metric.app || '?'} (${r.metric.health_status}/${r.metric.sync_status})`).join(', ')}` : '- ✅ ArgoCD: alle Apps gesund');\nif (nodes && nodes.length) health.push(`- Nodes bereit: ${nodes[0].value[1]}`);\nif (aus24.length) health.push(`- \\u{1F551} **Ausfälle 24 h:** ${aus24.slice(0, 4).map((r) => `${r.name} ${minuten(r.min)}`).join(', ')}`);\nelse if (abfrage('VM Ausfall 24h') === null) health.push('- ⚠️ Ausfalldaten nicht abrufbar');\nelse health.push('- ✅ Keine Ausfälle in den letzten 24 h');\nif (aus7.length) health.push(`- \\u{1F4C5} **Längste Ausfälle 7 Tage:** ${aus7.slice(0, 4).map((r) => `${r.name} ${minuten(r.min)}`).join(', ')}`);\nif (restarts && restarts.length) health.push(`- \\u{1F501} Neustarts 24 h: ${restarts.slice(0, 4).map((r) => `${name(r.metric)} (${Math.round(+r.value[1])}×)`).join(', ')}`);\nconst maximal = (liste) => (liste && liste.length ? liste.reduce((a, b) => (+b.value[1] > +a.value[1] ? b : a)) : null);\nconst teile = [['CPU', maximal(cpu)], ['RAM', maximal(mem)], ['Disk', maximal(disk)]].filter(([, r]) => r).map(([n, r]) => `${n} max ${Math.round(+r.value[1])} % (${String(r.metric.instance || '').split(':')[0]})`);\nif (teile.length) health.push(`- Ressourcen: ${teile.join(', ')}`);\n\nconst stunden = (sek) => `${Math.round(sek / 3600)} h`;\nconst backups = abfrage('VM Backups');\nconst backupFehler = new Set((abfrage('VM Backups fehlgeschlagen') || []).map((r) => `${r.metric.namespace}/${r.metric.name}`));\nif (backups === null) health.push('- \\u26A0\\uFE0F Backup-Daten nicht abrufbar');\nelse if (backups.length === 0) health.push('- \\u2139\\uFE0F Backups: keine Metriken vorhanden');\nelse {\n  const liste = backups.map((r) => ({ name: `${r.metric.namespace}/${r.metric.name}`, alter: +r.value[1] })).sort((x, y) => y.alter - x.alter);\n  const probleme = liste.filter((b) => b.alter > 30 * 3600 || backupFehler.has(b.name));\n  if (probleme.length) health.push(`- \\u{1F6A8} **Backups:** ${probleme.map((b) => `${b.name} ${backupFehler.has(b.name) ? 'fehlgeschlagen' : 'seit ' + stunden(b.alter)}`).join(', ')}`);\n  else health.push(`- \\u2705 Backups: alle ${liste.length} aktuell (\\u00E4ltestes ${liste[0].name} vor ${stunden(liste[0].alter)})`);\n}\nconst zertifikate = abfrage('VM Zertifikate');\nif (zertifikate === null || zertifikate.length === 0) health.push('- \\u2139\\uFE0F Zertifikate: nicht \\u00FCberwacht (keine cert-manager-Metriken)');\nelse {\n  const liste = zertifikate.map((r) => ({ name: `${r.metric.namespace || '?'}/${r.metric.name || r.metric.exported_namespace || '?'}`, tage: +r.value[1] / 86400 })).sort((x, y) => x.tage - y.tage);\n  const bald = liste.filter((c) => c.tage < 30);\n  if (bald.length) health.push(`- \\u{1F4DC} **Zertifikate < 30 Tage:** ${bald.slice(0, 5).map((c) => `${c.name} (${Math.floor(c.tage)} Tage)`).join(', ')}`);\n  else health.push(`- \\u2705 Zertifikate: alle ${liste.length} g\\u00FCltig, n\\u00E4chstes l\\u00E4uft in ${Math.floor(liste[0].tage)} Tagen ab (${liste[0].name})`);\n}\nconst register = holen('Token-Register');\nif (!register.includes('- id:')) health.push('- \\u26A0\\uFE0F Token-Register nicht lesbar');\nelse {\n  const tageVon = (iso) => (Date.parse(iso + 'T12:00:00Z') - jetzt.getTime()) / 86400000;\n  let ohneDatum = 0;\n  const faellig = [];\n  register.split(/\\n(?=- id:)/).forEach((block) => {\n    const id = (/id:\\s*(\\S+)/.exec(block) || [])[1];\n    const ablauf = (/\\n\\s*expires:\\s*\"?(\\d{4}-\\d{2}-\\d{2})/.exec(block) || [])[1];\n    const ausgestellt = (/\\n\\s*issued:\\s*\"?(\\d{4}-\\d{2}-\\d{2})/.exec(block) || [])[1];\n    const alter = +((/max_age_days:\\s*(\\d+)/.exec(block) || [])[1] || 0);\n    let rest = null;\n    if (ablauf) rest = tageVon(ablauf);\n    else if (ausgestellt && alter) rest = tageVon(ausgestellt) + alter;\n    if (rest === null) ohneDatum += 1;\n    else if (rest <= 30) faellig.push({ id, rest: Math.floor(rest) });\n  });\n  faellig.sort((x, y) => x.rest - y.rest);\n  if (faellig.length) health.push(`- \\u{1F511} **Tokens f\\u00E4llig:** ${faellig.slice(0, 6).map((t) => `${t.id} (${t.rest < 0 ? '\\u00FCberf\\u00E4llig' : 'in ' + t.rest + ' Tagen'})`).join(', ')}${faellig.length > 6 ? ` und ${faellig.length - 6} weitere` : ''}`);\n  else health.push(`- \\u2705 Tokens: nichts in den n\\u00E4chsten 30 Tagen f\\u00E4llig${ohneDatum ? ` (${ohneDatum} ohne Datum)` : ''}`);\n}\ntry {\n  const updates = $('Updates').first().json;\n  const repos = Array.isArray(updates.repos) ? updates.repos : null;\n  if (repos === null) health.push('- \\u2139\\uFE0F Updates: keine Daten');\n  else {\n    const teile = (v) => String(v || '').replace(/^[^0-9]*/, '').split(/[^0-9]+/).filter(Boolean).map(Number);\n    const neuer = (a, b) => { const x = teile(a); const y = teile(b); for (let i = 0; i < Math.max(x.length, y.length); i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; };\n    const neu = repos.filter((r) => r.has_update === true && neuer(r.latest_version, r.current_version));\n    if (neu.length) health.push(`- \\u2B06\\uFE0F **Updates verf\\u00FCgbar:** ${neu.map((r) => `${r.name} ${r.current_version || '?'} \\u2192 ${r.latest_version}`).join(', ')}`);\n    else health.push(`- \\u2705 Updates: alle ${repos.length} \\u00FCberwachten Apps aktuell`);\n  }\n} catch (e) {\n  health.push('- \\u2139\\uFE0F Updates: keine Daten');\n}\n\nconst auflisten = (liste) => liste.map((e, i) => `${i + 1}. [${e.quelle}] ${e.titel}\\n   ${e.text}\\n   ${e.link}`).join('\\n');\nconst system = 'Du bist ein nuechterner Redakteur fuer das taegliche Lagebild eines kleinen IT-Betriebs (Linux, Kubernetes, Nextcloud, Zammad, Microsoft 365, Apple-Geraeteverwaltung). Antworte ausschliesslich auf Deutsch, ohne Einleitung und ohne Schlusssatz. Erfinde keine Angaben, nutze nur den gelieferten Text.';\nconst nachricht = (aufgabe, liste) => [{ role: 'system', content: system }, { role: 'user', content: `${aufgabe}\\nFormat je Punkt genau eine Zeile: - **Kurztitel** – ein Satz. [Quelle](Link)\\n\\nMeldungen:\\n${auflisten(liste)}` }];\n\nreturn [{\n  json: {\n    health: health.join('\\n'),\n    sicherheit: sicherheitKandidaten,\n    woche,\n    anzahlSicherheit: sicherheitKandidaten.length,\n    anzahlWoche: woche.length,\n    nachrichtenSicherheit: nachricht('Wähle höchstens 5 der folgenden Meldungen, die für diese Umgebung am gefährlichsten oder relevantesten sind (aktiv ausgenutzte zuerst) und fasse jede in einem Satz zusammen.', sicherheitKandidaten),\n    nachrichtenWoche: nachricht('Wähle höchstens 5 der folgenden Meldungen der letzten Woche, die man als IT-Verantwortlicher unbedingt wissen sollte, und fasse jede in einem Satz zusammen.', woche),\n  },\n}];"
       }
     },
     {
@@ -541,7 +773,7 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        5200,
+        7020,
         0
       ],
       "parameters": {
@@ -556,7 +788,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        5460,
+        7280,
         0
       ],
       "parameters": {
@@ -590,7 +822,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        5720,
+        7540,
         120
       ],
       "parameters": {
@@ -629,7 +861,7 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        5980,
+        7800,
         120
       ],
       "parameters": {
@@ -644,7 +876,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        6240,
+        8060,
         0
       ],
       "parameters": {
@@ -666,7 +898,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        6500,
+        8320,
         0
       ],
       "parameters": {
@@ -688,7 +920,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6760,
+        8580,
         0
       ],
       "parameters": {
@@ -702,7 +934,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        7020,
+        8840,
         0
       ],
       "onError": "continueRegularOutput",
@@ -775,7 +1007,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        7280,
+        9100,
         0
       ],
       "onError": "continueRegularOutput",
@@ -826,6 +1058,28 @@
       ]
     },
     "Kalender Outlook": {
+      "main": [
+        [
+          {
+            "node": "Kalender HiOrg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kalender HiOrg": {
+      "main": [
+        [
+          {
+            "node": "Wetter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wetter": {
       "main": [
         [
           {
@@ -950,6 +1204,39 @@
       "main": [
         [
           {
+            "node": "VM Backups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VM Backups": {
+      "main": [
+        [
+          {
+            "node": "VM Backups fehlgeschlagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VM Backups fehlgeschlagen": {
+      "main": [
+        [
+          {
+            "node": "VM Zertifikate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VM Zertifikate": {
+      "main": [
+        [
+          {
             "node": "VM Nodes",
             "type": "main",
             "index": 0
@@ -991,6 +1278,28 @@
       ]
     },
     "Feed THN": {
+      "main": [
+        [
+          {
+            "node": "Token-Register",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Token-Register": {
+      "main": [
+        [
+          {
+            "node": "Updates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Updates": {
       "main": [
         [
           {
