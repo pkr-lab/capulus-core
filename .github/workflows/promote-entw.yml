@@ -66,7 +66,10 @@ jobs:
         with:
           channel: deployments
           token: ${{ secrets.MATTERMOST_BOT_TOKEN }}
-          message: "#### \u274C CI auf entw ist rot\nCommit `${{ needs.detect.outputs.head }}`\n[Lauf ansehen](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          title: "\u274C CI auf entw ist rot"
+          status: failure
+          fields: '[{"title":"Commit","value":"${{ needs.detect.outputs.head }}","short":true},{"title":"Branch","value":"entw","short":true}]'
+          message: "Die Promotion nach main wartet, bis die CI gruen ist."
 
   promote:
     name: PR nach main
@@ -94,4 +97,7 @@ jobs:
         with:
           channel: deployments
           token: ${{ secrets.MATTERMOST_BOT_TOKEN }}
-          message: "#### \U0001F500 ENTW \u2192 main\nCI gruen, Promotion fuer `${{ needs.detect.outputs.head }}` ausgefuehrt.\n[Lauf ansehen](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          title: "\U0001F500 ENTW \u2192 main"
+          status: success
+          fields: '[{"title":"Commit","value":"${{ needs.detect.outputs.head }}","short":true},{"title":"CI","value":"gruen","short":true}]'
+          message: "Die Promotion nach main ist ausgefuehrt."
