@@ -713,56 +713,6 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "={{ $json.title }}"
-            },
-            {
-              "name": "Priority",
-              "value": "={{ $json.priority }}"
-            },
-            {
-              "name": "Tags",
-              "value": "package"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $json.message }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "991f7888-1419-5cd3-a536-45a2399d2f3c",
-      "name": "Protokoll melden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        5980,
-        300
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      }
-    },
-    {
-      "parameters": {
         "mode": "runOnceForAllItems",
         "jsCode": "return [{ json: $('Meldung bauen').first().json }];\n"
       },
@@ -877,52 +827,200 @@
       ]
     },
     {
+      "id": "de20424a-6908-579e-9170-c82deda2e30b",
+      "name": "Protokoll melden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        5880,
+        300
+      ],
+      "onError": "continueRegularOutput",
       "parameters": {
-        "method": "POST",
-        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "assignments": {
+          "assignments": [
             {
-              "name": "Title",
-              "value": "={{ $json.title }}"
+              "id": "ec668ba3-a303-5322-8a1b-289a0c8c0830",
+              "name": "quelle",
+              "value": "MDM: iPad Grundeinrichtung",
+              "type": "string"
             },
             {
-              "name": "Priority",
-              "value": "high"
+              "id": "b5516e66-7a20-5d11-88cd-43e2ce218101",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.ntfyTopic }}",
+              "type": "string"
             },
             {
-              "name": "Tags",
-              "value": "warning"
+              "id": "1ca30c6e-2889-548d-8187-6b7e67489916",
+              "name": "titel",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "98da1890-718a-5a42-b949-e312f43c440e",
+              "name": "prioritaet",
+              "value": "={{ $json.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "fde415cb-6ca1-57f6-ac7d-92b1d510c038",
+              "name": "tags",
+              "value": "package",
+              "type": "string"
+            },
+            {
+              "id": "877da22a-1675-503f-b18a-eb39d81eafa0",
+              "name": "text",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "3ccace70-63be-5902-9561-389e8a88a1da",
+              "name": "kanal",
+              "value": "MDM-Verwaltung",
+              "type": "string"
+            },
+            {
+              "id": "a08d3f4e-58f6-5107-94d5-bbb4ab7b6933",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
             }
           ]
         },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $json.message }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "9c916752-9074-5c97-847f-4c06d3313a85",
-      "name": "Zeitplan Protokoll",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "6293ce82-7fa4-5bf7-b10d-068e32aa20d3",
+      "name": "Protokoll melden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [
-        7130,
+        6080,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "f4bf1b90-9c5f-508f-8a43-f2e5cb61e68b",
+      "name": "Zeitplan Protokoll vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7030,
         420
       ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "643d46bd-5e8e-567c-b94f-3628b77b3929",
+              "name": "quelle",
+              "value": "MDM: iPad Grundeinrichtung",
+              "type": "string"
+            },
+            {
+              "id": "a38aea96-40a9-5c18-8398-5185e827ad87",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "0d4dade4-0f62-500f-a0ad-c5f11bff5744",
+              "name": "titel",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "cd258c8c-e159-589e-865c-66867a6a3065",
+              "name": "prioritaet",
+              "value": "high",
+              "type": "string"
+            },
+            {
+              "id": "8c2a4c5f-1338-58a2-9c6c-6e8ab2a2e84f",
+              "name": "tags",
+              "value": "warning",
+              "type": "string"
+            },
+            {
+              "id": "55987718-8e2f-5a79-b05c-2a519a2cb065",
+              "name": "text",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "6100cb5e-6656-580c-9260-874896c854c3",
+              "name": "kanal",
+              "value": "MDM-Verwaltung",
+              "type": "string"
+            },
+            {
+              "id": "d75fd958-b94a-5db5-8076-40220252239f",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "269295f2-3f04-5b4d-abd1-e21c80deca48",
+      "name": "Zeitplan Protokoll",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        7230,
+        420
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
         }
       }
     }
@@ -1276,7 +1374,7 @@
       "main": [
         [
           {
-            "node": "Protokoll melden",
+            "node": "Protokoll melden vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -1360,6 +1458,28 @@
       "main": [
         [
           {
+            "node": "Zeitplan Protokoll vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Protokoll melden vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Protokoll melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zeitplan Protokoll vorbereiten": {
+      "main": [
+        [
+          {
             "node": "Zeitplan Protokoll",
             "type": "main",
             "index": 0
@@ -1372,7 +1492,8 @@
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "timezone": "Europe/Berlin"
+    "timezone": "Europe/Berlin",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "cc1c732d-2825-5366-a29b-8a015defcfdd",
   "meta": {

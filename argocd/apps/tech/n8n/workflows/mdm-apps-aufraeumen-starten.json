@@ -418,7 +418,8 @@
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "timezone": "Europe/Berlin"
+    "timezone": "Europe/Berlin",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "meta": {
     "description": "Das Formular fordert bei den iPads die Liste der installierten Apps an (InstalledApplicationList) und vermerkt den Befehl in automation.setting (aufraeumen:<Enrollment>). Die Auswertung und das Entfernen uebernimmt MDM: Apps aufraeumen auswerten. Credentials: MDM Formulare, MDM NanoMDM API, MDM Automation DB."

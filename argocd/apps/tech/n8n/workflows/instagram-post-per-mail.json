@@ -316,54 +316,6 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $('Konfiguration').first().json.cfg.ntfyUrl + '/' + $('Konfiguration').first().json.cfg.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "Instagram Probelauf (nichts gepostet)"
-            },
-            {
-              "name": "Tags",
-              "value": "test_tube"
-            },
-            {
-              "name": "Priority",
-              "value": "default"
-            },
-            {
-              "name": "Attach",
-              "value": "={{ $('Beitrag buendeln').first().json.imageUrls[0] }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ 'Bilder: ' + $('Beitrag buendeln').first().json.total + ' (Bild-URL von außen abrufbar)\\n' + ($('Beitrag buendeln').first().json.truncated ? 'Caption wurde gekürzt\\n' : '') + ($('Beitrag buendeln').first().json.ignored.length ? 'Nicht übernommen: ' + $('Beitrag buendeln').first().json.ignored.join(', ') + '\\n' : '') + '\\nCaption:\\n' + $('Beitrag buendeln').first().json.caption }}",
-        "options": {}
-      },
-      "id": "12ce908b-5128-510d-9f26-a07602ef9660",
-      "name": "ntfy Probelauf",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        3100,
-        40
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      }
-    },
-    {
-      "parameters": {
         "conditions": {
           "options": {
             "caseSensitive": true,
@@ -395,58 +347,6 @@
         3100,
         300
       ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $('Konfiguration').first().json.cfg.ntfyUrl + '/' + $('Konfiguration').first().json.cfg.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "Instagram-Post freigeben?"
-            },
-            {
-              "name": "Tags",
-              "value": "camera"
-            },
-            {
-              "name": "Priority",
-              "value": "high"
-            },
-            {
-              "name": "Actions",
-              "value": "=http, Freigeben, {{ $execution.resumeUrl }}, method=POST, clear=true"
-            },
-            {
-              "name": "Attach",
-              "value": "={{ $('Beitrag buendeln').first().json.imageUrls[0] }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ 'Bilder: ' + $('Beitrag buendeln').first().json.total + '\\n\\n' + $('Beitrag buendeln').first().json.caption }}",
-        "options": {}
-      },
-      "id": "d9ae98ef-989e-5b92-9a0f-dc8cd1ce44a2",
-      "name": "ntfy Freigabe-Anfrage",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        3320,
-        200
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      }
     },
     {
       "parameters": {
@@ -941,50 +841,6 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $('Konfiguration').first().json.cfg.ntfyUrl + '/' + $('Konfiguration').first().json.cfg.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "Instagram-Post veroeffentlicht"
-            },
-            {
-              "name": "Tags",
-              "value": "white_check_mark"
-            },
-            {
-              "name": "Priority",
-              "value": "default"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ 'Veröffentlicht: ' + ($json.permalink || ('Media-ID ' + $('Veroeffentlichung pruefen').first().json.mediaId)) + '\\n\\n' + $('Beitrag buendeln').first().json.caption + ($('Beitrag buendeln').first().json.truncated ? '\\n\\n(Caption wurde gekürzt)' : '') + ($('Beitrag buendeln').first().json.ignored.length ? '\\n\\nNicht übernommen: ' + $('Beitrag buendeln').first().json.ignored.join(', ') : '') }}",
-        "options": {}
-      },
-      "id": "5aecae89-e93a-58d2-a0d2-b805e7efd4c3",
-      "name": "ntfy Erfolg",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        7500,
-        300
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      }
-    },
-    {
-      "parameters": {
         "mode": "runOnceForAllItems",
         "jsCode": "const j = $input.first().json;\nconst fmt = (e) => {\n  if (!e) return '';\n  if (typeof e === 'string') return e;\n  const parts = [e.message, e.error_user_title, e.error_user_msg, e.description];\n  if (e.code) parts.push('Code ' + e.code);\n  if (e.error_subcode) parts.push('Subcode ' + e.error_subcode);\n  const text = parts.filter(Boolean).join(' | ');\n  return text || JSON.stringify(e).slice(0, 500);\n};\nconst schritt = j.schritt || 'Eingabe';\nconst grund = fmt(j.error) || fmt(j.antwort && j.antwort.error) || (j.antwort ? JSON.stringify(j.antwort).slice(0, 500) : 'unbekannt');\nconst caption = String($('Beitrag pruefen').first().json.caption || '');\nconst zeilen = ['Schritt: ' + schritt, 'Grund: ' + grund];\nif (schritt === 'Veröffentlichen') zeilen.push('Unklar, ob der Post erschienen ist. Zuerst auf Instagram nachsehen, bevor die Mail erneut gesendet wird (sonst Dublette).');\nif (caption) zeilen.push('', 'Post: ' + Array.from(caption.split('\\n')[0]).slice(0, 80).join(''));\nreturn [{ json: { text: zeilen.join('\\n') } }];\n"
       },
@@ -996,50 +852,6 @@
         4000,
         760
       ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $('Konfiguration').first().json.cfg.ntfyUrl + '/' + $('Konfiguration').first().json.cfg.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "Instagram-Post fehlgeschlagen"
-            },
-            {
-              "name": "Tags",
-              "value": "x"
-            },
-            {
-              "name": "Priority",
-              "value": "high"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $json.text }}",
-        "options": {}
-      },
-      "id": "531569b3-1f61-5f7b-911f-e08f373c5730",
-      "name": "ntfy Fehler",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        4220,
-        760
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      }
     },
     {
       "parameters": {
@@ -1213,6 +1025,372 @@
         240,
         740
       ]
+    },
+    {
+      "id": "72fea9fd-28d6-5107-b256-39a5d1ba84ac",
+      "name": "ntfy Probelauf vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3000,
+        40
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8c7d1f8a-b007-5b21-bef7-4d968c1a2ed6",
+              "name": "quelle",
+              "value": "Instagram-Post per Mail",
+              "type": "string"
+            },
+            {
+              "id": "d2ad931f-6a46-5f18-9680-b82385c70a0f",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.cfg.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "5125b366-c411-5eae-9a09-7a1b2a77d6b4",
+              "name": "titel",
+              "value": "Instagram Probelauf (nichts gepostet)",
+              "type": "string"
+            },
+            {
+              "id": "b91d9b6d-26c6-52c9-82c1-dbd0c8381365",
+              "name": "prioritaet",
+              "value": "default",
+              "type": "string"
+            },
+            {
+              "id": "df9ed6bd-1834-5bec-99d3-318259266fc2",
+              "name": "tags",
+              "value": "test_tube",
+              "type": "string"
+            },
+            {
+              "id": "e608edd9-0c5e-5f04-8c77-b71ccdfa6ff9",
+              "name": "anhang",
+              "value": "={{ $('Beitrag buendeln').first().json.imageUrls[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "2b681ef9-a5cb-5b4b-bd0e-a68574a6848d",
+              "name": "text",
+              "value": "={{ 'Bilder: ' + $('Beitrag buendeln').first().json.total + ' (Bild-URL von außen abrufbar)\\n' + ($('Beitrag buendeln').first().json.truncated ? 'Caption wurde gekürzt\\n' : '') + ($('Beitrag buendeln').first().json.ignored.length ? 'Nicht übernommen: ' + $('Beitrag buendeln').first().json.ignored.join(', ') + '\\n' : '') + '\\nCaption:\\n' + $('Beitrag buendeln').first().json.caption }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "03b64e7f-7f93-5eef-9470-e19e41ee8348",
+      "name": "ntfy Probelauf",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        3200,
+        40
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "ee9b6a54-06a1-56dc-893f-f6688f654838",
+      "name": "ntfy Freigabe-Anfrage vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3220,
+        200
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1f5a9bc-d7ab-5867-bf15-eef4db927e02",
+              "name": "quelle",
+              "value": "Instagram-Post per Mail",
+              "type": "string"
+            },
+            {
+              "id": "2f35212f-497c-5884-a4c6-9fd4d75f781b",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.cfg.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "1b038b07-ff73-5651-b015-b6fc71c33158",
+              "name": "titel",
+              "value": "Instagram-Post freigeben?",
+              "type": "string"
+            },
+            {
+              "id": "a171c5ca-7d48-5e0d-a44d-9fcdf4b656df",
+              "name": "prioritaet",
+              "value": "high",
+              "type": "string"
+            },
+            {
+              "id": "68ba6531-54f1-5e66-b45d-86949e2913cb",
+              "name": "tags",
+              "value": "camera",
+              "type": "string"
+            },
+            {
+              "id": "2b95efea-5251-59b4-bfe4-e56f7bb2495c",
+              "name": "aktionen",
+              "value": "=http, Freigeben, {{ $execution.resumeUrl }}, method=POST, clear=true",
+              "type": "string"
+            },
+            {
+              "id": "597081ed-39ad-50fe-89c9-18f052892001",
+              "name": "anhang",
+              "value": "={{ $('Beitrag buendeln').first().json.imageUrls[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "afa22344-cb87-5cab-a0c0-746eef254037",
+              "name": "text",
+              "value": "={{ 'Bilder: ' + $('Beitrag buendeln').first().json.total + '\\n\\n' + $('Beitrag buendeln').first().json.caption }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "7440e978-c3fe-5879-ad94-b7a3c50ebaf8",
+      "name": "ntfy Freigabe-Anfrage",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        3420,
+        200
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "d022429e-19d4-5358-9472-5bc6a17b68b3",
+      "name": "ntfy Erfolg vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7400,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f6636ac9-34dc-5563-8115-2742bbe3ef4a",
+              "name": "quelle",
+              "value": "Instagram-Post per Mail",
+              "type": "string"
+            },
+            {
+              "id": "a753975c-4d64-548c-b34a-45ea5f100bc3",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.cfg.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "07388937-d5bf-567d-8b1f-289c3880a5f8",
+              "name": "titel",
+              "value": "Instagram-Post veroeffentlicht",
+              "type": "string"
+            },
+            {
+              "id": "9a0d8ec7-d41d-5d3e-ae46-55428c37f6ac",
+              "name": "prioritaet",
+              "value": "default",
+              "type": "string"
+            },
+            {
+              "id": "27d601b6-be85-51a7-8505-7c950ef858fa",
+              "name": "tags",
+              "value": "white_check_mark",
+              "type": "string"
+            },
+            {
+              "id": "f1934748-2174-5713-beef-93429423f7b9",
+              "name": "text",
+              "value": "={{ 'Veröffentlicht: ' + ($json.permalink || ('Media-ID ' + $('Veroeffentlichung pruefen').first().json.mediaId)) + '\\n\\n' + $('Beitrag buendeln').first().json.caption + ($('Beitrag buendeln').first().json.truncated ? '\\n\\n(Caption wurde gekürzt)' : '') + ($('Beitrag buendeln').first().json.ignored.length ? '\\n\\nNicht übernommen: ' + $('Beitrag buendeln').first().json.ignored.join(', ') : '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "4371f87e-b165-560c-9eca-18f8396913f9",
+      "name": "ntfy Erfolg",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        7600,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "a16fdf94-9428-569a-97b0-77781eb456b1",
+      "name": "ntfy Fehler vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4120,
+        760
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9e853e48-c51f-5edd-aff2-462421c28089",
+              "name": "quelle",
+              "value": "Instagram-Post per Mail",
+              "type": "string"
+            },
+            {
+              "id": "04a3ccfd-db3d-514e-9f29-42d63b58ce43",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.cfg.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "d340ec6d-e04f-5aa3-8f4f-7a0e62d9037d",
+              "name": "titel",
+              "value": "Instagram-Post fehlgeschlagen",
+              "type": "string"
+            },
+            {
+              "id": "bc17e77c-318d-5adc-b7c4-8f906da43954",
+              "name": "prioritaet",
+              "value": "high",
+              "type": "string"
+            },
+            {
+              "id": "9ec3c53a-78bb-5227-8888-b64a12dd66f3",
+              "name": "tags",
+              "value": "x",
+              "type": "string"
+            },
+            {
+              "id": "7731974c-920b-5a2e-adc7-5e01c75fd2df",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "092c5d04-49ac-5103-ae9f-05ddf9083bc5",
+      "name": "ntfy Fehler",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        4320,
+        760
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
     }
   ],
   "pinData": {},
@@ -1374,7 +1552,7 @@
       "main": [
         [
           {
-            "node": "ntfy Probelauf",
+            "node": "ntfy Probelauf vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -1403,7 +1581,7 @@
       "main": [
         [
           {
-            "node": "ntfy Freigabe-Anfrage",
+            "node": "ntfy Freigabe-Anfrage vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -1672,7 +1850,7 @@
       "main": [
         [
           {
-            "node": "ntfy Erfolg",
+            "node": "ntfy Erfolg vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -1694,7 +1872,7 @@
       "main": [
         [
           {
-            "node": "ntfy Fehler",
+            "node": "ntfy Fehler vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -1769,13 +1947,58 @@
           }
         ]
       ]
+    },
+    "ntfy Probelauf vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "ntfy Probelauf",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ntfy Freigabe-Anfrage vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "ntfy Freigabe-Anfrage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ntfy Erfolg vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "ntfy Erfolg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ntfy Fehler vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "ntfy Fehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1",
     "timezone": "Europe/Berlin",
-    "saveManualExecutions": true
+    "saveManualExecutions": true,
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "0287f535-a518-5d48-9a73-009970422233",
   "meta": {

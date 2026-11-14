@@ -1,0 +1,111 @@
+{
+  "name": "Publish: Fehler-Handler",
+  "nodes": [
+    {
+      "id": "b6e7111f-dc90-5676-975b-b934c3e24686",
+      "name": "Hinweise",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -300
+      ],
+      "parameters": {
+        "content": "## Fehler-Handler\n\nIst bei allen Workflows als **Fehler-Workflow** eingetragen (Einstellungen, Error Workflow). Greift bei jedem unbehandelten Fehler und ruft nur `Publish: Benachrichtigung` auf. Das ntfy-Thema wird aus dem Workflow-Namen abgeleitet (MDM, Zammad/Nightly, WhatsApp), sonst Home-Lab-MDM.",
+        "height": 200,
+        "width": 620
+      }
+    },
+    {
+      "id": "d5fef19b-17ed-5624-9df2-0d665a6abb3e",
+      "name": "Bei Fehler",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "22f58521-b8ed-58f2-9e5b-5b46ee12c53f",
+      "name": "Meldung bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const eingabe = $input.first().json;\nconst workflow = eingabe.workflow || {};\nconst lauf = eingabe.execution || {};\nconst fehler = lauf.error || {};\nconst name = workflow.name || 'Unbekannter Workflow';\nconst speicher = $getWorkflowStaticData('global');\nconst jetzt = Date.now();\nconst frueher = speicher[name] || { zeit: 0, unterdrueckt: 0 };\nif (jetzt - frueher.zeit < 600000) {\n  speicher[name] = { zeit: frueher.zeit, unterdrueckt: frueher.unterdrueckt + 1 };\n  return [];\n}\nconst unterdrueckt = frueher.unterdrueckt;\nspeicher[name] = { zeit: jetzt, unterdrueckt: 0 };\nconst THEMEN = [[/^MDM/, 'Home-Lab-MDM'], [/Zammad|Nightly/, 'zammad'], [/WhatsApp/, 'whatsapp-relay']];\nconst treffer = THEMEN.find(([muster]) => muster.test(name));\nconst zeilen = [];\nif (lauf.lastNodeExecuted) zeilen.push('Node: ' + lauf.lastNodeExecuted);\nzeilen.push('Fehler: ' + String(fehler.message || 'unbekannt').slice(0, 600));\nif (lauf.url) zeilen.push('Lauf: ' + lauf.url);\nif (unterdrueckt > 0) zeilen.push(unterdrueckt + ' weitere Fehler dieses Workflows in den letzten 10 Minuten unterdrueckt.');\nreturn [{\n  json: {\n    quelle: name,\n    status: 'error',\n    titel: 'Workflow fehlgeschlagen: ' + name,\n    text: zeilen.join('\\n'),\n    prioritaet: 'high',\n    tags: 'rotating_light',\n    thema: treffer ? treffer[1] : 'Home-Lab-MDM',\n    mail: /^MDM/.test(name) ? 'false' : 'true',\n    kanal: /^MDM/.test(name) ? 'MDM-Verwaltung' : 'Berichte',\n  },\n}];"
+      }
+    },
+    {
+      "id": "6ff8c3a8-315e-54b7-b1dc-ddc5dd1b7e13",
+      "name": "Publish aufrufen",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        560,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Bei Fehler": {
+      "main": [
+        [
+          {
+            "node": "Meldung bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung bauen": {
+      "main": [
+        [
+          {
+            "node": "Publish aufrufen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Fehler-Workflow fuer alle n8n-Workflows. Reicht Workflow-Name, letzten Node, Fehlermeldung und Lauf-Link an 'Publish: Benachrichtigung' weiter."
+  },
+  "tags": [],
+  "id": "Vqt2w9o5XRVvs9LY"
+}

@@ -1062,108 +1062,6 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $('Konfiguration').first().json.cfg.ntfyUrl }}/{{ $('Konfiguration').first().json.cfg.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "={{ $json.title }}"
-            },
-            {
-              "name": "Priority",
-              "value": "={{ $json.priority }}"
-            },
-            {
-              "name": "Tags",
-              "value": "={{ $json.priority === 'high' ? 'warning' : 'iphone' }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $json.message }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "a0a3e924-1564-5a2e-a034-3ec66a15fb1b",
-      "name": "Ergebnis melden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        8280,
-        300
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $('Konfiguration').first().json.cfg.ntfyUrl }}/{{ $('Konfiguration').first().json.cfg.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "={{ $json.title }}"
-            },
-            {
-              "name": "Priority",
-              "value": "high"
-            },
-            {
-              "name": "Tags",
-              "value": "x"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $json.message }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "ea52a183-aeb4-5966-9e36-9dd80941081e",
-      "name": "Fehler melden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1840,
-        740
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
         "mode": "runOnceForAllItems",
         "jsCode": "const ran = (name) => ($(name).isExecuted ? $(name).all().map((item) => item.json) : []);\nconst built = ran('Meldung bauen')[0];\nconst checked = ran('Geraete pruefen')[0];\nconst parsed = ran('Auftrag lesen')[0];\nconst result = built || (checked && !checked.ok ? checked : parsed) || {};\nreturn [{ json: { title: String(result.title || 'iPad-Auftrag'), message: String(result.message || '') } }];\n"
       },
@@ -1287,29 +1185,281 @@
       "onError": "continueRegularOutput"
     },
     {
-      "id": "529065fc-7c79-4ab2-97bf-9356e9b9e1c6",
-      "name": "Mattermost-News senden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "onError": "continueErrorOutput",
+      "id": "00ee337a-7729-580c-926f-246d0dc85d43",
+      "name": "Ergebnis melden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
-        8970,
+        8180,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "18d79288-93a8-54a6-82a7-59190658baca",
+              "name": "quelle",
+              "value": "MDM: Auftrag per Mail",
+              "type": "string"
+            },
+            {
+              "id": "567c40d0-0a2b-5119-ac2b-f2f88ca1c081",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.cfg.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "85e55967-025c-5a9d-9664-af042d7b0994",
+              "name": "titel",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "37a58113-2967-50a3-8a62-54589ad06271",
+              "name": "prioritaet",
+              "value": "={{ $json.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "33564949-e6c6-598b-9dc8-aacea1f683e8",
+              "name": "tags",
+              "value": "={{ $json.priority === 'high' ? 'warning' : 'iphone' }}",
+              "type": "string"
+            },
+            {
+              "id": "f17dc9b9-521b-5377-bc4d-0275cb7b5ea6",
+              "name": "text",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "5ceb5681-a848-5a53-9762-38826720b8f1",
+              "name": "kanal",
+              "value": "MDM-Verwaltung",
+              "type": "string"
+            },
+            {
+              "id": "36078ea6-9907-561a-a505-1908186b3f94",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "066b9eac-35f5-5f78-9352-e76d9212d5fa",
+      "name": "Ergebnis melden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        8380,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "42aedcf3-8000-5230-8407-796b015e0447",
+      "name": "Fehler melden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1740,
+        740
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d6902e7d-85c9-5643-bfa3-950c4a47eff0",
+              "name": "quelle",
+              "value": "MDM: Auftrag per Mail",
+              "type": "string"
+            },
+            {
+              "id": "8ee75f22-b513-5533-be40-eb7a5b6160a6",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.cfg.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "b297abb2-17c4-5fd2-86d1-8782a155555e",
+              "name": "titel",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "5c46ab12-6288-532e-85a0-2c7ac526243c",
+              "name": "prioritaet",
+              "value": "high",
+              "type": "string"
+            },
+            {
+              "id": "e9fed2c7-9ced-53cb-a84d-9db20b971bf1",
+              "name": "tags",
+              "value": "x",
+              "type": "string"
+            },
+            {
+              "id": "44bd1597-b363-586e-8117-43855609748e",
+              "name": "text",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "6322eb3a-4737-50a4-81e5-a1b0a636d3e6",
+              "name": "kanal",
+              "value": "MDM-Verwaltung",
+              "type": "string"
+            },
+            {
+              "id": "9d0b3d0d-a769-51d0-a02f-a4e7f97e28f9",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "2c379740-cc35-5dd1-9f8e-d8742865a0ea",
+      "name": "Fehler melden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1940,
+        740
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "86469f24-44ae-578e-aeea-6505d3b1ad7e",
+      "name": "Mattermost-News senden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        8870,
         460
       ],
+      "onError": "continueRegularOutput",
       "parameters": {
-        "method": "POST",
-        "url": "http://mattermost.mattermost.svc.cluster.local:8065/api/v4/posts",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel_id: 'gh5k785kzjff3kzzjmeducw8mr', message: '#### ' + $json.betreff + '\\n\\n' + $json.text }) }}",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "66ecd516-3c82-59d1-b28f-d2777086c6f1",
+              "name": "quelle",
+              "value": "MDM: Auftrag per Mail",
+              "type": "string"
+            },
+            {
+              "id": "e03c8777-b8c7-5e3d-b378-96645effcc5a",
+              "name": "mattermostText",
+              "value": "={{ '#### ' + $json.betreff + '\\n\\n' + $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "1e9c2f9e-d663-5594-9e49-6a2eb30a9a5f",
+              "name": "ntfy",
+              "value": "false",
+              "type": "string"
+            },
+            {
+              "id": "fcec9232-83bd-56f6-9239-b9b997ed7727",
+              "name": "kanal",
+              "value": "MDM-Verwaltung",
+              "type": "string"
+            },
+            {
+              "id": "4bc7bb04-732b-5e37-8036-59ab000b528f",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
         "options": {}
-      },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "fu9GDp3BYYVp4L5i",
-          "name": "Mattermost Bot (News)"
+      }
+    },
+    {
+      "id": "ac48785d-0054-5416-9db2-c59ae63f2127",
+      "name": "Mattermost-News senden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        9070,
+        460
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
         }
       }
     }
@@ -1360,7 +1510,7 @@
         ],
         [
           {
-            "node": "Fehler melden",
+            "node": "Fehler melden vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -1400,7 +1550,7 @@
         ],
         [
           {
-            "node": "Fehler melden",
+            "node": "Fehler melden vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -1757,7 +1907,7 @@
       "main": [
         [
           {
-            "node": "Ergebnis melden",
+            "node": "Ergebnis melden vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -1839,7 +1989,7 @@
             "index": 0
           },
           {
-            "node": "Mattermost-News senden",
+            "node": "Mattermost-News senden vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -1856,13 +2006,47 @@
           }
         ]
       ]
+    },
+    "Ergebnis melden vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fehler melden vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Fehler melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mattermost-News senden vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Mattermost-News senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "timezone": "Europe/Berlin"
+    "timezone": "Europe/Berlin",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "00530ade-28fa-5dfc-8796-7e8a2204e3ee",
   "meta": {

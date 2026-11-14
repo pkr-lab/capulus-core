@@ -295,7 +295,8 @@
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "timezone": "Europe/Berlin"
+    "timezone": "Europe/Berlin",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "b88e9f21-3ee6-542b-821a-25eb0b4f4e7a",
   "meta": {

@@ -214,52 +214,101 @@
       ]
     },
     {
+      "id": "4d13cb8d-9345-5c5d-86cc-5612ff1baad9",
+      "name": "Protokoll melden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1970,
+        100
+      ],
+      "onError": "continueRegularOutput",
       "parameters": {
-        "method": "POST",
-        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "assignments": {
+          "assignments": [
             {
-              "name": "Title",
-              "value": "={{ $json.title }}"
+              "id": "186f7876-b29d-516e-b796-af0a1565fa7b",
+              "name": "quelle",
+              "value": "MDM: Apps aufraeumen auswerten",
+              "type": "string"
             },
             {
-              "name": "Priority",
-              "value": "={{ $json.priority }}"
+              "id": "6e0ef04f-a2f0-5953-8a5e-539d3cb87389",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.ntfyTopic }}",
+              "type": "string"
             },
             {
-              "name": "Tags",
-              "value": "broom"
+              "id": "95e31c1f-c6b6-5fc9-bf7e-fc1ac43cd1c9",
+              "name": "titel",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "06d65c62-0229-5c9d-8c7a-ea6db7f0d15d",
+              "name": "prioritaet",
+              "value": "={{ $json.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "41b15394-2c65-5495-bc10-d568980445ce",
+              "name": "tags",
+              "value": "broom",
+              "type": "string"
+            },
+            {
+              "id": "54ee89b8-19fe-50c3-a45d-2b84140e8621",
+              "name": "text",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "8e756283-232a-52d5-ba7a-c3d2694aa2e4",
+              "name": "kanal",
+              "value": "MDM-Verwaltung",
+              "type": "string"
+            },
+            {
+              "id": "849c961a-8a6f-5630-b9b8-a2c9e8215065",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
             }
           ]
         },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $json.message }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "ef3e3276-2df2-590c-917e-e1808ec81319",
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "885a8cb4-d469-5789-9ba0-6aa3eb378969",
       "name": "Protokoll melden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [
-        2070,
+        2170,
         100
       ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
         }
       }
     }
@@ -364,19 +413,31 @@
       "main": [
         [
           {
-            "node": "Protokoll melden",
+            "node": "Protokoll melden vorbereiten",
             "type": "main",
             "index": 0
           }
         ],
         []
       ]
+    },
+    "Protokoll melden vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Protokoll melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "timezone": "Europe/Berlin"
+    "timezone": "Europe/Berlin",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "meta": {
     "description": "Alle 5 Minuten: holt, falls ueber das Formular eine Inventur angefordert wurde, die Antworten auf InstalledApplicationList (nanomdm command_results), vergleicht mit der Erlaubt-Liste (Profil app-allowlist: Systemapps plus Katalog) und reiht fuer alles Uebrige RemoveApplication ein. Das Ergebnis geht per ntfy an Home-Lab-MDM. Bricht ab, wenn die Erlaubt-Liste leer oder unvollstaendig ist. Credentials: MDM Automation DB, MDM NanoMDM API, ntfy-publisher."

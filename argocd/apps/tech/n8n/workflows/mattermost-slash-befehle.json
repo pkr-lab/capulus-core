@@ -172,7 +172,7 @@
         "authentication": "basicAuth",
         "resource": "ticket",
         "title": "={{ $json.text }}",
-        "group": "Support::Administration",
+        "group": "Administration::n8n",
         "customer": "=info@pkr-service.de",
         "article": {
           "articleDetails": {
@@ -432,7 +432,8 @@
   "pinData": {},
   "active": false,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "meta": {
     "description": "Slash-Befehle aus Mattermost: /ticket <Titel> legt ein Zammad-Ticket an (nur System-Admins, geprueft ueber die Rollen des Nutzers in der Mattermost-API), /status listet die aktuell feuernden Alerts aus VictoriaMetrics (ALERTS-Metrik, ohne Watchdog). Jeder andere Befehl liefert die Hilfe. Die Antwort geht als JSON direkt an Mattermost (response_type ephemeral oder in_channel), Mattermost erwartet sie innerhalb von 3 Sekunden. Authentifizierung ueber Basic Auth in der Befehls-URL. NACH DEM IMPORT: Credential 'Webhook mattermost-befehl' zuweisen, Slash-Befehle in Mattermost anlegen, Workflow aktivieren."

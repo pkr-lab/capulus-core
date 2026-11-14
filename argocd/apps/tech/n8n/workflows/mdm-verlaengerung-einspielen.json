@@ -597,57 +597,6 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "={{ $json.title }}"
-            },
-            {
-              "name": "Priority",
-              "value": "={{ $json.priority }}"
-            },
-            {
-              "name": "Tags",
-              "value": "={{ $json.tags }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $json.message }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "a0f058f3-29c6-5a75-b092-0284b443223f",
-      "name": "Ergebnis melden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        3800,
-        200
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
         "operation": "completion",
         "respondWith": "text",
         "completionTitle": "={{ $('Meldung').first().json.title }}",
@@ -676,6 +625,105 @@
         3560,
         200
       ]
+    },
+    {
+      "id": "1c63f947-a249-5837-b7b4-5e218a88e106",
+      "name": "Ergebnis melden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3700,
+        200
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ae234b2d-a2b6-5d3d-a323-6a1bcf939bff",
+              "name": "quelle",
+              "value": "MDM: Verlaengerung einspielen",
+              "type": "string"
+            },
+            {
+              "id": "f1a638df-7f5d-5e6b-b243-fe956375a6c1",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "54e82e34-1918-585d-ab3d-b45266554273",
+              "name": "titel",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "d7bdc14f-37b7-5cfa-b582-78aa0ac32f6c",
+              "name": "prioritaet",
+              "value": "={{ $json.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "2503fa30-3a60-5786-ac8d-8531f1ca4915",
+              "name": "tags",
+              "value": "={{ $json.tags }}",
+              "type": "string"
+            },
+            {
+              "id": "c642228d-5f3d-5bda-a22a-e070342e21f2",
+              "name": "text",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "2d438834-66ec-58ab-8773-4ddd4b61feb6",
+              "name": "kanal",
+              "value": "MDM-Verwaltung",
+              "type": "string"
+            },
+            {
+              "id": "1a147c44-36a1-58b6-b6f9-9b9f75a613f4",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "a923da32-f95f-572b-9f3b-03d8c72f916c",
+      "name": "Ergebnis melden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        3900,
+        200
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
     }
   ],
   "pinData": {},
@@ -943,7 +991,7 @@
       "main": [
         [
           {
-            "node": "Ergebnis melden",
+            "node": "Ergebnis melden vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -960,13 +1008,25 @@
           }
         ]
       ]
+    },
+    "Ergebnis melden vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "timezone": "Europe/Berlin"
+    "timezone": "Europe/Berlin",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "5246481f-3a1e-50a7-8bf8-5fe4804b20d0",
   "meta": {

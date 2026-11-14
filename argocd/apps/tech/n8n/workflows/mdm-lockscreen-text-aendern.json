@@ -305,57 +305,6 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "={{ $json.title }}"
-            },
-            {
-              "name": "Priority",
-              "value": "default"
-            },
-            {
-              "name": "Tags",
-              "value": "iphone"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $json.message }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "7d197374-ae54-5add-9ca2-c3dd4eaeeea4",
-      "name": "Ergebnis melden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2920,
-        200
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
         "mode": "runOnceForAllItems",
         "jsCode": "return [{ json: { message: $input.first().json.error, title: 'Eingabe ungueltig' } }];\n"
       },
@@ -401,6 +350,105 @@
         1120,
         520
       ]
+    },
+    {
+      "id": "0847ab44-8c9f-5c12-9d14-e14682529796",
+      "name": "Ergebnis melden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2820,
+        200
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4e4d0fd6-afc0-58fe-95f8-b4d288953f8b",
+              "name": "quelle",
+              "value": "MDM: Lock-Screen-Text aendern",
+              "type": "string"
+            },
+            {
+              "id": "a90ac41b-80e1-5c3c-933e-55bda85fea11",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "a6262f1d-3c2e-5edf-bb72-db8749dbdcb1",
+              "name": "titel",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "8cd82046-f141-5067-9e28-3aca65fd7767",
+              "name": "prioritaet",
+              "value": "default",
+              "type": "string"
+            },
+            {
+              "id": "308a313c-1363-558c-b9c4-e23dc9583792",
+              "name": "tags",
+              "value": "iphone",
+              "type": "string"
+            },
+            {
+              "id": "354b64c1-f4c4-5bf6-981a-4f6897159130",
+              "name": "text",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "493f5e90-c4b5-5fd0-9bdf-03a4e3e11eb1",
+              "name": "kanal",
+              "value": "MDM-Verwaltung",
+              "type": "string"
+            },
+            {
+              "id": "a8c9e129-8b31-5cc0-a3a7-aa57a4434519",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "efd143fd-ac6b-51b6-801c-046f99f08b3e",
+      "name": "Ergebnis melden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        3020,
+        200
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
     }
   ],
   "pinData": {},
@@ -566,7 +614,7 @@
       "main": [
         [
           {
-            "node": "Ergebnis melden",
+            "node": "Ergebnis melden vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -583,13 +631,25 @@
           }
         ]
       ]
+    },
+    "Ergebnis melden vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "timezone": "Europe/Berlin"
+    "timezone": "Europe/Berlin",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "cb86dc29-576f-5fca-a1b8-cd0549c00e61",
   "meta": {

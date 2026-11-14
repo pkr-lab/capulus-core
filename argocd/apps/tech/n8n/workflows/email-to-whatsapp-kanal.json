@@ -89,46 +89,89 @@
       ]
     },
     {
+      "id": "49928361-d5ac-5849-a44c-5fc8a462182e",
+      "name": "Fehler-Push (ntfy) vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1020,
+        520
+      ],
+      "onError": "continueRegularOutput",
       "parameters": {
-        "method": "POST",
-        "url": "http://ntfy.ntfy.svc.cluster.local/whatsapp-relay",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "assignments": {
+          "assignments": [
             {
-              "name": "Title",
-              "value": "WhatsApp-Versand fehlgeschlagen"
+              "id": "41d550a8-370c-5a4f-9597-c04f0964e6e3",
+              "name": "quelle",
+              "value": "E-Mail von Absender -> WhatsApp-Kanal",
+              "type": "string"
             },
             {
-              "name": "Priority",
-              "value": "high"
+              "id": "4959a885-a275-54b6-be13-69b0f878b495",
+              "name": "thema",
+              "value": "whatsapp-relay",
+              "type": "string"
             },
             {
-              "name": "Tags",
-              "value": "warning"
+              "id": "5109de0b-b927-523a-bf9f-14b7ddc54b76",
+              "name": "titel",
+              "value": "WhatsApp-Versand fehlgeschlagen",
+              "type": "string"
+            },
+            {
+              "id": "0c01df42-a7ad-58b7-b17c-40d879a4dfea",
+              "name": "prioritaet",
+              "value": "high",
+              "type": "string"
+            },
+            {
+              "id": "f196b03d-0a29-50c5-8d42-d467bb0c1109",
+              "name": "tags",
+              "value": "warning",
+              "type": "string"
+            },
+            {
+              "id": "ea5eb138-b3d2-544b-8a27-aa6b3456e779",
+              "name": "text",
+              "value": "={{ $json.body }}",
+              "type": "string"
             }
           ]
         },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $json.body }}",
+        "includeOtherFields": false,
         "options": {}
-      },
-      "id": "760658c6-9b14-440a-91e6-b4145fd162aa",
+      }
+    },
+    {
+      "id": "d9c6b2ca-d1c9-5eb9-b666-a42c27c5ba00",
       "name": "Fehler-Push (ntfy)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [
-        1120,
+        1220,
         520
       ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
         }
       }
     }
@@ -180,6 +223,17 @@
       "main": [
         [
           {
+            "node": "Fehler-Push (ntfy) vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fehler-Push (ntfy) vorbereiten": {
+      "main": [
+        [
+          {
             "node": "Fehler-Push (ntfy)",
             "type": "main",
             "index": 0
@@ -190,7 +244,8 @@
   },
   "active": false,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "meta": {
     "description": "Neue Mail von einer bestimmten Absender-Adresse -> Nachricht in einen WhatsApp-KANAL (ausschliesslich Kanaele: TARGET_ID muss Ziffern@newsletter sein, Chats und Gruppen werden abgelehnt). Trigger: nativer 'Email Trigger (IMAP)' mit serverseitigem FROM-Filter (IDLE, kein Polling), Anhaenge werden geladen, Mails werden nach dem Abruf als gelesen markiert. 'Nachricht bauen' prueft den Absender ein zweites Mal, dekodiert den Betreff, repariert falsch dekodierte Umlaute und baut den Text (Betreff + Auszug, MAX_BODY_CHARS=0 = nur Betreff); Anhaenge werden durchgereicht (SEND_ATTACHMENTS=false ignoriert sie, dann im Trigger 'Download Attachments' ausschalten). 'An WhatsApp senden' startet pro Ausfuehrung einen eigenen Node-Prozess mit whatsapp-web.js und Chromium (Session auf dem n8n-PVC) -- der Task-Runner friert Prototypen ein, darin laeuft Puppeteer nicht -- und sendet Text plus Anhaenge (Kanal: nur Bilder und MP4-Videos; Anhaenge: JPG und MP4 gehen unveraendert raus, PDFs (erste 5 Seiten, je eine JPG), PNG, GIF, WebP, BMP, SVG, AVIF und Textdateien werden vor dem Senden in JPG umgewandelt (Chromium, PDFs mit pdf.js aus dem Image), alles andere wird im Text erwaehnt.  scheitert ein Anhang, ist der Text schon raus und der Fehler wird gemeldet). Enthaelt Laufzeit-Patches fuer whatsapp-web.js 1.34.7 beim Medien-Versand (__x_id: Issues wwebjs/whatsapp-web.js#201921/#201922; entferntes msg.avParams(): Issue #201823, PR #201824), die von selbst entfallen, sobald die Bibliothek das behebt. Trockenlauf: TEST = true im Node 'Nachricht bauen' fuehrt alles aus ausser dem eigentlichen Senden (Ausgabe: Items mit dryRun: true). Inoffizieller Weg ueber WhatsApp Web, Sperrrisiko des Kontos ist akzeptiert. Schlaegt ein Schritt fehl, kommt der geplante Text per ntfy (Topic whatsapp-relay) als Rueckfall. NACH DEM IMPORT: (1) values.yaml (NODE_FUNCTION_ALLOW_BUILTIN=child_process) und Image mit whatsapp-web.js muessen ausgerollt sein, (2) scripts/whatsapp-pair.js einmalig ausfuehren (QR scannen, Kanal-ID ermitteln), (3) im Trigger (IMAP-Credential `Netcup Automation`) den Ordner pruefen und Absender im FROM-Filter setzen, (4) SENDER im Node 'Nachricht bauen' und TARGET_ID im Node 'An WhatsApp senden' setzen, (5) Topic whatsapp-relay in der ntfy-App abonnieren, (6) Workflow AKTIVIEREN (Import allein reicht nicht). Volle Anleitung: docs/3-apps-workloads/30070-n8n.md, Abschnitt 'E-Mail -> WhatsApp-Kanal'."

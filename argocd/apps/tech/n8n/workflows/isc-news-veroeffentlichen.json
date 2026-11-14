@@ -229,50 +229,6 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $('Eingaben pruefen').first().json.ntfyUrl + '/' + $('Eingaben pruefen').first().json.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "ISC-News: Eingabe ungültig"
-            },
-            {
-              "name": "Tags",
-              "value": "warning"
-            },
-            {
-              "name": "Priority",
-              "value": "default"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $json.error }}",
-        "options": {}
-      },
-      "id": "9f386b0a-7e6f-4d71-9a3a-ff49730028f2",
-      "name": "ntfy Eingabefehler",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1200,
-        460
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      }
-    },
-    {
-      "parameters": {
         "conditions": {
           "options": {
             "caseSensitive": true,
@@ -304,54 +260,6 @@
         1200,
         200
       ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $('Eingaben pruefen').first().json.ntfyUrl + '/' + $('Eingaben pruefen').first().json.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "ISC-News freigeben?"
-            },
-            {
-              "name": "Tags",
-              "value": "newspaper"
-            },
-            {
-              "name": "Priority",
-              "value": "high"
-            },
-            {
-              "name": "Actions",
-              "value": "=http, Freigeben, {{ $execution.resumeUrl }}, method=POST, clear=true"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $json.title + ' | Bilder: ' + $json.imageCount + ' | Modus: ' + $json.mode }}",
-        "options": {}
-      },
-      "id": "ecee1f4a-3e45-4ffc-ad2f-4cc804e564c0",
-      "name": "ntfy Freigabe-Anfrage",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1440,
-        100
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      }
     },
     {
       "parameters": {
@@ -437,46 +345,6 @@
         2160,
         200
       ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $('Eingaben pruefen').first().json.ntfyUrl + '/' + $('Eingaben pruefen').first().json.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "=ISC-News: {{ $('Eingaben pruefen').first().json.title }}"
-            },
-            {
-              "name": "Tags",
-              "value": "white_check_mark"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ ($json.duplicate ? 'Bereits vorhanden (Duplikat), nichts angelegt: ' : '') + ($json.dryRun ? 'Probelauf, nichts gespeichert' : 'newsId ' + $json.newsId + ' | Status ' + ($json.status || '-') + ' | ' + ($json.editUrl || '')) }}",
-        "options": {}
-      },
-      "id": "abf11944-5a03-4f89-9ece-8bafecf3d9f4",
-      "name": "ntfy Erfolg",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2400,
-        100
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      }
     },
     {
       "parameters": {
@@ -584,50 +452,6 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $('Eingaben pruefen').first().json.ntfyUrl + '/' + $('Eingaben pruefen').first().json.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "=ISC-News fehlgeschlagen: {{ $('Eingaben pruefen').first().json.title }}"
-            },
-            {
-              "name": "Tags",
-              "value": "x"
-            },
-            {
-              "name": "Priority",
-              "value": "high"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ 'Fehler ' + $json.errorCode + ' im Schritt ' + ($json.step || '-') + ' | newsId ' + ($json.newsId || '-') + ' | ' + ($json.error || '') }}",
-        "options": {}
-      },
-      "id": "b11c6745-a097-4516-9342-d31e938e0583",
-      "name": "ntfy Fehler",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2640,
-        400
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      }
-    },
-    {
-      "parameters": {
         "content": "## ISC-News: Schritte NACH DEM IMPORT\n\n0. Der Node **E-Mail empfangen** nutzt das IMAP-Credential `Netcup Automation` (dasselbe Postfach wie MDM und Instagram). Der Node liest nur den Ordner `ISC-News`, nicht die INBOX. Dort landen die Mails über eine Regel im Postfach: Betreff enthaelt `1002011` → Ordner `ISC-News`. Ungelesene Mails mit Betreff `HOMEPAGE1002011` von `peter.kretzer@dlrg.org` werden verarbeitet und danach als gelesen markiert.\n1. **Credential anlegen**: Typ *Header Auth*, Name `ISC-News-Bot API-Token`, Header `Authorization`, Wert `Bearer <API_TOKEN>` (Klartext nur aus dem Secret `isc-news-bot-secrets`, nie ins Repo). Dann dem Node **ISC-News-Bot anlegen** zuweisen.\n2. **Konfiguration** oeffnen: `testModus` = `true` fuer Probelaeufe (dryRun, nichts wird gespeichert). `ntfyFreigabe` = `true`, wenn jede News vorher per ntfy freigegeben werden soll.\n3. ntfy-Topic `isc-news` in der App abonnieren (Topic-Name steht in **Konfiguration**).\n4. Kategorie-Namen im Formular muessen den Namen im ISC entsprechen (Liste siehe docs/3-apps-workloads/300k0-isc-news-bot.md).\n5. Workflow **aktivieren**. Die Formular-URL steht am Node **Formular**, die Webhook-URL am Node **Webhook** (`/webhook/isc-news`, POST, JSON).\n   Mail-Format: Betreff `HOMEPAGE1002011`. Anhang 1 ist eine JSON-Datei (Klartext oder Base64) mit `title`/`titel`, `subtitle`/`untertitel`, `text` (oder `html`), `categories`/`kategorien` (IDs oder Namen), optional `startDate` (`JJJJ-MM-TTTHH:mm`) und `mode` (`draft` oder `publish`, ohne Angabe wird per Mail veröffentlicht). Alle Bilder (jpg, png, webp) sind weitere Anhänge.\n6. Erster Lauf immer mit `testModus = true`. Erst danach auf `false` stellen.\n\nFreigabe-Link (ntfy-Button) zeigt auf den Wait-Node. Ohne Klick passiert nichts: die Ausfuehrung wartet, bis sie abgebrochen wird.\n",
         "height": 460,
         "width": 560,
@@ -641,6 +465,354 @@
         -260,
         -120
       ]
+    },
+    {
+      "id": "751e8f8d-6110-54dc-869b-ca328a31e597",
+      "name": "ntfy Eingabefehler vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1100,
+        460
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5450aac6-5825-5718-991e-dd948f713445",
+              "name": "quelle",
+              "value": "ISC-News veröffentlichen",
+              "type": "string"
+            },
+            {
+              "id": "b196f648-d974-5c18-8c44-30394361135a",
+              "name": "thema",
+              "value": "={{ $('Eingaben pruefen').first().json.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "8e377319-b45f-542c-9ce7-0a2d78d86072",
+              "name": "titel",
+              "value": "ISC-News: Eingabe ungültig",
+              "type": "string"
+            },
+            {
+              "id": "a83f5ddb-75e2-5b7a-8d35-bba274ae39bd",
+              "name": "prioritaet",
+              "value": "default",
+              "type": "string"
+            },
+            {
+              "id": "f9b10da3-8712-5098-a81e-e25bd376b248",
+              "name": "tags",
+              "value": "warning",
+              "type": "string"
+            },
+            {
+              "id": "7550da59-f824-5177-9bb4-49a3c6bffc4d",
+              "name": "text",
+              "value": "={{ $json.error }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "750ea7c9-1959-51b8-837f-d34c298ff29f",
+      "name": "ntfy Eingabefehler",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1300,
+        460
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "1747449a-69fa-5401-91d3-5db609892860",
+      "name": "ntfy Freigabe-Anfrage vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1340,
+        100
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3953a790-d3fb-5010-97d8-b4ad7a34b36f",
+              "name": "quelle",
+              "value": "ISC-News veröffentlichen",
+              "type": "string"
+            },
+            {
+              "id": "040e623f-bd5a-5b4b-ab53-e0309aef2e1b",
+              "name": "thema",
+              "value": "={{ $('Eingaben pruefen').first().json.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "37092440-8dcf-59d3-a256-a869cf5fb09b",
+              "name": "titel",
+              "value": "ISC-News freigeben?",
+              "type": "string"
+            },
+            {
+              "id": "6b935fc5-ca6b-5d5f-b42b-d185d28b6d81",
+              "name": "prioritaet",
+              "value": "high",
+              "type": "string"
+            },
+            {
+              "id": "e2148473-081e-5953-aa53-1f74fdd24d57",
+              "name": "tags",
+              "value": "newspaper",
+              "type": "string"
+            },
+            {
+              "id": "628f86e4-5fb4-5a36-8833-d2da4f67419c",
+              "name": "aktionen",
+              "value": "=http, Freigeben, {{ $execution.resumeUrl }}, method=POST, clear=true",
+              "type": "string"
+            },
+            {
+              "id": "3ba17de1-a5c2-5393-b1dc-cccd02b5837b",
+              "name": "text",
+              "value": "={{ $json.title + ' | Bilder: ' + $json.imageCount + ' | Modus: ' + $json.mode }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "df09182a-efde-56c3-84c0-a1949a5ee3c3",
+      "name": "ntfy Freigabe-Anfrage",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1540,
+        100
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "93365f09-4fdb-5709-9c5e-6bae0d9bcaca",
+      "name": "ntfy Erfolg vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2300,
+        100
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "57c6a1b2-bcc9-51de-bc8d-771a88827f15",
+              "name": "quelle",
+              "value": "ISC-News veröffentlichen",
+              "type": "string"
+            },
+            {
+              "id": "f0c13deb-feb3-5df3-9186-75d7da0694c4",
+              "name": "thema",
+              "value": "={{ $('Eingaben pruefen').first().json.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "bd2b44e9-bc71-5ab6-a432-06a0fab2004c",
+              "name": "titel",
+              "value": "=ISC-News: {{ $('Eingaben pruefen').first().json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "b439bc7a-de68-59d7-90fb-e7dff277b056",
+              "name": "tags",
+              "value": "white_check_mark",
+              "type": "string"
+            },
+            {
+              "id": "a0a78c61-c1ce-5dcf-a35f-c98038e81875",
+              "name": "text",
+              "value": "={{ ($json.duplicate ? 'Bereits vorhanden (Duplikat), nichts angelegt: ' : '') + ($json.dryRun ? 'Probelauf, nichts gespeichert' : 'newsId ' + $json.newsId + ' | Status ' + ($json.status || '-') + ' | ' + ($json.editUrl || '')) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "b27384d3-9bee-55c8-b2bc-3ea8a3a1f5b8",
+      "name": "ntfy Erfolg",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2500,
+        100
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "a1f28396-b4e1-5bf0-bacd-069f9544c785",
+      "name": "ntfy Fehler vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2540,
+        400
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "851015d4-908f-5ece-836d-5b943911666d",
+              "name": "quelle",
+              "value": "ISC-News veröffentlichen",
+              "type": "string"
+            },
+            {
+              "id": "67377d44-7d15-5f44-8b94-af7f0c3c6cc6",
+              "name": "thema",
+              "value": "={{ $('Eingaben pruefen').first().json.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "b05cbd0c-d875-58d4-bd6c-baa96ff7941f",
+              "name": "titel",
+              "value": "=ISC-News fehlgeschlagen: {{ $('Eingaben pruefen').first().json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "76742667-436d-5003-907a-64e4027f86bd",
+              "name": "prioritaet",
+              "value": "high",
+              "type": "string"
+            },
+            {
+              "id": "9ebb0262-f647-57e5-acba-e20c68590964",
+              "name": "tags",
+              "value": "x",
+              "type": "string"
+            },
+            {
+              "id": "bfd5999c-8a7f-5f3a-9d7f-63d71713bd7e",
+              "name": "text",
+              "value": "={{ 'Fehler ' + $json.errorCode + ' im Schritt ' + ($json.step || '-') + ' | newsId ' + ($json.newsId || '-') + ' | ' + ($json.error || '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "bc53ed8d-0eb6-560e-8884-83f4faed630a",
+      "name": "ntfy Fehler",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2740,
+        400
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
     }
   ],
   "pinData": {},
@@ -722,7 +894,7 @@
         ],
         [
           {
-            "node": "ntfy Eingabefehler",
+            "node": "ntfy Eingabefehler vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -733,7 +905,7 @@
       "main": [
         [
           {
-            "node": "ntfy Freigabe-Anfrage",
+            "node": "ntfy Freigabe-Anfrage vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -784,7 +956,7 @@
       "main": [
         [
           {
-            "node": "ntfy Erfolg",
+            "node": "ntfy Erfolg vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -809,7 +981,7 @@
         ],
         [
           {
-            "node": "ntfy Fehler",
+            "node": "ntfy Fehler vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -826,13 +998,58 @@
           }
         ]
       ]
+    },
+    "ntfy Eingabefehler vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "ntfy Eingabefehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ntfy Freigabe-Anfrage vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "ntfy Freigabe-Anfrage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ntfy Erfolg vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "ntfy Erfolg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ntfy Fehler vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "ntfy Fehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1",
     "timezone": "Europe/Berlin",
-    "saveManualExecutions": true
+    "saveManualExecutions": true,
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "2ee656cc-baaa-410a-9b28-87ab24807da7",
   "meta": {
