@@ -25,9 +25,9 @@ const GLIEDERUNG_NAMES: Record<string, string> = {
   [OTHER_EDV]: "Zweite Gliederung",
 };
 
-export type MockAsset = { id: string; name: string; keywords: string };
+type MockAsset = { id: string; name: string; keywords: string };
 
-export type MockNews = {
+type MockNews = {
   id: number;
   db: string;
   title: string;

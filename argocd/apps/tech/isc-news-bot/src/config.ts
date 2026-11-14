@@ -20,7 +20,7 @@ export type Config = {
   lockWaitMs: number;
 };
 
-export const DEFAULTS = {
+const DEFAULTS = {
   port: 8080,
   iscBaseUrl: "https://dlrg.net",
   gliederungEdv: "1002011",
@@ -53,7 +53,7 @@ function requiredFromEnv(env: NodeJS.ProcessEnv, name: string): string {
   return value;
 }
 
-export function parseMode(raw: string | undefined, fallback: Mode): Mode {
+function parseMode(raw: string | undefined, fallback: Mode): Mode {
   if (raw === undefined || raw.trim() === "") return fallback;
   if (raw === "draft" || raw === "publish") return raw;
   throw new ConfigError(`DEFAULT_MODE muss "draft" oder "publish" sein: ${raw}`);
