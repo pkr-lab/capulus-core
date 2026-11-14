@@ -230,29 +230,83 @@
       "onError": "continueRegularOutput"
     },
     {
-      "id": "7c9d3c1e-1f4b-4a2d-9b6a-5e7c0f3a8d2b",
-      "name": "Mattermost-News senden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "onError": "continueErrorOutput",
+      "id": "2ec3ba89-79ed-55ec-b560-e72e96895037",
+      "name": "Mattermost-News senden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
-        784,
+        684,
         0
       ],
+      "onError": "continueRegularOutput",
       "parameters": {
-        "method": "POST",
-        "url": "http://mattermost.mattermost.svc.cluster.local:8065/api/v4/posts",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel_id: 'gh5k785kzjff3kzzjmeducw8mr', message: '#### ' + $json.betreff + '\\n\\n' + $json.text }) }}",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9745fdcc-d57c-5fb4-b788-9c3ad37e86a1",
+              "name": "quelle",
+              "value": "EDV-Kretzer – Status-Hinweis schalten",
+              "type": "string"
+            },
+            {
+              "id": "bb1eb72f-8845-5d62-b209-9a48ed7dc81f",
+              "name": "mattermostText",
+              "value": "={{ '#### ' + $json.betreff + '\\n\\n' + $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "8e672502-2792-57c2-92e4-9641c0db3701",
+              "name": "ntfy",
+              "value": "false",
+              "type": "string"
+            },
+            {
+              "id": "142f3ae8-a3e8-5b3a-9d3d-bf49e01f8ae7",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
+            },
+            {
+              "id": "71143a52-bbc3-546d-a877-2e2768665961",
+              "name": "kanal",
+              "value": "Berichte",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
         "options": {}
-      },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "fu9GDp3BYYVp4L5i",
-          "name": "Mattermost Bot (News)"
+      }
+    },
+    {
+      "id": "37f0af0a-604f-54f4-bcb9-9b5dd3925ab6",
+      "name": "Mattermost-News senden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        884,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
         }
       }
     }
@@ -295,6 +349,17 @@
             "index": 0
           },
           {
+            "node": "Mattermost-News senden vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mattermost-News senden vorbereiten": {
+      "main": [
+        [
+          {
             "node": "Mattermost-News senden",
             "type": "main",
             "index": 0
@@ -311,7 +376,8 @@
     "timeSavedMode": "fixed",
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false,
-    "timeSavedPerExecution": 4
+    "timeSavedPerExecution": 4,
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "1b6c02a8-84f0-4a82-b15d-40ced0b5db4a",
   "meta": {
