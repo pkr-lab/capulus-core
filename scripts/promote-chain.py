@@ -407,7 +407,7 @@ def main() -> int:
     ap.add_argument("--no-fetch", action="store_true")
     args = ap.parse_args()
 
-    now = datetime.fromisoformat(os.environ["PROMOTE_NOW"].replace("Z", "+00:00")) if os.environ.get("PROMOTE_NOW") else datetime.now(timezone.utc)
+    now = parse_ts(os.environ["PROMOTE_NOW"]) if os.environ.get("PROMOTE_NOW") else datetime.now(timezone.utc)
     dry = bool(os.environ.get("DRY_RUN")) or args.plan_only
     if not args.no_fetch:
         git("fetch", "-q", "origin", "+refs/heads/main:refs/remotes/origin/main", "+refs/heads/entw:refs/remotes/origin/entw", check=False)
