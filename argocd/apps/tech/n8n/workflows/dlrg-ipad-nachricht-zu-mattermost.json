@@ -101,46 +101,89 @@
       }
     },
     {
-      "id": "a1b2c3d4-0006-4000-8000-000000000006",
-      "name": "Fehler-Push (ntfy)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "id": "54b082de-d97b-5ab0-8224-abd7e5666f96",
+      "name": "Fehler-Push (ntfy) vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
-        840,
+        740,
         220
       ],
+      "onError": "continueRegularOutput",
       "parameters": {
-        "method": "POST",
-        "url": "http://ntfy.ntfy.svc.cluster.local/Home-Lab-MDM",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "assignments": {
+          "assignments": [
             {
-              "name": "Title",
-              "value": "iPad-Gruppennachricht -> Mattermost fehlgeschlagen"
+              "id": "916064b4-a769-5a31-9d67-964605033a9f",
+              "name": "quelle",
+              "value": "DLRG: iPad-Gruppennachricht -> Mattermost",
+              "type": "string"
             },
             {
-              "name": "Priority",
-              "value": "high"
+              "id": "3b4a8873-f67d-5e91-ba20-0bedc52496ca",
+              "name": "thema",
+              "value": "Home-Lab-MDM",
+              "type": "string"
             },
             {
-              "name": "Tags",
-              "value": "warning"
+              "id": "5b37b11e-fad9-59cc-8767-7256fdb147d4",
+              "name": "titel",
+              "value": "iPad-Gruppennachricht -> Mattermost fehlgeschlagen",
+              "type": "string"
+            },
+            {
+              "id": "884c7c4e-6af0-5213-b4d8-f3c0f7784f8e",
+              "name": "prioritaet",
+              "value": "high",
+              "type": "string"
+            },
+            {
+              "id": "9e8598da-e020-5cf1-8d04-f65971af9a0d",
+              "name": "tags",
+              "value": "warning",
+              "type": "string"
+            },
+            {
+              "id": "448b8011-c6fc-52f2-8c0c-9f6f0c183322",
+              "name": "text",
+              "value": "={{ $json.body }}",
+              "type": "string"
             }
           ]
         },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $json.body }}",
+        "includeOtherFields": false,
         "options": {}
-      },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
+      }
+    },
+    {
+      "id": "5008957b-c200-5d47-8fe8-58233face6b4",
+      "name": "Fehler-Push (ntfy)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        940,
+        220
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
         }
       }
     }
@@ -192,6 +235,17 @@
       "main": [
         [
           {
+            "node": "Fehler-Push (ntfy) vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fehler-Push (ntfy) vorbereiten": {
+      "main": [
+        [
+          {
             "node": "Fehler-Push (ntfy)",
             "type": "main",
             "index": 0
@@ -202,7 +256,8 @@
   },
   "active": false,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "meta": {
     "description": "Neue Mail im IMAP-Ordner 'matter' (Postfach Netcup Automation, Credential 'Netcup Automation') -> Body ist nur ein Platzhalter ('no body neeeded'), die Daten stecken in einem JSON-Anhang eines DLRG-Formulars 'Gruppennachricht auf iPads' ({formular, antwortId, eingereichtAm, absender, ipadAuswahl, nachricht}). 'Nachricht aufbereiten' liest den JSON-Anhang (binary, erkannt per mimeType application/json oder Dateiendung .json) und mappt ipadAuswahl auf den Mattermost-Channel im Team DLRG-Andernach (Vorstandstisch/Kleines Becken/Großesbecken je eigener Channel, Alle iPads = Channel Allgemein/town-square) und baut den Text. 'An Mattermost senden' postet je Ziel-Channel ueber den Bot n8n-bot (Credential 'Mattermost Bot (News)', POST /api/v4/posts im Cluster). Schlaegt ein Schritt fehl, geht die Fehlermeldung per ntfy (Topic Home-Lab-MDM) raus; die Mail ist dann im Postfach bereits als gelesen markiert. NACH DEM IMPORT: (1) Bot-Mitgliedschaft in allen drei Ziel-Channels pruefen, (2) Workflow aktivieren."

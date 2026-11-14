@@ -249,57 +249,6 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "MDM: iPads gesperrt"
-            },
-            {
-              "name": "Priority",
-              "value": "high"
-            },
-            {
-              "name": "Tags",
-              "value": "lock"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $json.message }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "998849e2-a041-5ce5-903d-7dd08ed3693f",
-      "name": "Protokoll melden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2070,
-        300
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
         "mode": "runOnceForAllItems",
         "jsCode": "const serial = $('Eingabe pruefen').first().json.serial;\nreturn [{ json: { title: 'Nichts gesperrt', message: serial ? 'Es gibt kein angemeldetes iPad mit der Seriennummer ' + serial + '.' : 'Es ist noch kein iPad angemeldet.' } }];\n"
       },
@@ -356,6 +305,105 @@
         2990,
         300
       ]
+    },
+    {
+      "id": "60d477e0-951b-5272-b737-9898493a7680",
+      "name": "Protokoll melden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1970,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "152957dc-b5b2-575b-acce-a1a02b712d6c",
+              "name": "quelle",
+              "value": "MDM: iPads sperren mit Nachricht",
+              "type": "string"
+            },
+            {
+              "id": "2efd5aaf-cd65-5e51-9887-704e68b2d767",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "0c08c8ec-380a-5391-8517-820922604d1c",
+              "name": "titel",
+              "value": "MDM: iPads gesperrt",
+              "type": "string"
+            },
+            {
+              "id": "225cbedc-c00b-587b-aa18-a8fc7085a5df",
+              "name": "prioritaet",
+              "value": "high",
+              "type": "string"
+            },
+            {
+              "id": "e6b4a134-33b1-5b2c-94c4-073326dac709",
+              "name": "tags",
+              "value": "lock",
+              "type": "string"
+            },
+            {
+              "id": "4da9d88f-a759-5b45-ab87-0e0d0d0e9aa5",
+              "name": "text",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "7d5efe69-6fbc-5ef9-9098-cd980f1ba8ba",
+              "name": "kanal",
+              "value": "MDM-Verwaltung",
+              "type": "string"
+            },
+            {
+              "id": "8005f3e1-8584-5002-8808-fee331635ca3",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "1cb50e76-3d8b-5be2-96a4-75b38df0d618",
+      "name": "Protokoll melden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2170,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
     }
   ],
   "pinData": {},
@@ -466,7 +514,7 @@
       "main": [
         [
           {
-            "node": "Protokoll melden",
+            "node": "Protokoll melden vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -516,13 +564,25 @@
           }
         ]
       ]
+    },
+    "Protokoll melden vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Protokoll melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "timezone": "Europe/Berlin"
+    "timezone": "Europe/Berlin",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "38812ba5-2502-5eb9-8212-f09d55bfe7c4",
   "meta": {

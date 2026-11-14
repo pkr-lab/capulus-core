@@ -242,57 +242,6 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $('Konfiguration').first().json.ntfyUrl }}/{{ $('Konfiguration').first().json.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "MDM: Profil nicht eingereiht"
-            },
-            {
-              "name": "Priority",
-              "value": "={{ $json.priority }}"
-            },
-            {
-              "name": "Tags",
-              "value": "warning"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $json.message }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "b088c4fc-cbec-502d-9768-0ea3f11b0a88",
-      "name": "Fehler melden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2480,
-        120
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
         "operation": "executeQuery",
         "query": "UPDATE automation.device_profile\nSET state = CASE WHEN $2 = 'Acknowledged' THEN 'installed' ELSE 'error' END\nWHERE command_uuid = $1 AND state = 'queued'\nRETURNING enrollment_id, profile_name, state",
         "options": {
@@ -311,6 +260,105 @@
         "postgres": {
           "id": "REPLACE_ME_NACH_IMPORT",
           "name": "MDM Automation DB"
+        }
+      }
+    },
+    {
+      "id": "2b2d67fa-9b0f-5a74-9f34-1129fd86847e",
+      "name": "Fehler melden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2380,
+        120
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "509d3ce6-a0af-5f49-980b-fdab3f1a42be",
+              "name": "quelle",
+              "value": "MDM: Neues Geraet -> Basisprofile",
+              "type": "string"
+            },
+            {
+              "id": "65d40ca6-07af-5695-a7d1-c9a28384d71f",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "1ec917cc-0a5b-51cb-93ee-9d85cded1367",
+              "name": "titel",
+              "value": "MDM: Profil nicht eingereiht",
+              "type": "string"
+            },
+            {
+              "id": "9ca09108-febb-57c7-974a-efb2a4163c88",
+              "name": "prioritaet",
+              "value": "={{ $json.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "65c72ddc-4287-5c35-91f7-f1c0995aec53",
+              "name": "tags",
+              "value": "warning",
+              "type": "string"
+            },
+            {
+              "id": "0e50931c-d9ac-522b-8da5-6c117db0ffd6",
+              "name": "text",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "fd280304-5518-5613-b1ae-99a8f8513a70",
+              "name": "kanal",
+              "value": "MDM-Verwaltung",
+              "type": "string"
+            },
+            {
+              "id": "8a21a943-b01f-5c6f-a055-25ed0bb6d8ff",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "108baad4-6764-5898-9397-48883b8901e7",
+      "name": "Fehler melden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2580,
+        120
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
         }
       }
     }
@@ -332,7 +380,7 @@
       "main": [
         [
           {
-            "node": "Fehler melden",
+            "node": "Fehler melden vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -444,13 +492,25 @@
           }
         ]
       ]
+    },
+    "Fehler melden vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Fehler melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "timezone": "Europe/Berlin"
+    "timezone": "Europe/Berlin",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "0ea297d3-a181-5b54-a041-10c3007347fc",
   "meta": {

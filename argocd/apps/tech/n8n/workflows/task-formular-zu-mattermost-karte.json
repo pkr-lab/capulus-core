@@ -149,47 +149,89 @@
       }
     },
     {
-      "id": "b1a2c3d4-0008-4000-8000-000000000008",
-      "name": "Fehler-Push (ntfy)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "id": "ac1b5fbc-6c6f-52e1-9c89-91e9145748a9",
+      "name": "Fehler-Push (ntfy) vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
-        1120,
+        1020,
         240
       ],
       "onError": "continueRegularOutput",
       "parameters": {
-        "method": "POST",
-        "url": "http://ntfy.ntfy.svc.cluster.local/Home-Lab-MDM",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "assignments": {
+          "assignments": [
             {
-              "name": "Title",
-              "value": "Task-Mail -> Mattermost-Karte fehlgeschlagen"
+              "id": "3e40b8d2-4861-591f-868b-408d3d974e30",
+              "name": "quelle",
+              "value": "Task-Formular-Mail -> Mattermost-Board-Karte",
+              "type": "string"
             },
             {
-              "name": "Priority",
-              "value": "high"
+              "id": "84c1a4b3-cb20-5f70-a0c0-637c3ed887f0",
+              "name": "thema",
+              "value": "Home-Lab-MDM",
+              "type": "string"
             },
             {
-              "name": "Tags",
-              "value": "warning"
+              "id": "f9538b99-c5c7-5fc5-a155-ded8411a8e80",
+              "name": "titel",
+              "value": "Task-Mail -> Mattermost-Karte fehlgeschlagen",
+              "type": "string"
+            },
+            {
+              "id": "539f7bb5-ce2a-56a6-9358-cb56d113ee60",
+              "name": "prioritaet",
+              "value": "high",
+              "type": "string"
+            },
+            {
+              "id": "40e4071d-df86-52f1-97a3-c7d85d93358a",
+              "name": "tags",
+              "value": "warning",
+              "type": "string"
+            },
+            {
+              "id": "99238904-88bd-5553-88c8-a5ba05e81c26",
+              "name": "text",
+              "value": "={{ $json.body }}",
+              "type": "string"
             }
           ]
         },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $json.body }}",
+        "includeOtherFields": false,
         "options": {}
-      },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
+      }
+    },
+    {
+      "id": "1467c127-b5e4-525e-8658-6d0d56889bf4",
+      "name": "Fehler-Push (ntfy)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1220,
+        240
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
         }
       }
     }
@@ -277,6 +319,17 @@
       "main": [
         [
           {
+            "node": "Fehler-Push (ntfy) vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fehler-Push (ntfy) vorbereiten": {
+      "main": [
+        [
+          {
             "node": "Fehler-Push (ntfy)",
             "type": "main",
             "index": 0
@@ -287,7 +340,8 @@
   },
   "active": false,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "meta": {
     "description": "Neue Mail im IMAP-Ordner 'task' (Postfach Netcup Automation, Credential 'Netcup Automation') -> Body ist nur ein Platzhalter, die Daten stecken in einem JSON-Anhang eines 'Task Creation'-Formulars ({formular, titel, description, status, priority, assignee, estimatedHours, dueDate, label, repo, erstelltVon, erstelltVonEmail, erstelltAm, nachricht:{inhalt,von,link}}). 'Anhang parsen' validiert und mappt status/priority/label/repo auf die festen Property-IDs des Mattermost-Boards 'Capulus-Core' (Team Capulus-Core; Label ist dort Single-Select, zusaetzliche Labels landen als Hinweis im Text). 'Assignee aufloesen' sucht den Mattermost-Benutzernamen per API (api/v4/users/username/...); schlaegt das fehl oder ist kein assignee angegeben, wird die Karte trotzdem ohne Assignee angelegt. 'Karte+Bloecke bauen' fasst alles zu einer Karte plus Text-Bloecken (Beschreibung, zitierte Ausgangs-Nachricht, Formular-Metadaten) zusammen. 'Karte anlegen' postet den Block-Array an die Focalboard-API (POST .../blocks) ueber den Bot n8n-bot (Credential 'Mattermost Bot (News)'); braucht zusaetzlich den Header X-Requested-With: XMLHttpRequest, sonst CSRF-Fehler des Plugins. Schlaegt ein Schritt fehl, geht die Fehlermeldung per ntfy (Topic Home-Lab-MDM) raus; die Mail ist dann im Postfach bereits als gelesen markiert. Verarbeitet pro Ausfuehrung nur die erste Mail korrekt (wie bei MDM: Auftrag per Mail) -- mehrere gleichzeitige Task-Mails sind ein nicht gesondert behandelter Sonderfall. NACH DEM IMPORT: (1) FROM-Filter im Trigger pruefen, (2) Workflow aktivieren."
