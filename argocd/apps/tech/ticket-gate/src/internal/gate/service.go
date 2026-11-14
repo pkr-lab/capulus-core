@@ -11,6 +11,7 @@ import (
 	"io"
 	"log/slog"
 	"math/big"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -119,33 +120,33 @@ func (s *Service) sessionKey(token string) string {
 	return s.macString("session", token)
 }
 
-func (s *Service) rateErr(retry time.Duration) *Error {
-	e := newErr(429, "rate_limited")
+func rateErr(retry time.Duration) *Error {
+	e := newErr(http.StatusTooManyRequests, "rate_limited")
 	e.RetryAfter = retry
 	return e
 }
 
 func (s *Service) NewSession(ip string) (string, time.Duration, error) {
 	if ok, retry := s.limits.Take(limiter.Rule{Key: "session-ip:" + ip, Limit: s.cfg.SessionPerIPHour, Window: time.Hour}); !ok {
-		return "", 0, s.rateErr(retry)
+		return "", 0, rateErr(retry)
 	}
 	token, err := s.randomToken()
 	if err != nil {
-		return "", 0, newErr(500, "internal")
+		return "", 0, newErr(http.StatusInternalServerError, "internal")
 	}
 	if err := s.store.CreateSession(s.sessionKey(token), s.cfg.SessionTTL); err != nil {
-		return "", 0, newErr(503, "unavailable")
+		return "", 0, newErr(http.StatusServiceUnavailable, "unavailable")
 	}
 	return token, s.cfg.SessionTTL, nil
 }
 
 func (s *Service) authSession(token string) (string, *Error) {
 	if token == "" {
-		return "", newErr(401, "session_invalid")
+		return "", newErr(http.StatusUnauthorized, "session_invalid")
 	}
 	key := s.sessionKey(token)
 	if !s.store.SessionValid(key) {
-		return "", newErr(401, "session_invalid")
+		return "", newErr(http.StatusUnauthorized, "session_invalid")
 	}
 	return key, nil
 }
@@ -156,23 +157,23 @@ func (s *Service) RequestCode(sessionToken, ip, rawEmail string) (time.Duration,
 		return 0, serr
 	}
 	if ok, retry := s.limits.Take(limiter.Rule{Key: "mail-ip-hour:" + ip, Limit: s.cfg.MailPerIPHour, Window: time.Hour}); !ok {
-		return 0, s.rateErr(retry)
+		return 0, rateErr(retry)
 	}
 	email, ok := NormalizeEmail(rawEmail)
 	if !ok {
-		return 0, newErr(400, "email_invalid")
+		return 0, newErr(http.StatusBadRequest, "email_invalid")
 	}
 	emailKey := s.macString("email", email)
 	if ok, retry := s.limits.Take(
 		limiter.Rule{Key: "mail-email-cooldown:" + emailKey, Limit: 1, Window: s.cfg.MailCooldown},
 		limiter.Rule{Key: "mail-email-hour:" + emailKey, Limit: s.cfg.MailPerEmailHour, Window: time.Hour},
 	); !ok {
-		return 0, s.rateErr(retry)
+		return 0, rateErr(retry)
 	}
 
 	code, err := s.generateCode()
 	if err != nil {
-		return 0, newErr(500, "internal")
+		return 0, newErr(http.StatusInternalServerError, "internal")
 	}
 	s.store.PutCode(sess, store.CodeRecord{
 		Email:     email,
@@ -203,11 +204,11 @@ func (s *Service) ConfirmCode(sessionToken, ip, code string) (Verified, *Error) 
 		return Verified{}, serr
 	}
 	if ok, retry := s.limits.Take(limiter.Rule{Key: "confirm-ip:" + ip, Limit: s.cfg.ConfirmPerIP, Window: s.cfg.ConfirmWindow}); !ok {
-		return Verified{}, s.rateErr(retry)
+		return Verified{}, rateErr(retry)
 	}
 	code = strings.TrimSpace(code)
 	if !codePattern.MatchString(code) {
-		return Verified{}, newErr(400, "code_invalid")
+		return Verified{}, newErr(http.StatusBadRequest, "code_invalid")
 	}
 
 	res := s.store.Attempt(sess, s.cfg.MaxAttempts, func(rec store.CodeRecord) bool {
@@ -217,18 +218,18 @@ func (s *Service) ConfirmCode(sessionToken, ip, code string) (Verified, *Error) 
 	switch res.Status {
 	case store.AttemptOK:
 	case store.AttemptInvalid:
-		e := newErr(400, "code_invalid")
+		e := newErr(http.StatusBadRequest, "code_invalid")
 		e.Left = res.AttemptsLeft
 		return Verified{}, e
 	case store.AttemptLocked:
-		return Verified{}, newErr(400, "code_locked")
+		return Verified{}, newErr(http.StatusBadRequest, "code_locked")
 	default:
-		return Verified{}, newErr(400, "code_expired")
+		return Verified{}, newErr(http.StatusBadRequest, "code_expired")
 	}
 
 	token, err := s.randomToken()
 	if err != nil {
-		return Verified{}, newErr(500, "internal")
+		return Verified{}, newErr(http.StatusInternalServerError, "internal")
 	}
 	s.store.PutToken(s.macString("token", token), store.TokenRecord{
 		SessionID: sess,
@@ -282,11 +283,11 @@ func (s *Service) CreateTicket(sessionToken, ip string, in TicketInput) (string,
 		return "", serr
 	}
 	if ok, retry := s.limits.Take(limiter.Rule{Key: "ticket-ip:" + ip, Limit: s.cfg.TicketPerIPHour, Window: time.Hour}); !ok {
-		return "", s.rateErr(retry)
+		return "", rateErr(retry)
 	}
 
 	if in.VerificationToken == "" {
-		return "", newErr(403, "verification_required")
+		return "", newErr(http.StatusForbidden, "verification_required")
 	}
 
 	name := cleanLine(in.Name)
@@ -296,12 +297,12 @@ func (s *Service) CreateTicket(sessionToken, ip string, in TicketInput) (string,
 		utf8.RuneCountInString(name) > maxName ||
 		utf8.RuneCountInString(subject) > maxSubject ||
 		utf8.RuneCountInString(message) > maxMessage {
-		return "", newErr(400, "ticket_invalid")
+		return "", newErr(http.StatusBadRequest, "ticket_invalid")
 	}
 
 	rec, ok := s.store.ConsumeToken(s.macString("token", in.VerificationToken), sess)
 	if !ok {
-		return "", newErr(403, "verification_required")
+		return "", newErr(http.StatusForbidden, "verification_required")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -309,7 +310,7 @@ func (s *Service) CreateTicket(sessionToken, ip string, in TicketInput) (string,
 	number, err := s.tickets.Create(ctx, zammad.Ticket{Email: rec.Email, Name: name, Subject: subject, Message: message})
 	if err != nil {
 		s.logger.Error("ticket creation failed", "error", err.Error())
-		return "", newErr(502, "ticket_failed")
+		return "", newErr(http.StatusBadGateway, "ticket_failed")
 	}
 	return number, nil
 }
