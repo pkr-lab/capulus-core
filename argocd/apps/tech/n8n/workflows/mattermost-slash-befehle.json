@@ -1,0 +1,442 @@
+{
+  "name": "Mattermost: Slash-Befehle",
+  "nodes": [
+    {
+      "id": "25084de3-e95b-5e22-b0e2-4652511948b1",
+      "name": "Hinweise",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -360
+      ],
+      "parameters": {
+        "content": "## Vor dem Aktivieren\n\n1. **Credential** `Webhook mattermost-befehl` (Basic Auth) anlegen, Benutzer `mattermost`, Passwort zufaellig. Mattermost sendet die Zugangsdaten ueber die URL der Slash-Befehle mit.\n2. In Mattermost (Systemkonsole oder Team, Integrationen, Slash-Befehle) zwei Befehle anlegen, Methode POST, Anfrage-URL `http://mattermost:<Passwort>@n8n.n8n.svc.cluster.local/webhook/mattermost-befehl`:\n   - Trigger `ticket`, Beschreibung `Zammad-Ticket anlegen`, Hinweis `[Titel]`\n   - Trigger `status`, Beschreibung `Aktive Alerts anzeigen`\n3. `/ticket` darf nur ein Mattermost-Systemadmin ausfuehren, `/status` jeder.\n4. Workflow aktivieren.",
+        "height": 320,
+        "width": 700
+      }
+    },
+    {
+      "id": "6c5a6bd4-d01d-5ae1-bbea-49fb1e61d4df",
+      "name": "Slash-Befehl empfangen",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "ffda23c5-ce8f-50d9-91ae-cf42cf120447",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mattermost-befehl",
+        "responseMode": "lastNode",
+        "options": {},
+        "authentication": "basicAuth"
+      },
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "Webhook mattermost-befehl"
+        }
+      }
+    },
+    {
+      "id": "01588e15-923d-5997-8609-7652c85f6d3c",
+      "name": "Befehl auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const body = $input.first().json.body || {};\nconst befehl = String(body.command || '').replace(/^\\//, '').toLowerCase();\nreturn [{ json: { befehl, text: String(body.text || '').trim(), user_id: String(body.user_id || ''), user_name: String(body.user_name || 'unbekannt') } }];"
+      }
+    },
+    {
+      "id": "4b9bc913-2151-526c-9711-2ff7ef0f337d",
+      "name": "Ist /ticket?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        560,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f1d9be70-dfb2-52b7-8065-63342ade0d57",
+              "leftValue": "={{ $json.befehl === 'ticket' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ecd58ffd-c7cd-55da-a1c6-50825b4e5b4a",
+      "name": "Nutzer laden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        840,
+        -120
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'http://mattermost.mattermost.svc.cluster.local:8065/api/v4/users/' + encodeURIComponent($json.user_id) }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fu9GDp3BYYVp4L5i",
+          "name": "Mattermost Bot (News)"
+        }
+      }
+    },
+    {
+      "id": "236978c9-fa44-555c-bb36-933461ffa313",
+      "name": "Berechtigung pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        -120
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const befehl = $('Befehl auswerten').first().json;\nconst nutzer = $input.first().json;\nconst admin = String(nutzer.roles || '').split(' ').includes('system_admin');\nreturn [{ json: { ...befehl, erlaubt: admin && befehl.text.length > 0, ist_admin: admin } }];"
+      }
+    },
+    {
+      "id": "b9a75398-38ae-5f7a-898c-b2fe636bf717",
+      "name": "Erlaubt?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1400,
+        -120
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "785f07a5-fe5f-552a-af44-f9f7903c578e",
+              "leftValue": "={{ $json.erlaubt }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "0aa5b5e3-974f-5c3b-a21d-8e1875e51bfc",
+      "name": "Ticket anlegen",
+      "type": "n8n-nodes-base.zammad",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        -240
+      ],
+      "parameters": {
+        "authentication": "basicAuth",
+        "resource": "ticket",
+        "title": "={{ $json.text }}",
+        "group": "Support::Administration",
+        "customer": "=info@pkr-service.de",
+        "article": {
+          "articleDetails": {
+            "subject": "={{ $json.text }}",
+            "body": "={{ 'Angelegt von @' + $json.user_name + ' per Mattermost-Befehl /ticket.' }}",
+            "visibility": "internal",
+            "type": "note",
+            "sender": "Agent"
+          }
+        },
+        "additionalFields": {}
+      },
+      "credentials": {
+        "zammadBasicAuthApi": {
+          "id": "phUAvB04RmbLalky",
+          "name": "Zammad EDV-Kretzer"
+        }
+      }
+    },
+    {
+      "id": "e132b4b6-f91c-51c0-bdd5-2e976c6ad3dc",
+      "name": "Antwort Ticket",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1960,
+        -240
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const ticket = $input.first().json;\nconst url = 'https://support-tech.pkr-lab.de/#ticket/zoom/' + ticket.id;\nreturn [{ json: { response_type: 'in_channel', text: '\\u{1F3AB} Ticket #' + ticket.number + ' angelegt: ' + url } }];"
+      }
+    },
+    {
+      "id": "235b0be1-6dcf-54f2-bcb5-474357e2ad5b",
+      "name": "Antwort abgelehnt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const daten = $input.first().json;\nconst text = daten.ist_admin ? 'Bitte einen Titel angeben: /ticket <Titel>' : '/ticket ist nur fuer Mattermost-Administratoren erlaubt.';\nreturn [{ json: { response_type: 'ephemeral', text } }];"
+      }
+    },
+    {
+      "id": "a087111b-4eee-5d41-8879-edcebca12311",
+      "name": "Ist /status?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        840,
+        160
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "88d48b3b-14a6-5a60-99b1-c0078fce0772",
+              "leftValue": "={{ $('Befehl auswerten').first().json.befehl === 'status' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "74d0ad41-5f50-543e-9428-6bd216ff3754",
+      "name": "Aktive Alerts abfragen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        80
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://vmsingle-monitoring-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8428/api/v1/query",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "count by (alertname, severity) (ALERTS{alertstate=\"firing\",alertname!~\"Watchdog|InfoInhibitor\"})"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d48689a4-9aee-5c46-ac1a-d30620894913",
+      "name": "Antwort Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        80
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const reihen = (($input.first().json.data || {}).result || []);\nif (reihen.length === 0) {\n  return [{ json: { response_type: 'ephemeral', text: '\\u2705 Keine aktiven Alerts.' } }];\n}\nconst zeilen = reihen.map((reihe) => '| ' + (reihe.metric.alertname || '?') + ' | ' + (reihe.metric.severity || '-') + ' | ' + reihe.value[1] + ' |');\nreturn [{ json: { response_type: 'ephemeral', text: '#### \\u{1F525} Aktive Alerts\\n\\n| Alert | Schwere | Anzahl |\\n|---|---|---|\\n' + zeilen.join('\\n') } }];"
+      }
+    },
+    {
+      "id": "86d1a734-066b-585a-aeb5-1f69778c4d4d",
+      "name": "Antwort Hilfe",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        240
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: { response_type: 'ephemeral', text: 'Verfuegbare Befehle:\\n- `/ticket <Titel>` legt ein Zammad-Ticket an (nur Admins)\\n- `/status` zeigt aktive Alerts' } }];"
+      }
+    }
+  ],
+  "connections": {
+    "Slash-Befehl empfangen": {
+      "main": [
+        [
+          {
+            "node": "Befehl auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Befehl auswerten": {
+      "main": [
+        [
+          {
+            "node": "Ist /ticket?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ist /ticket?": {
+      "main": [
+        [
+          {
+            "node": "Nutzer laden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ist /status?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nutzer laden": {
+      "main": [
+        [
+          {
+            "node": "Berechtigung pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Berechtigung pruefen": {
+      "main": [
+        [
+          {
+            "node": "Erlaubt?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Erlaubt?": {
+      "main": [
+        [
+          {
+            "node": "Ticket anlegen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Antwort abgelehnt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ticket anlegen": {
+      "main": [
+        [
+          {
+            "node": "Antwort Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ist /status?": {
+      "main": [
+        [
+          {
+            "node": "Aktive Alerts abfragen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Antwort Hilfe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aktive Alerts abfragen": {
+      "main": [
+        [
+          {
+            "node": "Antwort Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Slash-Befehle aus Mattermost: /ticket <Titel> legt ein Zammad-Ticket an (nur System-Admins, geprueft ueber die Rollen des Nutzers in der Mattermost-API), /status listet die aktuell feuernden Alerts aus VictoriaMetrics (ALERTS-Metrik, ohne Watchdog). Jeder andere Befehl liefert die Hilfe. Die Antwort geht als JSON direkt an Mattermost (response_type ephemeral oder in_channel), Mattermost erwartet sie innerhalb von 3 Sekunden. Authentifizierung ueber Basic Auth in der Befehls-URL. NACH DEM IMPORT: Credential 'Webhook mattermost-befehl' zuweisen, Slash-Befehle in Mattermost anlegen, Workflow aktivieren."
+  },
+  "tags": [],
+  "id": "DfhjLPcTDHBySgua"
+}

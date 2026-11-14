@@ -75,6 +75,10 @@ data:
     # Interne Root-CA fuer https-Aufrufe gegen Zammad (Chart: ca-configmap.yaml).
     ZAMMAD_CA_FILE = os.environ.get("ZAMMAD_CA_FILE", "")
 
+    MATTERMOST_URL = os.environ.get("MATTERMOST_URL", "")
+    MATTERMOST_CHANNEL = os.environ.get("MATTERMOST_CHANNEL", "releases")
+    MATTERMOST_TOKEN = os.environ.get("MATTERMOST_TOKEN", "")
+
     NAMESPACE = os.environ["NAMESPACE"]
     STATE_CONFIGMAP = os.environ["STATE_CONFIGMAP_NAME"]
     UPDATES_CONFIGMAP = os.environ["UPDATES_CONFIGMAP_NAME"]
@@ -207,6 +211,48 @@ data:
             raise RuntimeError(f"Zammad-Ticket fehlgeschlagen: HTTP {exc.code} {detail}") from exc
 
 
+    def mattermost_request(method, path, body=None):
+        req = urllib.request.Request(
+            f"{MATTERMOST_URL}/api/v4{path}",
+            data=json.dumps(body).encode() if body is not None else None,
+            method=method,
+            headers={
+                "Authorization": f"Bearer {MATTERMOST_TOKEN}",
+                "Content-Type": "application/json",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return json.loads(resp.read())
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode(errors="replace")
+            raise RuntimeError(f"Mattermost {method} {path}: HTTP {exc.code} {detail}") from exc
+
+
+    def mattermost_channel_id():
+        for channel in mattermost_request("GET", "/users/me/channels"):
+            if channel.get("name") == MATTERMOST_CHANNEL:
+                return channel["id"]
+        raise RuntimeError(f"Mattermost-Channel {MATTERMOST_CHANNEL} nicht gefunden oder Bot kein Mitglied")
+
+
+    def notify_mattermost(entry, previous, release):
+        tag = release.get("tag_name", "?")
+        url = release.get("html_url", "")
+        notes = (release.get("body") or "").strip().replace("@", "@\u200b")
+        if len(notes) > 500:
+            notes = notes[:500].rstrip() + " ..."
+        lines = [
+            f"#### \U0001F195 {entry['name']} {tag}",
+            f"{previous} \u2192 {tag} ({entry['repo']})",
+            url,
+        ]
+        if notes:
+            lines.extend(["", "> " + notes.replace("\n", "\n> ")])
+        mattermost_request("POST", "/posts", {"channel_id": mattermost_channel_id(), "message": "\n".join(lines)})
+        print(f"[OK] Mattermost-Nachricht gesendet fuer {entry['repo']} {tag}")
+
+
     def main():
         state_existed, state = load_state()
         updates_existed, _ = load_configmap(UPDATES_CONFIGMAP, "updates.json", {})
@@ -280,6 +326,11 @@ data:
                         notify_zammad(repo, release)
                     except Exception as exc:
                         print(f"[ERR] {repo}: Zammad-Benachrichtigung fehlgeschlagen: {exc}", file=sys.stderr)
+                if MATTERMOST_URL and MATTERMOST_TOKEN:
+                    try:
+                        notify_mattermost(entry, previous, release)
+                    except Exception as exc:
+                        print(f"[ERR] {repo}: Mattermost-Benachrichtigung fehlgeschlagen: {exc}", file=sys.stderr)
             else:
                 print(f"[OK] {repo}: kein neues Release ({tag})")
 

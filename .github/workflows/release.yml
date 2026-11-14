@@ -20,3 +20,27 @@ jobs:
     uses: pkr-lab/.github/.github/workflows/release.yml@c2aab65b86ebe3710b2947b100e49a7a33d9455e # v1.2.0
     with:
       changelog: false
+
+  notify:
+    name: Mattermost
+    needs: release
+    if: needs.release.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Release-Tag ermitteln
+        id: tag
+        run: echo "name=$(git tag --points-at HEAD | head -n1)" >> "$GITHUB_OUTPUT"
+
+      - name: Mattermost
+        if: steps.tag.outputs.name != ''
+        uses: ./.github/actions/mattermost-notify
+        with:
+          channel: deployments
+          token: ${{ secrets.MATTERMOST_BOT_TOKEN }}
+          message: "#### \U0001F4E6 Release ${{ steps.tag.outputs.name }}\n[Release ansehen](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ steps.tag.outputs.name }})"
