@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+const k8sRequestTimeout = 3 * time.Second
+
 type K8sConfigMapClient struct {
 	apiServer  string
 	token      string
@@ -45,7 +47,7 @@ func NewK8sConfigMapClient() (*K8sConfigMapClient, error) {
 		apiServer: fmt.Sprintf("https://%s:%s", host, port),
 		token:     strings.TrimSpace(string(tokenBytes)),
 		httpClient: &http.Client{
-			Timeout: 3 * time.Second,
+			Timeout: k8sRequestTimeout,
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{RootCAs: pool},
 			},
