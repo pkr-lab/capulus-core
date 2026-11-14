@@ -35,10 +35,10 @@ function request(url, { method = 'GET', body, headers = {}, timeoutMs }) {
         res.on('end', () => {
           clearTimeout(timer);
           const raw = Buffer.concat(chunks).toString('utf8');
-          let parsed = raw;
+          let parsed;
           try {
             parsed = raw ? JSON.parse(raw) : null;
-          } catch (err) {
+          } catch {
             parsed = raw;
           }
           if (res.statusCode < 200 || res.statusCode >= 300) {
