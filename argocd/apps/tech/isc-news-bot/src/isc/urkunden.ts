@@ -3,9 +3,9 @@ import type { Config } from "../config.js";
 import { IscBotError } from "../errors.js";
 import { isPlaywrightTimeout } from "./helpers.js";
 
-export const URKUNDEN_SEITE = "/apps/urkunden?page=uebersicht";
-export const URKUNDEN_SERVICE = "/apps/urkunden?page=service";
-export const URKUNDEN_AKTION = "ladeUrkundenListe";
+const URKUNDEN_SEITE = "/apps/urkunden?page=uebersicht";
+const URKUNDEN_SERVICE = "/apps/urkunden?page=service";
+const URKUNDEN_AKTION = "ladeUrkundenListe";
 
 type Antwort = { ok: true; data: unknown } | { ok: false; error: string };
 
