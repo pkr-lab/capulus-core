@@ -88,8 +88,9 @@ test('Workflow: Anhang wird vor dem Shared Draft geladen, hochgeladen und bei Fe
   assert.deepEqual(ziele('Anhang hochladen', 0), ['Shared Draft speichern']);
   for (const name of ['Anhang laden', 'Anhang hochladen']) {
     assert.equal(nodes[name].onError, 'continueErrorOutput');
-    assert.deepEqual(ziele(name, 1), ['Anhang-Fehler-Push senden', 'Shared Draft speichern']);
+    assert.deepEqual(ziele(name, 1), ['Anhang-Fehler-Push senden vorbereiten', 'Shared Draft speichern']);
   }
+  assert.deepEqual(ziele('Anhang-Fehler-Push senden vorbereiten', 0), ['Anhang-Fehler-Push senden']);
   assert.match(nodes['Shared Draft speichern'].parameters.jsonBody, /form_id: formId/);
 });
 
@@ -218,13 +219,14 @@ test('Kurslink-Stufe und cli.js kurslink arbeiten zusammen (echte Kurslink-Liste
 test('Fehlerhandling: Ollama- und Zammad-Fehler laufen in den Fehler-Push', () => {
   const ziele = (name, ausgang) => (workflow.connections[name].main[ausgang] || []).map((c) => c.node);
   assert.deepEqual(ziele('Antwortentwurf extrahieren', 0), ['Ollama-Fehler?']);
-  assert.deepEqual(ziele('Ollama-Fehler?', 0), ['Fehler-Push senden']);
+  assert.deepEqual(ziele('Ollama-Fehler?', 0), ['Fehler-Push senden vorbereiten']);
   assert.deepEqual(ziele('Ollama-Fehler?', 1), ['Kurslink-Hinweise vorhanden?']);
   for (const name of ['Entwurf als interne Notiz speichern', 'Interne Hinweise als Notiz speichern']) {
     assert.equal(nodes[name].onError, 'continueErrorOutput', name);
   }
-  assert.deepEqual(ziele('Entwurf als Artikel speichern (Rückfall)', 1), ['Fehler-Push senden']);
-  assert.deepEqual(ziele('Interne Hinweise als Artikel speichern (Rückfall)', 1), ['Fehler-Push senden']);
+  assert.deepEqual(ziele('Entwurf als Artikel speichern (Rückfall)', 1), ['Fehler-Push senden vorbereiten']);
+  assert.deepEqual(ziele('Interne Hinweise als Artikel speichern (Rückfall)', 1), ['Fehler-Push senden vorbereiten']);
+  assert.deepEqual(ziele('Fehler-Push senden vorbereiten', 0), ['Fehler-Push senden']);
   assert.deepEqual(ziele('Fehler-Push senden', 0), ['Abschluss (immer genau 1 Item)']);
 });
 
@@ -388,13 +390,15 @@ test('Benachrichtigungsmail: sitzt vor dem Push, fängt Fehler ab und lässt Abs
   const ziele = (name) => workflow.connections[name].main.flatMap((gruppe) => gruppe.map((c) => c.node));
   assert.deepEqual(ziele('Interne Hinweise vorhanden?'), ['Interne Hinweise als Notiz speichern', 'KI-Mail bauen']);
   assert.ok(ziele('Interne Hinweise als Notiz speichern').includes('KI-Mail bauen'));
-  assert.deepEqual(ziele('KI-Mail bauen'), ['KI-Mail senden']);
-  assert.deepEqual(ziele('KI-Mail senden'), ['Freigabe-Push senden']);
-  assert.equal(nodes['KI-Mail senden'].onError, 'continueRegularOutput');
+  assert.deepEqual(ziele('KI-Mail bauen'), ['KI-Mail senden', 'Mattermost-News senden vorbereiten']);
+  assert.deepEqual(ziele('KI-Mail senden'), ['Freigabe-Push senden vorbereiten', 'SMTP-Fehler-Push senden vorbereiten']);
+  assert.equal(nodes['KI-Mail senden'].onError, 'continueErrorOutput');
   assert.equal(nodes['KI-Mail senden'].parameters.emailFormat, 'both');
   assert.equal(nodes['KI-Mail senden'].parameters.html, '={{ $json.html }}');
   const zuPush = Object.entries(workflow.connections).filter(([, c]) => c.main.some((g) => g.some((v) => v.node === 'Freigabe-Push senden'))).map(([name]) => name);
-  assert.deepEqual(zuPush, ['KI-Mail senden']);
+  assert.deepEqual(zuPush, ['Freigabe-Push senden vorbereiten']);
+  assert.deepEqual(ziele('Freigabe-Push senden'), ['Abschluss (immer genau 1 Item)']);
+  assert.deepEqual(ziele('SMTP-Fehler-Push senden'), ['Abschluss (immer genau 1 Item)']);
 });
 
 test('Benachrichtigungsmail: HTML maskiert Eingaben, enthält Button und endet mit der ID', () => {
