@@ -103,33 +103,6 @@
       }
     },
     {
-      "id": "7800e307-1fd2-4bc4-abd1-88e62550f6a5",
-      "name": "Mattermost-News senden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "onError": "continueErrorOutput",
-      "position": [
-        480,
-        360
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "http://mattermost.mattermost.svc.cluster.local:8065/api/v4/posts",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel_id: 'gh5k785kzjff3kzzjmeducw8mr', message: '#### ' + $json.betreff + '\\n\\n' + $json.text }) }}",
-        "options": {}
-      },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "fu9GDp3BYYVp4L5i",
-          "name": "Mattermost Bot (News)"
-        }
-      }
-    },
-    {
       "id": "8172e154-12bd-4953-a9c7-511e1639da9c",
       "name": "Abschluss",
       "type": "n8n-nodes-base.form",
@@ -144,6 +117,87 @@
         "completionTitle": "Mail gesendet",
         "completionMessage": "={{ 'Die Mail \"' + $('Mail bauen').first().json.titel + '\" ist an ' + $('Mail bauen').first().json.mailAn + ' unterwegs.' }}",
         "options": {}
+      }
+    },
+    {
+      "id": "08ffa95a-9662-5af8-a141-85faa50ac73c",
+      "name": "Mattermost-News senden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        380,
+        360
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "86fda6c7-8861-5e61-bc4d-e8f8847a43d7",
+              "name": "quelle",
+              "value": "Zammad: Benachrichtigungsmail per Formular senden",
+              "type": "string"
+            },
+            {
+              "id": "c2c5f648-c420-5e1f-a3d9-d7a713e2f4d7",
+              "name": "mattermostText",
+              "value": "={{ '#### ' + $json.betreff + '\\n\\n' + $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "802ba089-f1c4-55d2-81fd-3eb2ad8df718",
+              "name": "ntfy",
+              "value": "false",
+              "type": "string"
+            },
+            {
+              "id": "4590709a-8133-5249-b0ee-af8976c0387b",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
+            },
+            {
+              "id": "60da2cdc-80d7-5a2d-8eb1-4b035a7e7cb1",
+              "name": "kanal",
+              "value": "Berichte",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "76b18a64-e16c-520e-9e95-1637708c0237",
+      "name": "Mattermost-News senden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        580,
+        360
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
       }
     }
   ],
@@ -169,7 +223,7 @@
             "index": 0
           },
           {
-            "node": "Mattermost-News senden",
+            "node": "Mattermost-News senden vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -186,12 +240,24 @@
           }
         ]
       ]
+    },
+    "Mattermost-News senden vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Mattermost-News senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "timezone": "Europe/Berlin",
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "meta": {
     "description": "Formular, das eine Benachrichtigungsmail im Layout des Zammad-Laufs (zammad-tickets-verarbeiten, Nodes KI-Mail bauen und KI-Mail senden) an peter.kretzer@dlrg.org verschickt. Titel und Nachricht schreibt der Nutzer selbst, es gibt keinen KI-Aufruf und keinen Zammad-Zugriff. Empfänger, Absender und Kennung sind identisch."

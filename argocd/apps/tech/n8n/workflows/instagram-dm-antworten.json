@@ -466,50 +466,6 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $('Konfiguration').first().json.cfg.ntfyUrl + '/' + $('Konfiguration').first().json.cfg.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "Instagram-DM Probelauf (nichts gesendet)"
-            },
-            {
-              "name": "Priority",
-              "value": "default"
-            },
-            {
-              "name": "Tags",
-              "value": "test_tube"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ 'Person ' + $json.sender + '\\nSchrieb: ' + ($json.text || '(kein Text)') + '\\n\\nAntwort (' + $json.modus + (($json.notiz) ? ', ' + $json.notiz : '') + '):\\n' + $json.nachrichtText }}",
-        "options": {}
-      },
-      "id": "6aa89dd5-61c6-517b-8d3f-db0c397cea5d",
-      "name": "ntfy Probelauf",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        3840,
-        300
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "method": "POST",
         "url": "={{ $('Konfiguration').first().json.cfg.graphUrl + '/me/messages' }}",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
@@ -558,50 +514,6 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $('Konfiguration').first().json.cfg.ntfyUrl + '/' + $('Konfiguration').first().json.cfg.ntfyTopic }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "={{ $json.titel }}"
-            },
-            {
-              "name": "Priority",
-              "value": "={{ $json.prioritaet }}"
-            },
-            {
-              "name": "Tags",
-              "value": "={{ $json.tags }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ $json.text }}",
-        "options": {}
-      },
-      "id": "d74b9c47-9f41-504b-b72a-f7c2d1ae8e18",
-      "name": "ntfy Übergabe oder Fehler",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        4320,
-        500
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      }
-    },
-    {
-      "parameters": {
         "content": "## Instagram-DMs mit KI beantworten: Schritte NACH DEM IMPORT\n\n**Ablauf:** Meta ruft den Webhook `/webhook/instagram-dm` auf. Der Workflow prüft die Signatur, wartet kurz auf weitere Nachrichten derselben Person, holt den Chatverlauf, fragt das Ollama des Vereins (Kanal `instagram`) und sendet die Antwort per Graph API. Kann die KI nicht sicher antworten, steht `[ÜBERGABE: …]` in ihrer Antwort: Dann geht ein fester Text raus, die KI schweigt für diese Person (`uebernahmeStunden`) und ntfy meldet es. Antwortet jemand aus dem Team in der Instagram-App, pausiert die KI für diese Person ebenfalls.\n\n**Einmalig:**\n1. **Meta-App** (developers.facebook.com, Typ *Business*): Produkt *Instagram* mit Facebook-Login, Berechtigungen `instagram_basic`, `instagram_manage_messages`, `pages_show_list`, `pages_manage_metadata`. Für fremde Nutzer ist ein **App Review** und die Business-Verifizierung nötig. Bis dahin antwortet die App nur Personen mit App-Rolle (Tester). Im Instagram-Konto: *Einstellungen → Nachrichten → Zugriff auf Nachrichten für verbundene Tools erlauben*.\n2. **Webhook in der Meta-App:** Callback-URL `https://instagram-bilder-prod.pkr-lab.de/webhook/instagram-dm`, Verify-Token = `verifyToken` aus **Konfiguration**. Objekt *Instagram*, Feld `messages` abonnieren. Die Seite der Meta-App muss die Seite des Instagram-Kontos abonnieren (`POST /{page-id}/subscribed_apps?subscribed_fields=messages`).\n3. **Credential** *Instagram Graph API (Seiten-Token)* (Header Auth, `Authorization: Bearer <langlebiges Seiten-Token>`) ist dieselbe wie beim Instagram-Post-Workflow. Das Token braucht zusätzlich `instagram_manage_messages`. Zuweisen an **Verlauf holen** und **Nachricht senden**.\n4. **Konfiguration** öffnen: `igUserId` (Instagram-Konto-ID), `appSecret` (Meta-App → Einstellungen → Allgemein), `verifyToken` (frei gewählt). Diese Werte nur im n8n-Editor eintragen, nie ins Repo.\n5. ntfy-Topic `instagram` abonnieren. Workflow **aktivieren**: Die Test-URL von Meta geht nur mit der Produktions-URL.\n\n**Probelauf:** `testModus` bleibt `true`: Nichts wird gesendet, die KI-Antwort kommt als ntfy-Meldung „Instagram-DM Probelauf“. Mehrere Testnachrichten schreiben, Antworten prüfen, Wissen und `instagram_system.md` nachschärfen. Danach `erlaubteNutzer` mit der eigenen Nutzer-ID (steht in der ntfy-Meldung) füllen und `testModus` auf `false`: Dann antwortet die KI nur dieser Person. Erst zum Schluss `erlaubteNutzer` leeren.\n\n**Schutz:** Signaturprüfung (HMAC mit App-Secret), doppelte Webhooks werden ignoriert, höchstens `maxAntwortenProStunde` Antworten je Person, nur Links und Adressen der `erlaubteDomains`, keine Antwort mit Platzhaltern, jede Antwort trägt den KI-Hinweis. Zustand liegt in `zustandsDatei` auf dem n8n-Volume.\n\n**Fenster:** Meta erlaubt Antworten bis 24 Stunden nach der letzten Nachricht der Person. Ist Ollama aus, weckt der Workflow den PC (wie bei Zammad); dauert das zu lange, geht der Übergabetext raus und ntfy meldet es.",
         "height": 700,
         "width": 700,
@@ -615,6 +527,180 @@
         -80,
         -700
       ]
+    },
+    {
+      "id": "a1e7cebb-59c5-574c-aeb2-d628549dc3c4",
+      "name": "ntfy Probelauf vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3740,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "88cefb17-e7b1-5731-87a7-693ef2105816",
+              "name": "quelle",
+              "value": "Instagram-DMs mit KI beantworten",
+              "type": "string"
+            },
+            {
+              "id": "f3a0e6c5-af22-53cd-997f-7a5a01470426",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.cfg.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "0c996dac-51f3-587e-b1e9-d101db84a924",
+              "name": "titel",
+              "value": "Instagram-DM Probelauf (nichts gesendet)",
+              "type": "string"
+            },
+            {
+              "id": "d487d417-cac0-50cf-880b-ed761e5f61ff",
+              "name": "prioritaet",
+              "value": "default",
+              "type": "string"
+            },
+            {
+              "id": "423d0b54-b8fd-500a-a45b-54b77692ff21",
+              "name": "tags",
+              "value": "test_tube",
+              "type": "string"
+            },
+            {
+              "id": "7397c375-0aa4-56b7-8d10-c4dcd8762a20",
+              "name": "text",
+              "value": "={{ 'Person ' + $json.sender + '\\nSchrieb: ' + ($json.text || '(kein Text)') + '\\n\\nAntwort (' + $json.modus + (($json.notiz) ? ', ' + $json.notiz : '') + '):\\n' + $json.nachrichtText }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "83d533ae-eb45-5d0c-b1de-3b8804c4c080",
+      "name": "ntfy Probelauf",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        3940,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "51cd05b5-c70e-5a81-b4f3-8ec7d7f34e72",
+      "name": "ntfy Übergabe oder Fehler vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4220,
+        500
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1a9db215-983c-5508-9eb8-3937918f53a3",
+              "name": "quelle",
+              "value": "Instagram-DMs mit KI beantworten",
+              "type": "string"
+            },
+            {
+              "id": "d6f1562a-92cb-51d7-bef5-4ab9fa133f3b",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.cfg.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "931baf95-606f-55bf-847e-9af2289ac6af",
+              "name": "titel",
+              "value": "={{ $json.titel }}",
+              "type": "string"
+            },
+            {
+              "id": "7a23ef8d-0bbc-56ed-8a8e-8ceb6bf20d07",
+              "name": "prioritaet",
+              "value": "={{ $json.prioritaet }}",
+              "type": "string"
+            },
+            {
+              "id": "3ef65668-fa62-5f98-860f-bfcb933185ed",
+              "name": "tags",
+              "value": "={{ $json.tags }}",
+              "type": "string"
+            },
+            {
+              "id": "9ab4d5c4-c498-56ca-86d1-edb80bbe8c54",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "2c691771-0c82-54d4-a22c-7815b2058b88",
+      "name": "ntfy Übergabe oder Fehler",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        4420,
+        500
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
     }
   ],
   "connections": {
@@ -837,7 +923,7 @@
       "main": [
         [
           {
-            "node": "ntfy Probelauf",
+            "node": "ntfy Probelauf vorbereiten",
             "type": "main",
             "index": 0
           }
@@ -866,6 +952,28 @@
       "main": [
         [
           {
+            "node": "ntfy Übergabe oder Fehler vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ntfy Probelauf vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "ntfy Probelauf",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ntfy Übergabe oder Fehler vorbereiten": {
+      "main": [
+        [
+          {
             "node": "ntfy Übergabe oder Fehler",
             "type": "main",
             "index": 0
@@ -879,7 +987,8 @@
   "settings": {
     "executionOrder": "v1",
     "timezone": "Europe/Berlin",
-    "saveManualExecutions": true
+    "saveManualExecutions": true,
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "c22f8c3f-9a21-566c-b561-f537fead0386",
   "meta": {

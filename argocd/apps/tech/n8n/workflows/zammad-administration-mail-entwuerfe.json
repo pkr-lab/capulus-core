@@ -6,13 +6,25 @@
       "name": "Um 7, 12 und 17 Uhr",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
-      "position": [480, 80],
+      "position": [
+        480,
+        80
+      ],
       "parameters": {
         "rule": {
           "interval": [
-            { "triggerAtHour": 7, "triggerAtMinute": 5 },
-            { "triggerAtHour": 12, "triggerAtMinute": 5 },
-            { "triggerAtHour": 17, "triggerAtMinute": 5 }
+            {
+              "triggerAtHour": 7,
+              "triggerAtMinute": 5
+            },
+            {
+              "triggerAtHour": 12,
+              "triggerAtMinute": 5
+            },
+            {
+              "triggerAtHour": 17,
+              "triggerAtMinute": 5
+            }
           ]
         }
       }
@@ -22,7 +34,10 @@
       "name": "Manuell ausführen",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
-      "position": [480, 240],
+      "position": [
+        480,
+        240
+      ],
       "parameters": {}
     },
     {
@@ -30,7 +45,10 @@
       "name": "Offene Tickets suchen",
       "type": "n8n-nodes-base.zammad",
       "typeVersion": 1,
-      "position": [700, 80],
+      "position": [
+        700,
+        80
+      ],
       "parameters": {
         "authentication": "basicAuth",
         "resource": "ticket",
@@ -49,7 +67,10 @@
       "name": "Nur offene Tickets",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [920, 80],
+      "position": [
+        920,
+        80
+      ],
       "parameters": {
         "jsCode": "const OFFENE_STATES = [1, 2, 3, 6];\n\nreturn $input.all().filter(({ json: ticket }) => OFFENE_STATES.includes(ticket.state_id));"
       }
@@ -59,7 +80,10 @@
       "name": "Ticket-Artikel laden",
       "type": "n8n-nodes-base.zammad",
       "typeVersion": 1,
-      "position": [1140, 80],
+      "position": [
+        1140,
+        80
+      ],
       "parameters": {
         "authentication": "basicAuth",
         "resource": "ticket",
@@ -78,7 +102,10 @@
       "name": "LLM-Eingabe bauen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1360, 80],
+      "position": [
+        1360,
+        80
+      ],
       "parameters": {
         "jsCode": "const MAX_PAYLOAD_BYTES = 90000;\nconst MAX_MAIL_CHARS = 40000;\nconst MAX_CONTEXT_CHARS = 4000;\nconst KI_MARKIERUNG = /KI-Entwurf \\(automatisch erstellt\\)|Interne Hinweise zum KI-Entwurf/;\nconst SELBST_ADRESSEN = ['info@edv-kretzer.de', 'noreply@support-tech.pkr-lab.de'];\n\nfunction vonMirSelbst(adresse) {\n  return SELBST_ADRESSEN.some((a) => String(adresse || '').toLowerCase().includes(a));\n}\n\nfunction stripHtml(html) {\n  return String(html || '')\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<\\/(p|div|li|tr)>/gi, '\\n')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .replace(/&#39;/g, \"'\")\n    .replace(/&amp;/g, '&')\n    .replace(/[ \\t]+/g, ' ')\n    .replace(/ ?\\n ?/g, '\\n')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim();\n}\n\nfunction textOf(article) {\n  return /html/i.test(article.content_type || '') ? stripHtml(article.body) : String(article.body || '').trim();\n}\n\nfunction dateOf(article) {\n  return String(article.created_at || '').replace('T', ' ').slice(0, 16);\n}\n\nconst ergebnis = [];\n\n$input.all().forEach((item, index) => {\n  const { articles, ...ticket } = item.json;\n  const all = (articles || [])\n    .filter((a) => a.sender !== 'System')\n    .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)) || a.id - b.id);\n\n  const oeffentlich = all.filter((a) => !a.internal);\n\n  const erste = oeffentlich[0];\n  if (erste && vonMirSelbst(erste.from)) {\n    console.log(`Ticket #${ticket.number}: von mir selbst erstellt (${erste.from}), übersprungen`);\n    return;\n  }\n\n  const letzte = oeffentlich[oeffentlich.length - 1];\n  if (letzte && letzte.sender === 'Agent') {\n    console.log(`Ticket #${ticket.number}: Team hat bereits geantwortet, übersprungen`);\n    return;\n  }\n\n  if ([3, 6].includes(ticket.state_id) && !oeffentlich.some((a) => a.sender === 'Agent')) {\n    console.log(`Ticket #${ticket.number}: wartet auf Erinnerung oder Schließen, Kunde hat nicht geantwortet, übersprungen`);\n    return;\n  }\n\n  const context = all\n    .filter((a) => a.internal && /^\\s*Kontext:/i.test(textOf(a)))\n    .map((a) => textOf(a).replace(/^\\s*Kontext:\\s*/i, ''))\n    .join('\\n\\n')\n    .slice(0, MAX_CONTEXT_CHARS);\n\n  const mails = all.filter((a) => !a.internal && textOf(a));\n  const lastCustomer = [...mails].reverse().find((a) => a.sender === 'Customer');\n  const target = lastCustomer || mails[mails.length - 1];\n  if (!target) {\n    console.log(`Ticket #${ticket.number}: keine E-Mail zum Beantworten gefunden, übersprungen`);\n    return;\n  }\n\n  if (all.some((a) => a.internal && a.id > target.id && KI_MARKIERUNG.test(textOf(a)))) {\n    console.log(`Ticket #${ticket.number}: KI-Entwurf liegt bereits vor, übersprungen`);\n    return;\n  }\n\n  const history = mails\n    .filter((a) => a.id !== target.id)\n    .map((a) => ({ from: a.from || 'unbekannt', date: dateOf(a), text: textOf(a) }));\n\n  const payload = {\n    context,\n    history,\n    mail: {\n      from: target.from || 'unbekannt',\n      date: dateOf(target),\n      subject: target.subject || ticket.title,\n      text: textOf(target).slice(0, MAX_MAIL_CHARS),\n    },\n  };\n\n  let preTrimmed = 0;\n  while (Buffer.byteLength(JSON.stringify(payload), 'utf8') > MAX_PAYLOAD_BYTES && payload.history.length > 0) {\n    payload.history.shift();\n    preTrimmed += 1;\n  }\n  if (preTrimmed > 0) {\n    console.log(`Ticket #${ticket.number}: ${preTrimmed} ältere Mail(s) vor dem Aufruf gekürzt (Payload-Limit ${MAX_PAYLOAD_BYTES} Byte)`);\n  }\n\n  ergebnis.push({\n    json: {\n      ticket,\n      modus: 'entwurf',\n      replyTo: target.reply_to || target.from || '',\n      messageId: target.message_id || '',\n      payloadB64: Buffer.from(JSON.stringify(payload), 'utf8').toString('base64'),\n      historyCount: payload.history.length,\n      preTrimmed,\n    },\n    pairedItem: { item: index },\n  });\n});\n\nreturn ergebnis;"
       }
@@ -89,7 +116,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "onError": "continueRegularOutput",
-      "position": [1580, 80],
+      "position": [
+        1580,
+        80
+      ],
       "parameters": {
         "url": "={{ 'https://support-tech.pkr-lab.de/api/v1/tickets/' + $json.ticket.id + '/shared_draft' }}",
         "authentication": "genericCredentialType",
@@ -108,7 +138,10 @@
       "name": "Kein Shared Draft vorhanden?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [1800, 80],
+      "position": [
+        1800,
+        80
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -140,7 +173,10 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "onError": "continueRegularOutput",
-      "position": [2020, 80],
+      "position": [
+        2020,
+        80
+      ],
       "parameters": {
         "command": "node /opt/ollama-pc/cli.js probe"
       }
@@ -150,7 +186,10 @@
       "name": "PC schläft?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [2240, 80],
+      "position": [
+        2240,
+        80
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -182,7 +221,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "onError": "continueRegularOutput",
-      "position": [2460, -80],
+      "position": [
+        2460,
+        -80
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://carplay-api.prod.homeserver/api/power/wake",
@@ -217,7 +259,10 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "onError": "continueRegularOutput",
-      "position": [2460, 80],
+      "position": [
+        2460,
+        80
+      ],
       "parameters": {
         "command": "=printf %s '{{ $('LLM-Eingabe bauen').item.json.payloadB64 }}' | base64 -d | OLLAMA_MANDANT=pkr-service node /opt/ollama-pc/cli.js chat"
       }
@@ -227,7 +272,10 @@
       "name": "Antwortentwurf extrahieren",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2680, 80],
+      "position": [
+        2680,
+        80
+      ],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const eingabe = $('LLM-Eingabe bauen').item.json;\nconst ticket = eingabe.ticket;\n\nlet parsed = null;\ntry {\n  parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n} catch (err) {\n  parsed = null;\n}\n\nif (!parsed || !parsed.ok) {\n  const detail = parsed && parsed.error\n    ? `${parsed.error.code}: ${parsed.error.message}`\n    : String($json.stderr || $json.error || 'keine Ausgabe von ollama-pc/cli.js').trim();\n  throw new Error(`Ollama-Anfrage fehlgeschlagen (Ticket #${ticket.number}): ${detail}`);\n}\n\nconst hinweise = [];\nconst entwurf = String(parsed.reply || '')\n  .replace(/[ \\t]*\\[INTERN:\\s*([^\\]]*)\\]/g, (_, hinweis) => {\n    hinweise.push(hinweis.trim());\n    return '';\n  })\n  .replace(/[ \\t]+$/gm, '')\n  .replace(/(https?:\\/\\/\\S+) ([.,;:!?])/g, '$1$2')\n  .replace(/([^.])\\.\\.(?!\\.)/g, '$1.')\n  .replace(/\\n{3,}/g, '\\n\\n')\n  .trim();\n\nconst kurslinkHinweise = Array.from(entwurf.matchAll(/\\[KURSLINK:\\s*([^\\]]*)\\]/g)).map((m) => m[1].trim());\n\nconst escapeHtml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst entwurfHtml = entwurf\n  .replace(/\\r\\n?/g, '\\n')\n  .split(/\\n{2,}/)\n  .map((absatz) => '<p>' + escapeHtml(absatz)\n    .replace(/(https?:\\/\\/[^\\s<]*[^\\s<.,;:!?])/g, '<a href=\"$1\">$1</a>')\n    .replace(/\\n/g, '<br>') + '</p>')\n  .join('');\nconst abstand = '<p><br></p><p><br></p>';\nconst notizHtml = entwurfHtml + abstand + '<p><i>KI-Entwurf (automatisch erstellt)</i></p>';\nconst hinweiseHtml = hinweise.length\n  ? '<p><b>Interne Hinweise zum KI-Entwurf</b></p><ul>' + hinweise.map((h) => '<li>' + escapeHtml(h) + '</li>').join('') + '</ul>'\n  : '';\n\nreturn { json: { ticket, modus: eingabe.modus, replyTo: eingabe.replyTo, messageId: eingabe.messageId, entwurf, entwurfHtml: entwurfHtml + abstand, notizHtml, hinweise, hinweiseHtml, kurslinkHinweise, kurslinkHinweiseB64: Buffer.from(JSON.stringify(kurslinkHinweise)).toString('base64'), warnings: parsed.warnings, stats: parsed.stats } };"
@@ -238,7 +286,10 @@
       "name": "Kurslink-Hinweise vorhanden?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [2900, 80],
+      "position": [
+        2900,
+        80
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -270,7 +321,10 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "onError": "continueRegularOutput",
-      "position": [2900, 240],
+      "position": [
+        2900,
+        240
+      ],
       "parameters": {
         "command": "=printf %s '{{ $('Antwortentwurf extrahieren').item.json.kurslinkHinweiseB64 }}' | base64 -d | node /opt/ollama-pc/cli.js kurslink"
       }
@@ -280,7 +334,10 @@
       "name": "Kurslinks in Entwurf einfügen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [3120, 80],
+      "position": [
+        3120,
+        80
+      ],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const basis = $('Antwortentwurf extrahieren').item.json;\nconst escapeHtml = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst KURSLINK_TAG = /\\[KURSLINK:\\s*([^\\]]*)\\]/g;\n\nlet parsed = null;\nif (basis.kurslinkHinweise.length > 0) {\n  try {\n    parsed = JSON.parse(String($json.stdout || '').trim().split('\\n').pop());\n  } catch (err) {\n    parsed = null;\n  }\n}\n\nfunction istAnstehend(meldeschluss, now) {\n  const m = /^(\\d{2})\\.(\\d{2})\\.(\\d{2}|\\d{4})$/.exec(String(meldeschluss || '').trim());\n  if (!m) return false;\n  const jahr = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);\n  return new Date(jahr, Number(m[2]) - 1, Number(m[1])) >= now;\n}\n\nconst now = new Date();\nconst auditZeilen = [];\nconst decisions = basis.kurslinkHinweise.map((hint, idx) => {\n  const result = parsed && parsed.ok ? parsed.results[idx] : null;\n  if (!result) {\n    auditZeilen.push(`Kurslink-Nachschlag fehlgeschlagen für „${escapeHtml(hint)}“`);\n    const fallback = `[BITTE PRÜFEN: Upload-Link für ${escapeHtml(hint)}]`;\n    return { html: fallback, plain: fallback };\n  }\n  const anstehend = result.matches.filter((m) => istAnstehend(m.meldeschluss, now));\n  if (anstehend.length !== 1) {\n    auditZeilen.push(`Kurslink nicht eindeutig: ${escapeHtml(result.kursart || hint)} (${result.matches.length} Treffer gesamt, ${anstehend.length} anstehend) – bitte im Entwurf prüfen`);\n    const fallback = `[BITTE PRÜFEN: Upload-Link für ${escapeHtml(result.kursart || hint)}]`;\n    return { html: fallback, plain: fallback };\n  }\n  const treffer = anstehend[0];\n  auditZeilen.push(`Kurslink automatisch eingefügt: ${escapeHtml(treffer.kursart)} ${escapeHtml(treffer.code)} (Meldeschluss ${escapeHtml(treffer.meldeschluss)})`);\n  const link = escapeHtml(treffer.url);\n  return { html: `<a href=\"${link}\">${link}</a>`, plain: treffer.url };\n});\n\nfunction einfuegen(text, isHtml) {\n  if (!decisions.length) return text;\n  let i = 0;\n  return text.replace(KURSLINK_TAG, () => {\n    const d = decisions[i];\n    i += 1;\n    return isHtml ? d.html : d.plain;\n  });\n}\n\nconst entwurf = einfuegen(basis.entwurf, false);\nconst entwurfHtml = einfuegen(basis.entwurfHtml, true);\nconst notizHtml = einfuegen(basis.notizHtml, true);\nconst hinweiseHtml = basis.hinweiseHtml + (auditZeilen.length\n  ? '<p><b>Kurslink-Automatik</b></p><ul>' + auditZeilen.map((z) => '<li>' + z + '</li>').join('') + '</ul>'\n  : '');\n\nreturn { json: { ...basis, entwurf, entwurfHtml, notizHtml, hinweiseHtml } };"
@@ -292,7 +349,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "onError": "continueErrorOutput",
-      "position": [3340, 80],
+      "position": [
+        3340,
+        80
+      ],
       "parameters": {
         "method": "PUT",
         "url": "={{ 'https://support-tech.pkr-lab.de/api/v1/tickets/' + $('Antwortentwurf extrahieren').item.json.ticket.id + '/shared_draft' }}",
@@ -324,7 +384,10 @@
       "name": "Entwurf als interne Notiz speichern",
       "type": "n8n-nodes-base.zammad",
       "typeVersion": 1,
-      "position": [3340, 240],
+      "position": [
+        3340,
+        240
+      ],
       "parameters": {
         "authentication": "basicAuth",
         "resource": "ticket",
@@ -346,7 +409,10 @@
       "name": "Wartete auf Erinnerung oder Schließen?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [3560, 80],
+      "position": [
+        3560,
+        80
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -377,7 +443,10 @@
       "name": "Status wieder auf offen setzen",
       "type": "n8n-nodes-base.zammad",
       "typeVersion": 1,
-      "position": [3780, -80],
+      "position": [
+        3780,
+        -80
+      ],
       "parameters": {
         "authentication": "basicAuth",
         "resource": "ticket",
@@ -399,7 +468,10 @@
       "name": "Interne Hinweise vorhanden?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [3780, 80],
+      "position": [
+        3780,
+        80
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -430,7 +502,10 @@
       "name": "Interne Hinweise als Notiz speichern",
       "type": "n8n-nodes-base.zammad",
       "typeVersion": 1,
-      "position": [4000, -80],
+      "position": [
+        4000,
+        -80
+      ],
       "parameters": {
         "authentication": "basicAuth",
         "resource": "ticket",
@@ -452,7 +527,10 @@
       "name": "KI-Mail bauen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [4220, -40],
+      "position": [
+        4220,
+        -40
+      ],
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "const MAIL_AN = 'peter.kretzer@dlrg.org';\nconst MAIL_VON = 'n8n@pkr-service.de';\nconst ID_ZEILE = 'ID-IT-xi8klGKdh8';\nconst SCHRIFT = \"-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif\";\nconst FARBEN = { rot: '#c8102e', amber: '#b45309', gruen: '#15803d', blau: '#1d4ed8', grau: '#475569', indigo: '#4338ca' };\nconst mitId = (text) => String(text).replace(/\\s+$/, '') + '\\n\\n' + ID_ZEILE;\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');\nconst verlinken = (s) => esc(s).replace(/(https?:\\/\\/[^\\s<]*[^\\s<.,;:!?)])/g, '<a href=\"$1\" style=\"color:#1d4ed8;text-decoration:underline\">$1</a>');\nconst absaetze = (text) => String(text).replace(/\\r\\n?/g, '\\n').split(/\\n{2,}/).filter((b) => b.trim()).map((b) => '<p style=\"margin:0 0 14px 0;line-height:1.6\">' + verlinken(b.trim()).replace(/\\n/g, '<br>') + '</p>').join('');\nconst felder = (zeilen) => '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;margin:0 0 18px 0;border:1px solid #e5e7eb\">' + zeilen.map(([k, v], i) => '<tr style=\"background:' + (i % 2 ? '#ffffff' : '#f9fafb') + '\"><td valign=\"top\" style=\"padding:9px 12px;width:34%;font-size:13px;color:#6b7280;border-bottom:1px solid #eef0f3\">' + esc(k) + '</td><td valign=\"top\" style=\"padding:9px 12px;font-size:14px;color:#111827;border-bottom:1px solid #eef0f3\">' + verlinken(v) + '</td></tr>').join('') + '</table>';\nconst box = (inhalt, farbe, titel) => '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 18px 0\"><tr><td style=\"border-left:4px solid ' + farbe + ';background:#f9fafb;padding:14px 16px\">' + (titel ? '<div style=\"font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:' + farbe + ';margin-bottom:8px\">' + esc(titel) + '</div>' : '') + inhalt + '</td></tr></table>';\nconst liste = (eintraege) => '<ul style=\"margin:0;padding:0 0 0 18px;line-height:1.6\">' + eintraege.map((e) => '<li style=\"margin:0 0 4px 0\">' + verlinken(e) + '</li>').join('') + '</ul>';\nconst knopf = (text, url, farbe) => '<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:4px 0 18px 0\"><tr><td style=\"background:' + farbe + ';border-radius:6px\"><a href=\"' + esc(url) + '\" style=\"display:inline-block;padding:11px 20px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none\">' + esc(text) + '</a></td></tr></table>';\nconst klein = (text) => '<p style=\"margin:6px 0 14px 0;font-size:13px;line-height:1.5;color:#6b7280\">' + verlinken(text).replace(/\\n/g, '<br>') + '</p>';\nconst datum = (iso, kurz) => {\n  const d = new Date(iso);\n  return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: kurz ? 'short' : 'medium' }) + ' Uhr';\n};\nconst layout = ({ label, farbe, titel, badge, vorschau, abschnitte }) => {\n  const zeit = new Date().toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: 'short' });\n  const plakette = badge ? '<div style=\"margin-top:12px\"><span style=\"display:inline-block;background:#ffffff;color:' + farbe + ';font-size:12px;font-weight:700;padding:4px 10px;border-radius:12px\">' + esc(badge) + '</span></div>' : '';\n  return '<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"color-scheme\" content=\"light\"><title>' + esc(titel) + '</title></head>'\n    + '<body style=\"margin:0;padding:0;background:#f3f4f6;font-family:' + SCHRIFT + '\">'\n    + '<div style=\"display:none;max-height:0;overflow:hidden;opacity:0;color:#f3f4f6\">' + esc(vorschau || titel) + '</div>'\n    + '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f3f4f6\"><tr><td align=\"center\" style=\"padding:24px 12px\">'\n    + '<table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"width:100%;max-width:600px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden\">'\n    + '<tr><td style=\"background:' + farbe + ';padding:22px 26px\"><div style=\"font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#ffffff;opacity:.9\">' + esc(label) + '</div>'\n    + '<div style=\"margin-top:6px;font-size:22px;line-height:1.3;font-weight:700;color:#ffffff\">' + esc(titel) + '</div>' + plakette + '</td></tr>'\n    + '<tr><td style=\"padding:24px 26px 12px 26px;font-size:15px;line-height:1.6;color:#1f2937\">' + abschnitte.join('') + '</td></tr>'\n    + '<tr><td style=\"padding:14px 26px;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:12px;line-height:1.6;color:#6b7280\">Automatisch gesendet von n8n am ' + esc(zeit) + ' Uhr<div style=\"color:#9ca3af\">' + ID_ZEILE + '</div></td></tr>'\n    + '</table></td></tr></table></body></html>';\n};\nconst e = $('Kurslinks in Entwurf einfügen').item.json;\nconst t = e.ticket;\nconst schnitt = e.entwurf.lastIndexOf('\\n\\nMit freundlichen Grüßen');\nconst antwort = (schnitt >= 0 ? e.entwurf.slice(0, schnitt) : e.entwurf).trim();\nlet alsNotiz = false;\ntry {\n  alsNotiz = $('Entwurf als interne Notiz speichern').isExecuted === true;\n} catch (fehler) {\n  alsNotiz = false;\n}\nconst entwurf = e.modus === 'entwurf' && !alsNotiz;\nconst art = entwurf ? 'Mail-Entwurf zur Freigabe in Zammad' : 'Interne Notiz in Zammad';\nconst link = 'https://support-tech.pkr-lab.de/#ticket/zoom/' + t.id;\nconst zeilen = [\n  'Die KI hat Ticket #' + t.number + ' beantwortet.',\n  '',\n  'Ticket: #' + t.number + ' ' + t.title,\n  'Link: ' + link,\n  'Ablage: ' + art,\n  'Antwort an: ' + (e.replyTo || 'unbekannt'),\n  '',\n  'Antwort der KI:',\n  '',\n  antwort,\n];\nif (e.hinweise.length > 0) {\n  zeilen.push('', 'Interne Hinweise:', ...e.hinweise.map((h) => '- ' + h));\n}\nconst abschnitte = [\n  felder([['Ticket', '#' + t.number], ['Antwort an', e.replyTo || 'unbekannt'], ['Ablage', art]]),\n  knopf('Ticket in Zammad öffnen', link, FARBEN.indigo),\n  box(absaetze(antwort), FARBEN.indigo, 'Antwort der KI'),\n];\nif (e.hinweise.length > 0) abschnitte.push(box(liste(e.hinweise), FARBEN.amber, 'Interne Hinweise'));\nconst html = layout({\n  label: 'Zammad · KI-Antwort',\n  farbe: FARBEN.indigo,\n  titel: 'Ticket #' + t.number + ': ' + t.title,\n  badge: entwurf ? 'Entwurf wartet auf Freigabe' : 'Interne Notiz',\n  vorschau: antwort.split('\\n')[0],\n  abschnitte,\n});\nreturn { json: { mailAn: MAIL_AN, mailVon: MAIL_VON, betreff: 'KI-Antwort zu Ticket #' + t.number + ': ' + t.title, text: mitId(zeilen.join('\\n')), html } };"
@@ -463,7 +541,10 @@
       "name": "KI-Mail senden",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
-      "position": [4440, -40],
+      "position": [
+        4440,
+        -40
+      ],
       "parameters": {
         "fromEmail": "={{ $json.mailVon }}",
         "toEmail": "={{ $json.mailAn }}",
@@ -483,75 +564,184 @@
       }
     },
     {
-      "id": "bb217826-55b3-43fb-842a-59e069d42e59",
-      "name": "Mattermost-News senden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "onError": "continueErrorOutput",
-      "position": [4440, 160],
-      "parameters": {
-        "method": "POST",
-        "url": "http://mattermost.mattermost.svc.cluster.local:8065/api/v4/posts",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channel_id: 'gh5k785kzjff3kzzjmeducw8mr', message: '#### ' + $json.betreff + '\\n\\n' + $json.text }) }}",
-        "options": {}
-      },
-      "credentials": {
-        "httpHeaderAuth": { "id": "fu9GDp3BYYVp4L5i", "name": "Mattermost Bot (News)" }
-      }
-    },
-    {
-      "id": "801f5341-0f5d-4b57-aceb-dea62f5b3dcb",
-      "name": "Freigabe-Push senden",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [4660, -40],
-      "parameters": {
-        "method": "POST",
-        "url": "http://ntfy.ntfy.svc.cluster.local/zammad",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "KI-Entwurf wartet auf Freigabe"
-            },
-            {
-              "name": "Priority",
-              "value": "default"
-            },
-            {
-              "name": "Tags",
-              "value": "robot"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "text/plain",
-        "body": "={{ 'Ticket #' + $('Antwortentwurf extrahieren').item.json.ticket.number + ': ' + $('Antwortentwurf extrahieren').item.json.ticket.title }}",
-        "options": {}
-      },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "2YY5v6HVGvCihqij",
-          "name": "ntfy-publisher"
-        }
-      }
-    },
-    {
       "id": "83eeac62-3d8f-4082-81b0-9906fb550aef",
       "name": "Abschluss (immer genau 1 Item)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [4880, -40],
+      "position": [
+        4880,
+        -40
+      ],
       "parameters": {
         "jsCode": "return [{ json: { status: 'done', verarbeiteteTickets: Math.max($input.all().length - 1, 0) } }];"
+      }
+    },
+    {
+      "id": "2c0d5ac8-8b17-5a55-95e1-00f831e4de28",
+      "name": "Mattermost-News senden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4340,
+        160
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fc205378-b33d-5000-b6c1-ad3a5abe54b1",
+              "name": "quelle",
+              "value": "PKR-Service Zammad",
+              "type": "string"
+            },
+            {
+              "id": "2d319df1-1e84-5d1c-ac8b-619e3acea774",
+              "name": "mattermostText",
+              "value": "={{ '#### ' + $json.betreff + '\\n\\n' + $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "5b38d6c9-428f-512c-99dc-15eb76238949",
+              "name": "ntfy",
+              "value": "false",
+              "type": "string"
+            },
+            {
+              "id": "4be5111b-efc7-5dd3-bcfb-afe1807be5b3",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
+            },
+            {
+              "id": "eb700018-a683-55c0-a031-bc8e8e0d36e0",
+              "name": "kanal",
+              "value": "Berichte",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "5cce3557-f6ba-56f3-82fe-8fb5e5f6ab2a",
+      "name": "Mattermost-News senden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        4540,
+        160
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "1436fd59-f4e4-58cc-86fb-ad7c0bcd65b0",
+      "name": "Freigabe-Push senden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4560,
+        -40
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dcfdea0d-3516-5f1d-a146-bfec52453f19",
+              "name": "quelle",
+              "value": "PKR-Service Zammad",
+              "type": "string"
+            },
+            {
+              "id": "2b4f9b58-b040-551a-8f96-2cbe19d73b3d",
+              "name": "thema",
+              "value": "zammad",
+              "type": "string"
+            },
+            {
+              "id": "f9cc68a6-5683-502f-bf13-2bdb4b31496f",
+              "name": "titel",
+              "value": "KI-Entwurf wartet auf Freigabe",
+              "type": "string"
+            },
+            {
+              "id": "510b0daf-60a1-557a-b07c-7a6fe6a22b5d",
+              "name": "prioritaet",
+              "value": "default",
+              "type": "string"
+            },
+            {
+              "id": "e24100b0-29eb-57d9-994e-45236703aad2",
+              "name": "tags",
+              "value": "robot",
+              "type": "string"
+            },
+            {
+              "id": "55a845c6-a6b1-5f60-b9d3-91f54d2751d2",
+              "name": "text",
+              "value": "={{ 'Ticket #' + $('Antwortentwurf extrahieren').item.json.ticket.number + ': ' + $('Antwortentwurf extrahieren').item.json.ticket.title }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "cc5b52b4-dfa6-57f6-b3f9-c62d4f9e4212",
+      "name": "Freigabe-Push senden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        4760,
+        -40
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
       }
     }
   ],
@@ -560,141 +750,349 @@
     "Um 7, 12 und 17 Uhr": {
       "main": [
         [
-          { "node": "Offene Tickets suchen", "type": "main", "index": 0 },
-          { "node": "Abschluss (immer genau 1 Item)", "type": "main", "index": 0 }
+          {
+            "node": "Offene Tickets suchen",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Abschluss (immer genau 1 Item)",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Manuell ausführen": {
       "main": [
         [
-          { "node": "Offene Tickets suchen", "type": "main", "index": 0 },
-          { "node": "Abschluss (immer genau 1 Item)", "type": "main", "index": 0 }
+          {
+            "node": "Offene Tickets suchen",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Abschluss (immer genau 1 Item)",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Offene Tickets suchen": {
       "main": [
-        [{ "node": "Nur offene Tickets", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Nur offene Tickets",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Nur offene Tickets": {
       "main": [
-        [{ "node": "Ticket-Artikel laden", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Ticket-Artikel laden",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Ticket-Artikel laden": {
       "main": [
-        [{ "node": "LLM-Eingabe bauen", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "LLM-Eingabe bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "LLM-Eingabe bauen": {
       "main": [
-        [{ "node": "Shared Draft prüfen", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Shared Draft prüfen",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Shared Draft prüfen": {
       "main": [
-        [{ "node": "Kein Shared Draft vorhanden?", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Kein Shared Draft vorhanden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Kein Shared Draft vorhanden?": {
       "main": [
-        [{ "node": "Ollama erreichbar?", "type": "main", "index": 0 }],
+        [
+          {
+            "node": "Ollama erreichbar?",
+            "type": "main",
+            "index": 0
+          }
+        ],
         []
       ]
     },
     "Ollama erreichbar?": {
       "main": [
-        [{ "node": "PC schläft?", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "PC schläft?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "PC schläft?": {
       "main": [
-        [{ "node": "Ollama-PC wecken", "type": "main", "index": 0 }],
-        [{ "node": "Ollama-Antwort erzeugen", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Ollama-PC wecken",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ollama-Antwort erzeugen",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Ollama-PC wecken": {
       "main": [
-        [{ "node": "Ollama-Antwort erzeugen", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Ollama-Antwort erzeugen",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Ollama-Antwort erzeugen": {
       "main": [
-        [{ "node": "Antwortentwurf extrahieren", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Antwortentwurf extrahieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Antwortentwurf extrahieren": {
       "main": [
-        [{ "node": "Kurslink-Hinweise vorhanden?", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Kurslink-Hinweise vorhanden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Kurslink-Hinweise vorhanden?": {
       "main": [
-        [{ "node": "Kurslinks nachschlagen", "type": "main", "index": 0 }],
-        [{ "node": "Kurslinks in Entwurf einfügen", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Kurslinks nachschlagen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kurslinks in Entwurf einfügen",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Kurslinks nachschlagen": {
       "main": [
-        [{ "node": "Kurslinks in Entwurf einfügen", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Kurslinks in Entwurf einfügen",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Kurslinks in Entwurf einfügen": {
       "main": [
-        [{ "node": "Shared Draft speichern", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Shared Draft speichern",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Shared Draft speichern": {
       "main": [
-        [{ "node": "Wartete auf Erinnerung oder Schließen?", "type": "main", "index": 0 }],
-        [{ "node": "Entwurf als interne Notiz speichern", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Wartete auf Erinnerung oder Schließen?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Entwurf als interne Notiz speichern",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Entwurf als interne Notiz speichern": {
       "main": [
-        [{ "node": "Wartete auf Erinnerung oder Schließen?", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Wartete auf Erinnerung oder Schließen?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Wartete auf Erinnerung oder Schließen?": {
       "main": [
-        [{ "node": "Status wieder auf offen setzen", "type": "main", "index": 0 }],
-        [{ "node": "Interne Hinweise vorhanden?", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Status wieder auf offen setzen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Interne Hinweise vorhanden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Status wieder auf offen setzen": {
       "main": [
-        [{ "node": "Interne Hinweise vorhanden?", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Interne Hinweise vorhanden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Interne Hinweise vorhanden?": {
       "main": [
-        [{ "node": "Interne Hinweise als Notiz speichern", "type": "main", "index": 0 }],
-        [{ "node": "KI-Mail bauen", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Interne Hinweise als Notiz speichern",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "KI-Mail bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Interne Hinweise als Notiz speichern": {
       "main": [
-        [{ "node": "KI-Mail bauen", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "KI-Mail bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "KI-Mail bauen": {
       "main": [
         [
-          { "node": "KI-Mail senden", "type": "main", "index": 0 },
-          { "node": "Mattermost-News senden", "type": "main", "index": 0 }
+          {
+            "node": "KI-Mail senden",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Mattermost-News senden vorbereiten",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "KI-Mail senden": {
       "main": [
-        [{ "node": "Freigabe-Push senden", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Freigabe-Push senden vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Freigabe-Push senden": {
       "main": [
-        [{ "node": "Abschluss (immer genau 1 Item)", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Abschluss (immer genau 1 Item)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mattermost-News senden vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Mattermost-News senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Freigabe-Push senden vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Freigabe-Push senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -702,7 +1100,8 @@
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "availableInMCP": false
+    "availableInMCP": false,
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
   },
   "versionId": "8eda2f66-7fd9-4e1d-aa17-532c05b56710",
   "meta": {
