@@ -89,6 +89,7 @@ CALL_ESTABLISHED = re.compile(r"Call established")
 MEDIA_READY = re.compile(r"connectivity check is complete")
 CALL_TERMINATED = re.compile(r"Call with \S+ terminated")
 CALL_FAILED = re.compile(r"ua_connect failed")
+ANSI_COLOR = re.compile(r"\x1b\[[0-9;]*m")
 SUMMARY_LINE = re.compile(r"warning|error|fail|SRTP|srtp|ice:|aufile|rtprecv|dropping|Call (answered|established)|session closed|decrypt|audio:", re.IGNORECASE)
 
 CALL_LOCK = threading.Lock()
@@ -295,7 +296,7 @@ def stop_process(proc):
 
 
 def call_summary(output):
-    clean = re.sub(r"\x1b\[[0-9;]*m", "", output).replace("\r", "\n")
+    clean = ANSI_COLOR.sub("", output).replace("\r", "\n")
     keep = []
     for line in clean.splitlines():
         line = line.strip()
@@ -366,7 +367,7 @@ def dial(uri, seconds):
         log(f"call to {uri} finished, rx.wav peak: {rx_peak(rx_path)}")
         log(f"baresip: {call_summary(output)}")
     else:
-        tail = re.sub(r"\x1b\[[0-9;]*m", "", output).strip().splitlines()[-5:]
+        tail = ANSI_COLOR.sub("", output).strip().splitlines()[-5:]
         log(f"{uri} not answered: {' | '.join(tail)}")
     return answered
 
