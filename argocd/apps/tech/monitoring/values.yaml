@@ -106,6 +106,10 @@ victoria-metrics-k8s-stack:
             receiver: n8n-banana-pi-down
             continue: true
           - matchers:
+              - severity=~"warning|critical"
+            receiver: n8n-mattermost
+            continue: true
+          - matchers:
               - severity="critical"
             receiver: ntfy
       receivers:
@@ -136,6 +140,14 @@ victoria-metrics-k8s-stack:
           webhook_configs:
             - url: 'http://ntfy-bridge.ntfy-bridge.svc.cluster.local:8080/alert'
               send_resolved: false
+        - name: n8n-mattermost
+          webhook_configs:
+            - url: 'http://n8n.n8n.svc.cluster.local/webhook/alertmanager-mattermost'
+              send_resolved: true
+              http_config:
+                authorization:
+                  type: Bearer
+                  credentials_file: /etc/vm/secrets/n8n-webhook-token/token
         - name: n8n-banana-pi-down
           webhook_configs:
             - url: 'http://n8n.n8n.svc.cluster.local/webhook/banana-pi-down'

@@ -1,0 +1,236 @@
+{
+  "name": "Mattermost: Aktionen",
+  "nodes": [
+    {
+      "id": "11277dc9-ea13-53ea-a586-6ea8025421b7",
+      "name": "Hinweise",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -320
+      ],
+      "parameters": {
+        "content": "## Vor dem Aktivieren\n\n1. Mattermost ruft diesen Webhook ohne Authentifizierung auf, wenn jemand einen Button klickt (Integration-URL `http://n8n.n8n.svc.cluster.local/webhook/mattermost-aktion`). Mattermost braucht dafuer `MM_SERVICESETTINGS_ALLOWEDUNTRUSTEDINTERNALCONNECTIONS` (im Chart gesetzt).\n2. Schutz: Der Workflow laedt den Post ueber die Mattermost-API, prueft dass er vom Bot stammt und dass das Einmal-Token im Post mit dem Token der Anfrage uebereinstimmt. Danach wird das Token geloescht, ein zweiter Klick schlaegt fehl.\n3. Ticket-Gruppe und Kunde stehen im Node **Ticket anlegen** (Support::Administration, info@pkr-service.de).\n4. Workflow aktivieren.",
+        "height": 280,
+        "width": 620
+      }
+    },
+    {
+      "id": "b3c7474b-dbbe-52db-96c7-3a2396fad857",
+      "name": "Button-Klick empfangen",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "bea63613-b67e-5ab6-9415-e82d4ab9b5a4",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mattermost-aktion",
+        "responseMode": "lastNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "8d8b0a26-2e14-5e09-b0ec-80cd3a47fe5c",
+      "name": "Eingabe pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const body = $input.first().json.body || {};\nconst kontext = body.context || {};\nconst postId = String(body.post_id || '');\nif (!/^[a-z0-9]{26}$/.test(postId)) {\n  throw new Error('Ungueltige post_id');\n}\nif (kontext.aktion !== 'ticket' || !/^[a-f0-9]{32}$/.test(String(kontext.nonce || ''))) {\n  throw new Error('Unbekannte Aktion');\n}\nreturn [{ json: { post_id: postId, nonce: kontext.nonce, user_name: String(body.user_name || 'unbekannt') } }];"
+      }
+    },
+    {
+      "id": "4b308b30-73ab-508c-b0be-16edba4cc8cb",
+      "name": "Post laden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'http://mattermost.mattermost.svc.cluster.local:8065/api/v4/posts/' + $json.post_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fu9GDp3BYYVp4L5i",
+          "name": "Mattermost Bot (News)"
+        }
+      }
+    },
+    {
+      "id": "d39004cc-6d3c-504d-a591-173e74080278",
+      "name": "Bot-Nutzer laden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        840,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://mattermost.mattermost.svc.cluster.local:8065/api/v4/users/me",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fu9GDp3BYYVp4L5i",
+          "name": "Mattermost Bot (News)"
+        }
+      }
+    },
+    {
+      "id": "f2eb3e29-e00a-51fc-b35f-c79976d3947d",
+      "name": "Nonce pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const eingabe = $('Eingabe pruefen').first().json;\nconst post = $('Post laden').first().json;\nconst ich = $input.first().json;\nconst props = post.props || {};\nif (!ich.id || post.user_id !== ich.id) {\n  throw new Error('Post stammt nicht vom Bot');\n}\nif (!props.aktion_nonce || props.aktion_nonce !== eingabe.nonce) {\n  throw new Error('Aktion nicht mehr gueltig');\n}\nreturn [{ json: { titel: props.aktion_titel || 'Alert aus Mattermost', text: props.aktion_text || '', message: post.message, user: eingabe.user_name } }];"
+      }
+    },
+    {
+      "id": "7765378e-c776-53ef-94cb-585c0c238e37",
+      "name": "Ticket anlegen",
+      "type": "n8n-nodes-base.zammad",
+      "typeVersion": 1,
+      "position": [
+        1400,
+        0
+      ],
+      "parameters": {
+        "authentication": "basicAuth",
+        "resource": "ticket",
+        "title": "={{ $json.titel }}",
+        "group": "Support::Administration",
+        "customer": "=info@pkr-service.de",
+        "article": {
+          "articleDetails": {
+            "subject": "={{ $json.titel }}",
+            "body": "={{ $json.text + '\\n\\nAngelegt von @' + $json.user + ' per Mattermost-Button.' }}",
+            "visibility": "internal",
+            "type": "note",
+            "sender": "Agent"
+          }
+        },
+        "additionalFields": {}
+      },
+      "credentials": {
+        "zammadBasicAuthApi": {
+          "id": "phUAvB04RmbLalky",
+          "name": "Zammad EDV-Kretzer"
+        }
+      }
+    },
+    {
+      "id": "a3b8994d-90b4-5829-ae63-3c73220d68b4",
+      "name": "Antwort bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const daten = $('Nonce pruefen').first().json;\nconst ticket = $input.first().json;\nconst url = 'https://support-tech.pkr-lab.de/#ticket/zoom/' + ticket.id;\nreturn [{\n  json: {\n    update: {\n      message: daten.message,\n      props: {\n        aktion_nonce: '',\n        attachments: [{ fallback: 'Ticket angelegt', color: '#2e7d32', text: '\\u{1F3AB} Ticket #' + ticket.number + ' von @' + daten.user + ' angelegt: ' + url }],\n      },\n    },\n    ephemeral_text: 'Ticket #' + ticket.number + ' angelegt.',\n  },\n}];"
+      }
+    }
+  ],
+  "connections": {
+    "Button-Klick empfangen": {
+      "main": [
+        [
+          {
+            "node": "Eingabe pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingabe pruefen": {
+      "main": [
+        [
+          {
+            "node": "Post laden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post laden": {
+      "main": [
+        [
+          {
+            "node": "Bot-Nutzer laden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bot-Nutzer laden": {
+      "main": [
+        [
+          {
+            "node": "Nonce pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nonce pruefen": {
+      "main": [
+        [
+          {
+            "node": "Ticket anlegen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ticket anlegen": {
+      "main": [
+        [
+          {
+            "node": "Antwort bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Verarbeitet Klicks auf Buttons in Mattermost-Posts des Bots (Interactive Message Actions). Aktuell: 'Ticket anlegen' unter Alertmanager-Meldungen. Der Webhook ist nicht per Header geschuetzt, weil Mattermost keine eigenen Header sendet. Stattdessen prueft 'Nonce pruefen', dass der Post vom Bot stammt und das Einmal-Token im Post (props.aktion_nonce) zur Anfrage passt. Die Antwort aktualisiert den Post (Button verschwindet, Ticket-Link erscheint). NACH DEM IMPORT: Credential 'Zammad EDV-Kretzer' pruefen und Workflow aktivieren."
+  },
+  "tags": [],
+  "id": "HGnVfQkEtCmyOXKc"
+}
