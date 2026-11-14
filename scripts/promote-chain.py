@@ -224,8 +224,9 @@ def plan(stage: str, cfg: dict, now: datetime, statuses: dict, smoke: bool) -> l
     gates = cfg.get("gates") or {}
     pairs = []
     if stage in ("entw", "all"):
+        targets = {env: set(list_apps(env)) for env in ("tech", "prod")}
         for app in list_apps("entw"):
-            dst = next((e for e in ("tech", "prod") if app in list_apps(e)), None)
+            dst = next((env for env in ("tech", "prod") if app in targets[env]), None)
             if dst:
                 pairs.append(("entw", dst, app))
     if stage in ("tech", "all"):
