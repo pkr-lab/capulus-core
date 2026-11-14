@@ -1,10 +1,7 @@
 import { ValidationError } from "./errors.js";
+import { normalizeForComparison } from "./text.js";
 
 export type CategoryOption = { value: string; name: string };
-
-export function normalizeName(text: string): string {
-  return text.replace(/\s+/g, " ").trim().toLocaleLowerCase("de-DE");
-}
 
 export function resolveCategories(requested: readonly string[], available: readonly CategoryOption[]): string[] {
   const values: string[] = [];
@@ -14,7 +11,7 @@ export function resolveCategories(requested: readonly string[], available: reado
     const wanted = raw.trim();
     if (wanted === "") continue;
     const byId = available.find((o) => o.value === wanted);
-    const byName = available.filter((o) => normalizeName(o.name) === normalizeName(wanted));
+    const byName = available.filter((o) => normalizeForComparison(o.name) === normalizeForComparison(wanted));
     if (byId) {
       values.push(byId.value);
     } else if (byName.length === 1 && byName[0]) {
