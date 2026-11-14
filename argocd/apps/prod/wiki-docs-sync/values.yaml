@@ -8,7 +8,7 @@ imagePullSecrets: []
 
 schedule: "*/15 * * * *"
 timezone: "Europe/Berlin"
-suspend: false
+suspend: true
 concurrencyPolicy: Forbid
 failedJobsHistoryLimit: 3
 successfulJobsHistoryLimit: 3
@@ -29,6 +29,8 @@ github:
 
 wikijs:
   url: "http://wikijs.wikijs.svc.cluster.local"
+  siteId: ""
+  renderBatch: 8
   locale: "en"
   pathPrefix: "docs"
   legacyPrefixes: []

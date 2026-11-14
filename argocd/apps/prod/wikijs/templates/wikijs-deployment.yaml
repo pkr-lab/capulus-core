@@ -17,6 +17,9 @@ spec:
       labels:
         {{- include "wikijs.selectorLabels" . | nindent 8 }}
     spec:
+      enableServiceLinks: false
+      securityContext:
+        {{- toYaml .Values.wikijs.podSecurityContext | nindent 8 }}
       {{- with .Values.wikijs.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
@@ -38,8 +41,8 @@ spec:
               containerPort: {{ .Values.wikijs.service.targetPort }}
               protocol: TCP
           env:
-            - name: DB_TYPE
-              value: "postgres"
+            - name: KUBERNETES_SERVICE_HOST
+              value: kubernetes.default.svc
             - name: DB_HOST
               value: {{ include "wikijs.postgresql.fullname" . | quote }}
             - name: DB_PORT
@@ -48,31 +51,57 @@ spec:
               value: {{ .Values.postgresql.username | quote }}
             - name: DB_NAME
               value: {{ .Values.postgresql.database | quote }}
+            - name: DB_SCHEMA
+              value: {{ .Values.wikijs.dbSchema | quote }}
             - name: DB_PASS
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.secrets.name }}
                   key: db-password
-          # Wiki.js führt DB-Migrationen beim Start durch — das kann beim
-          # ersten Start (oder nach einem Versions-Upgrade) eine Weile
-          # dauern, daher die großzügigen initialDelaySeconds/Schwellwerte.
-          # "/" statt eines spezifischen Health-Pfads, da Wiki.js keinen
-          # dedizierten Healthcheck-Endpunkt dokumentiert.
-          readinessProbe:
+            - name: ADMIN_EMAIL
+              value: {{ required "wikijs.admin.email fehlt" .Values.wikijs.admin.email | quote }}
+            - name: ADMIN_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: admin-password
+          startupProbe:
             httpGet:
-              path: /
+              path: /_live
               port: http
-            initialDelaySeconds: 15
-            periodSeconds: 10
+            periodSeconds: 5
             timeoutSeconds: 3
-            failureThreshold: 12
+            failureThreshold: 60
           livenessProbe:
             httpGet:
-              path: /
+              path: /_live
               port: http
-            initialDelaySeconds: 60
-            periodSeconds: 30
+            periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /_ready
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            {{- toYaml .Values.wikijs.securityContext | nindent 12 }}
           resources:
             {{- toYaml .Values.wikijs.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /wiki/data
+            - name: tmp
+              mountPath: /tmp
+            - name: home
+              mountPath: /home/node
+      volumes:
+        - name: data
+          emptyDir:
+            sizeLimit: {{ .Values.wikijs.dataSizeLimit }}
+        - name: tmp
+          emptyDir: {}
+        - name: home
+          emptyDir: {}
