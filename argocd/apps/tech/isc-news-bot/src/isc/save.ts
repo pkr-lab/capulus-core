@@ -4,7 +4,7 @@ import { IscBotError } from "../errors.js";
 import { SEL } from "./selectors.js";
 import { requireVisible, waitForFirst } from "./helpers.js";
 
-export async function readNewsId(page: Page): Promise<number | undefined> {
+async function readNewsId(page: Page): Promise<number | undefined> {
   const raw = await page
     .locator(SEL.news.id)
     .first()

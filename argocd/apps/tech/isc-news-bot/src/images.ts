@@ -3,7 +3,7 @@ import { ValidationError } from "./errors.js";
 export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 export type ImageMimeType = (typeof ALLOWED_IMAGE_TYPES)[number];
 
-export type ImageInput = {
+type ImageInput = {
   fileName: string;
   mimeType: ImageMimeType;
   dataBase64: string;

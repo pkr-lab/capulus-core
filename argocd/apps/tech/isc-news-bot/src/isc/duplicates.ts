@@ -2,10 +2,7 @@ import type { Page } from "playwright";
 import type { Config } from "../config.js";
 import { IscBotError } from "../errors.js";
 import { finderUrl } from "./selectors.js";
-
-export function normalizeTitle(text: string): string {
-  return text.replace(/\s+/g, " ").trim().toLocaleLowerCase("de-DE");
-}
+import { normalizeForComparison } from "../text.js";
 
 export async function findDuplicate(page: Page, cfg: Config, title: string, step = "duplicate"): Promise<number | undefined> {
   const needle = title.replace(/\s+/g, " ").trim();
@@ -22,7 +19,7 @@ export async function findDuplicate(page: Page, cfg: Config, title: string, step
   }
   for (const entry of data) {
     if (!Array.isArray(entry) || typeof entry[0] !== "string") continue;
-    if (normalizeTitle(entry[0]) !== normalizeTitle(needle)) continue;
+    if (normalizeForComparison(entry[0]) !== normalizeForComparison(needle)) continue;
     const id = Number(entry[1]);
     if (Number.isInteger(id) && id > 0) return id;
   }

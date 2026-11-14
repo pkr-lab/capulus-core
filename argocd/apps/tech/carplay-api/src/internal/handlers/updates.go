@@ -14,6 +14,8 @@ import (
 	"carplay-api/internal/models"
 )
 
+const updatesLookupTimeout = 3 * time.Second
+
 type UpdatesHandler struct {
 	k8s           *clients.K8sConfigMapClient
 	namespace     string
@@ -50,7 +52,7 @@ func (h *UpdatesHandler) Handle(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), updatesLookupTimeout)
 	defer cancel()
 
 	raw, err := h.k8s.GetConfigMapData(ctx, h.namespace, h.configMapName, "updates.json")

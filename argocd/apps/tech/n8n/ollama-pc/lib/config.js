@@ -71,4 +71,4 @@ function loadConfig(env = process.env) {
   };
 }
 
-module.exports = { loadConfig, WAKE_MODES };
+module.exports = { loadConfig };

@@ -8,13 +8,13 @@ import type { NewsResult, CategoriesResult, UrkundenResult } from "./runner.js";
 import { parseUrkundenQuery, type UrkundenQuery } from "./urkunden.js";
 import { validateNewsRequest } from "./validation.js";
 
-export type NewsApi = {
+type NewsApi = {
   createNews(news: ReturnType<typeof validateNewsRequest>): Promise<NewsResult>;
   listCategories(): Promise<CategoriesResult>;
   listUrkunden(query: UrkundenQuery): Promise<UrkundenResult>;
 };
 
-export type ServerDeps = {
+type ServerDeps = {
   cfg: Config;
   runner: NewsApi;
   logger?: Logger;
