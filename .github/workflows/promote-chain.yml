@@ -112,4 +112,6 @@ jobs:
         with:
           channel: deployments
           token: ${{ secrets.MATTERMOST_BOT_TOKEN }}
-          message: "#### \u274C Promotion-Kette fehlgeschlagen\n[Lauf ansehen](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          title: "\u274C Promotion-Kette fehlgeschlagen"
+          status: failure
+          message: "Die Promotion ist abgebrochen, Details stehen im Lauf."
