@@ -457,8 +457,8 @@
   kind: api-token
   stored_in:
     - argocd/apps/prod/wiki-docs-sync/templates/sealedsecret.yaml
-  issued: "2026-09-19"
-  expires: null
+  issued: "2026-11-14"
+  expires: "2027-11-14"
   max_age_days: 365
   rotation:
     mode: manual

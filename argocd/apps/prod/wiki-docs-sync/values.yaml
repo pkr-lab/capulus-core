@@ -1,14 +1,14 @@
 ---
 image:
   repository: ghcr.io/pkr-lab/capulus-wiki-sync
-  tag: "v1.1.3"
+  tag: "v1.2.0"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
 
 schedule: "*/15 * * * *"
 timezone: "Europe/Berlin"
-suspend: true
+suspend: false
 concurrencyPolicy: Forbid
 failedJobsHistoryLimit: 3
 successfulJobsHistoryLimit: 3
@@ -34,7 +34,7 @@ wikijs:
   locale: "en"
   pathPrefix: "docs"
   legacyPrefixes: []
-  dryRun: false
+  dryRun: true
   minPages: 20
   tokenSecretName: wiki-docs-sync-wikijs-token
   tokenSecretKey: token
