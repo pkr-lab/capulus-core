@@ -43,4 +43,7 @@ jobs:
         with:
           channel: deployments
           token: ${{ secrets.MATTERMOST_BOT_TOKEN }}
-          message: "#### \U0001F4E6 Release ${{ steps.tag.outputs.name }}\n[Release ansehen](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ steps.tag.outputs.name }})"
+          title: "\U0001F4E6 Release ${{ steps.tag.outputs.name }}"
+          status: success
+          link: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ steps.tag.outputs.name }}
+          message: "Neue Version veroeffentlicht."
