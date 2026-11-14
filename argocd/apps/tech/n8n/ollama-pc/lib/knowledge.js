@@ -72,4 +72,4 @@ function formatKnowledge(files) {
   return `<firmenwissen>\n${body}\n</firmenwissen>`;
 }
 
-module.exports = { loadKnowledge, formatKnowledge, listProfiles, PLACEHOLDER_MARKER, SHARED_PROFILE };
+module.exports = { loadKnowledge, formatKnowledge, PLACEHOLDER_MARKER };
