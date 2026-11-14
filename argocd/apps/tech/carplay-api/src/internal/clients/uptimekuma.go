@@ -119,8 +119,6 @@ func kumaStatusToString(status int) string {
 		return "up"
 	case 3:
 		return "maintenance"
-	case 2:
-		return "down"
 	default:
 		return "down"
 	}

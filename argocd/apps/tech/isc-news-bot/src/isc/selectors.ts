@@ -62,8 +62,6 @@ export const SEL = {
   ckeditor5Editable: ".ck-editor__editable",
 } as const;
 
-export const TYPE_VALUE = { text: "0", link: "1", typo3: "2" } as const;
-
 export function createUrl(baseUrl: string): string {
   return `${baseUrl}/apps/news?page=uebersicht&create`;
 }

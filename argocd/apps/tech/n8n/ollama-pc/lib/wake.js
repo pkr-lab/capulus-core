@@ -38,7 +38,7 @@ function sendMagicPacket({ mac, broadcast, port }) {
 
 function runCommand(command, timeoutMs) {
   return new Promise((resolve, reject) => {
-    exec(command, { timeout: timeoutMs }, (err, stdout, stderr) => {
+    exec(command, { timeout: timeoutMs }, (err, _stdout, stderr) => {
       if (err) reject(new Error(`Wake-Kommando fehlgeschlagen: ${stderr.trim() || err.message}`));
       else resolve();
     });

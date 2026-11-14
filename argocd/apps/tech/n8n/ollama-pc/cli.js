@@ -20,6 +20,15 @@ function readStdin() {
   });
 }
 
+async function readJsonStdin() {
+  const raw = await readStdin();
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    throw new OllamaPcError('INVALID_INPUT', `stdin ist kein gültiges JSON: ${err.message}`);
+  }
+}
+
 function print(payload) {
   process.stdout.write(`${JSON.stringify(payload)}\n`);
 }
@@ -41,24 +50,12 @@ async function main(argv) {
     return;
   }
   if (command === 'chat') {
-    const raw = await readStdin();
-    let input;
-    try {
-      input = JSON.parse(raw);
-    } catch (err) {
-      throw new OllamaPcError('INVALID_INPUT', `stdin ist kein gültiges JSON: ${err.message}`);
-    }
+    const input = await readJsonStdin();
     print({ ok: true, ...(await generateReply(config, input, { log })) });
     return;
   }
   if (command === 'kurslink') {
-    const raw = await readStdin();
-    let input;
-    try {
-      input = JSON.parse(raw);
-    } catch (err) {
-      throw new OllamaPcError('INVALID_INPUT', `stdin ist kein gültiges JSON: ${err.message}`);
-    }
+    const input = await readJsonStdin();
     // Entweder ein Array von Hinweistexten oder { hints: [...], context: "Mailtext samt Verlauf" }.
     const hints = Array.isArray(input) ? input : input && input.hints;
     const context = Array.isArray(input) || !input ? '' : String(input.context || '');

@@ -1,8 +1,8 @@
 import type { Page } from "playwright";
 import type { Config } from "../config.js";
 import { IscBotError, ValidationError } from "../errors.js";
-import type { ParsedNews } from "../validation.js";
-import { TYPE_VALUE, SEL, createUrl } from "./selectors.js";
+import { TYPE_BY_NAME, type ParsedNews } from "../validation.js";
+import { SEL, createUrl } from "./selectors.js";
 import { fillField, requireAttached, requireVisible, selectOptionValue } from "./helpers.js";
 import type { CategoryOption } from "../categories.js";
 
@@ -29,7 +29,7 @@ export async function readCategoryOptions(page: Page, cfg: Config, step = "form"
 }
 
 async function setType(page: Page, news: ParsedNews, cfg: Config, step: string): Promise<void> {
-  const value = TYPE_VALUE[news.type];
+  const value = TYPE_BY_NAME[news.type];
   await selectOptionValue(page, SEL.news.type, value, cfg.stepTimeoutMs, step);
   const block = SEL.typeBlocks[Number(value)];
   if (!block) throw new IscBotError("INTERNAL", `Kein Typ-Block für Typ ${news.type}`, { step });

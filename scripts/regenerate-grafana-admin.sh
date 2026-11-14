@@ -49,7 +49,6 @@ if ! command -v openssl >/dev/null 2>&1; then
 fi
 
 PASSWORD=$(openssl rand -base64 16)
-ENC_PASSWORD=$(printf '%s' "$PASSWORD" | base64 | tr -d '\n')
 
 cat <<EOF
 Using secret: $SECRET_NAME

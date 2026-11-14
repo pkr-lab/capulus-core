@@ -99,7 +99,6 @@ func newRouter(cfg config, logger *slog.Logger) (*gin.Engine, error) {
 	k8sConfigMaps, err := clients.NewK8sConfigMapClient()
 	if err != nil {
 		logger.Warn("k8s in-cluster client unavailable, /api/updates will always be empty", "error", err)
-		k8sConfigMaps = nil
 	}
 	updatesHandler := handlers.NewUpdatesHandler(
 		k8sConfigMaps, cfg.updatesNamespace, cfg.updatesConfigMapName,

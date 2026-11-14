@@ -16,10 +16,6 @@
 {{- define "xibosignage.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
-{{- define "xibosignage.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "xibosignage.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
-{{- end }}
 
 {{/* ---- cms-web ---- */}}
 {{- define "xibosignage.cms.fullname" -}}
