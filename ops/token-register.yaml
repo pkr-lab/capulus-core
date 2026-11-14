@@ -465,7 +465,7 @@
     runbook: pkr-lab-docs:capulus-core/4-planung/40090-standby-cluster-ha-paar.md#rotation
     overlap: true
   owner: peter
-  blast_radius: "Kann Seiten in Wiki.js anlegen, ändern und löschen; der Sync arbeitet unter dem Pfad docs/ (und optional unter wikijs.legacyPrefixes)."
+  blast_radius: "Personal Access Token (Scope pages:write) des Wiki.js-Benutzers wiki-sync; kann Seiten anlegen, ändern und löschen, der Sync arbeitet unter dem Pfad docs/ (und optional unter wikijs.legacyPrefixes). Läuft laut Wiki.js nach höchstens 3 Jahren ab, zur Rotation Laufzeit 1y wählen."
 
 - id: xibosignage-db-password
   service: xibosignage
