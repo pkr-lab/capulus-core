@@ -29,4 +29,4 @@ maintainers:
 dependencies:
   - name: zammad
     repository: https://zammad.github.io/zammad-helm
-    version: "16.4.7"
+    version: "16.4.10"
