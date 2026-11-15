@@ -60,7 +60,7 @@ victoria-metrics-k8s-stack:
           cpu: 25m
           memory: 128Mi
         limits:
-          cpu: 200m
+          cpu: 500m
           memory: 256Mi
 
   vmalert:
@@ -164,6 +164,38 @@ victoria-metrics-k8s-stack:
           equal:
             - namespace
             - alertname
+        - source_matchers:
+            - alertname="Worker1Schlaeft"
+          target_matchers:
+            - node="worker-1"
+        - source_matchers:
+            - alertname="Worker1Schlaeft"
+          target_matchers:
+            - instance=~"192\\.168\\.178\\.96:.*|worker-1|entw-vm"
+        - source_matchers:
+            - alertname="Worker1Schlaeft"
+          target_matchers:
+            - alertname="TargetDown"
+            - job=~"worker-1-smartctl-exporter|entw-vm-node-exporter|node-exporter|kubelet"
+        - source_matchers:
+            - alertname="Worker1Schlaeft"
+          target_matchers:
+            - alertname=~"KubeDaemonSetMisScheduled|KubeDaemonSetRolloutStuck"
+        - source_matchers:
+            - alertname="Worker1Schlaeft"
+          target_matchers:
+            - alertname="KubePodNotReady"
+            - pod=~"(metallb-speaker|metallb-frr-k8s|svclb-traefik-[0-9a-f]+|logging-victoria-logs-collector|monitoring-prometheus-node-exporter)-[a-z0-9]{5}"
+        - source_matchers:
+            - alertname="Worker1Schlaeft"
+          target_matchers:
+            - alertname=~"TooManyScrapeErrors|TooManyLogs"
+            - container="vmagent"
+        - source_matchers:
+            - alertname="InfotafelAus"
+          target_matchers:
+            - alertname="TargetDown"
+            - job="infotafel-node-exporter"
 
 
   defaultRules:
@@ -307,7 +339,7 @@ victoria-metrics-k8s-stack:
         cpu: 20m
         memory: 64Mi
       limits:
-        cpu: 200m
+        cpu: 500m
         memory: 128Mi
 
   kube-state-metrics:
