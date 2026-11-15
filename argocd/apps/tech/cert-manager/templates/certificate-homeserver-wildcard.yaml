@@ -27,7 +27,6 @@ spec:
     - kubeseal-webgui.tech.homeserver
     - lldap.tech.homeserver
     - logs-write.tech.homeserver
-    - minio.tech.homeserver
     - n8n.prod.homeserver
     - nextcloud.prod.homeserver
     - ntfy.tech.homeserver

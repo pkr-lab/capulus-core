@@ -10,8 +10,11 @@ suspend: false
 concurrencyPolicy: Forbid
 failedJobsHistoryLimit: 3
 successfulJobsHistoryLimit: 3
+ttlSecondsAfterFinished: 86400
 
 github:
+  sourceRepo: "pkr-lab/capulus-core"
+  sourceRef: "main"
   repos:
     - id: docflowengine
       name: "DocFlowEngine"
@@ -21,37 +24,213 @@ github:
     - id: nextcloud
       name: "Nextcloud"
       repo: "nextcloud/server"
-      currentVersion: "v34.0.2"
+      currentFrom:
+        file: "argocd/apps/prod/nextcloud/values.yaml"
+        image: "nextcloud"
       notifyZammad: false
     - id: immich
       name: "Immich"
       repo: "immich-app/immich"
-      currentVersion: "v3.4.1"
-      notifyZammad: false
-    - id: vaultwarden
-      name: "Vaultwarden"
-      repo: "dani-garcia/vaultwarden"
-      currentVersion: "1.37.5"
+      currentFrom:
+        file: "argocd/apps/prod/immich/values.yaml"
+        image: "ghcr.io/immich-app/immich-server"
       notifyZammad: false
     - id: paperless-ngx
       name: "Paperless-ngx"
       repo: "paperless-ngx/paperless-ngx"
-      currentVersion: "v3.4.2"
-      notifyZammad: false
-    - id: n8n
-      name: "n8n"
-      repo: "n8n-io/n8n"
-      currentVersion: "n8n@2.47.7"
+      currentFrom:
+        file: "argocd/apps/prod/paperless-ngx/values.yaml"
+        image: "ghcr.io/paperless-ngx/paperless-ngx"
       notifyZammad: false
     - id: wikijs
       name: "Wiki.js"
       repo: "requarks/wiki"
-      currentVersion: "3.3.1"
+      currentFrom:
+        file: "argocd/apps/prod/wikijs/values.yaml"
+        image: "ghcr.io/requarks/wiki"
+      notifyZammad: false
+    - id: xibo-cms
+      name: "Xibo CMS"
+      repo: "xibosignage/xibo-cms"
+      currentFrom:
+        file: "argocd/apps/prod/xibosignage/values.yaml"
+        image: "ghcr.io/xibosignage/xibo-cms"
+      notifyZammad: false
+    - id: xibo-xmr
+      name: "Xibo XMR"
+      repo: "xibosignage/xibo-xmr"
+      currentFrom:
+        file: "argocd/apps/prod/xibosignage/values.yaml"
+        image: "ghcr.io/xibosignage/xibo-xmr"
+      notifyZammad: false
+    - id: wiki-docs-sync
+      name: "capulus-wiki-sync"
+      repo: "pkr-lab/capulus-wiki-sync"
+      currentFrom:
+        file: "argocd/apps/prod/wiki-docs-sync/values.yaml"
+        image: "ghcr.io/pkr-lab/capulus-wiki-sync"
+      notifyZammad: false
+    - id: cert-manager-prod
+      name: "cert-manager (PROD)"
+      repo: "cert-manager/cert-manager"
+      currentFrom:
+        file: "argocd/apps/prod/cert-manager/Chart.yaml"
+        chart: "cert-manager"
+      notifyZammad: false
+    - id: cloudflared-prod
+      name: "cloudflared (PROD)"
+      repo: "cloudflare/cloudflared"
+      currentFrom:
+        file: "argocd/apps/prod/cloudflared/values.yaml"
+        image: "cloudflare/cloudflared"
+      notifyZammad: false
+    - id: sealed-secrets-prod
+      name: "Sealed Secrets (PROD)"
+      repo: "bitnami-labs/sealed-secrets"
+      tagPrefix: "helm-v"
+      currentFrom:
+        file: "argocd/apps/prod/sealed-secrets/Chart.yaml"
+        chart: "sealed-secrets"
+      notifyZammad: false
+    - id: vaultwarden
+      name: "Vaultwarden"
+      repo: "dani-garcia/vaultwarden"
+      currentFrom:
+        file: "argocd/apps/tech/vaultwarden/values.yaml"
+        image: "vaultwarden/server"
+      notifyZammad: false
+    - id: n8n
+      name: "n8n"
+      repo: "n8n-io/n8n"
+      tagPrefix: "n8n@"
+      currentFrom:
+        file: "argocd/apps/tech/n8n/image/Dockerfile"
+        pattern: "FROM n8nio/n8n:([0-9][^@\\s]*)"
       notifyZammad: false
     - id: zammad
-      name: "Zammad"
-      repo: "zammad/zammad"
-      currentVersion: "7.1.1"
+      name: "Zammad (Helm-Chart)"
+      repo: "zammad/zammad-helm"
+      tagPrefix: "zammad-"
+      currentFrom:
+        file: "argocd/apps/tech/zammad/Chart.lock"
+        chart: "zammad"
+      notifyZammad: false
+    - id: mattermost
+      name: "Mattermost"
+      repo: "mattermost/mattermost"
+      currentFrom:
+        file: "argocd/apps/tech/mattermost/values.yaml"
+        image: "mattermost/mattermost-team-edition"
+      notifyZammad: false
+    - id: cert-manager
+      name: "cert-manager (TECH)"
+      repo: "cert-manager/cert-manager"
+      currentFrom:
+        file: "argocd/apps/tech/cert-manager/Chart.yaml"
+        chart: "cert-manager"
+      notifyZammad: false
+    - id: cloudflared
+      name: "cloudflared (TECH)"
+      repo: "cloudflare/cloudflared"
+      currentFrom:
+        file: "argocd/apps/tech/cloudflared/values.yaml"
+        image: "cloudflare/cloudflared"
+      notifyZammad: false
+    - id: sealed-secrets
+      name: "Sealed Secrets (TECH)"
+      repo: "bitnami-labs/sealed-secrets"
+      tagPrefix: "helm-v"
+      currentFrom:
+        file: "argocd/apps/tech/sealed-secrets/Chart.yaml"
+        chart: "sealed-secrets"
+      notifyZammad: false
+    - id: headlamp
+      name: "Headlamp"
+      repo: "kubernetes-sigs/headlamp"
+      tagPrefix: "headlamp-helm-"
+      currentFrom:
+        file: "argocd/apps/tech/headlamp/Chart.lock"
+        chart: "headlamp"
+      notifyZammad: false
+    - id: victoria-metrics
+      name: "VictoriaMetrics-Stack"
+      repo: "VictoriaMetrics/helm-charts"
+      tagPrefix: "victoria-metrics-k8s-stack-"
+      currentFrom:
+        file: "argocd/apps/tech/monitoring/Chart.lock"
+        chart: "victoria-metrics-k8s-stack"
+      notifyZammad: false
+    - id: victoria-logs
+      name: "VictoriaLogs"
+      repo: "VictoriaMetrics/helm-charts"
+      tagPrefix: "victoria-logs-single-"
+      currentFrom:
+        file: "argocd/apps/tech/logging/Chart.lock"
+        chart: "victoria-logs-single"
+      notifyZammad: false
+    - id: victoria-logs-collector
+      name: "VictoriaLogs-Collector"
+      repo: "VictoriaMetrics/helm-charts"
+      tagPrefix: "victoria-logs-collector-"
+      currentFrom:
+        file: "argocd/apps/tech/logging/Chart.lock"
+        chart: "victoria-logs-collector"
+      notifyZammad: false
+    - id: lldap
+      name: "LLDAP"
+      repo: "lldap/lldap"
+      currentFrom:
+        file: "argocd/apps/tech/lldap/values.yaml"
+        image: "lldap/lldap"
+      notifyZammad: false
+    - id: mediamtx
+      name: "MediaMTX"
+      repo: "bluenviron/mediamtx"
+      currentFrom:
+        file: "argocd/apps/tech/mediamtx/values.yaml"
+        image: "bluenviron/mediamtx"
+      notifyZammad: false
+    - id: ntfy
+      name: "ntfy"
+      repo: "binwiederhier/ntfy"
+      currentFrom:
+        file: "argocd/apps/tech/ntfy/values.yaml"
+        image: "binwiederhier/ntfy"
+      notifyZammad: false
+    - id: pihole
+      name: "Pi-hole"
+      repo: "pi-hole/docker-pi-hole"
+      currentFrom:
+        file: "argocd/apps/tech/pihole/values.yaml"
+        image: "pihole/pihole"
+      notifyZammad: false
+    - id: semaphore
+      name: "Semaphore"
+      repo: "semaphoreui/semaphore"
+      currentFrom:
+        file: "argocd/apps/tech/semaphore/values.yaml"
+        image: "semaphoreui/semaphore"
+      notifyZammad: false
+    - id: uptime-kuma
+      name: "Uptime Kuma"
+      repo: "louislam/uptime-kuma"
+      currentFrom:
+        file: "argocd/apps/tech/uptime-kuma/values.yaml"
+        image: "louislam/uptime-kuma"
+      notifyZammad: false
+    - id: nanomdm
+      name: "NanoMDM"
+      repo: "micromdm/nanomdm"
+      currentFrom:
+        file: "argocd/apps/tech/mdm/values.yaml"
+        image: "ghcr.io/micromdm/nanomdm"
+      notifyZammad: false
+    - id: nanodep
+      name: "NanoDEP"
+      repo: "micromdm/nanodep"
+      currentFrom:
+        file: "argocd/apps/tech/mdm/values.yaml"
+        image: "ghcr.io/micromdm/nanodep"
       notifyZammad: false
   tokenSecretName: "github-api-token"
   tokenSecretKey: token
