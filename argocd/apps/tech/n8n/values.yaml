@@ -70,6 +70,8 @@ env:
   N8N_RESTRICT_FILE_ACCESS_TO: "/data/xibosignage-inbox;/data/xibosignage-display;/data/instagram-bilder"
   N8N_GRACEFUL_SHUTDOWN_TIMEOUT: "570"
   N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+  NODE_OPTIONS: "--max-old-space-size=1536"
+  N8N_CONCURRENCY_PRODUCTION_LIMIT: "10"
 
 terminationGracePeriodSeconds: 600
 
