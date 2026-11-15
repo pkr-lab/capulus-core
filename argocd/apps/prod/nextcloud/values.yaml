@@ -17,7 +17,7 @@ nextcloud:
   image:
     repository: nextcloud
     pullPolicy: IfNotPresent
-    tag: "34.0.5-apache"
+    tag: "35.0.3-apache"
 
   podSecurityContext:
     runAsUser: 1000
