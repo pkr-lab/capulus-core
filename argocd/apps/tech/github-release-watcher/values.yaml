@@ -283,10 +283,10 @@ securityContext:
 resources:
   requests:
     cpu: 5m
-    memory: 32Mi
+    memory: 64Mi
   limits:
     cpu: 100m
-    memory: 64Mi
+    memory: 256Mi
 
 nodeSelector: {}
 tolerations:
