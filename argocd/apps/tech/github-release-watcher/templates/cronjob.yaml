@@ -43,8 +43,12 @@ spec:
                   value: {{ include "github-release-watcher.stateConfigMapName" . }}
                 - name: UPDATES_CONFIGMAP_NAME
                   value: {{ include "github-release-watcher.updatesConfigMapName" . }}
-                - name: GITHUB_REPOS
-                  value: {{ $repoEntries := list }}{{ range .Values.github.repos }}{{ $repoEntries = append $repoEntries (printf "%s|%s|%s|%s|%t" .id .name .repo .currentVersion .notifyZammad) }}{{ end }}{{ join "," $repoEntries | quote }}
+                - name: GITHUB_REPOS_JSON
+                  value: {{ .Values.github.repos | toJson | quote }}
+                - name: SOURCE_REPO
+                  value: {{ .Values.github.sourceRepo | quote }}
+                - name: SOURCE_REF
+                  value: {{ .Values.github.sourceRef | quote }}
                 {{- if .Values.github.tokenSecretName }}
                 - name: GITHUB_TOKEN
                   valueFrom:
