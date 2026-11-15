@@ -1,0 +1,20 @@
+---
+apiVersion: v2
+name: garage
+description: |
+  Garage als S3-Speicher im TECH-Cluster, Nachfolger von MinIO.
+  Artefakt-Repository und Log-Archiv von Argo Workflows (Bucket argo-artifacts).
+  Single-Node, Layout, Key und Bucket legt der Server beim Start selbst an.
+type: application
+version: 0.1.0
+appVersion: "v2.5.0"
+keywords:
+  - garage
+  - s3
+  - object-storage
+  - argo-workflows
+home: https://garagehq.deuxfleurs.fr
+sources:
+  - https://git.deuxfleurs.fr/Deuxfleurs/garage
+maintainers:
+  - name: home-server-admin

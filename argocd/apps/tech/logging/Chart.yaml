@@ -28,7 +28,7 @@ maintainers:
 dependencies:
   - name: victoria-logs-single
     repository: https://victoriametrics.github.io/helm-charts
-    version: "0.13.9"
+    version: "0.13.13"
   - name: victoria-logs-collector
     repository: https://victoriametrics.github.io/helm-charts
-    version: "0.3.7"
+    version: "0.3.9"
