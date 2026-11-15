@@ -1,0 +1,42 @@
+---
+image:
+  repository: dxflrs/garage
+  tag: v2.5.0
+  pullPolicy: IfNotPresent
+
+s3Region: garage
+defaultBucket: argo-artifacts
+
+persistence:
+  storageClassName: local-path
+  size: 10Gi
+  accessMode: ReadWriteOnce
+
+resources:
+  requests:
+    cpu: 20m
+    memory: 64Mi
+  limits:
+    cpu: "1"
+    memory: 512Mi
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+secrets:
+  name: garage-secrets
+  encryptedRpcSecret: "AgCgYvL3aj9jB0QUegvI92entFSDPkKcyUx8otIaSzHTF0IVR5HZb90pkIPd3vu6SZg0qF35TWAed31uapTwn99uJjz+9RPxT7L0z/64qD4UClcpZvLhwhsNTrbTWu/UUI4/iFSJwxXXjXQICeRk03ZryVJg9+voFM4+NyND5EbU25eXePYl0IxdX01S1/YzYrZZnrULyZQBh5TAlnYrRwtO6vXIKh6d3Lrn5Np1TRzUwvaTDhKL38odCHG1hns9ZBl2fzoy99OLqz4oimXrLc1nGFkE8W4yoZ3xS/pPy8Xx/k3wrYqWQs/nXBKu1LVSRzAd6oTRU6F/pcXqQZ37f+Y2FZGaL2iy/cr6QRts+G/zTj+ghznXF9x4JyeyecT6lWqoxo5zPkCZEr1ygVbqo+/84G26hsNYP/jp0ySPWo3HfGLdgX2TRHEPpADKUxNxvRyjhihFkAVz7+F3zRo1PH9yNMf5pWsYHpU0VZRd1GuTYMZUFORQma0OChl8nIqYEXiVwoGwAZxN3vUGE1btgGjbejVF5e0iCDwVAJOiWMwRvL0ZbBM0TlNgsnjeH24QIxw4apsovWSa22B5UrcrBkwVS49x4kERNCE8zFwTbPKgCskm0ehOzQ48IEwSLAjuEoVCGc8++LfcEndghGkr+UQJDkhdP5RSPFsFfzX3NOjnTchfBmtzZsj2DnN0Z/pqsJ6nEGmiP6LbWpRj8jLCBIsw1cy93ZkAT1kurckNtTMUloh1z/akJd/+WhYsfAbuxEMwTpoTUMgy3FPO/JQWwdFh"
+  encryptedAccessKey: "AgChzid23F0DTCglwyeEJhB8kQsRaVZdA3DJ6D0wg0DtIihiR2itmQMPH94eDKpAObjOjhrvzFhd3jXNWjRirbt9VP0tHcHsTKwrnLGd47ZHj4Bvl1Z0BDIfVoL6AUI/UUfxfrIonUqcF8M04K70bNfoCKxmlywShvYXXUCYgHKfQVF+0w0TB86RHupNwwUNWVGoRpThEjsaJXU3bLlxaBa4ytN3RHHYq/WSfRv17JkZfWxhSuH/9KwMkX00Gs6qN08EZb0tO35EGDnvSi1tn0ksCWC31a6rcwR7l62rMzKl9wpF/JMzRpYLQp+TBxF95JA6ADgg01r5KoHgBkhXZb7tv+Oud668FPIrhL8Traptr0wa5Qr5aYlm1+wX43YI9HpIYFFKdpU5q0Rtbtix5xg3TLyWA841ubjL7Us+XztxElvZJusA6Fq7zK6NH23jGVtDMsjQbmEhYRXBzk6DVTNwOLUidj3GKRokDfWeiOR1Dsryo2AlK0JUzVXYR6nvGs9ks07MDba1CGiA5oJx4bY1UVo/UOsZpJZPocDIHDIdcFMoypSXFbniNPC4Y7LSyFovitgQ3oPB4tGUKmSJcfHRpFVTRU/mCHzNHjEiMZt/TmHI/lulj2zdUfstkyieS2Gs5pP1mk4J93Aq53xF45YBkew52tmdg4laLiXQ1pAMxRC1pmdaZK+5dIHlL2J6o20IWqHeDt7CI1WjrrLYaJXRq6k0Ga19tZUXgg=="
+  encryptedSecretKey: "AgCnl6OQoQoT6OVJpzXOExxhnFsIXgY350DUGwfGjle2qb6MnsvURcTE/RZ1qT/Q+lUxFCSmXZLbYcSm5Zl0m4gEL0Qq67T2r9AwyaVNaTrN2S2ARIV1zkXrznMUuFvME4DNm0EssFL1Wa1Ad4Ip222TEjVzuiKq5vEFhPGkQ+agUHoUyAgwDA4IbzL9liEKripFNyVxw845yLjqnAYBTbO7irg+h8dwbJNuGhz92NlAYQQtegoIg6wp3GsAKG+0u6nB48bI8sp6kTN5/H7DJ64tMkVflqFO+7Pl3Ri6nwv7A54vieO/i1Ol0ByZGcG8dFGK0qfF/ZrNh129GbDje2qe341jWiPo9QXsdLziuzml2sUuoNkCp5gnPp7pCztMw1J35iS21wKBcj62a0KjSVU3B0ADiu96wzwo/4WDOE1i9hlMX0GCqSmG1gMBBxUIduEOFsCxyMFHvE7K+QSMuV6eJgm8nkW0m3bYtbl9CtV3p47oPyJULW+k+lbIb2dHdlyBxL1X2kCdQf0SQBj8tYNZD7DCmfCAhD7J9BJ5PS30pXSIxBLelWg4fvlW4p0jAExNziURexQmw9CnDRRyjBczpaL7byhaaMAp2BnD+z9RgWnahJOV7leXNVtT8ewLBZiwysmpgPTawkOPZl+01Yw8DlyJnduYNXwEpm4V1JVOl62Iw1osT0GSIvN0rbwo3ypMye1Rjv7GUdd+HgQ5/Noux/+LCvOnOdnwIA0zBS87Uk6CNAFrXK79qo+e7gUYo4OrlXCFcivYpvdUOp0wuXJi"
