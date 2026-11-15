@@ -10,6 +10,7 @@ suspend: false
 concurrencyPolicy: Forbid
 failedJobsHistoryLimit: 3
 successfulJobsHistoryLimit: 3
+ttlSecondsAfterFinished: 86400
 
 github:
   sourceRepo: "pkr-lab/capulus-core"

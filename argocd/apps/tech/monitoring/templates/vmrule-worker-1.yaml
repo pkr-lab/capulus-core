@@ -21,16 +21,7 @@ spec:
                 } == 0
               )
             )
-            # worker-1 wird vom cluster-power-manager NUR bei hoher
-            # Homeserver-Last per WoL geweckt und sonst bewusst
-            # heruntergefahren (cordon vor Shutdown, uncordon nach
-            # erfolgreichem Wake, siehe capulus-ansible/roles/cluster_power_manager).
-            # Ohne diesen Ausschluss würde dieser Alert die meiste Zeit
-            # (Standardzustand: Worker schläft) fälschlich als "critical"
-            # feuern. kube_node_spec_unschedulable==1 ist genau das Signal
-            # für "absichtlich außer Betrieb" (Cordon), egal ob durch den
-            # Power-Manager oder manuelle Wartung.
-            unless kube_node_spec_unschedulable{node="worker-1"} == 1
+            unless on() (kube_node_spec_unschedulable{node="worker-1"} == 1)
           for: 1m
           labels:
             severity: critical
@@ -39,3 +30,29 @@ spec:
             description: >-
               worker-1 (192.168.178.96) antwortet seit mehr als 1 Minute nicht mehr.
               Node-Exporter oder k8s-Node sind ausgefallen.
+
+        - alert: Worker1Schlaeft
+          expr: |
+            (kube_node_spec_unschedulable{node="worker-1"} == 1)
+            and on(node)
+            (kube_node_status_condition{node="worker-1", condition="Ready", status="true"} == 0)
+          for: 5m
+          labels:
+            severity: none
+          annotations:
+            summary: "worker-1 ist absichtlich aus (cordoned und nicht Ready)"
+            description: >-
+              Signalalarm fuer Alertmanager-Inhibit-Regeln. Solange er aktiv ist, werden Folgealarme
+              des schlafenden worker-1 (DaemonSet-Pods, kubelet, Scrape-Ziele, entw-vm) unterdrueckt.
+
+        - alert: InfotafelAus
+          expr: |
+            up{job="infotafel-node-exporter"} == 0
+          for: 5m
+          labels:
+            severity: none
+          annotations:
+            summary: "Infotafel ist ausgeschaltet"
+            description: >-
+              Signalalarm fuer Alertmanager-Inhibit-Regeln. Die Infotafel wird zeitgesteuert
+              heruntergefahren, ihr TargetDown ist dann erwartet.

@@ -21,10 +21,8 @@ minio:
       cpu: "1"
       memory: 1Gi
 
-  buckets:
-    - name: argo-artifacts
-      policy: none
-      purge: false
+  buckets: []
+  users: []
 
   consoleIngress:
     enabled: true
