@@ -197,6 +197,8 @@ victoria-metrics-k8s-stack:
 
   grafana:
     enabled: true
+    testFramework:
+      enabled: false
     defaultDashboardsTimezone: browser
 
     plugins:
