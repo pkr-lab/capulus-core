@@ -39,8 +39,10 @@ securityContext:
       - ALL
 
 resources:
+  # Leerlauf ~4m, Start ~85m. Mit 10m lag der Leerlauf schon bei 40 % des
+  # Requests und jeder Pod-Start trieb den HPA auf maxReplicas (KubeHpaMaxedOut).
   requests:
-    cpu: 10m
+    cpu: 50m
     memory: 32Mi
   limits:
     cpu: 250m
