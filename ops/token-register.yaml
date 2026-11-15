@@ -332,20 +332,21 @@
   owner: peter
   blast_radius: "JWT-Secret, Key-Seed, Root- und Bind-Passwoerter von lldap, inklusive des Bind-Passworts fuer Authentik."
 
-- id: minio-root-creds
-  service: minio
+- id: garage-s3-keys
+  service: garage
   kind: password
   stored_in:
-    - argocd/apps/tech/minio/templates/root-creds-sealedsecret.yaml
-  issued: "2026-09-19"
+    - argocd/apps/tech/garage/templates/secrets-sealedsecret.yaml
+    - argocd/apps/tech/argo-workflows/templates/artifact-secret-sealedsecret.yaml
+  issued: "2026-11-15"
   expires: null
   max_age_days: 365
   rotation:
     mode: manual
-    runbook: pkr-lab-docs:capulus-core/4-planung/40090-standby-cluster-ha-paar.md#rotation
-    overlap: true
+    runbook: pkr-lab-docs:capulus-core/6-hintergruende/60040-helm-charts-tech.md#argo-workflows-und-garage
+    overlap: false
   owner: peter
-  blast_radius: "Root-Zugangsdaten des internen MinIO (Artefakt-Speicher)."
+  blast_radius: "RPC-Secret und S3-Key des internen Garage (Artefakt- und Log-Speicher von Argo Workflows)."
 
 - id: pihole-webpassword
   service: pihole
