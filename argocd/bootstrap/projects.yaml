@@ -39,7 +39,7 @@ spec:
     - server: https://kubernetes.default.svc
       namespace: immich-storage
     - server: https://kubernetes.default.svc
-      namespace: minio
+      namespace: garage
     - server: https://kubernetes.default.svc
       namespace: argo-workflows
     - server: https://kubernetes.default.svc
