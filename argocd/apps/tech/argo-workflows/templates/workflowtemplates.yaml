@@ -6,7 +6,7 @@ the Argo `{{...}}` placeholders (workflow/inputs/pod expressions) at render time
 ---
 # git-ci — clone a git repo and run an arbitrary shell command in it.
 # For tests / linters / ansible-check style jobs. Step logs are archived to
-# MinIO automatically (controller artifactRepository.archiveLogs: true).
+# Garage automatically (controller artifactRepository.archiveLogs: true).
 apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
