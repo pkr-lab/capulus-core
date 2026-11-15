@@ -8,71 +8,44 @@ metadata:
 data:
   watcher.py: |
     #!/usr/bin/env python3
-    """
-    GitHub-Release-Watcher -> Zammad-Bridge + App-Update-Status.
-
-    Pollt die GitHub-Releases-API für eine Liste von Repos.
-    - Bei einem neuen Release UND notify_zammad=true wird per Zammad-REST-API
-      ein Ticket in einer Gruppe angelegt; Zammads eigene Agenten-
-      Benachrichtigung (Profil-Einstellungen) verschickt daraufhin die
-      E-Mail. Der zuletzt gesehene Tag pro Repo wird dafür in der
-      state-ConfigMap persistiert (reines Kantenerkennungs-Gedächtnis, nicht
-      von außen gelesen).
-    - Bei JEDEM Lauf wird zusätzlich für alle Repos der aktuelle Stand
-      (current_version aus der Config vs. gerade abgefragte GitHub-Version)
-      in eine zweite, separate updates-ConfigMap geschrieben — das ist der
-      Teil, den carplay-api liest (siehe role.yaml) und der iOS-App als
-      Update-Liste zeigt. Getrennt von state.json, damit ein Lesezugriff
-      von außen niemals das interne Zammad-Kantenerkennungs-Gedächtnis
-      berühren kann.
-
-    Beide ConfigMaps liegen im eigenen Namespace, Zugriff über das
-    ServiceAccount-Token (kein kubectl nötig). Nutzt ausschließlich die
-    Python-Standardbibliothek.
-    """
     import json
     import os
+    import re
     import ssl
     import sys
     import time
     import urllib.error
+    import urllib.parse
     import urllib.request
 
 
     def parse_repos(raw):
-        # "id|name|owner/repo|currentVersion|notifyZammad" pro Eintrag,
-        # gleiche "|"-Konvention wie HOSTS/SERVICES in carplay-api
-        # (main.go parseHosts/parseServices) — ein Format für
-        # strukturierte Listen-Werte in diesem Repo, egal in welcher
-        # Sprache der Konsument geschrieben ist.
         entries = []
-        for chunk in raw.split(","):
-            chunk = chunk.strip()
-            if not chunk:
+        for item in json.loads(raw or "[]"):
+            if not item.get("id") or not item.get("repo"):
+                print(f"[WARN] Eintrag ohne id/repo ignoriert: {item!r}", file=sys.stderr)
                 continue
-            parts = chunk.split("|", 4)
-            if len(parts) != 5:
-                print(f"[WARN] GITHUB_REPOS-Eintrag ignoriert (erwarte 5 Felder): {chunk!r}", file=sys.stderr)
-                continue
-            id_, name, repo, current_version, notify_raw = parts
             entries.append({
-                "id": id_,
-                "name": name,
-                "repo": repo,
-                "current_version": current_version,
-                "notify_zammad": notify_raw.strip().lower() == "true",
+                "id": item["id"],
+                "name": item.get("name") or item["id"],
+                "repo": item["repo"],
+                "tag_prefix": item.get("tagPrefix") or "",
+                "current_version": str(item.get("currentVersion") or ""),
+                "current_from": item.get("currentFrom") or None,
+                "notify_zammad": bool(item.get("notifyZammad")),
             })
         return entries
 
 
-    GITHUB_REPOS = parse_repos(os.environ["GITHUB_REPOS"])
+    GITHUB_REPOS = parse_repos(os.environ["GITHUB_REPOS_JSON"])
     GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+    SOURCE_REPO = os.environ.get("SOURCE_REPO", "pkr-lab/capulus-core")
+    SOURCE_REF = os.environ.get("SOURCE_REF", "main")
 
     ZAMMAD_URL = os.environ["ZAMMAD_URL"].rstrip("/")
     ZAMMAD_TOKEN = os.environ["ZAMMAD_TOKEN"]
     ZAMMAD_GROUP = os.environ["ZAMMAD_GROUP"]
     ZAMMAD_REQUESTER_EMAIL = os.environ["ZAMMAD_REQUESTER_EMAIL"]
-    # Interne Root-CA fuer https-Aufrufe gegen Zammad (Chart: ca-configmap.yaml).
     ZAMMAD_CA_FILE = os.environ.get("ZAMMAD_CA_FILE", "")
 
     MATTERMOST_URL = os.environ.get("MATTERMOST_URL", "")
@@ -85,7 +58,7 @@ data:
 
     SA_DIR = "/var/run/secrets/kubernetes.io/serviceaccount"
     K8S_API = "https://{}:{}".format(
-        os.environ["KUBERNETES_SERVICE_HOST"], os.environ["KUBERNETES_SERVICE_PORT"]
+        os.environ.get("KUBERNETES_SERVICE_HOST", ""), os.environ.get("KUBERNETES_SERVICE_PORT", "")
     )
 
 
@@ -141,31 +114,78 @@ data:
             raise RuntimeError(f"Konnte ConfigMap {name} nicht schreiben: HTTP {status} {body}")
 
 
-    def load_state():
-        return load_configmap(STATE_CONFIGMAP, "state.json", {})
-
-
-    def save_state(state, existed):
-        save_configmap(STATE_CONFIGMAP, "state.json", existed, state)
-
-
-    def latest_release(repo):
-        headers = {
-            "Accept": "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28",
-        }
+    def github_get(path, accept="application/vnd.github+json"):
+        headers = {"Accept": accept, "X-GitHub-Api-Version": "2022-11-28"}
         if GITHUB_TOKEN:
             headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
-        req = urllib.request.Request(
-            f"https://api.github.com/repos/{repo}/releases/latest", headers=headers
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                return json.loads(resp.read())
-        except urllib.error.HTTPError as exc:
-            if exc.code == 404:
-                return None  # noch kein Release veroeffentlicht
-            raise
+        req = urllib.request.Request(f"https://api.github.com{path}", headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            raw = resp.read()
+        return raw if accept.endswith("raw+json") else json.loads(raw)
+
+
+    def version_key(value):
+        m = re.search(r"\d+(?:\.\d+)*", str(value or ""))
+        return tuple(int(x) for x in m.group(0).split(".")) if m else None
+
+
+    def strip_prefix(tag, prefix):
+        return tag[len(prefix):] if prefix and tag.startswith(prefix) else tag
+
+
+    def latest_release(entry):
+        repo = entry["repo"]
+        prefix = entry["tag_prefix"]
+        candidates = []
+        for release in github_get(f"/repos/{repo}/releases?per_page=100"):
+            tag = release.get("tag_name") or ""
+            if release.get("draft") or release.get("prerelease") or not tag.startswith(prefix):
+                continue
+            if re.search(r"(?i)(rc|alpha|beta|pre|nightly)[.-]?\d*$", tag):
+                continue
+            key = version_key(strip_prefix(tag, prefix))
+            if key is not None:
+                candidates.append((key, release))
+        if not candidates:
+            return None
+        return max(candidates, key=lambda item: item[0])[1]
+
+
+    SOURCE_CACHE = {}
+
+
+    def source_file(path):
+        if path not in SOURCE_CACHE:
+            quoted = urllib.parse.quote(path)
+            raw = github_get(f"/repos/{SOURCE_REPO}/contents/{quoted}?ref={SOURCE_REF}", "application/vnd.github.raw+json")
+            SOURCE_CACHE[path] = raw.decode("utf-8", errors="replace")
+        return SOURCE_CACHE[path]
+
+
+    def current_version(entry):
+        spec = entry["current_from"]
+        if not spec:
+            return entry["current_version"] or None
+        text = source_file(spec["file"])
+        if spec.get("image"):
+            pattern = r"repository:\s*\"?" + re.escape(spec["image"]) + r"\"?\s*\n(?:[^\n]*\n){0,3}?\s*tag:\s*\"?([^\"@\s]+)"
+        elif spec.get("chart"):
+            pattern = r"-\s*name:\s*\"?" + re.escape(spec["chart"]) + r"\"?\s*\n(?:[^\n]*\n){0,3}?\s*version:\s*\"?([^\"\s]+)"
+        else:
+            pattern = spec["pattern"]
+        m = re.search(pattern, text)
+        if not m:
+            raise RuntimeError(f"Version nicht gefunden in {spec['file']}")
+        return m.group(1)
+
+
+    def has_update(current, latest):
+        if not current or not latest:
+            return None
+        a, b = version_key(current), version_key(latest)
+        if a is None or b is None:
+            return latest != current
+        return b > a
 
 
     def notify_zammad(repo, release):
@@ -173,7 +193,6 @@ data:
         name = release.get("name") or tag
         url = release.get("html_url", "")
         notes = release.get("body") or "(keine Release-Notes)"
-
         payload = {
             "title": f"Neues Release: {repo} {name}",
             "group": ZAMMAD_GROUP,
@@ -236,7 +255,7 @@ data:
         raise RuntimeError(f"Mattermost-Channel {MATTERMOST_CHANNEL} nicht gefunden oder Bot kein Mitglied")
 
 
-    def notify_mattermost(entry, previous, release):
+    def notify_mattermost(entry, previous, release, current):
         tag = release.get("tag_name", "?")
         url = release.get("html_url", "")
         notes = (release.get("body") or "").strip().replace("@", "@\u200b")
@@ -244,7 +263,7 @@ data:
             notes = notes[:500].rstrip() + " ..."
         lines = [
             f"#### \U0001F195 {entry['name']} {tag}",
-            f"{previous} \u2192 {tag} ({entry['repo']})",
+            f"{previous} \u2192 {tag} ({entry['repo']})" + (f", installiert: {current}" if current else ""),
             url,
         ]
         if notes:
@@ -253,89 +272,81 @@ data:
         print(f"[OK] Mattermost-Nachricht gesendet fuer {entry['repo']} {tag}")
 
 
+    def state_key(entry):
+        return f"{entry['repo']}#{entry['tag_prefix']}" if entry["tag_prefix"] else entry["repo"]
+
+
     def main():
-        state_existed, state = load_state()
+        state_existed, state = load_configmap(STATE_CONFIGMAP, "state.json", {})
         updates_existed, _ = load_configmap(UPDATES_CONFIGMAP, "updates.json", {})
         changed = False
         update_entries = []
 
         for entry in GITHUB_REPOS:
-            repo = entry["repo"]
+            key = state_key(entry)
+            prefix = entry["tag_prefix"]
             try:
-                release = latest_release(repo)
+                current = current_version(entry)
             except Exception as exc:
-                print(f"[ERR] {repo}: GitHub-Abfrage fehlgeschlagen: {exc}", file=sys.stderr)
-                # Letzten bekannten Stand aus state.json zeigen statt die
-                # App-Liste für diesen Eintrag ganz verschwinden zu lassen.
-                latest_tag = state.get(repo)
-                update_entries.append({
-                    "id": entry["id"],
-                    "name": entry["name"],
-                    "repo": repo,
-                    "current_version": entry["current_version"] or None,
-                    "latest_version": latest_tag,
-                    "latest_url": None,
-                    "has_update": (
-                        latest_tag != entry["current_version"]
-                        if entry["current_version"] and latest_tag
-                        else None
-                    ),
-                })
+                print(f"[ERR] {entry['id']}: installierte Version nicht lesbar: {exc}", file=sys.stderr)
+                current = None
+            record = {
+                "id": entry["id"],
+                "name": entry["name"],
+                "repo": entry["repo"],
+                "current_version": current,
+                "latest_version": None,
+                "latest_url": None,
+                "has_update": None,
+            }
+            try:
+                release = latest_release(entry)
+            except Exception as exc:
+                print(f"[ERR] {key}: GitHub-Abfrage fehlgeschlagen: {exc}", file=sys.stderr)
+                latest_tag = state.get(key)
+                if latest_tag:
+                    record["latest_version"] = strip_prefix(latest_tag, prefix)
+                    record["has_update"] = has_update(current, record["latest_version"])
+                update_entries.append(record)
                 continue
 
             if release is None:
-                print(f"[SKIP] {repo}: keine Releases vorhanden")
-                update_entries.append({
-                    "id": entry["id"],
-                    "name": entry["name"],
-                    "repo": repo,
-                    "current_version": entry["current_version"] or None,
-                    "latest_version": None,
-                    "latest_url": None,
-                    "has_update": None,
-                })
+                print(f"[SKIP] {key}: keine Releases vorhanden")
+                update_entries.append(record)
                 continue
 
             tag = release.get("tag_name")
-            previous = state.get(repo)
+            record["latest_version"] = strip_prefix(tag, prefix)
+            record["latest_url"] = release.get("html_url")
+            record["has_update"] = has_update(current, record["latest_version"])
+            update_entries.append(record)
 
-            update_entries.append({
-                "id": entry["id"],
-                "name": entry["name"],
-                "repo": repo,
-                "current_version": entry["current_version"] or None,
-                "latest_version": tag,
-                "latest_url": release.get("html_url"),
-                # None (nicht False) wenn current_version nicht gepflegt ist
-                # -> App zeigt "unbekannt" statt fälschlich "aktuell".
-                "has_update": (tag != entry["current_version"]) if entry["current_version"] else None,
-            })
-
+            previous = state.get(key)
             if previous is None:
-                print(f"[INIT] {repo}: Baseline gesetzt auf {tag}")
-                state[repo] = tag
+                print(f"[INIT] {key}: Baseline gesetzt auf {tag}")
+                state[key] = tag
                 changed = True
                 continue
+            if tag == previous:
+                print(f"[OK] {key}: kein neues Release ({tag}), installiert {current or '?'}")
+                continue
 
-            if tag != previous:
-                print(f"[NEW] {repo}: {previous} -> {tag}")
-                state[repo] = tag
-                changed = True
-                if entry["notify_zammad"]:
-                    try:
-                        notify_zammad(repo, release)
-                    except Exception as exc:
-                        print(f"[ERR] {repo}: Zammad-Benachrichtigung fehlgeschlagen: {exc}", file=sys.stderr)
-                if MATTERMOST_URL and MATTERMOST_TOKEN:
-                    try:
-                        notify_mattermost(entry, previous, release)
-                    except Exception as exc:
-                        print(f"[ERR] {repo}: Mattermost-Benachrichtigung fehlgeschlagen: {exc}", file=sys.stderr)
-            else:
-                print(f"[OK] {repo}: kein neues Release ({tag})")
+            print(f"[NEW] {key}: {previous} -> {tag}")
+            state[key] = tag
+            changed = True
+            if entry["notify_zammad"]:
+                try:
+                    notify_zammad(entry["repo"], release)
+                except Exception as exc:
+                    print(f"[ERR] {key}: Zammad-Benachrichtigung fehlgeschlagen: {exc}", file=sys.stderr)
+            if MATTERMOST_URL and MATTERMOST_TOKEN:
+                try:
+                    notify_mattermost(entry, previous, release, current)
+                except Exception as exc:
+                    print(f"[ERR] {key}: Mattermost-Benachrichtigung fehlgeschlagen: {exc}", file=sys.stderr)
 
         if changed:
-            save_state(state, state_existed)
+            save_configmap(STATE_CONFIGMAP, "state.json", state_existed, state)
 
         save_configmap(UPDATES_CONFIGMAP, "updates.json", updates_existed, {
             "updated_at": int(time.time()),
