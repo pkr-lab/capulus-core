@@ -16,7 +16,7 @@ resticBackup:
   storageClassName: nas
   size: 10Gi
   postgres:
-    host: zammad-postgresql
+    host: zammad-postgres
     user: zammad
     database: zammad_production
   keepDaily: 7
@@ -85,7 +85,8 @@ zammad:
 
   zammadConfig:
     initJob:
-      randomName: false
+      annotations:
+        argocd.argoproj.io/hook: Sync
 
     elasticsearch:
       enabled: false
@@ -161,30 +162,25 @@ zammad:
           privileged: false
           allowPrivilegeEscalation: false
 
-  postgresql:
-    enabled: true
+  postgres:
     auth:
       username: zammad
       database: zammad_production
       existingSecret: zammad-secrets
       secretKeys:
-        userPasswordKey: postgresql-password
-    volumePermissions:
+        adminPasswordKey: postgresql-password
+    persistence:
       enabled: true
-    primary:
-      persistence:
-        enabled: true
-        storageClass: local-path
-        size: 50Gi
-      nodeSelector:
-        kubernetes.io/hostname: homeserver
-      affinity: {}
-      resources:
-        requests:
-          cpu: 50m
-          memory: 256Mi
-        limits:
-          memory: 512Mi
+      storageClass: local-path
+      size: 50Gi
+    nodeSelector:
+      kubernetes.io/hostname: homeserver
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        memory: 512Mi
 
   redis:
     auth:
