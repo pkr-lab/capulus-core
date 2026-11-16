@@ -4,7 +4,7 @@ name: mattermost
 description: Mattermost Team Edition fuer ein kleines Team (bis zu 20 Nutzer), eigenes Chart inkl. eigenem PostgreSQL-Deployment.
 type: application
 version: 0.1.0
-appVersion: "12.0.2"
+appVersion: "12.1.0"
 keywords:
   - mattermost
   - chat
