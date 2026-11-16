@@ -26,14 +26,20 @@ spec:
 
         - alert: CronJobStale
           expr: |
-            (time() - kube_cronjob_status_last_successful_time{cronjob!~".*backup.*"}) > 36 * 3600
+            (time() - kube_cronjob_status_last_successful_time{cronjob!~".*backup.*"})
+              > on(namespace, cronjob)
+            clamp_min(
+              1.5 * (kube_cronjob_next_schedule_time - on(namespace, cronjob) kube_cronjob_status_last_schedule_time),
+              36 * 3600
+            )
               unless on(namespace, cronjob)
             kube_cronjob_spec_suspend == 1
           for: 10m
           labels:
             severity: warning
           annotations:
-            summary: "CronJob {{`{{ $labels.namespace }}`}}/{{`{{ $labels.cronjob }}`}} seit ueber 36 h ohne Erfolg"
+            summary: "CronJob {{`{{ $labels.namespace }}`}}/{{`{{ $labels.cronjob }}`}} ueberfaellig"
             description: >-
               Der CronJob {{`{{ $labels.cronjob }}`}} (Namespace {{`{{ $labels.namespace }}`}}) war zuletzt vor
-              mehr als 36 Stunden erfolgreich (ausgesetzte CronJobs werden ignoriert).
+              {{`{{ $value | humanizeDuration }}`}} erfolgreich, laenger als das 1,5-fache seines Zeitplans
+              (mindestens 36 h; ausgesetzte CronJobs werden ignoriert).

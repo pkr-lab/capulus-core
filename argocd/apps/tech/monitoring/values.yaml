@@ -206,6 +206,12 @@ victoria-metrics-k8s-stack:
           for: 15m
           labels:
             severity: warning
+      AlertmanagerFailedToSendAlerts:
+        spec:
+          for: 20m
+      AlertmanagerClusterFailedToSendAlerts:
+        spec:
+          for: 20m
     groups:
       etcd:
         create: false
