@@ -71,8 +71,15 @@
     },
     {
       "description": "isc-news-bot: das Playwright-Basisimage muss zur npm-Version von playwright passen, sonst fehlt der erwartete Chromium-Build und /readyz bleibt 503. Das MCR-Image liefert keinen Release-Zeitpunkt, daher keine Wartezeit, damit es gemeinsam mit dem npm-Paket angehoben wird.",
-      "matchPackageNames": ["mcr.microsoft.com/playwright"],
+      "matchPackageNames": ["mcr.microsoft.com/playwright", "playwright"],
       "minimumReleaseAge": null
+    },
+    {
+      "description": "mdm: ein Postgres-Major-Update braucht pg_upgrade oder Dump/Restore, ein bloesser Tag-Wechsel laesst den Pod mit 'database files are incompatible with server' in den CrashLoop laufen. Major-Spruenge nur von Hand.",
+      "matchFileNames": ["argocd/apps/tech/mdm/values.yaml"],
+      "matchPackageNames": ["postgres"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
     },
     {
       "description": "Group all Helm chart + image tag bumps for a single app into one PR instead of one PR per field.",
