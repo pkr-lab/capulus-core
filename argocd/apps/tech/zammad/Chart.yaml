@@ -28,5 +28,5 @@ maintainers:
   - name: home-server-admin
 dependencies:
   - name: zammad
-    repository: https://zammad.github.io/zammad-helm
-    version: "20.0.2"
+    repository: oci://ghcr.io/zammad/charts
+    version: "22.0.3"

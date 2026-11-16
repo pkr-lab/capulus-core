@@ -1,6 +1,6 @@
 dependencies:
 - name: zammad
-  repository: https://zammad.github.io/zammad-helm
-  version: 20.0.2
-digest: sha256:a0d4cc27330ec5ea8f36d619872c1d8e66650ee412e86cb09b1ee150304a7ebe
-generated: "2026-11-15T14:22:18.464331962+01:00"
+  repository: oci://ghcr.io/zammad/charts
+  version: 22.0.3
+digest: sha256:01e8bff6379ab223aff6a227f19ffee6c9525388effcd4c58466caad47546777
+generated: "2026-11-16T21:20:28.014517349+01:00"
