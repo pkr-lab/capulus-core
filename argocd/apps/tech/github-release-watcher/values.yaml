@@ -26,7 +26,7 @@ github:
       repo: "nextcloud/server"
       currentFrom:
         file: "argocd/apps/prod/nextcloud/values.yaml"
-        image: "nextcloud"
+        image: "nextcloud@sha256:8041f24690c5631da46d2391e1fd7efcde95c6cf08695047f3dd7ce7783934b4"
       notifyZammad: false
     - id: immich
       name: "Immich"
@@ -40,28 +40,28 @@ github:
       repo: "paperless-ngx/paperless-ngx"
       currentFrom:
         file: "argocd/apps/prod/paperless-ngx/values.yaml"
-        image: "ghcr.io/paperless-ngx/paperless-ngx"
+        image: "ghcr.io/paperless-ngx/paperless-ngx@sha256:d704e84f88300eb6ab001ab15720a2330ff99169cf9f94d6b8fcc44b63a84c84"
       notifyZammad: false
     - id: wikijs
       name: "Wiki.js"
       repo: "requarks/wiki"
       currentFrom:
         file: "argocd/apps/prod/wikijs/values.yaml"
-        image: "ghcr.io/requarks/wiki"
+        image: "ghcr.io/requarks/wiki@sha256:e4708eed80c014449c0c8426c8d466c7a52a62131555bb44372fa48378b448b8"
       notifyZammad: false
     - id: xibo-cms
       name: "Xibo CMS"
       repo: "xibosignage/xibo-cms"
       currentFrom:
         file: "argocd/apps/prod/xibosignage/values.yaml"
-        image: "ghcr.io/xibosignage/xibo-cms"
+        image: "ghcr.io/xibosignage/xibo-cms@sha256:7cd3ea7d588bac28128f114614cc38623f6646d1fad112e515fe7395dff37ab7"
       notifyZammad: false
     - id: xibo-xmr
       name: "Xibo XMR"
       repo: "xibosignage/xibo-xmr"
       currentFrom:
         file: "argocd/apps/prod/xibosignage/values.yaml"
-        image: "ghcr.io/xibosignage/xibo-xmr"
+        image: "ghcr.io/xibosignage/xibo-xmr@sha256:434ce9aec0af6762fa978e8ce668f9cb2fb3431b799793ef23073e4843a78543"
       notifyZammad: false
     - id: wiki-docs-sync
       name: "capulus-wiki-sync"
@@ -82,7 +82,7 @@ github:
       repo: "cloudflare/cloudflared"
       currentFrom:
         file: "argocd/apps/prod/cloudflared/values.yaml"
-        image: "cloudflare/cloudflared"
+        image: "cloudflare/cloudflared@sha256:b94b96edf2c9c4360f8879c8580cfaa99077f19c849ec595ca2f711b27d4f344"
       notifyZammad: false
     - id: sealed-secrets-prod
       name: "Sealed Secrets (PROD)"
@@ -97,7 +97,7 @@ github:
       repo: "dani-garcia/vaultwarden"
       currentFrom:
         file: "argocd/apps/tech/vaultwarden/values.yaml"
-        image: "vaultwarden/server"
+        image: "vaultwarden/server@sha256:4fe17f415f90087377d37c755e0ea3cf189dcc6794e49cdd2a9adbb4937d9e1f"
       notifyZammad: false
     - id: n8n
       name: "n8n"
@@ -120,7 +120,7 @@ github:
       repo: "mattermost/mattermost"
       currentFrom:
         file: "argocd/apps/tech/mattermost/values.yaml"
-        image: "mattermost/mattermost-team-edition"
+        image: "mattermost/mattermost-team-edition@sha256:35927b9c535a9eb74f0e45385d3fe5d8308b16e0464031f157a834da8af3ee73"
       notifyZammad: false
     - id: cert-manager
       name: "cert-manager (TECH)"
@@ -134,7 +134,7 @@ github:
       repo: "cloudflare/cloudflared"
       currentFrom:
         file: "argocd/apps/tech/cloudflared/values.yaml"
-        image: "cloudflare/cloudflared"
+        image: "cloudflare/cloudflared@sha256:b94b96edf2c9c4360f8879c8580cfaa99077f19c849ec595ca2f711b27d4f344"
       notifyZammad: false
     - id: sealed-secrets
       name: "Sealed Secrets (TECH)"
@@ -181,56 +181,56 @@ github:
       repo: "lldap/lldap"
       currentFrom:
         file: "argocd/apps/tech/lldap/values.yaml"
-        image: "lldap/lldap"
+        image: "lldap/lldap@sha256:bb6e509b4a44e8e9985acfd95d83a85e252ed81879254d9751b9926e3ac26c62"
       notifyZammad: false
     - id: mediamtx
       name: "MediaMTX"
       repo: "bluenviron/mediamtx"
       currentFrom:
         file: "argocd/apps/tech/mediamtx/values.yaml"
-        image: "bluenviron/mediamtx"
+        image: "bluenviron/mediamtx@sha256:c730bccdbc8739f8f0c13cefe9bea8b61926f599b88fa4d0d229baa91846c7bc"
       notifyZammad: false
     - id: ntfy
       name: "ntfy"
       repo: "binwiederhier/ntfy"
       currentFrom:
         file: "argocd/apps/tech/ntfy/values.yaml"
-        image: "binwiederhier/ntfy"
+        image: "binwiederhier/ntfy@sha256:038da2be5e668fee6d36a62884eea48975e1b71c29a56964e5298c1b9165a573"
       notifyZammad: false
     - id: pihole
       name: "Pi-hole"
       repo: "pi-hole/docker-pi-hole"
       currentFrom:
         file: "argocd/apps/tech/pihole/values.yaml"
-        image: "pihole/pihole"
+        image: "pihole/pihole@sha256:66c798d79a95c2691f280329c3611dba1746117c61c9f331907ca35a06a52778"
       notifyZammad: false
     - id: semaphore
       name: "Semaphore"
       repo: "semaphoreui/semaphore"
       currentFrom:
         file: "argocd/apps/tech/semaphore/values.yaml"
-        image: "semaphoreui/semaphore"
+        image: "semaphoreui/semaphore@sha256:c547d31cba238bee4a9f2b5eec9d0f42b2d5ecb399377a2e63008500d74fbf3a"
       notifyZammad: false
     - id: uptime-kuma
       name: "Uptime Kuma"
       repo: "louislam/uptime-kuma"
       currentFrom:
         file: "argocd/apps/tech/uptime-kuma/values.yaml"
-        image: "louislam/uptime-kuma"
+        image: "louislam/uptime-kuma@sha256:70233f4acb5163fd2a59a49909cf01e44415cecff13dba69e3a86647a2919f83"
       notifyZammad: false
     - id: nanomdm
       name: "NanoMDM"
       repo: "micromdm/nanomdm"
       currentFrom:
         file: "argocd/apps/tech/mdm/values.yaml"
-        image: "ghcr.io/micromdm/nanomdm"
+        image: "ghcr.io/micromdm/nanomdm@sha256:7e9a735fe2e065c8bac55104849663e7562f337b240f1a01ca42207d756f399c"
       notifyZammad: false
     - id: nanodep
       name: "NanoDEP"
       repo: "micromdm/nanodep"
       currentFrom:
         file: "argocd/apps/tech/mdm/values.yaml"
-        image: "ghcr.io/micromdm/nanodep"
+        image: "ghcr.io/micromdm/nanodep@sha256:2cb443e73823a90c1760f118737dea4c1b340df584a52cc9a83403f9a0e943e6"
       notifyZammad: false
   tokenSecretName: "github-api-token"
   tokenSecretKey: token
