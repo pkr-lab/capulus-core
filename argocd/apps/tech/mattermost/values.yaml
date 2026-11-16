@@ -106,7 +106,7 @@ boardsPlugin:
   sha256: "a9eeb367fe94640e3327228e493688d45ede182a250c0ece98dc912a171aa75f"
   image:
     repository: alpine
-    tag: "3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a"
+    tag: "3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf"
 
 resources:
   requests:
