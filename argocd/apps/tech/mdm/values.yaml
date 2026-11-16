@@ -5,7 +5,7 @@ internalHost: mdm.prod.homeserver
 image:
   repository: ghcr.io/pkr-lab/mdm-scep
   pullPolicy: IfNotPresent
-  tag: "sha-056a07b"
+  tag: "sha-f2c71076"
 
 nanomdm:
   image:
