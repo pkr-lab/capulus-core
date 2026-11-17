@@ -68,6 +68,7 @@ config:
   mitgliedschaftGliederung: "Ortsgruppe Andernach e.V."
   stepTimeoutMs: "30000"
   searchTimeoutMs: "90000"
+  searchSettleMs: "20000"
   saveTimeoutMs: "45000"
   syncTimeoutMs: "360000"
   lockWaitMs: "60000"
