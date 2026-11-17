@@ -3,7 +3,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/pkr-lab/isc-manager-bot
-  tag: "sha-92c2dc89"
+  tag: "sha-679c27dd"
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
@@ -68,6 +68,7 @@ config:
   mitgliedschaftGliederung: "Ortsgruppe Andernach e.V."
   stepTimeoutMs: "30000"
   searchTimeoutMs: "90000"
+  searchSettleMs: "20000"
   saveTimeoutMs: "45000"
   syncTimeoutMs: "360000"
   lockWaitMs: "60000"

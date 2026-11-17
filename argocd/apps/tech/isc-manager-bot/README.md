@@ -40,7 +40,7 @@ HTTP-Status: 200 bei `ok`, 400 ungültige Anfrage, 422 fachlicher Fehler (nichts
 | `ISC_BASE_URL`, `SEWOBE_BASE_URL` | ConfigMap | Standard `https://dlrg.net` und `https://mv.dlrg.net` |
 | `GLIEDERUNG_EDV` | ConfigMap | Standard `1002011` |
 | `MITGLIEDSCHAFT_GLIEDERUNG` | ConfigMap | Standard `Ortsgruppe Andernach e.V.` |
-| `STEP_TIMEOUT_MS`, `SEARCH_TIMEOUT_MS`, `SAVE_TIMEOUT_MS`, `SYNC_TIMEOUT_MS`, `LOCK_WAIT_MS`, `MAX_BODY_BYTES` | ConfigMap | Zeitgrenzen und Body-Größe |
+| `STEP_TIMEOUT_MS`, `SEARCH_TIMEOUT_MS`, `SEARCH_SETTLE_MS` (Wartezeit nach der SEWOBE-Sucheingabe, Standard 20000), `SAVE_TIMEOUT_MS`, `SYNC_TIMEOUT_MS`, `LOCK_WAIT_MS`, `MAX_BODY_BYTES` | ConfigMap | Zeitgrenzen und Body-Größe |
 
 Secrets nur als SealedSecret: `scripts/seal-isc-manager-bot.sh` im Repo-Wurzelverzeichnis versiegelt alle sechs Werte und trägt sie in `values.yaml` ein.
 
