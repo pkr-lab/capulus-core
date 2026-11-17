@@ -16,4 +16,5 @@ description = "SealedSecrets: der verschluesselte Wert ist kein Klartext-Secret"
 regexTarget = "secret"
 regexes = [
   '''^Ag[A-Za-z0-9+/=]{200,}$''',
+  '''^GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ$''',
 ]

@@ -1,7 +1,9 @@
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+
+const key = randomBytes(32);
 
 function digest(value: string): Buffer {
-  return createHash("sha256").update(value, "utf8").digest();
+  return createHmac("sha256", key).update(value, "utf8").digest();
 }
 
 export function isAuthorized(authorization: string | undefined, token: string): boolean {
