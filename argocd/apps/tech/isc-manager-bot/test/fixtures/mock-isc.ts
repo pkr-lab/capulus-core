@@ -26,6 +26,7 @@ export type MockOptions = {
   failSwitch?: boolean;
   failLogin?: boolean;
   saveUnconfirmed?: boolean;
+  silentSave?: boolean;
   saveFails?: boolean;
   rejectManagerId?: boolean;
   noPersonCreate?: boolean;
@@ -227,7 +228,7 @@ document.getElementById('grunddatensubmit').addEventListener('click', function (
     .then(function (r) { return r.json(); })
     .then(function (j) {
       setTimeout(function () {
-        indicator.innerHTML = j.ok ? '<div class="alert alert-success">Speichern erfolgreich</div>' : '<div class="alert alert-danger">Fehler beim Speichern</div>';
+        indicator.innerHTML = ${options.silentSave ? "''" : "j.ok ? '<div class=\"alert alert-success\">Speichern erfolgreich</div>' : '<div class=\"alert alert-danger\">Fehler beim Speichern</div>'"};
       }, 300);
     });
 });
