@@ -659,6 +659,66 @@
   owner: peter
   blast_radius: "Bearer-Token der API isc-news-bot: wer es hat, kann ueber den Dienst News im ISC anlegen und veroeffentlichen. Nur n8n kennt es (Header-Auth-Credential)."
 
+- id: isc-manager-bot-isc-login
+  service: isc-manager-bot
+  kind: password
+  stored_in:
+    - argocd/apps/tech/isc-manager-bot/templates/sealedsecret.yaml
+  issued: "2026-11-17"
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300x0-isc-manager-bot.md#secrets-anlegen-und-versiegeln
+    overlap: true
+  owner: peter
+  blast_radius: "Zugang zum ISC-Account der OG Andernach: kann dort Personen lesen, anlegen und aendern. Eigener Account mit Personenrechten, nicht der Hauptaccount."
+
+- id: isc-manager-bot-sewobe-login
+  service: isc-manager-bot
+  kind: password
+  stored_in:
+    - argocd/apps/tech/isc-manager-bot/templates/sealedsecret.yaml
+  issued: "2026-11-17"
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300x0-isc-manager-bot.md#secrets-anlegen-und-versiegeln
+    overlap: true
+  owner: peter
+  blast_radius: "Zugang zum SEWOBE-Benutzer fuer mv.dlrg.net (Mitgliederverwaltung, Gliederung 1002011): liest Personendaten. Nur zusammen mit dem TOTP-Secret nutzbar."
+
+- id: isc-manager-bot-sewobe-totp-secret
+  service: isc-manager-bot
+  kind: encryption-key
+  stored_in:
+    - argocd/apps/tech/isc-manager-bot/templates/sealedsecret.yaml
+  issued: "2026-11-17"
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300x0-isc-manager-bot.md#secrets-anlegen-und-versiegeln
+    overlap: true
+  owner: peter
+  blast_radius: "Base32-Secret des zweiten Faktors fuer den SEWOBE-Benutzer: erzeugt gueltige Anmeldecodes. Zusammen mit dem SEWOBE-Passwort voller Zugang zu SEWOBE."
+
+- id: isc-manager-bot-api-token
+  service: isc-manager-bot
+  kind: api-token
+  stored_in:
+    - argocd/apps/tech/isc-manager-bot/templates/sealedsecret.yaml
+  issued: "2026-11-17"
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300x0-isc-manager-bot.md#secrets-anlegen-und-versiegeln
+    overlap: true
+  owner: peter
+  blast_radius: "Bearer-Token der API isc-manager-bot: wer es hat, kann ueber den Dienst Personen aus SEWOBE ins ISC uebertragen. Nur n8n kennt es (Header-Auth-Credential)."
+
 - id: alert-caller-sip-password
   service: alert-caller
   kind: password

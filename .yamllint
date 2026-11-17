@@ -22,3 +22,4 @@ ignore: |
   argocd/apps/*/*/templates/
   argocd/pending/*/templates/
   argocd/apps/tech/isc-news-bot/node_modules/
+  argocd/apps/tech/isc-manager-bot/node_modules/

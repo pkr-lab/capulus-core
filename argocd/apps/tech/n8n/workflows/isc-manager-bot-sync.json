@@ -1,0 +1,625 @@
+{
+  "name": "ISC-Manager: Person aus SEWOBE uebertragen",
+  "nodes": [
+    {
+      "parameters": {
+        "mailbox": "NewUebertrag",
+        "postProcessAction": "read",
+        "format": "simple",
+        "downloadAttachments": false,
+        "options": {
+          "customEmailConfig": "[\"UNSEEN\"]",
+          "forceReconnect": 60,
+          "trackLastMessageId": true
+        }
+      },
+      "id": "91183995-de25-5b86-addb-73b22fc6b944",
+      "name": "E-Mail empfangen",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        200
+      ],
+      "credentials": {
+        "imap": {
+          "id": "pWlRjzswA4IeR0IW",
+          "name": "Netcup Automation"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "basicAuth",
+        "formTitle": "Person aus SEWOBE ins ISC uebertragen (Test)",
+        "formDescription": "Testet den Ablauf des ISC-Manager-Bots. Die Person wird in SEWOBE nach Vor- und Nachname gesucht. Standardmaessig ist es ein Testlauf, bei dem im ISC nichts gespeichert wird.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Vorname",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Nachname",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "DLRG-Manager-ID",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "optional, 13 Ziffern, hilft bei gleichnamigen Personen"
+            },
+            {
+              "fieldLabel": "Testlauf (nichts speichern)",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Ja"
+                  },
+                  {
+                    "option": "Nein"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "path": "isc-manager-test"
+        }
+      },
+      "id": "27667102-dca6-5809-83c0-98405cec41b8",
+      "name": "Formular Test",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        440
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Formulare"
+        }
+      },
+      "webhookId": "d8b83438-141b-5d86-9895-6a0cdeed9d45"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const item = $input.first();\nreturn [{\n  json: {\n    ...item.json,\n    ntfyTopic: 'isc-manager',\n    ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n    iscManagerBotUrl: 'http://isc-manager-bot.isc-manager-bot.svc.cluster.local:8080'\n  }\n}];\n"
+      },
+      "id": "1d646172-78f5-5e41-8ffb-f76ae2068f01",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const item = $input.first();\nconst src = item.json;\nconst cfg = {\n  ntfyTopic: src.ntfyTopic,\n  ntfyUrl: src.ntfyUrl,\n  iscManagerBotUrl: src.iscManagerBotUrl\n};\nconst toText = (v) => (typeof v === 'string' ? v.trim() : '');\nconst istFormular = src['Vorname'] !== undefined || src['Nachname'] !== undefined;\nlet quelle = 'Mail';\nlet vorname = '';\nlet nachname = '';\nlet nummer = '';\nlet dryRun = false;\nconst fehler = [];\nif (istFormular) {\n  quelle = 'Formular';\n  vorname = toText(src['Vorname']);\n  nachname = toText(src['Nachname']);\n  nummer = toText(src['DLRG-Manager-ID']);\n  dryRun = toText(src['Testlauf (nichts speichern)']) !== 'Nein';\n} else {\n  const text = toText(src.textPlain || src.text || '');\n  let daten = null;\n  try {\n    daten = JSON.parse(text);\n  } catch (e) {\n    daten = null;\n  }\n  if (daten && typeof daten === 'object' && !Array.isArray(daten)) {\n    vorname = toText(daten.vorname);\n    nachname = toText(daten.nachname);\n    nummer = toText(String(daten.mitgliedsnummer === undefined || daten.mitgliedsnummer === null ? '' : daten.mitgliedsnummer));\n    dryRun = daten.dryRun === true;\n  } else {\n    fehler.push('Mailtext ist kein lesbares JSON mit vorname und nachname');\n  }\n}\nif (vorname === '') fehler.push('Vorname fehlt');\nif (nachname === '') fehler.push('Nachname fehlt');\nif (nummer !== '' && !/^\\d{13}$/.test(nummer)) fehler.push('DLRG-Manager-ID muss 13 Ziffern haben');\nconst payload = { vorname, nachname, dryRun };\nif (nummer !== '') payload.mitgliedsnummer = nummer;\nreturn [{ json: { ...cfg, quelle, valid: fehler.length === 0, fehler, payload } }];\n"
+      },
+      "id": "09098d03-ea78-51eb-ac7c-38e65142a6d4",
+      "name": "Eingaben pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7aa536ed-bb26-5346-81c1-ca0e061a7b09",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ba5f43dd-3c91-5362-8bfe-963c97dbc8a7",
+      "name": "Eingaben gueltig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Eingaben pruefen').first().json.iscManagerBotUrl }}/sync",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": false,
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('Eingaben pruefen').first().json.payload) }}",
+        "options": {
+          "timeout": 420000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "ab9c01d3-0fbd-5e1b-bdcd-61fedec44479",
+      "name": "ISC-Manager-Bot abgleichen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        200
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ISC_MANAGER_BOT_CREDENTIAL_ID",
+          "name": "ISC-Manager-Bot API-Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "93b9a174-19a4-571f-82c2-242729d2cf47",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a122f685-016b-5548-a93e-07bfe00ba066",
+      "name": "Erfolgreich?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        200
+      ]
+    },
+    {
+      "id": "25371f57-f8fa-5c0f-b9bf-965b004cd8bb",
+      "name": "ntfy Ergebnis vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1440,
+        100
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bc4171c2-91cd-50cf-b7e4-c6bb9173b9b7",
+              "name": "quelle",
+              "value": "ISC-Manager-Bot",
+              "type": "string"
+            },
+            {
+              "id": "cd3823d8-7507-5d94-a8e1-bb99dd630902",
+              "name": "thema",
+              "value": "={{ $('Eingaben pruefen').first().json.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "b6a7fdec-c873-565b-8509-2fea19ab4839",
+              "name": "titel",
+              "value": "={{ 'ISC-Abgleich: ' + $('ISC-Manager-Bot abgleichen').first().json.result + ($('ISC-Manager-Bot abgleichen').first().json.dryRun ? ' (Testlauf)' : '') }}",
+              "type": "string"
+            },
+            {
+              "id": "05b9e1ca-f059-5ea1-b8cf-b0bf2ba54d89",
+              "name": "prioritaet",
+              "value": "={{ $('ISC-Manager-Bot abgleichen').first().json.result === 'skipped' ? 'low' : 'default' }}",
+              "type": "string"
+            },
+            {
+              "id": "a521b191-2df4-5fcf-a1df-8c2ae12faf19",
+              "name": "tags",
+              "value": "white_check_mark",
+              "type": "string"
+            },
+            {
+              "id": "2de92772-7618-51b0-8e1a-556d76a2f5fa",
+              "name": "text",
+              "value": "={{ 'Quelle: ' + $('Eingaben pruefen').first().json.quelle + ' | Felder: ' + (($('ISC-Manager-Bot abgleichen').first().json.changedFields || []).join(', ') || '-') + ' | ' + ($('ISC-Manager-Bot abgleichen').first().json.reason || '') + (($('ISC-Manager-Bot abgleichen').first().json.warnings || []).length ? ' | Hinweise: ' + $('ISC-Manager-Bot abgleichen').first().json.warnings.join(', ') : '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "ff64cb44-5d61-5816-81fe-db3aaca6729f",
+      "name": "ntfy Ergebnis",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1680,
+        100
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "e02f8862-8227-5d9c-b0c3-562f25ca734c",
+      "name": "ntfy Fehler vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1440,
+        320
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0e9716a4-143c-5bc2-9593-651690bbdda3",
+              "name": "quelle",
+              "value": "ISC-Manager-Bot",
+              "type": "string"
+            },
+            {
+              "id": "ad8a95f7-f71b-5926-875a-2f4f0dce23b0",
+              "name": "thema",
+              "value": "={{ $('Eingaben pruefen').first().json.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "cab33b75-9455-51fc-b1d7-f897c069f855",
+              "name": "titel",
+              "value": "ISC-Abgleich fehlgeschlagen",
+              "type": "string"
+            },
+            {
+              "id": "37771f42-4055-58ec-9336-275fbfbdc9f9",
+              "name": "prioritaet",
+              "value": "high",
+              "type": "string"
+            },
+            {
+              "id": "7d65df9f-1ff9-51a4-90a2-c88088ed609d",
+              "name": "tags",
+              "value": "x",
+              "type": "string"
+            },
+            {
+              "id": "e5a815b8-19e2-55f0-8c1a-c88b01fd1b01",
+              "name": "text",
+              "value": "={{ 'Quelle: ' + $('Eingaben pruefen').first().json.quelle + ' | Fehler ' + ($('ISC-Manager-Bot abgleichen').first().json.errorCode || 'UNBEKANNT') + ' im Schritt ' + ($('ISC-Manager-Bot abgleichen').first().json.step || '-') + ' | ' + ($('ISC-Manager-Bot abgleichen').first().json.error || 'keine Antwort vom Bot') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "33e12c71-bf73-5d1d-8a17-05a6744f5dfb",
+      "name": "ntfy Fehler",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1680,
+        320
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "e9f0bfcb-4504-5e31-a070-49c58ed175e3",
+      "name": "ntfy Eingabefehler vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        440
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ac57c56e-4178-5144-ba27-e4aea2760a2e",
+              "name": "quelle",
+              "value": "ISC-Manager-Bot",
+              "type": "string"
+            },
+            {
+              "id": "993e1bad-b695-5182-ba25-beb2695459db",
+              "name": "thema",
+              "value": "={{ $('Eingaben pruefen').first().json.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "31827673-2b8f-5b1f-ab63-e9b4a8ecc081",
+              "name": "titel",
+              "value": "ISC-Abgleich: Eingabe ungueltig",
+              "type": "string"
+            },
+            {
+              "id": "bd81c4f0-81ea-55fe-bbac-1d2333909165",
+              "name": "prioritaet",
+              "value": "high",
+              "type": "string"
+            },
+            {
+              "id": "3c73cb7a-fc5f-54ce-b9f8-7dd9e27cbcdc",
+              "name": "tags",
+              "value": "x",
+              "type": "string"
+            },
+            {
+              "id": "a0105dc5-78c3-52df-b453-971acebd3e4c",
+              "name": "text",
+              "value": "={{ 'Quelle: ' + $('Eingaben pruefen').first().json.quelle + ' | ' + $('Eingaben pruefen').first().json.fehler.join('; ') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "41d81950-0bfd-5821-8f00-1eb335692470",
+      "name": "ntfy Eingabefehler",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        440
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "E-Mail empfangen": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formular Test": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Eingaben pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingaben pruefen": {
+      "main": [
+        [
+          {
+            "node": "Eingaben gueltig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingaben gueltig?": {
+      "main": [
+        [
+          {
+            "node": "ISC-Manager-Bot abgleichen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ntfy Eingabefehler vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ISC-Manager-Bot abgleichen": {
+      "main": [
+        [
+          {
+            "node": "Erfolgreich?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Erfolgreich?": {
+      "main": [
+        [
+          {
+            "node": "ntfy Ergebnis vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ntfy Fehler vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ntfy Ergebnis vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "ntfy Ergebnis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ntfy Fehler vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "ntfy Fehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ntfy Eingabefehler vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "ntfy Eingabefehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "saveManualExecutions": true,
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
+  },
+  "versionId": "33add703-6c01-5a6f-9dc9-902a446912c2",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "iscManagerSync01",
+  "tags": []
+}

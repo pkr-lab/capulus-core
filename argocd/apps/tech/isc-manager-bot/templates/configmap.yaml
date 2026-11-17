@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "isc-manager-bot.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "isc-manager-bot.labels" . | nindent 4 }}
+data:
+  ISC_BASE_URL: {{ .Values.config.iscBaseUrl | quote }}
+  SEWOBE_BASE_URL: {{ .Values.config.sewobeBaseUrl | quote }}
+  GLIEDERUNG_EDV: {{ .Values.config.gliederungEdv | quote }}
+  MITGLIEDSCHAFT_GLIEDERUNG: {{ .Values.config.mitgliedschaftGliederung | quote }}
+  STEP_TIMEOUT_MS: {{ .Values.config.stepTimeoutMs | quote }}
+  SEARCH_TIMEOUT_MS: {{ .Values.config.searchTimeoutMs | quote }}
+  SAVE_TIMEOUT_MS: {{ .Values.config.saveTimeoutMs | quote }}
+  SYNC_TIMEOUT_MS: {{ .Values.config.syncTimeoutMs | quote }}
+  LOCK_WAIT_MS: {{ .Values.config.lockWaitMs | quote }}
+  MAX_BODY_BYTES: {{ .Values.config.maxBodyBytes | quote }}

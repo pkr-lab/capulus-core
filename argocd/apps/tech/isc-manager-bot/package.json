@@ -1,0 +1,27 @@
+{
+  "name": "isc-manager-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HTTP-API, die eine Person aus SEWOBE (mv.dlrg.net) per headless Chromium (Playwright) ins DLRG ISC (Personen-App) synchronisiert",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test --test-concurrency=1 dist/test/unit/*.test.js dist/test/e2e/*.test.js",
+    "test:unit": "npm run build && node --test dist/test/unit/*.test.js",
+    "test:e2e": "npm run build && node --test --test-concurrency=1 dist/test/e2e/*.test.js",
+    "start": "node dist/src/main.js",
+    "smoke": "npm run build && node dist/scripts/smoke.js"
+  },
+  "dependencies": {
+    "otpauth": "9.6.0",
+    "playwright": "1.65.1"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "typescript": "7.0.2"
+  }
+}

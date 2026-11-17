@@ -24,6 +24,14 @@ on:
       - "argocd/apps/tech/isc-news-bot/src/**"
       - "argocd/apps/tech/isc-news-bot/test/**"
       - "argocd/apps/tech/isc-news-bot/scripts/**"
+      - "argocd/apps/tech/isc-manager-bot/Dockerfile"
+      - "argocd/apps/tech/isc-manager-bot/.dockerignore"
+      - "argocd/apps/tech/isc-manager-bot/package.json"
+      - "argocd/apps/tech/isc-manager-bot/package-lock.json"
+      - "argocd/apps/tech/isc-manager-bot/tsconfig.json"
+      - "argocd/apps/tech/isc-manager-bot/src/**"
+      - "argocd/apps/tech/isc-manager-bot/test/**"
+      - "argocd/apps/tech/isc-manager-bot/scripts/**"
   pull_request:
     branches: [main]
     paths:
@@ -47,12 +55,20 @@ on:
       - "argocd/apps/tech/isc-news-bot/src/**"
       - "argocd/apps/tech/isc-news-bot/test/**"
       - "argocd/apps/tech/isc-news-bot/scripts/**"
+      - "argocd/apps/tech/isc-manager-bot/Dockerfile"
+      - "argocd/apps/tech/isc-manager-bot/.dockerignore"
+      - "argocd/apps/tech/isc-manager-bot/package.json"
+      - "argocd/apps/tech/isc-manager-bot/package-lock.json"
+      - "argocd/apps/tech/isc-manager-bot/tsconfig.json"
+      - "argocd/apps/tech/isc-manager-bot/src/**"
+      - "argocd/apps/tech/isc-manager-bot/test/**"
+      - "argocd/apps/tech/isc-manager-bot/scripts/**"
   workflow_dispatch:
     inputs:
       app:
         description: "App neu bauen (all = alle drei, z.B. nach einem reinen Base-Image-Update ohne Dateiänderung)"
         type: choice
-        options: [all, carplay-api, ticket-gate, n8n, isc-news-bot, alert-caller]
+        options: [all, carplay-api, ticket-gate, n8n, isc-news-bot, isc-manager-bot, alert-caller]
         default: all
 
 permissions:
@@ -95,6 +111,11 @@ jobs:
             values: argocd/apps/tech/isc-news-bot/values.yaml
             dockerfile: argocd/apps/tech/isc-news-bot/Dockerfile
             image: ghcr.io/pkr-lab/isc-news-bot
+          - app: isc-manager-bot
+            path: argocd/apps/tech/isc-manager-bot
+            values: argocd/apps/tech/isc-manager-bot/values.yaml
+            dockerfile: argocd/apps/tech/isc-manager-bot/Dockerfile
+            image: ghcr.io/pkr-lab/isc-manager-bot
           - app: alert-caller
             path: argocd/apps/tech/alert-caller
             values: argocd/apps/tech/alert-caller/values.yaml
