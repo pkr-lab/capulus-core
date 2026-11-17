@@ -208,7 +208,6 @@ export async function saveGrunddaten(page: Page, cfg: Config, uid: string, value
   if (outcome === 2) {
     throw new BotError("FORM_INVALID", "ISC lehnt Grunddaten als ungültig ab", { step, details: await invalidFields(page, ISC.grunddaten.form) });
   }
-  if (outcome !== 0) throw new BotError("SAVE_UNCONFIRMED", "Keine Bestätigung des ISC beim Speichern der Grunddaten", { step });
 
   await openPerson(page, cfg, uid);
   const after = await readGrunddaten(page, cfg);

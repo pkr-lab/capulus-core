@@ -309,6 +309,15 @@ sync("Speicherfehler: nicht bestätigt, vom ISC abgelehnt, ungültiges Feld", as
   });
 });
 
+sync("Grunddaten ohne Meldung des ISC: gespeicherte Werte werden beim Nachlesen bestätigt", async () => {
+  await withMocks({ persons: [withAddress({ vorname: "Erik" })], silentSave: true }, { persons: [sewobePerson()] }, { saveTimeoutMs: 1000 }, async ({ runner }) => {
+    assert.equal((await runner.sync(request())).ok, true);
+  });
+  await withMocks({ persons: [withAddress({ vorname: "Erik" })], silentSave: true, saveUnconfirmed: true }, { persons: [sewobePerson()] }, { saveTimeoutMs: 1000 }, async ({ runner }) => {
+    assert.equal((await runner.sync(request())).errorCode, "SAVE_UNCONFIRMED");
+  });
+});
+
 sync("Neuanlage vom ISC nicht übernommen: SAVE_UNCONFIRMED", async () => {
   await withMocks({ noPersonCreate: true }, { persons: [sewobePerson()] }, {}, async ({ runner }) => {
     assert.equal((await runner.sync(request())).errorCode, "SAVE_UNCONFIRMED");

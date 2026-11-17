@@ -34,7 +34,6 @@ export async function searchHits(page: Page, cfg: Config, vorname: string, nachn
   const input = page.locator(SEWOBE.search).first();
   await input.fill(term, { timeout: cfg.stepTimeoutMs });
   await input.press("Enter");
-  // SEWOBE zeigt kurz ein leeres Ergebnis, bevor die Treffer nachladen: erst nach der Wartezeit auswerten.
   await page.waitForTimeout(cfg.searchSettleMs);
 
   const frame = page.frameLocator(SEWOBE.frames.main).frameLocator(SEWOBE.frames.results);
