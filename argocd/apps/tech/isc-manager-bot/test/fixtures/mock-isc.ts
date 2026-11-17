@@ -97,9 +97,9 @@ function suggest(input, edv, list) {
   input.addEventListener('input', function () {
     list.innerHTML = '';
     edv.value = '';
-    if (input.value.length > 3 && 'Ortsgruppe Andernach e.V.'.toLowerCase().indexOf(input.value.toLowerCase()) === 0) {
+    if (input.value.toLowerCase().indexOf('andernach ') === 0) {
       var li = document.createElement('li');
-      li.textContent = 'Ortsgruppe Andernach e.V. (1002011)';
+      li.textContent = 'Ortsgruppe Andernach e.V. - 56626 Andernach';
       li.addEventListener('click', function () {
         input.value = 'Ortsgruppe Andernach e.V.';
         edv.value = '1002011';
