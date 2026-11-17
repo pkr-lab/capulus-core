@@ -1,0 +1,92 @@
+---
+replicaCount: 1
+
+image:
+  repository: ghcr.io/pkr-lab/isc-manager-bot
+  tag: "sha-0000000"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: ghcr-pull
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 8080
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 768Mi
+  limits:
+    cpu: "1"
+    memory: 2Gi
+
+tmpSizeLimit: 512Mi
+
+livenessProbe:
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+config:
+  iscBaseUrl: "https://dlrg.net"
+  sewobeBaseUrl: "https://mv.dlrg.net"
+  gliederungEdv: "1002011"
+  mitgliedschaftGliederung: "Ortsgruppe Andernach e.V."
+  stepTimeoutMs: "30000"
+  searchTimeoutMs: "90000"
+  saveTimeoutMs: "45000"
+  syncTimeoutMs: "360000"
+  lockWaitMs: "60000"
+  maxBodyBytes: "65536"
+
+n8nNamespace: n8n
+n8nPodName: n8n
+
+secrets:
+  enabled: true
+  name: isc-manager-bot-secrets
+  encryptedData:
+    ISC_USERNAME: "AgA+YFBgq4S7jDbhQW7LBsN93kzUuTI/owvWPcbyArW8Hf81Qbbt4V7j4xxOcV2ZF7S7IHomf6FiU1ehvTxuiGtxdz5On6skg78PXdd2uM9TVEP1Z4gVq2uvbmnwdnVZFEQhQ1F/YrRCBf6BWtvKZhtDkEHPB+3OaqeM9T1H9pywYS1PyuqbyC5a1VCom0TfOFwUUbUvqnMUe+QOjAls95ECMegGximbwB1jgDRJsFx5q1bI/5FGnK1iIJNcGtisCtJqrEfWbCiUr3oRojR1vNU3KK8pfjryxE40EWpepaIrloIUrd8YTPU9fQYh9Bez71P17l+OeRuMpxaop6TIhl0yXCxHok8CdJQ55kB51jz5rAOxBLyyLmjc/7PQvpdsQvTwXrIIn86bTiLPDd3ZFZt+KCIT3SQXtZqULl4AOcGK7WHdoeVVaZDfuhCh+dUjaeYDU4qmKbli5nDXmx5eJla816Dr9y4CdUQFbg0vKMp3YjirHEn47WnxKGJuiGl1qRc/V8sQGxeOd4TmVnTkzRCQC5YTpIo3MWXjeLcM+uqtXeGWWU8wAotxgs4HumfqaYUFLVy/DBrAWi5YO0vQhmaSe10EOY2wGLjosi9DuSJ76d1fbiLm06BXmJ6IAp5Sbjz/0EauRyjD2jjZ96hkViuOnhC2NxiSWDKyWS9yIb6f9jSCltGrYZvUKrec/5BNJRnGdNobd7c/2hdEa7pBBaE="
+    ISC_PASSWORD: "AgC4wv3fZ6bXU3PEImW89ynEmhR8xAbC01us25qGOGLnNVyeuKkPqOZbPq0KHB0cJEF6azEwTaxbmSQ85R6M5LhWn6VvBAdb892Eai0A0qh8EnKzLA24ApjY7bABkWBigM3Q/1Ml2b8y3IHOfs/qn/2e5yneBq1JKP18CdUrkhyAaMmUEsgCFqnWM8iRhWG+ksD8kf0HrXco8h2TfrEBr+ge1D2roz/MZXbp7HS7Ha9t1YN2Y0v4Vur6VEuiiVjOLreCIjpUKSMMZyhnQZ0zzZcDFyT2SAxFiXyDgBl+PHVSqqUCf3MiUoC1JByponA/0z3zFGutWVb7lQMUlQjXm6GhllDFv2kJluNClZ3FQ/uWWE9rvO6DtzClwYRF6qnxkAFJclxz0MlcUxFR0lHn/JwLO39j3YBN0lo6s5h+B6tCogWBaGR7BOQDkf5JNFvmnuawnPRklXmY+hI981OK4Fey9PaAD5t+Dv66dGKkwprSnWHT4OotslwSBQ9NJVgL/9o710KH5LxhrFqRWlmJ6PFUmdjhvx/1vgsD5A5+jXt8aFmCtl7dpcsqE3l95MxUMCj1xRN7bziVz1VSqjoOi/DTQJK6oriFVf7py4XwHEUdjRrYUBt5eDyOAyMBKISHInBGUNWU7DeIHdbCIxAYJJH6/sk3GJPUYpkeQ48sw35aYFwzX1H/u05ZWrPSFAir40ZqtDbJBEogHsJ/DZb5WzICn24eCg=="
+    SEWOBE_USERNAME: "AgAyT3yieg5rECPGwmWfcxCBiQm5NVy/jHLXn5FPKJalVuTLs9FjYZGNIfizfmtrGQslyJ/Siixb+Tx3697/r8c464/OSUVbi9GxBQusPNWM5dP1x/toeKNe982dUNGBDkMawYCnr0ET4HJAn0CyehYrjDFAevltfyk0dG15eThujAl2MmluuSMqbYqX4Yb7x3T97bre+Js1QrK5+eMhJbrSaukiIXXTTQ6AQQO8G2eBkPLmD+BY6AZ5KKvxNUzL41FT+EEt+L20k0LxMvRDkGUOptX9FOtXTwYt9Vsnt0Le8y/FhshPUN5ZVOGE4cGj7xDBXPHza8gd4aYA5x2CozZZKGtAK86VJiF7bPWMM6x1h+U6UXKQlebvJHMfMa/ON1Lt/4B0MIWdB66GRQ+lLp3gc8uC65tMmstv/4f8DTPoe2/l6xdbD+Xu99VLhRgeAqs79MIu+xnWrt3ih1RD97SYF4PcKTronz+J6DeiRmmuEcK5PWwpsVcAm2End/ZH5ezOivg9qgF0hBOYseggOj8/r/Z73L/ic1YVmExYmH8eh5Mh6naCxu9nmQIN6jAvC4pRt8BgMviY4+0trUVtpoPperwGSK31zVqPTVwnCwBqqwS4MJVjjpRc7lB2LDkwcAEy8eD7wmjWEiEb8Yy0XxSrPIDL8PEWETQlBqEEWeT7q6DxMSY58y9g2EjBO3/cfFAIj3Eu+5EDFw=="
+    SEWOBE_PASSWORD: "AgBWL4YyG13e9nZlsAccYJ/CWHYkwyAMmhbArVtTEaJ3tyOILX9b5OqY9LGEAMpWCXvZd8MFjUWedkLxfiU8qgohMEZTWnv9nliVk/dEwkkQrmgU9jais05li36Qb9G5x8/iAGN7p93EhuAFGyrJqwC2dEe7Wq43pcf+9Z/N5kZYWaGoXGLR5hbQADqZkxdw65AAtTRXfzgP/dsUNNm/zclE+bruLOkpapW2K/2WfVbhY3fIniuV/r5B8UFUfd/pSNNZuKHim4Kh1aaBldaURYLqE8P+Vk0ogwRIn1uwCr09bwc8Tucv7yxHYB+EwoldKnnhS1BKiIu4PIdaH7+7dX4/b7DmqBCtm2lhKXj0mTpRCkLJ3/5L0qdC46etaDgHHqc6cqTIajuJ86TLJ4Kwkd5ck0MvR6u4UgdUZxM2dXFvcJ8IrLPUSy1rT6Brk8rxjQ9gReDRHjEo2hKje1lvOBqf18hP+dYy6a3NS9tB7nomqLRquQfpR9zlwTrmFHSh1JwPCpbAtalhpKjhSBgXQtVxA2x1lwgNFrascet6x3TpftlsqW6n8xKBonRiQwAqcJ2o7ewyavVk5exJSE7enkUfvd0Yd5Y2pm/Uvyhjr8KxR7SAPQU0hLZ7kIqLihDfeXHKqe+5SL9VruSEh5YNbum75o3KLzG8UZHhP+hsRVyZgJKzlaP3IF+0TXhAKgt0mCn2+GmxE0btopJmHnNi+Owe6XV1vA=="
+    SEWOBE_TOTP_SECRET: "AgB2ff+sUqJ2UUWTcf7b5VFibYVt2AYeODOr89mH1KbnaDhgVXe8QtDHSQW6zp3X7LgIFRL0+8EO8sfZZ7Zwrby7xRyq/aYGRpimC9Bx8mA1rYnOFbe3uYW9MDw8fqCIR+O7G8x/UYAyPUr/6a1HnCfse4kG4LTlXZoNYPQAWvfThPvG9k/Uqf1AR5Nzgx22O1P/znPhp+CRRyOotdWWVRhboJFo3T6as4c0NpROctGGuVpub9q5sD4d6cmYqfIgZ7sqcw2GOQOdPXOn3FepDmVcIAim4nhx9YErnoOUXJEZLTXl7dC3Tz7eWzCs1fcwYu3UvjXYy/e+5r+EWL4gZXQqMG8OZp7eboYnsNWH0K9SaDf1GWJ9ArSjx2P6SEndNlg9MwbZF0bEHnGq+QdApsWXgG6XEmZPtJG/kYLFg9UYS+AjDci9spcuBLaIbGsod3wG33/X3PR1KFyUVhMjNLGxKvaKfexNhyyxEF6EOxprSQZ4IkzGxNSxPfo9btRIL2DoUmI0030G+zJ0RXPpT65ygDntAUQhZ9I3DAiYJGM/57to60xsICCDNWtNc0V4viVBOLbvxHsU0EkOPt+CxVhA81+NB+61+JLafLSBS4wppmUBoN4vqNgQePAALVW9x3ZQ+YhyisO8OpKqU9OwbL+oLkBgh5m7NNleUQmjLWFaE/zkp7YEfdK2qwiPIZRIngPYY7PTJK0p9rpsgwXuYe8t"
+    API_TOKEN: "AgBlxP62QPSvFioCGfeEfI7LGo+/w2rYokNZG9R/i0hwiWVjBhjyhccMzCB/v+p8EoKDNiyKsIdDothCy9f/7p9Q/CwgqKHmMHnfrC7S3kjO/7SthtqH4FN14+yi6ix39DkchiIhtrBs4EFybTvAOjyWBvmBpW0gPAASx1Hq/Xa1GHFtZwEJtXT1YLjLKlOfDfmEI/oNZHnWEom2tj9V9wpT+FM85l8EmGmC5g/GMFPtVWR+ZluBNyAusS6C0klzwHBGyD4nyBuEsP/F9LqRjrvqcYkgm/vzxRSX1XtennP44RuGmKdPr25J7Sjovc2VmP8NAi1ebSf0MwcEZaiSQH4SzWnktNnrGE74rpDZF8WuXi1/7eA//7HtQRA7Uw0gfaI+RD21JWBBgVi5l8HUu4JbRAsDbwpodtLlFYhoTBWAxwmmhk49BL0xQxe7SnOa+R2eH+6vlKGku/IoyRry+7ZlFkHZmfIuoyuQ/jP5TZ/9QvL0/Vz39EKDgfIS6HfA2N6Ky2TXFnnJ1l4kdkF/Bq4h3wxd+OXkWxB+shs2iIMroYc6EqmbVqEVP+H2KByQ3VT74H6fiGfwMGm9P0sKEkm3LUVeryDAs70AUgOmV9r3W8FjEvLWkhImEIQg7xvSBRHf+8NnWoHVItx51gYQd2JdSw7d5sUy5L6Z34F08lKhn6L20f1Ou+fdiCn7rQd0PA87Bu1ywiNMbBV4ufpLzVS18NiNSJX/NP0YHdZQty0XRDn7dru2AbJ2MnbXYDz753zZtuqCO0rvTJ8qR5cZgHw5"
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
