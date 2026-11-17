@@ -414,3 +414,83 @@ test('Benachrichtigungsmail: HTML maskiert Eingaben, enthält Button und endet m
   assert.match(mail.html, /ID-IT-xi8klGKdh8<\/div><\/td><\/tr><\/table><\/td><\/tr><\/table><\/body><\/html>$/);
   assert.equal(mail.text.split('\n').pop(), 'ID-IT-xi8klGKdh8');
 });
+
+test('Entwurf: ein Satzanfang direkt hinter dem Link wird nicht in den Link gezogen', () => {
+  for (const [reply, url] of [
+    ['Guten Tag,\nUpload: https://example.org/upload.Wir freuen uns auf Sie.', 'https://example.org/upload'],
+    ['Guten Tag,\nUpload: https://example.org/upload,Wir freuen uns auf Sie.', 'https://example.org/upload'],
+    ['Guten Tag,\nUpload: https://example.org/a.b/c?x=1&Y=2.Wir freuen uns.', 'https://example.org/a.b/c?x=1&Y=2'],
+  ]) {
+    const out = extrahieren(reply);
+    assert.ok(out.entwurf.includes(`${url}`) && !new RegExp(`${url.replace(/[.?]/g, '\\$&')}[.,]Wir`).test(out.entwurf), out.entwurf);
+    assert.ok(out.entwurfHtml.includes(`<a href="${url.replace(/&/g, '&amp;')}">`), out.entwurfHtml);
+    assert.ok(!/<a [^>]*>[^<]*Wir/.test(out.entwurfHtml), out.entwurfHtml);
+  }
+});
+
+test('Entwurf: Links mit Großbuchstaben oder Punkten im Pfad bleiben unverändert', () => {
+  const out = extrahieren('Guten Tag,\nsiehe https://example.org/Kurse/Datei.PDF und https://example.org/Seite.html.');
+  assert.ok(out.entwurfHtml.includes('<a href="https://example.org/Kurse/Datei.PDF">'), out.entwurfHtml);
+  assert.ok(out.entwurfHtml.includes('<a href="https://example.org/Seite.html">'), out.entwurfHtml);
+});
+
+test('Kurslink: der eingesetzte Link klebt nie an angrenzendem Text', () => {
+  const entry = { code: '2027-CK03', kursart: 'CrashKurs', url: 'https://example.org/ck03' };
+  for (const reply of [
+    'Guten Tag,\nUpload:[KURSLINK: CrashKurs]Wir freuen uns.',
+    'Guten Tag,\nUpload: [KURSLINK: CrashKurs].Wir freuen uns.',
+    'Guten Tag,\nUpload: [KURSLINK: CrashKurs]\nWir freuen uns.',
+  ]) {
+    const out = einfuegen(extrahieren(reply), [{ status: 'link', entry, grund: 'Kurscode in der Mail' }]);
+    assert.ok(/ https:\/\/example\.org\/ck03(\.)?[ \n]+Wir freuen uns\./.test(out.entwurf), out.entwurf);
+    assert.ok(/<\/a>(\.)?( |<br>)Wir freuen uns\./.test(out.entwurfHtml), out.entwurfHtml);
+  }
+});
+
+const BOUNCE = [
+  'This is the mail system at host mail.dlrg.de.',
+  '',
+  "I'm sorry to have to inform you that your message could not",
+  'be delivered to one or more recipients. It\'s attached below.',
+  '',
+  '<no-reply@dlrg.de>: host 192.168.100.145[192.168.100.145] said: 550 5.1.1',
+  "   <no-reply@dlrg.de> User doesn't exist: no-reply@dlrg.de (in reply to RCPT",
+  '   TO command)',
+].join('\n');
+
+test('Nur relevante Tickets: Zustellfehler-Tickets werden übersprungen', () => {
+  const input = [
+    { number: '1', owner_id: 5, state_id: 1, group_id: 9, title: 'Undelivered Mail Returned to Sender' },
+    { number: '2', owner_id: 5, state_id: 1, group_id: 9, title: 'Mail delivery failed: returning message to sender' },
+    { number: '3', owner_id: 5, state_id: 1, group_id: 9, title: 'AW: Delivery Status Notification (Failure)' },
+    { number: '4', owner_id: 5, state_id: 1, group_id: 9, title: 'Frage zum Crashkurs' },
+  ];
+  assert.deepEqual(run('Nur relevante Tickets', { input }).map((i) => i.json.number), ['4']);
+});
+
+test('LLM-Eingabe: Zustellfehler-Meldungen (Bounce) bekommen keinen Entwurf', () => {
+  const bounce = [
+    artikel({ id: 1, from: 'MAILER-DAEMON@mail.dlrg.de (Mail Delivery System)', body: 'irgendein Text' }),
+    artikel({ id: 1, from: 'Mail Delivery System <noreply@example.org>', body: BOUNCE }),
+  ];
+  for (const articles of bounce.map((a) => [a])) {
+    assert.equal(run('LLM-Eingabe bauen', { input: [{ ...ticket, articles }] }).length, 0);
+  }
+});
+
+test('LLM-Eingabe: ein Bounce nach der Team-Antwort löst keinen neuen Entwurf aus und fehlt im Verlauf', () => {
+  const frage = artikel({ id: 1, body: 'Wo kann ich hochladen?', message_id: 'm1' });
+  const antwort = artikel({ id: 2, sender: 'Agent', body: 'Hier der Link', created_at: '2026-11-02T10:00:00Z' });
+  const bounce = artikel({ id: 3, from: 'MAILER-DAEMON@mail.dlrg.de', body: BOUNCE, created_at: '2026-11-02T10:05:00Z' });
+  assert.equal(run('LLM-Eingabe bauen', { input: [{ ...ticket, articles: [frage, antwort, bounce] }] }).length, 0);
+  const neu = run('LLM-Eingabe bauen', { input: [{ ...ticket, articles: [frage, antwort, bounce] }], tickets: '10042' });
+  assert.equal(neu.length, 1);
+  const nutzlast = JSON.parse(Buffer.from(neu[0].json.payloadB64, 'base64').toString('utf8'));
+  assert.equal(nutzlast.mail.text, 'Wo kann ich hochladen?');
+  assert.ok(!nutzlast.history.some((h) => /mail system/i.test(h.text)));
+});
+
+test('LLM-Eingabe: normale Mails mit Fehlercode-Wörtern bleiben erhalten', () => {
+  const normal = [artikel({ id: 1, body: 'Meine Mail kam nicht an, Fehler 550 5.1.1 User unknown. Wo kann ich hochladen?' })];
+  assert.equal(run('LLM-Eingabe bauen', { input: [{ ...ticket, articles: normal }] }).length, 1);
+});
