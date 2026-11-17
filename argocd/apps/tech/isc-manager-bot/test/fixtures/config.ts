@@ -15,6 +15,7 @@ export function testConfig(iscBaseUrl: string, sewobeBaseUrl: string, overrides:
     sewobeTotpSecret: SEWOBE_TOTP_SECRET,
     gliederungEdv: MOCK_EDV,
     mitgliedschaftGliederung: MOCK_GLIEDERUNG,
+    mitgliedschaftSuchbegriff: "Andernach",
     stepTimeoutMs: 15_000,
     searchTimeoutMs: 20_000,
     searchSettleMs: 0,

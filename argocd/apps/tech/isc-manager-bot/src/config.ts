@@ -12,6 +12,7 @@ export type Config = {
   sewobeTotpSecret: string;
   gliederungEdv: string;
   mitgliedschaftGliederung: string;
+  mitgliedschaftSuchbegriff: string;
   stepTimeoutMs: number;
   searchTimeoutMs: number;
   searchSettleMs: number;
@@ -27,6 +28,7 @@ const DEFAULTS = {
   sewobeBaseUrl: "https://mv.dlrg.net",
   gliederungEdv: "1002011",
   mitgliedschaftGliederung: "Ortsgruppe Andernach e.V.",
+  mitgliedschaftSuchbegriff: "Andernach",
   stepTimeoutMs: 30_000,
   searchTimeoutMs: 90_000,
   searchSettleMs: 20_000,
@@ -83,6 +85,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
     sewobeTotpSecret: normalizeTotpSecret(requiredFromEnv(env, "SEWOBE_TOTP_SECRET")),
     gliederungEdv: env.GLIEDERUNG_EDV?.trim() || DEFAULTS.gliederungEdv,
     mitgliedschaftGliederung: env.MITGLIEDSCHAFT_GLIEDERUNG?.trim() || DEFAULTS.mitgliedschaftGliederung,
+    mitgliedschaftSuchbegriff: env.MITGLIEDSCHAFT_SUCHBEGRIFF?.trim() || DEFAULTS.mitgliedschaftSuchbegriff,
     stepTimeoutMs: intFromEnv(env, "STEP_TIMEOUT_MS", DEFAULTS.stepTimeoutMs, 1000),
     searchTimeoutMs: intFromEnv(env, "SEARCH_TIMEOUT_MS", DEFAULTS.searchTimeoutMs, 1000),
     searchSettleMs: intFromEnv(env, "SEARCH_SETTLE_MS", DEFAULTS.searchSettleMs, 0),

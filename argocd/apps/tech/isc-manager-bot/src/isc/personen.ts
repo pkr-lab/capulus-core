@@ -262,19 +262,29 @@ export async function saveAddress(page: Page, cfg: Config, uid: string, kind: "u
   }
 }
 
+async function stepAction<T>(step: string, what: string, action: () => Promise<T>): Promise<T> {
+  try {
+    return await action();
+  } catch (error) {
+    if (isPlaywrightTimeout(error)) throw new BotError("FORM_CHANGED", `Zeitüberschreitung bei: ${what}`, { step });
+    throw error;
+  }
+}
+
 async function pickGliederung(page: Page, cfg: Config, inputSelector: string, edvSelector: string, step: string): Promise<void> {
   const input = page.locator(inputSelector).first();
-  await input.click({ timeout: cfg.stepTimeoutMs });
-  await input.pressSequentially(cfg.mitgliedschaftGliederung, { delay: 40 });
-  const suggestion = page.getByText(cfg.mitgliedschaftGliederung).filter({ visible: true }).first();
+  await stepAction(step, "Klick ins Gliederungsfeld", () => input.click({ timeout: cfg.stepTimeoutMs }));
+  await stepAction(step, "Eingabe der Gliederung", () => input.pressSequentially(`${cfg.mitgliedschaftSuchbegriff} `, { delay: 40 }));
+  const suggestionText = new RegExp(`${cfg.mitgliedschaftGliederung.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s+-\\s+\\d{5}`);
+  const suggestion = page.getByText(suggestionText).filter({ visible: true }).first();
   try {
     await suggestion.waitFor({ state: "visible", timeout: cfg.stepTimeoutMs });
   } catch (error) {
     if (isPlaywrightTimeout(error)) throw new BotError("FORM_CHANGED", "Gliederungsvorschlag erscheint im ISC nicht", { step });
     throw error;
   }
-  await suggestion.click({ timeout: cfg.stepTimeoutMs });
-  const edv = await page.locator(edvSelector).first().inputValue({ timeout: cfg.stepTimeoutMs });
+  await stepAction(step, "Klick auf den Gliederungsvorschlag", () => suggestion.click({ timeout: cfg.stepTimeoutMs }));
+  const edv = await stepAction(step, "Lesen der EDV-Nummer der Gliederung", () => page.locator(edvSelector).first().inputValue({ timeout: cfg.stepTimeoutMs }));
   if (edv !== cfg.gliederungEdv) {
     throw new BotError("FORM_CHANGED", "Gliederungsauswahl hat nicht die erwartete EDV-Nummer gesetzt", { step });
   }
@@ -283,7 +293,9 @@ async function pickGliederung(page: Page, cfg: Config, inputSelector: string, ed
 export async function addMembership(page: Page, cfg: Config, uid: string): Promise<void> {
   const step = "isc-membership";
   await openPerson(page, cfg, uid);
-  await page.locator("button, a").filter({ hasText: ISC.membership.newButton }).first().click({ timeout: cfg.stepTimeoutMs });
+  await stepAction(step, "Klick auf Neue Mitgliedschaft", () =>
+    page.locator("button, a").filter({ hasText: ISC.membership.newButton }).first().click({ timeout: cfg.stepTimeoutMs }),
+  );
   await requireVisible(page.locator(ISC.membership.gliederung), cfg.stepTimeoutMs, "Mitgliedschaftsformular", step);
   await pickGliederung(page, cfg, ISC.membership.gliederung, ISC.membership.edv, step);
   try {

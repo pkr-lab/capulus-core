@@ -66,6 +66,7 @@ config:
   sewobeBaseUrl: "https://mv.dlrg.net"
   gliederungEdv: "1002011"
   mitgliedschaftGliederung: "Ortsgruppe Andernach e.V."
+  mitgliedschaftSuchbegriff: "Andernach"
   stepTimeoutMs: "30000"
   searchTimeoutMs: "90000"
   searchSettleMs: "20000"
@@ -76,6 +77,8 @@ config:
 
 n8nNamespace: n8n
 n8nPodName: n8n
+uptimeKumaNamespace: uptime-kuma
+uptimeKumaPodName: uptime-kuma
 
 secrets:
   enabled: true
