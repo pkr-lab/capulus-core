@@ -43,7 +43,7 @@ provisioniert [capulus-ansible](https://github.com/pkr-lab/capulus-ansible), die
 | `.github/workflows/` | `ci.yml` (Pflicht-Gate), `build-images.yml`, Promotion-/Sync-Workflows, Renovate, Release |
 
 Eigener Code mit Tests: `argocd/apps/tech/carplay-api/src` (Go),
-`argocd/apps/tech/isc-news-bot` (TypeScript/Node, Playwright).
+`argocd/apps/tech/isc-news-bot` und `argocd/apps/tech/isc-manager-bot` (TypeScript/Node, Playwright).
 
 ---
 
@@ -72,6 +72,7 @@ Die CI (`.github/workflows/ci.yml`) hat fünf Pflicht-Jobs. Lokal verfügbar sin
 pip install -q pyyaml && python3 scripts/check-token-register.py    # ops/token-register.yaml
 (cd argocd/apps/tech/carplay-api/src && go build ./... && go vet ./... && go test ./... && go mod tidy -diff)
 (cd argocd/apps/tech/isc-news-bot && npm ci && npm test)
+(cd argocd/apps/tech/isc-manager-bot && npm ci && npm test)
 ```
 
 Falls installierbar (`pip install yamllint`, Helm, kubeconform): `make lint` sowie
