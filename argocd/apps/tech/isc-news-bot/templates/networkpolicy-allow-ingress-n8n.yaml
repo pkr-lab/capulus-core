@@ -17,6 +17,12 @@ spec:
           podSelector:
             matchLabels:
               app.kubernetes.io/name: {{ .Values.n8nPodName }}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.uptimeKumaNamespace }}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ .Values.uptimeKumaPodName }}
       ports:
         - protocol: TCP
           port: 8080

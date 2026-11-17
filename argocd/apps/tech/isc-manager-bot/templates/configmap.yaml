@@ -10,6 +10,7 @@ data:
   SEWOBE_BASE_URL: {{ .Values.config.sewobeBaseUrl | quote }}
   GLIEDERUNG_EDV: {{ .Values.config.gliederungEdv | quote }}
   MITGLIEDSCHAFT_GLIEDERUNG: {{ .Values.config.mitgliedschaftGliederung | quote }}
+  MITGLIEDSCHAFT_SUCHBEGRIFF: {{ .Values.config.mitgliedschaftSuchbegriff | quote }}
   STEP_TIMEOUT_MS: {{ .Values.config.stepTimeoutMs | quote }}
   SEARCH_TIMEOUT_MS: {{ .Values.config.searchTimeoutMs | quote }}
   SEARCH_SETTLE_MS: {{ .Values.config.searchSettleMs | quote }}

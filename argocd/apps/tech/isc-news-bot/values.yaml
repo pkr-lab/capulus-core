@@ -76,6 +76,8 @@ config:
 
 n8nNamespace: n8n
 n8nPodName: n8n
+uptimeKumaNamespace: uptime-kuma
+uptimeKumaPodName: uptime-kuma
 
 secrets:
   name: isc-news-bot-secrets
