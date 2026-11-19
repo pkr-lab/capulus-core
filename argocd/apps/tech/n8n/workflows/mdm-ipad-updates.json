@@ -1,0 +1,811 @@
+{
+  "name": "MDM: iPad Updates",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 19 * * 3"
+            }
+          ]
+        }
+      },
+      "id": "66ae9a46-b64a-521f-a9d8-4be96fb0fd73",
+      "name": "Mittwoch 19:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "basicAuth",
+        "formTitle": "iPad-Updates starten",
+        "formDescription": "Sucht auf den iPads nach iPadOS-Updates und installiert das neueste. Das Ergebnis kommt per ntfy (Home-Lab-MDM). Der Ablauf dauert etwa 30 Minuten.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Seriennummer (leer = alle iPads)",
+              "fieldType": "text",
+              "requiredField": false
+            }
+          ]
+        },
+        "responseMode": "onReceived",
+        "options": {
+          "path": "mdm-ipad-updates"
+        }
+      },
+      "id": "f6a47ed5-5916-55c0-8311-0ba4c5a360f5",
+      "name": "Formular Updates",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        500
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Formulare"
+        }
+      },
+      "webhookId": "2fd97a19-fe0b-54dd-acaf-c7a2817c11da"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const input = $input.first().json;\nconst serial = String(input['Seriennummer (leer = alle iPads)'] || '').trim();\nif (serial.length > 40 || !/^[A-Za-z0-9]*$/.test(serial)) {\n  throw new Error('Die Seriennummer darf nur Buchstaben und Ziffern enthalten.');\n}\nconst cfg = {\n  nanomdmUrl: 'http://mdm-nanomdm.mdm.svc.cluster.local:9000',\n  ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n  ntfyTopic: 'Home-Lab-MDM',\n  serial,\n  manual: input.submittedAt !== undefined,\n  wartenSuche: 15,\n  wartenAntwort: 10,\n  wartenInstallation: 5,\n  maxMajor: 26\n};\nreturn [{ json: cfg }];\n"
+      },
+      "id": "8daa49d2-2745-5446-8e45-4cb8b93a95b0",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT e.id AS enrollment_id, d.serial_number FROM public.enrollments e JOIN public.devices d ON d.id = e.device_id WHERE e.type = 'Device' AND e.enabled AND ($1::text = '' OR d.serial_number = $1::text) ORDER BY d.serial_number",
+        "options": {
+          "queryReplacement": "={{ [$('Konfiguration').first().json.serial] }}"
+        }
+      },
+      "id": "8f215168-fe07-50a5-887c-64f24b0979ad",
+      "name": "Geraete suchen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst head = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n  + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n  + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n';\nconst tail = (commandUuid) => '\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>' + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\nconst escapeXml = (value) => String(value)\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;');\nconst devices = $input.all().map((item) => item.json).filter((row) => row.enrollment_id);\nif (devices.length === 0) {\n  const cfg = $('Konfiguration').first().json;\n  const message = cfg.serial\n    ? 'Es gibt kein angemeldetes iPad mit der Seriennummer ' + cfg.serial + '.'\n    : 'Es ist noch kein iPad angemeldet.';\n  return [{ json: { skip: true, message } }];\n}\nreturn devices.map((device) => {\n  const commandUuid = crypto.randomUUID();\n  const plist = head\n    + '\\t\\t<key>Force</key>\\n\\t\\t<true/>\\n'\n    + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>ScheduleOSUpdateScan</string>\\n'\n    + tail(commandUuid);\n  return { json: { skip: false, enrollment_id: device.enrollment_id, serial_number: device.serial_number, command_uuid: commandUuid, plist } };\n});\n"
+      },
+      "id": "a8f233bc-9cad-5c60-9e46-f78182a3c76a",
+      "name": "Scan bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        690,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              },
+              "id": "e847634b-e966-50bc-807c-0435952794d8"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "49c4694a-08e8-555d-ac66-318c198037d0",
+      "name": "Geraete gefunden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        920,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Konfiguration').first().json.nanomdmUrl }}/v1/enqueue/{{ $json.enrollment_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/xml",
+        "body": "={{ $json.plist }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "4235e7a8-ebd8-5ba0-a812-1c9126a84e38",
+      "name": "Scan einreihen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1150,
+        160
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoMDM API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": "={{ $('Konfiguration').first().json.wartenSuche }}",
+        "unit": "minutes"
+      },
+      "id": "135803fc-d33c-5ad7-9bf5-53155078fbc7",
+      "name": "Warten Suche",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1380,
+        160
+      ],
+      "webhookId": "3a8f6f18-6f9e-5cfb-8662-c6f9c4a42a58"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst head = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n  + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n  + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n';\nconst tail = (commandUuid) => '\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>' + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\nconst escapeXml = (value) => String(value)\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;');\nconst sources = $('Scan bauen').all().map((item) => item.json).filter((row) => !row.skip);\nconst queued = [];\nconst failed = [];\n$input.all().forEach((response, index) => {\n  const source = sources[index];\n  const body = response.json.body || {};\n  if (body.command_uuid === source.command_uuid) queued.push(source);\n  else failed.push(source.serial_number || source.enrollment_id);\n});\nif (queued.length === 0) throw new Error('Die Update-Suche konnte bei keinem iPad eingereiht werden.');\nreturn queued.map((device) => {\n  const commandUuid = crypto.randomUUID();\n  const plist = head\n    + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>AvailableOSUpdates</string>\\n'\n    + tail(commandUuid);\n  return { json: { enrollment_id: device.enrollment_id, serial_number: device.serial_number, command_uuid: commandUuid, plist, scanFailed: failed } };\n});\n"
+      },
+      "id": "5ec00391-0881-5c38-ae0d-e794e75e10fc",
+      "name": "Suche bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1610,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Konfiguration').first().json.nanomdmUrl }}/v1/enqueue/{{ $json.enrollment_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/xml",
+        "body": "={{ $json.plist }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "1a32d7cb-7b61-509b-ae3e-42fcb20e2769",
+      "name": "Suche einreihen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1840,
+        160
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoMDM API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": "={{ $('Konfiguration').first().json.wartenAntwort }}",
+        "unit": "minutes"
+      },
+      "id": "730835e0-cd9a-5461-bcf3-1ee3e8084bb5",
+      "name": "Warten Antwort",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2070,
+        160
+      ],
+      "webhookId": "ed6c4579-0089-5e9b-b384-55931081d441"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id AS enrollment_id, command_uuid, status, result FROM public.command_results WHERE command_uuid = ANY(string_to_array($1, ',')) AND status IN ('Acknowledged', 'Error', 'CommandFormatError')",
+        "options": {
+          "queryReplacement": "={{ [$('Suche bauen').all().map((item) => item.json.command_uuid).join(',')] }}"
+        }
+      },
+      "id": "acd0738e-2a5d-57c6-9de0-c0a64ad8f31b",
+      "name": "Ergebnisse lesen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2300,
+        160
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst head = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'\n  + '<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\\n'\n  + '<plist version=\"1.0\">\\n<dict>\\n\\t<key>Command</key>\\n\\t<dict>\\n';\nconst tail = (commandUuid) => '\\t</dict>\\n\\t<key>CommandUUID</key>\\n\\t<string>' + commandUuid + '</string>\\n</dict>\\n</plist>\\n';\nconst escapeXml = (value) => String(value)\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;');\nconst cfg = $('Konfiguration').first().json;\nconst sources = $('Suche bauen').all().map((item) => item.json);\nconst responses = $('Suche einreihen').all();\nconst results = new Map($input.all().map((item) => item.json).filter((row) => row.command_uuid).map((row) => [row.command_uuid, row]));\nconst versionParts = (version) => String(version).split('.').map((part) => parseInt(part, 10) || 0);\nconst compare = (a, b) => {\n  const left = versionParts(a);\n  const right = versionParts(b);\n  for (let i = 0; i < Math.max(left.length, right.length); i++) {\n    const diff = (right[i] || 0) - (left[i] || 0);\n    if (diff !== 0) return diff;\n  }\n  return 0;\n};\nconst parseUpdates = (xml) => {\n  const start = xml.indexOf('<key>AvailableOSUpdates</key>');\n  if (start < 0) return [];\n  const section = xml.slice(start + '<key>AvailableOSUpdates</key>'.length);\n  if (/^\\s*<array\\s*\\/>/.test(section)) return [];\n  const end = section.indexOf('</array>');\n  if (end < 0) return [];\n  return section.slice(0, end).split('<dict>').slice(1).map((chunk) => {\n    const entry = {};\n    const pairs = /<key>([^<]+)<\\/key>\\s*(?:<(true|false)\\/>|<(string|integer|real|date)>([^<]*)<\\/\\3>)/g;\n    let match;\n    while ((match = pairs.exec(chunk)) !== null) {\n      entry[match[1]] = match[2] ? match[2] === 'true' : match[4];\n    }\n    return entry;\n  }).filter((entry) => entry.Version);\n};\nconst report = { aktuell: [], keineAntwort: [], fehler: [], nichtEingereiht: [], uebersprungen: [], scanFehler: sources.length > 0 ? (sources[0].scanFailed || []) : [] };\nconst installs = [];\nsources.forEach((source, index) => {\n  const serial = source.serial_number || source.enrollment_id;\n  const body = (responses[index] && responses[index].json.body) || {};\n  if (body.command_uuid !== source.command_uuid) {\n    report.nichtEingereiht.push(serial);\n    return;\n  }\n  const row = results.get(source.command_uuid);\n  if (!row) {\n    report.keineAntwort.push(serial);\n    return;\n  }\n  if (row.status !== 'Acknowledged') {\n    report.fehler.push(serial + ' (Suche: ' + row.status + ')');\n    return;\n  }\n  let updates = parseUpdates(row.result);\n  const skippedMajor = cfg.maxMajor > 0 ? updates.filter((entry) => versionParts(entry.Version)[0] > cfg.maxMajor) : [];\n  if (cfg.maxMajor > 0) updates = updates.filter((entry) => versionParts(entry.Version)[0] <= cfg.maxMajor);\n  if (updates.length === 0) {\n    if (skippedMajor.length > 0) report.uebersprungen.push(serial + ' (' + skippedMajor[0].Version + ' ueber Obergrenze)');\n    else report.aktuell.push(serial);\n    return;\n  }\n  updates.sort((a, b) => compare(a.Version, b.Version));\n  const update = updates[0];\n  const commandUuid = crypto.randomUUID();\n  const selector = update.ProductKey\n    ? '\\t\\t\\t\\t<key>ProductKey</key>\\n\\t\\t\\t\\t<string>' + escapeXml(update.ProductKey) + '</string>\\n'\n    : '\\t\\t\\t\\t<key>ProductVersion</key>\\n\\t\\t\\t\\t<string>' + escapeXml(update.Version) + '</string>\\n';\n  const plist = head\n    + '\\t\\t<key>RequestType</key>\\n\\t\\t<string>ScheduleOSUpdate</string>\\n'\n    + '\\t\\t<key>Updates</key>\\n\\t\\t<array>\\n\\t\\t\\t<dict>\\n'\n    + '\\t\\t\\t\\t<key>InstallAction</key>\\n\\t\\t\\t\\t<string>InstallASAP</string>\\n'\n    + selector\n    + '\\t\\t\\t</dict>\\n\\t\\t</array>\\n'\n    + tail(commandUuid);\n  installs.push({ skip: false, enrollment_id: source.enrollment_id, serial_number: serial, version: update.Version, name: update.HumanReadableName || '', command_uuid: commandUuid, plist });\n});\nif (installs.length === 0) return [{ json: { skip: true, report } }];\nreturn installs.map((item) => ({ json: { ...item, report } }));\n"
+      },
+      "id": "896307bc-e7ec-5d3e-b1f0-97596f199d36",
+      "name": "Installation bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2530,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              },
+              "id": "ba3ca05f-b7f5-57e4-b8ff-08590dd0be35"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "a7bb3124-76c5-50af-8137-b75ccba98da5",
+      "name": "Installation noetig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2760,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Konfiguration').first().json.nanomdmUrl }}/v1/enqueue/{{ $json.enrollment_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/xml",
+        "body": "={{ $json.plist }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "efd392fd-a4cd-5125-afe6-0d3451c88dfb",
+      "name": "Installation einreihen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2990,
+        20
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM NanoMDM API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": "={{ $('Konfiguration').first().json.wartenInstallation }}",
+        "unit": "minutes"
+      },
+      "id": "6fa39a52-f59d-551f-bfa6-d68063499585",
+      "name": "Warten Installation",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3220,
+        20
+      ],
+      "webhookId": "15cad7cb-15b6-5036-8ac5-2bcd73160694"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id AS enrollment_id, command_uuid, status, result FROM public.command_results WHERE command_uuid = ANY(string_to_array($1, ',')) AND status IN ('Acknowledged', 'Error', 'CommandFormatError')",
+        "options": {
+          "queryReplacement": "={{ [$('Installation bauen').all().filter((item) => !item.json.skip).map((item) => item.json.command_uuid).join(',')] }}"
+        }
+      },
+      "id": "45f6382c-636f-5086-8b52-c1fc7f81d780",
+      "name": "Installationsergebnis lesen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3450,
+        20
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME_NACH_IMPORT",
+          "name": "MDM Automation DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const sources = $('Installation bauen').all().map((item) => item.json).filter((row) => !row.skip);\nconst responses = $('Installation einreihen').all();\nconst results = new Map($input.all().map((item) => item.json).filter((row) => row.command_uuid).map((row) => [row.command_uuid, row]));\nconst report = sources.length > 0 ? sources[0].report : {};\nconst angenommen = [];\nconst abgelehnt = [];\nconst ausstehend = [];\nconst nichtEingereiht = [];\nsources.forEach((source, index) => {\n  const label = source.serial_number + ' (' + (source.name || 'iPadOS ' + source.version) + ')';\n  const body = (responses[index] && responses[index].json.body) || {};\n  if (body.command_uuid !== source.command_uuid) {\n    nichtEingereiht.push(source.serial_number);\n    return;\n  }\n  const row = results.get(source.command_uuid);\n  if (!row) {\n    ausstehend.push(label);\n    return;\n  }\n  if (row.status === 'Acknowledged') {\n    angenommen.push(label);\n    return;\n  }\n  const reason = /<key>ErrorDescription<\\/key>\\s*<string>([^<]*)<\\/string>/.exec(row.result || '');\n  abgelehnt.push(label + ': ' + (reason ? reason[1] : row.status));\n});\nconst lines = [];\nif (angenommen.length > 0) lines.push('Update gestartet: ' + angenommen.join(', ') + '. Download und Installation laufen auf dem iPad weiter, es startet dabei neu.');\nif (ausstehend.length > 0) lines.push('Befehl eingereiht, noch keine Antwort (offline oder aus): ' + ausstehend.join(', ') + '. Das Update startet, sobald sich das iPad meldet.');\nif (abgelehnt.length > 0) lines.push('Abgelehnt: ' + abgelehnt.join('; ') + '.');\nif (nichtEingereiht.length > 0) lines.push('Nicht eingereiht: ' + nichtEingereiht.join(', ') + '.');\nif ((report.aktuell || []).length > 0) lines.push('Schon aktuell: ' + report.aktuell.join(', ') + '.');\nif ((report.uebersprungen || []).length > 0) lines.push('Uebersprungen: ' + report.uebersprungen.join(', ') + '.');\nif ((report.keineAntwort || []).length > 0) lines.push('Suche ohne Antwort: ' + report.keineAntwort.join(', ') + '.');\nif ((report.fehler || []).length > 0) lines.push('Suche mit Fehler: ' + report.fehler.join(', ') + '.');\nif ((report.nichtEingereiht || []).length > 0) lines.push('Suche nicht eingereiht: ' + report.nichtEingereiht.join(', ') + '.');\nif ((report.scanFehler || []).length > 0) lines.push('Scan nicht eingereiht: ' + report.scanFehler.join(', ') + '.');\nconst problems = abgelehnt.length + nichtEingereiht.length + (report.fehler || []).length + (report.nichtEingereiht || []).length + (report.scanFehler || []).length > 0;\nreturn [{ json: { title: problems ? 'iPad-Updates mit Problemen' : 'iPad-Updates gestartet', message: lines.join(' '), priority: problems ? 'high' : 'default', tags: problems ? 'warning' : 'arrow_up' } }];\n"
+      },
+      "id": "7aa265c4-0db7-5694-b216-29dc6b80af25",
+      "name": "Meldung bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3680,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const report = $input.first().json.report || {};\nconst lines = [];\nif ((report.aktuell || []).length > 0) lines.push('Aktuell, nichts zu tun: ' + report.aktuell.join(', ') + '.');\nif ((report.uebersprungen || []).length > 0) lines.push('Uebersprungen: ' + report.uebersprungen.join(', ') + '.');\nif ((report.keineAntwort || []).length > 0) lines.push('Keine Antwort (offline oder aus): ' + report.keineAntwort.join(', ') + '.');\nif ((report.fehler || []).length > 0) lines.push('Fehler: ' + report.fehler.join(', ') + '.');\nif ((report.nichtEingereiht || []).length > 0) lines.push('Suche nicht eingereiht: ' + report.nichtEingereiht.join(', ') + '.');\nif ((report.scanFehler || []).length > 0) lines.push('Scan nicht eingereiht: ' + report.scanFehler.join(', ') + '.');\nconst problems = (report.keineAntwort || []).length + (report.fehler || []).length + (report.nichtEingereiht || []).length + (report.scanFehler || []).length > 0;\nreturn [{ json: { title: problems ? 'iPad-Updates: kein Update, aber Probleme' : 'iPad-Updates: alles aktuell', message: lines.join(' ') || 'Es gab nichts zu tun.', priority: problems ? 'high' : 'default', tags: problems ? 'warning' : 'white_check_mark' } }];\n"
+      },
+      "id": "931c56c1-f387-5705-9486-33ca87c3dbd1",
+      "name": "Nichts zu installieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2990,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const first = $input.first().json;\nreturn [{ json: { title: 'iPad-Updates nicht gestartet', message: first.message || 'Es ist kein iPad angemeldet.', priority: 'high', tags: 'x' } }];\n"
+      },
+      "id": "5becd3c0-f9b0-53a8-b89d-73cc56b1683a",
+      "name": "Keine Geraete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1150,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e2153c13-7ef4-5f5f-bd81-9c12cdab3f80",
+              "name": "quelle",
+              "value": "MDM: iPad Updates",
+              "type": "string"
+            },
+            {
+              "id": "6aa45cfd-9bd8-5aa9-ac1e-043220e9ad57",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "aeebeeb4-8f18-5b51-be0f-b63ccb56805a",
+              "name": "titel",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "82a09ba8-8fb3-5cc6-9ce2-8006d07ab739",
+              "name": "prioritaet",
+              "value": "={{ $json.priority || 'default' }}",
+              "type": "string"
+            },
+            {
+              "id": "076997dd-490c-5bf4-9e51-30a9e7f2de18",
+              "name": "tags",
+              "value": "={{ $json.tags }}",
+              "type": "string"
+            },
+            {
+              "id": "6891f7b0-4b4e-537c-8242-462995bb2e49",
+              "name": "text",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "bab8d367-288f-5a2b-8d08-7e435f0e3ab8",
+              "name": "kanal",
+              "value": "MDM-Verwaltung",
+              "type": "string"
+            },
+            {
+              "id": "237d374e-effe-5304-bf93-f6fa75e82326",
+              "name": "mail",
+              "value": "false",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "99879c1c-1f8d-5d88-b9c1-be700e397b54",
+      "name": "Protokoll melden vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3910,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "4d802f79-d11d-53df-8a1a-9b581fed40e4",
+      "name": "Protokoll melden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        4140,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Mittwoch 19:00": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formular Updates": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Geraete suchen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geraete suchen": {
+      "main": [
+        [
+          {
+            "node": "Scan bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scan bauen": {
+      "main": [
+        [
+          {
+            "node": "Geraete gefunden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geraete gefunden?": {
+      "main": [
+        [
+          {
+            "node": "Scan einreihen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Keine Geraete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scan einreihen": {
+      "main": [
+        [
+          {
+            "node": "Warten Suche",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Warten Suche": {
+      "main": [
+        [
+          {
+            "node": "Suche bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suche bauen": {
+      "main": [
+        [
+          {
+            "node": "Suche einreihen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suche einreihen": {
+      "main": [
+        [
+          {
+            "node": "Warten Antwort",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Warten Antwort": {
+      "main": [
+        [
+          {
+            "node": "Ergebnisse lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnisse lesen": {
+      "main": [
+        [
+          {
+            "node": "Installation bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Installation bauen": {
+      "main": [
+        [
+          {
+            "node": "Installation noetig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Installation noetig?": {
+      "main": [
+        [
+          {
+            "node": "Installation einreihen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nichts zu installieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Installation einreihen": {
+      "main": [
+        [
+          {
+            "node": "Warten Installation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Warten Installation": {
+      "main": [
+        [
+          {
+            "node": "Installationsergebnis lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Installationsergebnis lesen": {
+      "main": [
+        [
+          {
+            "node": "Meldung bauen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meldung bauen": {
+      "main": [
+        [
+          {
+            "node": "Protokoll melden vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nichts zu installieren": {
+      "main": [
+        [
+          {
+            "node": "Protokoll melden vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keine Geraete": {
+      "main": [
+        [
+          {
+            "node": "Protokoll melden vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Protokoll melden vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Protokoll melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "Europe/Berlin",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
+  },
+  "versionId": "4bc62ab2-bfdf-5db8-8596-44cff567be35",
+  "meta": {
+    "description": "Jeden Mittwoch um 19:00 Uhr (Europe/Berlin) sucht der Workflow auf allen angemeldeten iPads nach iPadOS-Updates und installiert das neueste. Ablauf: ScheduleOSUpdateScan (Force) an alle iPads, 15 Minuten warten, AvailableOSUpdates abfragen, 10 Minuten warten, die Antworten aus public.command_results lesen und je iPad das hoechste Update mit ScheduleOSUpdate (InstallAction InstallASAP) einreihen, nach 5 Minuten das Ergebnis pruefen. Zusaetzlich als Formular unter /form/mdm-ipad-updates (Seriennummer leer = alle iPads). Nur auf beaufsichtigten iPads. Das iPad muss online, geladen und im WLAN sein; ein iPad mit Code kann die Installation verlangen, dass der Code eingegeben wird. Apps aktualisiert iPadOS selbst ueber den App Store, dafuer ist kein MDM-Befehl noetig. Obergrenze fuer die Hauptversion: Node Konfiguration, Feld maxMajor (Standard 26, damit iPadOS 27 nicht ungefragt installiert wird; 0 = keine Obergrenze). Ergebnis und Probleme per ntfy an Home-Lab-MDM. Credentials: MDM Automation DB, MDM NanoMDM API, MDM Formulare, ntfy-publisher."
+  }
+}
