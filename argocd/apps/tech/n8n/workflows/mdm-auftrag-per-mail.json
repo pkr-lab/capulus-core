@@ -159,6 +159,9 @@
                     "option": "Bitwarden Passwortmanager"
                   },
                   {
+                    "option": "Mattermost"
+                  },
+                  {
                     "option": "Microsoft Authenticator"
                   }
                 ]
