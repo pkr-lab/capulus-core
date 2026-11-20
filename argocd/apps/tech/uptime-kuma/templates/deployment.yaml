@@ -24,6 +24,54 @@ spec:
       serviceAccountName: {{ include "uptime-kuma.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if and .Values.restore.enabled .Values.resticBackup.enabled .Values.persistence.enabled }}
+      initContainers:
+        - name: restore
+          image: {{ .Values.restore.image | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              if [ -e /data/kuma.db ]; then
+                echo "kuma.db vorhanden, kein Restore"
+                exit 0
+              fi
+              echo "keine kuma.db, stelle aus dem Restic-Backup wieder her"
+              restic --no-lock restore latest --host "$BACKUP_HOST" --tag "$BACKUP_TAG" \
+                --target /restore --exclude /sources/data/error.log
+              test -s /restore/stage/data/kuma.db
+              cp -a /restore/sources/data/. /data/
+              cp -a /restore/stage/data/kuma.db /data/kuma.db
+              echo "Restore fertig"
+          env:
+            - name: RESTIC_REPOSITORY
+              value: /repo
+            - name: RESTIC_CACHE_DIR
+              value: /cache
+            - name: RESTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.resticBackup.secretName }}
+                  key: password
+            - name: BACKUP_HOST
+              value: {{ include "uptime-kuma.fullname" . | quote }}
+            - name: BACKUP_TAG
+              value: {{ include "uptime-kuma.fullname" . | quote }}
+          resources:
+            {{- toYaml .Values.restore.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: restic-repo
+              mountPath: /repo
+              readOnly: true
+            - name: restore-tmp
+              mountPath: /restore
+            - name: restore-cache
+              mountPath: /cache
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -76,6 +124,16 @@ spec:
         - name: homeserver-ca
           configMap:
             name: {{ include "uptime-kuma.fullname" . }}-ca
+        {{- if and .Values.restore.enabled .Values.resticBackup.enabled .Values.persistence.enabled }}
+        - name: restic-repo
+          persistentVolumeClaim:
+            claimName: {{ include "uptime-kuma.fullname" . }}-restic
+            readOnly: true
+        - name: restore-tmp
+          emptyDir: {}
+        - name: restore-cache
+          emptyDir: {}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
