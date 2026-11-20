@@ -80,6 +80,21 @@ resticBackup:
     limits:
       memory: 256Mi
 
+# Stellt kuma.db und die uebrigen Daten aus dem letzten Restic-Backup wieder
+# her, wenn /app/data noch keine kuma.db enthaelt (leeres PVC, z. B. nach
+# Knotenverlust). Braucht resticBackup.enabled; das Repo wird nur lesend
+# eingehangen (restic --no-lock). Ein Pod-Neustart mit vorhandener kuma.db
+# fasst nichts an.
+restore:
+  enabled: true
+  image: "restic/restic:0.19.1@sha256:136600b6ff6843d61d355f7f71f460a166429f35de6fd11b568fece3c9a4d510"
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
 resources:
   requests:
     cpu: 50m
@@ -90,8 +105,11 @@ resources:
 
 affinity: {}
 
-nodeSelector:
-  kubernetes.io/hostname: controlplane-1
+# Kein fester Knoten mehr: Die Daten liegen auf einem local-path-PVC, das beim
+# ersten Start auf dem Knoten angelegt wird, auf dem der Pod landet. Ist der
+# Knoten dauerhaft weg, PVC loeschen -> der Init-Container "restore" holt den
+# letzten Stand aus dem Restic-Backup (siehe restore.* oben).
+nodeSelector: {}
 tolerations:
   - key: capulus.homeserver/protected
     operator: Exists
