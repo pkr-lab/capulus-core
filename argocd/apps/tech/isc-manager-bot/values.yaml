@@ -3,7 +3,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/pkr-lab/isc-manager-bot
-  tag: "sha-3ce32c49"
+  tag: "sha-c3779453"
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
