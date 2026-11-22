@@ -1,0 +1,526 @@
+{
+  "name": "ISC-Manager: Neue Mitglieder in SEWOBE melden",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 7,
+              "triggerAtMinute": 30
+            },
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 17,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "id": "e740caf4-c320-5b22-acca-598e31015f55",
+      "name": "Taeglich 07:30 und 17:30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const item = $input.first();\nreturn [{\n  json: {\n    ...item.json,\n    ntfyTopic: 'isc-manager',\n    ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n    iscManagerBotUrl: 'http://isc-manager-bot.isc-manager-bot.svc.cluster.local:8080',\n    startNummer: '',\n    fenster: 10\n  }\n}];\n"
+      },
+      "id": "5028cc97-a47a-5364-9365-8f24f55894b4",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = $input.first().json;\nconst store = $getWorkflowStaticData('global');\nconst known = /^\\d{13}$/.test(store.letzteNummer || '') ? store.letzteNummer : '';\nconst start = /^\\d{13}$/.test(cfg.startNummer || '') ? cfg.startNummer : '';\nconst after = known || start;\nif (after === '') {\n  return [{ json: { ...cfg, bereit: false, fehlertext: 'Keine Startnummer: in Node Konfiguration die zuletzt bekannte Mitgliedsnummer (13 Ziffern) als startNummer eintragen' } }];\n}\nreturn [{ json: { ...cfg, bereit: true, after, payload: { after, window: cfg.fenster } } }];\n"
+      },
+      "id": "46316fd0-db4f-5198-a2e4-e62bfcc14649",
+      "name": "Stand lesen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "52bc5eaf-4ce9-541a-9804-8019d1f532ff",
+              "leftValue": "={{ $json.bereit }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cb8b1b54-d227-523c-81d5-3905f06a9f5a",
+      "name": "Bereit?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Stand lesen').first().json.iscManagerBotUrl }}/members/new",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": false,
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('Stand lesen').first().json.payload) }}",
+        "options": {
+          "timeout": 420000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "e11d7e5f-81b4-57b9-bde3-89f39d70c119",
+      "name": "Neue Mitglieder abfragen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        200
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ISC_MANAGER_BOT_CREDENTIAL_ID",
+          "name": "ISC-Manager-Bot API-Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8242c5f4-0b3a-515e-97b2-9812bf8c777b",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "10a1505e-e23d-5a83-b199-4817b70bbe2c",
+      "name": "Erfolgreich?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const res = $input.first().json;\nconst store = $getWorkflowStaticData('global');\nconst members = Array.isArray(res.members) ? res.members : [];\nif (/^\\d{13}$/.test(res.highest || '')) store.letzteNummer = res.highest;\nif (members.length === 0) {\n  return [{ json: { neu: false } }];\n}\nconst zeilen = members.map((m) => m.number + ' ' + m.name + (m.active ? '' : ' (nicht aktiv)'));\nconst titel = members.length === 1 ? 'Neues Mitglied in SEWOBE' : members.length + ' neue Mitglieder in SEWOBE';\nreturn [{ json: { neu: true, titel, text: zeilen.join('\\n') } }];\n"
+      },
+      "id": "55109b60-c2a7-5d9f-8ef2-2734fc354ba7",
+      "name": "Ergebnis auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f1b48149-d00e-5743-8d4b-d35aa48f8b67",
+              "leftValue": "={{ $json.neu }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f768fe35-81f5-554f-bd5c-deeb3434fd27",
+      "name": "Neu?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1680,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7b15feff-b881-5ec3-8ca6-0768b2f9720a",
+              "name": "quelle",
+              "value": "ISC-Manager-Bot",
+              "type": "string"
+            },
+            {
+              "id": "45c79eea-261b-53ad-89e0-66fe963f549b",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "6cde3b11-dba0-5584-b2a2-058c83d8f175",
+              "name": "titel",
+              "value": "={{ $json.titel }}",
+              "type": "string"
+            },
+            {
+              "id": "b44de8c2-afc1-58d3-a4ed-6af4bf83e2a8",
+              "name": "prioritaet",
+              "value": "default",
+              "type": "string"
+            },
+            {
+              "id": "fe38a5fb-816a-5789-9eaf-8b33175d29cb",
+              "name": "tags",
+              "value": "busts_in_silhouette",
+              "type": "string"
+            },
+            {
+              "id": "0b017c51-56b3-5dff-820a-20aeb2a5e92e",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "cc511ac8-0a0d-5951-b5ed-81b06d5e14ec",
+      "name": "ntfy Neue Mitglieder vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1920,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "919a8d1d-b4cf-5530-9ffd-b12937ed7be6",
+      "name": "ntfy Neue Mitglieder",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2160,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dd64ef00-8839-5916-8e05-32f0294b1178",
+              "name": "quelle",
+              "value": "ISC-Manager-Bot",
+              "type": "string"
+            },
+            {
+              "id": "e8904dd8-88c5-5829-849f-87bf7aee02af",
+              "name": "thema",
+              "value": "={{ $('Konfiguration').first().json.ntfyTopic }}",
+              "type": "string"
+            },
+            {
+              "id": "5e41455d-04d5-5d72-9baa-6ddf12031286",
+              "name": "titel",
+              "value": "Mitgliederpruefung fehlgeschlagen",
+              "type": "string"
+            },
+            {
+              "id": "6003b339-f227-52fb-8e63-e890aecd0015",
+              "name": "prioritaet",
+              "value": "high",
+              "type": "string"
+            },
+            {
+              "id": "08b9df45-f9ac-5f1f-852e-09e5acdf6615",
+              "name": "tags",
+              "value": "x",
+              "type": "string"
+            },
+            {
+              "id": "e927d612-6c49-58e9-9f64-5e6e0625fa65",
+              "name": "text",
+              "value": "={{ $json.fehlertext || ('Fehler ' + ($json.errorCode || 'UNBEKANNT') + ' im Schritt ' + ($json.step || '-') + ' | ' + ($json.error || 'keine Antwort vom Bot')) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "32dfc683-af1b-584a-8952-466a527e36c8",
+      "name": "ntfy Fehler vorbereiten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1440,
+        420
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tfhunJtksLEkj1Id",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/tfhunJtksLEkj1Id",
+          "cachedResultName": "Publish: Benachrichtigung"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "d9fde311-6eed-54ee-97c5-88c7cb525a2f",
+      "name": "ntfy Fehler",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1680,
+        420
+      ],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Taeglich 07:30 und 17:30": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Stand lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stand lesen": {
+      "main": [
+        [
+          {
+            "node": "Bereit?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bereit?": {
+      "main": [
+        [
+          {
+            "node": "Neue Mitglieder abfragen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ntfy Fehler vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Neue Mitglieder abfragen": {
+      "main": [
+        [
+          {
+            "node": "Erfolgreich?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Erfolgreich?": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ntfy Fehler vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnis auswerten": {
+      "main": [
+        [
+          {
+            "node": "Neu?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Neu?": {
+      "main": [
+        [
+          {
+            "node": "ntfy Neue Mitglieder vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "ntfy Neue Mitglieder vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "ntfy Neue Mitglieder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ntfy Fehler vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "ntfy Fehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "errorWorkflow": "Vqt2w9o5XRVvs9LY"
+  },
+  "versionId": "b4c4b4ab-42a8-5a5d-874f-693684093765",
+  "meta": {
+    "description": "Zweimal taeglich (07:30 und 17:30): fragt den ISC-Manager-Bot nach Mitgliedsnummern oberhalb der zuletzt bekannten Nummer (POST /members/new, probiert die naechsten Nummern in SEWOBE durch). Gefundene neue Mitglieder gehen als ntfy-Meldung an das Thema isc-manager, die hoechste Nummer wird in den Workflow-Static-Data gemerkt. Erststart: startNummer im Node Konfiguration setzen. Credentials: ISC-Manager-Bot API-Token."
+  },
+  "id": "iscManagerNeu001",
+  "tags": []
+}

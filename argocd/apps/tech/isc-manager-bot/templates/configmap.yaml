@@ -14,6 +14,7 @@ data:
   STEP_TIMEOUT_MS: {{ .Values.config.stepTimeoutMs | quote }}
   SEARCH_TIMEOUT_MS: {{ .Values.config.searchTimeoutMs | quote }}
   SEARCH_SETTLE_MS: {{ .Values.config.searchSettleMs | quote }}
+  NUMBER_SEARCH_SETTLE_MS: {{ .Values.config.numberSearchSettleMs | quote }}
   SAVE_TIMEOUT_MS: {{ .Values.config.saveTimeoutMs | quote }}
   SYNC_TIMEOUT_MS: {{ .Values.config.syncTimeoutMs | quote }}
   LOCK_WAIT_MS: {{ .Values.config.lockWaitMs | quote }}
