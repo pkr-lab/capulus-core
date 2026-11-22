@@ -7,7 +7,7 @@ import { Logger } from "../../src/logger.js";
 import { RunLock } from "../../src/mutex.js";
 import { collapse, normalizeName, scrubMessage } from "../../src/text.js";
 import { loadConfig, normalizeTotpSecret } from "../../src/config.js";
-import { validateSyncRequest } from "../../src/validation.js";
+import { validateNewMembersRequest, validateSyncRequest } from "../../src/validation.js";
 import { parseEdv } from "../../src/isc/session.js";
 import { resolveCountry } from "../../src/isc/personen.js";
 import { selectHit, type Hit } from "../../src/sewobe/search.js";
@@ -214,4 +214,14 @@ test("Logger: Geheimnisse und personenbezogene Felder werden entfernt", () => {
   for (const forbidden of ["password", "totpCode", "vorname", "nachname", "geburtstag", "diff", "uid"]) {
     assert.equal(forbidden in entry, false, `${forbidden} darf nicht geloggt werden`);
   }
+});
+
+test("Validierung neue Mitglieder: Standardfenster, Zahl als Nummer und Grenzen", () => {
+  assert.deepEqual(validateNewMembersRequest({ after: "1002011000042" }), { after: "1002011000042", window: 10 });
+  assert.deepEqual(validateNewMembersRequest({ after: 1002011000042, window: 25 }), { after: "1002011000042", window: 25 });
+  assert.throws(() => validateNewMembersRequest({}), ValidationError);
+  assert.throws(() => validateNewMembersRequest({ after: "42" }), ValidationError);
+  assert.throws(() => validateNewMembersRequest({ after: "1002011000042", window: 0 }), ValidationError);
+  assert.throws(() => validateNewMembersRequest({ after: "1002011000042", window: 26 }), ValidationError);
+  assert.throws(() => validateNewMembersRequest([]), ValidationError);
 });

@@ -115,3 +115,23 @@ test("Technischer Fehler: Login im ISC abgelehnt ergibt 502", { timeout: RUN_TIM
     }
   });
 });
+
+test("POST /members/new: Token Pflicht, ungültige Nummer 400, Treffer 200", { timeout: RUN_TIMEOUT }, async (t) => {
+  if (!chromiumReady) return t.skip("Chromium nicht verfügbar");
+  await withMocks({}, { persons: [sewobePerson({ nr: "1002011000011" })] }, {}, async (h) => {
+    const api = await startApi(h);
+    try {
+      const none = await fetch(`${api.base}/members/new`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      assert.equal(none.status, 401);
+      const bad = await fetch(`${api.base}/members/new`, { method: "POST", headers: AUTH, body: JSON.stringify({ after: "42" }) });
+      assert.equal(bad.status, 400);
+      const ok = await fetch(`${api.base}/members/new`, { method: "POST", headers: AUTH, body: JSON.stringify({ after: "1002011000010", window: 2 }) });
+      assert.equal(ok.status, 200);
+      const body = (await ok.json()) as { found: boolean; highest: string };
+      assert.equal(body.found, true);
+      assert.equal(body.highest, "1002011000011");
+    } finally {
+      await api.close();
+    }
+  });
+});

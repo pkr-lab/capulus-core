@@ -367,3 +367,45 @@ sync("Logs und Fehlerantworten enthalten keine Personendaten, Passwörter oder T
     }
   }
 });
+
+sync("Neue Mitglieder: findet höhere Nummern über Lücken hinweg und meldet die höchste", async () => {
+  const persons = [
+    sewobePerson({ id: 1, nr: "1002011000010" }),
+    sewobePerson({ id: 2, vorname: "Hans", nachname: "Beispiel", nr: "1002011000011" }),
+    sewobePerson({ id: 3, vorname: "Lena", nachname: "Probe", nr: "1002011000013" }),
+    sewobePerson({ id: 4, vorname: "Fern", nachname: "Weit", nr: "1002011000040" }),
+  ];
+  await withMocks({}, { persons }, {}, async ({ sewobe, runner }) => {
+    const result = await runner.newMembers({ after: "1002011000010", window: 5 });
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(result.found, true);
+    assert.deepEqual(
+      result.members.map((m) => m.number),
+      ["1002011000011", "1002011000013"],
+    );
+    assert.equal(result.members[0]?.name, "Beispiel, Hans");
+    assert.equal(result.highest, "1002011000013");
+    assert.equal(result.checked, 8);
+    assert.equal(sewobe.logouts(), 1);
+  });
+});
+
+sync("Neue Mitglieder: ohne höhere Nummer bleibt highest unverändert", async () => {
+  await withMocks({}, { persons: [sewobePerson({ nr: "1002011000010" })] }, {}, async ({ runner }) => {
+    const result = await runner.newMembers({ after: "1002011000010", window: 3 });
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(result.found, false);
+    assert.deepEqual(result.members, []);
+    assert.equal(result.highest, "1002011000010");
+    assert.equal(result.checked, 3);
+  });
+});
+
+sync("Neue Mitglieder: Anmeldefehler liefert error mit Code", async () => {
+  await withMocks({}, { failLogin: true }, {}, async ({ runner }) => {
+    const result = await runner.newMembers({ after: "1002011000010", window: 3 });
+    assert.equal(result.ok, false);
+    assert.ok(result.errorCode);
+    assert.equal(result.highest, "1002011000010");
+  });
+});
