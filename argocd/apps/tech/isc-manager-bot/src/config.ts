@@ -17,6 +17,7 @@ export type Config = {
   searchTimeoutMs: number;
   searchSettleMs: number;
   numberSearchSettleMs: number;
+  membersTimeoutMs: number;
   saveTimeoutMs: number;
   syncTimeoutMs: number;
   lockWaitMs: number;
@@ -33,7 +34,8 @@ const DEFAULTS = {
   stepTimeoutMs: 30_000,
   searchTimeoutMs: 90_000,
   searchSettleMs: 20_000,
-  numberSearchSettleMs: 3000,
+  numberSearchSettleMs: 20_000,
+  membersTimeoutMs: 900_000,
   saveTimeoutMs: 45_000,
   syncTimeoutMs: 360_000,
   lockWaitMs: 60_000,
@@ -92,6 +94,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
     searchTimeoutMs: intFromEnv(env, "SEARCH_TIMEOUT_MS", DEFAULTS.searchTimeoutMs, 1000),
     searchSettleMs: intFromEnv(env, "SEARCH_SETTLE_MS", DEFAULTS.searchSettleMs, 0),
     numberSearchSettleMs: intFromEnv(env, "NUMBER_SEARCH_SETTLE_MS", DEFAULTS.numberSearchSettleMs, 0),
+    membersTimeoutMs: intFromEnv(env, "MEMBERS_TIMEOUT_MS", DEFAULTS.membersTimeoutMs, 10_000),
     saveTimeoutMs: intFromEnv(env, "SAVE_TIMEOUT_MS", DEFAULTS.saveTimeoutMs, 1000),
     syncTimeoutMs: intFromEnv(env, "SYNC_TIMEOUT_MS", DEFAULTS.syncTimeoutMs, 10_000),
     lockWaitMs: intFromEnv(env, "LOCK_WAIT_MS", DEFAULTS.lockWaitMs, 0),

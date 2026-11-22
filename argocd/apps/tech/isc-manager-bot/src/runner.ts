@@ -53,6 +53,12 @@ export type NewMember = {
   active: boolean;
 };
 
+export type NumberProbe = {
+  number: string;
+  hits: number;
+  seen: string[];
+};
+
 export type NewMembersResult = {
   ok: boolean;
   after: string;
@@ -60,6 +66,7 @@ export type NewMembersResult = {
   found: boolean;
   members: NewMember[];
   checked: number;
+  probes: NumberProbe[];
   errorCode?: ErrorCode;
   step?: string;
   error?: string;
@@ -72,7 +79,7 @@ export type SyncApi = {
   newMembers(request: ParsedNewMembers): Promise<NewMembersResult>;
 };
 
-const MAX_PROBES = 60;
+const MAX_PROBES = 40;
 
 type Sessions = {
   isc: Page;
@@ -154,11 +161,20 @@ export class SyncRunner {
       context = await browser.newContext({ locale: "de-DE", timezoneId: "Europe/Berlin", viewport: { width: 1366, height: 900 }, acceptDownloads: false });
       page = await context.newPage();
       page.setDefaultTimeout(this.cfg.stepTimeoutMs);
-      const members = await withDeadline(this.probeNumbers(page, request, state), this.cfg.syncTimeoutMs);
+      const members = await withDeadline(this.probeNumbers(page, request, state), this.cfg.membersTimeoutMs);
       const durationMs = Date.now() - started;
       const highest = members.list.reduce((max, member) => (member.number > max ? member.number : max), request.after);
       this.log.info("Mitgliedsnummern geprüft", { checked: members.checked, foundCount: members.list.length, durationMs });
-      return { ok: true, after: request.after, highest, found: members.list.length > 0, members: members.list, checked: members.checked, durationMs };
+      return {
+        ok: true,
+        after: request.after,
+        highest,
+        found: members.list.length > 0,
+        members: members.list,
+        checked: members.checked,
+        probes: members.probes,
+        durationMs,
+      };
     } catch (error) {
       const durationMs = Date.now() - started;
       const info = this.describeError(error, state.step);
@@ -170,6 +186,7 @@ export class SyncRunner {
         found: false,
         members: [],
         checked: 0,
+        probes: [],
         errorCode: info.code,
         step: info.step,
         error: info.message,
@@ -182,18 +199,20 @@ export class SyncRunner {
     }
   }
 
-  private async probeNumbers(page: Page, request: ParsedNewMembers, state: { step: string }): Promise<{ list: NewMember[]; checked: number }> {
+  private async probeNumbers(page: Page, request: ParsedNewMembers, state: { step: string }): Promise<{ list: NewMember[]; checked: number; probes: NumberProbe[] }> {
     state.step = "sewobe-login";
     await sewobeLogin(page, this.cfg, this.totp);
     state.step = "sewobe-search";
     const list: NewMember[] = [];
+    const probes: NumberProbe[] = [];
     let next = Number(request.after) + 1;
     let limit = Number(request.after) + request.window;
     let checked = 0;
     while (next <= limit && checked < MAX_PROBES) {
       const candidate = String(next).padStart(13, "0");
-      const hits = await searchTerm(page, this.cfg, candidate, this.cfg.numberSearchSettleMs);
+      const hits = await searchTerm(page, this.cfg, candidate, this.cfg.numberSearchSettleMs, candidate);
       checked += 1;
+      probes.push({ number: candidate, hits: hits.length, seen: hits.slice(0, 3).map((entry) => entry.number) });
       const hit = hits.find((entry) => entry.number === candidate);
       if (hit) {
         list.push({ number: candidate, name: hit.company, active: hit.active });
@@ -201,7 +220,7 @@ export class SyncRunner {
       }
       next += 1;
     }
-    return { list, checked };
+    return { list, checked, probes };
   }
 
   private async run(sessions: Sessions, request: ParsedSync, state: { step: string }): Promise<Outcome> {

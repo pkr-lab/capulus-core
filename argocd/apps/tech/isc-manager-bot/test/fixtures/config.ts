@@ -20,6 +20,7 @@ export function testConfig(iscBaseUrl: string, sewobeBaseUrl: string, overrides:
     searchTimeoutMs: 20_000,
     searchSettleMs: 0,
     numberSearchSettleMs: 0,
+    membersTimeoutMs: 120_000,
     saveTimeoutMs: 15_000,
     syncTimeoutMs: 120_000,
     lockWaitMs: 60_000,
