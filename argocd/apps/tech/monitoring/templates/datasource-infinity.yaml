@@ -25,3 +25,4 @@ data:
             - "https://www.hochwasser.rlp.de"
             - "https://opendata.dwd.de"
             - "https://warnung.bund.de"
+            - "https://api.open-meteo.com"
