@@ -14,7 +14,8 @@
     "test:unit": "npm run build && node --test dist/test/unit/*.test.js",
     "test:e2e": "npm run build && node --test --test-concurrency=1 dist/test/e2e/*.test.js",
     "start": "node dist/src/main.js",
-    "smoke": "npm run build && node dist/scripts/smoke.js"
+    "smoke": "npm run build && node dist/scripts/smoke.js",
+    "smoke:members": "npm run build && node dist/scripts/smoke-members.js"
   },
   "dependencies": {
     "otpauth": "9.6.0",
