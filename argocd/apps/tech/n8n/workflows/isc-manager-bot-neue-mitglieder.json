@@ -33,7 +33,7 @@
       "parameters": {
         "authentication": "basicAuth",
         "formTitle": "Neue SEWOBE-Mitglieder pruefen (Test)",
-        "formDescription": "Fragt den ISC-Manager-Bot nach Mitgliedsnummern oberhalb der angegebenen Nummer. Es wird nichts gemerkt, die gemerkte Nummer des Zeitplans bleibt unveraendert. Das Ergebnis kommt per ntfy.",
+        "formDescription": "Fragt den ISC-Manager-Bot nach Mitgliedsnummern oberhalb der angegebenen Nummer. Es wird nichts gemerkt, die gemerkte Nummer des Zeitplans bleibt unveraendert. Das Ergebnis kommt per ntfy. Die Mail an den Empfaenger aus dem Node Konfiguration geht nur bei Ja und nur, wenn Mitglieder gefunden wurden.",
         "formFields": {
           "values": [
             {
@@ -47,6 +47,21 @@
               "fieldType": "number",
               "requiredField": false,
               "placeholder": "optional, Standard 10"
+            },
+            {
+              "fieldLabel": "Mail an Empfaenger senden",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Nein"
+                  },
+                  {
+                    "option": "Ja"
+                  }
+                ]
+              },
+              "requiredField": true
             }
           ]
         },
@@ -74,7 +89,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const item = $input.first();\nreturn [{\n  json: {\n    ...item.json,\n    ntfyTopic: 'isc-manager',\n    ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n    iscManagerBotUrl: 'http://isc-manager-bot.isc-manager-bot.svc.cluster.local:8080',\n    startNummer: '',\n    fenster: 10\n  }\n}];\n"
+        "jsCode": "const item = $input.first();\nreturn [{\n  json: {\n    ...item.json,\n    ntfyTopic: 'isc-manager',\n    ntfyUrl: 'http://ntfy.ntfy.svc.cluster.local',\n    iscManagerBotUrl: 'http://isc-manager-bot.isc-manager-bot.svc.cluster.local:8080',\n    startNummer: '',\n    fenster: 10,\n    mailAn: 'peter.kretzer@dlrg.org',\n    mailVon: 'n8n@pkr-service.de'\n  }\n}];\n"
       },
       "id": "5028cc97-a47a-5364-9365-8f24f55894b4",
       "name": "Konfiguration",
@@ -88,7 +103,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const cfg = $input.first().json;\nconst form = cfg['Letzte bekannte Mitgliedsnummer'];\nif (form !== undefined) {\n  const after = String(form).trim();\n  const rawWindow = cfg['Fenster (1 bis 25)'];\n  const fenster = rawWindow === undefined || rawWindow === null || rawWindow === '' ? cfg.fenster : Number(rawWindow);\n  if (!/^\\d{13}$/.test(after)) {\n    return [{ json: { ...cfg, bereit: false, fehlertext: 'Testformular: Mitgliedsnummer muss 13 Ziffern haben' } }];\n  }\n  if (!Number.isInteger(fenster) || fenster < 1 || fenster > 25) {\n    return [{ json: { ...cfg, bereit: false, fehlertext: 'Testformular: Fenster muss eine ganze Zahl von 1 bis 25 sein' } }];\n  }\n  return [{ json: { ...cfg, bereit: true, test: true, after, payload: { after, window: fenster } } }];\n}\nconst store = $getWorkflowStaticData('global');\nconst known = /^\\d{13}$/.test(store.letzteNummer || '') ? store.letzteNummer : '';\nconst start = /^\\d{13}$/.test(cfg.startNummer || '') ? cfg.startNummer : '';\nconst after = known || start;\nif (after === '') {\n  return [{ json: { ...cfg, bereit: false, fehlertext: 'Keine Startnummer: in Node Konfiguration die zuletzt bekannte Mitgliedsnummer (13 Ziffern) als startNummer eintragen' } }];\n}\nreturn [{ json: { ...cfg, bereit: true, test: false, after, payload: { after, window: cfg.fenster } } }];\n"
+        "jsCode": "const cfg = $input.first().json;\nconst form = cfg['Letzte bekannte Mitgliedsnummer'];\nif (form !== undefined) {\n  const after = String(form).trim();\n  const rawWindow = cfg['Fenster (1 bis 25)'];\n  const fenster = rawWindow === undefined || rawWindow === null || rawWindow === '' ? cfg.fenster : Number(rawWindow);\n  if (!/^\\d{13}$/.test(after)) {\n    return [{ json: { ...cfg, bereit: false, fehlertext: 'Testformular: Mitgliedsnummer muss 13 Ziffern haben' } }];\n  }\n  if (!Number.isInteger(fenster) || fenster < 1 || fenster > 25) {\n    return [{ json: { ...cfg, bereit: false, fehlertext: 'Testformular: Fenster muss eine ganze Zahl von 1 bis 25 sein' } }];\n  }\n  return [{ json: { ...cfg, bereit: true, test: true, mailSenden: cfg['Mail an Empfaenger senden'] === 'Ja', after, payload: { after, window: fenster } } }];\n}\nconst store = $getWorkflowStaticData('global');\nconst known = /^\\d{13}$/.test(store.letzteNummer || '') ? store.letzteNummer : '';\nconst start = /^\\d{13}$/.test(cfg.startNummer || '') ? cfg.startNummer : '';\nconst after = known || start;\nif (after === '') {\n  return [{ json: { ...cfg, bereit: false, fehlertext: 'Keine Startnummer: in Node Konfiguration die zuletzt bekannte Mitgliedsnummer (13 Ziffern) als startNummer eintragen' } }];\n}\nreturn [{ json: { ...cfg, bereit: true, test: false, mailSenden: true, after, payload: { after, window: cfg.fenster } } }];\n"
       },
       "id": "46316fd0-db4f-5198-a2e4-e62bfcc14649",
       "name": "Stand lesen",
@@ -205,7 +220,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const res = $input.first().json;\nconst test = $('Stand lesen').first().json.test === true;\nconst members = Array.isArray(res.members) ? res.members : [];\nconst zeilen = members.map((m) => m.number + ' ' + m.name + (m.active ? '' : ' (nicht aktiv)'));\nif (test) {\n  const kopf = members.length === 0 ? 'Keine hoehere Nummer gefunden' : members.length + ' neue Nummer(n) gefunden';\n  const fuss = 'Geprueft: ' + res.checked + ' Nummern ab ' + res.after + ', hoechste: ' + res.highest;\n  return [{ json: { neu: true, titel: 'Test: Neue Mitglieder in SEWOBE', text: [kopf, ...zeilen, fuss].join('\\n') } }];\n}\nconst store = $getWorkflowStaticData('global');\nif (/^\\d{13}$/.test(res.highest || '')) store.letzteNummer = res.highest;\nif (members.length === 0) {\n  return [{ json: { neu: false } }];\n}\nconst titel = members.length === 1 ? 'Neues Mitglied in SEWOBE' : members.length + ' neue Mitglieder in SEWOBE';\nreturn [{ json: { neu: true, titel, text: zeilen.join('\\n') } }];\n"
+        "jsCode": "const res = $input.first().json;\nconst stand = $('Stand lesen').first().json;\nconst test = stand.test === true;\nconst mailSenden = stand.mailSenden === true;\nconst members = Array.isArray(res.members) ? res.members : [];\nconst zeilen = members.map((m) => m.number + ' ' + m.name + (m.active ? '' : ' (nicht aktiv)'));\nif (test) {\n  const kopf = members.length === 0 ? 'Keine hoehere Nummer gefunden' : members.length + ' neue Nummer(n) gefunden';\n  const fuss = 'Geprueft: ' + res.checked + ' Nummern ab ' + res.after + ', hoechste: ' + res.highest;\n  return [{ json: { neu: true, test, mailSenden, members, titel: 'Test: Neue Mitglieder in SEWOBE', text: [kopf, ...zeilen, fuss].join('\\n') } }];\n}\nconst store = $getWorkflowStaticData('global');\nif (/^\\d{13}$/.test(res.highest || '')) store.letzteNummer = res.highest;\nif (members.length === 0) {\n  return [{ json: { neu: false } }];\n}\nconst titel = members.length === 1 ? 'Neues Mitglied in SEWOBE' : members.length + ' neue Mitglieder in SEWOBE';\nreturn [{ json: { neu: true, test, mailSenden, members, titel, text: zeilen.join('\\n') } }];\n"
       },
       "id": "55109b60-c2a7-5d9f-8ef2-2734fc354ba7",
       "name": "Ergebnis auswerten",
@@ -423,6 +438,48 @@
         420
       ],
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const cfg = $('Konfiguration').first().json;\nconst res = $input.first().json;\nconst members = Array.isArray(res.members) ? res.members : [];\nif (members.length === 0 || res.mailSenden !== true) return [];\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst anzeige = (name) => {\n  const teile = String(name || '').split(',').map((t) => t.trim()).filter(Boolean);\n  return teile.length === 2 ? teile[1] + ' ' + teile[0] : (teile[0] || '-');\n};\nconst stand = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: 'short' }).format(new Date());\nconst einzahl = members.length === 1;\nconst betreff = (res.test ? '[TEST] ' : '') + (einzahl\n  ? 'Neues Mitglied in SEWOBE: ' + anzeige(members[0].name) + ' (' + members[0].number + ')'\n  : members.length + ' neue Mitglieder in SEWOBE');\nconst text = [(einzahl ? 'Neues Mitglied in SEWOBE angelegt:' : 'Neue Mitglieder in SEWOBE angelegt:'), '']\n  .concat(members.map((m) => anzeige(m.name) + ' - Mitgliedsnummer ' + m.number))\n  .concat(['', 'Stand: ' + stand + ' | ISC-Manager-Bot'])\n  .join('\\n');\nconst zeilen = members.map((m, i) => '<tr style=\"background:' + (i % 2 === 0 ? '#ffffff' : '#f6f7f9') + '\">'\n  + '<td style=\"padding:10px 14px;border-bottom:1px solid #e3e6ea\"><b>' + esc(anzeige(m.name)) + '</b></td>'\n  + '<td style=\"padding:10px 14px;border-bottom:1px solid #e3e6ea;font-family:Consolas,Menlo,monospace\">' + esc(m.number) + '</td>'\n  + '</tr>').join('');\nconst html = '<div style=\"font-family:Segoe UI,Arial,sans-serif;color:#1f2328;max-width:620px;margin:0 auto\">'\n  + '<div style=\"background:#e3000f;color:#ffffff;padding:16px 20px;border-radius:8px 8px 0 0\">'\n  + '<div style=\"font-size:13px;opacity:.9\">SEWOBE Mitgliederverwaltung</div>'\n  + '<div style=\"font-size:20px;font-weight:600\">' + (einzahl ? 'Neues Mitglied angelegt' : members.length + ' neue Mitglieder angelegt') + '</div></div>'\n  + '<table style=\"width:100%;border-collapse:collapse;border:1px solid #e3e6ea;border-top:0\">'\n  + '<tr style=\"background:#fff3cd;text-align:left\"><th style=\"padding:8px 14px\">Name</th><th style=\"padding:8px 14px\">Mitgliedsnummer</th></tr>'\n  + zeilen + '</table>'\n  + '<p style=\"font-size:12px;color:#6e7781;margin:12px 4px\">Stand: ' + esc(stand) + ' &middot; automatisch erzeugt vom ISC-Manager-Bot' + (res.test ? ' &middot; <b>Testlauf</b>' : '') + '</p></div>';\nreturn [{ json: { mailAn: cfg.mailAn, mailVon: cfg.mailVon, betreff, text, html } }];\n"
+      },
+      "id": "4d5b9383-d076-5cfb-9916-e09ebaf1da53",
+      "name": "Mail bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $json.mailVon }}",
+        "toEmail": "={{ $json.mailAn }}",
+        "subject": "={{ $json.betreff }}",
+        "emailFormat": "both",
+        "text": "={{ $json.text }}",
+        "html": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "1043fddf-4811-5b14-b957-26f7325c0c3c",
+      "name": "Mail senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2160,
+        -200
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "smtp": {
+          "id": "gQZtSwFzQoNoRn3S",
+          "name": "SMTP Netcup Automations"
+        }
+      }
     }
   ],
   "connections": {
@@ -524,6 +581,11 @@
             "node": "ntfy Neue Mitglieder vorbereiten",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Mail bauen",
+            "type": "main",
+            "index": 0
           }
         ],
         []
@@ -561,6 +623,17 @@
           }
         ]
       ]
+    },
+    "Mail bauen": {
+      "main": [
+        [
+          {
+            "node": "Mail senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "pinData": {},
@@ -572,7 +645,7 @@
   },
   "versionId": "b4c4b4ab-42a8-5a5d-874f-693684093765",
   "meta": {
-    "description": "Zweimal taeglich (07:30 und 17:30): fragt den ISC-Manager-Bot nach Mitgliedsnummern oberhalb der zuletzt bekannten Nummer (POST /members/new, probiert die naechsten Nummern in SEWOBE durch). Gefundene neue Mitglieder gehen als ntfy-Meldung an das Thema isc-manager, die hoechste Nummer wird in den Workflow-Static-Data gemerkt. Erststart: startNummer im Node Konfiguration setzen. Credentials: ISC-Manager-Bot API-Token. Zusaetzlich Testformular (Pfad isc-manager-neue-mitglieder-test, Basic-Auth MDM Formulare): prueft ab einer angegebenen Nummer, ohne den gemerkten Stand zu aendern."
+    "description": "Zweimal taeglich (07:30 und 17:30): fragt den ISC-Manager-Bot nach Mitgliedsnummern oberhalb der zuletzt bekannten Nummer (POST /members/new, probiert die naechsten Nummern in SEWOBE durch). Gefundene neue Mitglieder gehen als ntfy-Meldung an das Thema isc-manager, die hoechste Nummer wird in den Workflow-Static-Data gemerkt. Erststart: startNummer im Node Konfiguration setzen. Credentials: ISC-Manager-Bot API-Token. Zusaetzlich Testformular (Pfad isc-manager-neue-mitglieder-test, Basic-Auth MDM Formulare): prueft ab einer angegebenen Nummer, ohne den gemerkten Stand zu aendern. Bei neuen Mitgliedern zusaetzlich HTML-Mail (Name und Mitgliedsnummer) an mailAn aus dem Node Konfiguration; Absender mailVon. Im Testformular geht die Mail nur bei Auswahl Ja."
   },
   "id": "iscManagerNeu001",
   "tags": []
