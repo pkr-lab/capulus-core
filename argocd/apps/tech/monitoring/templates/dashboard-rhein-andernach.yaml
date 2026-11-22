@@ -77,8 +77,8 @@ data:
               "parser": "simple",
               "root_selector": "",
               "columns": [
-                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
-                {"selector": "value", "type": "number", "alias": "Wasserstand (cm)"}
+                {"selector": "timestamp", "type": "timestamp", "text": "time"},
+                {"selector": "value", "type": "number", "text": "Wasserstand (cm)"}
               ],
               "format": "timeseries"
             }
@@ -138,8 +138,8 @@ data:
               "parser": "simple",
               "root_selector": "",
               "columns": [
-                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
-                {"selector": "value", "type": "number", "alias": "Wasserstand (cm)"}
+                {"selector": "timestamp", "type": "timestamp", "text": "time"},
+                {"selector": "value", "type": "number", "text": "Wasserstand (cm)"}
               ],
               "format": "timeseries"
             },
@@ -153,8 +153,8 @@ data:
               "parser": "backend",
               "root_selector": "W.predictions.p50",
               "columns": [
-                {"selector": "x", "type": "timestamp", "alias": "time"},
-                {"selector": "y", "type": "number", "alias": "Wasserstand Vorhersage (cm)"}
+                {"selector": "x", "type": "timestamp", "text": "time"},
+                {"selector": "y", "type": "number", "text": "Wasserstand Vorhersage (cm)"}
               ],
               "format": "timeseries"
             }
@@ -199,8 +199,8 @@ data:
               "parser": "simple",
               "root_selector": "",
               "columns": [
-                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
-                {"selector": "value", "type": "number", "alias": "Wasserstand (cm)"}
+                {"selector": "timestamp", "type": "timestamp", "text": "time"},
+                {"selector": "value", "type": "number", "text": "Wasserstand (cm)"}
               ],
               "format": "timeseries"
             }
@@ -234,8 +234,8 @@ data:
               "parser": "simple",
               "root_selector": "",
               "columns": [
-                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
-                {"selector": "value", "type": "number", "alias": "Koblenz (cm)"}
+                {"selector": "timestamp", "type": "timestamp", "text": "time"},
+                {"selector": "value", "type": "number", "text": "Koblenz (cm)"}
               ],
               "format": "timeseries"
             }
@@ -269,8 +269,8 @@ data:
               "parser": "simple",
               "root_selector": "",
               "columns": [
-                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
-                {"selector": "value", "type": "number", "alias": "Neuwied Stadt (cm)"}
+                {"selector": "timestamp", "type": "timestamp", "text": "time"},
+                {"selector": "value", "type": "number", "text": "Neuwied Stadt (cm)"}
               ],
               "format": "timeseries"
             }
@@ -304,8 +304,8 @@ data:
               "parser": "simple",
               "root_selector": "",
               "columns": [
-                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
-                {"selector": "value", "type": "number", "alias": "Oberwinter (cm)"}
+                {"selector": "timestamp", "type": "timestamp", "text": "time"},
+                {"selector": "value", "type": "number", "text": "Oberwinter (cm)"}
               ],
               "format": "timeseries"
             }
@@ -339,8 +339,8 @@ data:
               "parser": "simple",
               "root_selector": "",
               "columns": [
-                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
-                {"selector": "value", "type": "number", "alias": "Bonn (cm)"}
+                {"selector": "timestamp", "type": "timestamp", "text": "time"},
+                {"selector": "value", "type": "number", "text": "Bonn (cm)"}
               ],
               "format": "timeseries"
             }
@@ -383,8 +383,8 @@ data:
               "parser": "simple",
               "root_selector": "",
               "columns": [
-                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
-                {"selector": "value", "type": "number", "alias": "Koblenz (cm)"}
+                {"selector": "timestamp", "type": "timestamp", "text": "time"},
+                {"selector": "value", "type": "number", "text": "Koblenz (cm)"}
               ],
               "format": "timeseries"
             },
@@ -398,8 +398,8 @@ data:
               "parser": "simple",
               "root_selector": "",
               "columns": [
-                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
-                {"selector": "value", "type": "number", "alias": "Neuwied Stadt (cm)"}
+                {"selector": "timestamp", "type": "timestamp", "text": "time"},
+                {"selector": "value", "type": "number", "text": "Neuwied Stadt (cm)"}
               ],
               "format": "timeseries"
             },
@@ -413,8 +413,8 @@ data:
               "parser": "simple",
               "root_selector": "",
               "columns": [
-                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
-                {"selector": "value", "type": "number", "alias": "Andernach (cm)"}
+                {"selector": "timestamp", "type": "timestamp", "text": "time"},
+                {"selector": "value", "type": "number", "text": "Andernach (cm)"}
               ],
               "format": "timeseries"
             },
@@ -428,8 +428,8 @@ data:
               "parser": "simple",
               "root_selector": "",
               "columns": [
-                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
-                {"selector": "value", "type": "number", "alias": "Oberwinter (cm)"}
+                {"selector": "timestamp", "type": "timestamp", "text": "time"},
+                {"selector": "value", "type": "number", "text": "Oberwinter (cm)"}
               ],
               "format": "timeseries"
             },
@@ -443,8 +443,8 @@ data:
               "parser": "simple",
               "root_selector": "",
               "columns": [
-                {"selector": "timestamp", "type": "timestamp", "alias": "time"},
-                {"selector": "value", "type": "number", "alias": "Bonn (cm)"}
+                {"selector": "timestamp", "type": "timestamp", "text": "time"},
+                {"selector": "value", "type": "number", "text": "Bonn (cm)"}
               ],
               "format": "timeseries"
             }
@@ -534,7 +534,7 @@ data:
               "source": "url",
               "url": "https://api.open-meteo.com/v1/forecast?latitude=50.4397&longitude=7.4017&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max&timezone=Europe%2FBerlin&forecast_days=4",
               "url_options": {"method": "GET", "data": ""},
-              "parser": "jsonata",
+              "parser": "backend",
               "root_selector": "$map($zip(daily.time,daily.weather_code,daily.temperature_2m_max,daily.temperature_2m_min,daily.precipitation_sum,daily.precipitation_probability_max,daily.wind_speed_10m_max),function($r){ {'Tag':$r[0],'Wetter':$r[1],'Max':$r[2],'Min':$r[3],'Regen':$r[4],'Regenwahrscheinlichkeit':$r[5],'Wind':$r[6]} })",
               "columns": [
                 {"selector": "Tag", "type": "string", "text": "Tag"},
@@ -548,6 +548,7 @@ data:
               "format": "table"
             }
           ],
+          "transformations": [{"id": "organize", "options": {"indexByName": {"Tag": 0, "Wetter": 1, "Max": 2, "Min": 3, "Regen": 4, "Regenwahrscheinlichkeit": 5, "Wind": 6}}}],
           "title": "Wetter Andernach — heute + 3 Tage",
           "type": "table"
         },
@@ -577,19 +578,20 @@ data:
               "refId": "A",
               "type": "json",
               "source": "url",
-              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations.json?includeTimeseries=true&includeCurrentMeasurement=true&waters=RHEIN&km=580&kmEnd=650",
+              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations.json?includeTimeseries=true&includeCurrentMeasurement=true&waters=RHEIN",
               "url_options": {"method": "GET", "data": ""},
               "parser": "backend",
-              "root_selector": "[*]",
+              "root_selector": "$map($[km>=580 and km<=650]^(km),function($s){ {'Station':$s.shortname,'km':$s.km,'Pegel':$s.timeseries[shortname='W'].currentMeasurement.value,'Gemessen':$s.timeseries[shortname='W'].currentMeasurement.timestamp} })",
               "columns": [
-                {"selector": "shortname", "type": "string", "alias": "Station"},
-                {"selector": "km", "type": "number", "alias": "Rhein-km"},
-                {"selector": "timeseries.0.currentMeasurement.value", "type": "number", "alias": "Pegel (cm)"},
-                {"selector": "timeseries.0.currentMeasurement.timestamp", "type": "time", "alias": "Gemessen"}
+                {"selector": "Station", "type": "string", "text": "Station"},
+                {"selector": "km", "type": "number", "text": "Rhein-km"},
+                {"selector": "Pegel", "type": "number", "text": "Pegel (cm)"},
+                {"selector": "Gemessen", "type": "timestamp", "text": "Gemessen"}
               ],
               "format": "table"
             }
           ],
+          "transformations": [{"id": "organize", "options": {"indexByName": {"Station": 0, "Rhein-km": 1, "Pegel (cm)": 2, "Gemessen": 3}}}],
           "title": "Pegelonline — Rhein Nachbarstationen (km 580–650)",
           "description": "Quelle: Wasser- und Schifffahrtsverwaltung des Bundes (WSV), Pegelonline — öffentlich & kostenlos.",
           "type": "table"
