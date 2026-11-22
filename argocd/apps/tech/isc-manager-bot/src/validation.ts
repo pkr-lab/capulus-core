@@ -55,3 +55,39 @@ export function validateSyncRequest(input: unknown): ParsedSync {
   if (problems.length > 0) throw new ValidationError("Ungültige Anfrage", problems);
   return { vorname, nachname, mitgliedsnummer, dryRun };
 }
+
+export type ParsedNewMembers = {
+  after: string;
+  window: number;
+};
+
+export const DEFAULT_WINDOW = 10;
+export const MAX_WINDOW = 25;
+
+export function validateNewMembersRequest(input: unknown): ParsedNewMembers {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    throw new ValidationError("Body muss ein JSON-Objekt sein");
+  }
+  const body = input as Record<string, unknown>;
+  const problems: string[] = [];
+
+  let after = "";
+  const rawAfter = typeof body.after === "number" ? String(body.after) : body.after;
+  if (typeof rawAfter !== "string" || !/^\d{13}$/.test(rawAfter.trim())) {
+    problems.push("after muss eine Mitgliedsnummer mit 13 Ziffern sein");
+  } else {
+    after = rawAfter.trim();
+  }
+
+  let window = DEFAULT_WINDOW;
+  if (body.window !== undefined && body.window !== null) {
+    if (typeof body.window !== "number" || !Number.isInteger(body.window) || body.window < 1 || body.window > MAX_WINDOW) {
+      problems.push(`window muss eine ganze Zahl von 1 bis ${MAX_WINDOW} sein`);
+    } else {
+      window = body.window;
+    }
+  }
+
+  if (problems.length > 0) throw new ValidationError("Ungültige Anfrage", problems);
+  return { after, window };
+}

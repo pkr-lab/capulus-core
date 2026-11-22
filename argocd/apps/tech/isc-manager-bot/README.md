@@ -27,6 +27,8 @@ Antwort:
 
 HTTP-Status: 200 bei `ok`, 400 ungültige Anfrage, 422 fachlicher Fehler (nichts gespeichert), 429 Dienst belegt, 502 und 504 technische Fehler.
 
+`POST /members/new` mit Body `{ "after": "<13 Ziffern>", "window": 10 }` sucht in SEWOBE nach den Mitgliedsnummern `after + 1` bis `after + window` (Lücken erlaubt, jeder Treffer verlängert das Fenster). Antwort: `found`, `members` (`number`, `name`, `active`), `highest`, `checked`. Der Bot speichert keinen Stand.
+
 `GET /healthz` und `GET /readyz` brauchen kein Token.
 
 ## Umgebungsvariablen
@@ -41,13 +43,15 @@ HTTP-Status: 200 bei `ok`, 400 ungültige Anfrage, 422 fachlicher Fehler (nichts
 | `GLIEDERUNG_EDV` | ConfigMap | Standard `1002011` |
 | `MITGLIEDSCHAFT_GLIEDERUNG` | ConfigMap | Standard `Ortsgruppe Andernach e.V.` |
 | `MITGLIEDSCHAFT_SUCHBEGRIFF` | ConfigMap | Name der Gliederung ohne Bezeichnung, wird mit angehängtem Leerzeichen ins ISC-Feld getippt, Standard `Andernach` |
-| `STEP_TIMEOUT_MS`, `SEARCH_TIMEOUT_MS`, `SEARCH_SETTLE_MS` (Wartezeit nach der SEWOBE-Sucheingabe, Standard 20000), `SAVE_TIMEOUT_MS`, `SYNC_TIMEOUT_MS`, `LOCK_WAIT_MS`, `MAX_BODY_BYTES` | ConfigMap | Zeitgrenzen und Body-Größe |
+| `STEP_TIMEOUT_MS`, `SEARCH_TIMEOUT_MS`, `SEARCH_SETTLE_MS` (Wartezeit nach der SEWOBE-Sucheingabe, Standard 20000), `NUMBER_SEARCH_SETTLE_MS` (dasselbe je Nummernsuche, Standard 3000), `SAVE_TIMEOUT_MS`, `SYNC_TIMEOUT_MS`, `LOCK_WAIT_MS`, `MAX_BODY_BYTES` | ConfigMap | Zeitgrenzen und Body-Größe |
 
 Secrets nur als SealedSecret: `scripts/seal-isc-manager-bot.sh` im Repo-Wurzelverzeichnis versiegelt alle sechs Werte und trägt sie in `values.yaml` ein.
 
 ## n8n
 
 Workflow `argocd/apps/tech/n8n/workflows/isc-manager-bot-sync.json`: IMAP-Trigger (Ordner `NewUebertrag`) und Test-Formular (Vorname, Nachname, DLRG-Manager-ID, Testlauf). Beide rufen `POST /sync` auf. Das Mailformat ist noch nicht festgelegt, der Mail-Pfad liest vorläufig JSON mit `vorname`, `nachname` und optional `mitgliedsnummer`.
+
+Workflow `isc-manager-bot-neue-mitglieder.json`: täglich 07:30 und 17:30 `POST /members/new` ab der zuletzt gemerkten Mitgliedsnummer (Workflow-Static-Data, Erststart über `startNummer` im Node „Konfiguration“), neue Mitglieder gehen per ntfy an das Thema `isc-manager`.
 
 ## Entwicklung
 

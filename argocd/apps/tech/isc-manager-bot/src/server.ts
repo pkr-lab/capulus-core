@@ -5,7 +5,7 @@ import { isAuthorized } from "./auth.js";
 import { BotError, HTTP_STATUS_BY_CODE, ValidationError } from "./errors.js";
 import { logger as defaultLogger, type Logger } from "./logger.js";
 import type { SyncApi } from "./runner.js";
-import { validateSyncRequest } from "./validation.js";
+import { validateNewMembersRequest, validateSyncRequest } from "./validation.js";
 
 type ServerDeps = {
   cfg: Config;
@@ -71,7 +71,7 @@ export function createServer(deps: ServerDeps): http.Server {
         req.resume();
         return sendJson(res, 401, { ok: false, error: "Nicht autorisiert" });
       }
-      if (req.method === "POST" && url.pathname === "/sync") {
+      if (req.method === "POST" && (url.pathname === "/sync" || url.pathname === "/members/new")) {
         const contentType = req.headers["content-type"] ?? "";
         if (!contentType.startsWith("application/json")) {
           req.resume();
@@ -83,6 +83,11 @@ export function createServer(deps: ServerDeps): http.Server {
           parsed = JSON.parse(raw);
         } catch {
           return sendJson(res, 400, { ok: false, errorCode: "VALIDATION_FAILED", error: "Body ist kein gültiges JSON" });
+        }
+        if (url.pathname === "/members/new") {
+          const members = await runner.newMembers(validateNewMembersRequest(parsed));
+          if (members.ok) return sendJson(res, 200, members);
+          return sendJson(res, members.errorCode ? HTTP_STATUS_BY_CODE[members.errorCode] : 500, members);
         }
         const result = await runner.sync(validateSyncRequest(parsed));
         if (result.ok) return sendJson(res, 200, result);

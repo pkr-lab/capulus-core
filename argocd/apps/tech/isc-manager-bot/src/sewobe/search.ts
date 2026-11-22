@@ -29,12 +29,15 @@ async function readHits(page: Page): Promise<Hit[]> {
 }
 
 export async function searchHits(page: Page, cfg: Config, vorname: string, nachname: string): Promise<Hit[]> {
+  return searchTerm(page, cfg, collapse(`${vorname} ${nachname}`), cfg.searchSettleMs);
+}
+
+export async function searchTerm(page: Page, cfg: Config, term: string, settleMs: number): Promise<Hit[]> {
   const step = "sewobe-search";
-  const term = collapse(`${vorname} ${nachname}`);
   const input = page.locator(SEWOBE.search).first();
   await input.fill(term, { timeout: cfg.stepTimeoutMs });
   await input.press("Enter");
-  await page.waitForTimeout(cfg.searchSettleMs);
+  await page.waitForTimeout(settleMs);
 
   const frame = page.frameLocator(SEWOBE.frames.main).frameLocator(SEWOBE.frames.results);
   try {

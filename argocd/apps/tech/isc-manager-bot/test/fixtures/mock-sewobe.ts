@@ -168,7 +168,7 @@ export async function startMockSewobe(options: SewobeMockOptions = {}): Promise<
     if (url.pathname === "/search") {
       const q = url.searchParams.get("q") ?? "";
       const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
-      const hits = q === "" ? [] : persons.filter((p) => tokens.every((t) => `${p.vorname} ${p.nachname}`.toLowerCase().includes(t)));
+      const hits = q === "" ? [] : persons.filter((p) => tokens.every((t) => `${p.vorname} ${p.nachname} ${p.nr}`.toLowerCase().includes(t)));
       if (q !== "") searchCount += 1;
       await new Promise((resolve) => setTimeout(resolve, options.searchDelayMs ?? 0));
       const cards = hits
