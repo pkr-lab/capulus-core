@@ -386,6 +386,9 @@ sync("Neue Mitglieder: findet höhere Nummern über Lücken hinweg und meldet di
     assert.equal(result.members[0]?.name, "Beispiel, Hans");
     assert.equal(result.highest, "1002011000013");
     assert.equal(result.checked, 8);
+    assert.equal(result.probes.length, 8);
+    assert.deepEqual(result.probes[0], { number: "1002011000011", hits: 1, seen: ["1002011000011"] });
+    assert.deepEqual(result.probes[1], { number: "1002011000012", hits: 0, seen: [] });
     assert.equal(sewobe.logouts(), 1);
   });
 });

@@ -32,14 +32,25 @@ export async function searchHits(page: Page, cfg: Config, vorname: string, nachn
   return searchTerm(page, cfg, collapse(`${vorname} ${nachname}`), cfg.searchSettleMs);
 }
 
-export async function searchTerm(page: Page, cfg: Config, term: string, settleMs: number): Promise<Hit[]> {
+export async function searchTerm(page: Page, cfg: Config, term: string, settleMs: number, expectedText?: string): Promise<Hit[]> {
   const step = "sewobe-search";
   const input = page.locator(SEWOBE.search).first();
   await input.fill(term, { timeout: cfg.stepTimeoutMs });
   await input.press("Enter");
-  await page.waitForTimeout(settleMs);
 
   const frame = page.frameLocator(SEWOBE.frames.main).frameLocator(SEWOBE.frames.results);
+  if (expectedText === undefined || settleMs === 0) {
+    await page.waitForTimeout(settleMs);
+  } else {
+    await frame
+      .locator(SEWOBE.results.card)
+      .filter({ hasText: expectedText })
+      .first()
+      .waitFor({ state: "attached", timeout: settleMs })
+      .catch((error: unknown) => {
+        if (!isPlaywrightTimeout(error)) throw error;
+      });
+  }
   try {
     await frame.locator("body").filter({ hasText: `Suchbegriff: ${term}` }).waitFor({ state: "attached", timeout: cfg.searchTimeoutMs });
     await Promise.any([
