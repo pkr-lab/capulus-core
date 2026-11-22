@@ -43,7 +43,7 @@ HTTP-Status: 200 bei `ok`, 400 ungültige Anfrage, 422 fachlicher Fehler (nichts
 | `GLIEDERUNG_EDV` | ConfigMap | Standard `1002011` |
 | `MITGLIEDSCHAFT_GLIEDERUNG` | ConfigMap | Standard `Ortsgruppe Andernach e.V.` |
 | `MITGLIEDSCHAFT_SUCHBEGRIFF` | ConfigMap | Name der Gliederung ohne Bezeichnung, wird mit angehängtem Leerzeichen ins ISC-Feld getippt, Standard `Andernach` |
-| `STEP_TIMEOUT_MS`, `SEARCH_TIMEOUT_MS`, `SEARCH_SETTLE_MS` (Wartezeit nach der SEWOBE-Sucheingabe, Standard 20000), `NUMBER_SEARCH_SETTLE_MS` (dasselbe je Nummernsuche, Standard 3000), `SAVE_TIMEOUT_MS`, `SYNC_TIMEOUT_MS`, `LOCK_WAIT_MS`, `MAX_BODY_BYTES` | ConfigMap | Zeitgrenzen und Body-Größe |
+| `STEP_TIMEOUT_MS`, `SEARCH_TIMEOUT_MS`, `SEARCH_SETTLE_MS` (Wartezeit nach der SEWOBE-Sucheingabe, Standard 20000), `NUMBER_SEARCH_SETTLE_MS` (längste Wartezeit je Nummernsuche, endet früher, sobald der Treffer erscheint, Standard 20000), `MEMBERS_TIMEOUT_MS` (Gesamtlauf von `/members/new`, Standard 900000), `SAVE_TIMEOUT_MS`, `SYNC_TIMEOUT_MS`, `LOCK_WAIT_MS`, `MAX_BODY_BYTES` | ConfigMap | Zeitgrenzen und Body-Größe |
 
 Secrets nur als SealedSecret: `scripts/seal-isc-manager-bot.sh` im Repo-Wurzelverzeichnis versiegelt alle sechs Werte und trägt sie in `values.yaml` ein.
 
