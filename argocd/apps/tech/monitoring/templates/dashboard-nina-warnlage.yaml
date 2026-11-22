@@ -1,0 +1,292 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-nina-warnlage
+  namespace: {{ .Release.Namespace }}
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: "Anwendungen (TECH)"
+data:
+  nina-warnlage.json: |
+    {
+      "annotations": {"list": []},
+      "description": "NINA-Warnlage (BBK) für Landkreise rund um Andernach — Katastrophenschutz, DLRG",
+      "editable": true,
+      "graphTooltip": 0,
+      "links": [
+        {
+          "title": "NINA Meldungen",
+          "url": "https://warnung.bund.de/meldungen",
+          "type": "link",
+          "targetBlank": true
+        },
+        {"title": "Rhein Andernach", "url": "/d/rhein-andernach-pegel", "type": "link"}
+      ],
+      "panels": [
+        {
+          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "decimals": 0,
+              "noValue": "0",
+              "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1}]}
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Aktive Warnungen"},
+                "properties": [
+                  {"id": "color", "value": {"mode": "thresholds"}},
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [{"color": "green", "value": null}, {"color": "blue", "value": 1}]
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Extrem"},
+                "properties": [
+                  {"id": "color", "value": {"mode": "thresholds"}},
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [{"color": "green", "value": null}, {"color": "purple", "value": 1}]
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Schwer"},
+                "properties": [
+                  {"id": "color", "value": {"mode": "thresholds"}},
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Markant"},
+                "properties": [
+                  {"id": "color", "value": {"mode": "thresholds"}},
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}]
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Gering"},
+                "properties": [
+                  {"id": "color", "value": {"mode": "thresholds"}},
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1}]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+          "id": 1,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "vertical",
+            "textMode": "value_and_name",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+              "refId": "A",
+              "type": "json",
+              "source": "url",
+              "url": "https://warnung.bund.de/api31/dashboard/${kreis}.json",
+              "url_options": {"method": "GET", "data": ""},
+              "parser": "backend",
+              "root_selector": "($d:=$;$map([1],function($i){ {'Aktive Warnungen':$count($d),'Extrem':$count($d[payload.data.severity='Extreme']),'Schwer':$count($d[payload.data.severity='Severe']),'Markant':$count($d[payload.data.severity='Moderate']),'Gering':$count($d[payload.data.severity='Minor'])} }))",
+              "columns": [
+                {"selector": "Aktive Warnungen", "type": "number", "text": "Aktive Warnungen"},
+                {"selector": "Extrem", "type": "number", "text": "Extrem"},
+                {"selector": "Schwer", "type": "number", "text": "Schwer"},
+                {"selector": "Markant", "type": "number", "text": "Markant"},
+                {"selector": "Gering", "type": "number", "text": "Gering"}
+              ],
+              "format": "table"
+            }
+          ],
+          "title": "Aktive Warnungen — ${kreis:text}",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+          "description": "Quelle: NINA-Warn-API des BBK (warnung.bund.de) — MoWaS, Katwarn, BiWAPP, DWD, Hochwasserzentralen, Polizei. Cache ca. 5 Minuten.",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"align": "auto", "cellOptions": {"type": "auto"}, "filterable": true},
+              "noValue": "Keine aktiven Warnungen für diese Region"
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Zeit"},
+                "properties": [{"id": "unit", "value": "dateTimeAsLocal"}, {"id": "custom.width", "value": 180}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Stufe"},
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "Minor": {"text": "1 · Gering", "color": "yellow", "index": 0},
+                          "Moderate": {"text": "2 · Markant", "color": "orange", "index": 1},
+                          "Severe": {"text": "3 · Schwer", "color": "red", "index": 2},
+                          "Extreme": {"text": "4 · Extrem", "color": "purple", "index": 3}
+                        }
+                      }
+                    ]
+                  },
+                  {"id": "custom.width", "value": 130},
+                  {"id": "custom.cellOptions", "value": {"type": "color-background"}}
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Quelle"},
+                "properties": [{"id": "custom.width", "value": 110}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Art"},
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "Alert": {"text": "Warnung", "index": 0},
+                          "Update": {"text": "Aktualisierung", "index": 1},
+                          "Cancel": {"text": "Aufhebung", "index": 2}
+                        }
+                      }
+                    ]
+                  },
+                  {"id": "custom.width", "value": 150}
+                ]
+              }
+            ]
+          },
+          "gridPos": {"h": 12, "w": 24, "x": 0, "y": 4},
+          "id": 2,
+          "options": {
+            "cellHeight": "md",
+            "footer": {"show": false},
+            "showHeader": true,
+            "sortBy": [{"displayName": "Zeit", "desc": true}]
+          },
+          "targets": [
+            {
+              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+              "refId": "A",
+              "type": "json",
+              "source": "url",
+              "url": "https://warnung.bund.de/api31/dashboard/${kreis}.json",
+              "url_options": {"method": "GET", "data": ""},
+              "parser": "backend",
+              "root_selector": "$map($^(>sent),function($w){ {'Zeit':$w.sent,'Stufe':$w.payload.data.severity,'Quelle':$w.payload.data.provider,'Art':$w.payload.data.msgType,'Meldung':$w.i18nTitle.de,'ID':$w.id} })",
+              "columns": [
+                {"selector": "Zeit", "type": "timestamp", "text": "Zeit"},
+                {"selector": "Stufe", "type": "string", "text": "Stufe"},
+                {"selector": "Quelle", "type": "string", "text": "Quelle"},
+                {"selector": "Art", "type": "string", "text": "Art"},
+                {"selector": "Meldung", "type": "string", "text": "Meldung"},
+                {"selector": "ID", "type": "string", "text": "ID"}
+              ],
+              "format": "table"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {"ID": true},
+                "indexByName": {"Zeit": 0, "Stufe": 1, "Quelle": 2, "Art": 3, "Meldung": 4}
+              }
+            }
+          ],
+          "title": "Warnungen — ${kreis:text}",
+          "type": "table"
+        },
+        {
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+          "id": 3,
+          "options": {
+            "content": "## Warnstufen\n\n| Stufe | Farbe | Bedeutung |\n|---|---|---|\n| 1 · Gering | Gelb | Wetterwarnung bzw. Hinweis |\n| 2 · Markant | Orange | Markante Warnung, Vorbereitung empfohlen |\n| 3 · Schwer | Rot | Unwetter bzw. schwere Gefahr |\n| 4 · Extrem | Violett | Extremes Unwetter bzw. extreme Gefahr |\n\n**Quellen in NINA:** MoWaS (Bund/Länder, Katastrophenschutz), Katwarn, BiWAPP, DWD (Wetter), Hochwasserzentralen (LHP) und Polizei.",
+            "mode": "markdown"
+          },
+          "title": "Warnstufen und Quellen",
+          "type": "text"
+        },
+        {
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+          "id": 4,
+          "options": {
+            "content": "## Weiterführend\n\n- [NINA — alle Meldungen](https://warnung.bund.de/meldungen)\n- [DWD Warnkarte](https://www.dwd.de/DE/wetter/warnungen_aktuell/warnkarten/warnkarte_gemeinden_bw.html)\n- [Hochwasser RLP — Andernach](https://www.hochwasser.rlp.de/flussgebiet/mittelrhein/andernach)\n- [Katwarn](https://katwarn.de/)\n\nPegel, Wetter und Hochwasserlage: Dashboard *Rhein Andernach — Pegel, Wetter & Warnungen*.\n\n> **Hinweis:** Die Anzeige ersetzt keine amtliche Warnung. Maßgeblich sind die Meldungen der Leitstelle und der NINA-App.",
+            "mode": "markdown"
+          },
+          "title": "Links",
+          "type": "text"
+        }
+      ],
+      "refresh": "5m",
+      "schemaVersion": 38,
+      "tags": ["nina", "warnung", "katastrophenschutz", "dlrg", "andernach"],
+      "templating": {
+        "list": [
+          {
+            "current": {"selected": false, "text": "Mayen-Koblenz", "value": "071370000000"},
+            "hide": 0,
+            "includeAll": false,
+            "label": "Region",
+            "multi": false,
+            "name": "kreis",
+            "options": [
+              {"selected": true, "text": "Mayen-Koblenz", "value": "071370000000"},
+              {"selected": false, "text": "Koblenz", "value": "071110000000"},
+              {"selected": false, "text": "Neuwied", "value": "071380000000"},
+              {"selected": false, "text": "Ahrweiler", "value": "071310000000"},
+              {"selected": false, "text": "Cochem-Zell", "value": "071350000000"},
+              {"selected": false, "text": "Rhein-Lahn", "value": "071410000000"},
+              {"selected": false, "text": "Bonn", "value": "053140000000"},
+              {"selected": false, "text": "Rhein-Sieg", "value": "053820000000"}
+            ],
+            "query": "Mayen-Koblenz : 071370000000, Koblenz : 071110000000, Neuwied : 071380000000, Ahrweiler : 071310000000, Cochem-Zell : 071350000000, Rhein-Lahn : 071410000000, Bonn : 053140000000, Rhein-Sieg : 053820000000",
+            "skipUrlSync": false,
+            "type": "custom"
+          }
+        ]
+      },
+      "time": {"from": "now-6h", "to": "now"},
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "NINA Warnlage — Katastrophenschutz",
+      "uid": "nina-warnlage",
+      "version": 1
+    }
