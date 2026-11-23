@@ -11,19 +11,19 @@ data:
   rhein-andernach.json: |
     {
       "annotations": {"list": []},
-      "description": "Rhein-Pegel Andernach mit Nachbarstationen, Wetter, DWD-Warnungen, ELWIS, Hochwasservorhersage",
+      "description": "Einsatzlage am Gewässer: Wasserstufe, Pegel mit Vorhersage und Karten für Pegel, Wassertemperatur und Wetter rund um den gewählten Einsatzort",
       "editable": true,
       "graphTooltip": 1,
       "links": [
         {
-          "title": "Pegelonline Andernach",
-          "url": "https://pegelonline.wsv.de/gast/stammdaten?pegelnr=27100400",
+          "title": "Pegelonline",
+          "url": "https://pegelonline.wsv.de/gast/stammdaten?pegelnr=${pegelnr}",
           "type": "link",
           "targetBlank": true
         },
         {
           "title": "Hochwasser RLP",
-          "url": "https://www.hochwasser.rlp.de/flussgebiet/mittelrhein/andernach",
+          "url": "https://www.hochwasser.rlp.de/",
           "type": "link",
           "targetBlank": true
         },
@@ -32,6 +32,12 @@ data:
           "url": "https://elwis.de/DE/dynamisch/gewaesserkundliche-Grundlagen/Wasserstaende/index.php",
           "type": "link",
           "targetBlank": true
+        },
+        {
+          "title": "NINA-Warnlage",
+          "url": "/d/nina-warnlage",
+          "type": "link",
+          "targetBlank": false
         }
       ],
       "panels": [
@@ -40,26 +46,104 @@ data:
           "fieldConfig": {
             "defaults": {
               "color": {"mode": "thresholds"},
-              "decimals": 0,
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {"color": "blue", "value": null},
-                  {"color": "green", "value": 100},
-                  {"color": "yellow", "value": 400},
-                  {"color": "orange", "value": 600},
-                  {"color": "red", "value": 800}
+              "thresholds": {"mode": "absolute", "steps": [{"color": "#5a6b7d", "value": null}]},
+              "noValue": "Keine aktuelle Messung"
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Wasserstufe"},
+                "properties": [
+                  {"id": "displayName", "value": "Wasserstufe ${ort} (${gewaesser_name})"},
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "0": {"text": "Keine Kennwerte", "color": "#5a6b7d", "index": 0},
+                          "1": {"text": "Niedrigwasser – unter MNW", "color": "#00c8ff", "index": 1},
+                          "2": {"text": "Unter Mittelwasser", "color": "#0000ff", "index": 2},
+                          "3": {"text": "Über Mittelwasser", "color": "#44a016", "index": 3},
+                          "4": {"text": "Hochwasser – über MHW", "color": "#f3e600", "index": 4},
+                          "5": {"text": "Starkes Hochwasser – über HW", "color": "#f8ae64", "index": 5},
+                          "6": {"text": "Extremes Hochwasser – über HHW", "color": "#8a2d87", "index": 6}
+                        }
+                      }
+                    ]
+                  }
                 ]
               },
+              {
+                "matcher": {"id": "byName", "options": "Schifffahrt"},
+                "properties": [
+                  {"id": "displayName", "value": "Schifffahrt"},
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "0": {"text": "Keine Hochwassermarken", "color": "#5a6b7d", "index": 0},
+                          "1": {"text": "Frei", "color": "#44a016", "index": 1},
+                          "2": {"text": "Hochwassermarke I überschritten", "color": "#f8ae64", "index": 2},
+                          "3": {"text": "Hochwassermarke II – eingestellt", "color": "#de0a14", "index": 3}
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+          "id": 20,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "auto",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+            "showPercentChange": false,
+            "text": {"titleSize": 16, "valueSize": 32},
+            "textMode": "value_and_name",
+            "wideLayout": true
+          },
+          "targets": [
+            {
+              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+              "refId": "A",
+              "type": "json",
+              "source": "url",
+              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${einsatzort}/W.json?includeCurrentMeasurement=true&includeCharacteristicValues=true",
+              "url_options": {"method": "GET", "data": ""},
+              "parser": "backend",
+              "root_selector": "( $v := currentMeasurement.value; $c := characteristicValues; $k := function($n){ $c[shortname=$n][0].value }; $mnw := $k('MNW'); $mw := $k('MW'); $mhw := $k('MHW'); $hw := $k('HW'); $hhw := $k('HHW'); $m1 := $k('M_I'); $m2 := $k('M_II'); $hsw := $k('HSW'); [{'Wasserstufe':$not($exists($v)) or $not($exists($mw)) ? 0 : ($exists($hhw) and $v >= $hhw) ? 6 : ($exists($hw) and $v >= $hw) ? 5 : ($exists($mhw) and $v >= $mhw) ? 4 : $v >= $mw ? 3 : ($exists($mnw) and $v < $mnw) ? 1 : 2,'Schifffahrt':$not($exists($v)) ? 0 : ($exists($m2) and $v >= $m2) ? 3 : ($exists($m1) and $v >= $m1) ? 2 : ($exists($hsw) and $v >= $hsw) ? 3 : ($exists($m1) or $exists($m2) or $exists($hsw)) ? 1 : 0}] )",
+              "columns": [
+                {"selector": "Wasserstufe", "type": "number", "text": "Wasserstufe"},
+                {"selector": "Schifffahrt", "type": "number", "text": "Schifffahrt"}
+              ],
+              "format": "table"
+            }
+          ],
+          "transformations": [{"id": "organize", "options": {"indexByName": {"Wasserstufe": 0, "Schifffahrt": 1}}}],
+          "title": "",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "fixed", "fixedColor": "blue"},
+              "decimals": 0,
+              "mappings": [],
               "unit": "cm",
               "min": 0
             }
           },
-          "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
+          "gridPos": {"h": 10, "w": 6, "x": 0, "y": 4},
           "id": 1,
           "options": {
-            "colorMode": "background",
+            "colorMode": "value",
             "graphMode": "area",
             "justifyMode": "auto",
             "orientation": "auto",
@@ -72,7 +156,7 @@ data:
               "refId": "A",
               "type": "json",
               "source": "url",
-              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/ANDERNACH/W/measurements.json?start=PT3H",
+              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${einsatzort}/W/measurements.json?start=PT3H",
               "url_options": {"method": "GET", "data": ""},
               "parser": "simple",
               "root_selector": "",
@@ -83,7 +167,7 @@ data:
               "format": "timeseries"
             }
           ],
-          "title": "Rhein Andernach — Aktueller Pegel",
+          "title": "${ort} — Aktueller Pegel",
           "type": "stat"
         },
         {
@@ -99,29 +183,25 @@ data:
                 "showPoints": "never",
                 "spanNulls": false
               },
-              "unit": "cm",
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {"color": "green", "value": null},
-                  {"color": "yellow", "value": 400},
-                  {"color": "orange", "value": 600},
-                  {"color": "red", "value": 800}
-                ]
-              }
+              "unit": "cm"
             },
             "overrides": [
               {
                 "matcher": {"id": "byName", "options": "Wasserstand Vorhersage (cm)"},
                 "properties": [
+                  {"id": "displayName", "value": "Vorhersage Hochwasser RLP"},
                   {"id": "color", "value": {"mode": "fixed", "fixedColor": "purple"}},
                   {"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [10, 6]}},
                   {"id": "custom.fillOpacity", "value": 0}
                 ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Wasserstand (cm)"},
+                "properties": [{"id": "displayName", "value": "Gemessen"}]
               }
             ]
           },
-          "gridPos": {"h": 10, "w": 18, "x": 6, "y": 0},
+          "gridPos": {"h": 10, "w": 18, "x": 6, "y": 4},
           "id": 2,
           "options": {
             "legend": {"calcs": ["lastNotNull", "min", "max"], "displayMode": "table", "placement": "bottom"},
@@ -133,7 +213,7 @@ data:
               "refId": "A",
               "type": "json",
               "source": "url",
-              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/ANDERNACH/W/measurements.json?start=P2D",
+              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${einsatzort}/W/measurements.json?start=P2D",
               "url_options": {"method": "GET", "data": ""},
               "parser": "simple",
               "root_selector": "",
@@ -148,7 +228,7 @@ data:
               "refId": "B",
               "type": "json",
               "source": "url",
-              "url": "https://www.hochwasser.rlp.de/api/v1/measurement-site/27100400",
+              "url": "https://www.hochwasser.rlp.de/api/v1/measurement-site/${pegelnr}",
               "url_options": {"method": "GET", "data": ""},
               "parser": "backend",
               "root_selector": "W.predictions.p50",
@@ -159,7 +239,7 @@ data:
               "format": "timeseries"
             }
           ],
-          "title": "Rhein-Pegel Andernach — 48h Verlauf",
+          "title": "${ort} — 48h Verlauf und Vorhersage",
           "type": "timeseries"
         },
         {
@@ -167,26 +247,154 @@ data:
           "fieldConfig": {
             "defaults": {
               "color": {"mode": "thresholds"},
-              "decimals": 0,
-              "unit": "cm",
+              "thresholds": {"mode": "absolute", "steps": [{"color": "text", "value": null}]}
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Zustand"},
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "low": {"text": "unter MNW", "color": "#00c8ff", "index": 0},
+                          "normal": {"text": "normal", "color": "#44a016", "index": 1},
+                          "high": {"text": "über MHW", "color": "#f8ae64", "index": 2},
+                          "unknown": {"text": "keine Kennwerte", "color": "#5a6b7d", "index": 3},
+                          "commented": {"text": "kommentiert", "color": "#5a6b7d", "index": 4},
+                          "out-dated": {"text": "veraltet", "color": "#999999", "index": 5}
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Pegel"},
+                "properties": [{"id": "unit", "value": "cm"}, {"id": "decimals", "value": 0}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Fluss-km"},
+                "properties": [{"id": "decimals", "value": 1}]
+              },
+              {
+                "matcher": {"id": "byRegexp", "options": "^(lat|lon|Label)$"},
+                "properties": [{"id": "custom.hideFrom", "value": {"legend": true, "tooltip": true, "viz": false}}]
+              }
+            ]
+          },
+          "gridPos": {"h": 10, "w": 12, "x": 0, "y": 14},
+          "id": 21,
+          "options": {
+            "basemap": {"type": "default", "name": "Karte", "config": {}},
+            "controls": {"mouseWheelZoom": false, "showAttribution": true, "showDebug": false, "showMeasure": false, "showScale": false, "showZoom": true},
+            "layers": [
+              {
+                "type": "markers",
+                "name": "Pegel",
+                "config": {
+                  "showLegend": false,
+                  "style": {
+                    "color": {"field": "Zustand", "fixed": "blue"},
+                    "opacity": 0.9,
+                    "rotation": {"fixed": 0, "max": 360, "min": -360, "mode": "mod"},
+                    "size": {"fixed": 8, "max": 15, "min": 2},
+                    "symbol": {"fixed": "img/icons/marker/circle.svg", "mode": "fixed"},
+                    "symbolAlign": {"horizontal": "center", "vertical": "center"},
+                    "text": {"field": "Label", "fixed": "", "mode": "field"},
+                    "textConfig": {"fontSize": 12, "offsetX": 0, "offsetY": -12, "textAlign": "center", "textBaseline": "bottom"}
+                  }
+                },
+                "location": {"mode": "coords", "latitude": "lat", "longitude": "lon"},
+                "tooltip": true
+              }
+            ],
+            "tooltip": {"mode": "details"},
+            "view": {"id": "fit", "allLayers": true, "padding": 40, "lat": 50.44, "lon": 7.39, "zoom": 9}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+              "refId": "A",
+              "type": "json",
+              "source": "url",
+              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations.json?latitude=${lat}&longitude=${lon}&radius=${umkreis}&waters=${gewaesser:percentencode}&timeseries=W&includeTimeseries=true&includeCurrentMeasurement=true",
+              "url_options": {"method": "GET", "data": ""},
+              "parser": "backend",
+              "root_selector": "( $tc := function($t){ $join($map($split($lowercase($t),' '),function($w){ $uppercase($substring($w,0,1)) & $substring($w,1) }),' ') }; $map($^(km),function($s){ ( $n := $tc($s.shortname); $m := $s.timeseries[shortname='W'].currentMeasurement; {'Station':$n,'km':$s.km,'lat':$s.latitude,'lon':$s.longitude,'Pegel':$m.value,'Zustand':$m.stateMnwMhw,'Gemessen':$m.timestamp,'Label':$n & ' ' & $string($m.value) & ' cm'} ) }) )",
+              "columns": [
+                {"selector": "Station", "type": "string", "text": "Station"},
+                {"selector": "km", "type": "number", "text": "Fluss-km"},
+                {"selector": "Pegel", "type": "number", "text": "Pegel"},
+                {"selector": "Zustand", "type": "string", "text": "Zustand"},
+                {"selector": "Gemessen", "type": "timestamp", "text": "Gemessen"},
+                {"selector": "lat", "type": "number", "text": "lat"},
+                {"selector": "lon", "type": "number", "text": "lon"},
+                {"selector": "Label", "type": "string", "text": "Label"}
+              ],
+              "format": "table"
+            }
+          ],
+          "title": "Wasserstände ${gewaesser_name} — ${umkreis} km um ${ort}",
+          "type": "geomap"
+        },
+        {
+          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
-                  {"color": "blue", "value": null},
-                  {"color": "yellow", "value": 400},
-                  {"color": "orange", "value": 600},
-                  {"color": "red", "value": 800}
+                  {"color": "dark-blue", "value": null},
+                  {"color": "blue", "value": 10},
+                  {"color": "green", "value": 15},
+                  {"color": "yellow", "value": 20},
+                  {"color": "orange", "value": 25}
                 ]
               }
-            }
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Wassertemperatur"},
+                "properties": [{"id": "unit", "value": "celsius"}, {"id": "decimals", "value": 1}]
+              },
+              {
+                "matcher": {"id": "byRegexp", "options": "^(lat|lon|Label)$"},
+                "properties": [{"id": "custom.hideFrom", "value": {"legend": true, "tooltip": true, "viz": false}}]
+              }
+            ]
           },
-          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 6},
-          "id": 10,
+          "gridPos": {"h": 10, "w": 12, "x": 12, "y": 14},
+          "id": 22,
           "options": {
-            "orientation": "auto",
-            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
-            "showThresholdLabels": true,
-            "showThresholdMarkers": true
+            "basemap": {"type": "default", "name": "Karte", "config": {}},
+            "controls": {"mouseWheelZoom": false, "showAttribution": true, "showDebug": false, "showMeasure": false, "showScale": false, "showZoom": true},
+            "layers": [
+              {
+                "type": "markers",
+                "name": "Wassertemperatur",
+                "config": {
+                  "showLegend": false,
+                  "style": {
+                    "color": {"field": "Wassertemperatur", "fixed": "blue"},
+                    "opacity": 0.9,
+                    "rotation": {"fixed": 0, "max": 360, "min": -360, "mode": "mod"},
+                    "size": {"fixed": 8, "max": 15, "min": 2},
+                    "symbol": {"fixed": "img/icons/marker/circle.svg", "mode": "fixed"},
+                    "symbolAlign": {"horizontal": "center", "vertical": "center"},
+                    "text": {"field": "Label", "fixed": "", "mode": "field"},
+                    "textConfig": {"fontSize": 12, "offsetX": 0, "offsetY": -12, "textAlign": "center", "textBaseline": "bottom"}
+                  }
+                },
+                "location": {"mode": "coords", "latitude": "lat", "longitude": "lon"},
+                "tooltip": true
+              }
+            ],
+            "tooltip": {"mode": "details"},
+            "view": {"id": "fit", "allLayers": true, "padding": 40, "lat": 50.44, "lon": 7.39, "zoom": 7.5}
           },
           "targets": [
             {
@@ -194,269 +402,42 @@ data:
               "refId": "A",
               "type": "json",
               "source": "url",
-              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/ANDERNACH/W/measurements.json?start=PT1H",
+              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations.json?latitude=${lat}&longitude=${lon}&radius=100&timeseries=WT&includeTimeseries=true&includeCurrentMeasurement=true",
               "url_options": {"method": "GET", "data": ""},
-              "parser": "simple",
-              "root_selector": "",
+              "parser": "backend",
+              "root_selector": "$map($[$toMillis(timeseries[shortname='WT'].currentMeasurement.timestamp) > $millis() - 86400000],function($s){ ( $n := $join($map($split($lowercase($s.shortname),' '),function($w){ $uppercase($substring($w,0,1)) & $substring($w,1) }),' '); $g := $uppercase($substring($s.water.shortname,0,1)) & $lowercase($substring($s.water.shortname,1)); $m := $s.timeseries[shortname='WT'].currentMeasurement; {'Station':$n,'Gewässer':$g,'lat':$s.latitude,'lon':$s.longitude,'Wassertemperatur':$m.value,'Gemessen':$m.timestamp,'Label':$n & ' (' & $g & ') ' & $replace($formatNumber($m.value,'0.0'),'.',',') & ' °C'} ) })",
               "columns": [
-                {"selector": "timestamp", "type": "timestamp", "text": "time"},
-                {"selector": "value", "type": "number", "text": "Wasserstand (cm)"}
+                {"selector": "Station", "type": "string", "text": "Station"},
+                {"selector": "Gewässer", "type": "string", "text": "Gewässer"},
+                {"selector": "Wassertemperatur", "type": "number", "text": "Wassertemperatur"},
+                {"selector": "Gemessen", "type": "timestamp", "text": "Gemessen"},
+                {"selector": "lat", "type": "number", "text": "lat"},
+                {"selector": "lon", "type": "number", "text": "lon"},
+                {"selector": "Label", "type": "string", "text": "Label"}
               ],
-              "format": "timeseries"
+              "format": "table"
             }
           ],
-          "title": "Pegel Gauge",
-          "type": "gauge"
+          "title": "Wassertemperatur — 100 km um ${ort}",
+          "type": "geomap"
         },
         {
           "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
-          "fieldConfig": {
-            "defaults": {"color": {"mode": "fixed", "fixedColor": "blue"}, "decimals": 0, "unit": "cm", "min": 0}
-          },
-          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 10},
-          "id": 11,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "area",
-            "justifyMode": "auto",
-            "orientation": "auto",
-            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
-            "textMode": "auto"
-          },
-          "targets": [
-            {
-              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
-              "refId": "A",
-              "type": "json",
-              "source": "url",
-              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/4c7d796a-39f2-4f26-97a9-3aad01713e29/W/measurements.json?start=PT3H",
-              "url_options": {"method": "GET", "data": ""},
-              "parser": "simple",
-              "root_selector": "",
-              "columns": [
-                {"selector": "timestamp", "type": "timestamp", "text": "time"},
-                {"selector": "value", "type": "number", "text": "Koblenz (cm)"}
-              ],
-              "format": "timeseries"
-            }
-          ],
-          "title": "Oberhalb — Koblenz (km 591,5)",
-          "type": "stat"
-        },
-        {
-          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
-          "fieldConfig": {
-            "defaults": {"color": {"mode": "fixed", "fixedColor": "blue"}, "decimals": 0, "unit": "cm", "min": 0}
-          },
-          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 10},
-          "id": 12,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "area",
-            "justifyMode": "auto",
-            "orientation": "auto",
-            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
-            "textMode": "auto"
-          },
-          "targets": [
-            {
-              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
-              "refId": "A",
-              "type": "json",
-              "source": "url",
-              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/dc407f1e-e25f-4995-9feb-5bacc8658149/W/measurements.json?start=PT3H",
-              "url_options": {"method": "GET", "data": ""},
-              "parser": "simple",
-              "root_selector": "",
-              "columns": [
-                {"selector": "timestamp", "type": "timestamp", "text": "time"},
-                {"selector": "value", "type": "number", "text": "Neuwied Stadt (cm)"}
-              ],
-              "format": "timeseries"
-            }
-          ],
-          "title": "Oberhalb — Neuwied Stadt (km 608,0)",
-          "type": "stat"
-        },
-        {
-          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
-          "fieldConfig": {
-            "defaults": {"color": {"mode": "fixed", "fixedColor": "blue"}, "decimals": 0, "unit": "cm", "min": 0}
-          },
-          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 10},
-          "id": 13,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "area",
-            "justifyMode": "auto",
-            "orientation": "auto",
-            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
-            "textMode": "auto"
-          },
-          "targets": [
-            {
-              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
-              "refId": "A",
-              "type": "json",
-              "source": "url",
-              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/b45359df-c020-4314-adb1-d1921db642da/W/measurements.json?start=PT3H",
-              "url_options": {"method": "GET", "data": ""},
-              "parser": "simple",
-              "root_selector": "",
-              "columns": [
-                {"selector": "timestamp", "type": "timestamp", "text": "time"},
-                {"selector": "value", "type": "number", "text": "Oberwinter (cm)"}
-              ],
-              "format": "timeseries"
-            }
-          ],
-          "title": "Unterhalb — Oberwinter (km 638,2)",
-          "type": "stat"
-        },
-        {
-          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
-          "fieldConfig": {
-            "defaults": {"color": {"mode": "fixed", "fixedColor": "blue"}, "decimals": 0, "unit": "cm", "min": 0}
-          },
-          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 10},
-          "id": 14,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "area",
-            "justifyMode": "auto",
-            "orientation": "auto",
-            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
-            "textMode": "auto"
-          },
-          "targets": [
-            {
-              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
-              "refId": "A",
-              "type": "json",
-              "source": "url",
-              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/593647aa-9fea-43ec-a7d6-6476a76ae868/W/measurements.json?start=PT3H",
-              "url_options": {"method": "GET", "data": ""},
-              "parser": "simple",
-              "root_selector": "",
-              "columns": [
-                {"selector": "timestamp", "type": "timestamp", "text": "time"},
-                {"selector": "value", "type": "number", "text": "Bonn (cm)"}
-              ],
-              "format": "timeseries"
-            }
-          ],
-          "title": "Unterhalb — Bonn (km 654,8)",
-          "type": "stat"
-        },
-        {
-          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
-          "description": "Pegelnullpunkte unterscheiden sich je Station — verglichen wird der zeitliche Verlauf der Welle, nicht der absolute Wert. Quelle: WSV Pegelonline.",
           "fieldConfig": {
             "defaults": {
-              "color": {"mode": "palette-classic"},
-              "custom": {
-                "drawStyle": "line",
-                "fillOpacity": 0,
-                "lineInterpolation": "smooth",
-                "lineWidth": 2,
-                "showPoints": "never",
-                "spanNulls": false
-              },
-              "unit": "cm"
+              "color": {"mode": "thresholds"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "dark-blue", "value": null},
+                  {"color": "blue", "value": 0},
+                  {"color": "green", "value": 10},
+                  {"color": "yellow", "value": 20},
+                  {"color": "orange", "value": 25},
+                  {"color": "red", "value": 30}
+                ]
+              }
             },
-            "overrides": []
-          },
-          "gridPos": {"h": 9, "w": 12, "x": 0, "y": 14},
-          "id": 15,
-          "options": {
-            "legend": {"calcs": ["lastNotNull", "min", "max"], "displayMode": "table", "placement": "bottom"},
-            "tooltip": {"mode": "multi", "sort": "desc"}
-          },
-          "targets": [
-            {
-              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
-              "refId": "A",
-              "type": "json",
-              "source": "url",
-              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/4c7d796a-39f2-4f26-97a9-3aad01713e29/W/measurements.json?start=P2D",
-              "url_options": {"method": "GET", "data": ""},
-              "parser": "simple",
-              "root_selector": "",
-              "columns": [
-                {"selector": "timestamp", "type": "timestamp", "text": "time"},
-                {"selector": "value", "type": "number", "text": "Koblenz (cm)"}
-              ],
-              "format": "timeseries"
-            },
-            {
-              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
-              "refId": "B",
-              "type": "json",
-              "source": "url",
-              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/dc407f1e-e25f-4995-9feb-5bacc8658149/W/measurements.json?start=P2D",
-              "url_options": {"method": "GET", "data": ""},
-              "parser": "simple",
-              "root_selector": "",
-              "columns": [
-                {"selector": "timestamp", "type": "timestamp", "text": "time"},
-                {"selector": "value", "type": "number", "text": "Neuwied Stadt (cm)"}
-              ],
-              "format": "timeseries"
-            },
-            {
-              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
-              "refId": "C",
-              "type": "json",
-              "source": "url",
-              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/5735892a-ec65-4b29-97c5-50939aa9584e/W/measurements.json?start=P2D",
-              "url_options": {"method": "GET", "data": ""},
-              "parser": "simple",
-              "root_selector": "",
-              "columns": [
-                {"selector": "timestamp", "type": "timestamp", "text": "time"},
-                {"selector": "value", "type": "number", "text": "Andernach (cm)"}
-              ],
-              "format": "timeseries"
-            },
-            {
-              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
-              "refId": "D",
-              "type": "json",
-              "source": "url",
-              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/b45359df-c020-4314-adb1-d1921db642da/W/measurements.json?start=P2D",
-              "url_options": {"method": "GET", "data": ""},
-              "parser": "simple",
-              "root_selector": "",
-              "columns": [
-                {"selector": "timestamp", "type": "timestamp", "text": "time"},
-                {"selector": "value", "type": "number", "text": "Oberwinter (cm)"}
-              ],
-              "format": "timeseries"
-            },
-            {
-              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
-              "refId": "E",
-              "type": "json",
-              "source": "url",
-              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/593647aa-9fea-43ec-a7d6-6476a76ae868/W/measurements.json?start=P2D",
-              "url_options": {"method": "GET", "data": ""},
-              "parser": "simple",
-              "root_selector": "",
-              "columns": [
-                {"selector": "timestamp", "type": "timestamp", "text": "time"},
-                {"selector": "value", "type": "number", "text": "Bonn (cm)"}
-              ],
-              "format": "timeseries"
-            }
-          ],
-          "title": "Rhein — Pegelverlauf Andernach & Nachbarstationen (48h)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
-          "description": "Quelle: Open-Meteo (DWD ICON), Standort Andernach. Erste Zeile = heute.",
-          "fieldConfig": {
-            "defaults": {"custom": {"align": "auto", "displayMode": "auto"}},
             "overrides": [
               {
                 "matcher": {"id": "byName", "options": "Wetter"},
@@ -467,35 +448,156 @@ data:
                       {
                         "type": "value",
                         "options": {
-                          "0": {"text": "Klar", "index": 0},
-                          "1": {"text": "Überwiegend klar", "index": 1},
-                          "2": {"text": "Teils bewölkt", "index": 2},
-                          "3": {"text": "Bedeckt", "index": 3},
-                          "45": {"text": "Nebel", "index": 4},
-                          "48": {"text": "Reifnebel", "index": 5},
-                          "51": {"text": "Leichter Nieselregen", "index": 6},
-                          "53": {"text": "Nieselregen", "index": 7},
-                          "55": {"text": "Starker Nieselregen", "index": 8},
-                          "56": {"text": "Gefrierender Nieselregen", "index": 9},
-                          "57": {"text": "Starker gefrierender Nieselregen", "index": 10},
-                          "61": {"text": "Leichter Regen", "index": 11},
-                          "63": {"text": "Regen", "index": 12},
-                          "65": {"text": "Starker Regen", "index": 13},
-                          "66": {"text": "Gefrierender Regen", "index": 14},
-                          "67": {"text": "Starker gefrierender Regen", "index": 15},
-                          "71": {"text": "Leichter Schneefall", "index": 16},
-                          "73": {"text": "Schneefall", "index": 17},
-                          "75": {"text": "Starker Schneefall", "index": 18},
-                          "77": {"text": "Schneegriesel", "index": 19},
-                          "80": {"text": "Leichte Regenschauer", "index": 20},
-                          "81": {"text": "Regenschauer", "index": 21},
-                          "82": {"text": "Heftige Regenschauer", "index": 22},
-                          "85": {"text": "Leichte Schneeschauer", "index": 23},
-                          "86": {"text": "Starke Schneeschauer", "index": 24},
-                          "95": {"text": "Gewitter", "index": 25},
-                          "96": {"text": "Gewitter mit Hagel", "index": 26},
-                          "99": {"text": "Starkes Gewitter mit Hagel", "index": 27}
-                        }
+                            "0": {"text": "Klar", "index": 0},
+                            "1": {"text": "Überwiegend klar", "index": 1},
+                            "2": {"text": "Teils bewölkt", "index": 2},
+                            "3": {"text": "Bedeckt", "index": 3},
+                            "45": {"text": "Nebel", "index": 4},
+                            "48": {"text": "Reifnebel", "index": 5},
+                            "51": {"text": "Leichter Nieselregen", "index": 6},
+                            "53": {"text": "Nieselregen", "index": 7},
+                            "55": {"text": "Starker Nieselregen", "index": 8},
+                            "56": {"text": "Gefrierender Nieselregen", "index": 9},
+                            "57": {"text": "Starker gefrierender Nieselregen", "index": 10},
+                            "61": {"text": "Leichter Regen", "index": 11},
+                            "63": {"text": "Regen", "index": 12},
+                            "65": {"text": "Starker Regen", "index": 13},
+                            "66": {"text": "Gefrierender Regen", "index": 14},
+                            "67": {"text": "Starker gefrierender Regen", "index": 15},
+                            "71": {"text": "Leichter Schneefall", "index": 16},
+                            "73": {"text": "Schneefall", "index": 17},
+                            "75": {"text": "Starker Schneefall", "index": 18},
+                            "77": {"text": "Schneegriesel", "index": 19},
+                            "80": {"text": "Leichte Regenschauer", "index": 20},
+                            "81": {"text": "Regenschauer", "index": 21},
+                            "82": {"text": "Heftige Regenschauer", "index": 22},
+                            "85": {"text": "Leichte Schneeschauer", "index": 23},
+                            "86": {"text": "Starke Schneeschauer", "index": 24},
+                            "95": {"text": "Gewitter", "index": 25},
+                            "96": {"text": "Gewitter mit Hagel", "index": 26},
+                            "99": {"text": "Starkes Gewitter mit Hagel", "index": 27}
+                          }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Temperatur"},
+                "properties": [{"id": "unit", "value": "celsius"}, {"id": "decimals", "value": 1}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Niederschlag"},
+                "properties": [{"id": "unit", "value": "suffix: mm"}, {"id": "decimals", "value": 1}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Wind"},
+                "properties": [{"id": "unit", "value": "velocitykmh"}, {"id": "decimals", "value": 0}]
+              },
+              {
+                "matcher": {"id": "byRegexp", "options": "^(lat|lon|Label)$"},
+                "properties": [{"id": "custom.hideFrom", "value": {"legend": true, "tooltip": true, "viz": false}}]
+              }
+            ]
+          },
+          "gridPos": {"h": 9, "w": 12, "x": 0, "y": 24},
+          "id": 23,
+          "options": {
+            "basemap": {"type": "default", "name": "Karte", "config": {}},
+            "controls": {"mouseWheelZoom": false, "showAttribution": true, "showDebug": false, "showMeasure": false, "showScale": false, "showZoom": true},
+            "layers": [
+              {
+                "type": "markers",
+                "name": "Wetter",
+                "config": {
+                  "showLegend": false,
+                  "style": {
+                    "color": {"field": "Temperatur", "fixed": "blue"},
+                    "opacity": 0.9,
+                    "rotation": {"fixed": 0, "max": 360, "min": -360, "mode": "mod"},
+                    "size": {"fixed": 8, "max": 15, "min": 2},
+                    "symbol": {"fixed": "img/icons/marker/circle.svg", "mode": "fixed"},
+                    "symbolAlign": {"horizontal": "center", "vertical": "center"},
+                    "text": {"field": "Label", "fixed": "", "mode": "field"},
+                    "textConfig": {"fontSize": 12, "offsetX": 0, "offsetY": -12, "textAlign": "center", "textBaseline": "bottom"}
+                  }
+                },
+                "location": {"mode": "coords", "latitude": "lat", "longitude": "lon"},
+                "tooltip": true
+              }
+            ],
+            "tooltip": {"mode": "details"},
+            "view": {"id": "fit", "allLayers": true, "padding": 40, "lat": 50.44, "lon": 7.39, "zoom": 9}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+              "refId": "A",
+              "type": "json",
+              "source": "url",
+              "url": "https://api.open-meteo.com/v1/forecast?latitude=${wetter_lat}&longitude=${wetter_lon}&current=temperature_2m,weather_code,wind_speed_10m,precipitation&timezone=Europe%2FBerlin",
+              "url_options": {"method": "GET", "data": ""},
+              "parser": "backend",
+              "root_selector": "( $n := ['${ort}','N 15 km','NO 15 km','O 15 km','SO 15 km','S 15 km','SW 15 km','W 15 km','NW 15 km','N 30 km','NO 30 km','O 30 km','SO 30 km','S 30 km','SW 30 km','W 30 km','NW 30 km']; $map($zip($n,$type($) = 'array' ? $ : [$]),function($r){ ( $t := $replace($formatNumber($r[1].current.temperature_2m,'0.0'),'.',',') & ' °C'; {'Ort':$r[0],'lat':$r[1].latitude,'lon':$r[1].longitude,'Temperatur':$r[1].current.temperature_2m,'Wetter':$r[1].current.weather_code,'Wind':$r[1].current.wind_speed_10m,'Niederschlag':$r[1].current.precipitation,'Label':$r[0] = $n[0] ? $r[0] & ' ' & $t : $t} ) }) )",
+              "columns": [
+                {"selector": "Ort", "type": "string", "text": "Ort"},
+                {"selector": "Wetter", "type": "number", "text": "Wetter"},
+                {"selector": "Temperatur", "type": "number", "text": "Temperatur"},
+                {"selector": "Niederschlag", "type": "number", "text": "Niederschlag"},
+                {"selector": "Wind", "type": "number", "text": "Wind"},
+                {"selector": "lat", "type": "number", "text": "lat"},
+                {"selector": "lon", "type": "number", "text": "lon"},
+                {"selector": "Label", "type": "string", "text": "Label"}
+              ],
+              "format": "table"
+            }
+          ],
+          "title": "Wetter aktuell — 30 km um ${ort}",
+          "type": "geomap"
+        },
+        {
+          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+          "fieldConfig": {
+            "defaults": {"custom": {"align": "auto", "displayMode": "auto", "minWidth": 50}},
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Wetter"},
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                            "0": {"text": "Klar", "index": 0},
+                            "1": {"text": "Überwiegend klar", "index": 1},
+                            "2": {"text": "Teils bewölkt", "index": 2},
+                            "3": {"text": "Bedeckt", "index": 3},
+                            "45": {"text": "Nebel", "index": 4},
+                            "48": {"text": "Reifnebel", "index": 5},
+                            "51": {"text": "Leichter Nieselregen", "index": 6},
+                            "53": {"text": "Nieselregen", "index": 7},
+                            "55": {"text": "Starker Nieselregen", "index": 8},
+                            "56": {"text": "Gefrierender Nieselregen", "index": 9},
+                            "57": {"text": "Starker gefrierender Nieselregen", "index": 10},
+                            "61": {"text": "Leichter Regen", "index": 11},
+                            "63": {"text": "Regen", "index": 12},
+                            "65": {"text": "Starker Regen", "index": 13},
+                            "66": {"text": "Gefrierender Regen", "index": 14},
+                            "67": {"text": "Starker gefrierender Regen", "index": 15},
+                            "71": {"text": "Leichter Schneefall", "index": 16},
+                            "73": {"text": "Schneefall", "index": 17},
+                            "75": {"text": "Starker Schneefall", "index": 18},
+                            "77": {"text": "Schneegriesel", "index": 19},
+                            "80": {"text": "Leichte Regenschauer", "index": 20},
+                            "81": {"text": "Regenschauer", "index": 21},
+                            "82": {"text": "Heftige Regenschauer", "index": 22},
+                            "85": {"text": "Leichte Schneeschauer", "index": 23},
+                            "86": {"text": "Starke Schneeschauer", "index": 24},
+                            "95": {"text": "Gewitter", "index": 25},
+                            "96": {"text": "Gewitter mit Hagel", "index": 26},
+                            "99": {"text": "Starkes Gewitter mit Hagel", "index": 27}
+                          }
                       }
                     ]
                   }
@@ -511,11 +613,19 @@ data:
               },
               {
                 "matcher": {"id": "byName", "options": "Regen"},
-                "properties": [{"id": "unit", "value": "lengthmm"}, {"id": "decimals", "value": 1}]
+                "properties": [{"id": "unit", "value": "suffix: mm"}, {"id": "decimals", "value": 1}]
               },
               {
                 "matcher": {"id": "byName", "options": "Regenwahrscheinlichkeit"},
-                "properties": [{"id": "unit", "value": "percent"}, {"id": "decimals", "value": 0}]
+                "properties": [{"id": "unit", "value": "percent"}, {"id": "decimals", "value": 0}, {"id": "displayName", "value": "Regen %"}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Tag"},
+                "properties": [{"id": "custom.width", "value": 100}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Wetter"},
+                "properties": [{"id": "custom.width", "value": 165}, {"id": "custom.align", "value": "left"}]
               },
               {
                 "matcher": {"id": "byName", "options": "Wind"},
@@ -523,7 +633,7 @@ data:
               }
             ]
           },
-          "gridPos": {"h": 9, "w": 12, "x": 12, "y": 14},
+          "gridPos": {"h": 9, "w": 12, "x": 12, "y": 24},
           "id": 16,
           "options": {"footer": {"show": false}, "showHeader": true},
           "targets": [
@@ -532,7 +642,7 @@ data:
               "refId": "A",
               "type": "json",
               "source": "url",
-              "url": "https://api.open-meteo.com/v1/forecast?latitude=50.4397&longitude=7.4017&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max&timezone=Europe%2FBerlin&forecast_days=4",
+              "url": "https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max&timezone=Europe%2FBerlin&forecast_days=4",
               "url_options": {"method": "GET", "data": ""},
               "parser": "backend",
               "root_selector": "$map($zip(daily.time,daily.weather_code,daily.temperature_2m_max,daily.temperature_2m_min,daily.precipitation_sum,daily.precipitation_probability_max,daily.wind_speed_10m_max),function($r){ {'Tag':$r[0],'Wetter':$r[1],'Max':$r[2],'Min':$r[3],'Regen':$r[4],'Regenwahrscheinlichkeit':$r[5],'Wind':$r[6]} })",
@@ -549,78 +659,496 @@ data:
             }
           ],
           "transformations": [{"id": "organize", "options": {"indexByName": {"Tag": 0, "Wetter": 1, "Max": 2, "Min": 3, "Regen": 4, "Regenwahrscheinlichkeit": 5, "Wind": 6}}}],
-          "title": "Wetter Andernach — heute + 3 Tage",
+          "title": "Wetter ${ort} — heute + 3 Tage",
           "type": "table"
-        },
-        {
-          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 23},
-          "id": 3,
-          "options": {
-            "content": "## DWD Warnungen — Kreis Mayen-Koblenz\n\n**Aktuelle Warnungen direkt beim DWD abrufen:**\n\n- [DWD WarnWetter — Andernach/Mayen-Koblenz](https://www.dwd.de/DE/wetter/warnungen_aktuell/warnkarten/warnkarte_gemeinden_bw.html)\n- [DWD Warnapp (warnwetter.de)](https://www.wettergefahren.de/warnkarte/gemeinden/aktuelle-warnungen.html)\n- [Katwarn Mayen-Koblenz](https://katwarn.de/)\n\n**Warnstufen:**\n\n| Stufe | Farbe | Bedeutung |\n|---|---|---|\n| 1 | Gelb | Wetterwarnung |\n| 2 | Orange | Markante Wetterwarnung |\n| 3 | Rot | Unwetterwarnung |\n| 4 | Violett | Extremes Unwetter |\n\n> **Hinweis:** Die DWD JSON-API wurde eingestellt. Die Warnungsdaten sind nur noch als JSONP oder im CAP-XML-Format verfügbar — nicht kompatibel mit dem Infinity-Plugin.",
-            "mode": "markdown"
-          },
-          "title": "DWD Warnungen — Kreis Mayen-Koblenz",
-          "type": "text"
         },
         {
           "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
           "fieldConfig": {
             "defaults": {
-              "custom": {"align": "auto", "displayMode": "auto"}
-            }
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "cm"
+            },
+            "overrides": [
+              {"matcher": {"id": "byName", "options": "Nachbar A"}, "properties": [{"id": "displayName", "value": "${nachbar_a:text}"}]},
+              {"matcher": {"id": "byName", "options": "Einsatzort"}, "properties": [{"id": "displayName", "value": "${ort}"}]},
+              {"matcher": {"id": "byName", "options": "Nachbar B"}, "properties": [{"id": "displayName", "value": "${nachbar_b:text}"}]}
+            ]
           },
-          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 23},
-          "id": 4,
-          "options": {"footer": {"show": false}, "showHeader": true},
+          "gridPos": {"h": 9, "w": 24, "x": 0, "y": 33},
+          "id": 15,
+          "options": {
+            "legend": {"calcs": ["lastNotNull", "min", "max"], "displayMode": "table", "placement": "bottom"},
+            "tooltip": {"mode": "multi", "sort": "desc"}
+          },
           "targets": [
             {
               "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
               "refId": "A",
               "type": "json",
               "source": "url",
-              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations.json?includeTimeseries=true&includeCurrentMeasurement=true&waters=RHEIN",
+              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${nachbar_a}/W/measurements.json?start=P2D",
               "url_options": {"method": "GET", "data": ""},
-              "parser": "backend",
-              "root_selector": "$map($[km>=580 and km<=650]^(km),function($s){ {'Station':$s.shortname,'km':$s.km,'Pegel':$s.timeseries[shortname='W'].currentMeasurement.value,'Gemessen':$s.timeseries[shortname='W'].currentMeasurement.timestamp} })",
+              "parser": "simple",
+              "root_selector": "",
               "columns": [
-                {"selector": "Station", "type": "string", "text": "Station"},
-                {"selector": "km", "type": "number", "text": "Rhein-km"},
-                {"selector": "Pegel", "type": "number", "text": "Pegel (cm)"},
-                {"selector": "Gemessen", "type": "timestamp", "text": "Gemessen"}
+                {"selector": "timestamp", "type": "timestamp", "text": "time"},
+                {"selector": "value", "type": "number", "text": "Nachbar A"}
               ],
-              "format": "table"
+              "format": "timeseries"
+            },
+            {
+              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+              "refId": "B",
+              "type": "json",
+              "source": "url",
+              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${einsatzort}/W/measurements.json?start=P2D",
+              "url_options": {"method": "GET", "data": ""},
+              "parser": "simple",
+              "root_selector": "",
+              "columns": [
+                {"selector": "timestamp", "type": "timestamp", "text": "time"},
+                {"selector": "value", "type": "number", "text": "Einsatzort"}
+              ],
+              "format": "timeseries"
+            },
+            {
+              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+              "refId": "C",
+              "type": "json",
+              "source": "url",
+              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${nachbar_b}/W/measurements.json?start=P2D",
+              "url_options": {"method": "GET", "data": ""},
+              "parser": "simple",
+              "root_selector": "",
+              "columns": [
+                {"selector": "timestamp", "type": "timestamp", "text": "time"},
+                {"selector": "value", "type": "number", "text": "Nachbar B"}
+              ],
+              "format": "timeseries"
             }
           ],
-          "transformations": [{"id": "organize", "options": {"indexByName": {"Station": 0, "Rhein-km": 1, "Pegel (cm)": 2, "Gemessen": 3}}}],
-          "title": "Pegelonline — Rhein Nachbarstationen (km 580–650)",
-          "description": "Quelle: Wasser- und Schifffahrtsverwaltung des Bundes (WSV), Pegelonline — öffentlich & kostenlos.",
-          "type": "table"
-        },
-        {
-          "gridPos": {"h": 6, "w": 12, "x": 0, "y": 31},
-          "id": 5,
-          "options": {
-            "content": "## Hochwasservorhersage RLP\n\nDas LUWG (Landesamt für Umwelt) RLP bietet eine **24–48h Hochwasservorhersage** für den Rhein bei Andernach:\n\n- [Hochwasserkarte RLP — Andernach](https://www.hochwasser-rlp.de/)\n- [Hochwassernachrichten-App RLP](https://www.hochwasser-rlp.de/service/hochwassernachrichten-app)\n\n**Meldestufen Rhein Andernach:**\n\n| Stufe | Pegel (cm) | Maßnahme |\n|---|---|---|\n| 1 | ≥ 430 | Beobachtung |\n| 2 | ≥ 570 | verstärkte Kontrollen |\n| 3 | ≥ 660 | Einsatz |\n| 4 | ≥ 800 | Katastrophenschutz |",
-            "mode": "markdown"
-          },
-          "title": "Hochwasservorhersage RLP",
-          "type": "text"
-        },
-        {
-          "gridPos": {"h": 6, "w": 12, "x": 12, "y": 31},
-          "id": 6,
-          "options": {
-            "content": "## ELWIS — Schifffahrt & Wasserstraßen\n\nDer Elektronische Wasserstraßen-Informationsservice (ELWIS) des Bundes bietet:\n\n- **Schifffahrtsmeldungen** (Sperrungen, Baustellen, Fahrwassereinschränkungen)\n- **Wasserstände** entlang des Rheins\n- **Nachrichten** für Wassersportler und Schifffahrt\n\n**Links:**\n- [ELWIS Rhein Andernach](https://www.elwis.de/DE/dynamisch/gewaesserkundliche-Grundlagen/Wasserstaende/index.php)\n- [Schifffahrtsmeldungen Rhein](https://www.elwis.de/DE/dynamisch/Bekanntmachungen/Binnenschifffahrt/index.php)\n- [Fahrwasserzustand Rhein](https://www.elwis.de/DE/dynamisch/gewaesserkundliche-Grundlagen/Fahrwassertiefe/index.php)\n\n*Quelle: Wasserstraßen- und Schifffahrtsverwaltung des Bundes (WSV), öffentlich & kostenlos.*",
-            "mode": "markdown"
-          },
-          "title": "ELWIS — Schifffahrtsmeldungen Rhein",
-          "type": "text"
+          "title": "Pegelverlauf ${nachbar_a:text} · ${ort} · ${nachbar_b:text} (48h)",
+          "type": "timeseries"
         }
       ],
-      "refresh": "5m",
+      "refresh": "15m",
       "schemaVersion": 38,
-      "tags": ["rhein", "pegel", "wasser", "dlrg", "andernach", "wetter"],
-      "templating": {"list": []},
+      "tags": ["rhein", "pegel", "wasser", "dlrg", "andernach", "wetter", "einsatz"],
+      "templating": {
+        "list": [
+          {
+            "current": {"selected": true, "text": "Andernach (Rhein)", "value": "5735892a-ec65-4b29-97c5-50939aa9584e"},
+            "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+            "definition": "",
+            "hide": 0,
+            "includeAll": false,
+            "label": "Einsatzort",
+            "multi": false,
+            "name": "einsatzort",
+            "options": [],
+            "query": {
+              "infinityQuery": {
+                "columns": [
+                  {"selector": "__text", "text": "__text", "type": "string"},
+                  {"selector": "__value", "text": "__value", "type": "string"}
+                ],
+                "filters": [],
+                "format": "table",
+                "parser": "backend",
+                "refId": "variable",
+                "root_selector": "( $tc := function($t){ $join($map($split($lowercase($t),' '),function($w){ $uppercase($substring($w,0,1)) & $substring($w,1) }),' ') }; $map($[$exists(latitude)]^(water.shortname,km),function($s){ {'__text':$tc($s.shortname) & ' (' & $tc($s.water.shortname) & ')','__value':$s.uuid} }) )",
+                "source": "url",
+                "type": "json",
+                "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations.json?timeseries=W",
+                "url_options": {"data": "", "method": "GET"}
+              },
+              "query": "",
+              "queryType": "infinity"
+            },
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 1,
+            "type": "query"
+          },
+          {
+            "current": {"selected": true, "text": "40", "value": "40"},
+            "hide": 0,
+            "includeAll": false,
+            "label": "Umkreis Pegel (km)",
+            "multi": false,
+            "name": "umkreis",
+            "options": [
+              {"selected": false, "text": "20", "value": "20"},
+              {"selected": true, "text": "40", "value": "40"},
+              {"selected": false, "text": "60", "value": "60"},
+              {"selected": false, "text": "100", "value": "100"}
+            ],
+            "query": "20,40,60,100",
+            "skipUrlSync": false,
+            "type": "custom"
+          },
+          {
+            "current": {"selected": true, "text": "Andernach", "value": "Andernach"},
+            "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+            "definition": "",
+            "hide": 2,
+            "includeAll": false,
+            "label": "Ort",
+            "multi": false,
+            "name": "ort",
+            "options": [],
+            "query": {
+              "infinityQuery": {
+                "columns": [
+                  {"selector": "__text", "text": "__text", "type": "string"},
+                  {"selector": "__value", "text": "__value", "type": "string"}
+                ],
+                "filters": [],
+                "format": "table",
+                "parser": "backend",
+                "refId": "variable",
+                "root_selector": "( $tc := function($t){ $join($map($split($lowercase($t),' '),function($w){ $uppercase($substring($w,0,1)) & $substring($w,1) }),' ') }; [{'__text':$tc(shortname),'__value':$tc(shortname)}] )",
+                "source": "url",
+                "type": "json",
+                "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${einsatzort}.json",
+                "url_options": {"data": "", "method": "GET"}
+              },
+              "query": "",
+              "queryType": "infinity"
+            },
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 0,
+            "type": "query"
+          },
+          {
+            "current": {"selected": true, "text": "RHEIN", "value": "RHEIN"},
+            "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+            "definition": "",
+            "hide": 2,
+            "includeAll": false,
+            "label": "Gewässer",
+            "multi": false,
+            "name": "gewaesser",
+            "options": [],
+            "query": {
+              "infinityQuery": {
+                "columns": [
+                  {"selector": "__text", "text": "__text", "type": "string"},
+                  {"selector": "__value", "text": "__value", "type": "string"}
+                ],
+                "filters": [],
+                "format": "table",
+                "parser": "backend",
+                "refId": "variable",
+                "root_selector": "( [{'__text':water.shortname,'__value':water.shortname}] )",
+                "source": "url",
+                "type": "json",
+                "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${einsatzort}.json",
+                "url_options": {"data": "", "method": "GET"}
+              },
+              "query": "",
+              "queryType": "infinity"
+            },
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 0,
+            "type": "query"
+          },
+          {
+            "current": {"selected": true, "text": "Rhein", "value": "Rhein"},
+            "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+            "definition": "",
+            "hide": 2,
+            "includeAll": false,
+            "label": "Gewässername",
+            "multi": false,
+            "name": "gewaesser_name",
+            "options": [],
+            "query": {
+              "infinityQuery": {
+                "columns": [
+                  {"selector": "__text", "text": "__text", "type": "string"},
+                  {"selector": "__value", "text": "__value", "type": "string"}
+                ],
+                "filters": [],
+                "format": "table",
+                "parser": "backend",
+                "refId": "variable",
+                "root_selector": "( $tc := function($t){ $join($map($split($lowercase($t),' '),function($w){ $uppercase($substring($w,0,1)) & $substring($w,1) }),' ') }; [{'__text':$tc(water.shortname),'__value':$tc(water.shortname)}] )",
+                "source": "url",
+                "type": "json",
+                "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${einsatzort}.json",
+                "url_options": {"data": "", "method": "GET"}
+              },
+              "query": "",
+              "queryType": "infinity"
+            },
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 0,
+            "type": "query"
+          },
+          {
+            "current": {"selected": true, "text": "50.44339", "value": "50.44339"},
+            "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+            "definition": "",
+            "hide": 2,
+            "includeAll": false,
+            "label": "Breite",
+            "multi": false,
+            "name": "lat",
+            "options": [],
+            "query": {
+              "infinityQuery": {
+                "columns": [
+                  {"selector": "__text", "text": "__text", "type": "string"},
+                  {"selector": "__value", "text": "__value", "type": "string"}
+                ],
+                "filters": [],
+                "format": "table",
+                "parser": "backend",
+                "refId": "variable",
+                "root_selector": "( [{'__text':$string(latitude),'__value':$string(latitude)}] )",
+                "source": "url",
+                "type": "json",
+                "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${einsatzort}.json",
+                "url_options": {"data": "", "method": "GET"}
+              },
+              "query": "",
+              "queryType": "infinity"
+            },
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 0,
+            "type": "query"
+          },
+          {
+            "current": {"selected": true, "text": "7.392056", "value": "7.392056"},
+            "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+            "definition": "",
+            "hide": 2,
+            "includeAll": false,
+            "label": "Länge",
+            "multi": false,
+            "name": "lon",
+            "options": [],
+            "query": {
+              "infinityQuery": {
+                "columns": [
+                  {"selector": "__text", "text": "__text", "type": "string"},
+                  {"selector": "__value", "text": "__value", "type": "string"}
+                ],
+                "filters": [],
+                "format": "table",
+                "parser": "backend",
+                "refId": "variable",
+                "root_selector": "( [{'__text':$string(longitude),'__value':$string(longitude)}] )",
+                "source": "url",
+                "type": "json",
+                "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${einsatzort}.json",
+                "url_options": {"data": "", "method": "GET"}
+              },
+              "query": "",
+              "queryType": "infinity"
+            },
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 0,
+            "type": "query"
+          },
+          {
+            "current": {"selected": true, "text": "27100400", "value": "27100400"},
+            "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+            "definition": "",
+            "hide": 2,
+            "includeAll": false,
+            "label": "Pegelnummer",
+            "multi": false,
+            "name": "pegelnr",
+            "options": [],
+            "query": {
+              "infinityQuery": {
+                "columns": [
+                  {"selector": "__text", "text": "__text", "type": "string"},
+                  {"selector": "__value", "text": "__value", "type": "string"}
+                ],
+                "filters": [],
+                "format": "table",
+                "parser": "backend",
+                "refId": "variable",
+                "root_selector": "( [{'__text':number,'__value':number}] )",
+                "source": "url",
+                "type": "json",
+                "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${einsatzort}.json",
+                "url_options": {"data": "", "method": "GET"}
+              },
+              "query": "",
+              "queryType": "infinity"
+            },
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 0,
+            "type": "query"
+          },
+          {
+            "current": {"selected": true, "text": "50.4434", "value": "50.4434"},
+            "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+            "definition": "",
+            "hide": 2,
+            "includeAll": false,
+            "label": "Wetter Breiten",
+            "multi": false,
+            "name": "wetter_lat",
+            "options": [],
+            "query": {
+              "infinityQuery": {
+                "columns": [
+                  {"selector": "__text", "text": "__text", "type": "string"},
+                  {"selector": "__value", "text": "__value", "type": "string"}
+                ],
+                "filters": [],
+                "format": "table",
+                "parser": "backend",
+                "refId": "variable",
+                "root_selector": "( $la := latitude; $d := [0,15,10.607,0,-10.607,-15,-10.607,0,10.607,30,21.213,0,-21.213,-30,-21.213,0,21.213]; $v := $join($map($d,function($n){ $string($round($la + $n / 111.32,4)) }),','); [{'__text':$v,'__value':$v}] )",
+                "source": "url",
+                "type": "json",
+                "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${einsatzort}.json",
+                "url_options": {"data": "", "method": "GET"}
+              },
+              "query": "",
+              "queryType": "infinity"
+            },
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 0,
+            "type": "query"
+          },
+          {
+            "current": {"selected": true, "text": "7.3921", "value": "7.3921"},
+            "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+            "definition": "",
+            "hide": 2,
+            "includeAll": false,
+            "label": "Wetter Längen",
+            "multi": false,
+            "name": "wetter_lon",
+            "options": [],
+            "query": {
+              "infinityQuery": {
+                "columns": [
+                  {"selector": "__text", "text": "__text", "type": "string"},
+                  {"selector": "__value", "text": "__value", "type": "string"}
+                ],
+                "filters": [],
+                "format": "table",
+                "parser": "backend",
+                "refId": "variable",
+                "root_selector": "( $la := latitude * 3.14159265 / 180; $c := 1 - $power($la,2) / 2 + $power($la,4) / 24 - $power($la,6) / 720 + $power($la,8) / 40320; $lo := longitude; $d := [0,0,10.607,15,10.607,0,-10.607,-15,-10.607,0,21.213,30,21.213,0,-21.213,-30,-21.213]; $v := $join($map($d,function($e){ $string($round($lo + $e / (111.32 * $c),4)) }),','); [{'__text':$v,'__value':$v}] )",
+                "source": "url",
+                "type": "json",
+                "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${einsatzort}.json",
+                "url_options": {"data": "", "method": "GET"}
+              },
+              "query": "",
+              "queryType": "infinity"
+            },
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 0,
+            "type": "query"
+          },
+          {
+            "current": {"selected": true, "text": "Neuwied Stadt", "value": "dc407f1e-e25f-4995-9feb-5bacc8658149"},
+            "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+            "definition": "",
+            "hide": 2,
+            "includeAll": false,
+            "label": "Nachbar A",
+            "multi": false,
+            "name": "nachbar_a",
+            "options": [],
+            "query": {
+              "infinityQuery": {
+                "columns": [
+                  {"selector": "__text", "text": "__text", "type": "string"},
+                  {"selector": "__value", "text": "__value", "type": "string"}
+                ],
+                "filters": [],
+                "format": "table",
+                "parser": "backend",
+                "refId": "variable",
+                "root_selector": "( $tc := function($t){ $join($map($split($lowercase($t),' '),function($w){ $uppercase($substring($w,0,1)) & $substring($w,1) }),' ') }; $e := $[uuid='${einsatzort}']; $n := ($[km < $e.km]^(>km))[0]; $n ? [{'__text':$tc($n.shortname),'__value':$n.uuid}] : [] )",
+                "source": "url",
+                "type": "json",
+                "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations.json?waters=${gewaesser:percentencode}&timeseries=W",
+                "url_options": {"data": "", "method": "GET"}
+              },
+              "query": "",
+              "queryType": "infinity"
+            },
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 0,
+            "type": "query"
+          },
+          {
+            "current": {"selected": true, "text": "Oberwinter", "value": "b45359df-c020-4314-adb1-d1921db642da"},
+            "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+            "definition": "",
+            "hide": 2,
+            "includeAll": false,
+            "label": "Nachbar B",
+            "multi": false,
+            "name": "nachbar_b",
+            "options": [],
+            "query": {
+              "infinityQuery": {
+                "columns": [
+                  {"selector": "__text", "text": "__text", "type": "string"},
+                  {"selector": "__value", "text": "__value", "type": "string"}
+                ],
+                "filters": [],
+                "format": "table",
+                "parser": "backend",
+                "refId": "variable",
+                "root_selector": "( $tc := function($t){ $join($map($split($lowercase($t),' '),function($w){ $uppercase($substring($w,0,1)) & $substring($w,1) }),' ') }; $e := $[uuid='${einsatzort}']; $n := ($[km > $e.km]^(km))[0]; $n ? [{'__text':$tc($n.shortname),'__value':$n.uuid}] : [] )",
+                "source": "url",
+                "type": "json",
+                "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations.json?waters=${gewaesser:percentencode}&timeseries=W",
+                "url_options": {"data": "", "method": "GET"}
+              },
+              "query": "",
+              "queryType": "infinity"
+            },
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 0,
+            "type": "query"
+          }
+        ]
+      },
       "time": {"from": "now-2d", "to": "now+2d"},
       "timepicker": {},
       "timezone": "browser",
