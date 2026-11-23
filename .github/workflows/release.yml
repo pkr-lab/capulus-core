@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   release:
-    uses: pkr-lab/.github/.github/workflows/release.yml@c2aab65b86ebe3710b2947b100e49a7a33d9455e # v1.2.0
+    uses: pkr-lab/.github/.github/workflows/release.yml@62d1d88661a2af78917f76fc750438be74f5be7c # v1.2.0
     with:
       changelog: false
 
