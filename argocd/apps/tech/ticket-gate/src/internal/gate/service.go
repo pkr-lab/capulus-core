@@ -41,6 +41,8 @@ type Service struct {
 	rand    io.Reader
 	logger  *slog.Logger
 	spawn   func(func())
+
+	retryDelay time.Duration
 }
 
 type Deps struct {
@@ -76,6 +78,8 @@ func NewService(d Deps) *Service {
 		rand:    d.Rand,
 		logger:  d.Logger,
 		spawn:   d.Spawn,
+
+		retryDelay: 2 * time.Second,
 	}
 }
 
@@ -332,7 +336,7 @@ const (
 	maxRelaySubject = 200
 	maxRelayText    = 10000
 	maxRelayHTML    = 20000
-	relayTimeout    = 8 * time.Second
+	relayAttempts   = 2
 )
 
 func (s *Service) tokenMatches(given string) bool {
@@ -365,12 +369,21 @@ func (s *Service) Relay(in RelayInput) *Error {
 	if ok, retry := s.limits.Take(limiter.Rule{Key: "relay-rcpt:" + s.macString("email", to), Limit: s.cfg.RelayPerRcptHour, Window: time.Hour}); !ok {
 		return rateErr(retry)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), relayTimeout)
-	defer cancel()
-	if err := s.mailer.Send(ctx, mail.Message{To: to, Subject: subject, Text: text, HTML: html}); err != nil {
-		s.logger.Error("relay mail failed", "error", err.Error())
-		return newErr(http.StatusBadGateway, "mail_failed")
-	}
+	msg := mail.Message{To: to, Subject: subject, Text: text, HTML: html}
+	s.spawn(func() {
+		for attempt := 1; attempt <= relayAttempts; attempt++ {
+			ctx, cancel := context.WithTimeout(context.Background(), backendTimeout)
+			err := s.mailer.Send(ctx, msg)
+			cancel()
+			if err == nil {
+				return
+			}
+			s.logger.Error("relay mail failed", "attempt", attempt, "error", err.Error())
+			if attempt < relayAttempts {
+				time.Sleep(s.retryDelay)
+			}
+		}
+	})
 	return nil
 }
 

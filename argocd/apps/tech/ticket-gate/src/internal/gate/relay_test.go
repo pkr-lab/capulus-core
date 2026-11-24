@@ -108,12 +108,28 @@ func TestRelayLimits(t *testing.T) {
 	mustErr(t, e.do("/v1/mail", relayToken, "203.0.113.5", relayBody("d@example.de")), 429, "rate_limited")
 }
 
-func TestRelayReportsDeliveryFailure(t *testing.T) {
+func TestRelayRetriesOnceAfterDeliveryFailure(t *testing.T) {
+	e := newEnv(t, withRelay)
+	e.mailer.relFail = 1
+	if r := e.do("/v1/mail", relayToken, "203.0.113.5", relayBody("a@example.de")); r.Status != 200 {
+		t.Fatalf("Status %d (%s)", r.Status, r.Raw)
+	}
+	if e.mailer.attempts() != 2 || len(e.mailer.relayedMails()) != 1 {
+		t.Fatalf("Versuche %d, zugestellt %d", e.mailer.attempts(), len(e.mailer.relayedMails()))
+	}
+}
+
+func TestRelayGivesUpAfterTwoAttemptsWithoutLeakingAddress(t *testing.T) {
 	e := newEnv(t, withRelay)
 	e.mailer.relErr = errTicket
-	mustErr(t, e.do("/v1/mail", relayToken, "203.0.113.5", relayBody("a@example.de")), 502, "mail_failed")
-	if contains(e.logs.String(), "a@example.de") {
-		t.Fatal("Empfängeradresse im Log")
+	if r := e.do("/v1/mail", relayToken, "203.0.113.5", relayBody("a@example.de")); r.Status != 200 {
+		t.Fatalf("Status %d (%s)", r.Status, r.Raw)
+	}
+	if e.mailer.attempts() != 2 {
+		t.Fatalf("Versuche %d, erwartet 2", e.mailer.attempts())
+	}
+	if !contains(e.logs.String(), "relay mail failed") || contains(e.logs.String(), "a@example.de") {
+		t.Fatalf("Log: %s", e.logs.String())
 	}
 }
 
