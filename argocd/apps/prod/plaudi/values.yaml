@@ -1,0 +1,107 @@
+---
+replicaCount: 1
+
+image:
+  repository: ghcr.io/pkr-lab/plaudi
+  tag: "sha-ba0e80e"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+  hosts:
+    - plaudi.prod.homeserver
+    - plaudi-prod.pkr-lab.de
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 320Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+tmpSizeLimit: 256Mi
+
+livenessProbe:
+  initialDelaySeconds: 15
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+persistence:
+  size: 2Gi
+  storageClassName: local-path
+  accessMode: ReadWriteOnce
+
+config:
+  NODE_ENV: production
+  PORT: "3000"
+  DATA_DIR: /data
+  PUBLIC_DIR: /app/public
+  TZ: Europe/Berlin
+  PUBLIC_URL: https://plaudi-prod.pkr-lab.de
+  COOKIE_SECURE: "true"
+  TRUST_PROXY: "2"
+  MAIL_TRANSPORT: webhook
+  MAIL_WEBHOOK_URL: https://ticket-gate-tech.pkr-lab.de/v1/mail
+  MAIL_FROM: Plaudi <info@pkr-service.de>
+  AI_BACKEND: subscription
+  AI_MODEL: claude-opus-5-5
+  AI_EFFORT: medium
+  SESSION_IDLE_HOURS: "3"
+  MAX_LOGIN_FAILURES: "3"
+  LOCK_HOURS: "24"
+
+secrets:
+  enabled: true
+  name: plaudi-secrets
+  encryptedData:
+    API_KEY: ""
+    ADMIN_EMAIL: "AgAiFl6E2fVK9jOeJaM2r93cMFS5OQiSJHHBGWRj+DOHhVyPxXB/J4M+RoHoDz5zZiTYLCvohXu5EUqJ1Xaevo4EZ705d77fDn80HkG6Cb2DM1hgp1wdPjikl0lpMxE802K7qnVmn0y/8D61prMj82sGydfqshwXCN1nLOy4kCeXhq68SqLVpPh1ee2bjWyBZiIAHoCP/aW/l3yhjs1upZqUpH0Icvhpbho8RJC07XHRrx1GHh+siOJMDO6++cy57iMDJ8FgTot3Pg4pHVhg/lQpUkuJDkTAfhANasSaOturjep6EWW/w9T6s91C9JH7nOBnnFvMQu/qqbwnY+aBfku/Z96Uf87D0Q+OURdnJx18GXEOyPjW6l88AlLHvl7tMI3ot3Ui04UVh92wiNu1l9FBl/nOAuFg7w1GBnm5Xum44C30x3hWxkytDO23ro912NzAJ9jDaoCLb/tXqQ6NL8fgw9WkVpru4evU6YPuFMUr0+f+AH6TyjB28v7n6ovvpzxV2C/BLwmdnO5TIuqLMFbzaEU24tHcxSbcPpyTItUU9Ih195NXZvir6HtR6suDl8YDIl6A0kHwMLqyLYPx7Au9tR3HSfiiV0Y1jEVmsX+slBiznnV18lLavWkZMpMbxMFUKnL+jf5MqNIEwoEwvj4nrRtvjil8S0BEJUbiABJZjFUo2ATD9oLw5mwolNkBpw0v6NuLv8nZFHUY3JcZI23cW8/PEr7vEYHqsQ=="
+    MAIL_WEBHOOK_TOKEN: "AgA+3cbGAU3OTn4XxC/Pc+2kE7NYEN8+DPBLjhhR7x1N0IpDtR2ZfyjyRzmKDMyOGXc7IjsU0sDIZTX/mrR13jc5BcjjoZBscS97sD0oWG6xSUx6JbNpeFY7BG0W2oAhd184H/EYXPfLuMa60OM+4lNjSJ5NXt3andGQM/isdLbpzquttK4eLo+VS+rv2hx29Lwi7eqXow0msdx0MbI4Kq4aVcLWcRmSN/05oFgYLH5PzrMKZXH7Inq6W9yEDaXHIj/qcgwtiuMP4uWGAByLhSw6T4I8T4rwRqGcxO5Jfx/EoKbqzHmggF772C+hGPbSIuWf/ZyAaUKVOUPWaT1Mxk7NaBCeUG0NGcWQlkmL/ftqpE2pM9hv8ntGG+o2XtxWZWcSTTx3Ifev1Q1iG8l5HjFE3Vdb5Qt1pfORi1hclBO1pREHlTXX8P7v5xk+ubIE+TGW+3Dy6NDMKmLjsUw6xlIheASUdvdLWbe4DfxldsJwIVG1Hj181sgmeUB85MESrfxIs5VsaTgNKNzzi+ysDpxFK+L+jUk33KbMbEZX2P3zOvZqqpXuQLWuaxHKqPXPWEfzs5FyxIrvjo8xiwSk+AdlsvxgENkYA8mJmi2LAKu6H+cBKyg8O5Wh0lNGhIwgJQYLQ7cjN9MO2i6AnBAZV71xCIAxc8AEllIBU/pVo5h0Z58hLS69pAGgtZIqX9jt2zJZUaakbydKcSCHq13/FKhQ52sJuJlH1slcAZNy/TSIAL2pidK8dYcqzqmqyYJ58ALmOXaj1vv7IxUIoS/VuXdK"
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

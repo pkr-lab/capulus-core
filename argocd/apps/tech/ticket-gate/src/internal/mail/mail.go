@@ -21,6 +21,14 @@ const base64LineLength = 76
 
 type Mailer interface {
 	SendCode(ctx context.Context, to, code string, ttl time.Duration) error
+	Send(ctx context.Context, m Message) error
+}
+
+type Message struct {
+	To      string
+	Subject string
+	Text    string
+	HTML    string
 }
 
 type SMTP struct {
@@ -50,16 +58,6 @@ func BuildMessage(from, fromName, to, code string, ttl time.Duration, now time.T
 		"Wenn Sie keinen Code angefordert haben, ignorieren Sie diese E-Mail bitte. Es ist nichts weiter zu tun.\r\n",
 		code, minutes)
 
-	encodedBody := base64.StdEncoding.EncodeToString([]byte(body))
-	var wrapped strings.Builder
-	for len(encodedBody) > base64LineLength {
-		wrapped.WriteString(encodedBody[:base64LineLength])
-		wrapped.WriteString("\r\n")
-		encodedBody = encodedBody[base64LineLength:]
-	}
-	wrapped.WriteString(encodedBody)
-	wrapped.WriteString("\r\n")
-
 	fromDomain := from[strings.LastIndex(from, "@")+1:]
 	var msg strings.Builder
 	msg.WriteString("From: " + mime.QEncoding.Encode("utf-8", fromName) + " <" + from + ">\r\n")
@@ -72,19 +70,92 @@ func BuildMessage(from, fromName, to, code string, ttl time.Duration, now time.T
 	msg.WriteString("Content-Transfer-Encoding: base64\r\n")
 	msg.WriteString("Auto-Submitted: auto-generated\r\n")
 	msg.WriteString("\r\n")
-	msg.WriteString(wrapped.String())
+	msg.WriteString(wrapBase64(body))
 	return []byte(msg.String()), nil
 }
 
-func (s *SMTP) SendCode(ctx context.Context, to, code string, ttl time.Duration) error {
+func wrapBase64(body string) string {
+	encoded := base64.StdEncoding.EncodeToString([]byte(body))
+	var wrapped strings.Builder
+	for len(encoded) > base64LineLength {
+		wrapped.WriteString(encoded[:base64LineLength])
+		wrapped.WriteString("\r\n")
+		encoded = encoded[base64LineLength:]
+	}
+	wrapped.WriteString(encoded)
+	wrapped.WriteString("\r\n")
+	return wrapped.String()
+}
+
+func BuildRelayMessage(from, fromName string, m Message, now time.Time, messageID string) ([]byte, error) {
+	for _, v := range []string{from, fromName, m.To, m.Subject, messageID} {
+		if hasLineBreak(v) {
+			return nil, errors.New("unzulaessige Zeichen im Header")
+		}
+	}
+	fromDomain := from[strings.LastIndex(from, "@")+1:]
+	boundary := "=_" + messageID
+	var msg strings.Builder
+	msg.WriteString("From: " + mime.QEncoding.Encode("utf-8", fromName) + " <" + from + ">\r\n")
+	msg.WriteString("To: <" + m.To + ">\r\n")
+	msg.WriteString("Subject: " + mime.QEncoding.Encode("utf-8", m.Subject) + "\r\n")
+	msg.WriteString("Date: " + now.Format(time.RFC1123Z) + "\r\n")
+	msg.WriteString("Message-ID: <" + messageID + "@" + fromDomain + ">\r\n")
+	msg.WriteString("MIME-Version: 1.0\r\n")
+	msg.WriteString("Auto-Submitted: auto-generated\r\n")
+	if m.HTML == "" {
+		msg.WriteString("Content-Type: text/plain; charset=utf-8\r\n")
+		msg.WriteString("Content-Transfer-Encoding: base64\r\n")
+		msg.WriteString("\r\n")
+		msg.WriteString(wrapBase64(m.Text))
+		return []byte(msg.String()), nil
+	}
+	msg.WriteString("Content-Type: multipart/alternative; boundary=\"" + boundary + "\"\r\n")
+	msg.WriteString("\r\n")
+	for _, part := range []struct{ kind, body string }{{"text/plain", m.Text}, {"text/html", m.HTML}} {
+		msg.WriteString("--" + boundary + "\r\n")
+		msg.WriteString("Content-Type: " + part.kind + "; charset=utf-8\r\n")
+		msg.WriteString("Content-Transfer-Encoding: base64\r\n")
+		msg.WriteString("\r\n")
+		msg.WriteString(wrapBase64(part.body))
+	}
+	msg.WriteString("--" + boundary + "--\r\n")
+	return []byte(msg.String()), nil
+}
+
+func newMessageID() (string, error) {
 	idBytes := make([]byte, 12)
 	if _, err := rand.Read(idBytes); err != nil {
-		return err
+		return "", err
 	}
-	msg, err := BuildMessage(s.cfg.From, s.cfg.FromName, to, code, ttl, s.now(), hex.EncodeToString(idBytes))
+	return hex.EncodeToString(idBytes), nil
+}
+
+func (s *SMTP) SendCode(ctx context.Context, to, code string, ttl time.Duration) error {
+	id, err := newMessageID()
 	if err != nil {
 		return err
 	}
+	msg, err := BuildMessage(s.cfg.From, s.cfg.FromName, to, code, ttl, s.now(), id)
+	if err != nil {
+		return err
+	}
+	return s.deliver(ctx, to, msg)
+}
+
+func (s *SMTP) Send(ctx context.Context, m Message) error {
+	id, err := newMessageID()
+	if err != nil {
+		return err
+	}
+	msg, err := BuildRelayMessage(s.cfg.From, s.cfg.RelayFromName, m, s.now(), id)
+	if err != nil {
+		return err
+	}
+	return s.deliver(ctx, m.To, msg)
+}
+
+func (s *SMTP) deliver(ctx context.Context, to string, msg []byte) error {
 
 	dialHost := s.cfg.Host
 	if s.dialHost != "" {

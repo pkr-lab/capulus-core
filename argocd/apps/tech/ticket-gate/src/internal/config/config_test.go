@@ -62,3 +62,21 @@ func TestLoadRejectsWeakSecretAndBadNumbers(t *testing.T) {
 		t.Fatal("SMTP_SECURITY=plain akzeptiert")
 	}
 }
+
+func TestLoadRelayOptionalButValidated(t *testing.T) {
+	cfg, err := Load(env(base()))
+	if err != nil || len(cfg.RelayToken) != 0 || cfg.RelayPerHour != 60 || cfg.RelayPerRcptHour != 10 || cfg.SMTP.RelayFromName != "PKR-Service" {
+		t.Fatalf("Defaults: %+v (%v)", cfg, err)
+	}
+	m := base()
+	m["MAIL_RELAY_TOKEN"] = strings.Repeat("t", 32)
+	m["MAIL_RELAY_FROM_NAME"] = "Plaudi"
+	cfg, err = Load(env(m))
+	if err != nil || string(cfg.RelayToken) != strings.Repeat("t", 32) || cfg.SMTP.RelayFromName != "Plaudi" {
+		t.Fatalf("Relay: %+v (%v)", cfg, err)
+	}
+	m["MAIL_RELAY_TOKEN"] = "kurz"
+	if _, err := Load(env(m)); err == nil {
+		t.Fatal("kurzes Relay-Token akzeptiert")
+	}
+}
