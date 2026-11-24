@@ -42,12 +42,17 @@ seal_tech() {
   printf '%s' "$sealed"
 }
 
-api_key="$(ask API_KEY)"
+api_key="${API_KEY:-}"
+if [[ -z "$api_key" ]]; then
+  read -rsp "API_KEY (leer lassen fuer das Claude-Abo): " api_key
+  echo >&2
+fi
 admin_email="$(ask ADMIN_EMAIL | tr 'A-Z' 'a-z')"
 [[ "$admin_email" =~ ^[^@[:space:]]+@[^@[:space:]]+\.[a-z]{2,}$ ]] || { echo "Fehler: ADMIN_EMAIL ist keine Adresse" >&2; exit 1; }
 relay_token="${MAIL_RELAY_TOKEN:-$(openssl rand -hex 32)}"
 
-api_key_sealed="$(seal_prod "$api_key")"
+api_key_sealed=""
+[[ -z "$api_key" ]] || api_key_sealed="$(seal_prod "$api_key")"
 admin_email_sealed="$(seal_prod "$admin_email")"
 webhook_token_sealed="$(seal_prod "$relay_token")"
 relay_token_sealed="$(seal_tech "$relay_token")"
