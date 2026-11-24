@@ -46,16 +46,29 @@ type fakeMailer struct {
 	sent    []sentMail
 	relayed []mail.Message
 	relErr  error
+	relFail int
+	tries   int
 }
 
 func (m *fakeMailer) Send(_ context.Context, msg mail.Message) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	m.tries++
 	if m.relErr != nil {
 		return m.relErr
 	}
+	if m.relFail > 0 {
+		m.relFail--
+		return errors.New("smtp timeout")
+	}
 	m.relayed = append(m.relayed, msg)
 	return nil
+}
+
+func (m *fakeMailer) attempts() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.tries
 }
 
 func (m *fakeMailer) relayedMails() []mail.Message {
@@ -164,6 +177,7 @@ func newEnv(t *testing.T, mutate ...func(*config.Config)) *env {
 		Logger:  slog.New(slog.NewJSONHandler(e.logs, &slog.HandlerOptions{Level: slog.LevelDebug})),
 		Spawn:   func(f func()) { f() },
 	})
+	e.svc.retryDelay = 0
 	e.h = e.svc.Handler()
 	return e
 }
