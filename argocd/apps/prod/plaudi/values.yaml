@@ -1,0 +1,107 @@
+---
+replicaCount: 0
+
+image:
+  repository: ghcr.io/pkr-lab/plaudi
+  tag: "sha-0000000"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: ghcr-pull
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+  hosts:
+    - plaudi.prod.homeserver
+    - plaudi-prod.pkr-lab.de
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 192Mi
+  limits:
+    cpu: "1"
+    memory: 512Mi
+
+tmpSizeLimit: 64Mi
+
+livenessProbe:
+  initialDelaySeconds: 15
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+persistence:
+  size: 2Gi
+  storageClassName: local-path
+  accessMode: ReadWriteOnce
+
+config:
+  NODE_ENV: production
+  PORT: "3000"
+  DATA_DIR: /data
+  PUBLIC_DIR: /app/public
+  TZ: Europe/Berlin
+  PUBLIC_URL: https://plaudi-prod.pkr-lab.de
+  COOKIE_SECURE: "true"
+  TRUST_PROXY: "2"
+  MAIL_TRANSPORT: webhook
+  MAIL_WEBHOOK_URL: https://ticket-gate-tech.pkr-lab.de/v1/mail
+  MAIL_FROM: Plaudi <info@pkr-service.de>
+  AI_MODEL: claude-opus-5-5
+  AI_EFFORT: medium
+  SESSION_IDLE_HOURS: "3"
+  MAX_LOGIN_FAILURES: "3"
+  LOCK_HOURS: "24"
+
+secrets:
+  enabled: false
+  name: plaudi-secrets
+  encryptedData:
+    API_KEY: ""
+    ADMIN_EMAIL: ""
+    MAIL_WEBHOOK_TOKEN: ""
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
