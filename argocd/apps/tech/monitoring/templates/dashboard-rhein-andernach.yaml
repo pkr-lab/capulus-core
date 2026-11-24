@@ -187,11 +187,48 @@ data:
             },
             "overrides": [
               {
-                "matcher": {"id": "byName", "options": "Wasserstand Vorhersage (cm)"},
+                "matcher": {"id": "byName", "options": "RLP Median"},
                 "properties": [
-                  {"id": "displayName", "value": "Vorhersage Hochwasser RLP"},
+                  {"id": "displayName", "value": "Vorhersage Hochwasser RLP (Median)"},
                   {"id": "color", "value": {"mode": "fixed", "fixedColor": "purple"}},
                   {"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [10, 6]}},
+                  {"id": "custom.fillOpacity", "value": 0}
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "RLP 10 %"},
+                "properties": [
+                  {"id": "color", "value": {"mode": "fixed", "fixedColor": "purple"}},
+                  {"id": "custom.lineWidth", "value": 1},
+                  {"id": "custom.fillOpacity", "value": 0},
+                  {"id": "custom.hideFrom", "value": {"legend": true, "tooltip": false, "viz": false}}
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "RLP 90 %"},
+                "properties": [
+                  {"id": "color", "value": {"mode": "fixed", "fixedColor": "purple"}},
+                  {"id": "custom.lineWidth", "value": 1},
+                  {"id": "custom.fillOpacity", "value": 15},
+                  {"id": "custom.fillBelowTo", "value": "RLP 10 %"},
+                  {"id": "custom.hideFrom", "value": {"legend": true, "tooltip": false, "viz": false}}
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "BfG Vorhersage"},
+                "properties": [
+                  {"id": "displayName", "value": "Vorhersage BfG (WSV)"},
+                  {"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}},
+                  {"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [10, 6]}},
+                  {"id": "custom.fillOpacity", "value": 0}
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "BfG Abschätzung"},
+                "properties": [
+                  {"id": "displayName", "value": "Abschätzung BfG (WSV)"},
+                  {"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}},
+                  {"id": "custom.lineStyle", "value": {"fill": "dot", "dash": [2, 6]}},
                   {"id": "custom.fillOpacity", "value": 0}
                 ]
               },
@@ -228,17 +265,36 @@ data:
               "refId": "B",
               "type": "json",
               "source": "url",
-              "url": "https://www.hochwasser.rlp.de/api/v1/measurement-site/${pegelnr}",
+              "url": "${rlp_url:raw}",
               "url_options": {"method": "GET", "data": ""},
               "parser": "backend",
-              "root_selector": "W.predictions.p50",
+              "root_selector": "( $p := W.predictions; $map($p.p50, function($v,$i){ {'x':$v.x,'p10':$p.p10[$i].y,'p50':$v.y,'p90':$p.p90[$i].y} }) )",
               "columns": [
                 {"selector": "x", "type": "timestamp", "text": "time"},
-                {"selector": "y", "type": "number", "text": "Wasserstand Vorhersage (cm)"}
+                {"selector": "p10", "type": "number", "text": "RLP 10 %"},
+                {"selector": "p50", "type": "number", "text": "RLP Median"},
+                {"selector": "p90", "type": "number", "text": "RLP 90 %"}
+              ],
+              "format": "timeseries"
+            },
+            {
+              "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+              "refId": "C",
+              "type": "json",
+              "source": "url",
+              "url": "${wv_url:raw}",
+              "url_options": {"method": "GET", "data": ""},
+              "parser": "backend",
+              "root_selector": "$map($, function($r){ {'timestamp':$r.timestamp,'wf':$r.type = 'forecast' ? $r.value,'we':$r.type = 'estimate' ? $r.value} })",
+              "columns": [
+                {"selector": "timestamp", "type": "timestamp", "text": "time"},
+                {"selector": "wf", "type": "number", "text": "BfG Vorhersage"},
+                {"selector": "we", "type": "number", "text": "BfG Abschätzung"}
               ],
               "format": "timeseries"
             }
           ],
+          "description": "Gemessen: Pegelonline. Vorhersage Hochwasser RLP (Median mit 10–90-%-Band) und Vorhersage der BfG (über Pegelonline) erscheinen nur, wenn es für den gewählten Pegel eine gibt. Fehlt beides, zeigt das Panel nur die Messwerte.",
           "title": "${ort} — 48h Verlauf und Vorhersage",
           "type": "timeseries"
         },
@@ -402,7 +458,7 @@ data:
               "refId": "A",
               "type": "json",
               "source": "url",
-              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations.json?latitude=${lat}&longitude=${lon}&radius=100&timeseries=WT&includeTimeseries=true&includeCurrentMeasurement=true",
+              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations.json?latitude=${lat}&longitude=${lon}&radius=${umkreis_temp}&timeseries=WT&includeTimeseries=true&includeCurrentMeasurement=true",
               "url_options": {"method": "GET", "data": ""},
               "parser": "backend",
               "root_selector": "$map($[$toMillis(timeseries[shortname='WT'].currentMeasurement.timestamp) > $millis() - 86400000],function($s){ ( $n := $join($map($split($lowercase($s.shortname),' '),function($w){ $uppercase($substring($w,0,1)) & $substring($w,1) }),' '); $g := $uppercase($substring($s.water.shortname,0,1)) & $lowercase($substring($s.water.shortname,1)); $m := $s.timeseries[shortname='WT'].currentMeasurement; {'Station':$n,'Gewässer':$g,'lat':$s.latitude,'lon':$s.longitude,'Wassertemperatur':$m.value,'Gemessen':$m.timestamp,'Label':$n & ' (' & $g & ') ' & $replace($formatNumber($m.value,'0.0'),'.',',') & ' °C'} ) })",
@@ -418,7 +474,7 @@ data:
               "format": "table"
             }
           ],
-          "title": "Wassertemperatur — 100 km um ${ort}",
+          "title": "Wassertemperatur — ${umkreis_temp} km um ${ort}",
           "type": "geomap"
         },
         {
@@ -552,7 +608,8 @@ data:
               "format": "table"
             }
           ],
-          "title": "Wetter aktuell — 30 km um ${ort}",
+          "description": "Open-Meteo zählt jeden Rasterpunkt als Abruf: 15 km = 9, 30 km = 17 Abrufe je Aktualisierung (Tageslimit der kostenlosen API: 10.000).",
+          "title": "Wetter aktuell — ${wetter_km} km um ${ort}",
           "type": "geomap"
         },
         {
@@ -695,7 +752,7 @@ data:
               "refId": "A",
               "type": "json",
               "source": "url",
-              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${nachbar_a}/W/measurements.json?start=P2D",
+              "url": "${nachbar_a:raw}",
               "url_options": {"method": "GET", "data": ""},
               "parser": "simple",
               "root_selector": "",
@@ -725,7 +782,7 @@ data:
               "refId": "C",
               "type": "json",
               "source": "url",
-              "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${nachbar_b}/W/measurements.json?start=P2D",
+              "url": "${nachbar_b:raw}",
               "url_options": {"method": "GET", "data": ""},
               "parser": "simple",
               "root_selector": "",
@@ -746,7 +803,7 @@ data:
       "templating": {
         "list": [
           {
-            "current": {"selected": true, "text": "Andernach (Rhein)", "value": "5735892a-ec65-4b29-97c5-50939aa9584e"},
+            "current": {"selected": true, "text": "Rhein · Andernach (km 614)", "value": "5735892a-ec65-4b29-97c5-50939aa9584e"},
             "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
             "definition": "",
             "hide": 0,
@@ -765,7 +822,7 @@ data:
                 "format": "table",
                 "parser": "backend",
                 "refId": "variable",
-                "root_selector": "( $tc := function($t){ $join($map($split($lowercase($t),' '),function($w){ $uppercase($substring($w,0,1)) & $substring($w,1) }),' ') }; $map($[$exists(latitude)]^(water.shortname,km),function($s){ {'__text':$tc($s.shortname) & ' (' & $tc($s.water.shortname) & ')','__value':$s.uuid} }) )",
+                "root_selector": "( $tc := function($t){ $join($map($split($lowercase($t),' '),function($w){ $uppercase($substring($w,0,1)) & $substring($w,1) }),' ') }; $map($[$exists(latitude)]^(water.shortname,km),function($s){ {'__text':$tc($s.water.shortname) & ' · ' & $tc($s.shortname) & ($exists($s.km) ? ' (km ' & $string($round($s.km)) & ')' : ''),'__value':$s.uuid} }) )",
                 "source": "url",
                 "type": "json",
                 "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations.json?timeseries=W",
@@ -777,7 +834,7 @@ data:
             "refresh": 1,
             "regex": "",
             "skipUrlSync": false,
-            "sort": 1,
+            "sort": 0,
             "type": "query"
           },
           {
@@ -794,6 +851,38 @@ data:
               {"selected": false, "text": "100", "value": "100"}
             ],
             "query": "20,40,60,100",
+            "skipUrlSync": false,
+            "type": "custom"
+          },
+          {
+            "current": {"selected": true, "text": "100", "value": "100"},
+            "hide": 0,
+            "includeAll": false,
+            "label": "Umkreis Wassertemperatur (km)",
+            "multi": false,
+            "name": "umkreis_temp",
+            "options": [
+              {"selected": false, "text": "50", "value": "50"},
+              {"selected": true, "text": "100", "value": "100"},
+              {"selected": false, "text": "150", "value": "150"},
+              {"selected": false, "text": "200", "value": "200"}
+            ],
+            "query": "50,100,150,200",
+            "skipUrlSync": false,
+            "type": "custom"
+          },
+          {
+            "current": {"selected": true, "text": "30", "value": "30"},
+            "hide": 0,
+            "includeAll": false,
+            "label": "Wetterraster (km)",
+            "multi": false,
+            "name": "wetter_km",
+            "options": [
+              {"selected": false, "text": "15", "value": "15"},
+              {"selected": true, "text": "30", "value": "30"}
+            ],
+            "query": "15,30",
             "skipUrlSync": false,
             "type": "custom"
           },
@@ -1008,6 +1097,76 @@ data:
             "type": "query"
           },
           {
+            "current": {"selected": false, "text": "", "value": ""},
+            "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+            "definition": "",
+            "hide": 2,
+            "includeAll": false,
+            "label": "Quelle Vorhersage RLP",
+            "multi": false,
+            "name": "rlp_url",
+            "options": [],
+            "query": {
+              "infinityQuery": {
+                "columns": [
+                  {"selector": "__text", "text": "__text", "type": "string"},
+                  {"selector": "__value", "text": "__value", "type": "string"}
+                ],
+                "filters": [],
+                "format": "table",
+                "parser": "backend",
+                "refId": "variable",
+                "root_selector": "( $f := $exists(measurementSites.`${pegelnr}`.predictions.p50); [{'__text':$f ? 'ja' : 'nein','__value':$f ? 'https://www.hochwasser.rlp.de/api/v1/measurement-site/${pegelnr}' : 'https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${einsatzort}/W/measurements.json?start=PT1S'}] )",
+                "source": "url",
+                "type": "json",
+                "url": "https://www.hochwasser.rlp.de/api/v1/index",
+                "url_options": {"data": "", "method": "GET"}
+              },
+              "query": "",
+              "queryType": "infinity"
+            },
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 0,
+            "type": "query"
+          },
+          {
+            "current": {"selected": false, "text": "", "value": ""},
+            "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+            "definition": "",
+            "hide": 2,
+            "includeAll": false,
+            "label": "Quelle Vorhersage BfG",
+            "multi": false,
+            "name": "wv_url",
+            "options": [],
+            "query": {
+              "infinityQuery": {
+                "columns": [
+                  {"selector": "__text", "text": "__text", "type": "string"},
+                  {"selector": "__value", "text": "__value", "type": "string"}
+                ],
+                "filters": [],
+                "format": "table",
+                "parser": "backend",
+                "refId": "variable",
+                "root_selector": "( $f := $exists($[uuid='${einsatzort}']); [{'__text':$f ? 'ja' : 'nein','__value':$f ? 'https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${einsatzort}/WV/measurements.json' : 'https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${einsatzort}/W/measurements.json?start=PT1S'}] )",
+                "source": "url",
+                "type": "json",
+                "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations.json?timeseries=WV",
+                "url_options": {"data": "", "method": "GET"}
+              },
+              "query": "",
+              "queryType": "infinity"
+            },
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 0,
+            "type": "query"
+          },
+          {
             "current": {"selected": true, "text": "50.4434", "value": "50.4434"},
             "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
             "definition": "",
@@ -1027,7 +1186,7 @@ data:
                 "format": "table",
                 "parser": "backend",
                 "refId": "variable",
-                "root_selector": "( $la := latitude; $d := [0,15,10.607,0,-10.607,-15,-10.607,0,10.607,30,21.213,0,-21.213,-30,-21.213,0,21.213]; $v := $join($map($d,function($n){ $string($round($la + $n / 111.32,4)) }),','); [{'__text':$v,'__value':$v}] )",
+                "root_selector": "( $la := latitude; $k := ${wetter_km} = 15 ? 9 : 17; $d := [0,15,10.607,0,-10.607,-15,-10.607,0,10.607,30,21.213,0,-21.213,-30,-21.213,0,21.213][[0..$k-1]]; $v := $join($map($d,function($n){ $string($round($la + $n / 111.32,4)) }),','); [{'__text':$v,'__value':$v}] )",
                 "source": "url",
                 "type": "json",
                 "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${einsatzort}.json",
@@ -1062,7 +1221,7 @@ data:
                 "format": "table",
                 "parser": "backend",
                 "refId": "variable",
-                "root_selector": "( $la := latitude * 3.14159265 / 180; $c := 1 - $power($la,2) / 2 + $power($la,4) / 24 - $power($la,6) / 720 + $power($la,8) / 40320; $lo := longitude; $d := [0,0,10.607,15,10.607,0,-10.607,-15,-10.607,0,21.213,30,21.213,0,-21.213,-30,-21.213]; $v := $join($map($d,function($e){ $string($round($lo + $e / (111.32 * $c),4)) }),','); [{'__text':$v,'__value':$v}] )",
+                "root_selector": "( $la := latitude * 3.14159265 / 180; $c := 1 - $power($la,2) / 2 + $power($la,4) / 24 - $power($la,6) / 720 + $power($la,8) / 40320; $lo := longitude; $k := ${wetter_km} = 15 ? 9 : 17; $d := [0,0,10.607,15,10.607,0,-10.607,-15,-10.607,0,21.213,30,21.213,0,-21.213,-30,-21.213][[0..$k-1]]; $v := $join($map($d,function($e){ $string($round($lo + $e / (111.32 * $c),4)) }),','); [{'__text':$v,'__value':$v}] )",
                 "source": "url",
                 "type": "json",
                 "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/${einsatzort}.json",
@@ -1078,7 +1237,7 @@ data:
             "type": "query"
           },
           {
-            "current": {"selected": true, "text": "Neuwied Stadt", "value": "dc407f1e-e25f-4995-9feb-5bacc8658149"},
+            "current": {"selected": true, "text": "Neuwied Stadt", "value": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/dc407f1e-e25f-4995-9feb-5bacc8658149/W/measurements.json?start=P2D"},
             "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
             "definition": "",
             "hide": 2,
@@ -1097,7 +1256,7 @@ data:
                 "format": "table",
                 "parser": "backend",
                 "refId": "variable",
-                "root_selector": "( $tc := function($t){ $join($map($split($lowercase($t),' '),function($w){ $uppercase($substring($w,0,1)) & $substring($w,1) }),' ') }; $e := $[uuid='${einsatzort}']; $n := ($[km < $e.km]^(>km))[0]; $n ? [{'__text':$tc($n.shortname),'__value':$n.uuid}] : [] )",
+                "root_selector": "( $tc := function($t){ $join($map($split($lowercase($t),' '),function($w){ $uppercase($substring($w,0,1)) & $substring($w,1) }),' ') }; $e := $[uuid='${einsatzort}']; $n := ($[km < $e.km]^(>km))[0]; [{'__text':$n ? $tc($n.shortname) : 'kein Nachbarpegel','__value':'https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/' & ($n ? $n.uuid : '${einsatzort}') & '/W/measurements.json?start=' & ($n ? 'P2D' : 'PT1S')}] )",
                 "source": "url",
                 "type": "json",
                 "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations.json?waters=${gewaesser:percentencode}&timeseries=W",
@@ -1113,7 +1272,7 @@ data:
             "type": "query"
           },
           {
-            "current": {"selected": true, "text": "Oberwinter", "value": "b45359df-c020-4314-adb1-d1921db642da"},
+            "current": {"selected": true, "text": "Oberwinter", "value": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/b45359df-c020-4314-adb1-d1921db642da/W/measurements.json?start=P2D"},
             "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
             "definition": "",
             "hide": 2,
@@ -1132,7 +1291,7 @@ data:
                 "format": "table",
                 "parser": "backend",
                 "refId": "variable",
-                "root_selector": "( $tc := function($t){ $join($map($split($lowercase($t),' '),function($w){ $uppercase($substring($w,0,1)) & $substring($w,1) }),' ') }; $e := $[uuid='${einsatzort}']; $n := ($[km > $e.km]^(km))[0]; $n ? [{'__text':$tc($n.shortname),'__value':$n.uuid}] : [] )",
+                "root_selector": "( $tc := function($t){ $join($map($split($lowercase($t),' '),function($w){ $uppercase($substring($w,0,1)) & $substring($w,1) }),' ') }; $e := $[uuid='${einsatzort}']; $n := ($[km > $e.km]^(km))[0]; [{'__text':$n ? $tc($n.shortname) : 'kein Nachbarpegel','__value':'https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/' & ($n ? $n.uuid : '${einsatzort}') & '/W/measurements.json?start=' & ($n ? 'P2D' : 'PT1S')}] )",
                 "source": "url",
                 "type": "json",
                 "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations.json?waters=${gewaesser:percentencode}&timeseries=W",
@@ -1152,7 +1311,7 @@ data:
       "time": {"from": "now-2d", "to": "now+2d"},
       "timepicker": {},
       "timezone": "browser",
-      "title": "Rhein Andernach — Pegel, Wetter & Warnungen",
+      "title": "Rhein Andernach — Pegel & Wetter",
       "uid": "rhein-andernach-pegel",
       "version": 1
     }
