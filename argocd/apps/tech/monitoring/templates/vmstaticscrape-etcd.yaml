@@ -1,4 +1,5 @@
 {{- range .Values.etcd.targets }}
+{{- if not (and $.Values.controlPlane1.offline (eq .host "controlplane-1")) }}
 ---
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMStaticScrape
@@ -15,4 +16,5 @@ spec:
         instance: {{ .host }}
         host: {{ .host }}
         kind: server
+{{- end }}
 {{- end }}
