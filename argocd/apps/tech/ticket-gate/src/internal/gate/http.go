@@ -226,5 +226,5 @@ func (s *Service) handleMail(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, e)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"status": "sent"})
+	writeJSON(w, http.StatusOK, map[string]any{"status": "accepted"})
 }
