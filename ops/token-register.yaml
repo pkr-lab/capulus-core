@@ -1072,3 +1072,34 @@
     overlap: false
   owner: peter
   blast_radius: "Access-Token des Mattermost-Bots n8n-bot (gleicher Wert wie im n8n-Credential Mattermost Bot (News) und im GitHub-Repo-Secret MATTERMOST_BOT_TOKEN). Kann in allen Channels posten, in denen der Bot Mitglied ist, und lesen. Rotation: neues Token in Mattermost erzeugen, dann scripts/seal-release-watcher-mattermost-token.sh, das GitHub-Secret und das n8n-Credential aktualisieren."
+
+- id: plaudi-anthropic-api-key
+  service: plaudi
+  kind: api-token
+  stored_in:
+    - argocd/apps/prod/plaudi/templates/sealedsecret.yaml
+  issued: "2026-11-24"
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: manual
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300y0-plaudi.md#rotation
+    overlap: true
+  owner: peter
+  blast_radius: "Anthropic-API-Schluessel von Plaudi: wer ihn hat, verursacht Kosten auf dem Konto. Ausgabenlimit in der Anthropic-Konsole setzen."
+
+- id: plaudi-mail-relay-token
+  service: plaudi
+  kind: api-token
+  stored_in:
+    - argocd/apps/prod/plaudi/templates/sealedsecret.yaml
+    - argocd/apps/tech/ticket-gate/templates/sealedsecret.yaml
+  issued: "2026-11-24"
+  expires: null
+  max_age_days: 365
+  rotation:
+    mode: scripted
+    runbook: pkr-lab-docs:capulus-core/3-apps-workloads/300y0-plaudi.md#rotation
+    overlap: false
+  owner: peter
+  blast_radius: "Bearer-Token fuer POST /v1/mail von ticket-gate (MAIL_WEBHOOK_TOKEN in Plaudi, MAIL_RELAY_TOKEN in ticket-gate): wer es hat, kann ueber das Postfach info@pkr-service.de Mails an beliebige Adressen senden, begrenzt auf 60 pro Stunde und 10 je Empfaenger."

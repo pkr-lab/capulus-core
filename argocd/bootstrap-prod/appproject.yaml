@@ -32,6 +32,8 @@ spec:
     - name: prod
       namespace: xibosignage
     - name: prod
+      namespace: plaudi
+    - name: prod
       namespace: example-whoami
     - name: prod
       namespace: cert-manager
