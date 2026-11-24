@@ -320,6 +320,60 @@ func (s *Service) CreateTicket(sessionToken, ip string, in TicketInput) (string,
 	return number, nil
 }
 
+type RelayInput struct {
+	Token   string
+	To      string
+	Subject string
+	Text    string
+	HTML    string
+}
+
+const (
+	maxRelaySubject = 200
+	maxRelayText    = 10000
+	maxRelayHTML    = 20000
+	relayTimeout    = 8 * time.Second
+)
+
+func (s *Service) tokenMatches(given string) bool {
+	if len(s.cfg.RelayToken) == 0 || given == "" {
+		return false
+	}
+	return hmac.Equal(s.mac("relay-token", given), s.mac("relay-token", string(s.cfg.RelayToken)))
+}
+
+func (s *Service) Relay(in RelayInput) *Error {
+	if len(s.cfg.RelayToken) == 0 {
+		return newErr(http.StatusNotFound, "not_found")
+	}
+	if !s.tokenMatches(in.Token) {
+		return newErr(http.StatusUnauthorized, "token_invalid")
+	}
+	to, ok := NormalizeEmail(in.To)
+	subject := cleanLine(in.Subject)
+	text := cleanText(in.Text)
+	html := cleanText(in.HTML)
+	if !ok || subject == "" || text == "" ||
+		utf8.RuneCountInString(subject) > maxRelaySubject ||
+		utf8.RuneCountInString(text) > maxRelayText ||
+		utf8.RuneCountInString(html) > maxRelayHTML {
+		return newErr(http.StatusBadRequest, "mail_invalid")
+	}
+	if ok, retry := s.limits.Take(limiter.Rule{Key: "relay-hour", Limit: s.cfg.RelayPerHour, Window: time.Hour}); !ok {
+		return rateErr(retry)
+	}
+	if ok, retry := s.limits.Take(limiter.Rule{Key: "relay-rcpt:" + s.macString("email", to), Limit: s.cfg.RelayPerRcptHour, Window: time.Hour}); !ok {
+		return rateErr(retry)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), relayTimeout)
+	defer cancel()
+	if err := s.mailer.Send(ctx, mail.Message{To: to, Subject: subject, Text: text, HTML: html}); err != nil {
+		s.logger.Error("relay mail failed", "error", err.Error())
+		return newErr(http.StatusBadGateway, "mail_failed")
+	}
+	return nil
+}
+
 func (s *Service) Purge() {
 	s.store.Purge()
 	s.limits.Purge()

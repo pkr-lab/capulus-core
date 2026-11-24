@@ -17,6 +17,8 @@ type SMTP struct {
 	Password string
 	From     string
 	FromName string
+
+	RelayFromName string
 }
 
 type Zammad struct {
@@ -44,6 +46,9 @@ type Config struct {
 	SessionPerIPHour int
 	TicketPerIPHour  int
 	MaxSessions      int
+	RelayToken       []byte
+	RelayPerHour     int
+	RelayPerRcptHour int
 	SMTP             SMTP
 	Zammad           Zammad
 }
@@ -102,6 +107,16 @@ func Load(get func(string) string) (Config, error) {
 		SessionPerIPHour: r.integer("SESSION_PER_IP_PER_HOUR", 30),
 		TicketPerIPHour:  r.integer("TICKET_PER_IP_PER_HOUR", 10),
 		MaxSessions:      r.integer("MAX_SESSIONS", 50000),
+		RelayPerHour:     r.integer("MAIL_RELAY_PER_HOUR", 60),
+		RelayPerRcptHour: r.integer("MAIL_RELAY_PER_RECIPIENT_PER_HOUR", 10),
+	}
+
+	relayToken := strings.TrimSpace(r.get("MAIL_RELAY_TOKEN"))
+	if relayToken != "" && len(relayToken) < 32 {
+		r.errs = append(r.errs, errors.New("MAIL_RELAY_TOKEN muss mindestens 32 Zeichen lang sein"))
+	}
+	if relayToken != "" {
+		cfg.RelayToken = []byte(relayToken)
 	}
 
 	switch strings.ToLower(r.str("LOG_LEVEL", "info")) {
@@ -139,6 +154,7 @@ func Load(get func(string) string) (Config, error) {
 		From:     r.required("SMTP_FROM"),
 		FromName: r.str("SMTP_FROM_NAME", "PKR-Service"),
 	}
+	cfg.SMTP.RelayFromName = r.str("MAIL_RELAY_FROM_NAME", cfg.SMTP.FromName)
 	if cfg.SMTP.Security != "tls" && cfg.SMTP.Security != "starttls" {
 		r.errs = append(r.errs, errors.New("SMTP_SECURITY muss tls oder starttls sein"))
 	}

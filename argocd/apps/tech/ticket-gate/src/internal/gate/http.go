@@ -24,6 +24,7 @@ func (s *Service) Handler() http.Handler {
 	mux.HandleFunc("POST /v1/verify/request", s.handleRequest)
 	mux.HandleFunc("POST /v1/verify/confirm", s.handleConfirm)
 	mux.HandleFunc("POST /v1/tickets", s.handleTicket)
+	mux.HandleFunc("POST /v1/mail", s.handleMail)
 	return s.middleware(mux)
 }
 
@@ -207,4 +208,23 @@ func (s *Service) handleTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]any{"ticket_number": number})
+}
+
+func (s *Service) handleMail(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		From    string `json:"from"`
+		To      string `json:"to"`
+		Subject string `json:"subject"`
+		Text    string `json:"text"`
+		HTML    string `json:"html"`
+	}
+	if err := decode(r, &in); err != nil {
+		badRequest(w)
+		return
+	}
+	if e := s.Relay(RelayInput{Token: bearer(r), To: in.To, Subject: in.Subject, Text: in.Text, HTML: in.HTML}); e != nil {
+		writeErr(w, e)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "sent"})
 }

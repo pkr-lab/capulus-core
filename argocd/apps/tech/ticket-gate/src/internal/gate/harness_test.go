@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"ticket-gate/internal/config"
+	"ticket-gate/internal/mail"
 	"ticket-gate/internal/zammad"
 )
 
@@ -41,8 +42,26 @@ type sentMail struct {
 }
 
 type fakeMailer struct {
-	mu   sync.Mutex
-	sent []sentMail
+	mu      sync.Mutex
+	sent    []sentMail
+	relayed []mail.Message
+	relErr  error
+}
+
+func (m *fakeMailer) Send(_ context.Context, msg mail.Message) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.relErr != nil {
+		return m.relErr
+	}
+	m.relayed = append(m.relayed, msg)
+	return nil
+}
+
+func (m *fakeMailer) relayedMails() []mail.Message {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([]mail.Message(nil), m.relayed...)
 }
 
 func (m *fakeMailer) SendCode(_ context.Context, to, code string, _ time.Duration) error {
