@@ -4,7 +4,7 @@ replicaCount: 1
 image:
   repository: louislam/uptime-kuma
   pullPolicy: IfNotPresent
-  tag: "2.5.11@sha256:7554dba313c84e44fee921ef3b5626ba1c711e412e82815e8c957517026112a9"
+  tag: "2.5.12@sha256:8e4b6bef96417ec98a35dc103c99cc64fc229a01e584e56d95d9004d2003c02a"
 
 nameOverride: ""
 fullnameOverride: ""
@@ -87,7 +87,7 @@ resticBackup:
 # fasst nichts an.
 restore:
   enabled: true
-  image: "restic/restic:0.19.1@sha256:136600b6ff6843d61d355f7f71f460a166429f35de6fd11b568fece3c9a4d510"
+  image: "restic/restic:0.20.0@sha256:93999df80d4ac6cb148e82d2ef1fe6a81996f17ff535e772723538211b31555a"
   resources:
     requests:
       cpu: 25m
