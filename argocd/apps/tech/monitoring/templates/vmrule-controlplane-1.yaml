@@ -1,3 +1,25 @@
+{{- if .Values.controlPlane1.offline }}
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: controlplane-1-availability
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+    - name: controlplane-1.availability
+      interval: 30s
+      rules:
+        - alert: ControlPlane1Aus
+          expr: vector(1)
+          labels:
+            severity: none
+          annotations:
+            summary: "controlplane-1 ist laenger absichtlich offline"
+            description: >-
+              Signalalarm fuer Alertmanager-Inhibit-Regeln (values.yaml: controlPlane1.offline). Solange er aktiv
+              ist, werden die Folgealarme von controlplane-1 unterdrueckt. Die eigenen Alarme ControlPlane1Down und
+              das Telefon-Paging NodeDownPaging fuer diesen Host sind abgeschaltet.
+{{- else }}
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMRule
 metadata:
@@ -40,3 +62,4 @@ spec:
               {{ .Values.controlPlane1.memoryRequestsRatio }}). Der weiche Taint reicht dann nicht,
               Pods ohne Toleration landen auf dem Node. Mit
               kubectl get pods -A -o wide --field-selector spec.nodeName=controlplane-1 prüfen.
+{{- end }}

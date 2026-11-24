@@ -29,6 +29,7 @@ spec:
         instance: worker-1
         host: worker-1
         kind: server
+{{- if not .Values.controlPlane1.offline }}
 ---
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMStaticScrape
@@ -45,3 +46,4 @@ spec:
         instance: controlplane-1
         host: controlplane-1
         kind: server
+{{- end }}

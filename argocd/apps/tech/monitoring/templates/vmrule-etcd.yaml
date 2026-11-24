@@ -1,3 +1,5 @@
+{{- $members := int .Values.etcd.expectedMembers }}
+{{- if .Values.controlPlane1.offline }}{{- $members = sub $members 1 }}{{- end }}
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMRule
 metadata:
@@ -20,18 +22,18 @@ spec:
               Die Kubernetes-API ist nicht schreibbar, laufende Pods laufen weiter.
 
         - alert: EtcdMemberMissing
-          expr: count(up{job="k3s-etcd"} == 1) < {{ .Values.etcd.expectedMembers }}
+          expr: count(up{job="k3s-etcd"} == 1) < {{ $members }}
           for: 2m
           labels:
             severity: critical
           annotations:
-            summary: "etcd hat weniger als {{ .Values.etcd.expectedMembers }} erreichbare Mitglieder"
+            summary: "etcd hat weniger als {{ $members }} erreichbare Mitglieder"
             description: >-
-              Nur {{`{{ $value }}`}} von {{ .Values.etcd.expectedMembers }} etcd-Mitgliedern liefern Metriken.
+              Nur {{`{{ $value }}`}} von {{ $members }} etcd-Mitgliedern liefern Metriken.
               Bei zwei Mitgliedern fehlt das Quorum, sobald eines ausfällt.
 
         - alert: EtcdPeerLost
-          expr: etcd_network_active_peers < {{ sub (int .Values.etcd.expectedMembers) 1 }}
+          expr: etcd_network_active_peers < {{ sub $members 1 }}
           for: 2m
           labels:
             severity: critical
@@ -39,7 +41,7 @@ spec:
             summary: "etcd auf {{`{{ $labels.host }}`}} sieht nicht alle Peers"
             description: >-
               Das Mitglied auf {{`{{ $labels.host }}`}} hat seit 2 Minuten weniger aktive Peers als erwartet
-              ({{ sub (int .Values.etcd.expectedMembers) 1 }}). Netzwerk zwischen den Servern prüfen.
+              ({{ sub $members 1 }}). Netzwerk zwischen den Servern prüfen.
 
         - alert: EtcdLeaderChangesFrequent
           expr: increase(etcd_server_leader_changes_seen_total[1h]) > 3
