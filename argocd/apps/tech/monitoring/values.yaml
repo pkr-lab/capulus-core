@@ -196,6 +196,33 @@ victoria-metrics-k8s-stack:
           target_matchers:
             - alertname="TargetDown"
             - job="infotafel-node-exporter"
+        # controlplane-1 ist laenger absichtlich offline (controlPlane1.offline, Signalalarm ControlPlane1Aus)
+        - source_matchers:
+            - alertname="ControlPlane1Aus"
+          target_matchers:
+            - node="controlplane-1"
+        - source_matchers:
+            - alertname="ControlPlane1Aus"
+          target_matchers:
+            - host="controlplane-1"
+        - source_matchers:
+            - alertname="ControlPlane1Aus"
+          target_matchers:
+            - instance=~"192\\.168\\.178\\.95:.*|controlplane-1"
+        - source_matchers:
+            - alertname="ControlPlane1Aus"
+          target_matchers:
+            - alertname="TargetDown"
+            - job=~"node-exporter|kubelet|k3s-etcd|controlplane-1-smartctl-exporter"
+        - source_matchers:
+            - alertname="ControlPlane1Aus"
+          target_matchers:
+            - alertname=~"KubeDaemonSetMisScheduled|KubeDaemonSetRolloutStuck"
+        - source_matchers:
+            - alertname="ControlPlane1Aus"
+          target_matchers:
+            - alertname="KubePodNotReady"
+            - pod=~"(metallb-speaker|metallb-frr-k8s|svclb-traefik-[0-9a-f]+|logging-victoria-logs-collector|monitoring-prometheus-node-exporter)-[a-z0-9]{5}"
 
 
   defaultRules:
@@ -377,6 +404,7 @@ victoria-metrics-k8s-stack:
     enabled: false
 
 etcd:
+  # Sollwert bei vollstaendigem Cluster; bei controlPlane1.offline wird in den Regeln automatisch 1 abgezogen.
   expectedMembers: 2
   targets:
     - host: control-plane-0
@@ -385,6 +413,10 @@ etcd:
       address: "192.168.178.95:2381"
 
 controlPlane1:
+  # true = controlplane-1 ist laenger absichtlich offline. Dann entfallen seine Alarme (inkl. Telefon-
+  # Paging), die etcd-Erwartung sinkt um ein Mitglied und die Scrape-Ziele auf .95 werden entfernt.
+  # Beim Zurueckholen des Nodes wieder auf false setzen (und ihn vorher in etcd wieder aufnehmen).
+  offline: true
   memoryRequestsRatio: 0.5
 
 writeAuth:
