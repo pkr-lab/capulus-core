@@ -367,10 +367,10 @@ data:
                     "opacity": 0.9,
                     "rotation": {"fixed": 0, "max": 360, "min": -360, "mode": "mod"},
                     "size": {"fixed": 8, "max": 15, "min": 2},
-                    "symbol": {"fixed": "img/icons/marker/circle.svg", "mode": "fixed"},
+                    "symbol": {"fixed": "", "mode": "fixed"},
                     "symbolAlign": {"horizontal": "center", "vertical": "center"},
                     "text": {"field": "Label", "fixed": "", "mode": "field"},
-                    "textConfig": {"fontSize": 12, "offsetX": 0, "offsetY": -12, "textAlign": "center", "textBaseline": "bottom"}
+                    "textConfig": {"fontSize": 13, "offsetX": 0, "offsetY": 0, "textAlign": "left", "textBaseline": "middle"}
                   }
                 },
                 "location": {"mode": "coords", "latitude": "lat", "longitude": "lon"},
@@ -389,7 +389,7 @@ data:
               "url": "${pegelkarte_url:raw}",
               "url_options": {"method": "GET", "data": ""},
               "parser": "backend",
-              "root_selector": "( $exists(measurementsite) ? ( $tc := function($t){ $join($map($split($lowercase($t),' '),function($w){ $uppercase($substring($w,0,1)) & $substring($w,1) }),' ') }; $ll := function($v){ ( $x := ($v.easting - 370000) / 100000; $y := ($v.northing - 5530000) / 100000; {'la': 49.9082398392 + 0.021739401005*$x + 0.898969776152*$y + -0.00835096083506*$x*$x + 0.000687658762063*$x*$y + -8.01743365436e-05*$y*$y + -8.11538767407e-06*$x*$x*$x + -0.000262910017838*$x*$x*$y + 1.26170305311e-05*$x*$y*$y + -1.00373539816e-07*$y*$y*$y, 'lo': 7.18944915891 + 1.39199593362*$x + -0.0336619505371*$y + 0.000848449298071*$x*$x + 0.025845291257*$x*$y + -0.000847397313198*$y*$y + -0.000215445520018*$x*$x*$x + 5.50011185809e-05*$x*$x*$y + 0.000645751915523*$x*$y*$y + -1.83053098425e-05*$y*$y*$y} ) }; $c := $number('${lat}'); $o := $number('${lon}'); $rid := measurementsite.`${einsatzort_rlp}`.rivers[0]; $l := $each(measurementsite,function($v,$k){ ( $p := $ll($v); $dist := $sqrt($power(($p.la - $c) * 111.2, 2) + $power(($p.lo - $o) * 111.2 * 0.636, 2)); $v.type = 'default' and $rid in $v.rivers and $dist <= ${umkreis} ? {'Station':$v.name,'km':$v.riverKilometer,'lat':$p.la,'lon':$p.lo,'Pegel':$nichts,'Zustand':'unknown','Gemessen':$nichts,'Label':$v.name} ) }); $l^(Station) ) : ( $tc := function($t){ $join($map($split($lowercase($t),' '),function($w){ $uppercase($substring($w,0,1)) & $substring($w,1) }),' ') }; $map($^(km),function($s){ ( $n := $tc($s.shortname); $m := $s.timeseries[shortname='W'].currentMeasurement; {'Station':$n,'km':$s.km,'lat':$s.latitude,'lon':$s.longitude,'Pegel':$m.value,'Zustand':$m.stateMnwMhw,'Gemessen':$m.timestamp,'Label':$n & ' ' & $string($m.value) & ' cm'} ) }) ) )",
+              "root_selector": "( $exists(measurementsite) ? ( $tc := function($t){ $join($map($split($lowercase($t),' '),function($w){ $uppercase($substring($w,0,1)) & $substring($w,1) }),' ') }; $ll := function($v){ ( $x := ($v.easting - 370000) / 100000; $y := ($v.northing - 5530000) / 100000; {'la': 49.9082398392 + 0.021739401005*$x + 0.898969776152*$y + -0.00835096083506*$x*$x + 0.000687658762063*$x*$y + -8.01743365436e-05*$y*$y + -8.11538767407e-06*$x*$x*$x + -0.000262910017838*$x*$x*$y + 1.26170305311e-05*$x*$y*$y + -1.00373539816e-07*$y*$y*$y, 'lo': 7.18944915891 + 1.39199593362*$x + -0.0336619505371*$y + 0.000848449298071*$x*$x + 0.025845291257*$x*$y + -0.000847397313198*$y*$y + -0.000215445520018*$x*$x*$x + 5.50011185809e-05*$x*$x*$y + 0.000645751915523*$x*$y*$y + -1.83053098425e-05*$y*$y*$y} ) }; $c := $number('${lat}'); $o := $number('${lon}'); $rid := measurementsite.`${einsatzort_rlp}`.rivers[0]; $l := $each(measurementsite,function($v,$k){ ( $p := $ll($v); $dist := $sqrt($power(($p.la - $c) * 111.2, 2) + $power(($p.lo - $o) * 111.2 * 0.636, 2)); $v.type = 'default' and $rid in $v.rivers and $dist <= ${umkreis} ? {'Station':$v.name,'km':$v.riverKilometer,'lat':$p.la,'lon':$p.lo,'Pegel':$nichts,'Zustand':'unknown','Gemessen':$nichts,'Label':'● ' & $v.name} ) }); $l^(Station) ) : ( $tc := function($t){ $join($map($split($lowercase($t),' '),function($w){ $uppercase($substring($w,0,1)) & $substring($w,1) }),' ') }; $map($^(km),function($s){ ( $n := $tc($s.shortname); $m := $s.timeseries[shortname='W'].currentMeasurement; {'Station':$n,'km':$s.km,'lat':$s.latitude,'lon':$s.longitude,'Pegel':$m.value,'Zustand':$m.stateMnwMhw,'Gemessen':$m.timestamp,'Label':'● ' & $n & ' ' & $string($m.value) & ' cm'} ) }) ) )",
               "columns": [
                 {"selector": "Station", "type": "string", "text": "Station"},
                 {"selector": "km", "type": "number", "text": "Fluss-km"},
@@ -449,10 +449,10 @@ data:
                     "opacity": 0.9,
                     "rotation": {"fixed": 0, "max": 360, "min": -360, "mode": "mod"},
                     "size": {"fixed": 8, "max": 15, "min": 2},
-                    "symbol": {"fixed": "img/icons/marker/circle.svg", "mode": "fixed"},
+                    "symbol": {"fixed": "", "mode": "fixed"},
                     "symbolAlign": {"horizontal": "center", "vertical": "center"},
                     "text": {"field": "Label", "fixed": "", "mode": "field"},
-                    "textConfig": {"fontSize": 12, "offsetX": 0, "offsetY": -12, "textAlign": "center", "textBaseline": "bottom"}
+                    "textConfig": {"fontSize": 13, "offsetX": 0, "offsetY": 0, "textAlign": "left", "textBaseline": "middle"}
                   }
                 },
                 "location": {"mode": "coords", "latitude": "lat", "longitude": "lon"},
@@ -471,7 +471,7 @@ data:
               "url": "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations.json?latitude=${lat}&longitude=${lon}&radius=${umkreis_temp}&timeseries=WT&includeTimeseries=true&includeCurrentMeasurement=true",
               "url_options": {"method": "GET", "data": ""},
               "parser": "backend",
-              "root_selector": "$map($[$toMillis(timeseries[shortname='WT'].currentMeasurement.timestamp) > $millis() - 86400000],function($s){ ( $n := $join($map($split($lowercase($s.shortname),' '),function($w){ $uppercase($substring($w,0,1)) & $substring($w,1) }),' '); $g := $uppercase($substring($s.water.shortname,0,1)) & $lowercase($substring($s.water.shortname,1)); $m := $s.timeseries[shortname='WT'].currentMeasurement; {'Station':$n,'Gewässer':$g,'lat':$s.latitude,'lon':$s.longitude,'Wassertemperatur':$m.value,'Gemessen':$m.timestamp,'Label':$n & ' (' & $g & ') ' & $replace($formatNumber($m.value,'0.0'),'.',',') & ' °C'} ) })",
+              "root_selector": "$map($[$toMillis(timeseries[shortname='WT'].currentMeasurement.timestamp) > $millis() - 86400000],function($s){ ( $n := $join($map($split($lowercase($s.shortname),' '),function($w){ $uppercase($substring($w,0,1)) & $substring($w,1) }),' '); $g := $uppercase($substring($s.water.shortname,0,1)) & $lowercase($substring($s.water.shortname,1)); $m := $s.timeseries[shortname='WT'].currentMeasurement; {'Station':$n,'Gewässer':$g,'lat':$s.latitude,'lon':$s.longitude,'Wassertemperatur':$m.value,'Gemessen':$m.timestamp,'Label':'● ' & $n & ' (' & $g & ') ' & $replace($formatNumber($m.value,'0.0'),'.',',') & ' °C'} ) })",
               "columns": [
                 {"selector": "Station", "type": "string", "text": "Station"},
                 {"selector": "Gewässer", "type": "string", "text": "Gewässer"},
@@ -582,10 +582,10 @@ data:
                     "opacity": 0.9,
                     "rotation": {"fixed": 0, "max": 360, "min": -360, "mode": "mod"},
                     "size": {"fixed": 8, "max": 15, "min": 2},
-                    "symbol": {"fixed": "img/icons/marker/circle.svg", "mode": "fixed"},
+                    "symbol": {"fixed": "", "mode": "fixed"},
                     "symbolAlign": {"horizontal": "center", "vertical": "center"},
                     "text": {"field": "Label", "fixed": "", "mode": "field"},
-                    "textConfig": {"fontSize": 12, "offsetX": 0, "offsetY": -12, "textAlign": "center", "textBaseline": "bottom"}
+                    "textConfig": {"fontSize": 13, "offsetX": 0, "offsetY": 0, "textAlign": "left", "textBaseline": "middle"}
                   }
                 },
                 "location": {"mode": "coords", "latitude": "lat", "longitude": "lon"},
@@ -604,7 +604,7 @@ data:
               "url": "https://api.open-meteo.com/v1/forecast?latitude=${wetter_lat}&longitude=${wetter_lon}&current=temperature_2m,weather_code,wind_speed_10m,precipitation&timezone=Europe%2FBerlin",
               "url_options": {"method": "GET", "data": ""},
               "parser": "backend",
-              "root_selector": "( $n := ['${ort}','N 15 km','NO 15 km','O 15 km','SO 15 km','S 15 km','SW 15 km','W 15 km','NW 15 km','N 30 km','NO 30 km','O 30 km','SO 30 km','S 30 km','SW 30 km','W 30 km','NW 30 km']; $map($zip($n,$type($) = 'array' ? $ : [$]),function($r){ ( $t := $replace($formatNumber($r[1].current.temperature_2m,'0.0'),'.',',') & ' °C'; {'Ort':$r[0],'lat':$r[1].latitude,'lon':$r[1].longitude,'Temperatur':$r[1].current.temperature_2m,'Wetter':$r[1].current.weather_code,'Wind':$r[1].current.wind_speed_10m,'Niederschlag':$r[1].current.precipitation,'Label':$r[0] = $n[0] ? $r[0] & ' ' & $t : $t} ) }) )",
+              "root_selector": "( $n := ['${ort}','N 15 km','NO 15 km','O 15 km','SO 15 km','S 15 km','SW 15 km','W 15 km','NW 15 km','N 30 km','NO 30 km','O 30 km','SO 30 km','S 30 km','SW 30 km','W 30 km','NW 30 km']; $map($zip($n,$type($) = 'array' ? $ : [$]),function($r){ ( $t := $replace($formatNumber($r[1].current.temperature_2m,'0.0'),'.',',') & ' °C'; {'Ort':$r[0],'lat':$r[1].latitude,'lon':$r[1].longitude,'Temperatur':$r[1].current.temperature_2m,'Wetter':$r[1].current.weather_code,'Wind':$r[1].current.wind_speed_10m,'Niederschlag':$r[1].current.precipitation,'Label':'● ' & ($r[0] = $n[0] ? $r[0] & ' ' & $t : $t)} ) }) )",
               "columns": [
                 {"selector": "Ort", "type": "string", "text": "Ort"},
                 {"selector": "Wetter", "type": "number", "text": "Wetter"},
